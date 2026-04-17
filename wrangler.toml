@@ -1,0 +1,10 @@
+name = "comeback-tracker"
+compatibility_date = "2025-04-01"
+pages_build_output_dir = "./dist"
+
+# Deploy with: wrangler pages deploy dist --project-name=comeback-tracker
+# Or link this repo to Cloudflare Pages in the dashboard:
+#   Framework preset: Vite
+#   Build command: npm run build
+#   Build output: dist
+#   Node version: 20 (set via env var NODE_VERSION=20)

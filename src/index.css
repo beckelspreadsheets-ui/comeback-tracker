@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-ink text-bone;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    /* Safe area support for iOS notch / home indicator */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+
+  /* Strip number input spinners */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  input[type='number'],
+  input[type='text'],
+  input[type='date'],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  @media (min-width: 768px) {
+    input[type='number'],
+    input[type='text'],
+    input[type='date'],
+    select,
+    textarea {
+      font-size: inherit;
+    }
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .font-display {
+    font-family: 'Instrument Serif', ui-serif, Georgia, serif;
+    font-weight: 400;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  /* Warm paper grain overlay — pairs with the ink ground */
+  @keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-3%, -2%); }
+    50% { transform: translate(2%, -4%); }
+    75% { transform: translate(-2%, 3%); }
+  }
+
+  .grain-overlay {
+    animation: grain 8s steps(4) infinite;
+  }
+
+  /* Sheet / modal transitions used by the food entry flow */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  /* Scroll without showing scrollbar on iOS */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
