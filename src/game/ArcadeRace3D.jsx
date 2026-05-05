@@ -574,6 +574,7 @@ const createRaceState = (compiled, profile, defaultVehicle) => {
     landingTimer: 0,
     lap: 1,
     lapStartTime: 0,
+    lapSplits: [],
     layer: 'ground',
     liftDisabledTimer: 0,
     lightningRodTimer: 0,
@@ -722,6 +723,10 @@ const createRaceState = (compiled, profile, defaultVehicle) => {
       };
     }),
     time: 0,
+    cameraShakeTimer: 0,
+    lastPlayerRank: 1,
+    positionNotice: null,
+    screenFlashTimer: 0,
     zippers,
   };
 };
@@ -746,18 +751,22 @@ export const ArcadeRace3D = ({
     altitude: 0,
     bananas: 0,
     boost: 0,
+    cameraFlash: 0,
     drift: 0,
     doubleSlotUses: 0,
     heldBalloon: null,
     itemTier: 0,
     jump: 0,
     lap: 1,
+    lapSplits: [],
     perfect: false,
     place: 1,
+    positionNotice: null,
     rareNextPickup: false,
     secondaryHeldItem: null,
     shield: 0,
     speed: 0,
+    speedRatio: 0,
     time: 0,
     upgradeAvailable: false,
     vehicleMode: DEFAULT_VEHICLE_BY_STYLE[track.raceStyle] || 'kart',
@@ -818,7 +827,7 @@ export const ArcadeRace3D = ({
     scene.background = new THREE.Color('#59c6ed');
     scene.fog = new THREE.Fog('#bdf6ff', 180, 520);
 
-    const camera = new THREE.PerspectiveCamera(58, 1, 0.25, 520);
+    const camera = new THREE.PerspectiveCamera(90, 1, 0.25, 520);
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       canvas,
@@ -1317,6 +1326,13 @@ export const ArcadeRace3D = ({
     });
     playerVehicle.setMode(race.player.vehicleMode);
     world.add(playerVehicle.group);
+    const switchRing = new THREE.Mesh(
+      new THREE.TorusGeometry(7.2, 0.28, 8, 40),
+      new THREE.MeshBasicMaterial({ color: '#ffd34f', depthWrite: false, opacity: 0.75, transparent: true })
+    );
+    switchRing.rotation.x = Math.PI / 2;
+    switchRing.visible = false;
+    playerVehicle.group.add(switchRing);
 
     const rivalModels = race.rivals.map((rival) => {
       const model = createVehicleModel({
@@ -1378,6 +1394,60 @@ export const ArcadeRace3D = ({
       };
     };
 
+    let audioContext = null;
+    let ambientOscillator = null;
+    let ambientGain = null;
+    const cueFrequency = (name = '') =>
+      name.includes('lightning') || name.includes('storm')
+        ? 180
+        : name.includes('anchor') || name.includes('drill') || name.includes('polarity')
+        ? 120
+        : name.includes('shield') || name.includes('star')
+        ? 520
+        : name.includes('boost') || name.includes('turbo')
+        ? 720
+        : name.includes('trap') || name.includes('bubble')
+        ? 260
+        : 360;
+
+    const ensureAudio = () => {
+      if (typeof window === 'undefined') return null;
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) return null;
+      if (!audioContext) audioContext = new AudioCtor();
+      if (audioContext.state === 'suspended') audioContext.resume();
+      return audioContext;
+    };
+
+    const startAmbientAudio = () => {
+      const ctx = ensureAudio();
+      if (!ctx || ambientOscillator) return;
+      ambientOscillator = ctx.createOscillator();
+      ambientGain = ctx.createGain();
+      ambientOscillator.type = compiled.key === 'static-storm-plateau' ? 'sawtooth' : compiled.key === 'magnet-mine-descent' ? 'square' : 'sine';
+      ambientOscillator.frequency.value =
+        compiled.key === 'static-storm-plateau' ? 64 : compiled.key === 'magnet-mine-descent' ? 48 : 86;
+      ambientGain.gain.value = 0.012;
+      ambientOscillator.connect(ambientGain).connect(ctx.destination);
+      ambientOscillator.start();
+    };
+
+    const playCue = (name, duration = 0.11) => {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      startAmbientAudio();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = name?.includes('hit') || name?.includes('drag') ? 'square' : 'triangle';
+      osc.frequency.setValueAtTime(cueFrequency(name), ctx.currentTime);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration + 0.02);
+    };
+
     const addBoost = (racer, seconds, impulse, tier = 1) => {
       const forward = new THREE.Vector3(Math.sin(racer.heading), 0, Math.cos(racer.heading));
       racer.boostTimer = Math.max(racer.boostTimer || 0, seconds);
@@ -1412,6 +1482,7 @@ export const ArcadeRace3D = ({
       if (racer === race.player) {
         racer.boostTimer = Math.max(racer.boostTimer, 0.2);
         playerVehicle.setMode(racer.vehicleMode);
+        playCue('vehicle-switch', 0.16);
       }
       return true;
     };
@@ -1463,6 +1534,9 @@ export const ArcadeRace3D = ({
       }
       race.player.hitTimer = Math.max(race.player.hitTimer, 0.45 + severity * 0.22);
       race.player.velocity.multiplyScalar(clamp(0.72 - severity * 0.08, 0.42, 0.72));
+      race.cameraShakeTimer = Math.max(race.cameraShakeTimer, 0.2);
+      race.screenFlashTimer = Math.max(race.screenFlashTimer, 0.18);
+      playCue('item-hit', 0.1);
       scatterBananas(race.player, 3);
     };
 
@@ -1535,6 +1609,7 @@ export const ArcadeRace3D = ({
       if (!itemKey || !definition) return false;
       if (!itemAllowedOnTrack(definition, compiled.key)) return false;
       if (racer === race.player && !itemAllowedForVehicle(definition, racer.vehicleMode)) return false;
+      if (racer === race.player) playCue(definition.feedback?.activation || itemKey, 0.12);
 
       if (itemKey === 'boost') {
         addBoost(racer, 0.55 + level * 0.42, 12 + level * 5.5, level);
@@ -1706,6 +1781,7 @@ export const ArcadeRace3D = ({
         const lapTime = race.time - (racer.lapStartTime || 0);
         if (racer === race.player) {
           racer.bestLap = racer.bestLap ? Math.min(racer.bestLap, lapTime) : lapTime;
+          racer.lapSplits.push(lapTime);
         }
         racer.lap += 1;
         racer.lapStartTime = race.time;
@@ -2249,6 +2325,11 @@ export const ArcadeRace3D = ({
       racers.forEach((racer, index) => {
         racer.rank = index + 1;
       });
+      if (race.player.rank !== race.lastPlayerRank) {
+        const delta = race.lastPlayerRank - race.player.rank;
+        race.positionNotice = { life: 1.6, text: delta > 0 ? `Position +${delta}` : `Position ${delta}` };
+        race.lastPlayerRank = race.player.rank;
+      }
     };
 
     const syncMeshes = (dt, now) => {
@@ -2270,6 +2351,12 @@ export const ArcadeRace3D = ({
           ? player.flightPitch
           : (player.driftActive ? -player.driftDirection * 0.08 : 0) + (player.jumpHeight > 0 ? 0.08 : 0);
       playerVehicle.boostFlame.visible = player.boostTimer > 0.02;
+      switchRing.visible = player.transformTimer > 0;
+      if (switchRing.visible) {
+        switchRing.rotation.z += dt * 8;
+        switchRing.scale.setScalar(1 + (0.5 - player.transformTimer) * 0.8);
+        switchRing.material.opacity = clamp(player.transformTimer / 0.5, 0.2, 0.8);
+      }
       playerVehicle.wheels.forEach((wheel) => {
         wheel.rotation.x += player.speed * dt * 2.2;
         if (wheel.userData.front) wheel.rotation.y = player.steerInput * 0.36;
@@ -2370,9 +2457,15 @@ export const ArcadeRace3D = ({
         .clone()
         .addScaledVector(forward, 2 + speedRatio * 4)
         .add(new THREE.Vector3(0, 4.2 + altitude * (isPlane ? 0.78 : 0.38), 0));
+      if (race.cameraShakeTimer > 0) {
+        const shake = race.cameraShakeTimer / 0.2;
+        desired.x += (Math.random() - 0.5) * 1.2 * shake;
+        desired.y += (Math.random() - 0.5) * 0.7 * shake;
+      }
       camera.position.lerp(desired, 1 - Math.exp(-7.2 * dt));
       camera.lookAt(lookAt);
-      camera.fov = THREE.MathUtils.lerp(camera.fov, 58 + speedRatio * 5 + (player.boostTimer > 0 ? 2 : 0), 1 - Math.exp(-3 * dt));
+      camera.rotation.z += -player.steerInput * speedRatio * 0.045;
+      camera.fov = THREE.MathUtils.lerp(camera.fov, player.boostTimer > 0 ? 100 : 90, 1 - Math.exp(-3 * dt));
       camera.updateProjectionMatrix();
     };
 
@@ -2404,6 +2497,12 @@ export const ArcadeRace3D = ({
       const dt = clamp((now - lastFrame) / 1000, 0, 0.033);
       lastFrame = now;
       race.time += dt;
+      race.cameraShakeTimer = Math.max(0, race.cameraShakeTimer - dt);
+      race.screenFlashTimer = Math.max(0, race.screenFlashTimer - dt);
+      if (race.positionNotice) {
+        race.positionNotice.life -= dt;
+        if (race.positionNotice.life <= 0) race.positionNotice = null;
+      }
       fitRenderer();
 
       const externalCommand = commandRef.current;
@@ -2466,18 +2565,22 @@ export const ArcadeRace3D = ({
           altitude: race.player.flightAltitude,
           bananas: race.player.bananas,
           boost: race.player.boostTimer,
+          cameraFlash: race.screenFlashTimer,
           drift: race.player.driftCharge,
           doubleSlotUses: race.player.doubleSlotUses,
           heldBalloon: race.player.heldBalloon,
           itemTier: race.player.heldItem?.level || 0,
           jump: race.player.jumpHeight,
           lap: Math.min(race.player.lap, compiled.laps),
+          lapSplits: race.player.lapSplits.slice(-3),
           perfect: race.player.perfectBoostTimer > 0,
           place: race.player.rank,
+          positionNotice: race.positionNotice,
           rareNextPickup: race.player.rareNextPickup,
           secondaryHeldItem: race.player.secondaryHeldItem,
           shield: race.player.shieldTimer,
           speed: Math.round(race.player.velocity.length() * 5.8),
+          speedRatio: clamp(race.player.velocity.length() / ((VEHICLES[race.player.vehicleMode] || VEHICLES.kart).maxSpeed || 1), 0, 1.4),
           time: race.time,
           upgradeAvailable: race.player.bananas >= 3 && Boolean(race.player.heldItem) && race.player.heldItem.level < 3,
           vehicleMode: race.player.vehicleMode,
@@ -2517,6 +2620,7 @@ export const ArcadeRace3D = ({
       window.cancelAnimationFrame(raf);
       window.removeEventListener('keydown', keyDown);
       window.removeEventListener('keyup', keyUp);
+      if (ambientOscillator) ambientOscillator.stop();
       renderer.dispose();
     };
   }, [profile, runId, track]);
@@ -2550,7 +2654,22 @@ export const ArcadeRace3D = ({
       <canvas
         ref={canvasRef}
         className="arcade-race-canvas block h-[min(78svh,680px)] min-h-[560px] w-full touch-none"
+        style={{ filter: telemetry.boost > 0 ? 'saturate(1.18) contrast(1.08)' : 'none' }}
       />
+
+      {telemetry.speedRatio > 0.8 && (
+        <div className="pointer-events-none absolute inset-0 opacity-45 mix-blend-screen">
+          <div className="absolute inset-y-0 left-0 w-1/2 bg-[repeating-linear-gradient(100deg,transparent_0_18px,rgba(255,255,255,0.16)_18px_20px,transparent_20px_42px)]" />
+          <div className="absolute inset-y-0 right-0 w-1/2 bg-[repeating-linear-gradient(80deg,transparent_0_18px,rgba(255,255,255,0.16)_18px_20px,transparent_20px_42px)]" />
+        </div>
+      )}
+
+      {telemetry.cameraFlash > 0 && (
+        <div
+          className="pointer-events-none absolute inset-0 bg-white mix-blend-screen"
+          style={{ opacity: clamp(telemetry.cameraFlash / 0.18, 0, 0.34) }}
+        />
+      )}
 
       <div className="pointer-events-none absolute left-3 right-3 top-3 grid gap-2 sm:left-4 sm:right-auto sm:w-[360px]">
         <div className="arcade-hud-panel border border-white/18 bg-[#10151d]/[0.88] p-2.5 text-white shadow-[0_14px_34px_rgba(0,0,0,0.32)] backdrop-blur-md">
@@ -2581,6 +2700,13 @@ export const ArcadeRace3D = ({
             <div className="font-mono text-[8px] font-black uppercase tracking-[0.12em] text-white/56">
               Drift
             </div>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-1 font-mono text-[8px] uppercase tracking-[0.08em] text-white/58">
+            {[0, 1, 2].map((index) => (
+              <div key={index} className="truncate">
+                L{index + 1} <span className="text-white">{formatTime(telemetry.lapSplits[index])}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -2690,6 +2816,12 @@ export const ArcadeRace3D = ({
       {telemetry.perfect && (
         <div className="pointer-events-none absolute left-1/2 top-[21%] -translate-x-1/2 arcade-hud-panel border border-[#ffd34f]/60 bg-[#ffd34f] px-4 py-2 font-mono text-[11px] font-black uppercase tracking-[0.14em] text-[#10151d] shadow-[0_16px_42px_rgba(0,0,0,0.36)]">
           Perfect zipper
+        </div>
+      )}
+
+      {telemetry.positionNotice && (
+        <div className="pointer-events-none absolute left-1/2 top-[29%] -translate-x-1/2 arcade-hud-panel border border-[#2cc8ff]/60 bg-[#10151d]/90 px-4 py-2 font-mono text-[11px] font-black uppercase tracking-[0.14em] text-[#2cc8ff] shadow-[0_16px_42px_rgba(0,0,0,0.36)]">
+          {telemetry.positionNotice.text}
         </div>
       )}
 
