@@ -44,13 +44,76 @@ export const RACE_ITEMS = [
     cost: 135,
     summary: 'Knocks the nearest rival off pace',
   },
+  {
+    key: 'bubbleTrap',
+    name: 'Bubble Trap',
+    cost: 120,
+    summary: 'Drops a floating trap that pops rivals out of their line',
+  },
+  {
+    key: 'switchBolt',
+    name: 'Switch Bolt',
+    cost: 145,
+    summary: 'Forces the nearest rival into the opposite vehicle mode',
+  },
+  {
+    key: 'liftJammer',
+    name: 'Lift Jammer',
+    cost: 150,
+    summary: 'Disables plane lift on nearby opponents for a short window',
+  },
+  {
+    key: 'hazardBell',
+    name: 'Hazard Bell',
+    cost: 160,
+    summary: 'Triggers the next armed environmental hazard early',
+  },
+  {
+    key: 'decoyCrate',
+    name: 'Decoy Crate',
+    cost: 100,
+    summary: 'Places a fake item box that spins out greedy racers',
+  },
+  {
+    key: 'ghostReplay',
+    name: 'Ghost Replay',
+    cost: 125,
+    summary: 'Creates a short racing-line ghost that grants slipstream speed',
+  },
+  {
+    key: 'bananaMagnet',
+    name: 'Banana Magnet',
+    cost: 115,
+    summary: 'Pulls nearby bananas into your vehicle',
+  },
+  {
+    key: 'invincibility',
+    name: 'Star Shield',
+    cost: 190,
+    summary: 'Brief invincibility against traps, hazards, and contact',
+  },
+  {
+    key: 'tideHorn',
+    name: 'Tide Horn',
+    cost: 155,
+    summary: 'Remote environmental trigger for water and crowd hazards',
+  },
 ];
 
 export const DEFAULT_RACE_GARAGE = {
   inventory: {
     boost: 0,
+    bananaMagnet: 0,
+    bubbleTrap: 0,
+    decoyCrate: 0,
+    ghostReplay: 0,
+    hazardBell: 0,
+    invincibility: 0,
+    liftJammer: 0,
     rocket: 0,
     shield: 0,
+    switchBolt: 0,
+    tideHorn: 0,
   },
   spentCredits: 0,
   upgrades: {

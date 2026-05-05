@@ -65,6 +65,53 @@ export const RACE_TRACKS = [
     },
     boostPads: [0.075, 0.405, 0.688],
     itemBoxes: [0.19, 0.525, 0.842],
+    layers: {
+      ground: {
+        name: 'Boardwalk line',
+        vehiclePreference: 'kart',
+        aiWeight: 1,
+        lineOffset: -0.08,
+        itemBoxes: [
+          { progress: 0.19, side: -0.22 },
+          { progress: 0.525, side: 0.18 },
+        ],
+      },
+      air: {
+        name: 'Harbor glide',
+        vehiclePreference: 'plane',
+        aiWeight: 0.82,
+        lineOffset: 0.42,
+        itemBoxes: [{ progress: 0.62, side: 0.28, rare: true }],
+      },
+      hybrid: {
+        name: 'Ticket chute switch',
+        vehiclePreference: 'hover',
+        aiWeight: 0.9,
+        lineOffset: -0.34,
+        itemBoxes: [{ progress: 0.842, side: -0.18 }],
+      },
+    },
+    switchPads: [
+      { key: 'pier-launch-pad', progress: 0.64, targetVehicle: 'plane', layer: 'hybrid', radius: 8 },
+      { key: 'boardwalk-landing-pad', progress: 0.78, targetVehicle: 'kart', layer: 'ground', radius: 8 },
+    ],
+    vehicleZones: [
+      { key: 'flooded-shortcut-zone', progress: 0.82, vehicle: 'plane', action: 'auto-switch', radius: 16 },
+    ],
+    vehicleLocks: [
+      { key: 'harbor-flight-lock', start: 0.64, end: 0.76, vehicle: 'plane' },
+    ],
+    events: [
+      {
+        key: 'lap-two-tide-pulse',
+        trigger: 'lap',
+        lap: 2,
+        action: 'trigger-hazard',
+        hazardType: 'wet',
+        duration: 2.8,
+        message: 'Tide rising',
+      },
+    ],
     shortcuts: [
       {
         key: 'ticket-chute',
@@ -180,6 +227,56 @@ export const RACE_TRACKS = [
     },
     boostPads: [0.105, 0.355, 0.612, 0.845],
     itemBoxes: [0.245, 0.472, 0.702, 0.912],
+    layers: {
+      ground: {
+        name: 'Armor straps',
+        vehiclePreference: 'kart',
+        aiWeight: 0.88,
+        lineOffset: 0.16,
+        itemBoxes: [
+          { progress: 0.245, side: -0.18 },
+          { progress: 0.472, side: 0.16 },
+        ],
+      },
+      air: {
+        name: 'Shoulder leap',
+        vehiclePreference: 'plane',
+        aiWeight: 1.08,
+        lineOffset: 0.44,
+        itemBoxes: [
+          { progress: 0.702, side: 0.26 },
+          { progress: 0.912, side: -0.24, rare: true },
+        ],
+      },
+      hybrid: {
+        name: 'Wake skim',
+        vehiclePreference: 'hover',
+        aiWeight: 0.94,
+        lineOffset: -0.34,
+        itemBoxes: [{ progress: 0.36, side: -0.2 }],
+      },
+    },
+    switchPads: [
+      { key: 'shoulder-plane-pad', progress: 0.31, targetVehicle: 'plane', layer: 'air', radius: 8 },
+      { key: 'strap-kart-pad', progress: 0.56, targetVehicle: 'kart', layer: 'ground', radius: 8 },
+    ],
+    vehicleZones: [
+      { key: 'wake-air-only', progress: 0.34, vehicle: 'plane', action: 'penalty', radius: 18, severity: 0.55 },
+    ],
+    vehicleLocks: [
+      { key: 'wake-skim-lock', start: 0.3, end: 0.42, vehicle: 'plane' },
+    ],
+    events: [
+      {
+        key: 'wake-pulse-loop',
+        trigger: 'time',
+        repeatInterval: 22,
+        action: 'trigger-hazard',
+        hazardType: 'tremor',
+        duration: 2.2,
+        message: 'Wake pulse',
+      },
+    ],
     shortcuts: [
       {
         key: 'shoulder-blade',
@@ -293,6 +390,53 @@ export const RACE_TRACKS = [
     },
     boostPads: [0.12, 0.49, 0.735],
     itemBoxes: [0.255, 0.565, 0.88],
+    layers: {
+      ground: {
+        name: 'Cargo ring',
+        vehiclePreference: 'kart',
+        aiWeight: 0.94,
+        lineOffset: -0.12,
+        itemBoxes: [
+          { progress: 0.255, side: -0.18 },
+          { progress: 0.565, side: 0.2 },
+        ],
+      },
+      air: {
+        name: 'Relay arc',
+        vehiclePreference: 'plane',
+        aiWeight: 0.96,
+        lineOffset: 0.46,
+        itemBoxes: [{ progress: 0.74, side: 0.26, rare: true }],
+      },
+      hybrid: {
+        name: 'Airlock skip',
+        vehiclePreference: 'hover',
+        aiWeight: 1.06,
+        lineOffset: -0.36,
+        itemBoxes: [{ progress: 0.88, side: -0.22 }],
+      },
+    },
+    switchPads: [
+      { key: 'relay-plane-pad', progress: 0.18, targetVehicle: 'plane', layer: 'air', radius: 8 },
+      { key: 'relay-hover-pad', progress: 0.66, targetVehicle: 'hover', layer: 'hybrid', radius: 8 },
+    ],
+    vehicleZones: [
+      { key: 'green-airlock-only', progress: 0.66, vehicle: 'hover', action: 'auto-switch', radius: 16 },
+    ],
+    vehicleLocks: [
+      { key: 'airlock-vehicle-lock', start: 0.62, end: 0.72, vehicle: 'hover' },
+    ],
+    events: [
+      {
+        key: 'phase-shutter-pulse',
+        trigger: 'position',
+        progress: 0.66,
+        action: 'trigger-hazard',
+        hazardType: 'laser',
+        duration: 2,
+        message: 'Shutters cycling',
+      },
+    ],
     shortcuts: [
       {
         key: 'airlock-skip',
@@ -339,4 +483,3 @@ export const RACE_TRACKS = [
     ],
   },
 ];
-
