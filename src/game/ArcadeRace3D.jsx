@@ -1796,6 +1796,9 @@ export const ArcadeRace3D = ({
         setVehicleMode(racer, hazard.targetVehicle || nextVehicleMode(racer.vehicleMode || defaultVehicle), { force: true });
       } else if (effect === 'control-flip') {
         racer.controlFlipTimer = Math.max(racer.controlFlipTimer || 0, hazard.duration || 2.2);
+      } else if (effect === 'set-polarity') {
+        racer.polarity = hazard.polarity || 1;
+        racer.polaritySwapTimer = Math.max(racer.polaritySwapTimer || 0, hazard.duration || 4);
       } else if (effect === 'switch-lock') {
         racer.switchLockedUntil = Math.max(racer.switchLockedUntil || 0, race.time + (hazard.duration || 5));
       } else if (effect === 'polarity-check' && hazard.polarity && racer.polarity !== hazard.polarity) {
@@ -1833,6 +1836,14 @@ export const ArcadeRace3D = ({
       }
       if (event.action === 'set-lock') {
         race.player.switchLockedUntil = Math.max(race.player.switchLockedUntil || 0, race.time + (event.duration || 2));
+      }
+      if (event.action === 'rotate-polarity') {
+        race.trackHazards.forEach((hazard) => {
+          if (hazard.type === 'polarityStrip' || hazard.type === 'polarityGate') {
+            hazard.polarity = (hazard.polarity || 1) * -1;
+            hazard.eventPulse = Math.max(hazard.eventPulse || 0, 1.2);
+          }
+        });
       }
     };
 

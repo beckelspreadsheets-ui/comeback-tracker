@@ -179,6 +179,13 @@ export const HAZARD_DEFINITIONS = [
     telegraph: 'purple pulse ring',
   },
   {
+    type: 'polarityStrip',
+    trigger: HAZARD_TRIGGERS.proximity,
+    effect: 'set-polarity',
+    vehicleFilter: 'kart',
+    telegraph: 'rotating polarity strip',
+  },
+  {
     type: 'stalactite',
     trigger: HAZARD_TRIGGERS.timer,
     effect: HAZARD_EFFECTS.spin,
