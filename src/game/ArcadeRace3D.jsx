@@ -1768,6 +1768,12 @@ export const ArcadeRace3D = ({
       if (!vehicleMatchesFilter(racer.vehicleMode || defaultVehicle, vehicleFilter)) return;
       const effect = hazard.effect || definition?.effect;
       if (racer === race.player && racer.invincibleTimer > 0 && !['boost', 'switch-lock'].includes(effect)) return;
+      if (racer === race.player && hazard.type === 'lightning' && race.player.lightningRodTimer > 0) {
+        const leader = [...race.rivals].sort((a, b) => scoreRacer(b) - scoreRacer(a))[0];
+        if (leader) hitRival(leader, hazard.severity || 1.05);
+        race.player.lightningRodTimer = 0;
+        return;
+      }
 
       if (effect === 'slow') {
         if (racer.velocity) racer.velocity.multiplyScalar(1 - clamp(dt * (hazard.strength || 1.4), 0, 0.2));

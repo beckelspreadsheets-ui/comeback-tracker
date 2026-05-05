@@ -130,6 +130,13 @@ export const HAZARD_DEFINITIONS = [
     telegraph: 'charge ring before strike',
   },
   {
+    type: 'bridgeCollapse',
+    trigger: 'timer-or-event',
+    effect: HAZARD_EFFECTS.forceSwitch,
+    vehicleFilter: 'kart',
+    telegraph: 'rope bridge cracks and missing planks',
+  },
+  {
     type: 'tornado',
     trigger: HAZARD_TRIGGERS.proximity,
     effect: HAZARD_EFFECTS.pull,
