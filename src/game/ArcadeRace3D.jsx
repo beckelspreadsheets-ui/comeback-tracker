@@ -361,6 +361,8 @@ const compileTrack3D = (track) => {
 
   return {
     ...track,
+    bananaCount: track.bananaCount || 18,
+    bananaPlacements: track.bananaPlacements || null,
     bounds,
     events: track.events || [],
     hazardPlacements,
@@ -600,6 +602,7 @@ const createRaceState = (compiled, profile, defaultVehicle) => {
     const lane = [0.32, -0.32, 0.18][index % 3] * compiled.roadWidth;
     return {
       accent: rival.accent,
+      ai: rival,
       color: rival.color,
       finished: false,
       finishTime: null,
@@ -614,19 +617,29 @@ const createRaceState = (compiled, profile, defaultVehicle) => {
       position: sample.point.clone().addScaledVector(laneNormal, lane),
       progress: sample.progress,
       rank: index + 2,
+      signatureUsed: false,
       speed: 26 + index * 1.8,
       vehicleMode: defaultVehicle,
       wobble: index * 1.3,
     };
   });
 
-  const bananas = Array.from({ length: 18 }, (_, index) => {
-    const progress = wrap01(0.035 + index * 0.052 + (index % 3) * 0.008);
+  const bananaEntries =
+    compiled.bananaPlacements ||
+    Array.from({ length: compiled.bananaCount || 18 }, (_, index) => ({
+      progress: wrap01(0.035 + index * (0.94 / Math.max(1, compiled.bananaCount || 18)) + (index % 3) * 0.008),
+    }));
+
+  const bananas = bananaEntries.map((entry, index) => {
+    const progress = wrap01(typeof entry === 'number' ? entry : entry.progress);
     const sample = compiled.pointAt(progress);
     const normalAtPoint = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x);
     return {
       cooldown: 0,
-      position: sample.point.clone().addScaledVector(normalAtPoint, ((index % 3) - 1) * compiled.roadWidth * 0.18),
+      position: sample.point.clone().addScaledVector(
+        normalAtPoint,
+        (typeof entry === 'number' ? ((index % 3) - 1) * 0.18 : entry.side || 0) * compiled.roadWidth
+      ),
       progress,
     };
   });
@@ -1788,7 +1801,7 @@ export const ArcadeRace3D = ({
       race.trackHazards.forEach((hazard) => {
         hazard.cooldown = Math.max(0, hazard.cooldown - dt);
         hazard.eventPulse = Math.max(0, hazard.eventPulse - dt);
-        const active = hazard.active !== false && hazardWindowOpen(hazard);
+        const active = hazard.eventPulse > 0 || (hazard.active !== false && hazardWindowOpen(hazard));
         if (!active || hazard.cooldown > 0) return;
         [race.player, ...race.rivals].forEach((racer) => {
           if (racer.finished) return;
@@ -2147,9 +2160,33 @@ export const ArcadeRace3D = ({
       return scored[0]?.key || 'ground';
     };
 
+    const triggerHazardByType = (hazardType, duration = 2.4, message = null) => {
+      const hazard = race.trackHazards.find((entry) => entry.type === hazardType);
+      if (hazard) hazard.eventPulse = Math.max(hazard.eventPulse || 0, duration);
+      if (message) race.eventMessages.push({ life: 2, text: message });
+    };
+
+    const maybeUseRivalSignature = (rival) => {
+      const signature = rival.ai?.signature;
+      if (!signature || rival.signatureUsed) return;
+      if (signature === 'dock-bell' && rival.rank === 2 && rival.progress > 0.34) {
+        triggerHazardByType('seagulls', 3.4, 'Dock bell');
+        rival.signatureUsed = true;
+      }
+      if (signature === 'static-bait' && rival.progress > 0.42 && distance2D(rival.position, race.player.position) < 34) {
+        triggerHazardByType('staticCharge', 4.2, 'Static charge');
+        rival.signatureUsed = true;
+      }
+      if (signature === 'early-drill' && rival.rank >= 4 && rival.progress > 0.28) {
+        triggerHazardByType('mineCart', 3.2, 'Drill early');
+        rival.signatureUsed = true;
+      }
+    };
+
     const updateRivals = (dt) => {
       race.rivals.forEach((rival, index) => {
         if (rival.finished) return;
+        maybeUseRivalSignature(rival);
         rival.invincibleTimer = Math.max(0, (rival.invincibleTimer || 0) - dt);
         rival.liftDisabledTimer = Math.max(0, (rival.liftDisabledTimer || 0) - dt);
         rival.polaritySwapTimer = Math.max(0, (rival.polaritySwapTimer || 0) - dt);
@@ -2279,7 +2316,7 @@ export const ArcadeRace3D = ({
       race.trackHazards.forEach((hazard, index) => {
         const mesh = trackHazardMeshes[index];
         if (!mesh) return;
-        const active = hazard.active !== false && hazardWindowOpen(hazard);
+        const active = hazard.eventPulse > 0 || (hazard.active !== false && hazardWindowOpen(hazard));
         mesh.visible = active || hazard.eventPulse > 0 || hazard.telegraphTime > 0;
         mesh.rotation.y += dt * 0.8;
         mesh.scale.setScalar(active ? 1.05 + Math.sin(now / 140 + index) * 0.06 : 0.72);

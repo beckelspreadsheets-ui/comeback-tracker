@@ -116,6 +116,13 @@ export const HAZARD_DEFINITIONS = [
     telegraph: 'trap cage on racing line',
   },
   {
+    type: 'boatTraffic',
+    trigger: HAZARD_TRIGGERS.timer,
+    effect: HAZARD_EFFECTS.knockBack,
+    vehicleFilter: 'both',
+    telegraph: 'boat horn before crossing',
+  },
+  {
     type: 'lightning',
     trigger: HAZARD_TRIGGERS.timer,
     effect: HAZARD_EFFECTS.spin,
@@ -187,4 +194,3 @@ export const vehicleMatchesFilter = (vehicleMode, vehicleFilter = 'both') =>
   vehicleFilter === 'both' ||
   vehicleFilter === vehicleMode ||
   (vehicleFilter === 'kart' && vehicleMode === 'hover');
-
