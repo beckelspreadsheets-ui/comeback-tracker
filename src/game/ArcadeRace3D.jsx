@@ -54,8 +54,8 @@ const VEHICLES = {
     acceleration: 46,
     brake: 54,
     boostMax: 66,
-    cameraDistance: 54,
-    cameraHeight: 24,
+    cameraDistance: 38,
+    cameraHeight: 12.2,
     driftCharge: 1.08,
     driftGrip: 5.6,
     driftSlip: 9.5,
@@ -72,8 +72,8 @@ const VEHICLES = {
     acceleration: 39,
     brake: 42,
     boostMax: 64,
-    cameraDistance: 57,
-    cameraHeight: 25,
+    cameraDistance: 40,
+    cameraHeight: 13,
     driftCharge: 0.94,
     driftGrip: 3.2,
     driftSlip: 13,
@@ -90,8 +90,8 @@ const VEHICLES = {
     acceleration: 39,
     brake: 34,
     boostMax: 78,
-    cameraDistance: 74,
-    cameraHeight: 36,
+    cameraDistance: 58,
+    cameraHeight: 11.5,
     driftCharge: 0.78,
     driftGrip: 2.4,
     driftSlip: 6,
@@ -1519,7 +1519,7 @@ export const ArcadeRace3D = ({
     const playerVehicle = createVehicleModel({
       accent: '#46d9ef',
       color: '#ef4334',
-      scale: 0.78,
+      scale: 1.05,
       suit: profile.avatar?.suit || '#202837',
     });
     playerVehicle.setMode(race.player.vehicleMode);
@@ -2812,24 +2812,31 @@ export const ArcadeRace3D = ({
       const right = new THREE.Vector3(forward.z, 0, -forward.x);
       const speedRatio = clamp(player.velocity.length() / vehicle.maxSpeed, 0, 1);
       const altitude = isPlane ? player.flightAltitude : player.jumpHeight;
+      const chaseDistance = vehicle.cameraDistance + speedRatio * (isPlane ? 4.5 : 2.5);
+      const chaseHeight =
+        isPlane
+          ? altitude + vehicle.cameraHeight + speedRatio * 1.5
+          : vehicle.cameraHeight + speedRatio * 1.2 + altitude * 0.22;
+      const lookAhead = isPlane ? 24 + speedRatio * 8 : 12 + speedRatio * 5;
+      const lookHeight = isPlane ? altitude + 1.2 : 2.6 + altitude * 0.14;
       const desired = player.position
         .clone()
-        .addScaledVector(forward, -(vehicle.cameraDistance + speedRatio * 5))
-        .addScaledVector(right, -player.steerInput * speedRatio * (isPlane ? 4.8 : 2.2))
-        .add(new THREE.Vector3(0, vehicle.cameraHeight + speedRatio * 2.5 + altitude * (isPlane ? 0.72 : 0.55), 0));
+        .addScaledVector(forward, -chaseDistance)
+        .addScaledVector(right, -player.steerInput * speedRatio * (isPlane ? 3.6 : 1.8))
+        .add(new THREE.Vector3(0, chaseHeight, 0));
       const lookAt = player.position
         .clone()
-        .addScaledVector(forward, 2 + speedRatio * 4)
-        .add(new THREE.Vector3(0, 4.2 + altitude * (isPlane ? 0.78 : 0.38), 0));
+        .addScaledVector(forward, lookAhead)
+        .add(new THREE.Vector3(0, lookHeight, 0));
       if (race.cameraShakeTimer > 0) {
         const shake = race.cameraShakeTimer / 0.2;
         desired.x += (Math.random() - 0.5) * 1.2 * shake;
         desired.y += (Math.random() - 0.5) * 0.7 * shake;
       }
-      camera.position.lerp(desired, 1 - Math.exp(-7.2 * dt));
+      camera.position.lerp(desired, 1 - Math.exp(-9.4 * dt));
       camera.lookAt(lookAt);
-      camera.rotation.z += -player.steerInput * speedRatio * 0.045;
-      camera.fov = THREE.MathUtils.lerp(camera.fov, player.boostTimer > 0 ? 100 : 90, 1 - Math.exp(-3 * dt));
+      camera.rotation.z += -player.steerInput * speedRatio * 0.035;
+      camera.fov = THREE.MathUtils.lerp(camera.fov, player.boostTimer > 0 ? 88 : 78, 1 - Math.exp(-3.4 * dt));
       camera.updateProjectionMatrix();
     };
 
@@ -3040,10 +3047,10 @@ export const ArcadeRace3D = ({
   const vehicle = VEHICLES[telemetry.vehicleMode] || VEHICLES.kart;
 
   return (
-    <div className="arcade-race-shell relative -mx-4 overflow-hidden border-y border-white/16 bg-[#10151d] shadow-[0_24px_70px_rgba(0,0,0,0.35)] sm:mx-0 sm:rounded-lg sm:border">
+    <div className="arcade-race-shell relative left-1/2 w-[min(100vw,1440px)] -translate-x-1/2 overflow-hidden border-y border-white/16 bg-[#10151d] shadow-[0_24px_70px_rgba(0,0,0,0.35)] lg:rounded-lg lg:border">
       <canvas
         ref={canvasRef}
-        className="arcade-race-canvas block h-[min(78svh,680px)] min-h-[560px] w-full touch-none"
+        className="arcade-race-canvas block h-[min(88svh,900px)] min-h-[640px] w-full touch-none max-sm:min-h-[520px]"
         style={{ filter: telemetry.boost > 0 ? 'saturate(1.18) contrast(1.08)' : 'none' }}
       />
 
