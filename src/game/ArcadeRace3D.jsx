@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
-  ArrowLeft,
-  ArrowRight,
   ArrowUp,
   ChevronsRight,
   CircleDot,
-  Gauge,
+  Dumbbell,
   Plane,
   RotateCcw,
   Shield,
@@ -16,6 +14,12 @@ import {
 } from 'lucide-react';
 import * as THREE from 'three';
 import raceBackdrop from '../assets/game/comeback-city-race-backdrop-v2.png';
+import {
+  CAMERA_PRESETS,
+  CurrencyStack,
+  GAME_STATUS,
+  VISUAL_PALETTE,
+} from './comebackCityVisuals.jsx';
 import {
   COMMON_BOX_ITEMS,
   getItemDefinition,
@@ -55,7 +59,7 @@ const VEHICLES = {
     brake: 54,
     boostMax: 66,
     cameraDistance: 38,
-    cameraHeight: 12.2,
+    cameraHeight: 11.2,
     driftCharge: 1.08,
     driftGrip: 5.6,
     driftSlip: 9.5,
@@ -73,7 +77,7 @@ const VEHICLES = {
     brake: 42,
     boostMax: 64,
     cameraDistance: 40,
-    cameraHeight: 13,
+    cameraHeight: 12.5,
     driftCharge: 0.94,
     driftGrip: 3.2,
     driftSlip: 13,
@@ -185,7 +189,7 @@ const TRACK_THEME = {
     fog: '#bdf6ff',
     ground: '#5fa56c',
     horizon: '#6ed3ef',
-    sky: '#f2b36a',
+    sky: '#59c6ed',
   },
 };
 
@@ -430,10 +434,17 @@ const createVehicleModel = ({ accent = '#2cc8ff', color = '#ef4334', scale = 1, 
   const group = new THREE.Group();
   group.scale.setScalar(scale);
 
-  const bodyMat = createBasicMaterial(color, { emissive: color, emissiveIntensity: 0.08 });
-  const accentMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.36 });
-  const darkMat = createBasicMaterial('#111827');
+  const chassis = color || VISUAL_PALETTE.redKart;
+  const glow = accent || VISUAL_PALETTE.cyan;
+  const bodyMat = createBasicMaterial(chassis, { emissive: chassis, emissiveIntensity: 0.1 });
+  const accentMat = createBasicMaterial(glow, { emissive: glow, emissiveIntensity: 0.48 });
+  const darkMat = createBasicMaterial(VISUAL_PALETTE.tire);
+  const cockpitMat = createBasicMaterial('#202837');
   const trimMat = createBasicMaterial('#f6fbff');
+  const headlightMat = createBasicMaterial(VISUAL_PALETTE.cyan, {
+    emissive: VISUAL_PALETTE.cyan,
+    emissiveIntensity: 0.78,
+  });
   const suitMat = createBasicMaterial(suit);
 
   const addBox = (size, position, material = bodyMat) => {
@@ -445,47 +456,67 @@ const createVehicleModel = ({ accent = '#2cc8ff', color = '#ef4334', scale = 1, 
     return mesh;
   };
 
-  addBox({ x: 5.6, y: 1.25, z: 8.2 }, { y: 1.45, z: 0 }, bodyMat);
-  addBox({ x: 4.2, y: 0.8, z: 4.4 }, { y: 2.25, z: 2.3 }, accentMat);
-  addBox({ x: 3.2, y: 1.75, z: 2.8 }, { y: 3.1, z: -1.35 }, darkMat);
-  addBox({ x: 6.6, y: 0.38, z: 1.1 }, { y: 2.12, z: 4.65 }, trimMat);
-  addBox({ x: 6.4, y: 0.36, z: 0.95 }, { y: 1.16, z: -4.75 }, darkMat);
-  addBox({ x: 2.6, y: 0.36, z: 1.1 }, { y: 2.54, z: 4.78 }, accentMat);
+  addBox({ x: 7.4, y: 1.25, z: 9.8 }, { y: 1.48, z: 0.15 }, bodyMat);
+  addBox({ x: 6.6, y: 0.8, z: 5.1 }, { y: 2.22, z: 2.15 }, bodyMat);
+  addBox({ x: 4.7, y: 1.95, z: 3.5 }, { y: 3.28, z: -1.45 }, cockpitMat);
+  addBox({ x: 7.8, y: 0.46, z: 1.15 }, { y: 2.18, z: 4.95 }, trimMat);
+  addBox({ x: 7.2, y: 0.38, z: 1.05 }, { y: 1.16, z: -5.1 }, darkMat);
+  addBox({ x: 3.4, y: 0.42, z: 1.2 }, { y: 2.62, z: 5.18 }, headlightMat);
+  [-1, 1].forEach((side) => {
+    addBox({ x: 1.35, y: 0.46, z: 1.12 }, { x: side * 2.6, y: 2.46, z: 5.52 }, headlightMat);
+    addBox({ x: 0.58, y: 0.6, z: 6.5 }, { x: side * 4.42, y: 1.95, z: -0.2 }, darkMat);
+    addBox({ x: 0.72, y: 0.46, z: 5.8 }, { x: side * 4.84, y: 2.2, z: 0.35 }, accentMat);
+  });
 
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(3.05, 4.2, 4), bodyMat);
-  nose.position.set(0, 1.48, 5.1);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(3.55, 5.2, 4), bodyMat);
+  nose.position.set(0, 1.55, 5.95);
   nose.rotation.x = Math.PI / 2;
   nose.rotation.y = Math.PI / 4;
   nose.castShadow = true;
   group.add(nose);
 
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.34, 8.2), trimMat);
+  stripe.position.set(0, 2.94, 1.25);
+  stripe.castShadow = true;
+  group.add(stripe);
+
   const driver = new THREE.Group();
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.95, 1.5, 7), suitMat);
-  torso.position.y = 3.85;
-  const helmet = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 0), accentMat);
-  helmet.position.y = 5.0;
-  driver.position.z = -1.7;
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 1.12, 1.65, 7), suitMat);
+  torso.position.y = 4.15;
+  const helmet = new THREE.Mesh(new THREE.DodecahedronGeometry(1.14, 0), accentMat);
+  helmet.position.y = 5.38;
+  driver.position.z = -1.9;
   driver.add(torso, helmet);
   group.add(driver);
 
+  [-1, 1].forEach((side) => {
+    const cage = new THREE.Mesh(new THREE.BoxGeometry(0.34, 3.4, 0.34), darkMat);
+    cage.position.set(side * 1.85, 4.2, -2.2);
+    cage.rotation.z = side * 0.14;
+    group.add(cage);
+  });
+  addBox({ x: 4.2, y: 0.32, z: 0.44 }, { y: 5.72, z: -2.18 }, darkMat);
+
   const wheelGroup = new THREE.Group();
-  const wheelMat = createBasicMaterial('#0b1019');
-  const hubMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.25 });
+  const wheelMat = createBasicMaterial(VISUAL_PALETTE.tire);
+  const hubMat = createBasicMaterial(glow, { emissive: glow, emissiveIntensity: 0.34 });
   const wheels = [];
   [
-    [-3.3, 0.9, -3.0],
-    [3.3, 0.9, -3.0],
-    [-3.3, 0.9, 3.3],
-    [3.3, 0.9, 3.3],
+    [-4.4, 1.02, -3.55],
+    [4.4, 1.02, -3.55],
+    [-4.4, 1.02, 3.65],
+    [4.4, 1.02, 3.65],
   ].forEach(([x, y, z]) => {
     const wheel = new THREE.Group();
     wheel.position.set(x, y, z);
     wheel.userData.front = z > 0;
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 1.15, 12), wheelMat);
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(1.62, 1.62, 1.48, 14), wheelMat);
     tire.rotation.z = Math.PI / 2;
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.28, 8), hubMat);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.64, 0.64, 1.62, 9), hubMat);
     hub.rotation.z = Math.PI / 2;
-    wheel.add(tire, hub);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.11, 5, 18), hubMat);
+    rim.rotation.y = Math.PI / 2;
+    wheel.add(tire, hub, rim);
     wheelGroup.add(wheel);
     wheels.push(wheel);
   });
@@ -909,7 +940,7 @@ export const ArcadeRace3D = ({
 
     const addBackdrop = (position, rotationY = 0) => {
       const backdrop = new THREE.Mesh(
-        new THREE.PlaneGeometry(440, 204),
+        new THREE.PlaneGeometry(720, 232),
         new THREE.MeshBasicMaterial({
           depthWrite: false,
           fog: false,
@@ -930,11 +961,12 @@ export const ArcadeRace3D = ({
     const trackSpanZ = bounds.maxZ - bounds.minZ;
     const trackCenterX = (bounds.minX + bounds.maxX) / 2;
     const trackCenterZ = (bounds.minZ + bounds.maxZ) / 2;
-    const backdropX = Math.max(230, trackSpanX / 2 + compiled.roadWidth + 95);
-    const backdropZ = Math.max(220, trackSpanZ / 2 + compiled.roadWidth + 110);
-    addBackdrop(new THREE.Vector3(trackCenterX, 98, trackCenterZ + backdropZ), 0);
-    addBackdrop(new THREE.Vector3(trackCenterX + backdropX, 98, trackCenterZ), Math.PI / 2);
-    addBackdrop(new THREE.Vector3(trackCenterX - backdropX, 98, trackCenterZ), -Math.PI / 2);
+    const backdropX = Math.max(270, trackSpanX / 2 + compiled.roadWidth + 125);
+    const backdropZ = Math.max(250, trackSpanZ / 2 + compiled.roadWidth + 135);
+    addBackdrop(new THREE.Vector3(trackCenterX, 104, trackCenterZ + backdropZ), 0);
+    addBackdrop(new THREE.Vector3(trackCenterX, 104, trackCenterZ - backdropZ), Math.PI);
+    addBackdrop(new THREE.Vector3(trackCenterX + backdropX, 104, trackCenterZ), Math.PI / 2);
+    addBackdrop(new THREE.Vector3(trackCenterX - backdropX, 104, trackCenterZ), -Math.PI / 2);
 
     const groundMat = createBasicMaterial(compiled.grass || theme.ground || '#79c96d');
     const ground = new THREE.Mesh(
@@ -1519,7 +1551,7 @@ export const ArcadeRace3D = ({
     const playerVehicle = createVehicleModel({
       accent: '#46d9ef',
       color: '#ef4334',
-      scale: 1.05,
+      scale: 1.12,
       suit: profile.avatar?.suit || '#202837',
     });
     playerVehicle.setMode(race.player.vehicleMode);
@@ -1556,6 +1588,7 @@ export const ArcadeRace3D = ({
     let lastLocalCommand = 0;
     let jumpQueued = false;
     let reportedFinish = false;
+    const raceViewport = { height: 1, mobile: false, width: 1 };
 
     if (playtest.enabled) {
       window.__racePlaytestEvents = [];
@@ -1576,6 +1609,9 @@ export const ArcadeRace3D = ({
 
     const fitRenderer = () => {
       const rect = canvas.getBoundingClientRect();
+      raceViewport.width = Math.max(1, rect.width || 1);
+      raceViewport.height = Math.max(1, rect.height || 1);
+      raceViewport.mobile = raceViewport.width / raceViewport.height < 0.74;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const width = Math.max(1, Math.floor(rect.width * dpr));
       const height = Math.max(1, Math.floor(rect.height * dpr));
@@ -2407,13 +2443,18 @@ export const ArcadeRace3D = ({
       }
 
       if (!isPlane) {
-        const edge = clamp((nearest.distance - compiled.roadWidth * 0.42) / (compiled.roadWidth * 0.42), 0, 1);
+        const softLimit = compiled.roadWidth * 0.48;
+        const hardLimit = compiled.roadWidth * (player.vehicleMode === 'hover' ? 0.68 : 0.6);
+        const edge = clamp((nearest.distance - softLimit) / Math.max(1, hardLimit - softLimit), 0, 1);
         if (edge > 0 && player.shieldTimer <= 0 && player.jumpHeight <= 0.05) {
-          player.velocity.addScaledVector(nearest.normal, -edge * 8.2 * dt);
+          player.velocity.addScaledVector(nearest.normal, -edge * 24 * dt);
+          player.velocity.multiplyScalar(1 - edge * 0.16);
         }
-        if (nearest.distance > compiled.roadWidth * 0.86 && player.jumpHeight <= 0.05) {
-          player.position.copy(nearest.point).addScaledVector(nearest.normal, compiled.roadWidth * 0.86);
-          player.velocity.multiplyScalar(0.72);
+        if (nearest.distance > hardLimit && player.jumpHeight <= 0.05) {
+          player.position.copy(nearest.point).addScaledVector(nearest.normal, hardLimit);
+          const outwardSpeed = player.velocity.dot(nearest.normal);
+          if (outwardSpeed > 0) player.velocity.addScaledVector(nearest.normal, -outwardSpeed * 1.15);
+          player.velocity.multiplyScalar(0.58);
         }
       }
 
@@ -2812,13 +2853,20 @@ export const ArcadeRace3D = ({
       const right = new THREE.Vector3(forward.z, 0, -forward.x);
       const speedRatio = clamp(player.velocity.length() / vehicle.maxSpeed, 0, 1);
       const altitude = isPlane ? player.flightAltitude : player.jumpHeight;
-      const chaseDistance = vehicle.cameraDistance + speedRatio * (isPlane ? 4.5 : 2.5);
+      const chaseDistance = isPlane
+        ? vehicle.cameraDistance + speedRatio * 4.5
+        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.distance : vehicle.cameraDistance + 8) +
+          speedRatio * (raceViewport.mobile ? 2.2 : 4.5);
       const chaseHeight =
         isPlane
           ? altitude + vehicle.cameraHeight + speedRatio * 1.5
-          : vehicle.cameraHeight + speedRatio * 1.2 + altitude * 0.22;
-      const lookAhead = isPlane ? 24 + speedRatio * 8 : 12 + speedRatio * 5;
-      const lookHeight = isPlane ? altitude + 1.2 : 2.6 + altitude * 0.14;
+          : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.height : vehicle.cameraHeight + 5.4) +
+            speedRatio * 1.5 +
+            altitude * 0.18;
+      const lookAhead = isPlane
+        ? 24 + speedRatio * 8
+        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.lookAhead + 4 : 34) + speedRatio * 8;
+      const lookHeight = isPlane ? altitude + 1.2 : (raceViewport.mobile ? 3 : 5.5) + altitude * 0.12;
       const desired = player.position
         .clone()
         .addScaledVector(forward, -chaseDistance)
@@ -2836,7 +2884,17 @@ export const ArcadeRace3D = ({
       camera.position.lerp(desired, 1 - Math.exp(-9.4 * dt));
       camera.lookAt(lookAt);
       camera.rotation.z += -player.steerInput * speedRatio * 0.035;
-      camera.fov = THREE.MathUtils.lerp(camera.fov, player.boostTimer > 0 ? 88 : 78, 1 - Math.exp(-3.4 * dt));
+      camera.fov = THREE.MathUtils.lerp(
+        camera.fov,
+        player.boostTimer > 0
+          ? raceViewport.mobile
+            ? 78
+            : 74
+          : raceViewport.mobile
+          ? CAMERA_PRESETS.mobileChase.fov
+          : 68,
+        1 - Math.exp(-3.4 * dt)
+      );
       camera.updateProjectionMatrix();
     };
 
@@ -3044,8 +3102,6 @@ export const ArcadeRace3D = ({
       : heldDefinition?.category === 'vehicle-state'
       ? Plane
       : Sparkles;
-  const vehicle = VEHICLES[telemetry.vehicleMode] || VEHICLES.kart;
-
   return (
     <div className="arcade-race-shell relative left-1/2 w-[min(100vw,1440px)] -translate-x-1/2 overflow-hidden border-y border-white/16 bg-[#10151d] shadow-[0_24px_70px_rgba(0,0,0,0.35)] lg:rounded-lg lg:border">
       <canvas
@@ -3068,79 +3124,51 @@ export const ArcadeRace3D = ({
         />
       )}
 
-      <div className="pointer-events-none absolute left-3 right-3 top-3 grid gap-2 sm:left-4 sm:right-auto sm:w-[360px]">
-        <div className="arcade-hud-panel border border-white/18 bg-[#10151d]/[0.88] p-2.5 text-white shadow-[0_14px_34px_rgba(0,0,0,0.32)] backdrop-blur-md">
-          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
-            <div className="grid h-10 w-10 place-items-center border-2 border-[#2cc8ff] bg-[#2cc8ff]/15 text-[#2cc8ff]">
-              <Gauge size={20} />
+      <div className="pointer-events-none absolute left-3 top-3 w-[min(222px,calc(100vw-154px))] sm:left-4 sm:w-[320px]">
+        <div className="race-objective-card p-2.5 text-white backdrop-blur-md">
+          <div className="grid grid-cols-[46px_1fr] items-center gap-2.5">
+            <div className="grid h-11 w-11 place-items-center rounded-lg border-2 border-[#80ff62] bg-[#80ff62]/15 text-[#80ff62] shadow-[0_0_18px_rgba(128,255,98,0.22)]">
+              <Dumbbell size={22} strokeWidth={2.6} />
             </div>
             <div className="min-w-0">
-              <div className="font-mono text-[8px] font-black uppercase leading-none tracking-[0.16em] text-white/58">
-                {track.shortName || track.name}
+              <div className="font-mono text-[8px] font-black uppercase leading-none tracking-[0.16em] text-white/62">
+                Next Objective
               </div>
-              <div className="mt-1 truncate font-mono text-sm font-black uppercase leading-none text-white">
-                Lap {telemetry.lap}/{track.laps} / {ordinal(telemetry.place)}
+              <div className="mt-1 truncate font-mono text-[13px] font-black leading-none text-white">
+                {GAME_STATUS.nextObjective.replace('Gym', '')}
+                <span className="text-[#80ff62]">Gym</span>
               </div>
-            </div>
-            <div className="text-right font-mono text-[18px] font-black leading-none text-[#ffd34f] tabular-nums">
-              {telemetry.speed}
-              <div className="mt-0.5 text-[7px] uppercase tracking-[0.14em] text-white/48">mph</div>
+              <div className="mt-1 font-mono text-[13px] font-black leading-none text-[#9bff4f]">
+                {GAME_STATUS.nextDistance}
+              </div>
             </div>
           </div>
           <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-2">
             <div className="h-2 border border-white/14 bg-black/32">
               <div
-                className="h-full bg-[#ffd34f] transition-all"
-                style={{ width: `${clamp((telemetry.drift / 2.75) * 100, 0, 100)}%` }}
+                className="h-full bg-[#9bff4f] transition-all"
+                style={{ width: `${clamp((telemetry.drift / 2.75) * 100, 12, 100)}%` }}
               />
             </div>
             <div className="font-mono text-[8px] font-black uppercase tracking-[0.12em] text-white/56">
-              Drift
+              Route
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-1 font-mono text-[8px] uppercase tracking-[0.08em] text-white/58">
-            {[0, 1, 2].map((index) => (
-              <div key={index} className="truncate">
-                L{index + 1} <span className="text-white">{formatTime(telemetry.lapSplits[index])}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-4 gap-2">
-          <div className="arcade-hud-panel border border-white/16 bg-[#10151d]/[0.82] px-2 py-2 text-center font-mono text-white backdrop-blur-md">
-            <div className="text-[8px] uppercase tracking-[0.14em] text-white/52">Bananas</div>
-            <div className="mt-1 text-sm font-black text-[#ffd34f]">{telemetry.bananas}</div>
-          </div>
-          <div className="arcade-hud-panel border border-white/16 bg-[#10151d]/[0.82] px-2 py-2 text-center font-mono text-white backdrop-blur-md">
-            <div className="text-[8px] uppercase tracking-[0.14em] text-white/52">Vehicle</div>
-            <div className="mt-1 text-sm font-black text-[#2cc8ff]">{vehicle.label}</div>
-          </div>
-          <div className="arcade-hud-panel border border-white/16 bg-[#10151d]/[0.82] px-2 py-2 text-center font-mono text-white backdrop-blur-md">
-            <div className="text-[8px] uppercase tracking-[0.14em] text-white/52">Time</div>
-            <div className="mt-1 text-sm font-black">{formatTime(telemetry.time)}</div>
-          </div>
-          <div className="arcade-hud-panel border border-white/16 bg-[#10151d]/[0.82] px-2 py-2 text-center font-mono text-white backdrop-blur-md">
-            <div className="text-[8px] uppercase tracking-[0.14em] text-white/52">
-              {telemetry.vehicleMode === 'plane' ? 'Alt' : 'Jump'}
-            </div>
-            <div className="mt-1 text-sm font-black text-[#ffd34f]">
-              {telemetry.vehicleMode === 'plane'
-                ? Math.round(telemetry.altitude)
-                : telemetry.jump > 0
-                  ? Math.round(telemetry.jump)
-                  : '--'}
-            </div>
+          <div className="mt-1 flex justify-between gap-2 font-mono text-[8px] uppercase tracking-[0.1em] text-white/55">
+            <span>{track.shortName || track.name}</span>
+            <span>Lap {telemetry.lap}/{track.laps}</span>
+            <span>{ordinal(telemetry.place)}</span>
           </div>
         </div>
       </div>
 
-      <div className="pointer-events-none absolute right-3 top-3 grid w-[144px] gap-2 text-white sm:right-4">
+      <div className="pointer-events-none absolute right-3 top-3 grid w-[116px] gap-2 text-white sm:right-4 sm:w-[144px]">
+        <CurrencyStack />
         <button
           type="button"
           onClick={() => queueLocalCommand('item')}
           disabled={!telemetry.heldBalloon}
-          className="arcade-hud-panel pointer-events-auto grid min-h-[72px] border border-white/18 bg-[#10151d]/[0.88] p-2 text-left shadow-[0_14px_34px_rgba(0,0,0,0.32)] backdrop-blur-md transition-opacity disabled:opacity-50"
+          className="arcade-hud-panel pointer-events-auto hidden min-h-[72px] border border-white/18 bg-[#10151d]/[0.88] p-2 text-left shadow-[0_14px_34px_rgba(0,0,0,0.32)] backdrop-blur-md transition-opacity disabled:opacity-50 sm:grid"
           title="Use balloon item"
         >
           <div className="flex items-center gap-2">
@@ -3169,7 +3197,7 @@ export const ArcadeRace3D = ({
           </div>
         </button>
 
-        <div className="grid grid-cols-3 gap-1">
+        <div className="hidden grid-cols-3 gap-1 sm:grid">
           <button
             type="button"
             onClick={() => queueLocalCommand('upgrade-tier')}
@@ -3202,7 +3230,7 @@ export const ArcadeRace3D = ({
         <button
           type="button"
           onClick={() => queueLocalCommand('vehicle')}
-          className="arcade-hud-panel pointer-events-auto flex h-10 items-center justify-center gap-2 border border-white/18 bg-[#10151d]/[0.88] px-2 font-mono text-[9px] font-black uppercase tracking-[0.12em] text-white backdrop-blur-md"
+          className="arcade-hud-panel pointer-events-auto hidden h-10 items-center justify-center gap-2 border border-white/18 bg-[#10151d]/[0.88] px-2 font-mono text-[9px] font-black uppercase tracking-[0.12em] text-white backdrop-blur-md sm:flex"
           title="Change vehicle"
         >
           <Plane size={13} />
@@ -3222,32 +3250,16 @@ export const ArcadeRace3D = ({
         </div>
       )}
 
-      <div className="arcade-touch-controls pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+18px)] z-30 flex items-end justify-between px-3 sm:hidden">
-        <div className="pointer-events-auto flex gap-2">
-          <button
-            type="button"
-            className="arcade-touch-button"
-            onPointerDown={press({ steer: -1 })}
-            onPointerUp={release({ steer: 0 })}
-            onPointerCancel={release({ steer: 0 })}
-            aria-label="Steer left"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <button
-            type="button"
-            className="arcade-touch-button"
-            onPointerDown={press({ steer: 1 })}
-            onPointerUp={release({ steer: 0 })}
-            onPointerCancel={release({ steer: 0 })}
-            aria-label="Steer right"
-          >
-            <ArrowRight size={20} />
-          </button>
+      <div className="arcade-touch-controls pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+18px)] z-30 flex items-end justify-between px-3">
+        <div className="pointer-events-none">
+          <div className="race-minimap">
+            <span className="race-minimap__route" />
+            <span className="race-minimap__dot" />
+          </div>
         </div>
 
         <div className="pointer-events-auto flex items-end gap-2">
-          <div className="grid gap-2">
+          <div className="hidden gap-2">
             <button
               type="button"
               className="arcade-touch-button"

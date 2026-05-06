@@ -24,6 +24,7 @@ import {
   upgradeCost,
 } from './raceProgression.js';
 import { ArcadeRace3D } from './ArcadeRace3D.jsx';
+import { KartDesignSheet } from './comebackCityVisuals.jsx';
 import { BANKED_ITEMS, COMMON_BOX_ITEMS, ITEM_META } from './raceItems.js';
 import { RACE_TRACKS } from './raceTracks.js';
 
@@ -1737,7 +1738,17 @@ export const RaceScreen = ({ readOnly = false, setState, state }) => {
     <div className="space-y-6">
       <div ref={raceStageRef} className="grid gap-4 scroll-mt-16">
         <div className="space-y-3">
-          <div className="grid gap-2 md:grid-cols-3">
+          <ArcadeRace3D
+            command={command}
+            inventory={garage.inventory}
+            onFinish={handleFinish}
+            onInventoryUse={consumeInventory}
+            profile={raceProfile || profile}
+            runId={runId}
+            track={track}
+          />
+
+          <div className="mx-auto hidden w-full max-w-6xl gap-2 px-4 sm:grid md:grid-cols-3">
             {RACE_TRACKS.map((item) => {
               const active = item.key === track.key;
               return (
@@ -1770,17 +1781,7 @@ export const RaceScreen = ({ readOnly = false, setState, state }) => {
             })}
           </div>
 
-          <ArcadeRace3D
-            command={command}
-            inventory={garage.inventory}
-            onFinish={handleFinish}
-            onInventoryUse={consumeInventory}
-            profile={raceProfile || profile}
-            runId={runId}
-            track={track}
-          />
-
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-2 px-4">
             <button
               type="button"
               onClick={() => startRace()}
@@ -1807,6 +1808,10 @@ export const RaceScreen = ({ readOnly = false, setState, state }) => {
               label="Pulse"
               onClick={() => issueCommand('rocket')}
             />
+          </div>
+
+          <div className="mx-auto w-full max-w-6xl px-4">
+            <KartDesignSheet profile={profile} />
           </div>
 
           {lastResult && (

@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test:race": "node scripts/race-content-playtest.mjs",
     "test:race:browser": "node scripts/race-browser-playtest.mjs",
+    "test:visual": "node scripts/visual-reference-checks.mjs",
     "deploy:andrew": "npm run build:andrew && npx wrangler pages deploy dist --project-name=comeback-andrew --branch=main --commit-dirty=true",
     "deploy:alexander": "npm run build:alexander && npx wrangler pages deploy dist --project-name=comeback-alexander --branch=main --commit-dirty=true"
   },

@@ -41,7 +41,7 @@ const BASE_DESTINATIONS = [
   {
     key: 'food',
     title: 'Food Court',
-    shortTitle: 'Fuel',
+    shortTitle: 'Food Court',
     icon: 'Utensils',
     route: 'food',
     position: { x: 56, z: -30 },

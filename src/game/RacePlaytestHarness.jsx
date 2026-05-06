@@ -28,6 +28,7 @@ const trackKey = query.get('raceTrack') || RACE_TRACKS[0].key;
 const track = RACE_TRACKS.find((item) => item.key === trackKey) || RACE_TRACKS[0];
 const raceIndex = Number(query.get('raceIndex') || 1);
 const raceMode = query.get('raceMode') || 'free-switch';
+const visualMode = query.get('visual') === '1';
 
 const Harness = () => {
   const [result, setResult] = useState(null);
@@ -55,7 +56,8 @@ const Harness = () => {
 
   return (
     <main className="min-h-screen bg-ink text-bone">
-      <section className="mx-auto max-w-6xl px-4 py-4">
+      <section className={visualMode ? 'min-h-screen' : 'mx-auto max-w-6xl px-4 py-4'}>
+        {!visualMode && (
         <div className="mb-3 flex items-baseline justify-between gap-4">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-gold">
@@ -67,6 +69,7 @@ const Harness = () => {
             {raceMode} / run {raceIndex}
           </div>
         </div>
+        )}
 
         <ArcadeRace3D
           command={null}
@@ -78,12 +81,14 @@ const Harness = () => {
           track={track}
         />
 
+        {!visualMode && (
         <pre
           className="mt-4 max-h-72 overflow-auto border border-bone/[0.08] bg-bone/[0.025] p-3 font-mono text-[11px] text-stone"
           data-testid="race-result"
         >
           {result ? JSON.stringify(result, null, 2) : 'running'}
         </pre>
+        )}
       </section>
     </main>
   );

@@ -115,7 +115,7 @@ export const WorldMode = ({
 
   return (
     <div className="min-h-screen bg-ink text-bone antialiased">
-      <header className="sticky top-0 z-40 border-b border-gold/15 bg-ink/92 backdrop-blur-xl">
+      <header className={`${screen === 'race' ? 'hidden sm:sticky sm:block' : 'sticky'} top-0 z-40 border-b border-gold/15 bg-ink/92 backdrop-blur-xl`}>
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between gap-3 px-4">
           <button
             type="button"
@@ -139,9 +139,9 @@ export const WorldMode = ({
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-5 pb-28">
+      <main className={screen === 'race' ? 'px-0 py-0 pb-0 sm:pb-20' : 'mx-auto max-w-2xl px-4 py-5 pb-28'}>
         {notice}
-        <div className="mb-4 flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-stone">
+        <div className={screen === 'race' ? 'mx-auto mb-3 mt-3 hidden max-w-6xl items-center gap-2 px-4 text-[10px] font-mono uppercase tracking-[0.2em] text-stone sm:flex' : 'mb-4 flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] text-stone'}>
           <button
             type="button"
             onClick={() => setScreen('home')}
@@ -155,7 +155,7 @@ export const WorldMode = ({
         {renderScreen()}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-gold/15 bg-ink/92 backdrop-blur-xl safe-bottom">
+      <nav className={`${screen === 'race' ? 'hidden sm:block' : 'block'} fixed bottom-0 inset-x-0 z-40 border-t border-gold/15 bg-ink/92 backdrop-blur-xl safe-bottom`}>
         <div
           className="mx-auto grid h-16 max-w-2xl px-2"
           style={{ gridTemplateColumns: `repeat(${destinations.length}, minmax(0, 1fr))` }}

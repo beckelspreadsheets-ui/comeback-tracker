@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CornerDownRight } from 'lucide-react';
 import * as THREE from 'three';
 import citySkylineBackdrop from '../assets/game/comeback-city-race-backdrop-v2.png';
+import { CAMERA_PRESETS, VISUAL_PALETTE } from './comebackCityVisuals.jsx';
 import { GAME_AVATARS } from './gameProfile.js';
 import { WORLD_BOUNDS } from './worldConfig.js';
 
@@ -43,7 +44,7 @@ const CITY_STYLE = {
   fog: '#c9f4f8',
   horizon: '#bdefff',
   ink: '#10151d',
-  rim: '#74f1ff',
+  rim: VISUAL_PALETTE.cyan,
   sky: '#66c8ed',
   skyTop: '#4fb5e4',
 };
@@ -197,6 +198,10 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     const animatedClouds = [];
     const animatedBanners = [];
     const animatedDistrictParts = [];
+    const drivableRoutes = destinations.map((destination) => ({
+      destination,
+      entry: toVec3(destination.entry || destination.position),
+    }));
     const keys = new Set();
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -2985,7 +2990,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       renderer.setPixelRatio(renderSize.pixelRatio);
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
-      camera.fov = viewport.mobile ? 68 : 50;
+      camera.fov = viewport.mobile ? 68 : CAMERA_PRESETS.desktopPlaza.fov;
       camera.updateProjectionMatrix();
     };
 
@@ -3096,6 +3101,59 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         collided = true;
       });
       return collided;
+    };
+
+    const constrainToRoadNetwork = (position) => {
+      const current = new THREE.Vector3(position.x, 0, position.z);
+      const plazaRadius = 37;
+      const roadHalfWidth = 11.5;
+      let bestPoint = null;
+      let bestDistance = Infinity;
+
+      const consider = (point) => {
+        const distance = current.distanceTo(point);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestPoint = point;
+        }
+      };
+
+      const plazaOffset = current.clone().sub(PLAZA_CENTER);
+      plazaOffset.y = 0;
+      const plazaDistance = plazaOffset.length();
+      if (plazaDistance <= plazaRadius) return false;
+      consider(PLAZA_CENTER.clone().add(plazaOffset.normalize().multiplyScalar(plazaRadius)));
+
+      for (const route of drivableRoutes) {
+        const start = PLAZA_CENTER;
+        const end = route.entry;
+        const segment = end.clone().sub(start);
+        segment.y = 0;
+        const lengthSq = Math.max(1, segment.lengthSq());
+        const t = clamp(current.clone().sub(start).dot(segment) / lengthSq, 0, 1);
+        const roadPoint = start.clone().add(segment.multiplyScalar(t));
+        const portalRadius = Math.max(route.destination.portalRadius || 13, roadHalfWidth);
+        const allowedRadius = t > 0.78 ? portalRadius + 5.5 : roadHalfWidth;
+        const offset = current.clone().sub(roadPoint);
+        offset.y = 0;
+        const distance = offset.length();
+        if (distance <= allowedRadius) return false;
+        const normal = distance > 0.001 ? offset.normalize() : new THREE.Vector3(0, 0, 1);
+        consider(roadPoint.add(normal.multiplyScalar(allowedRadius)));
+
+        const entryOffset = current.clone().sub(end);
+        entryOffset.y = 0;
+        const entryRadius = portalRadius + 6.5;
+        const entryDistance = entryOffset.length();
+        if (entryDistance <= entryRadius) return false;
+        const entryNormal = entryDistance > 0.001 ? entryOffset.normalize() : new THREE.Vector3(0, 0, 1);
+        consider(end.clone().add(entryNormal.multiplyScalar(entryRadius)));
+      }
+
+      if (!bestPoint) return false;
+      position.x = bestPoint.x;
+      position.z = bestPoint.z;
+      return true;
     };
 
     const animateSign = (sign, active, now, phase = 0) => {
@@ -3296,6 +3354,10 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       if (boundedX !== kartState.position.x) kartState.velocity.x *= -0.24;
       if (boundedZ !== kartState.position.z) kartState.velocity.z *= -0.24;
       kartState.position.set(boundedX, 0, boundedZ);
+      if (constrainToRoadNetwork(kartState.position)) {
+        kartState.velocity.multiplyScalar(0.38);
+        kartState.landPulse = Math.max(kartState.landPulse, 0.28);
+      }
       if (resolveCollisions(kartState.position)) {
         kartState.velocity.copy(previousPosition.sub(kartState.position).multiplyScalar(5.4));
         kartState.landPulse = Math.max(kartState.landPulse, 0.45);
@@ -3392,8 +3454,13 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       kart.position.y =
         0.22 + kartState.height + Math.sin(now / 110) * (0.018 + speedRatio * 0.065);
       kart.rotation.y = kartState.heading;
+      kart.visible =
+        kartState.velocity.length() > 0.9 ||
+        Math.abs(kartState.throttleInput) > 0.05 ||
+        Math.abs(kartState.steerInput) > 0.08;
       kartShadow.position.set(kartState.position.x, 0.34, kartState.position.z);
       kartShadow.rotation.z = -kartState.heading;
+      kartShadow.visible = kart.visible;
       kartShadow.material.opacity = 0.12 + clamp(1 - kartState.height / 18, 0, 1) * 0.18;
       kartState.visualRoll = damp(
         kartState.visualRoll,
@@ -3632,13 +3699,15 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         });
       }
 
-      const baseFov = viewport.mobile ? 68 : 50;
+      const baseFov = viewport.mobile ? 68 : CAMERA_PRESETS.desktopPlaza.fov;
       const targetFov = baseFov + speedRatio * 4 + (kartState.boostTimer > 0 ? 1.6 : 0);
       camera.fov = damp(camera.fov, targetFov, 4.2, dt);
       camera.updateProjectionMatrix();
 
-      const cameraDistance = (viewport.mobile ? 58 : 132) + speedRatio * 10;
-      const cameraHeight = (viewport.mobile ? 28 : 84) + speedRatio * 5;
+      const cameraDistance =
+        (viewport.mobile ? 58 : CAMERA_PRESETS.desktopPlaza.distance * 0.68) + speedRatio * 10;
+      const cameraHeight =
+        (viewport.mobile ? 28 : CAMERA_PRESETS.desktopPlaza.height * 0.82) + speedRatio * 5;
       const sideOffset = new THREE.Vector3(Math.cos(kartState.heading), 0, -Math.sin(kartState.heading)).multiplyScalar(
         -4.8 * kartState.steerInput * speedRatio
       );
@@ -3647,12 +3716,12 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         .addScaledVector(forward, -cameraDistance)
         .add(sideOffset)
         .add(new THREE.Vector3(0, cameraHeight, viewport.mobile ? -3 : -18));
-      const vistaBlend = clamp(1 - kartState.velocity.length() / 12, 0, viewport.mobile ? 0 : 0.95);
+      const vistaBlend = clamp(1 - kartState.velocity.length() / 12, 0, viewport.mobile ? 0.86 : 1);
       if (vistaBlend > 0.02) {
         const vistaCamera = new THREE.Vector3(
           kartState.position.x * (viewport.mobile ? 0.26 : 0.12),
-          viewport.mobile ? 34 : 108,
-          viewport.mobile ? -98 : -226
+          viewport.mobile ? 82 : CAMERA_PRESETS.desktopPlaza.height,
+          viewport.mobile ? -178 : -CAMERA_PRESETS.desktopPlaza.distance
         );
         desiredCamera = desiredCamera.lerp(vistaCamera, vistaBlend);
       }
@@ -3673,9 +3742,11 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       let desiredLookTarget = kartState.position
         .clone()
         .addScaledVector(forward, lookAhead)
-        .add(new THREE.Vector3(0, viewport.mobile ? 4.2 : 13, 0));
+        .add(new THREE.Vector3(0, viewport.mobile ? 4.2 : CAMERA_PRESETS.desktopPlaza.lookHeight * 0.54, 0));
       if (vistaBlend > 0.02) {
-        const vistaLookTarget = PLAZA_CENTER.clone().add(new THREE.Vector3(0, viewport.mobile ? 12 : 24, 6));
+        const vistaLookTarget = PLAZA_CENTER.clone().add(
+          new THREE.Vector3(0, viewport.mobile ? 20 : CAMERA_PRESETS.desktopPlaza.lookHeight, 6)
+        );
         desiredLookTarget = desiredLookTarget.lerp(vistaLookTarget, vistaBlend);
       }
       if (nearbyDestination) {

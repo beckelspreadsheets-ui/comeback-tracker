@@ -17,6 +17,12 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
+import {
+  ComebackCityLogo,
+  CurrencyStack,
+  DISTRICT_VISUALS,
+  DistrictCloseupStrip,
+} from './comebackCityVisuals.jsx';
 import { WORLD_BOUNDS } from './worldConfig.js';
 
 const ICONS = {
@@ -239,14 +245,46 @@ export const HudOverlay = ({
     : null;
   const raceDestination = destinations.find((destination) => destination.key === 'raceway');
   const routeDestination = nearbyDestination || (!activeMission?.complete ? missionDestination : null);
+  const hudDestinations = destinations.filter((destination) => DISTRICT_VISUALS[destination.key]);
   const missionsByDestination = new Map(
     missions.map((mission) => [mission.destinationKey, mission])
   );
 
   return (
     <div className="pointer-events-none absolute inset-0 z-50 overflow-hidden">
-      <div className="absolute left-2 right-2 top-2 flex items-start justify-end gap-2 sm:left-4 sm:right-4 sm:top-4 sm:justify-between">
-        <div className="world-hud-panel hidden min-w-0 w-[278px] flex-none border border-white/18 bg-[#10151d]/[0.9] p-2 text-white shadow-[0_14px_38px_rgba(0,0,0,0.34)] backdrop-blur-md sm:block">
+      <div className="pointer-events-none absolute left-5 top-5 hidden sm:block">
+        <ComebackCityLogo />
+      </div>
+
+      <div className="comeback-slogan-badge pointer-events-none absolute left-1/2 top-[126px] hidden -translate-x-1/2 px-5 py-2 font-mono text-[11px] font-black uppercase tracking-[0.12em] text-white sm:block">
+        Train. Improve. Comeback.
+      </div>
+
+      <div className="world-hud-panel pointer-events-auto absolute left-5 top-[132px] hidden w-[300px] border border-white/18 bg-[#061522]/[0.88] p-2.5 text-white shadow-[0_14px_34px_rgba(0,0,0,0.28)] backdrop-blur-md xl:block">
+        <div className="grid grid-cols-[44px_1fr] items-center gap-2.5">
+          <div className="grid h-11 w-11 place-items-center rounded-full border-2 border-[#46d9ef] bg-[#46d9ef]/15 font-mono text-lg font-black text-white">
+            {profile.level}
+          </div>
+          <div className="min-w-0">
+            <div className="font-mono text-[9px] font-black uppercase tracking-[0.16em] text-white/64">
+              Trainer
+            </div>
+            <div className="mt-1 h-2 border border-white/18 bg-black/34">
+              <div
+                className="h-full bg-[#9bff4f] transition-all duration-500"
+                style={{ width: `${xpPct}%` }}
+              />
+            </div>
+            <div className="mt-1 flex justify-between font-mono text-[8px] uppercase tracking-[0.1em] text-white/58">
+              <span>{profile.currentLevelXp}</span>
+              <span>{profile.nextLevelXp} XP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="absolute left-2 right-2 top-2 flex items-start justify-end gap-2 sm:left-4 sm:right-4 sm:top-4">
+        <div className="world-hud-panel hidden min-w-0 w-[278px] flex-none border border-white/18 bg-[#10151d]/[0.9] p-2 text-white shadow-[0_14px_38px_rgba(0,0,0,0.34)] backdrop-blur-md">
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[9px] font-mono font-black uppercase leading-none tracking-[0.18em] text-[#ffd34f]">
@@ -287,7 +325,8 @@ export const HudOverlay = ({
           </div>
         </div>
 
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 items-start gap-2">
+          <CurrencyStack className="hidden sm:grid" />
           {raceDestination && (
             <button
               type="button"
@@ -309,7 +348,7 @@ export const HudOverlay = ({
         </div>
       </div>
 
-      <div className="absolute left-2 top-2 grid max-w-[min(74vw,286px)] gap-2 sm:left-4 sm:top-[92px] sm:max-w-[350px]">
+      <div className="absolute left-2 top-2 grid max-w-[min(74vw,286px)] gap-2 sm:hidden">
         <div className="world-hud-panel hidden border border-white/18 bg-[#10151d]/[0.94] px-3 py-2 text-white shadow-[0_10px_26px_rgba(0,0,0,0.3)] backdrop-blur-md">
           <div className="flex items-center gap-2 font-mono text-[9px] font-black uppercase leading-none tracking-[0.16em] text-white/62">
             <MapPin size={12} className="text-[#ffd34f]" />
@@ -354,7 +393,7 @@ export const HudOverlay = ({
         <MiniMap
           activeMission={activeMission}
           className="scale-[0.82] origin-bottom-left"
-          destinations={destinations}
+          destinations={hudDestinations}
           nearbyDestination={nearbyDestination}
           onEnter={onEnter}
         />
@@ -364,10 +403,14 @@ export const HudOverlay = ({
         <MiniMap
           activeMission={activeMission}
           className="hidden sm:block"
-          destinations={destinations}
+          destinations={hudDestinations}
           nearbyDestination={nearbyDestination}
           onEnter={onEnter}
         />
+      </div>
+
+      <div className="absolute bottom-[86px] left-1/2 hidden -translate-x-1/2 lg:block">
+        <DistrictCloseupStrip destinations={hudDestinations} onEnter={onEnter} />
       </div>
 
       <div className="absolute inset-x-0 bottom-0 border-t border-white/14 bg-[#10151d]/[0.93] px-2 pb-[calc(env(safe-area-inset-bottom)+7px)] pt-2 backdrop-blur-md sm:left-1/2 sm:right-auto sm:top-auto sm:bottom-4 sm:w-[min(720px,calc(100vw-360px))] sm:-translate-x-1/2 sm:border sm:p-2">
@@ -376,7 +419,7 @@ export const HudOverlay = ({
           Districts
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-none sm:overflow-visible">
-          {destinations.map((destination) => (
+          {hudDestinations.map((destination) => (
             <DestinationButton
               key={destination.key}
               active={nearbyDestination?.key === destination.key}
