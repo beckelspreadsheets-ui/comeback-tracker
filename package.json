@@ -11,6 +11,7 @@
     "build:alexander": "VITE_USER_PRESET=alexander vite build",
     "preview": "vite preview",
     "test:race": "node scripts/race-content-playtest.mjs",
+    "test:race:browser": "node scripts/race-browser-playtest.mjs",
     "deploy:andrew": "npm run build:andrew && npx wrangler pages deploy dist --project-name=comeback-andrew --branch=main --commit-dirty=true",
     "deploy:alexander": "npm run build:alexander && npx wrangler pages deploy dist --project-name=comeback-alexander --branch=main --commit-dirty=true"
   },
@@ -27,6 +28,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
+    "playwright": "^1.59.1",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "vite": "^5.3.1",

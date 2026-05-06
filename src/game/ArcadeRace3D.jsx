@@ -36,6 +36,10 @@ const FLIGHT_MAX_ALTITUDE = 34;
 const UP = new THREE.Vector3(0, 1, 0);
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const wrap01 = (value) => ((value % 1) + 1) % 1;
+const progressDistance = (a, b) => {
+  const gap = Math.abs(wrap01(a) - wrap01(b));
+  return Math.min(gap, 1 - gap);
+};
 const distance2D = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const signedAngleDelta = (target, current) => {
   let delta = target - current;
@@ -162,6 +166,27 @@ const ITEM_COLORS = {
   switchBolt: '#f45b69',
   tideHorn: '#00d4ff',
   warhorn: '#ffb000',
+};
+
+const TRACK_THEME = {
+  'magnet-mine-descent': {
+    fog: '#1a1422',
+    ground: '#211827',
+    horizon: '#1f2937',
+    sky: '#140f1c',
+  },
+  'static-storm-plateau': {
+    fog: '#20284f',
+    ground: '#2b315f',
+    horizon: '#1f2a55',
+    sky: '#18204a',
+  },
+  'tide-pier': {
+    fog: '#bdf6ff',
+    ground: '#5fa56c',
+    horizon: '#6ed3ef',
+    sky: '#f2b36a',
+  },
 };
 
 const VEHICLE_ORDER = ['kart', 'hover', 'plane'];
@@ -798,6 +823,24 @@ export const ArcadeRace3D = ({
     if (!canvas) return undefined;
 
     const compiled = compileTrack3D(track);
+    const query = new URLSearchParams(window.location.search);
+    const playtest = {
+      bananaMax: 0,
+      enabled: query.get('raceAutoplay') === '1',
+      hazardsEncountered: 0,
+      itemBoxesCollected: 0,
+      itemUses: 0,
+      layers: new Set(),
+      locks: 0,
+      mode: query.get('raceMode') || 'free-switch',
+      raceIndex: Number(query.get('raceIndex') || 1),
+      signatureUsed: false,
+      started: false,
+      switchPads: 0,
+      upgrades: 0,
+      vehicles: new Set(),
+      zones: 0,
+    };
     const defaultVehicle = DEFAULT_VEHICLE_BY_STYLE[compiled.raceStyle] || 'kart';
     const race = createRaceState(compiled, profile, defaultVehicle);
     const keys = new Set();
@@ -823,9 +866,10 @@ export const ArcadeRace3D = ({
       'Space',
     ]);
 
+    const theme = TRACK_THEME[compiled.key] || {};
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#59c6ed');
-    scene.fog = new THREE.Fog('#bdf6ff', 180, 520);
+    scene.background = new THREE.Color(theme.sky || '#59c6ed');
+    scene.fog = new THREE.Fog(theme.fog || '#bdf6ff', 180, 520);
 
     const camera = new THREE.PerspectiveCamera(90, 1, 0.25, 520);
     const renderer = new THREE.WebGLRenderer({
@@ -892,7 +936,7 @@ export const ArcadeRace3D = ({
     addBackdrop(new THREE.Vector3(trackCenterX + backdropX, 98, trackCenterZ), Math.PI / 2);
     addBackdrop(new THREE.Vector3(trackCenterX - backdropX, 98, trackCenterZ), -Math.PI / 2);
 
-    const groundMat = createBasicMaterial(compiled.grass || '#79c96d');
+    const groundMat = createBasicMaterial(compiled.grass || theme.ground || '#79c96d');
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(Math.max(500, trackSpanX + 210), Math.max(460, trackSpanZ + 220), 24, 24),
       groundMat
@@ -1245,6 +1289,162 @@ export const ArcadeRace3D = ({
         addWindows(x, z, w, d, h);
       };
 
+      const treeMat = createBasicMaterial('#4cae50');
+      const trunkMat = createBasicMaterial('#8a5a2f');
+
+      const addLandmarkLabel = (group, label, color) => {
+        const sprite = createBillboardText(label, color);
+        sprite.position.y = 18;
+        sprite.scale.set(12, 3, 1);
+        group.add(sprite);
+      };
+
+      const addTrackLandmark = (item, index) => {
+        const position = toWorldPoint(item);
+        const width = Math.max(12, (item.w || 90) * TRACK_SCALE);
+        const depth = Math.max(10, (item.h || item.w || 90) * TRACK_SCALE * 0.45);
+        const height = Math.max(14, (item.h || 120) * TRACK_SCALE * 0.72);
+        const color = item.color || compiled.accent || '#2cc8ff';
+        const accentMat = createBasicMaterial(color, { emissive: color, emissiveIntensity: 0.32 });
+        const darkMat = createBasicMaterial('#111827');
+        const lightMat = createBasicMaterial('#f7fbff', { emissive: '#ffd34f', emissiveIntensity: 0.32 });
+        const metalMat = createBasicMaterial('#6b7280', { metalness: 0.18, roughness: 0.48 });
+        const group = new THREE.Group();
+        group.position.copy(position);
+
+        if (item.kind === 'lighthouse') {
+          const tower = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.11, width * 0.16, height, 18), lightMat);
+          tower.position.y = height / 2;
+          const bandA = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.17, width * 0.17, 2.2, 18), accentMat);
+          bandA.position.y = height * 0.32;
+          const bandB = bandA.clone();
+          bandB.position.y = height * 0.62;
+          const lantern = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.2, width * 0.2, 5, 16), accentMat);
+          lantern.position.y = height + 3;
+          const roof = new THREE.Mesh(new THREE.ConeGeometry(width * 0.24, 6, 16), darkMat);
+          roof.position.y = height + 8.4;
+          const beam = new THREE.Mesh(
+            new THREE.BoxGeometry(width * 1.5, 0.45, 5.2),
+            new THREE.MeshBasicMaterial({ color: '#fff7b7', opacity: 0.34, transparent: true })
+          );
+          beam.position.set(width * 0.72, height + 3.1, 0);
+          group.add(tower, bandA, bandB, lantern, roof, beam);
+          addLandmarkLabel(group, 'LIGHTHOUSE', color);
+        } else if (item.kind === 'boats') {
+          for (let boat = 0; boat < 5; boat += 1) {
+            const boatGroup = new THREE.Group();
+            const hull = new THREE.Mesh(new THREE.BoxGeometry(11, 2.4, 4.8), createBasicMaterial(boat % 2 ? '#ef4444' : '#2cc8ff'));
+            const bow = new THREE.Mesh(new THREE.ConeGeometry(2.5, 4.2, 4), hull.material);
+            const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 10, 6), darkMat);
+            const sail = new THREE.Mesh(
+              new THREE.BoxGeometry(0.18, 5.6, 3.8),
+              new THREE.MeshBasicMaterial({ color: '#fff7da', opacity: 0.82, transparent: true })
+            );
+            bow.position.z = 4.2;
+            bow.rotation.x = Math.PI / 2;
+            mast.position.y = 5.5;
+            sail.position.set(0.2, 5.2, 1.2);
+            boatGroup.add(hull, bow, mast, sail);
+            boatGroup.position.set((boat - 2) * 14, 1.5 + Math.sin(boat) * 0.4, (boat % 2) * 8 - 4);
+            boatGroup.rotation.y = boat % 2 ? 0.34 : -0.28;
+            group.add(boatGroup);
+          }
+          addLandmarkLabel(group, 'HARBOR', color);
+        } else if (item.kind === 'market') {
+          for (let stall = 0; stall < 6; stall += 1) {
+            const stallGroup = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(9.5, 5.2, 8), blockMats[(stall + index) % blockMats.length]);
+            const awning = new THREE.Mesh(new THREE.BoxGeometry(10.6, 1, 8.8), accentMat);
+            const laundry = new THREE.Mesh(
+              new THREE.BoxGeometry(7, 0.16, 3.5),
+              createBasicMaterial(stall % 2 ? '#f7fbff' : '#f45b69')
+            );
+            body.position.y = 2.6;
+            awning.position.y = 5.7;
+            laundry.position.set(0, 7.8, 4.8);
+            stallGroup.add(body, awning, laundry);
+            stallGroup.position.set((stall - 2.5) * 10.5, 0, (stall % 2) * 8 - 4);
+            group.add(stallGroup);
+          }
+          addLandmarkLabel(group, 'FISH MARKET', color);
+        } else if (item.kind === 'island') {
+          const island = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.55, width * 0.7, 4.5, 24), createBasicMaterial('#d9b66f'));
+          const grass = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.5, width * 0.5, 1.1, 24), createBasicMaterial(color));
+          island.position.y = 2.2;
+          grass.position.y = 5;
+          group.add(island, grass);
+          [-0.32, 0.28].forEach((offset) => {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.58, 8, 6), trunkMat);
+            const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(3.2, 0), treeMat);
+            trunk.position.set(offset * width, 9, offset * depth);
+            crown.position.set(offset * width, 14, offset * depth);
+            group.add(trunk, crown);
+          });
+          addLandmarkLabel(group, 'ISLAND', color);
+        } else if (item.kind === 'spire') {
+          const base = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.32, width * 0.42, height * 0.42, 8), darkMat);
+          const spike = new THREE.Mesh(new THREE.ConeGeometry(width * 0.28, height, 8), accentMat);
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(width * 0.38, 0.7, 8, 32), accentMat);
+          base.position.y = height * 0.21;
+          spike.position.y = height * 0.86;
+          ring.position.y = height * 0.66;
+          ring.rotation.x = Math.PI / 2;
+          group.add(base, spike, ring);
+          addLandmarkLabel(group, 'STORM EYE', color);
+        } else if (item.kind === 'mesa') {
+          const mesaBase = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.38, width * 0.52, depth, 9), createBasicMaterial('#7c4a2d'));
+          const top = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.5, width * 0.48, 4.2, 9), accentMat);
+          mesaBase.position.y = depth / 2;
+          top.position.y = depth + 2.1;
+          group.add(mesaBase, top);
+        } else if (item.kind === 'storm') {
+          for (let cloud = 0; cloud < 10; cloud += 1) {
+            const puff = new THREE.Mesh(new THREE.DodecahedronGeometry(6 + (cloud % 3) * 1.6, 0), createBasicMaterial('#2f3567'));
+            puff.position.set((cloud - 4.5) * 10, 24 + Math.sin(cloud) * 3, Math.cos(cloud) * 10);
+            group.add(puff);
+          }
+          for (let bolt = 0; bolt < 5; bolt += 1) {
+            const strike = new THREE.Mesh(new THREE.BoxGeometry(0.8, 22, 0.8), accentMat);
+            strike.position.set((bolt - 2) * 18, 10, bolt % 2 ? 8 : -8);
+            strike.rotation.z = bolt % 2 ? 0.24 : -0.18;
+            group.add(strike);
+          }
+          addLandmarkLabel(group, 'LIGHTNING', color);
+        } else if (item.kind === 'drill') {
+          const shaft = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.16, width * 0.16, height * 0.6, 14), metalMat);
+          const bit = new THREE.Mesh(new THREE.ConeGeometry(width * 0.24, height * 0.48, 14), accentMat);
+          const platform = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.5, width * 0.5, 4.4, 18), darkMat);
+          platform.position.y = 2.2;
+          shaft.position.y = height * 0.34;
+          bit.position.y = height * 0.82;
+          group.add(platform, shaft, bit);
+          addLandmarkLabel(group, 'CENTRAL DRILL', color);
+        } else if (item.kind === 'ore') {
+          for (let crystal = 0; crystal < 9; crystal += 1) {
+            const gem = new THREE.Mesh(new THREE.ConeGeometry(2.2 + (crystal % 3) * 0.5, 8 + (crystal % 4), 5), accentMat);
+            gem.position.set((crystal % 3 - 1) * 5, 4 + (crystal % 4), (Math.floor(crystal / 3) - 1) * 5);
+            gem.rotation.z = (crystal - 4) * 0.08;
+            group.add(gem);
+          }
+        } else if (item.kind === 'rails') {
+          [-3.2, 3.2].forEach((offset) => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(width, 0.55, 0.55), metalMat);
+            rail.position.set(0, 0.7, offset);
+            group.add(rail);
+          });
+          for (let sleeper = -Math.floor(width / 8); sleeper <= Math.floor(width / 8); sleeper += 1) {
+            const tie = new THREE.Mesh(new THREE.BoxGeometry(1, 0.35, 9.5), darkMat);
+            tie.position.set(sleeper * 8, 0.35, 0);
+            group.add(tie);
+          }
+        }
+
+        group.userData.kind = item.kind;
+        world.add(group);
+      };
+
+      (compiled.scenery || []).forEach(addTrackLandmark);
+
       const buildingSpots = [
         [left - 18, near + trackSpanZ * 0.1, 11, 13, 18],
         [left - 30, trackCenterZ + trackSpanZ * 0.12, 12, 13, 23],
@@ -1299,8 +1499,6 @@ export const ArcadeRace3D = ({
         world.add(pole, lamp);
       }
 
-      const treeMat = createBasicMaterial('#4cae50');
-      const trunkMat = createBasicMaterial('#8a5a2f');
       for (let i = 0; i < 42; i += 1) {
         const angle = (Math.PI * 2 * i) / 42;
         const radiusX = trackSpanX / 2 + compiled.roadWidth + 72 + (i % 3) * 6;
@@ -1359,6 +1557,23 @@ export const ArcadeRace3D = ({
     let jumpQueued = false;
     let reportedFinish = false;
 
+    if (playtest.enabled) {
+      window.__racePlaytestEvents = [];
+      window.__racePlaytestResult = null;
+    }
+
+    const recordPlaytest = (type, detail = {}) => {
+      if (!playtest.enabled) return;
+      window.__racePlaytestEvents.push({
+        mode: playtest.mode,
+        raceIndex: playtest.raceIndex,
+        time: race.time,
+        trackKey: compiled.key,
+        type,
+        ...detail,
+      });
+    };
+
     const fitRenderer = () => {
       const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1397,6 +1612,7 @@ export const ArcadeRace3D = ({
     let audioContext = null;
     let ambientOscillator = null;
     let ambientGain = null;
+    let ambientNodes = [];
     const cueFrequency = (name = '') =>
       name.includes('lightning') || name.includes('storm')
         ? 180
@@ -1422,14 +1638,36 @@ export const ArcadeRace3D = ({
     const startAmbientAudio = () => {
       const ctx = ensureAudio();
       if (!ctx || ambientOscillator) return;
-      ambientOscillator = ctx.createOscillator();
-      ambientGain = ctx.createGain();
-      ambientOscillator.type = compiled.key === 'static-storm-plateau' ? 'sawtooth' : compiled.key === 'magnet-mine-descent' ? 'square' : 'sine';
-      ambientOscillator.frequency.value =
-        compiled.key === 'static-storm-plateau' ? 64 : compiled.key === 'magnet-mine-descent' ? 48 : 86;
-      ambientGain.gain.value = 0.012;
-      ambientOscillator.connect(ambientGain).connect(ctx.destination);
-      ambientOscillator.start();
+      const voices =
+        compiled.key === 'static-storm-plateau'
+          ? [
+              { frequency: 54, gain: 0.008, type: 'sawtooth' },
+              { frequency: 122, gain: 0.004, type: 'square' },
+              { frequency: 320, gain: 0.002, type: 'triangle' },
+            ]
+          : compiled.key === 'magnet-mine-descent'
+          ? [
+              { frequency: 42, gain: 0.01, type: 'square' },
+              { frequency: 96, gain: 0.004, type: 'sawtooth' },
+              { frequency: 186, gain: 0.002, type: 'triangle' },
+            ]
+          : [
+              { frequency: 72, gain: 0.008, type: 'sine' },
+              { frequency: 188, gain: 0.003, type: 'triangle' },
+              { frequency: 420, gain: 0.0018, type: 'sine' },
+            ];
+      ambientNodes = voices.map((voice) => {
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = voice.type;
+        oscillator.frequency.value = voice.frequency;
+        gain.gain.value = voice.gain;
+        oscillator.connect(gain).connect(ctx.destination);
+        oscillator.start();
+        return { gain, oscillator };
+      });
+      ambientOscillator = ambientNodes[0]?.oscillator || null;
+      ambientGain = ambientNodes[0]?.gain || null;
     };
 
     const playCue = (name, duration = 0.11) => {
@@ -1452,10 +1690,12 @@ export const ArcadeRace3D = ({
       const forward = new THREE.Vector3(Math.sin(racer.heading), 0, Math.cos(racer.heading));
       racer.boostTimer = Math.max(racer.boostTimer || 0, seconds);
       racer.boostTier = Math.max(racer.boostTier || 0, tier);
-      racer.velocity.addScaledVector(forward, impulse);
+      if (racer.velocity) racer.velocity.addScaledVector(forward, impulse);
+      else if (typeof racer.speed === 'number') racer.speed += impulse;
       const vehicle = VEHICLES[racer.vehicleMode || defaultVehicle] || VEHICLES.kart;
-      const limit = vehicle.boostMax + racer.bananas * 0.8;
-      if (racer.velocity.length() > limit) racer.velocity.setLength(limit);
+      const limit = vehicle.boostMax + (racer.bananas || 0) * 0.8;
+      if (racer.velocity && racer.velocity.length() > limit) racer.velocity.setLength(limit);
+      else if (typeof racer.speed === 'number') racer.speed = Math.min(racer.speed, limit);
     };
 
     const setVehicleMode = (racer, nextMode, { force = false } = {}) => {
@@ -1836,6 +2076,130 @@ export const ArcadeRace3D = ({
           setVehicleMode(race.player, lock.vehicle, { force: true });
         }
       });
+    };
+
+    const updateAutoplayPlayer = (dt) => {
+      const player = race.player;
+      if (player.finished) return;
+
+      if (!playtest.started) {
+        playtest.started = true;
+        player.bananas = 16;
+        playtest.bananaMax = player.bananas;
+        player.heldItem = makeHeldItem(compiled.signatureItem?.key || 'boost', 1);
+        player.heldBalloon = player.heldItem;
+        recordPlaytest('start', { signatureItem: player.heldItem.itemKey });
+        upgradeHeldItem();
+        buyRareNextPickup();
+        buyDoubleSlot();
+        playtest.upgrades += 3;
+        recordPlaytest('banana-upgrades', {
+          bananas: player.bananas,
+          doubleSlotUses: player.doubleSlotUses,
+          heldLevel: player.heldItem?.level || 0,
+          rareNextPickup: player.rareNextPickup,
+        });
+      }
+
+      const previousProgress = player.progress;
+      const layerKeys = ['ground', 'air', 'hybrid'].filter((key) => compiled.routeLayers?.[key]);
+      const layerKey = layerKeys[Math.floor(race.time / 0.65) % Math.max(1, layerKeys.length)] || 'ground';
+      const layer = compiled.routeLayers?.[layerKey] || compiled.routeLayers?.ground || {};
+      const requiredVehicle = playtest.mode === 'vehicle-restricted' ? layer.vehiclePreference || 'kart' : layerKey === 'air' ? 'plane' : layerKey === 'hybrid' ? 'hover' : 'kart';
+      if (player.vehicleMode !== requiredVehicle) setVehicleMode(player, requiredVehicle, { force: true });
+      player.layer = layerKey;
+      playtest.layers.add(layerKey);
+      playtest.vehicles.add(player.vehicleMode);
+
+      const progressRate = playtest.mode === 'vehicle-restricted' ? 0.86 : 0.94;
+      player.progress = wrap01(player.progress + dt * progressRate);
+      const sample = compiled.pointAt(player.progress);
+      const normalAtPoint = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x);
+      player.position.copy(sample.point).addScaledVector(normalAtPoint, layerOffset(layerKey, compiled.roadWidth));
+      player.heading = Math.atan2(sample.tangent.x, sample.tangent.z);
+      player.velocity.copy(sample.tangent).multiplyScalar(player.vehicleMode === 'plane' ? 56 : 48);
+      player.flightAltitude = player.vehicleMode === 'plane' ? FLIGHT_CRUISE_ALTITUDE : 0;
+      player.flightPitch = player.vehicleMode === 'plane' ? -0.04 : 0;
+      player.flightRoll = player.vehicleMode === 'plane' ? Math.sin(race.time * 2.2) * 0.16 : 0;
+      player.jumpHeight = player.vehicleMode === 'plane' ? 0 : Math.max(0, Math.sin(race.time * 4) * 0.2);
+      player.steerInput = Math.sin(race.time * 1.8) * 0.22;
+      player.planeBob += dt * 4;
+
+      if (previousProgress > 0.82 && player.progress < 0.18) {
+        const lapTime = race.time - (player.lapStartTime || 0);
+        player.bestLap = player.bestLap ? Math.min(player.bestLap, lapTime) : lapTime;
+        player.lapSplits.push(lapTime);
+        player.lap += 1;
+        player.lapStartTime = race.time;
+        recordPlaytest('lap', { lap: player.lap - 1, lapTime });
+        if (player.lap > compiled.laps) {
+          player.finished = true;
+          player.finishTime = race.time;
+          race.finished = true;
+          return;
+        }
+      }
+
+      if (!playtest.signatureUsed && race.time > 0.2) {
+        playtest.signatureUsed = applyRaceItem(player, player.heldItem, player.heldItem?.level || 1);
+        if (playtest.signatureUsed) {
+          playtest.itemUses += 1;
+          recordPlaytest('signature-item', { itemKey: compiled.signatureItem?.key });
+          player.heldItem = null;
+          player.heldBalloon = null;
+        }
+      }
+
+      if (Math.floor(race.time * 2) % 4 === 0) {
+        const balloon = race.balloons.find((entry) => entry.cooldown <= 0);
+        if (balloon) {
+          collectBalloon(balloon);
+          playtest.itemBoxesCollected += 1;
+          recordPlaytest('item-box', { itemKey: player.heldItem?.itemKey || player.secondaryHeldItem?.itemKey });
+        }
+      }
+
+      if (player.heldItem && race.time > 1.2 && playtest.itemUses < 3) {
+        const used = applyRaceItem(player, player.heldItem, player.heldItem.level || 1);
+        if (used) {
+          playtest.itemUses += 1;
+          recordPlaytest('item-use', { itemKey: player.heldItem.itemKey });
+          player.heldItem = player.secondaryHeldItem || null;
+          player.secondaryHeldItem = null;
+          player.heldBalloon = player.heldItem;
+        }
+      }
+
+      race.bananas.forEach((banana) => {
+        banana.cooldown = Math.max(0, banana.cooldown - dt);
+        if (banana.cooldown <= 0 && progressDistance(banana.progress, player.progress) < 0.02) {
+          player.bananas = clamp(player.bananas + 1, 0, 99);
+          banana.cooldown = 3;
+        }
+      });
+      playtest.bananaMax = Math.max(playtest.bananaMax, player.bananas);
+
+      const nearHazard = race.trackHazards.find(
+        (hazard) => hazard.active !== false && progressDistance(hazard.progress, player.progress) < 0.018
+      );
+      if (nearHazard) playtest.hazardsEncountered += dt;
+      if (compiled.vehicleZones.some((zone) => progressDistance(zone.progress, player.progress) < 0.018)) playtest.zones += 1;
+      if (compiled.vehicleLocks.some((lock) => progressInRange(player.progress, lock.start, lock.end))) playtest.locks += 1;
+      if (race.switchPads.some((pad) => progressDistance(pad.progress, player.progress) < 0.018)) playtest.switchPads += 1;
+
+      player.boostTimer = Math.max(0, player.boostTimer - dt);
+      player.blindTimer = Math.max(0, player.blindTimer - dt);
+      player.controlFlipTimer = Math.max(0, player.controlFlipTimer - dt);
+      player.ghostTimer = Math.max(0, (player.ghostTimer || 0) - dt);
+      player.invincibleTimer = Math.max(0, player.invincibleTimer - dt);
+      player.liftDisabledTimer = Math.max(0, player.liftDisabledTimer - dt);
+      player.lightningRodTimer = Math.max(0, player.lightningRodTimer - dt);
+      player.magnetTimer = Math.max(0, player.magnetTimer - dt);
+      player.polaritySwapTimer = Math.max(0, player.polaritySwapTimer - dt);
+      player.shieldTimer = Math.max(0, player.shieldTimer - dt);
+      player.transformTimer = Math.max(0, player.transformTimer - dt);
+      player.speed = player.velocity.length();
+      applyVehicleIntegration(dt);
     };
 
     const applyHazardEffect = (racer, hazard, dt) => {
@@ -2550,7 +2914,8 @@ export const ArcadeRace3D = ({
         keys.delete('KeyV');
       }
 
-      updatePlayer(dt);
+      if (playtest.enabled) updateAutoplayPlayer(dt);
+      else updatePlayer(dt);
       updateRivals(dt);
       updateTrackEvents(dt);
       updateTrackHazards(dt);
@@ -2589,12 +2954,36 @@ export const ArcadeRace3D = ({
 
       if (race.player.finished && !reportedFinish) {
         reportedFinish = true;
-        onFinishRef.current?.({
+        const result = {
           bestLap: race.player.bestLap,
           place: race.player.rank,
           time: race.player.finishTime,
           trackKey: compiled.key,
-        });
+          ...(playtest.enabled
+            ? {
+                playtest: {
+                  bananaMax: playtest.bananaMax,
+                  hazardsEncountered: Number(playtest.hazardsEncountered.toFixed(2)),
+                  itemBoxesCollected: playtest.itemBoxesCollected,
+                  itemUses: playtest.itemUses,
+                  layers: Array.from(playtest.layers),
+                  locks: playtest.locks,
+                  mode: playtest.mode,
+                  raceIndex: playtest.raceIndex,
+                  signatureUsed: playtest.signatureUsed,
+                  switchPads: playtest.switchPads,
+                  upgrades: playtest.upgrades,
+                  vehicles: Array.from(playtest.vehicles),
+                  zones: playtest.zones,
+                },
+              }
+            : {}),
+        };
+        if (playtest.enabled) {
+          window.__racePlaytestResult = result;
+          recordPlaytest('finish', result);
+        }
+        onFinishRef.current?.(result);
       }
 
       raf = window.requestAnimationFrame(tick);
@@ -2620,7 +3009,8 @@ export const ArcadeRace3D = ({
       window.cancelAnimationFrame(raf);
       window.removeEventListener('keydown', keyDown);
       window.removeEventListener('keyup', keyUp);
-      if (ambientOscillator) ambientOscillator.stop();
+      ambientNodes.forEach((node) => node.oscillator.stop());
+      ambientNodes = [];
       renderer.dispose();
     };
   }, [profile, runId, track]);

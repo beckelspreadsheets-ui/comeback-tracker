@@ -1,80 +1,101 @@
-# Phase 1 Audit
+# Race Architecture Audit
 
 ## Scope Read
 
-The app is a Vite/React tracker with a game layer under `src/game`. The active race entry path is:
+The active race entry path is:
 
 1. `src/App.jsx` routes the `race` screen to `RaceScreen`.
-2. `src/game/RaceScreen.jsx` renders the track selector, garage UI, inventory buttons, results persistence, and active `ArcadeRace3D`.
-3. `src/game/ArcadeRace3D.jsx` owns the playable 3D race loop.
+2. `src/game/RaceScreen.jsx` renders the track selector, garage UI, inventory buttons, results persistence, and `ArcadeRace3D`.
+3. `src/game/ArcadeRace3D.jsx` owns the active Three.js race loop.
 
-There is also an older 2D canvas race implementation inside `RaceScreen.jsx` (`RaceCanvas`). It is not mounted. It still documents useful behavior for hazards and track events, but the active game is `ArcadeRace3D`.
+There is also an older 2D canvas runtime inside `RaceScreen.jsx` (`RaceCanvas`). It is not mounted by the active race screen. The final Diddy Kong Racing-style work is implemented in `ArcadeRace3D` and the race registries.
 
 ## Race File Map
 
 - Tracks: `src/game/raceTracks.js`
-- Item metadata and current item registry: `src/game/raceItems.js`
+- Item metadata and item registry: `src/game/raceItems.js`
 - Hazard metadata registry: `src/game/raceHazards.js`
 - Player/race progression garage economy: `src/game/raceProgression.js`
-- Active 3D race runtime: `src/game/ArcadeRace3D.jsx`
-- Race shell, garage UI, results persistence, legacy 2D runtime: `src/game/RaceScreen.jsx`
-- Profile/avatar stat derivation: `src/game/gameProfile.js`
-- World entry point to raceway: `src/game/worldConfig.js`, `src/game/WorldMode.jsx`, `src/game/WorldScene.jsx`, `src/game/HudOverlay.jsx`
+- Active 3D runtime: `src/game/ArcadeRace3D.jsx`
+- Isolated browser playtest harness: `race-playtest.html`, `src/game/RacePlaytestHarness.jsx`
+- Automated validation: `scripts/race-content-playtest.mjs`, `scripts/race-browser-playtest.mjs`
 
 ## Current Track Data Schema
 
 Tracks are plain objects in `src/game/raceTracks.js` exported as `RACE_TRACKS`.
 
-Required runtime fields used by the active 3D race:
+Core runtime fields:
 
-- `key`: stable result and selection id.
-- `name`, `shortName`, `discipline`, `difficulty`, `difficultyWhy`: UI labels.
-- `laps`: race lap count.
-- `width`: source-space track width used by the legacy 2D runtime and scaled by the 3D runtime.
-- `startProgress`: normalized 0..1 start position on the route.
-- `raceStyle`: controls default vehicle through `DEFAULT_VEHICLE_BY_STYLE` in `ArcadeRace3D`.
-- `accent`, `asphalt`, `curbA`, `curbB`, `grass`, `hazard`, `sky`: presentation colors.
-- `points`: closed route points in 1024x768 source coordinates.
-- `boostPads`: normalized progress values.
-- `itemBoxes`: normalized progress values.
-- `aiRivals`: rival display and behavior data. Active 3D uses `name`, `color`, and `accent`; legacy 2D also uses lane, aggression, risk, patience, and signature data.
+- `key`, `name`, `shortName`, `discipline`, `difficulty`, `difficultyWhy`
+- `laps`, `width`, `startProgress`, `raceStyle`
+- `accent`, `asphalt`, `curbA`, `curbB`, `grass`, `hazard`, `sky`
+- `points`: closed route points in 1024x768 source coordinates
+- `bananaCount` or `bananaPlacements`
+- `boostPads`
+- `layers.ground`, `layers.air`, `layers.hybrid`
+- `switchPads`
+- `vehicleZones`
+- `vehicleLocks`
+- `events`
+- `hazards`
+- `scenery`
+- `signatureItem`
+- `aiRivals`
 
-UI/design fields:
+Layer fields:
 
-- `theme`: `atmosphere`, `time`, `weather`, `music`.
-- `layout`: `philosophy`, `shape`, `keyTurns`, `elevation`, `branches`.
-- `signatureObstacles`: array of strings.
-- `dynamicElements`: array of strings.
-- `riskRewardShortcut`: `name`, `summary`.
-- `powerUpIntel`: `placement`, `signatureUse`, `defensive`, `aggressive`.
-- `aiIntel`: `line`, `shortcuts`, `items`, `signatureMove`.
-- `signatureItem`: `key`, `name`, `summary`, `color`.
-- `shortcuts`: legacy 2D shortcut route data with `key`, `name`, `condition`, `width`, `accent`, `points`.
-- `hazards`: legacy 2D hazard definitions. Active 3D currently does not process these.
-- `scenery`: legacy 2D scenery definitions. Active 3D currently generates generic scenery instead.
+- `name`
+- `vehiclePreference`
+- `aiWeight`
+- `lineOffset`
+- `itemBoxes`
+- optional layer-local `hazards`
+
+Vehicle integration fields:
+
+- `switchPads`: normalized `progress`, `targetVehicle`, `layer`, optional `radius`
+- `vehicleZones`: normalized `progress`, `vehicle`, `action`, `radius`, optional activation fields
+- `vehicleLocks`: normalized `start`, `end`, optional `vehicle`
+
+Event fields:
+
+- `trigger`: `lap`, `time`, `position`, or `player`
+- `action`: `trigger-hazard`, `activate-zone`, `set-lock`, or `rotate-polarity`
+- optional `repeatInterval`, `message`, `flag`, `hazardKey`, `hazardType`, `zoneKey`, `duration`
+
+Scenery fields:
+
+- `kind`: `lighthouse`, `boats`, `market`, `island`, `spire`, `mesa`, `storm`, `drill`, `ore`, or `rails`
+- `x`, `y`, `w`, `h`, `color`
 
 ## Current Item Data Schema
 
-Garage-purchased items live in `src/game/raceProgression.js` as `RACE_ITEMS`:
-
-- `key`
-- `name`
-- `cost`
-- `summary`
+Garage-purchased items live in `src/game/raceProgression.js` as `RACE_ITEMS`.
 
 Runtime item metadata lives in `src/game/raceItems.js`:
 
-- `COMMON_BOX_ITEMS`: current item-box pool keys.
-- `BANKED_ITEMS`: garage inventory keys the player can trigger from the HUD.
-- `LOCAL_ITEMS`: local non-shop item labels, including track signatures.
-- `ITEM_META`: lookup map used by the race UI.
-- `ITEM_DEFINITIONS`: normalized metadata for current items: `key`, `category`, `targetType`, `vehicleRestriction`, `trackRestriction`, `duration`, `cooldown`, `feedback`.
+- `COMMON_BOX_ITEMS`
+- `BANKED_ITEMS`
+- `LOCAL_ITEMS`
+- `ITEM_META`
+- `ITEM_DEFINITIONS`
 
-Active 3D pickup items are still color balloon based in `ArcadeRace3D.jsx`:
+Each `ITEM_DEFINITIONS` entry includes:
 
-- `BALLOON_TYPES` defines `key`, `color`, `icon`, and tier `labels`.
-- `collectBalloon` tiers repeated pickups of the same color up to level 3.
-- `useHeldBalloon` applies hardcoded effects for `red`, `blue`, `green`, `yellow`, and `rainbow`.
+- `key`
+- `name`
+- `category`
+- `targetType`
+- `vehicleRestriction`
+- `trackRestriction`
+- `duration`
+- `cooldown`
+- `rarity`
+- `feedback.activation`
+- `feedback.hit`
+- `feedback.expiration`
+
+Active effects are applied through `applyRaceItem` in `ArcadeRace3D.jsx`. Item boxes choose from the registry, honor vehicle and track restrictions, and support track-specific signature items.
 
 ## Vehicle Switch System
 
@@ -82,85 +103,70 @@ Active vehicle switching is in `ArcadeRace3D.jsx`:
 
 - `VEHICLES` defines `kart`, `hover`, and `plane` handling.
 - `DEFAULT_VEHICLE_BY_STYLE` picks an initial mode from `track.raceStyle`.
-- `cycleVehicle` cycles `kart -> hover -> plane`, resets altitude/jump state, gives a small boost, and calls `playerVehicle.setMode`.
-- Commands reach the runtime through `RaceScreen` buttons, keyboard `KeyC`, or touch controls.
-- Plane-specific flight gates exist in `createRaceState` and `updatePlayer`.
+- `setVehicleMode` handles transform timing, altitude/jump reset, audio cue, and brief invincibility.
+- `cycleVehicle` handles manual switching.
+- `applyVehicleIntegration` handles switch pads, vehicle-only zones, penalties, blocks, and vehicle locks.
+- Items and hazards query `racer.vehicleMode` and use `vehicleMatchesFilter`.
 
-Current limitation: there are no data-driven switch pads, forced zones, switch locks, or vehicle-only route checks yet.
+## Banana Economy
 
-## Banana Collection System
+Bananas are active race currency:
 
-Bananas are active only in `ArcadeRace3D.jsx`:
+- Bananas accumulate during the race and are not reset per lap.
+- `3` bananas upgrades the held item by one tier.
+- `5` bananas guarantees a rare item on the next pickup.
+- `8` bananas arms a one-use second item slot.
+- Hits scatter up to 3 dropped bananas onto the track.
+- Banana Magnet pulls placed and dropped bananas.
+- The HUD shows count, item tier, rare pickup state, second slot state, and upgrade availability.
 
-- `createRaceState` generates 18 bananas procedurally along the compiled route.
-- `updatePlayer` checks distance to each banana, increments `player.bananas`, clamps to 10, and starts an 8.5 second banana cooldown.
-- `addBoost` uses bananas as a speed cap bonus.
-- The HUD displays `telemetry.bananas`.
+## Hazard Architecture
 
-Current limitation: bananas do not persist beyond the active race state, cannot be spent, and are not dropped on hit.
+Hazard metadata lives in `src/game/raceHazards.js`. Track instances live in each track's `hazards` arrays.
 
-## Hazard And Obstacle Architecture
+Active hazard runtime support:
 
-Current active 3D hazards:
-
-- Dropped green balloon traps are stored in `race.droppedHazards`.
-- Trap collision only checks rivals.
-- Boost pads, item balloons, bananas, flight gates, road edges, rival bumping, and off-road slowdown are implemented inline in `updatePlayer`.
-
-Current legacy 2D hazards:
-
-- `RaceCanvas` reads `track.hazards`.
-- Supported types include `wet`, `swing`, `gate`, `gust`, `tremor`, `slam`, `laser`, `conveyor`, and `gravity`.
-- Logic is hardcoded in `updateTrackHazards`.
-
-Foundation added in Phase 1:
-
-- `src/game/raceHazards.js` now records current hazard metadata in `HAZARD_DEFINITIONS`.
+- trigger windows through cycle timing, event pulses, and proximity checks
+- effects including slow, spin, knockback, pull, boost, blind, force-switch, switch-lock, control-flip, set-polarity, and polarity-check
+- vehicle filtering through `vehicleFilter`
+- visual telegraphs through active/inactive hazard meshes
+- remote triggering through environmental items and dynamic events
 
 ## How To Add A New Track
 
 1. Add a new object to `RACE_TRACKS` in `src/game/raceTracks.js`.
 2. Choose a stable `key`, display labels, `laps`, `width`, `startProgress`, and `raceStyle`.
-3. Add route `points` in 1024x768 source coordinates. The active 3D compiler converts them to world coordinates.
-4. Add `boostPads` and `itemBoxes` as normalized progress values.
-5. Add `signatureItem` and register matching item metadata in `src/game/raceItems.js`.
-6. Add `aiRivals`.
-7. Add design/UI fields (`theme`, `layout`, obstacles, dynamic elements, shortcut and AI notes).
-8. If using hazards or shortcuts in the active 3D game, implement the relevant runtime support in `ArcadeRace3D.jsx`. Track hazard data alone is not enough yet.
-9. Run `npm run build` and an automated playtest.
+3. Add closed route `points` in 1024x768 source coordinates.
+4. Add `layers.ground`, `layers.air`, and `layers.hybrid` with item boxes and AI weights.
+5. Add `bananaPlacements` or `bananaCount`.
+6. Add `boostPads`, `switchPads`, `vehicleZones`, `vehicleLocks`, `events`, `hazards`, and `scenery`.
+7. Add `signatureItem` and matching item metadata in `src/game/raceItems.js`.
+8. Add `aiRivals` and any signature behavior supported by `maybeUseRivalSignature`.
+9. Run `npm run test:race`, `npm run test:race:browser`, and `npm run build`.
 
 ## How To Add A New Item
 
-1. If it is shop-purchasable, add it to `RACE_ITEMS` in `src/game/raceProgression.js`.
+1. If shop-purchasable, add it to `RACE_ITEMS` in `src/game/raceProgression.js`.
 2. Add normalized metadata to `ITEM_DEFINITIONS` in `src/game/raceItems.js`.
-3. Add it to `COMMON_BOX_ITEMS`, `BANKED_ITEMS`, or a track `signatureItem` as appropriate.
-4. Add display metadata if it is not already covered by `RACE_ITEMS` or `LOCAL_ITEMS`.
-5. Implement the active effect in `ArcadeRace3D.jsx`. Current active item effects are hardcoded in `useHeldBalloon` and `useBankedItem`.
-6. Add visual/audio feedback hooks when Phase 6 feedback systems exist.
-7. Add tests or an automated playtest path that uses the item.
+3. Add it to `COMMON_BOX_ITEMS`, `BANKED_ITEMS`, or a track `signatureItem`.
+4. Implement or map the effect in `applyRaceItem` in `ArcadeRace3D.jsx`.
+5. Add `ITEM_COLORS` and feedback cue ids when useful.
+6. Add or update content/browser playtest assertions if the item introduces a new mechanic.
 
 ## How To Add A New Hazard Type
 
 1. Add metadata to `HAZARD_DEFINITIONS` in `src/game/raceHazards.js`.
-2. Add hazard instances to a track's `hazards` array in `src/game/raceTracks.js`.
-3. Implement runtime trigger/effect/telegraph behavior in `ArcadeRace3D.jsx`.
-4. Add mesh creation and mesh sync if the hazard needs a visible 3D object.
-5. Verify vehicle filtering, cooldowns, and softlock safety in automated playtests.
+2. Add hazard instances to a track's `hazards` array or a layer-local `hazards` array.
+3. Map the effect in `applyHazardEffect` if it is not already supported.
+4. Add mesh styling in the hazard mesh creation block if the default mesh is not clear enough.
+5. Verify vehicle filtering, cooldowns, event triggering, and softlock safety with both race test scripts.
 
 ## Architectural Blockers
 
-Resolved in Phase 1:
+No known blockers remain for the requested Diddy Kong Racing-style content. The original Phase 1 blockers were resolved by the registry split, data-driven route layers, active 3D hazard consumption, item metadata, vehicle zones/locks/switch pads, banana spending, and dynamic event scheduler.
 
-- Track data no longer lives inside the `RaceScreen` UI component.
-- Item metadata no longer lives inside the `RaceScreen` UI component.
-- Hazard metadata now has a registry file for Phase 2 expansion.
+Remaining quality refinements are non-blocking:
 
-Remaining blockers to address before adding final content:
-
-- Active 3D item effects are still hardcoded by balloon color and banked item key.
-- Active 3D does not consume `track.hazards`, `track.shortcuts`, or `track.scenery`.
-- Vehicle switch behavior is manual only; there are no forced zones, locks, or switch pads.
-- Bananas are capped at 10 and only provide passive speed bonus.
-- AI rivals follow the primary route by progress and do not evaluate route layers.
-- Dynamic track events exist only as hardcoded legacy 2D behavior, not as an active 3D scheduler.
-
+- Replace generated WebAudio cues with authored audio assets.
+- Add more nuanced AI tactical item coordination.
+- Add richer route geometry instead of one compiled centerline plus layer offsets.

@@ -2,6 +2,8 @@
 
 The item system is registry-driven in `src/game/raceItems.js`. Every item includes category, target type, vehicle restriction, track restriction, duration, cooldown, rarity, and feedback cue ids.
 
+The active Three.js browser playtest verifies each track signature item activates in-game and that item boxes, banana upgrades, rare pickup state, and the one-use second slot are exercised during runtime.
+
 ## Roster
 
 | Item | Category | Target | Vehicle | Track | Duration | Balance Notes |
@@ -41,4 +43,3 @@ On hit, the player loses up to 3 bananas. Dropped bananas scatter onto the track
 ## Feedback
 
 Item definitions include activation, hit, and expiration cue ids. The active runtime plays lightweight WebAudio activation/hit cues and keeps the ids available for richer sound assets later.
-

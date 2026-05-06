@@ -2,6 +2,12 @@
 
 All tracks are 3 laps and use three route layers: ground, air, and hybrid. Coordinates use the source 1024x768 route space from `src/game/raceTracks.js`.
 
+Runtime validation:
+
+- `npm run test:race` validates data, item counts, hazards, events, zones, locks, switch pads, and simulated completion.
+- `npm run test:race:browser` runs the active Three.js race in Chromium for 18 races: 3 runs per track in both free-switch and vehicle-restricted modes.
+- Browser playtests verify nonblank canvas rendering, all route layers, kart/plane usage, signature item activation, banana upgrades, item boxes, hazards, zones, locks, and switch pads.
+
 ## Tide Pier
 
 Theme: coastal fishing village at golden hour.
@@ -190,4 +196,3 @@ Dynamic events:
 AI notes:
 
 Drill uses `early-drill` when behind to trigger mine hazards early. AI weighting favors ground/polarity routes and uses air mostly for shortcuts.
-

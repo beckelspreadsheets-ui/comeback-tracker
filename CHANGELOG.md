@@ -63,3 +63,12 @@
 - Verified required track hazards, route layers, item box counts, signatures, item roster, banana counts, events, zones, locks, and switch pads.
 - Added `TRACK_DESIGN.md`, `ITEM_REFERENCE.md`, and this changelog.
 
+## Finish Pass: Runtime Verification and Polish
+
+- Added track-specific 3D scenery rendering for Tide Pier, Static Storm Plateau, and Magnet Mine Descent landmarks.
+- Added an isolated browser playtest harness at `race-playtest.html` and `src/game/RacePlaytestHarness.jsx`.
+- Added `scripts/race-browser-playtest.mjs` and `npm run test:race:browser`.
+- Browser playtests now run 18 Three.js races: 3 runs per track in both free-switch and vehicle-restricted modes.
+- Browser validation checks nonblank canvas rendering, race completion, all route layers, kart/plane usage, signature item activation, item box pickup, banana upgrades, hazards, zones, locks, and switch pads.
+- Fixed AI boost handling so shared boost effects work for racers that use speed-only AI state instead of player velocity vectors.
+- Updated `AUDIT.md` and `BLOCKERS.md` to reflect resolved architecture blockers.
