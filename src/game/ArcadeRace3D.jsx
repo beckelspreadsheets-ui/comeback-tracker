@@ -13,7 +13,6 @@ import {
   Zap,
 } from 'lucide-react';
 import * as THREE from 'three';
-import raceBackdrop from '../assets/game/comeback-city-race-backdrop-v2.png';
 import {
   CAMERA_PRESETS,
   CurrencyStack,
@@ -192,6 +191,59 @@ const TRACK_THEME = {
     sky: '#59c6ed',
   },
 };
+
+const RACE_CITY_DISTRICTS = [
+  {
+    accent: VISUAL_PALETTE.gym,
+    base: '#3ca75b',
+    dark: '#1f5f35',
+    icon: 'dumbbell',
+    label: 'GYM',
+    progress: 0.905,
+    roof: '#e9f7ce',
+    side: 1,
+  },
+  {
+    accent: VISUAL_PALETTE.food,
+    base: '#f28b2e',
+    dark: '#9d4516',
+    icon: 'utensils',
+    label: 'FOOD COURT',
+    progress: 0.838,
+    roof: '#fff0b0',
+    side: -1,
+  },
+  {
+    accent: VISUAL_PALETTE.lab,
+    base: '#8a53df',
+    dark: '#38206f',
+    icon: 'flask',
+    label: 'LAB',
+    progress: 0.878,
+    roof: '#f0e2ff',
+    side: -1,
+  },
+  {
+    accent: VISUAL_PALETTE.clinic,
+    base: '#e64b4b',
+    dark: '#7c202c',
+    icon: 'cross',
+    label: 'CLINIC',
+    progress: 0.954,
+    roof: '#f3ece0',
+    side: -1,
+  },
+  {
+    accent: VISUAL_PALETTE.garage,
+    base: '#2677d8',
+    dark: '#143d78',
+    icon: 'wrench',
+    label: 'GARAGE',
+    progress: 0.825,
+    roof: '#e4f8ff',
+    side: 1,
+  },
+];
 
 const VEHICLE_ORDER = ['kart', 'hover', 'plane'];
 const VEHICLE_LAYER_SCORE = {
@@ -932,41 +984,11 @@ export const ArcadeRace3D = ({
     const world = new THREE.Group();
     scene.add(world);
 
-    const textureLoader = new THREE.TextureLoader();
-    const backdropTexture = textureLoader.load(raceBackdrop);
-    backdropTexture.colorSpace = THREE.SRGBColorSpace;
-    backdropTexture.offset.set(0, 0.18);
-    backdropTexture.repeat.set(1, 0.78);
-
-    const addBackdrop = (position, rotationY = 0) => {
-      const backdrop = new THREE.Mesh(
-        new THREE.PlaneGeometry(720, 232),
-        new THREE.MeshBasicMaterial({
-          depthWrite: false,
-          fog: false,
-          map: backdropTexture,
-          opacity: 0.86,
-          side: THREE.DoubleSide,
-          toneMapped: false,
-          transparent: true,
-        })
-      );
-      backdrop.position.copy(position);
-      backdrop.rotation.y = rotationY;
-      backdrop.renderOrder = -4;
-      world.add(backdrop);
-    };
     const bounds = compiled.bounds;
     const trackSpanX = bounds.maxX - bounds.minX;
     const trackSpanZ = bounds.maxZ - bounds.minZ;
     const trackCenterX = (bounds.minX + bounds.maxX) / 2;
     const trackCenterZ = (bounds.minZ + bounds.maxZ) / 2;
-    const backdropX = Math.max(270, trackSpanX / 2 + compiled.roadWidth + 125);
-    const backdropZ = Math.max(250, trackSpanZ / 2 + compiled.roadWidth + 135);
-    addBackdrop(new THREE.Vector3(trackCenterX, 104, trackCenterZ + backdropZ), 0);
-    addBackdrop(new THREE.Vector3(trackCenterX, 104, trackCenterZ - backdropZ), Math.PI);
-    addBackdrop(new THREE.Vector3(trackCenterX + backdropX, 104, trackCenterZ), Math.PI / 2);
-    addBackdrop(new THREE.Vector3(trackCenterX - backdropX, 104, trackCenterZ), -Math.PI / 2);
 
     const groundMat = createBasicMaterial(compiled.grass || theme.ground || '#79c96d');
     const ground = new THREE.Mesh(
@@ -1122,12 +1144,6 @@ export const ArcadeRace3D = ({
     });
 
     const startSample = compiled.pointAt(compiled.startProgress || 0);
-    const startYaw = Math.atan2(startSample.tangent.x, startSample.tangent.z);
-    const startSign = createBillboardText('Comeback GP', compiled.accent || '#ffd34f');
-    startSign.position.copy(startSample.point.clone().add(new THREE.Vector3(0, 18.5, 0)));
-    startSign.rotation.y = startYaw;
-    world.add(startSign);
-
     for (let lane = -2; lane <= 2; lane += 1) {
       const tile = new THREE.Mesh(
         new THREE.BoxGeometry(2.4, 0.1, compiled.roadWidth / 5),
@@ -1475,7 +1491,7 @@ export const ArcadeRace3D = ({
         world.add(group);
       };
 
-      (compiled.scenery || []).forEach(addTrackLandmark);
+      (compiled.scenery || []).filter((item) => item.kind !== 'island').forEach(addTrackLandmark);
 
       const buildingSpots = [
         [left - 18, near + trackSpanZ * 0.1, 11, 13, 18],
@@ -1490,31 +1506,6 @@ export const ArcadeRace3D = ({
         [trackCenterX + trackSpanX * 0.05, near - 44, 10, 10, 28],
       ];
       buildingSpots.forEach(([x, z, w, d, h], index) => addBuilding(x, z, w, d, h, index));
-
-      [0.06, 0.22, 0.4, 0.6, 0.79].forEach((progress, index) => {
-        const sample = compiled.pointAt(progress);
-        const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x);
-        const side = index % 2 === 0 ? -1 : 1;
-        const position = sample.point.clone().addScaledVector(normal, side * (compiled.roadWidth / 2 + 22));
-        const color = districtColors[index % districtColors.length];
-        const group = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(15, 16 + index * 1.4, 13), blockMats[index % blockMats.length]);
-        const roof = new THREE.Mesh(new THREE.BoxGeometry(17, 1.4, 14.5), roofMats[(index + 1) % roofMats.length]);
-        const portalMat = new THREE.MeshBasicMaterial({ color, depthWrite: false, opacity: 0.38, transparent: true });
-        const ringMat = createBasicMaterial(color, { emissive: color, emissiveIntensity: 0.58 });
-        const portal = new THREE.Mesh(new THREE.CircleGeometry(4.2, 28), portalMat);
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(4.4, 0.42, 8, 28), ringMat);
-        const sign = new THREE.Mesh(new THREE.BoxGeometry(8, 3.2, 0.45), ringMat);
-        body.position.y = body.geometry.parameters.height / 2;
-        roof.position.y = body.geometry.parameters.height + 0.8;
-        portal.position.set(0, 4.8, 6.78);
-        ring.position.copy(portal.position);
-        sign.position.set(0, body.geometry.parameters.height + 2.9, 6.8);
-        group.add(body, roof, portal, ring, sign);
-        group.position.copy(position);
-        group.rotation.y = Math.atan2(sample.point.x - position.x, sample.point.z - position.z);
-        world.add(group);
-      });
 
       for (let i = 0; i < 24; i += 1) {
         const sample = compiled.pointAt(i / 24);
@@ -1531,27 +1522,592 @@ export const ArcadeRace3D = ({
         world.add(pole, lamp);
       }
 
-      for (let i = 0; i < 42; i += 1) {
-        const angle = (Math.PI * 2 * i) / 42;
-        const radiusX = trackSpanX / 2 + compiled.roadWidth + 72 + (i % 3) * 6;
-        const radiusZ = trackSpanZ / 2 + compiled.roadWidth + 72 + (i % 4) * 5;
-        const x = trackCenterX + Math.cos(angle) * radiusX;
-        const z = trackCenterZ + Math.sin(angle) * radiusZ;
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.65, 3, 5), trunkMat);
-        trunk.position.set(x, 1.5, z);
-        const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(2.4 + (i % 3) * 0.35, 0), treeMat);
-        crown.position.set(x, 4.2, z);
-        crown.castShadow = true;
-        world.add(trunk, crown);
+      const startSample = compiled.pointAt(compiled.startProgress || 0);
+      const corridorForward = startSample.tangent.clone().normalize();
+      const corridorRight = new THREE.Vector3(corridorForward.z, 0, -corridorForward.x).normalize();
+      const corridorOrigin = startSample.point.clone();
+      const raceCityMaterials = {
+        asphalt: asphaltMat,
+        cyan: createBasicMaterial(VISUAL_PALETTE.cyan, {
+          emissive: VISUAL_PALETTE.cyan,
+          emissiveIntensity: 0.85,
+        }),
+        dark: createBasicMaterial('#10151d'),
+        glass: createBasicMaterial('#dff8ff', {
+          emissive: '#74f1ff',
+          emissiveIntensity: 0.38,
+        }),
+        light: createBasicMaterial('#f7fbff'),
+        yellow: createBasicMaterial(VISUAL_PALETTE.roadLine, {
+          emissive: VISUAL_PALETTE.roadLine,
+          emissiveIntensity: 0.18,
+        }),
+      };
+
+      const cityPoint = (forwardDistance, lateral = 0, y = 0) =>
+        corridorOrigin
+          .clone()
+          .addScaledVector(corridorForward, forwardDistance)
+          .addScaledVector(corridorRight, lateral)
+          .setY(y);
+
+      const faceRoadYaw = (position, target = corridorOrigin) => {
+        const direction = target.clone().sub(position).setY(0).normalize();
+        return Math.atan2(direction.x, direction.z);
+      };
+
+      const addCityWindowGrid = (group, width, height, depth, rows = 4, columns = 4) => {
+        for (let row = 0; row < rows; row += 1) {
+          for (let column = 0; column < columns; column += 1) {
+            if ((row + column) % 5 === 0) continue;
+            const window = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.25, 0.14), raceCityMaterials.glass);
+            window.position.set(
+              -width * 0.34 + (width * 0.68 * column) / Math.max(1, columns - 1),
+              5 + row * (height / (rows + 1)),
+              depth / 2 + 0.1
+            );
+            group.add(window);
+          }
+        }
+      };
+
+      const addDistrictIcon = (group, district, y, z) => {
+        const iconGroup = new THREE.Group();
+        iconGroup.position.set(0, y, z);
+        const iconMat = createBasicMaterial(district.roof, {
+          emissive: district.accent,
+          emissiveIntensity: 0.42,
+        });
+        const accentMat = createBasicMaterial(district.accent, {
+          emissive: district.accent,
+          emissiveIntensity: 0.7,
+        });
+
+        if (district.icon === 'dumbbell') {
+          const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 8.6, 7), iconMat);
+          bar.rotation.z = Math.PI / 2;
+          iconGroup.add(bar);
+          [-4.3, 4.3].forEach((x) => {
+            [-0.52, 0.52].forEach((offset) => {
+              const plate = new THREE.Mesh(new THREE.BoxGeometry(0.82, 2.7, 1), accentMat);
+              plate.position.x = x + offset;
+              iconGroup.add(plate);
+            });
+          });
+        } else if (district.icon === 'utensils') {
+          [-1.6, 1.6].forEach((x, index) => {
+            const handle = new THREE.Mesh(new THREE.BoxGeometry(0.48, 7.4, 0.7), iconMat);
+            handle.position.x = x;
+            handle.rotation.z = index === 0 ? 0.08 : -0.18;
+            iconGroup.add(handle);
+          });
+          [-2.25, -1.6, -0.95].forEach((x) => {
+            const tine = new THREE.Mesh(new THREE.BoxGeometry(0.28, 2.4, 0.64), accentMat);
+            tine.position.set(x, 4, 0);
+            iconGroup.add(tine);
+          });
+          const blade = new THREE.Mesh(new THREE.ConeGeometry(0.95, 3.4, 4), accentMat);
+          blade.position.set(1.95, 3.7, 0);
+          blade.rotation.z = -0.76;
+          iconGroup.add(blade);
+        } else if (district.icon === 'flask') {
+          const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 4.2, 8), iconMat);
+          neck.position.y = 2.7;
+          const bulb = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 1.15, 4.6, 8), accentMat);
+          bulb.position.y = -1.1;
+          const liquid = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.1, 0.9), raceCityMaterials.cyan);
+          liquid.position.y = -2.1;
+          iconGroup.add(neck, bulb, liquid);
+        } else if (district.icon === 'cross') {
+          iconGroup.add(new THREE.Mesh(new THREE.BoxGeometry(2.1, 8.4, 0.9), iconMat));
+          iconGroup.add(new THREE.Mesh(new THREE.BoxGeometry(7.6, 2.1, 0.95), iconMat));
+        } else if (district.icon === 'wrench') {
+          const handle = new THREE.Mesh(new THREE.BoxGeometry(1.1, 8.6, 0.8), iconMat);
+          handle.rotation.z = -0.65;
+          const head = new THREE.Mesh(new THREE.TorusGeometry(2.05, 0.35, 6, 16, Math.PI * 1.35), accentMat);
+          head.position.set(2.65, 2.85, 0);
+          head.rotation.z = 0.92;
+          iconGroup.add(handle, head);
+        }
+
+        group.add(iconGroup);
+        return iconGroup;
+      };
+
+      const addDistrictProps = (group, district, width, depth) => {
+        const accentMat = createBasicMaterial(district.accent, {
+          emissive: district.accent,
+          emissiveIntensity: 0.42,
+        });
+        const baseMat = createBasicMaterial(district.base);
+        const darkMat = raceCityMaterials.dark;
+
+        if (district.icon === 'dumbbell') {
+          [-0.34, 0.34].forEach((xSide) => {
+            const rack = new THREE.Mesh(new THREE.BoxGeometry(4.6, 1.2, 1.2), darkMat);
+            rack.position.set(xSide * width, 1.2, depth / 2 + 7);
+            group.add(rack);
+            for (let plate = 0; plate < 3; plate += 1) {
+              const weight = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.45, 8), accentMat);
+              weight.position.set(xSide * width + plate * 1.1 - 1.1, 2.2, depth / 2 + 7);
+              weight.rotation.x = Math.PI / 2;
+              group.add(weight);
+            }
+          });
+        } else if (district.icon === 'utensils') {
+          [-0.35, 0.35].forEach((xSide) => {
+            const stall = new THREE.Mesh(new THREE.BoxGeometry(7.8, 4.6, 5.2), baseMat);
+            stall.position.set(xSide * width, 2.3, depth / 2 + 7.2);
+            group.add(stall);
+            const awning = new THREE.Mesh(new THREE.BoxGeometry(8.6, 1, 6), accentMat);
+            awning.position.set(xSide * width, 5.1, depth / 2 + 7.2);
+            group.add(awning);
+          });
+        } else if (district.icon === 'flask') {
+          [-0.3, 0.3].forEach((xSide) => {
+            const tube = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 10, 10), raceCityMaterials.glass);
+            tube.position.set(xSide * width, 6.2, depth * 0.08);
+            group.add(tube);
+            const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.8, 10), accentMat);
+            cap.position.set(xSide * width, 11.5, depth * 0.08);
+            group.add(cap);
+          });
+        } else if (district.icon === 'cross') {
+          [-0.42, 0.42].forEach((xSide) => {
+            const light = new THREE.Mesh(new THREE.BoxGeometry(3.6, 5.4, 0.5), accentMat);
+            light.position.set(xSide * width, 6.5, depth / 2 + 0.55);
+            group.add(light);
+          });
+        } else if (district.icon === 'wrench') {
+          [-0.42, 0.42].forEach((xSide) => {
+            for (let tire = 0; tire < 3; tire += 1) {
+              const stack = new THREE.Mesh(new THREE.TorusGeometry(1.42, 0.45, 6, 12), darkMat);
+              stack.position.set(xSide * width, 1.4 + tire * 1.25, depth / 2 + 6);
+              stack.rotation.x = Math.PI / 2;
+              group.add(stack);
+            }
+          });
+        }
+      };
+
+      const addRaceDistrict = (district, index) => {
+        const sample = compiled.pointAt(district.progress);
+        const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize().multiplyScalar(district.side);
+        const position = sample.point.clone().addScaledVector(normal, compiled.roadWidth / 2 + 72 + (index % 2) * 8);
+        const group = new THREE.Group();
+        const width = district.label === 'FOOD COURT' ? 26 : district.label === 'GARAGE' ? 28 : 22;
+        const depth = district.label === 'LAB' ? 21 : 18;
+        const height = district.label === 'LAB' ? 34 : district.label === 'FOOD COURT' ? 22 : 26;
+        const baseMat = createBasicMaterial(district.base, {
+          emissive: district.base,
+          emissiveIntensity: 0.06,
+        });
+        const darkMat = createBasicMaterial(district.dark);
+        const roofMat = createBasicMaterial(district.roof);
+        const accentMat = createBasicMaterial(district.accent, {
+          emissive: district.accent,
+          emissiveIntensity: 0.58,
+        });
+
+        group.position.copy(position);
+        group.rotation.y = faceRoadYaw(position, sample.point);
+
+        const plaza = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.82, width * 0.94, 0.38, 8), darkMat);
+        plaza.position.set(0, 0.18, depth / 2 + 2.5);
+        plaza.scale.z = 0.56;
+        plaza.receiveShadow = true;
+        group.add(plaza);
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), baseMat);
+        body.position.y = height / 2 + 0.6;
+        body.castShadow = true;
+        body.receiveShadow = true;
+        group.add(body);
+
+        const upper = new THREE.Mesh(new THREE.BoxGeometry(width * 0.74, height * 0.42, depth * 0.76), darkMat);
+        upper.position.set(0, height + height * 0.2 + 0.6, -depth * 0.03);
+        upper.castShadow = true;
+        group.add(upper);
+
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(width + 2.2, 2.2, depth + 2.2), roofMat);
+        roof.position.set(0, height + 1.7, 0);
+        roof.castShadow = true;
+        group.add(roof);
+
+        [-1, 1].forEach((side) => {
+          const tower = new THREE.Mesh(new THREE.BoxGeometry(4.2, height * 0.74, depth * 0.52), darkMat);
+          tower.position.set(side * (width * 0.44), height * 0.37 + 0.6, depth * 0.02);
+          tower.castShadow = true;
+          group.add(tower);
+          const trim = new THREE.Mesh(new THREE.BoxGeometry(1.15, height * 0.64, depth * 0.58), accentMat);
+          trim.position.set(side * (width * 0.44), height * 0.4 + 0.8, depth * 0.09);
+          group.add(trim);
+        });
+
+        addCityWindowGrid(group, width, height, depth, district.label === 'LAB' ? 5 : 3, 4);
+
+        const portalY = Math.min(10, height * 0.44);
+        const portal = new THREE.Mesh(
+          new THREE.CircleGeometry(5.3, 28),
+          new THREE.MeshBasicMaterial({
+            color: district.accent,
+            depthWrite: false,
+            opacity: 0.28,
+            side: THREE.DoubleSide,
+            transparent: true,
+          })
+        );
+        portal.position.set(0, portalY, depth / 2 + 0.8);
+        group.add(portal);
+
+        const portalRing = new THREE.Mesh(new THREE.TorusGeometry(5.6, 0.5, 8, 32), accentMat);
+        portalRing.position.copy(portal.position);
+        group.add(portalRing);
+
+        const innerRing = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.18, 5, 22), raceCityMaterials.light);
+        innerRing.position.set(0, portalY, depth / 2 + 1.08);
+        group.add(innerRing);
+
+        const sign = createBillboardText(district.label, district.accent);
+        sign.position.set(0, height + 8.6, depth / 2 + 1.2);
+        sign.scale.set(district.label === 'FOOD COURT' ? 20 : 14.8, 4.2, 1);
+        group.add(sign);
+
+        addDistrictIcon(group, district, height + 4.2, depth / 2 + 1.6);
+        addDistrictProps(group, district, width, depth);
+
+        const portalLight = new THREE.PointLight(district.accent, 1.45, 70, 2);
+        portalLight.position.copy(portal.position);
+        group.add(portalLight);
+
+        group.userData.portalRing = portalRing;
+        group.userData.innerRing = innerRing;
+        group.userData.portal = portal;
+        group.userData.portalLight = portalLight;
+        group.userData.phase = index * 0.75;
+        animatedCityDistricts.push(group);
+        world.add(group);
+      };
+
+      const animatedCityDistricts = [];
+      RACE_CITY_DISTRICTS.forEach(addRaceDistrict);
+
+      const addRaceObjectiveMarker = () => {
+        const markerSample = compiled.pointAt(0.872);
+        const markerGroup = new THREE.Group();
+        markerGroup.position.copy(markerSample.point);
+        markerGroup.position.y = 0.5;
+
+        const pad = new THREE.Mesh(
+          new THREE.CylinderGeometry(9.5, 11.5, 0.35, 32),
+          new THREE.MeshBasicMaterial({
+            color: VISUAL_PALETTE.cyan,
+            opacity: 0.24,
+            transparent: true,
+          })
+        );
+        pad.position.y = 0.2;
+        markerGroup.add(pad);
+
+        const padRing = new THREE.Mesh(new THREE.TorusGeometry(10, 0.32, 6, 32), raceCityMaterials.cyan);
+        padRing.rotation.x = Math.PI / 2;
+        padRing.position.y = 0.45;
+        markerGroup.add(padRing);
+
+        const beam = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.1, 3.4, 86, 10, 1, true),
+          new THREE.MeshBasicMaterial({
+            color: VISUAL_PALETTE.cyan,
+            depthWrite: false,
+            opacity: 0.24,
+            transparent: true,
+          })
+        );
+        beam.position.y = 43;
+        markerGroup.add(beam);
+
+        const badge = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(5.3, 0),
+          createBasicMaterial('#1f8bff', {
+            emissive: VISUAL_PALETTE.cyan,
+            emissiveIntensity: 1.05,
+          })
+        );
+        badge.position.y = 26;
+        badge.scale.z = 0.36;
+        markerGroup.add(badge);
+
+        const flag = new THREE.Mesh(new THREE.BoxGeometry(1.1, 6.4, 0.5), raceCityMaterials.light);
+        flag.position.set(-1.3, 26.4, 0.3);
+        const flagCloth = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 0.45), raceCityMaterials.cyan);
+        flagCloth.position.set(1.7, 28.2, 0.4);
+        markerGroup.add(flag, flagCloth);
+
+        markerGroup.userData.beam = beam;
+        markerGroup.userData.badge = badge;
+        markerGroup.userData.padRing = padRing;
+        world.add(markerGroup);
+        animatedCityDistricts.push(markerGroup);
+      };
+      addRaceObjectiveMarker();
+
+      const addCitySkyline = () => {
+        const base = cityPoint(305, 0, 0);
+        const skylineMats = [
+          createBasicMaterial('#2d76b7'),
+          createBasicMaterial('#5a91b2'),
+          createBasicMaterial('#315b8d'),
+          createBasicMaterial('#e28d47'),
+          createBasicMaterial('#8a53df'),
+          createBasicMaterial('#f3ece0'),
+        ];
+        for (let i = 0; i < 34; i += 1) {
+          const lateral = -178 + i * 10.8;
+          const depthOffset = (i % 5) * 7 - 12;
+          const p = base
+            .clone()
+            .addScaledVector(corridorRight, lateral)
+            .addScaledVector(corridorForward, depthOffset);
+          const h = 20 + (i % 8) * 6.4 + (i % 5 === 0 ? 14 : 0);
+          const w = 6.8 + (i % 3) * 2.4;
+          const d = 8.5 + (i % 4) * 2.2;
+          const block = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), skylineMats[i % skylineMats.length]);
+          block.position.set(p.x, h / 2, p.z);
+          block.rotation.y = faceRoadYaw(block.position, corridorOrigin) + (i % 3 - 1) * 0.035;
+          block.castShadow = true;
+          world.add(block);
+          if (i % 4 === 0) {
+            const spire = new THREE.Mesh(
+              new THREE.ConeGeometry(w * 0.36, 9 + (i % 3) * 4, 5),
+              i % 2 ? raceCityMaterials.cyan : raceCityMaterials.light
+            );
+            spire.position.set(p.x, h + 4.2, p.z);
+            spire.castShadow = true;
+            world.add(spire);
+          }
+        }
+
+        const wheelGroup = new THREE.Group();
+        const wheelCenter = base.clone().addScaledVector(corridorRight, -118).addScaledVector(corridorForward, -6);
+        wheelGroup.position.set(wheelCenter.x, 28, wheelCenter.z);
+        wheelGroup.rotation.y = faceRoadYaw(wheelCenter, corridorOrigin);
+        const wheelMat = createBasicMaterial('#f3ece0', {
+          emissive: '#ffd34f',
+          emissiveIntensity: 0.16,
+        });
+        const wheel = new THREE.Mesh(new THREE.TorusGeometry(17, 0.38, 6, 36), wheelMat);
+        wheelGroup.add(wheel);
+        for (let i = 0; i < 10; i += 1) {
+          const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.34, 17, 0.34), wheelMat);
+          spoke.rotation.z = (Math.PI * i) / 10;
+          wheelGroup.add(spoke);
+        }
+        const legA = new THREE.Mesh(new THREE.BoxGeometry(0.7, 34, 0.7), wheelMat);
+        legA.position.set(-6.2, -17, 0);
+        legA.rotation.z = -0.26;
+        const legB = legA.clone();
+        legB.position.x = 6.2;
+        legB.rotation.z = 0.26;
+        wheelGroup.add(legA, legB);
+        world.add(wheelGroup);
+      };
+      addCitySkyline();
+
+      const addPerimeterSkyline = () => {
+        const skylineMats = [
+          createBasicMaterial('#2d76b7'),
+          createBasicMaterial('#5a91b2'),
+          createBasicMaterial('#315b8d'),
+          createBasicMaterial('#55b957'),
+          createBasicMaterial('#f28b2e'),
+          createBasicMaterial('#8a53df'),
+          createBasicMaterial('#e64b4b'),
+        ];
+        const windowMat = createBasicMaterial('#dff8ff', {
+          emissive: '#74f1ff',
+          emissiveIntensity: 0.22,
+          opacity: 0.74,
+          transparent: true,
+        });
+        const placeBlock = (x, z, index, yaw = 0) => {
+          const h = 18 + (index % 7) * 5.5 + (index % 6 === 0 ? 12 : 0);
+          const w = 7 + (index % 3) * 2.2;
+          const d = 8 + (index % 4) * 2.4;
+          const block = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), skylineMats[index % skylineMats.length]);
+          block.position.set(x, h / 2 - 0.6, z);
+          block.rotation.y = yaw + (index % 3 - 1) * 0.035;
+          block.castShadow = true;
+          block.receiveShadow = true;
+          world.add(block);
+
+          const roof = new THREE.Mesh(
+            new THREE.BoxGeometry(w + 1.1, 1.4, d + 1.1),
+            index % 2 ? raceCityMaterials.light : raceCityMaterials.dark
+          );
+          roof.position.set(x, h + 0.1, z);
+          roof.rotation.y = block.rotation.y;
+          roof.castShadow = true;
+          world.add(roof);
+
+          for (let row = 0; row < Math.min(5, Math.floor(h / 6)); row += 1) {
+            [-0.28, 0.28].forEach((side) => {
+              const window = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.9, 0.12), windowMat);
+              window.position.set(x + side * w, 4.8 + row * 4.8, z - d / 2 - 0.08);
+              window.rotation.y = block.rotation.y;
+              world.add(window);
+            });
+          }
+        };
+
+        const xStart = bounds.minX - 56;
+        const xEnd = bounds.maxX + 56;
+        const zStart = bounds.minZ - 48;
+        const zEnd = bounds.maxZ + 56;
+        for (let i = 0; i < 26; i += 1) {
+          const t = i / 25;
+          const x = xStart + (xEnd - xStart) * t;
+          placeBlock(x, bounds.maxZ + 112 + (i % 5) * 7, i, Math.PI);
+          placeBlock(x, bounds.minZ - 112 - (i % 4) * 7, i + 31, 0);
+        }
+        for (let i = 0; i < 17; i += 1) {
+          const t = i / 16;
+          const z = zStart + (zEnd - zStart) * t;
+          placeBlock(bounds.minX - 122 - (i % 4) * 8, z, i + 63, Math.PI / 2);
+          placeBlock(bounds.maxX + 122 + (i % 5) * 7, z, i + 91, -Math.PI / 2);
+        }
+      };
+      addPerimeterSkyline();
+
+      const addMountainsAndClouds = () => {
+        [-128, -82, -38, 62, 116, 160].forEach((lateral, index) => {
+          const p = cityPoint(382 + (index % 2) * 18, lateral, 0);
+          const mountain = new THREE.Mesh(
+            new THREE.ConeGeometry(28 + (index % 3) * 7, 52 + (index % 2) * 18, 4),
+            createBasicMaterial(index % 2 ? '#9bc2d3' : '#8eb3c8')
+          );
+          mountain.position.set(p.x, 20, p.z);
+          mountain.rotation.y = Math.PI / 4;
+          world.add(mountain);
+
+          const snow = new THREE.Mesh(
+            new THREE.ConeGeometry(10 + (index % 3) * 2, 16, 4),
+            raceCityMaterials.light
+          );
+          snow.position.set(p.x, 52 + (index % 2) * 8, p.z);
+          snow.rotation.y = Math.PI / 4;
+          world.add(snow);
+        });
+
+        const cloudMat = new THREE.MeshBasicMaterial({ color: '#f7fbff', opacity: 0.82, transparent: true });
+        const puffGeometry = new THREE.DodecahedronGeometry(1, 0);
+        [
+          { d: 118, l: -92, y: 84, s: 6.3 },
+          { d: 156, l: -12, y: 104, s: 5.1 },
+          { d: 140, l: 86, y: 90, s: 6.8 },
+          { d: 214, l: 32, y: 118, s: 4.9 },
+        ].forEach((cloud, cloudIndex) => {
+          const p = cityPoint(cloud.d, cloud.l, cloud.y);
+          const group = new THREE.Group();
+          group.position.copy(p);
+          [-1.7, -0.5, 0.8, 1.9].forEach((offset, puffIndex) => {
+            const puff = new THREE.Mesh(puffGeometry, cloudMat);
+            puff.position.set(offset * cloud.s, Math.sin(puffIndex) * cloud.s * 0.2, 0);
+            puff.scale.set(cloud.s * (0.86 + puffIndex * 0.08), cloud.s * 0.44, cloud.s * 0.34);
+            group.add(puff);
+          });
+          group.userData.cloudSpeed = 0.012 + cloudIndex * 0.003;
+          world.add(group);
+        });
+      };
+      addMountainsAndClouds();
+
+      const addWaterAndBridge = () => {
+        const waterCenter = cityPoint(58, 76, 0);
+        const water = new THREE.Mesh(
+          new THREE.PlaneGeometry(150, 92, 8, 8),
+          new THREE.MeshBasicMaterial({
+            color: '#0ea5c8',
+            opacity: 0.64,
+            side: THREE.DoubleSide,
+            transparent: true,
+          })
+        );
+        water.position.set(waterCenter.x, 0.03, waterCenter.z);
+        water.rotation.x = -Math.PI / 2;
+        water.rotation.z = Math.atan2(corridorForward.z, corridorForward.x);
+        world.add(water);
+
+        for (let i = 0; i < 9; i += 1) {
+          const ripple = new THREE.Mesh(new THREE.BoxGeometry(16 + (i % 3) * 6, 0.05, 0.32), raceCityMaterials.cyan);
+          const p = waterCenter
+            .clone()
+            .addScaledVector(corridorForward, -36 + i * 9)
+            .addScaledVector(corridorRight, -26 + (i % 4) * 13);
+          ripple.position.set(p.x, 0.11, p.z);
+          ripple.rotation.y = -Math.atan2(corridorForward.z, corridorForward.x);
+          world.add(ripple);
+        }
+
+        const bridgeCenter = cityPoint(70, 45, 0);
+        const bridgeYaw = -Math.atan2(corridorForward.z, corridorForward.x);
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(70, 1.1, 13.5), createBasicMaterial('#65717f'));
+        deck.position.set(bridgeCenter.x, 2.3, bridgeCenter.z);
+        deck.rotation.y = bridgeYaw;
+        deck.castShadow = true;
+        world.add(deck);
+        [-1, 1].forEach((side) => {
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(70, 0.5, 0.45), raceCityMaterials.light);
+          rail.position.copy(deck.position);
+          rail.position.y += 1.25;
+          rail.rotation.y = bridgeYaw;
+          rail.translateZ(side * 6.5);
+          world.add(rail);
+        });
+      };
+      addWaterAndBridge();
+
+      for (let i = 0; i < 18; i += 1) {
+        const sample = compiled.pointAt(0.81 + i * 0.008);
+        const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize();
+        [-1, 1].forEach((side) => {
+          const p = sample.point.clone().addScaledVector(normal, side * (compiled.roadWidth / 2 + 7.6));
+          const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.26, 7.6, 6), railPostMat);
+          pole.position.set(p.x, 3.8, p.z);
+          const bulb = new THREE.Mesh(
+            new THREE.SphereGeometry(0.72, 12, 10),
+            side > 0 ? raceCityMaterials.cyan : raceCityMaterials.yellow
+          );
+          bulb.position.set(p.x, 7.85, p.z);
+          world.add(pole, bulb);
+        });
       }
 
+      animatedCityDistricts.forEach((group) => {
+        group.userData.animate = (time, dt) => {
+          if (group.userData.portalRing) {
+            group.userData.portalRing.rotation.z += dt * 0.9;
+            group.userData.innerRing.rotation.z -= dt * 1.35;
+            group.userData.portal.material.opacity = 0.2 + Math.sin(time / 190 + group.userData.phase) * 0.07;
+            group.userData.portalLight.intensity = 1.1 + Math.sin(time / 180 + group.userData.phase) * 0.32;
+          }
+          if (group.userData.beam) {
+            group.userData.beam.rotation.y += dt * 0.14;
+            group.userData.beam.material.opacity = 0.2 + Math.sin(time / 260) * 0.05;
+            group.userData.badge.rotation.y += dt * 1.1;
+            group.userData.badge.position.y = 26 + Math.sin(time / 240) * 0.5;
+            group.userData.padRing.rotation.z += dt * 0.8;
+          }
+        };
+      });
+
+      world.userData.cityAnimationHooks = animatedCityDistricts;
     };
     createScenery();
 
     const playerVehicle = createVehicleModel({
       accent: '#46d9ef',
       color: '#ef4334',
-      scale: 1.12,
+      scale: 1.34,
       suit: profile.avatar?.suit || '#202837',
     });
     playerVehicle.setMode(race.player.vehicleMode);
@@ -2442,6 +2998,22 @@ export const ArcadeRace3D = ({
           dt;
       }
 
+      if (!isPlane && speed > 1.2) {
+        const trackHeading = Math.atan2(nearest.tangent.x, nearest.tangent.z);
+        const edgeAssist = clamp(
+          (nearest.distance - compiled.roadWidth * 0.2) / Math.max(1, compiled.roadWidth * 0.32),
+          0,
+          1
+        );
+        const cruiseAssist = controls.throttle > 0.08 && Math.abs(player.steerInput) < 0.14 ? 0.42 : 0.08;
+        const assistStrength = edgeAssist * 2.1 + cruiseAssist;
+        player.heading += signedAngleDelta(trackHeading, player.heading) * clamp(dt * assistStrength, 0, 0.16);
+        if (edgeAssist > 0.05 && player.jumpHeight <= 0.05) {
+          const guidedVelocity = nearest.tangent.clone().multiplyScalar(Math.max(0, player.velocity.dot(nearest.tangent)));
+          player.velocity.lerp(guidedVelocity, clamp(dt * edgeAssist * 2.4, 0, 0.28));
+        }
+      }
+
       if (!isPlane) {
         const softLimit = compiled.roadWidth * 0.48;
         const hardLimit = compiled.roadWidth * (player.vehicleMode === 'hover' ? 0.68 : 0.6);
@@ -2832,6 +3404,10 @@ export const ArcadeRace3D = ({
         if (mesh.material) mesh.material.opacity = active ? 0.86 : 0.38;
       });
 
+      world.userData.cityAnimationHooks?.forEach((group) => {
+        group.userData.animate?.(now, dt);
+      });
+
       trapMeshes.forEach((entry) => {
         entry.mesh.visible = entry.hazard.life > 0;
         entry.mesh.material.opacity = clamp(entry.hazard.life / 6, 0.15, 1);
@@ -3106,7 +3682,7 @@ export const ArcadeRace3D = ({
     <div className="arcade-race-shell relative left-1/2 w-[min(100vw,1440px)] -translate-x-1/2 overflow-hidden border-y border-white/16 bg-[#10151d] shadow-[0_24px_70px_rgba(0,0,0,0.35)] lg:rounded-lg lg:border">
       <canvas
         ref={canvasRef}
-        className="arcade-race-canvas block h-[min(88svh,900px)] min-h-[640px] w-full touch-none max-sm:min-h-[520px]"
+        className="arcade-race-canvas block h-[min(88svh,900px)] min-h-[640px] w-full touch-none max-sm:h-[100svh] max-sm:min-h-[100svh]"
         style={{ filter: telemetry.boost > 0 ? 'saturate(1.18) contrast(1.08)' : 'none' }}
       />
 

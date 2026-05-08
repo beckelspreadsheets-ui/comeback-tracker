@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -52,6 +52,30 @@ const assertVisible = async (page, selector, label) => {
   fail(`${label} is not visible`, { count, selector });
 };
 
+const assertNoForbiddenBackdropUsage = async () => {
+  const sceneFiles = [
+    path.join(root, 'src/game/ArcadeRace3D.jsx'),
+    path.join(root, 'src/game/WorldScene.jsx'),
+  ];
+  for (const file of sceneFiles) {
+    const source = await readFile(file, 'utf8');
+    const forbidden = [
+      'comeback-city-race-backdrop',
+      'city-skyline-backdrop',
+      'raceBackdrop',
+      'citySkylineBackdrop',
+      'PlaneGeometry(720, 232)',
+      'PlaneGeometry(382, 215)',
+    ].filter((pattern) => source.includes(pattern));
+    if (forbidden.length) {
+      fail('Forbidden large backdrop usage is present in a live scene file', {
+        file: path.relative(root, file),
+        forbidden,
+      });
+    }
+  }
+};
+
 const screenshotPage = async (browser, {
   name,
   pathName,
@@ -83,6 +107,7 @@ const screenshotPage = async (browser, {
 
 const run = async () => {
   await mkdir(screenshotsDir, { recursive: true });
+  await assertNoForbiddenBackdropUsage();
 
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const server = spawn(npm, ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
@@ -136,6 +161,52 @@ const run = async () => {
     });
 
     await screenshotPage(browser, {
+      name: 'mobile game after movement',
+      pathName: 'mobile-game-moving-390x844.png',
+      url: `${baseUrl}/#race`,
+      viewport: { height: 844, isMobile: true, width: 390 },
+      setup: async (page) => {
+        await assertCanvasNonblank(page, 'mobile game after movement');
+        await assertCanvasFrame(page, 'mobile game after movement', { maxTop: 40, minHeight: 820, minWidth: 380 });
+        await page.keyboard.down('ArrowUp');
+        await page.waitForTimeout(14000);
+        await page.keyboard.up('ArrowUp');
+        await assertVisible(page, '.race-objective-card', 'mobile objective card after movement');
+        await assertVisible(page, '.race-minimap', 'mobile minimap after movement');
+        await assertVisible(page, '.arcade-go-button', 'mobile GO button after movement');
+      },
+    });
+
+    await screenshotPage(browser, {
+      name: 'desktop game',
+      pathName: 'desktop-game-1440x900.png',
+      url: `${baseUrl}/#race`,
+      viewport: { height: 900, width: 1440 },
+      setup: async (page) => {
+        await assertCanvasNonblank(page, 'desktop game');
+        await assertCanvasFrame(page, 'desktop game', { maxTop: 180, minHeight: 760, minWidth: 1280 });
+        await assertVisible(page, '.race-objective-card', 'desktop objective card');
+        await assertVisible(page, '.currency-stack', 'desktop currency stack');
+        await assertVisible(page, '.arcade-go-button', 'desktop GO button');
+      },
+    });
+
+    await screenshotPage(browser, {
+      name: 'desktop game after movement',
+      pathName: 'desktop-game-moving-1440x900.png',
+      url: `${baseUrl}/#race`,
+      viewport: { height: 900, width: 1440 },
+      setup: async (page) => {
+        await assertCanvasNonblank(page, 'desktop game after movement');
+        await assertCanvasFrame(page, 'desktop game after movement', { maxTop: 180, minHeight: 760, minWidth: 1280 });
+        await page.keyboard.down('ArrowUp');
+        await page.waitForTimeout(14000);
+        await page.keyboard.up('ArrowUp');
+        await assertVisible(page, '.race-objective-card', 'desktop objective card after movement');
+      },
+    });
+
+    await screenshotPage(browser, {
       name: 'district closeups',
       pathName: 'district-closeups-1440x900.png',
       url: `${baseUrl}/`,
@@ -174,6 +245,9 @@ const run = async () => {
     screenshots: [
       'desktop-plaza-1440x900.png',
       'mobile-game-390x844.png',
+      'mobile-game-moving-390x844.png',
+      'desktop-game-1440x900.png',
+      'desktop-game-moving-1440x900.png',
       'district-closeups-1440x900.png',
       'garage-kart-sheet-1440x900.png',
     ],

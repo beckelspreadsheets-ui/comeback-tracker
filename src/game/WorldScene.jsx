@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CornerDownRight } from 'lucide-react';
 import * as THREE from 'three';
-import citySkylineBackdrop from '../assets/game/comeback-city-race-backdrop-v2.png';
 import { CAMERA_PRESETS, VISUAL_PALETTE } from './comebackCityVisuals.jsx';
 import { GAME_AVATARS } from './gameProfile.js';
 import { WORLD_BOUNDS } from './worldConfig.js';
@@ -633,23 +632,6 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       );
       skyDome.position.set(0, 32, 18);
       world.add(skyDome);
-
-      const backdropTexture = new THREE.TextureLoader().load(citySkylineBackdrop);
-      backdropTexture.colorSpace = THREE.SRGBColorSpace;
-      const backdrop = new THREE.Mesh(
-        new THREE.PlaneGeometry(382, 215),
-        basicMaterial('#ffffff', {
-          depthWrite: false,
-          fog: false,
-          map: backdropTexture,
-          opacity: 0.18,
-          side: THREE.DoubleSide,
-          transparent: true,
-        })
-      );
-      backdrop.position.set(0, 92, 254);
-      backdrop.renderOrder = -4;
-      world.add(backdrop);
 
       [
         { y: 42, h: 28, color: CITY_STYLE.horizon, z: 214, opacity: 0.035 },

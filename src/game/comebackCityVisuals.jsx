@@ -47,11 +47,11 @@ export const CAMERA_PRESETS = {
     label: 'garage kart preview',
   },
   mobileChase: {
-    distance: 34,
-    fov: 72,
-    height: 10.6,
+    distance: 28,
+    fov: 70,
+    height: 8.8,
     label: 'mobile portrait chase',
-    lookAhead: 18,
+    lookAhead: 22,
   },
 };
 
