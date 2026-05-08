@@ -2,17 +2,26 @@ import { RACE_TRACKS } from '../src/game/raceTracks.js';
 import { ITEM_DEFINITIONS, getItemDefinition, itemAllowedOnTrack } from '../src/game/raceItems.js';
 
 const REQUIRED_TRACKS = {
+  'comeback-city': {
+    bananaCount: 18,
+    hazards: ['wet', 'pulseZone', 'laser', 'mineCart', 'gate'],
+    itemBoxes: { air: 4, ground: 8, hybrid: 3 },
+    signature: 'boost',
+  },
   'magnet-mine-descent': {
+    bananaCount: 10,
     hazards: ['mineCart', 'magneticSpike', 'pulseZone', 'stalactite', 'polarityGate'],
     itemBoxes: { air: 3, ground: 5, hybrid: 2 },
     signature: 'polaritySwap',
   },
   'static-storm-plateau': {
+    bananaCount: 10,
     hazards: ['lightning', 'tornado', 'bridgeCollapse', 'staticCharge', 'windGust'],
     itemBoxes: { air: 6, ground: 4, hybrid: 3 },
     signature: 'lightningRod',
   },
   'tide-pier': {
+    bananaCount: 10,
     hazards: ['fishCart', 'laundry', 'lighthouseBeam', 'seagulls', 'crabTrap'],
     itemBoxes: { air: 4, ground: 6, hybrid: 2 },
     signature: 'anchorDrop',
@@ -48,7 +57,9 @@ const validateTrack = (track) => {
   const expected = REQUIRED_TRACKS[track.key];
   if (!expected) fail('Unexpected track key', { key: track.key });
   if (track.laps !== 3) fail('Track must be 3 laps', { key: track.key, laps: track.laps });
-  if (track.bananaCount !== 10) fail('Track must expose 10 bananas', { key: track.key, bananaCount: track.bananaCount });
+  if (track.bananaCount !== expected.bananaCount) {
+    fail('Track banana count mismatch', { actual: track.bananaCount, expected: expected.bananaCount, key: track.key });
+  }
   if (track.signatureItem?.key !== expected.signature) fail('Signature item mismatch', { key: track.key });
   if (!getItemDefinition(track.signatureItem.key)) fail('Missing signature item definition', { key: track.key });
   if (!itemAllowedOnTrack(getItemDefinition(track.signatureItem.key), track.key)) {
@@ -122,7 +133,12 @@ const simulateRace = (track, raceIndex, mode) => {
 };
 
 validateItems();
-if (RACE_TRACKS.length !== 3) fail('Expected exactly three race tracks', { count: RACE_TRACKS.length });
+if (RACE_TRACKS.length !== Object.keys(REQUIRED_TRACKS).length) {
+  fail('Race track count mismatch', {
+    actual: RACE_TRACKS.length,
+    expected: Object.keys(REQUIRED_TRACKS).length,
+  });
+}
 
 const summaries = RACE_TRACKS.map((track) => {
   validateTrack(track);
@@ -140,4 +156,3 @@ const summaries = RACE_TRACKS.map((track) => {
 });
 
 console.log(JSON.stringify({ itemCount: ITEM_DEFINITIONS.length, status: 'ok', tracks: summaries }, null, 2));
-

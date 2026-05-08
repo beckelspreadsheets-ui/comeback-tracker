@@ -90,4 +90,350 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  @keyframes questBob {
+    0%, 100% { transform: translateY(-50%) scale(1); }
+    50% { transform: translateY(calc(-50% - 3px)) scale(1.04); }
+  }
+
+  @keyframes questSpark {
+    0%, 100% { opacity: 0.22; transform: rotate(0deg) scale(0.9); }
+    50% { opacity: 0.55; transform: rotate(45deg) scale(1.08); }
+  }
+
+  @keyframes questHit {
+    0% { box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0); }
+    45% { box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.42), 0 0 22px rgba(212, 175, 55, 0.16); }
+    100% { box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0); }
+  }
+
+  .quest-grid {
+    background-image:
+      linear-gradient(rgba(212, 175, 55, 0.14) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(107, 158, 122, 0.11) 1px, transparent 1px);
+    background-size: 28px 28px;
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent 78%);
+    mask-image: linear-gradient(to bottom, black, transparent 78%);
+  }
+
+  .quest-avatar {
+    animation: questBob 1.7s ease-in-out infinite;
+  }
+
+  .quest-spark {
+    animation: questSpark 3.2s ease-in-out infinite;
+  }
+
+  .quest-hit {
+    animation: questHit 0.7s ease-out;
+  }
+
+  .city-asphalt {
+    background-image:
+      radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.12), transparent 34%),
+      radial-gradient(circle at 20% 78%, rgba(107, 158, 122, 0.12), transparent 26%),
+      linear-gradient(135deg, rgba(212, 175, 55, 0.06), transparent 38%),
+      #101116;
+  }
+
+  .city-blocks {
+    background-image:
+      linear-gradient(rgba(243, 236, 224, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(243, 236, 224, 0.035) 1px, transparent 1px);
+    background-size: 36px 36px;
+    background-position: center;
+  }
+
+  .city-road {
+    background:
+      linear-gradient(90deg, rgba(243, 236, 224, 0.18), transparent 8%, transparent 92%, rgba(243, 236, 224, 0.18)),
+      linear-gradient(90deg, rgba(11, 11, 14, 0.25), rgba(30, 29, 35, 0.95), rgba(11, 11, 14, 0.25));
+    box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.12), 0 22px 80px rgba(0, 0, 0, 0.45);
+  }
+
+  .city-road-cross {
+    background:
+      linear-gradient(0deg, rgba(243, 236, 224, 0.16), transparent 8%, transparent 92%, rgba(243, 236, 224, 0.16)),
+      linear-gradient(0deg, rgba(11, 11, 14, 0.25), rgba(30, 29, 35, 0.95), rgba(11, 11, 14, 0.25));
+  }
+
+  .city-dash {
+    background-image: linear-gradient(to bottom, rgba(212, 175, 55, 0.85) 0 18px, transparent 18px 34px);
+    background-size: 1px 34px;
+  }
+
+  .city-dash-cross {
+    background-image: linear-gradient(to right, rgba(212, 175, 55, 0.85) 0 18px, transparent 18px 34px);
+    background-size: 34px 1px;
+  }
+
+  .city-loop {
+    border: 32px solid rgba(30, 29, 35, 0.92);
+    border-radius: 999px;
+    box-shadow:
+      inset 0 0 0 1px rgba(243, 236, 224, 0.12),
+      0 0 0 1px rgba(212, 175, 55, 0.14),
+      0 28px 90px rgba(0, 0, 0, 0.36);
+  }
+
+  .city-building {
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+
+  .city-kart {
+    box-shadow: 0 0 0 3px rgba(11, 11, 14, 0.75), 0 0 34px rgba(212, 175, 55, 0.22);
+  }
+
+  .world-mode {
+    overscroll-behavior: none;
+  }
+
+  .world-scene-canvas {
+    cursor: crosshair;
+    image-rendering: auto;
+    touch-action: none;
+  }
+
+  .world-hud-panel,
+  .world-destination-button,
+  .race-hud-panel,
+  .race-touch-button,
+  .world-touch-button,
+  .world-touch-enter {
+    clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  }
+
+  .world-destination-button {
+    box-shadow:
+      inset 0 -3px 0 var(--destination),
+      0 10px 24px rgba(0, 0, 0, 0.28);
+  }
+
+  .world-destination-button:active {
+    box-shadow:
+      inset 0 -5px 0 var(--destination),
+      0 6px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  .world-minimap {
+    position: relative;
+    background-image:
+      radial-gradient(circle at 50% 50%, rgba(255, 211, 79, 0.13), transparent 18%),
+      linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: auto, 22px 22px, 22px 22px;
+  }
+
+  .world-map-route {
+    position: absolute;
+    width: 2px;
+    transform-origin: top center;
+    background: linear-gradient(to bottom, rgba(255, 211, 79, 0.54), rgba(255, 211, 79, 0));
+  }
+
+  .world-map-dot {
+    position: absolute;
+    display: grid;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    transform: translate(-50%, -50%);
+  }
+
+  .world-map-dot span {
+    display: block;
+    width: 9px;
+    height: 9px;
+    border: 2px solid var(--dot);
+    background: rgba(16, 21, 29, 0.92);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--dot) 55%, transparent);
+    transition: transform 160ms ease;
+  }
+
+  @keyframes worldObjectivePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 211, 79, 0.34); }
+    50% { box-shadow: 0 0 0 8px rgba(255, 211, 79, 0); }
+  }
+
+  .world-objective-pulse span {
+    animation: worldObjectivePulse 1.35s ease-in-out infinite;
+    background: #ffd34f;
+  }
+
+  .world-portal-cta {
+    box-shadow:
+      inset 0 -3px 0 rgba(16, 21, 29, 0.22),
+      0 0 20px rgba(255, 211, 79, 0.18);
+  }
+
+  .world-touch-button,
+  .race-touch-button,
+  .world-touch-enter {
+    display: grid;
+    place-items: center;
+    min-width: 52px;
+    height: 52px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(16, 21, 29, 0.76);
+    color: #fff8d5;
+    box-shadow: inset 0 -4px 0 rgba(255, 211, 79, 0.42), 0 12px 28px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    touch-action: none;
+    user-select: none;
+  }
+
+  .world-touch-button:active,
+  .race-touch-button:active,
+  .world-touch-enter:active {
+    transform: translateY(2px);
+    box-shadow: inset 0 -2px 0 rgba(255, 211, 79, 0.62), 0 8px 18px rgba(0, 0, 0, 0.26);
+  }
+
+  .world-touch-enter {
+    display: flex;
+    min-width: 92px;
+    gap: 6px;
+    padding: 0 14px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .race-shell,
+  .race-track-card,
+  .race-hud-panel {
+    clip-path: none;
+    border-radius: 8px;
+  }
+
+  .race-canvas {
+    image-rendering: auto;
+    background: #05060c;
+  }
+
+  .arcade-race-shell {
+    min-height: 560px;
+    overscroll-behavior: none;
+  }
+
+  .arcade-race-canvas {
+    background: #59c6ed;
+    image-rendering: auto;
+  }
+
+  .arcade-hud-panel,
+  .arcade-touch-button,
+  .arcade-go-button {
+    clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  }
+
+  .arcade-touch-button,
+  .arcade-go-button {
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(16, 21, 29, 0.82);
+    color: #fff8d5;
+    box-shadow:
+      inset 0 -4px 0 rgba(44, 200, 255, 0.42),
+      0 14px 34px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    touch-action: none;
+    user-select: none;
+  }
+
+  .arcade-touch-button {
+    min-width: 52px;
+    height: 52px;
+  }
+
+  .arcade-touch-button--active {
+    border-color: rgba(70, 217, 239, 0.82);
+    background: rgba(70, 217, 239, 0.22);
+    color: #ffffff;
+    box-shadow:
+      inset 0 -4px 0 rgba(255, 211, 79, 0.56),
+      0 0 24px rgba(70, 217, 239, 0.42),
+      0 14px 34px rgba(0, 0, 0, 0.32);
+  }
+
+  .arcade-go-button {
+    width: 82px;
+    height: 82px;
+    border-radius: 999px;
+    background: #ffd34f;
+    color: #10151d;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    box-shadow:
+      inset 0 -6px 0 rgba(16, 21, 29, 0.22),
+      0 18px 44px rgba(0, 0, 0, 0.42),
+      0 0 0 2px rgba(255, 255, 255, 0.48);
+  }
+
+  .arcade-touch-button:active,
+  .arcade-go-button:active {
+    transform: translateY(2px);
+    box-shadow:
+      inset 0 -2px 0 rgba(44, 200, 255, 0.62),
+      0 8px 18px rgba(0, 0, 0, 0.26);
+  }
+
+  .race-touch-button {
+    clip-path: none;
+    border-radius: 8px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .arcade-touch-controls,
+    .race-touch-controls,
+    .world-touch-controls {
+      display: none;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .arcade-touch-controls,
+    .race-touch-controls,
+    .world-touch-controls {
+      bottom: calc(env(safe-area-inset-bottom) + 80px);
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    .race-touch-button,
+    .arcade-touch-button,
+    .world-touch-button,
+    .world-touch-enter {
+      min-width: 42px;
+      height: 42px;
+    }
+
+    .arcade-go-button {
+      width: 74px;
+      height: 74px;
+    }
+
+    .world-touch-enter {
+      min-width: 78px;
+      padding: 0 10px;
+      font-size: 9px;
+    }
+  }
 }

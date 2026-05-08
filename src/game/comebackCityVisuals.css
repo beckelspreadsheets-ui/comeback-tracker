@@ -683,6 +683,35 @@
   filter: drop-shadow(0 0 5px rgba(255, 211, 79, 0.62));
 }
 
+.race-minimap__branch {
+  position: absolute;
+  width: 34px;
+  height: 22px;
+  border-top: 4px solid rgba(70, 217, 239, 0.82);
+  border-radius: 999px 999px 0 0;
+  box-shadow: 0 0 8px rgba(70, 217, 239, 0.42);
+}
+
+.race-minimap__branch--food {
+  left: 26px;
+  top: 28px;
+  transform: rotate(-42deg);
+}
+
+.race-minimap__branch--lab {
+  left: 43px;
+  top: 41px;
+  transform: rotate(34deg);
+  border-color: rgba(212, 92, 255, 0.86);
+}
+
+.race-minimap__branch--garage {
+  left: 22px;
+  top: 57px;
+  transform: rotate(154deg);
+  border-color: rgba(255, 211, 79, 0.86);
+}
+
 .race-minimap__dot {
   position: absolute;
   left: 54%;

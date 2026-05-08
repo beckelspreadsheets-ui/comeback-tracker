@@ -147,7 +147,7 @@ const run = async () => {
 
     await screenshotPage(browser, {
       name: 'mobile game',
-      pathName: 'mobile-game-390x844.png',
+      pathName: 'mobile-race-start-390x844.png',
       url: `${baseUrl}/#race`,
       viewport: { height: 844, isMobile: true, width: 390 },
       setup: async (page) => {
@@ -161,15 +161,15 @@ const run = async () => {
     });
 
     await screenshotPage(browser, {
-      name: 'mobile game after movement',
-      pathName: 'mobile-game-moving-390x844.png',
+      name: 'mobile race after movement',
+      pathName: 'mobile-race-moving-390x844.png',
       url: `${baseUrl}/#race`,
       viewport: { height: 844, isMobile: true, width: 390 },
       setup: async (page) => {
         await assertCanvasNonblank(page, 'mobile game after movement');
         await assertCanvasFrame(page, 'mobile game after movement', { maxTop: 40, minHeight: 820, minWidth: 380 });
         await page.keyboard.down('ArrowUp');
-        await page.waitForTimeout(14000);
+        await page.waitForTimeout(22000);
         await page.keyboard.up('ArrowUp');
         await assertVisible(page, '.race-objective-card', 'mobile objective card after movement');
         await assertVisible(page, '.race-minimap', 'mobile minimap after movement');
@@ -178,8 +178,8 @@ const run = async () => {
     });
 
     await screenshotPage(browser, {
-      name: 'desktop game',
-      pathName: 'desktop-game-1440x900.png',
+      name: 'desktop race',
+      pathName: 'desktop-race-start-1440x900.png',
       url: `${baseUrl}/#race`,
       viewport: { height: 900, width: 1440 },
       setup: async (page) => {
@@ -192,17 +192,37 @@ const run = async () => {
     });
 
     await screenshotPage(browser, {
-      name: 'desktop game after movement',
-      pathName: 'desktop-game-moving-1440x900.png',
+      name: 'desktop race after movement',
+      pathName: 'desktop-race-moving-1440x900.png',
       url: `${baseUrl}/#race`,
       viewport: { height: 900, width: 1440 },
       setup: async (page) => {
         await assertCanvasNonblank(page, 'desktop game after movement');
         await assertCanvasFrame(page, 'desktop game after movement', { maxTop: 180, minHeight: 760, minWidth: 1280 });
         await page.keyboard.down('ArrowUp');
-        await page.waitForTimeout(14000);
+        await page.waitForTimeout(22000);
         await page.keyboard.up('ArrowUp');
         await assertVisible(page, '.race-objective-card', 'desktop objective card after movement');
+      },
+    });
+
+    await screenshotPage(browser, {
+      name: 'mobile race during drift',
+      pathName: 'mobile-race-drifting-390x844.png',
+      url: `${baseUrl}/#race`,
+      viewport: { height: 844, isMobile: true, width: 390 },
+      setup: async (page) => {
+        await assertCanvasNonblank(page, 'mobile race during drift');
+        await assertCanvasFrame(page, 'mobile race during drift', { maxTop: 40, minHeight: 820, minWidth: 380 });
+        await page.keyboard.down('ArrowUp');
+        await page.waitForTimeout(1800);
+        await page.keyboard.down('ArrowLeft');
+        await page.keyboard.down('ShiftLeft');
+        await page.waitForTimeout(5200);
+        await page.keyboard.up('ShiftLeft');
+        await page.keyboard.up('ArrowLeft');
+        await page.keyboard.up('ArrowUp');
+        await assertVisible(page, '.arcade-go-button', 'mobile GO button after drift');
       },
     });
 
@@ -244,10 +264,11 @@ const run = async () => {
     screenshotsDir,
     screenshots: [
       'desktop-plaza-1440x900.png',
-      'mobile-game-390x844.png',
-      'mobile-game-moving-390x844.png',
-      'desktop-game-1440x900.png',
-      'desktop-game-moving-1440x900.png',
+      'mobile-race-start-390x844.png',
+      'mobile-race-moving-390x844.png',
+      'mobile-race-drifting-390x844.png',
+      'desktop-race-start-1440x900.png',
+      'desktop-race-moving-1440x900.png',
       'district-closeups-1440x900.png',
       'garage-kart-sheet-1440x900.png',
     ],

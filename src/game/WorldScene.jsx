@@ -801,7 +801,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       });
     };
 
-    const addRoadSegment = (a, b, width = 13, dashes = true, y = 0.09) => {
+    const addRoadSegment = (a, b, width = 16, dashes = true, y = 0.09) => {
       const dx = b.x - a.x;
       const dz = b.z - a.z;
       const length = Math.max(1, Math.hypot(dx, dz));
@@ -859,7 +859,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
           z: PLAZA_CENTER.z + Math.sin(t) * 44,
         };
       });
-      addRoadPath(points, 12.5, true);
+      addRoadPath(points, 15.5, true);
     };
 
     const createBoostPad = (x, z, yaw, color = '#44d7d0') => {
@@ -2456,16 +2456,16 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         { x: 0, z: -18 },
         { x: 0, z: 2 },
       ],
-      15
+      18
     );
     addRoadLoop();
-    addRoadPath([{ x: -18, z: -17 }, { x: -28, z: -21 }, { x: -34, z: -22 }], 12);
-    addRoadPath([{ x: 18, z: -17 }, { x: 28, z: -21 }, { x: 34, z: -22 }], 12);
-    addRoadPath([{ x: -51, z: 17 }, { x: -48, z: 25 }, { x: -42, z: 30 }], 12);
-    addRoadPath([{ x: 51, z: 17 }, { x: 48, z: 25 }, { x: 42, z: 30 }], 12);
-    addRoadPath([{ x: -39, z: 50 }, { x: -35, z: 64 }, { x: -30, z: 74 }], 12);
-    addRoadPath([{ x: 39, z: 50 }, { x: 35, z: 64 }, { x: 30, z: 74 }], 12);
-    addRoadPath([{ x: -30, z: 74 }, { x: 0, z: 76 }, { x: 30, z: 74 }], 11);
+    addRoadPath([{ x: -18, z: -17 }, { x: -28, z: -21 }, { x: -34, z: -22 }], 14.5);
+    addRoadPath([{ x: 18, z: -17 }, { x: 28, z: -21 }, { x: 34, z: -22 }], 14.5);
+    addRoadPath([{ x: -51, z: 17 }, { x: -48, z: 25 }, { x: -42, z: 30 }], 14.5);
+    addRoadPath([{ x: 51, z: 17 }, { x: 48, z: 25 }, { x: 42, z: 30 }], 14.5);
+    addRoadPath([{ x: -39, z: 50 }, { x: -35, z: 64 }, { x: -30, z: 74 }], 14.5);
+    addRoadPath([{ x: 39, z: 50 }, { x: 35, z: 64 }, { x: 30, z: 74 }], 14.5);
+    addRoadPath([{ x: -30, z: 74 }, { x: 0, z: 76 }, { x: 30, z: 74 }], 13.5);
 
     [
       { x: 0, z: -62, yaw: 0 },
@@ -3088,7 +3088,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     const constrainToRoadNetwork = (position) => {
       const current = new THREE.Vector3(position.x, 0, position.z);
       const plazaRadius = 37;
-      const roadHalfWidth = 11.5;
+      const roadHalfWidth = 14.5;
       let bestPoint = null;
       let bestDistance = Infinity;
 
