@@ -169,7 +169,15 @@ const run = async () => {
         await assertCanvasNonblank(page, 'mobile game after movement');
         await assertCanvasFrame(page, 'mobile game after movement', { maxTop: 40, minHeight: 820, minWidth: 380 });
         await page.keyboard.down('ArrowUp');
-        await page.waitForTimeout(22000);
+        await page.waitForTimeout(3600);
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(4200);
+        await page.keyboard.up('ArrowRight');
+        await page.waitForTimeout(3400);
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(2800);
+        await page.keyboard.up('ArrowRight');
+        await page.waitForTimeout(5200);
         await page.keyboard.up('ArrowUp');
         await assertVisible(page, '.race-objective-card', 'mobile objective card after movement');
         await assertVisible(page, '.race-minimap', 'mobile minimap after movement');
@@ -200,7 +208,15 @@ const run = async () => {
         await assertCanvasNonblank(page, 'desktop game after movement');
         await assertCanvasFrame(page, 'desktop game after movement', { maxTop: 180, minHeight: 760, minWidth: 1280 });
         await page.keyboard.down('ArrowUp');
-        await page.waitForTimeout(22000);
+        await page.waitForTimeout(3600);
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(4200);
+        await page.keyboard.up('ArrowRight');
+        await page.waitForTimeout(3400);
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(2800);
+        await page.keyboard.up('ArrowRight');
+        await page.waitForTimeout(5200);
         await page.keyboard.up('ArrowUp');
         await assertVisible(page, '.race-objective-card', 'desktop objective card after movement');
       },
@@ -216,11 +232,12 @@ const run = async () => {
         await assertCanvasFrame(page, 'mobile race during drift', { maxTop: 40, minHeight: 820, minWidth: 380 });
         await page.keyboard.down('ArrowUp');
         await page.waitForTimeout(1800);
-        await page.keyboard.down('ArrowLeft');
+        await page.keyboard.down('ArrowRight');
         await page.keyboard.down('ShiftLeft');
-        await page.waitForTimeout(5200);
+        await page.waitForTimeout(3200);
         await page.keyboard.up('ShiftLeft');
-        await page.keyboard.up('ArrowLeft');
+        await page.waitForTimeout(600);
+        await page.keyboard.up('ArrowRight');
         await page.keyboard.up('ArrowUp');
         await assertVisible(page, '.arcade-go-button', 'mobile GO button after drift');
       },

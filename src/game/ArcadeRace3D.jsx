@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   ArrowUp,
   ChevronsRight,
   CircleDot,
@@ -62,13 +64,13 @@ const DRIFT_TUNING = {
     turnAssist: 1.22,
   },
   kart: {
-    boostDuration: [0.54, 0.86, 1.15],
-    boostStrength: [9.5, 14.5, 20],
-    grip: 4.65,
-    slideAngle: 0.25,
-    slideForce: 10.8,
-    sparkChargeTime: [0.58, 1.18, 1.95],
-    turnAssist: 1.5,
+    boostDuration: [0.5, 0.82, 1.1],
+    boostStrength: [8.5, 13.5, 18.5],
+    grip: 4.25,
+    slideAngle: 0.27,
+    slideForce: 10.6,
+    sparkChargeTime: [0.48, 1.02, 1.7],
+    turnAssist: 1.55,
   },
   plane: {
     boostDuration: [0.42, 0.68, 0.92],
@@ -1144,14 +1146,19 @@ export const ArcadeRace3D = ({
     const curbRedMat = createBasicMaterial('#e2554f');
     const lineMat = createBasicMaterial('#ffd34f', { emissive: '#ffd34f', emissiveIntensity: 0.12 });
     const whiteLineMat = createBasicMaterial('#f7fbff');
+    const mutedLineMat = createBasicMaterial('#9fb0aa');
     const shoulderMat = createBasicMaterial('#586675');
     const railMat = createBasicMaterial('#eef6ff');
     const railPostMat = createBasicMaterial('#202837');
+    const cleanCityCourse = compiled.key === 'comeback-city';
 
     const addTrackSegment = (segment, options = {}) => {
       const roadWidth = options.roadWidth || compiled.roadWidth;
       const shoulderWidth = options.shoulderWidth || SHOULDER_WIDTH;
-      const railMode = options.railMode || 'full';
+      const cleanRoad = options.clean ?? cleanCityCourse;
+      const railMode = options.railMode ?? (cleanRoad ? 'none' : 'full');
+      const showCurbs = options.showCurbs ?? true;
+      const showLines = options.showLines ?? true;
       const center = new THREE.Vector3(
         (segment.a.x + segment.b.x) / 2,
         0.08,
@@ -1190,49 +1197,70 @@ export const ArcadeRace3D = ({
       road.receiveShadow = true;
       world.add(road);
 
-      [-1, 1].forEach((side) => {
-        placeLocalBox(
-          new THREE.BoxGeometry(segment.length + 0.9, 0.2, 0.34),
-          whiteLineMat,
-          0,
-          side * (roadWidth / 2 - 1.25),
-          0.35
-        );
-      });
-
-      for (let offset = 3.5; offset < segment.length; offset += 7) {
-        const t = offset / segment.length;
+      if (showLines) {
         [-1, 1].forEach((side) => {
-          const curb = new THREE.Mesh(
-            new THREE.BoxGeometry(4.4, 0.36, 1.04),
-            Math.floor(offset / 7 + (side > 0 ? 0 : 1)) % 2 === 0 ? curbAMat : curbRedMat
+          placeLocalBox(
+            new THREE.BoxGeometry(segment.length + 0.9, 0.14, cleanRoad ? 0.14 : 0.34),
+            cleanRoad ? mutedLineMat : whiteLineMat,
+            0,
+            side * (roadWidth / 2 - (cleanRoad ? 0.9 : 1.25)),
+            0.35
           );
-          curb.position.set(segment.a.x + segment.dx * t, 0.38, segment.a.z + segment.dz * t);
-          curb.rotation.y = yaw;
-          curb.translateZ(side * (roadWidth / 2 + 0.52));
-          curb.castShadow = true;
-          curb.receiveShadow = true;
-          world.add(curb);
         });
       }
 
-      for (let offset = 7; offset < segment.length; offset += 14) {
-        const t = offset / segment.length;
-        [-0.58, 0.58].forEach((laneOffset) => {
-          const dash = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.09, 0.18), lineMat);
-          dash.position.set(segment.a.x + segment.dx * t, 0.39, segment.a.z + segment.dz * t);
-          dash.rotation.y = yaw;
-          dash.translateZ(laneOffset);
-          world.add(dash);
-        });
+      if (showCurbs) {
+        const curbStep = cleanRoad ? 24 : 7;
+        for (let offset = cleanRoad ? 8 : 3.5; offset < segment.length; offset += curbStep) {
+          const t = offset / segment.length;
+          [-1, 1].forEach((side) => {
+            const curb = new THREE.Mesh(
+              new THREE.BoxGeometry(cleanRoad ? 5.8 : 4.4, cleanRoad ? 0.24 : 0.36, cleanRoad ? 0.46 : 1.04),
+              cleanRoad
+                ? Math.floor(offset / curbStep + (side > 0 ? 0 : 1)) % 2 === 0
+                  ? curbBMat
+                  : curbAMat
+                : Math.floor(offset / 7 + (side > 0 ? 0 : 1)) % 2 === 0
+                  ? curbAMat
+                  : curbRedMat
+            );
+            curb.position.set(segment.a.x + segment.dx * t, 0.38, segment.a.z + segment.dz * t);
+            curb.rotation.y = yaw;
+            curb.translateZ(side * (roadWidth / 2 + (cleanRoad ? 0.28 : 0.52)));
+            curb.castShadow = true;
+            curb.receiveShadow = true;
+            world.add(curb);
+          });
+        }
+      }
 
-        [-roadWidth * 0.24, roadWidth * 0.24].forEach((laneOffset) => {
-          const dash = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.08, 0.22), whiteLineMat);
-          dash.position.set(segment.a.x + segment.dx * t, 0.38, segment.a.z + segment.dz * t);
-          dash.rotation.y = yaw;
-          dash.translateZ(laneOffset);
-          world.add(dash);
-        });
+      const dashStep = cleanRoad ? 30 : 14;
+      if (showLines) {
+        for (let offset = cleanRoad ? 14 : 7; offset < segment.length; offset += dashStep) {
+          const t = offset / segment.length;
+          if (cleanRoad) {
+            const dash = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.08, 0.22), lineMat);
+            dash.position.set(segment.a.x + segment.dx * t, 0.39, segment.a.z + segment.dz * t);
+            dash.rotation.y = yaw;
+            world.add(dash);
+          } else {
+            [-0.58, 0.58].forEach((laneOffset) => {
+              const dash = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.09, 0.18), lineMat);
+              dash.position.set(segment.a.x + segment.dx * t, 0.39, segment.a.z + segment.dz * t);
+              dash.rotation.y = yaw;
+              dash.translateZ(laneOffset);
+              world.add(dash);
+            });
+
+            [-roadWidth * 0.24, roadWidth * 0.24].forEach((laneOffset) => {
+              const dash = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.08, 0.22), whiteLineMat);
+              dash.position.set(segment.a.x + segment.dx * t, 0.38, segment.a.z + segment.dz * t);
+              dash.rotation.y = yaw;
+              dash.translateZ(laneOffset);
+              world.add(dash);
+            });
+          }
+        }
       }
 
       if (railMode === 'none') return;
@@ -1283,17 +1311,25 @@ export const ArcadeRace3D = ({
       });
     };
 
-    compiled.segments.forEach((segment) => addTrackSegment(segment));
-    addTrackCaps(compiled.points, compiled.roadWidth, SHOULDER_WIDTH, true);
+    compiled.segments.forEach((segment) =>
+      addTrackSegment(segment, {
+        clean: cleanCityCourse,
+        railMode: cleanCityCourse ? 'none' : 'full',
+      })
+    );
+    addTrackCaps(compiled.points, compiled.roadWidth, SHOULDER_WIDTH, !cleanCityCourse);
     (compiled.branchRoutes || []).forEach((route) => {
       route.segments.forEach((segment) =>
         addTrackSegment(segment, {
-          railMode: route.rails === false ? 'none' : 'low',
+          clean: cleanCityCourse,
+          railMode: cleanCityCourse || route.rails === false ? 'none' : 'low',
           roadWidth: route.roadWidth,
           shoulderWidth: route.shoulderWidth,
+          showCurbs: !cleanCityCourse,
+          showLines: !cleanCityCourse,
         })
       );
-      addTrackCaps(route.points, route.roadWidth, route.shoulderWidth, false);
+      if (!cleanCityCourse) addTrackCaps(route.points, route.roadWidth, route.shoulderWidth, false);
     });
 
     const startSample = compiled.pointAt(compiled.startProgress || 0);
@@ -1401,12 +1437,12 @@ export const ArcadeRace3D = ({
       group.position.copy(gate.position);
       group.position.y = gate.altitude;
       group.rotation.y = Math.atan2(gate.tangent.x, gate.tangent.z);
-      group.visible = defaultVehicle === 'plane' || index % 3 === 0;
+      group.visible = cleanCityCourse ? defaultVehicle === 'plane' : defaultVehicle === 'plane' || index % 3 === 0;
       world.add(group);
       return { glow, group, ring };
     });
 
-    const switchPadMeshes = race.switchPads.map((pad) => {
+    const switchPadMeshes = (cleanCityCourse ? [] : race.switchPads).map((pad) => {
       const group = new THREE.Group();
       const color = pad.targetVehicle === 'plane' ? '#2cc8ff' : pad.targetVehicle === 'hover' ? '#4ade80' : '#ffd34f';
       const mat = createBasicMaterial(color, { emissive: color, emissiveIntensity: 0.46 });
@@ -1649,7 +1685,13 @@ export const ArcadeRace3D = ({
         });
       };
 
-      (compiled.scenery || []).filter((item) => item.kind !== 'island').forEach(addTrackLandmark);
+      (compiled.scenery || [])
+        .filter(
+          (item) =>
+            item.kind !== 'island' &&
+            !(cleanCityCourse && ['drill', 'market', 'rails', 'spire'].includes(item.kind))
+        )
+        .forEach(addTrackLandmark);
 
       const buildingSpots = [
         [left - 18, near + trackSpanZ * 0.1, 11, 13, 18],
@@ -1665,8 +1707,9 @@ export const ArcadeRace3D = ({
       ];
       buildingSpots.forEach(([x, z, w, d, h], index) => addBuilding(x, z, w, d, h, index));
 
-      for (let i = 0; i < 24; i += 1) {
-        const sample = compiled.pointAt(i / 24);
+      const streetLampCount = cleanCityCourse ? 10 : 24;
+      for (let i = 0; i < streetLampCount; i += 1) {
+        const sample = compiled.pointAt(i / streetLampCount);
         const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x);
         const side = i % 2 === 0 ? -1 : 1;
         const position = sample.point.clone().addScaledVector(normal, side * (compiled.roadWidth / 2 + 9.4));
@@ -1851,7 +1894,7 @@ export const ArcadeRace3D = ({
       const addRaceDistrict = (district, index) => {
         const sample = compiled.pointAt(district.progress);
         const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize().multiplyScalar(district.side);
-        const position = sample.point.clone().addScaledVector(normal, compiled.roadWidth / 2 + 72 + (index % 2) * 8);
+        const position = sample.point.clone().addScaledVector(normal, compiled.roadWidth / 2 + 98 + (index % 2) * 12);
         const group = new THREE.Group();
         const width = district.label === 'FOOD COURT' ? 26 : district.label === 'GARAGE' ? 28 : 22;
         const depth = district.label === 'LAB' ? 21 : 18;
@@ -1953,6 +1996,56 @@ export const ArcadeRace3D = ({
 
       const animatedCityDistricts = [];
       RACE_CITY_DISTRICTS.forEach(addRaceDistrict);
+
+      const addRoadDistrictSign = (district, index) => {
+        const signProgress = clamp(district.progress - 0.035, 0.02, 0.98);
+        const sample = compiled.pointAt(signProgress);
+        const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize().multiplyScalar(district.side);
+        const position = sample.point.clone().addScaledVector(normal, compiled.roadWidth / 2 + 18 + (index % 2) * 3);
+        const group = new THREE.Group();
+        const darkMat = createBasicMaterial('#0b1b2d', {
+          emissive: '#0b1b2d',
+          emissiveIntensity: 0.12,
+        });
+        const accentMat = createBasicMaterial(district.accent, {
+          emissive: district.accent,
+          emissiveIntensity: 0.62,
+        });
+        const lightMat = createBasicMaterial('#f7fbff');
+        group.position.copy(position);
+        group.rotation.y = faceRoadYaw(position, sample.point);
+
+        [-1, 1].forEach((side) => {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.58, 9.8, 0.58), darkMat);
+          post.position.set(side * 6.9, 4.9, 0);
+          post.castShadow = true;
+          group.add(post);
+        });
+
+        const board = new THREE.Mesh(new THREE.BoxGeometry(16.4, 4.5, 0.8), darkMat);
+        board.position.set(0, 9.2, 0);
+        board.castShadow = true;
+        group.add(board);
+
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(15.4, 0.5, 1), accentMat);
+        stripe.position.set(0, 11.2, 0.05);
+        group.add(stripe);
+
+        [-2.8, 0, 2.8].forEach((x) => {
+          const arrow = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.32, 0.82), lightMat);
+          arrow.position.set(x, 7.1, 0.46);
+          arrow.rotation.z = district.side > 0 ? -0.66 : 0.66;
+          group.add(arrow);
+        });
+
+        const text = createBillboardText(district.label, district.accent);
+        text.position.set(0, 9.3, 0.62);
+        text.scale.set(district.label === 'FOOD COURT' ? 11.8 : 9.8, 2.5, 1);
+        group.add(text);
+
+        world.add(group);
+      };
+      RACE_CITY_DISTRICTS.forEach(addRoadDistrictSign);
 
       const addRaceObjectiveMarker = () => {
         const markerSample = compiled.pointAt(0.872);
@@ -2230,8 +2323,9 @@ export const ArcadeRace3D = ({
       };
       addWaterAndBridge();
 
-      for (let i = 0; i < 18; i += 1) {
-        const sample = compiled.pointAt(0.81 + i * 0.008);
+      const plazaLampCount = cleanCityCourse ? 6 : 18;
+      for (let i = 0; i < plazaLampCount; i += 1) {
+        const sample = compiled.pointAt(0.81 + i * (cleanCityCourse ? 0.018 : 0.008));
         const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize();
         [-1, 1].forEach((side) => {
           const p = sample.point.clone().addScaledVector(normal, side * (compiled.roadWidth / 2 + 7.6));
@@ -2271,7 +2365,7 @@ export const ArcadeRace3D = ({
     const playerVehicle = createVehicleModel({
       accent: '#46d9ef',
       color: '#ef4334',
-      scale: 0.92,
+      scale: 0.8,
       suit: profile.avatar?.suit || '#202837',
     });
     playerVehicle.setMode(race.player.vehicleMode);
@@ -2288,7 +2382,7 @@ export const ArcadeRace3D = ({
       const model = createVehicleModel({
         accent: rival.accent,
         color: rival.color,
-        scale: 0.54,
+        scale: 0.48,
         suit: '#202837',
       });
       model.setMode(defaultVehicle);
@@ -3200,35 +3294,41 @@ export const ArcadeRace3D = ({
           0,
           1
         );
-        const cruiseAssist = controls.throttle > 0.08 && Math.abs(player.steerInput) < 0.14 ? 1.35 : 0.08;
-        const assistStrength = edgeAssist * 2.1 + cruiseAssist;
+        const cruiseAssist =
+          !player.driftActive && controls.throttle > 0.08 && Math.abs(player.steerInput) < 0.14 ? 1.45 : 0.06;
+        const assistStrength = edgeAssist * (player.driftActive ? 1.05 : 2.25) + cruiseAssist;
         player.heading += signedAngleDelta(trackHeading, player.heading) * clamp(dt * assistStrength, 0, 0.16);
         if (edgeAssist > 0.05 && player.jumpHeight <= 0.05) {
           const guidedVelocity = nearest.tangent.clone().multiplyScalar(Math.max(0, player.velocity.dot(nearest.tangent)));
-          player.velocity.lerp(guidedVelocity, clamp(dt * edgeAssist * 2.4, 0, 0.28));
+          player.velocity.lerp(guidedVelocity, clamp(dt * edgeAssist * (player.driftActive ? 1.35 : 2.65), 0, 0.28));
         }
-        if (controls.throttle > 0.08 && Math.abs(player.steerInput) < 0.14 && nearest.distance > activeRoadWidth * 0.24) {
-          const recenter = clamp((nearest.distance - activeRoadWidth * 0.24) / Math.max(1, activeRoadWidth * 0.42), 0, 1);
-          player.velocity.addScaledVector(nearest.normal, -recenter * 22 * dt);
+        if (
+          !player.driftActive &&
+          controls.throttle > 0.08 &&
+          Math.abs(player.steerInput) < 0.14 &&
+          nearest.distance > activeRoadWidth * 0.18
+        ) {
+          const recenter = clamp((nearest.distance - activeRoadWidth * 0.18) / Math.max(1, activeRoadWidth * 0.46), 0, 1);
+          player.velocity.addScaledVector(nearest.normal, -recenter * 34 * dt);
         }
       }
 
       if (!isPlane) {
         const activeRoadWidth = nearest.roadWidth || compiled.roadWidth;
         const softLimit = activeRoadWidth * 0.5;
-        const guideLimit = activeRoadWidth * (player.vehicleMode === 'hover' ? 1.08 : 0.92);
+        const guideLimit = activeRoadWidth * (player.vehicleMode === 'hover' ? 1.18 : 1.05);
         const edge = clamp((nearest.distance - softLimit) / Math.max(1, guideLimit - softLimit), 0, 1);
         if (edge > 0 && player.shieldTimer <= 0 && player.jumpHeight <= 0.05) {
-          player.velocity.addScaledVector(nearest.normal, -edge * 18 * dt);
-          player.velocity.multiplyScalar(Math.max(0, 1 - (0.58 + edge * 1.7) * dt));
+          player.velocity.addScaledVector(nearest.normal, -edge * 13 * dt);
+          player.velocity.multiplyScalar(Math.max(0, 1 - (0.46 + edge * 1.35) * dt));
         }
         if (nearest.distance > guideLimit && player.jumpHeight <= 0.05) {
           const returnStrength = clamp((nearest.distance - guideLimit) / Math.max(1, activeRoadWidth * 0.72), 0, 1);
           const guidedVelocity = nearest.tangent.clone().multiplyScalar(Math.max(0, player.velocity.dot(nearest.tangent)));
           const outwardSpeed = player.velocity.dot(nearest.normal);
           if (outwardSpeed > 0) player.velocity.addScaledVector(nearest.normal, -outwardSpeed * clamp(edge * 0.72, 0.1, 0.72));
-          player.velocity.addScaledVector(nearest.normal, -returnStrength * 32 * dt);
-          player.velocity.lerp(guidedVelocity, clamp(dt * (1.4 + returnStrength * 3.2), 0, 0.46));
+          player.velocity.addScaledVector(nearest.normal, -returnStrength * 24 * dt);
+          player.velocity.lerp(guidedVelocity, clamp(dt * (1.1 + returnStrength * 2.5), 0, 0.38));
         }
       }
 
@@ -3672,7 +3772,7 @@ export const ArcadeRace3D = ({
       const lookAhead = isPlane
         ? 24 + speedRatio * 8
         : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.lookAhead + 4 : 34) + speedRatio * 8;
-      const lookHeight = isPlane ? altitude + 1.2 : (raceViewport.mobile ? 3 : 5.5) + altitude * 0.12;
+      const lookHeight = isPlane ? altitude + 1.2 : (raceViewport.mobile ? 4.8 : 5.5) + altitude * 0.12;
       const desired = player.position
         .clone()
         .addScaledVector(forward, -chaseDistance)
@@ -3984,80 +4084,27 @@ export const ArcadeRace3D = ({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute right-3 top-3 grid w-[116px] gap-2 text-white sm:right-4 sm:w-[144px]">
+      <div className="pointer-events-none absolute right-3 top-3 grid w-[116px] gap-2 text-white sm:right-4 sm:w-[132px]">
         <CurrencyStack />
-        <button
-          type="button"
-          onClick={() => queueLocalCommand('item')}
-          disabled={!telemetry.heldBalloon}
-          className="arcade-hud-panel pointer-events-auto hidden min-h-[72px] border border-white/18 bg-[#10151d]/[0.88] p-2 text-left shadow-[0_14px_34px_rgba(0,0,0,0.32)] backdrop-blur-md transition-opacity disabled:opacity-50 sm:grid"
-          title="Use balloon item"
-        >
-          <div className="flex items-center gap-2">
-            <span
-              className="grid h-8 w-8 place-items-center border"
-              style={{
-                borderColor: telemetry.heldBalloon?.color || '#ffffff55',
-                color: telemetry.heldBalloon?.color || '#ffffffaa',
-              }}
-            >
-              <HeldIcon size={17} />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate font-mono text-[8px] font-black uppercase tracking-[0.12em] text-white/56">
-                Item
-              </span>
-              <span className="block truncate font-mono text-[10px] font-black uppercase leading-tight">
-                {telemetry.heldBalloon?.label || 'Empty'}
-              </span>
-            </span>
-          </div>
-          <div className="mt-1 font-mono text-[8px] uppercase tracking-[0.12em] text-[#ffd34f]">
-            {telemetry.heldBalloon
-              ? `Tier ${telemetry.heldBalloon.level}${telemetry.secondaryHeldItem ? ' / +1 slot' : ''}`
-              : 'Collect box'}
-          </div>
-        </button>
-
-        <div className="hidden grid-cols-3 gap-1 sm:grid">
+        <div className="hidden grid-cols-2 gap-2 sm:grid">
           <button
             type="button"
-            onClick={() => queueLocalCommand('upgrade-tier')}
-            disabled={!telemetry.upgradeAvailable}
-            className="arcade-hud-panel pointer-events-auto h-8 border border-white/18 bg-[#10151d]/[0.86] font-mono text-[8px] font-black uppercase tracking-[0.08em] text-[#ffd34f] disabled:opacity-40"
-            title="Spend 3 bananas to upgrade the held item"
+            onClick={() => queueLocalCommand('item')}
+            disabled={!telemetry.heldBalloon}
+            className="arcade-hud-panel pointer-events-auto grid h-11 place-items-center border border-white/18 bg-[#10151d]/[0.88] text-white shadow-[0_12px_28px_rgba(0,0,0,0.3)] backdrop-blur-md transition-opacity disabled:opacity-42"
+            title={telemetry.heldBalloon?.label || 'No item held'}
           >
-            T+1
+            <HeldIcon size={17} />
           </button>
           <button
             type="button"
-            onClick={() => queueLocalCommand('upgrade-rare')}
-            disabled={telemetry.bananas < 5 || telemetry.rareNextPickup}
-            className="arcade-hud-panel pointer-events-auto h-8 border border-white/18 bg-[#10151d]/[0.86] font-mono text-[8px] font-black uppercase tracking-[0.08em] text-[#ffd34f] disabled:opacity-40"
-            title="Spend 5 bananas for a rare next pickup"
+            onClick={() => queueLocalCommand('vehicle')}
+            className="arcade-hud-panel pointer-events-auto grid h-11 place-items-center border border-white/18 bg-[#10151d]/[0.88] text-white shadow-[0_12px_28px_rgba(0,0,0,0.3)] backdrop-blur-md"
+            title="Change vehicle"
           >
-            Rare
-          </button>
-          <button
-            type="button"
-            onClick={() => queueLocalCommand('upgrade-double')}
-            disabled={telemetry.bananas < 8 || telemetry.doubleSlotUses > 0 || telemetry.secondaryHeldItem}
-            className="arcade-hud-panel pointer-events-auto h-8 border border-white/18 bg-[#10151d]/[0.86] font-mono text-[8px] font-black uppercase tracking-[0.08em] text-[#ffd34f] disabled:opacity-40"
-            title="Spend 8 bananas to arm a one-use second item slot"
-          >
-            Slot
+            <Plane size={17} />
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => queueLocalCommand('vehicle')}
-          className="arcade-hud-panel pointer-events-auto hidden h-10 items-center justify-center gap-2 border border-white/18 bg-[#10151d]/[0.88] px-2 font-mono text-[9px] font-black uppercase tracking-[0.12em] text-white backdrop-blur-md sm:flex"
-          title="Change vehicle"
-        >
-          <Plane size={13} />
-          Switch
-        </button>
       </div>
 
       {telemetry.perfect && (
@@ -4080,6 +4127,28 @@ export const ArcadeRace3D = ({
             <span className="race-minimap__branch race-minimap__branch--lab" />
             <span className="race-minimap__branch race-minimap__branch--garage" />
             <span className="race-minimap__dot" />
+          </div>
+          <div className="pointer-events-auto mt-2 flex gap-2">
+            <button
+              type="button"
+              className="arcade-touch-button"
+              onPointerDown={press({ steer: -1 })}
+              onPointerUp={release({ steer: 0 })}
+              onPointerCancel={release({ steer: 0 })}
+              aria-label="Steer left"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <button
+              type="button"
+              className="arcade-touch-button"
+              onPointerDown={press({ steer: 1 })}
+              onPointerUp={release({ steer: 0 })}
+              onPointerCancel={release({ steer: 0 })}
+              aria-label="Steer right"
+            >
+              <ArrowRight size={18} />
+            </button>
           </div>
         </div>
 
