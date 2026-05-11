@@ -91,19 +91,24 @@ const run = async () => {
           if (!result || result.trackKey !== track.key) fail('Race did not report a matching finish result', { mode, raceIndex, result, track: track.key });
           if (!Number.isFinite(result.time) || result.time <= 0) fail('Race finish time was invalid', { mode, raceIndex, result, track: track.key });
           const telemetry = result.playtest || {};
-          for (const layer of ['ground', 'air', 'hybrid']) {
+          const requiredLayers = track.kartOnly ? ['ground'] : ['ground', 'air', 'hybrid'];
+          const requiredVehicles = track.kartOnly ? ['kart'] : ['kart', 'plane'];
+          for (const layer of requiredLayers) {
             if (!telemetry.layers?.includes(layer)) fail('Autoplay did not exercise all route layers', { layer, mode, raceIndex, telemetry, track: track.key });
           }
-          for (const vehicle of ['kart', 'plane']) {
+          for (const vehicle of requiredVehicles) {
             if (!telemetry.vehicles?.includes(vehicle)) fail('Autoplay did not exercise required vehicles', { mode, raceIndex, telemetry, track: track.key, vehicle });
+          }
+          if (track.kartOnly && telemetry.vehicles?.some((vehicle) => vehicle !== 'kart')) {
+            fail('Kart-only track used a non-kart vehicle', { mode, raceIndex, telemetry, track: track.key });
           }
           if (!telemetry.signatureUsed) fail('Track signature item was not activated', { mode, raceIndex, telemetry, track: track.key });
           if ((telemetry.itemUses || 0) < 1) fail('No item activation was recorded', { mode, raceIndex, telemetry, track: track.key });
           if ((telemetry.itemBoxesCollected || 0) < 1) fail('No item box pickup was recorded', { mode, raceIndex, telemetry, track: track.key });
           if ((telemetry.bananaMax || 0) < 16 || (telemetry.upgrades || 0) < 3) fail('Banana economy upgrades were not exercised', { mode, raceIndex, telemetry, track: track.key });
-          if ((track.switchPads || []).length && (telemetry.switchPads || 0) < 1) fail('Switch pads were not crossed', { mode, raceIndex, telemetry, track: track.key });
-          if ((track.vehicleZones || []).length && (telemetry.zones || 0) < 1) fail('Vehicle-only zones were not crossed', { mode, raceIndex, telemetry, track: track.key });
-          if ((track.vehicleLocks || []).length && (telemetry.locks || 0) < 1) fail('Vehicle-locked sections were not crossed', { mode, raceIndex, telemetry, track: track.key });
+          if (!track.kartOnly && (track.switchPads || []).length && (telemetry.switchPads || 0) < 1) fail('Switch pads were not crossed', { mode, raceIndex, telemetry, track: track.key });
+          if (!track.kartOnly && (track.vehicleZones || []).length && (telemetry.zones || 0) < 1) fail('Vehicle-only zones were not crossed', { mode, raceIndex, telemetry, track: track.key });
+          if (!track.kartOnly && (track.vehicleLocks || []).length && (telemetry.locks || 0) < 1) fail('Vehicle-locked sections were not crossed', { mode, raceIndex, telemetry, track: track.key });
           if ((telemetry.hazardsEncountered || 0) <= 0) fail('No active track hazards were encountered', { mode, raceIndex, telemetry, track: track.key });
 
           results.push({

@@ -64,13 +64,13 @@ const DRIFT_TUNING = {
     turnAssist: 1.22,
   },
   kart: {
-    boostDuration: [0.5, 0.82, 1.1],
-    boostStrength: [8.5, 13.5, 18.5],
-    grip: 4.25,
-    slideAngle: 0.27,
-    slideForce: 10.6,
-    sparkChargeTime: [0.48, 1.02, 1.7],
-    turnAssist: 1.55,
+    boostDuration: [0.35, 0.75, 1.1],
+    boostStrength: [9.5, 14.5, 20],
+    grip: 4.05,
+    slideAngle: 0.28,
+    slideForce: 10.8,
+    sparkChargeTime: [0.55, 1.3, 2.15],
+    turnAssist: 1.7,
   },
   plane: {
     boostDuration: [0.42, 0.68, 0.92],
@@ -86,22 +86,22 @@ const DRIFT_TUNING = {
 const VEHICLES = {
   kart: {
     label: 'Kart',
-    acceleration: 49,
+    acceleration: 58,
     brake: 54,
-    boostMax: 70,
-    cameraDistance: 34,
-    cameraHeight: 9.3,
-    driftCharge: 1.18,
+    boostMax: 76,
+    cameraDistance: 30,
+    cameraHeight: 8.4,
+    driftCharge: 1.08,
     driftGrip: DRIFT_TUNING.kart.grip,
     driftSlip: DRIFT_TUNING.kart.slideForce,
     driftTurn: DRIFT_TUNING.kart.turnAssist,
     driftVisualAngle: DRIFT_TUNING.kart.slideAngle,
-    grip: 12.8,
+    grip: 14.2,
     hover: 0,
-    maxSpeed: 52,
-    offroad: 0.36,
+    maxSpeed: 58,
+    offroad: 0.46,
     reverse: 16,
-    steer: 2.28,
+    steer: 2.46,
   },
   hover: {
     label: 'Hover',
@@ -322,6 +322,62 @@ const toWorldPoint = (point, y = 0) =>
     (point.y - SOURCE_WORLD.h / 2) * TRACK_SCALE
   );
 
+const toCourseV2Point = (point, y = 0) =>
+  new THREE.Vector3(point.x || 0, point.y ?? y, point.z ?? point.y ?? 0);
+
+const sampleCourseLine = (points, { closed = false, divisions = 32 } = {}) => {
+  const vectors = (points || []).map((point) => toCourseV2Point(point));
+  if (vectors.length < 3) return vectors;
+  const curve = new THREE.CatmullRomCurve3(vectors, closed, 'catmullrom', 0.42);
+  const samples = curve.getSpacedPoints(Math.max(divisions, vectors.length * 4));
+  if (closed && samples.length > 1) samples.pop();
+  return samples;
+};
+
+const makeRaceMinimap = (track) => {
+  const course = track.courseV2;
+  const source = course?.minimapPath?.length
+    ? course.minimapPath
+    : (track.points || []).map((point) => ({ x: point.x, z: point.y }));
+  const branches = course?.branches || track.shortcuts || [];
+  if (!source.length) return null;
+  const allPoints = [
+    ...source,
+    ...branches.flatMap((branch) => branch.points || []),
+  ].map((point) => ({ x: point.x || 0, z: point.z ?? point.y ?? 0 }));
+  const bounds = allPoints.reduce(
+    (acc, point) => ({
+      maxX: Math.max(acc.maxX, point.x),
+      maxZ: Math.max(acc.maxZ, point.z),
+      minX: Math.min(acc.minX, point.x),
+      minZ: Math.min(acc.minZ, point.z),
+    }),
+    { maxX: -Infinity, maxZ: -Infinity, minX: Infinity, minZ: Infinity }
+  );
+  const spanX = Math.max(1, bounds.maxX - bounds.minX);
+  const spanZ = Math.max(1, bounds.maxZ - bounds.minZ);
+  const pad = 12;
+  const mapPoint = (point) => {
+    const x = pad + ((point.x - bounds.minX) / spanX) * (100 - pad * 2);
+    const y = pad + ((point.z - bounds.minZ) / spanZ) * (100 - pad * 2);
+    return [Number(x.toFixed(2)), Number(y.toFixed(2))];
+  };
+  const pathFor = (points, closed = false) => {
+    const mapped = points.map((point) => mapPoint({ x: point.x || 0, z: point.z ?? point.y ?? 0 }));
+    if (!mapped.length) return '';
+    const body = mapped.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ');
+    return closed ? `${body} Z` : body;
+  };
+  return {
+    branches: branches.map((branch) => ({
+      accent: branch.accent || '#46d9ef',
+      d: pathFor(branch.points || [], false),
+      key: branch.key,
+    })),
+    route: pathFor(source, true),
+  };
+};
+
 const pointOnSegment = (segment, t) => ({
   point: new THREE.Vector3(
     segment.a.x + segment.dx * t,
@@ -332,7 +388,13 @@ const pointOnSegment = (segment, t) => ({
 });
 
 const compileTrack3D = (track) => {
-  const points = track.points.map((point) => toWorldPoint(point));
+  const courseV2 = track.courseV2 || null;
+  const points = courseV2
+    ? sampleCourseLine(courseV2.centerline, {
+        closed: true,
+        divisions: courseV2.sampleCount || 128,
+      })
+    : track.points.map((point) => toWorldPoint(point));
   const segments = [];
   let totalLength = 0;
 
@@ -404,8 +466,17 @@ const compileTrack3D = (track) => {
 
   const nearestMain = (position) => nearestOnSegments(segments, totalLength, position);
 
+  const roadWidth = courseV2
+    ? courseV2.mainRoadWidth || track.width || 50
+    : Math.max(ROAD_WIDTH_MIN, track.width * TRACK_SCALE * ROAD_WIDTH_MULTIPLIER);
+
   const compileBranchRoute = (shortcut, index) => {
-    const branchPoints = (shortcut.points || []).map((point) => toWorldPoint(point));
+    const branchPoints = courseV2
+      ? sampleCourseLine(shortcut.points || [], {
+          closed: false,
+          divisions: shortcut.sampleCount || Math.max(18, (shortcut.points || []).length * 8),
+        })
+      : (shortcut.points || []).map((point) => toWorldPoint(point));
     const branchSegments = [];
     let branchLength = 0;
 
@@ -443,20 +514,22 @@ const compileTrack3D = (track) => {
       index,
       points: branchPoints,
       progressAt: (progress) => wrap01(startProgress + span * progress),
-      roadWidth: Math.max(
-        ROAD_WIDTH_MIN * 0.78,
-        (shortcut.width || track.width * 0.78) * TRACK_SCALE * ROAD_WIDTH_MULTIPLIER
-      ),
+      roadWidth: courseV2
+        ? shortcut.width || roadWidth * 0.72
+        : Math.max(
+            ROAD_WIDTH_MIN * 0.78,
+            (shortcut.width || track.width * 0.78) * TRACK_SCALE * ROAD_WIDTH_MULTIPLIER
+          ),
       segments: branchSegments,
-      shoulderWidth: Math.max(4.4, SHOULDER_WIDTH * 0.72),
+      shoulderWidth: courseV2 ? shortcut.shoulderWidth || 5 : Math.max(4.4, SHOULDER_WIDTH * 0.72),
       startProgress,
       totalLength: branchLength,
     };
   };
 
   const branchRoutes = [
-    ...(track.shortcuts || []),
-    ...(track.branches || []),
+    ...((courseV2?.branches || track.shortcuts || [])),
+    ...(courseV2 ? [] : track.branches || []),
   ].filter((branch) => (branch.points || []).length > 1).map(compileBranchRoute);
 
   const nearest = (position) => {
@@ -473,7 +546,6 @@ const compileTrack3D = (track) => {
     return best;
   };
 
-  const roadWidth = Math.max(ROAD_WIDTH_MIN, track.width * TRACK_SCALE * ROAD_WIDTH_MULTIPLIER);
   const sourceLayers =
     track.layers || {
       air: { aiWeight: 0.82, itemBoxes: [], lineOffset: 0.42, vehiclePreference: 'plane' },
@@ -555,9 +627,13 @@ const compileTrack3D = (track) => {
   return {
     ...track,
     bananaCount: track.bananaCount || 18,
-    bananaPlacements: track.bananaPlacements || null,
+    bananaPlacements: courseV2?.bananaPlacements || track.bananaPlacements || null,
     branchRoutes,
     bounds,
+    cameraCheckpoints: courseV2?.cameraCheckpoints || [],
+    collisionZones: courseV2?.collisionZones || [],
+    courseV2,
+    districtAnchors: courseV2?.districtAnchors || null,
     events: track.events || [],
     hazardPlacements,
     itemBoxPlacements: itemBoxPlacements.length
@@ -569,6 +645,7 @@ const compileTrack3D = (track) => {
     points,
     roadWidth,
     segments,
+    surfaceZones: courseV2?.surfaceZones || [],
     switchPads,
     totalLength,
     vehicleLocks,
@@ -897,18 +974,23 @@ const createRaceState = (compiled, profile, defaultVehicle) => {
     };
   });
 
-  const zippers = (compiled.boostPads || []).map((progress, index) => {
+  const zippers = (compiled.boostPads || []).map((entry, index) => {
+    const progress = typeof entry === 'number' ? entry : entry.progress;
     const sample = compiled.pointAt(progress);
+    const normalAtPoint = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x);
     return {
       cooldown: 0,
       index,
-      position: sample.point.clone(),
+      position: sample.point.clone().addScaledVector(
+        normalAtPoint,
+        (typeof entry === 'number' ? 0 : entry.side || 0) * compiled.roadWidth + layerOffset(entry.layer, compiled.roadWidth)
+      ),
       progress,
       tangent: sample.tangent.clone(),
     };
   });
 
-  const flightGates = Array.from({ length: 10 }, (_, index) => {
+  const flightGates = compiled.kartOnly || compiled.courseV2?.kartOnly ? [] : Array.from({ length: 10 }, (_, index) => {
     const progress = wrap01(0.045 + index * 0.096);
     const sample = compiled.pointAt(progress);
     return {
@@ -955,7 +1037,8 @@ const createRaceState = (compiled, profile, defaultVehicle) => {
         eventPulse: 0,
         position: sample.point.clone().addScaledVector(
           normalAtPoint,
-          (hazard.side || 0) * TRACK_SCALE + layerOffset(hazard.layer, compiled.roadWidth)
+          (compiled.courseV2 ? hazard.side || 0 : (hazard.side || 0) * TRACK_SCALE) +
+            layerOffset(hazard.layer, compiled.roadWidth)
         ),
         tangent: sample.tangent.clone(),
       };
@@ -1058,7 +1141,8 @@ export const ArcadeRace3D = ({
       vehicles: new Set(),
       zones: 0,
     };
-    const defaultVehicle = DEFAULT_VEHICLE_BY_STYLE[compiled.raceStyle] || 'kart';
+    const kartOnly = Boolean(compiled.kartOnly || compiled.courseV2?.kartOnly);
+    const defaultVehicle = kartOnly ? 'kart' : DEFAULT_VEHICLE_BY_STYLE[compiled.raceStyle] || 'kart';
     const race = createRaceState(compiled, profile, defaultVehicle);
     const keys = new Set();
     const relevantKeys = new Set([
@@ -1118,6 +1202,11 @@ export const ArcadeRace3D = ({
     const world = new THREE.Group();
     scene.add(world);
     const collisionCircles = [];
+    const cameraCollisionObjects = [];
+    const registerCameraCollider = (object) => {
+      if (object) cameraCollisionObjects.push(object);
+      return object;
+    };
 
     const bounds = compiled.bounds;
     const trackSpanX = bounds.maxX - bounds.minX;
@@ -1326,7 +1415,7 @@ export const ArcadeRace3D = ({
           roadWidth: route.roadWidth,
           shoulderWidth: route.shoulderWidth,
           showCurbs: !cleanCityCourse,
-          showLines: !cleanCityCourse,
+          showLines: true,
         })
       );
       if (!cleanCityCourse) addTrackCaps(route.points, route.roadWidth, route.shoulderWidth, false);
@@ -1516,6 +1605,7 @@ export const ArcadeRace3D = ({
         base.castShadow = true;
         base.receiveShadow = true;
         world.add(base);
+        registerCameraCollider(base);
         collisionCircles.push({ position: new THREE.Vector3(x, 0, z), radius: Math.max(w, d) * 0.68 });
         const roof = new THREE.Mesh(
           new THREE.BoxGeometry(w + 1.2, 1.4, d + 1.2),
@@ -1524,6 +1614,7 @@ export const ArcadeRace3D = ({
         roof.position.set(x, h + 0.7, z);
         roof.castShadow = true;
         world.add(roof);
+        registerCameraCollider(roof);
         addWindows(x, z, w, d, h);
       };
 
@@ -1679,6 +1770,7 @@ export const ArcadeRace3D = ({
 
         group.userData.kind = item.kind;
         world.add(group);
+        registerCameraCollider(group);
         collisionCircles.push({
           position: position.clone(),
           radius: Math.max(width, depth) * (item.kind === 'boats' ? 0.48 : 0.62),
@@ -1688,6 +1780,7 @@ export const ArcadeRace3D = ({
       (compiled.scenery || [])
         .filter(
           (item) =>
+            !compiled.courseV2 &&
             item.kind !== 'island' &&
             !(cleanCityCourse && ['drill', 'market', 'rails', 'spire'].includes(item.kind))
         )
@@ -1706,6 +1799,19 @@ export const ArcadeRace3D = ({
         [trackCenterX + trackSpanX * 0.05, near - 44, 10, 10, 28],
       ];
       buildingSpots.forEach(([x, z, w, d, h], index) => addBuilding(x, z, w, d, h, index));
+
+      (compiled.collisionZones || []).forEach((zone) => {
+        const position = toCourseV2Point(zone.position || zone);
+        const radius =
+          zone.shape === 'box'
+            ? Math.max(zone.size?.w || zone.w || 1, zone.size?.d || zone.d || 1) * 0.64
+            : zone.radius || 12;
+        collisionCircles.push({
+          key: zone.key,
+          position,
+          radius,
+        });
+      });
 
       const streetLampCount = cleanCityCourse ? 10 : 24;
       for (let i = 0; i < streetLampCount; i += 1) {
@@ -1894,7 +2000,9 @@ export const ArcadeRace3D = ({
       const addRaceDistrict = (district, index) => {
         const sample = compiled.pointAt(district.progress);
         const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize().multiplyScalar(district.side);
-        const position = sample.point.clone().addScaledVector(normal, compiled.roadWidth / 2 + 98 + (index % 2) * 12);
+        const position = sample.point
+          .clone()
+          .addScaledVector(normal, compiled.roadWidth / 2 + (district.setback ?? 98) + (index % 2) * 8);
         const group = new THREE.Group();
         const width = district.label === 'FOOD COURT' ? 26 : district.label === 'GARAGE' ? 28 : 22;
         const depth = district.label === 'LAB' ? 21 : 18;
@@ -1992,10 +2100,12 @@ export const ArcadeRace3D = ({
         });
         animatedCityDistricts.push(group);
         world.add(group);
+        registerCameraCollider(group);
       };
 
       const animatedCityDistricts = [];
-      RACE_CITY_DISTRICTS.forEach(addRaceDistrict);
+      const raceCityDistricts = compiled.districtAnchors || RACE_CITY_DISTRICTS;
+      raceCityDistricts.forEach(addRaceDistrict);
 
       const addRoadDistrictSign = (district, index) => {
         const signProgress = clamp(district.progress - 0.035, 0.02, 0.98);
@@ -2044,8 +2154,63 @@ export const ArcadeRace3D = ({
         group.add(text);
 
         world.add(group);
+        registerCameraCollider(group);
       };
-      RACE_CITY_DISTRICTS.forEach(addRoadDistrictSign);
+      raceCityDistricts.forEach(addRoadDistrictSign);
+
+      const addBranchDecisionSign = (route, index) => {
+        const signProgress = wrap01(route.decisionCueProgress ?? route.startProgress - 0.04);
+        const sample = compiled.pointAt(signProgress);
+        const side = route.entrySide || (index % 2 === 0 ? -1 : 1);
+        const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize().multiplyScalar(side);
+        const position = sample.point.clone().addScaledVector(normal, compiled.roadWidth / 2 + 13.5);
+        const group = new THREE.Group();
+        const accent = route.accent || VISUAL_PALETTE.cyan;
+        const darkMat = createBasicMaterial('#07182a', {
+          emissive: '#07182a',
+          emissiveIntensity: 0.16,
+        });
+        const accentMat = createBasicMaterial(accent, {
+          emissive: accent,
+          emissiveIntensity: 0.75,
+        });
+        const lightMat = createBasicMaterial('#f7fbff');
+        group.position.copy(position);
+        group.rotation.y = faceRoadYaw(position, sample.point);
+
+        [-1, 1].forEach((postSide) => {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.54, 8.8, 0.54), darkMat);
+          post.position.set(postSide * 7.8, 4.4, 0);
+          post.castShadow = true;
+          group.add(post);
+        });
+
+        const board = new THREE.Mesh(new THREE.BoxGeometry(18.4, 5.2, 0.85), darkMat);
+        board.position.set(0, 8.8, 0);
+        board.castShadow = true;
+        group.add(board);
+
+        const label = createBillboardText(route.label || route.name || 'BRANCH', accent);
+        label.position.set(0, 9.05, 0.62);
+        label.scale.set(11.4, 2.7, 1);
+        group.add(label);
+
+        [-4.4, -1.4, 1.6, 4.6].forEach((x) => {
+          const arrow = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.34, 0.82), lightMat);
+          arrow.position.set(x, 6.35, 0.52);
+          arrow.rotation.z = side > 0 ? -0.62 : 0.62;
+          group.add(arrow);
+        });
+
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(17.2, 0.5, 1), accentMat);
+        stripe.position.set(0, 11.35, 0.05);
+        group.add(stripe);
+
+        group.userData.branchKey = route.key;
+        world.add(group);
+        registerCameraCollider(group);
+      };
+      if (cleanCityCourse) (compiled.branchRoutes || []).forEach(addBranchDecisionSign);
 
       const addRaceObjectiveMarker = () => {
         const markerSample = compiled.pointAt(0.872);
@@ -2131,6 +2296,7 @@ export const ArcadeRace3D = ({
           block.rotation.y = faceRoadYaw(block.position, corridorOrigin) + (i % 3 - 1) * 0.035;
           block.castShadow = true;
           world.add(block);
+          registerCameraCollider(block);
           collisionCircles.push({ position: new THREE.Vector3(p.x, 0, p.z), radius: Math.max(w, d) * 0.72 });
           if (i % 4 === 0) {
             const spire = new THREE.Mesh(
@@ -2166,6 +2332,7 @@ export const ArcadeRace3D = ({
         legB.rotation.z = 0.26;
         wheelGroup.add(legA, legB);
         world.add(wheelGroup);
+        registerCameraCollider(wheelGroup);
       };
       addCitySkyline();
 
@@ -2195,6 +2362,7 @@ export const ArcadeRace3D = ({
           block.castShadow = true;
           block.receiveShadow = true;
           world.add(block);
+          registerCameraCollider(block);
           collisionCircles.push({ position: new THREE.Vector3(x, 0, z), radius: Math.max(w, d) * 0.72 });
 
           const roof = new THREE.Mesh(
@@ -2312,6 +2480,7 @@ export const ArcadeRace3D = ({
         deck.rotation.y = bridgeYaw;
         deck.castShadow = true;
         world.add(deck);
+        registerCameraCollider(deck);
         [-1, 1].forEach((side) => {
           const rail = new THREE.Mesh(new THREE.BoxGeometry(70, 0.5, 0.45), raceCityMaterials.light);
           rail.position.copy(deck.position);
@@ -2403,11 +2572,23 @@ export const ArcadeRace3D = ({
     let jumpQueued = false;
     let reportedFinish = false;
     const raceViewport = { height: 1, mobile: false, width: 1 };
+    const cameraRaycaster = new THREE.Raycaster();
+    cameraRaycaster.camera = camera;
+    const visualStats = {
+      cameraClipCount: 0,
+      cameraAvoidanceCount: 0,
+      fps: 60,
+      branchVisibleSeen: false,
+      boostSeen: false,
+      driftTierSeen: 0,
+      offroadSlowdownSeen: false,
+    };
 
     if (playtest.enabled) {
       window.__racePlaytestEvents = [];
       window.__racePlaytestResult = null;
     }
+    window.__raceVisualTelemetry = null;
 
     const recordPlaytest = (type, detail = {}) => {
       if (!playtest.enabled) return;
@@ -2550,6 +2731,7 @@ export const ArcadeRace3D = ({
 
     const setVehicleMode = (racer, nextMode, { force = false } = {}) => {
       if (!VEHICLES[nextMode]) return false;
+      if (kartOnly && nextMode !== 'kart') return false;
       if (!force && racer.switchLockedUntil > race.time) return false;
       racer.vehicleMode = nextMode;
       racer.transformTimer = 0.5;
@@ -2637,7 +2819,9 @@ export const ArcadeRace3D = ({
     };
 
     const cycleVehicle = () => {
+      if (kartOnly) return false;
       setVehicleMode(race.player, nextVehicleMode(race.player.vehicleMode));
+      return true;
     };
 
     const nearestRival = (fromRacer, predicate = () => true) =>
@@ -2897,6 +3081,7 @@ export const ArcadeRace3D = ({
     };
 
     const applyVehicleIntegration = (dt) => {
+      if (kartOnly) return;
       if (compiled.key === 'comeback-city' && !playtest.enabled) return;
       race.switchPads.forEach((pad) => {
         pad.cooldown = Math.max(0, pad.cooldown - dt);
@@ -3031,12 +3216,25 @@ export const ArcadeRace3D = ({
       playtest.bananaMax = Math.max(playtest.bananaMax, player.bananas);
 
       const playtestProgressWindow = Math.max(0.018, dt * progressRate * 1.35);
+      const crossedProgress = (target) =>
+        previousProgress <= player.progress
+          ? target >= previousProgress && target <= player.progress
+          : target >= previousProgress || target <= player.progress;
       const nearHazard = race.trackHazards.find(
         (hazard) => hazard.active !== false && progressDistance(hazard.progress, player.progress) < playtestProgressWindow
       );
       if (nearHazard) playtest.hazardsEncountered += dt;
       if (compiled.vehicleZones.some((zone) => progressDistance(zone.progress, player.progress) < playtestProgressWindow)) playtest.zones += 1;
-      if (compiled.vehicleLocks.some((lock) => progressInRange(player.progress, lock.start, lock.end))) playtest.locks += 1;
+      if (
+        compiled.vehicleLocks.some(
+          (lock) =>
+            progressInRange(player.progress, lock.start, lock.end) ||
+            crossedProgress(lock.start) ||
+            crossedProgress(lock.end)
+        )
+      ) {
+        playtest.locks += 1;
+      }
       if (race.switchPads.some((pad) => progressDistance(pad.progress, player.progress) < playtestProgressWindow)) playtest.switchPads += 1;
 
       player.boostTimer = Math.max(0, player.boostTimer - dt);
@@ -3761,18 +3959,18 @@ export const ArcadeRace3D = ({
       const altitude = isPlane ? player.flightAltitude : player.jumpHeight;
       const chaseDistance = isPlane
         ? vehicle.cameraDistance + speedRatio * 4.5
-        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.distance : vehicle.cameraDistance + 8) +
-          speedRatio * (raceViewport.mobile ? 2.2 : 4.5);
+        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.distance : vehicle.cameraDistance + 26) +
+          speedRatio * (raceViewport.mobile ? 0.8 : 4.5);
       const chaseHeight =
         isPlane
           ? altitude + vehicle.cameraHeight + speedRatio * 1.5
-          : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.height : vehicle.cameraHeight + 5.4) +
+          : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.height : vehicle.cameraHeight + 9.4) +
             speedRatio * 1.5 +
             altitude * 0.18;
       const lookAhead = isPlane
         ? 24 + speedRatio * 8
-        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.lookAhead + 4 : 34) + speedRatio * 8;
-      const lookHeight = isPlane ? altitude + 1.2 : (raceViewport.mobile ? 4.8 : 5.5) + altitude * 0.12;
+        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.lookAhead + 4 : 52) + speedRatio * 8;
+      const lookHeight = isPlane ? altitude + 1.2 : (raceViewport.mobile ? 5.8 : 8.6) + altitude * 0.12;
       const desired = player.position
         .clone()
         .addScaledVector(forward, -chaseDistance)
@@ -3787,6 +3985,32 @@ export const ArcadeRace3D = ({
         desired.x += (Math.random() - 0.5) * 1.2 * shake;
         desired.y += (Math.random() - 0.5) * 0.7 * shake;
       }
+      if (cameraCollisionObjects.length) {
+        const rayStart = player.position.clone().add(new THREE.Vector3(0, altitude + 3.4, 0));
+        const toCamera = desired.clone().sub(rayStart);
+        const rawDistance = toCamera.length();
+        if (rawDistance > 1) {
+          const rayDirection = toCamera.clone().normalize();
+          cameraRaycaster.set(rayStart, rayDirection);
+          cameraRaycaster.far = rawDistance;
+          const hit = cameraRaycaster
+            .intersectObjects(cameraCollisionObjects, true)
+            .find((entry) => entry.distance > 5.2);
+          if (hit) {
+            visualStats.cameraAvoidanceCount += 1;
+            const safeDistance = Math.max(7.5, hit.distance - 2.6);
+            desired.copy(rayStart).addScaledVector(rayDirection, safeDistance);
+            desired.y = Math.max(desired.y + 2.2, rayStart.y + (raceViewport.mobile ? 6.6 : 8.4));
+
+            cameraRaycaster.set(rayStart, desired.clone().sub(rayStart).normalize());
+            cameraRaycaster.far = rayStart.distanceTo(desired);
+            const residualHit = cameraRaycaster
+              .intersectObjects(cameraCollisionObjects, true)
+              .find((entry) => entry.distance > 5.2 && entry.distance < cameraRaycaster.far - 0.4);
+            if (residualHit) visualStats.cameraClipCount += 1;
+          }
+        }
+      }
       camera.position.lerp(desired, 1 - Math.exp(-9.4 * dt));
       camera.lookAt(lookAt);
       camera.rotation.z += -player.steerInput * speedRatio * 0.035;
@@ -3794,7 +4018,7 @@ export const ArcadeRace3D = ({
         camera.fov,
         player.boostTimer > 0
           ? raceViewport.mobile
-            ? 78
+            ? 72
             : 74
           : raceViewport.mobile
           ? CAMERA_PRESETS.mobileChase.fov
@@ -3802,6 +4026,113 @@ export const ArcadeRace3D = ({
         1 - Math.exp(-3.4 * dt)
       );
       camera.updateProjectionMatrix();
+    };
+
+    const measureKartScreenCoverage = () => {
+      const box = new THREE.Box3().setFromObject(playerVehicle.group);
+      if (box.isEmpty()) {
+        return {
+          bottomYRatio: 1,
+          centerYRatio: 1,
+          framingBandFromBottom: 0,
+          heightRatio: 0,
+        };
+      }
+      const corners = [
+        new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+        new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+        new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+        new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+        new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+        new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+        new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+        new THREE.Vector3(box.max.x, box.max.y, box.max.z),
+      ].map((corner) => {
+        const projected = corner.project(camera);
+        return {
+          x: projected.x * 0.5 + 0.5,
+          y: -projected.y * 0.5 + 0.5,
+        };
+      });
+      const minY = Math.min(...corners.map((corner) => corner.y));
+      const maxY = Math.max(...corners.map((corner) => corner.y));
+      const centerYRatio = (minY + maxY) / 2;
+      return {
+        bottomYRatio: Number(maxY.toFixed(3)),
+        centerYRatio: Number(centerYRatio.toFixed(3)),
+        framingBandFromBottom: Number((1 - centerYRatio).toFixed(3)),
+        heightRatio: Number(Math.max(0, maxY - minY).toFixed(3)),
+      };
+    };
+
+    const projectedPointVisible = (point, y = 0.8) => {
+      const projected = point.clone().setY(y).project(camera);
+      const x = projected.x * 0.5 + 0.5;
+      const screenY = -projected.y * 0.5 + 0.5;
+      return {
+        visible: projected.z > -1 && projected.z < 1 && x > 0.02 && x < 0.98 && screenY > 0.02 && screenY < 0.88,
+        x,
+        y: screenY,
+      };
+    };
+
+    const estimateRoadAheadCoverage = () => {
+      const samples = 18;
+      const speed = race.player.velocity.length();
+      const progressStep = Math.max(0.008, ((speed + 38) * 0.22) / compiled.totalLength);
+      const forward = new THREE.Vector3(Math.sin(race.player.heading), 0, Math.cos(race.player.heading));
+      let visible = 0;
+      for (let index = 1; index <= samples; index += 1) {
+        const sample = compiled.pointAt(race.player.progress + progressStep * index);
+        const projected = projectedPointVisible(sample.point, 0.7);
+        if (projected.visible && projected.y < 0.82) {
+          visible += 1;
+          continue;
+        }
+        const headingProbe = race.player.position.clone().addScaledVector(forward, 18 + index * 10);
+        const nearest = compiled.nearest(headingProbe);
+        const headingProjected = projectedPointVisible(nearest.point, 0.7);
+        if (headingProjected.visible && headingProjected.y < 0.84 && nearest.distance < (nearest.roadWidth || compiled.roadWidth) * 0.7) {
+          visible += 1;
+        }
+      }
+      return {
+        samples,
+        value: Number((visible / samples).toFixed(3)),
+      };
+    };
+
+    const countVisibleBranches = () => {
+      const forward = new THREE.Vector3(Math.sin(race.player.heading), 0, Math.cos(race.player.heading));
+      return (compiled.branchRoutes || []).reduce((count, route) => {
+        const ahead = wrap01((route.decisionCueProgress ?? route.startProgress) - race.player.progress);
+        if (ahead <= 0.004 || ahead > 0.3) return count;
+        const sample = compiled.pointAt(route.decisionCueProgress ?? route.startProgress);
+        const toBranch = sample.point.clone().sub(race.player.position).setY(0);
+        if (toBranch.length() > 360 || toBranch.dot(forward) < -40) return count;
+        const projected = projectedPointVisible(sample.point, 4.5);
+        return count + (projected.visible || ahead < 0.22 ? 1 : 0);
+      }, 0);
+    };
+
+    const nearestCollisionClearance = () => {
+      if (!collisionCircles.length) return Infinity;
+      const nearest = collisionCircles.reduce((best, circle) => {
+        const clearance = distance2D(race.player.position, circle.position) - (circle.radius || 0);
+        return Math.min(best, clearance);
+      }, Infinity);
+      return Number(nearest.toFixed(2));
+    };
+
+    const activeSurfaceFor = (nearest, offroad) => {
+      if (offroad) return 'offroad';
+      const zone = (compiled.surfaceZones || []).find((entry) => {
+        if (!Number.isFinite(entry.progress)) return false;
+        return progressDistance(entry.progress, race.player.progress) < 0.018;
+      });
+      if (zone?.type) return zone.type;
+      if (nearest.branchKey) return `branch:${nearest.branchKey}`;
+      return 'asphalt';
     };
 
     const handleCommand = (nextCommand) => {
@@ -3832,6 +4163,7 @@ export const ArcadeRace3D = ({
       const elapsed = (now - lastFrame) / 1000;
       const dt = playtest.enabled ? clamp(elapsed, 0, 0.16) : clamp(elapsed, 0, 0.033);
       lastFrame = now;
+      visualStats.fps = THREE.MathUtils.lerp(visualStats.fps, 1 / Math.max(dt, 0.001), 0.08);
       race.time += dt;
       race.cameraShakeTimer = Math.max(0, race.cameraShakeTimer - dt);
       race.screenFlashTimer = Math.max(0, race.screenFlashTimer - dt);
@@ -3906,6 +4238,42 @@ export const ArcadeRace3D = ({
           (bestTier, chargeTime, index) => (race.player.driftCharge >= chargeTime ? index + 1 : bestTier),
           0
         );
+        visualStats.driftTierSeen = Math.max(visualStats.driftTierSeen, driftTier);
+        if (race.player.boostTimer > 0) visualStats.boostSeen = true;
+        const offroad =
+          race.player.vehicleMode !== 'plane' &&
+          race.player.jumpHeight <= 0.05 &&
+          playerNearest.distance > playerRoadWidth * 0.52;
+        if (offroad) visualStats.offroadSlowdownSeen = true;
+        const visibleBranchCount = countVisibleBranches();
+        if (visibleBranchCount > 0) visualStats.branchVisibleSeen = true;
+        const raceVisualTelemetry = {
+          activeSurface: activeSurfaceFor(playerNearest, offroad),
+          assetLoadState:
+            compiled.courseV2?.assetLoadState || {
+              externalAssets: 0,
+              manifestPath: '/src/assets/game/asset-manifest.json',
+              missing: [],
+              state: 'procedural-ready',
+            },
+          boostTimer: Number(race.player.boostTimer.toFixed(3)),
+          cameraAvoidanceCount: visualStats.cameraAvoidanceCount,
+          cameraClipCount: visualStats.cameraClipCount,
+          driftTier,
+          driftTierSeen: visualStats.driftTierSeen,
+          boostSeen: visualStats.boostSeen,
+          fps: Number(visualStats.fps.toFixed(1)),
+          branchVisibleSeen: visualStats.branchVisibleSeen,
+          kartOnly,
+          kartScreenCoverage: measureKartScreenCoverage(),
+          nearestCollisionDistance: nearestCollisionClearance(),
+          offroadSlowdown: offroad ? playerVehicleConfig.offroad : 1,
+          offroadSlowdownSeen: visualStats.offroadSlowdownSeen,
+          roadAheadCoverage: estimateRoadAheadCoverage(),
+          trackKey: compiled.key,
+          visibleBranchCount,
+        };
+        window.__raceVisualTelemetry = raceVisualTelemetry;
         setTelemetry({
           altitude: race.player.flightAltitude,
           bananas: race.player.bananas,
@@ -3921,10 +4289,7 @@ export const ArcadeRace3D = ({
           jump: race.player.jumpHeight,
           lap: Math.min(race.player.lap, compiled.laps),
           lapSplits: race.player.lapSplits.slice(-3),
-          offroad:
-            race.player.vehicleMode !== 'plane' &&
-            race.player.jumpHeight <= 0.05 &&
-            playerNearest.distance > playerRoadWidth * 0.52,
+          offroad,
           perfect: race.player.perfectBoostTimer > 0,
           place: race.player.rank,
           positionNotice: race.positionNotice,
@@ -3998,6 +4363,7 @@ export const ArcadeRace3D = ({
       window.removeEventListener('keyup', keyUp);
       ambientNodes.forEach((node) => node.oscillator.stop());
       ambientNodes = [];
+      if (window.__raceVisualTelemetry?.trackKey === compiled.key) window.__raceVisualTelemetry = null;
       renderer.dispose();
     };
   }, [profile, runId, track]);
@@ -4024,6 +4390,8 @@ export const ArcadeRace3D = ({
       : heldDefinition?.category === 'vehicle-state'
       ? Plane
       : Sparkles;
+  const isKartOnly = Boolean(track.kartOnly || track.courseV2?.kartOnly);
+  const minimap = makeRaceMinimap(track);
   return (
     <div className="arcade-race-shell relative left-1/2 w-[min(100vw,1440px)] -translate-x-1/2 overflow-hidden border-y border-white/16 bg-[#10151d] shadow-[0_24px_70px_rgba(0,0,0,0.35)] lg:rounded-lg lg:border">
       <canvas
@@ -4099,10 +4467,11 @@ export const ArcadeRace3D = ({
           <button
             type="button"
             onClick={() => queueLocalCommand('vehicle')}
+            disabled={isKartOnly}
             className="arcade-hud-panel pointer-events-auto grid h-11 place-items-center border border-white/18 bg-[#10151d]/[0.88] text-white shadow-[0_12px_28px_rgba(0,0,0,0.3)] backdrop-blur-md"
-            title="Change vehicle"
+            title={isKartOnly ? 'Kart only' : 'Change vehicle'}
           >
-            <Plane size={17} />
+            <Plane size={17} className={isKartOnly ? 'opacity-35' : ''} />
           </button>
         </div>
       </div>
@@ -4122,10 +4491,21 @@ export const ArcadeRace3D = ({
       <div className="arcade-touch-controls pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+18px)] z-30 flex items-end justify-between px-3">
         <div className="pointer-events-none">
           <div className="race-minimap">
-            <span className="race-minimap__route" />
-            <span className="race-minimap__branch race-minimap__branch--food" />
-            <span className="race-minimap__branch race-minimap__branch--lab" />
-            <span className="race-minimap__branch race-minimap__branch--garage" />
+            {minimap ? (
+              <svg className="race-minimap__svg" viewBox="0 0 100 100" aria-hidden="true">
+                <path className="race-minimap__svg-route" d={minimap.route} />
+                {minimap.branches.map((branch) => (
+                  <path
+                    key={branch.key}
+                    className="race-minimap__svg-branch"
+                    d={branch.d}
+                    style={{ stroke: branch.accent }}
+                  />
+                ))}
+              </svg>
+            ) : (
+              <span className="race-minimap__route" />
+            )}
             <span className="race-minimap__dot" />
           </div>
           <div className="pointer-events-auto mt-2 flex gap-2">

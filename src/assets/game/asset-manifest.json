@@ -1,0 +1,34 @@
+[
+  {
+    "filePath": "src/game/ArcadeRace3D.jsx",
+    "source": "Procedural Three.js geometry authored in-repo",
+    "license": "Project-owned",
+    "role": "Comeback City V2 road ribbons, kart, barriers, signs, skyline, trees, water, bridge, and district modules",
+    "sizeBudget": "Runtime geometry only; no external binary asset",
+    "fallback": "Primitive meshes with flat materials"
+  },
+  {
+    "filePath": "src/game/comebackCityVisuals.jsx",
+    "source": "Procedural React/CSS components authored in-repo",
+    "license": "Project-owned",
+    "role": "District closeups and garage kart design sheet",
+    "sizeBudget": "Runtime CSS/DOM only; no external binary asset",
+    "fallback": "Textured CSS model and district cards"
+  },
+  {
+    "filePath": "src/game/courseV2.js",
+    "source": "Authored Comeback City V2 course data",
+    "license": "Project-owned",
+    "role": "Single source of truth for centerline, road widths, branches, surfaces, collision zones, district anchors, minimap, and camera checkpoints",
+    "sizeBudget": "Under 24 KB source data",
+    "fallback": "Kart-only main loop remains playable without optional scenery"
+  },
+  {
+    "filePath": "src/assets/game/comeback-city-race-backdrop-v2.png",
+    "source": "Legacy generated visual reference retained for audit only",
+    "license": "Project-owned generated reference",
+    "role": "Not used by live /#race scene",
+    "sizeBudget": "Reference asset only",
+    "fallback": "Procedural skyline, water, mountains, and district geometry"
+  }
+]

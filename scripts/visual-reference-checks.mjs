@@ -52,6 +52,90 @@ const assertVisible = async (page, selector, label) => {
   fail(`${label} is not visible`, { count, selector });
 };
 
+const waitForRaceTelemetry = async (page, label) => {
+  await page.waitForFunction(() => window.__raceVisualTelemetry?.trackKey === 'comeback-city', null, {
+    timeout: 15000,
+  });
+  const telemetry = await page.evaluate(() => window.__raceVisualTelemetry);
+  if (!telemetry) fail(`${label} race visual telemetry is missing`);
+  return telemetry;
+};
+
+const assertHudDoesNotCoverRouteCenter = async (page, label) => {
+  const result = await page.evaluate(() => {
+    const viewport = { height: window.innerHeight, width: window.innerWidth };
+    const protectedRect = {
+      bottom: viewport.height * 0.72,
+      left: viewport.width * 0.32,
+      right: viewport.width * 0.68,
+      top: viewport.height * 0.32,
+    };
+    const selectors = ['.race-objective-card', '.currency-stack', '.race-minimap', '.arcade-go-button'];
+    const overlaps = selectors.flatMap((selector) =>
+      [...document.querySelectorAll(selector)]
+        .filter((node) => {
+          const style = window.getComputedStyle(node);
+          if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        })
+        .map((node) => {
+          const rect = node.getBoundingClientRect();
+          const overlap = !(
+            rect.right < protectedRect.left ||
+            rect.left > protectedRect.right ||
+            rect.bottom < protectedRect.top ||
+            rect.top > protectedRect.bottom
+          );
+          return { overlap, rect: { bottom: rect.bottom, left: rect.left, right: rect.right, top: rect.top }, selector };
+        })
+        .filter((entry) => entry.overlap)
+    );
+    return { overlaps, protectedRect, viewport };
+  });
+  if (result.overlaps.length) fail(`${label} HUD overlaps the protected route center`, result);
+};
+
+const assertRaceVisualTelemetry = async (page, label, {
+  expectBranch = false,
+  expectDrift = false,
+  expectOffroad = false,
+  profile,
+} = {}) => {
+  const telemetry = await waitForRaceTelemetry(page, label);
+  if (telemetry.assetLoadState?.state !== 'procedural-ready') {
+    fail(`${label} asset load state is not ready`, { assetLoadState: telemetry.assetLoadState });
+  }
+  if (!telemetry.kartOnly) fail(`${label} did not report kart-only V2 telemetry`, telemetry);
+  if ((telemetry.cameraClipCount || 0) !== 0) fail(`${label} camera clipping was detected`, telemetry);
+  if ((telemetry.roadAheadCoverage?.value || 0) < 0.24) fail(`${label} road-ahead coverage is too low`, telemetry);
+  if (!Number.isFinite(telemetry.nearestCollisionDistance) || telemetry.nearestCollisionDistance <= 0) {
+    fail(`${label} kart entered or touched a collision zone`, telemetry);
+  }
+  if (expectBranch && !telemetry.branchVisibleSeen && (telemetry.visibleBranchCount || 0) < 1) {
+    fail(`${label} did not expose a visible upcoming branch`, telemetry);
+  }
+  if (expectOffroad && !telemetry.offroadSlowdownSeen) fail(`${label} did not record off-road slowdown`, telemetry);
+  if (
+    expectDrift &&
+    (telemetry.driftTier || telemetry.driftTierSeen || 0) < 1 &&
+    (telemetry.boostTimer || 0) <= 0 &&
+    !telemetry.boostSeen
+  ) {
+    fail(`${label} did not record drift charge or release boost`, telemetry);
+  }
+  if (profile) {
+    const coverage = telemetry.kartScreenCoverage?.heightRatio;
+    const centerY = telemetry.kartScreenCoverage?.centerYRatio;
+    const target = profile === 'mobile' ? [0.25, 0.33] : [0.14, 0.22];
+    if (!Number.isFinite(coverage) || coverage < target[0] || coverage > target[1] || centerY < 0.58) {
+      fail(`${label} kart framing is outside the ${profile} target`, { centerY, coverage, target, telemetry });
+    }
+  }
+  await assertHudDoesNotCoverRouteCenter(page, label);
+  return telemetry;
+};
+
 const assertNoForbiddenBackdropUsage = async () => {
   const sceneFiles = [
     path.join(root, 'src/game/ArcadeRace3D.jsx'),
@@ -157,6 +241,7 @@ const run = async () => {
         await assertVisible(page, '.currency-stack', 'mobile currency stack');
         await assertVisible(page, '.race-minimap', 'mobile minimap');
         await assertVisible(page, '.arcade-go-button', 'mobile GO button');
+        await assertRaceVisualTelemetry(page, 'mobile race start', { profile: 'mobile' });
       },
     });
 
@@ -178,10 +263,18 @@ const run = async () => {
         await page.waitForTimeout(2800);
         await page.keyboard.up('ArrowRight');
         await page.waitForTimeout(5200);
+        await page.keyboard.down('ArrowRight');
+        await page.waitForTimeout(3800);
+        await page.keyboard.up('ArrowRight');
         await page.keyboard.up('ArrowUp');
         await assertVisible(page, '.race-objective-card', 'mobile objective card after movement');
         await assertVisible(page, '.race-minimap', 'mobile minimap after movement');
         await assertVisible(page, '.arcade-go-button', 'mobile GO button after movement');
+        await assertRaceVisualTelemetry(page, 'mobile race after movement', {
+          expectBranch: true,
+          expectOffroad: true,
+          profile: 'mobile',
+        });
       },
     });
 
@@ -196,6 +289,7 @@ const run = async () => {
         await assertVisible(page, '.race-objective-card', 'desktop objective card');
         await assertVisible(page, '.currency-stack', 'desktop currency stack');
         await assertVisible(page, '.arcade-go-button', 'desktop GO button');
+        await assertRaceVisualTelemetry(page, 'desktop race start', { profile: 'desktop' });
       },
     });
 
@@ -219,6 +313,9 @@ const run = async () => {
         await page.waitForTimeout(5200);
         await page.keyboard.up('ArrowUp');
         await assertVisible(page, '.race-objective-card', 'desktop objective card after movement');
+        await assertRaceVisualTelemetry(page, 'desktop race after movement', {
+          profile: 'desktop',
+        });
       },
     });
 
@@ -240,6 +337,9 @@ const run = async () => {
         await page.keyboard.up('ArrowRight');
         await page.keyboard.up('ArrowUp');
         await assertVisible(page, '.arcade-go-button', 'mobile GO button after drift');
+        await assertRaceVisualTelemetry(page, 'mobile race during drift', {
+          expectDrift: true,
+        });
       },
     });
 

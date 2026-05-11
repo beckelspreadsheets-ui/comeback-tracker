@@ -683,6 +683,33 @@
   filter: drop-shadow(0 0 5px rgba(255, 211, 79, 0.62));
 }
 
+.race-minimap__svg {
+  position: absolute;
+  inset: 7px;
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
+  overflow: visible;
+}
+
+.race-minimap__svg-route,
+.race-minimap__svg-branch {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.race-minimap__svg-route {
+  stroke: #71f09a;
+  stroke-width: 6.5;
+  filter: drop-shadow(0 0 6px rgba(113, 240, 154, 0.55));
+}
+
+.race-minimap__svg-branch {
+  stroke-width: 4;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 5px rgba(70, 217, 239, 0.42));
+}
+
 .race-minimap__branch {
   position: absolute;
   width: 34px;
