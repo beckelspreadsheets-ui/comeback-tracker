@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ArrowDown,
   ArrowLeft,
   ArrowRight,
   ArrowUp,
@@ -3370,9 +3369,14 @@ export const ArcadeRace3D = ({
       if (racer.vehicleMode === 'plane' || racer.ghostTimer > 0 || racer.invincibleTimer > 0) return false;
       let collided = false;
       collisionCircles.forEach((circle) => {
+        const circleRoad = compiled.nearest(circle.position);
+        const circleRoadWidth = circleRoad.roadWidth || compiled.roadWidth;
+        const corridorClearance = circleRoad.distance - circleRoadWidth * 0.5;
+        const effectiveRadius = Math.min(circle.radius || 0, Math.max(0, corridorClearance - 2.5));
+        if (effectiveRadius <= 0) return;
         const offset = racer.position.clone().sub(circle.position).setY(0);
         const distance = offset.length();
-        const radius = circle.radius + 3.2;
+        const radius = effectiveRadius + 3.2;
         if (distance <= 0.001 || distance >= radius) return;
         const normal = offset.multiplyScalar(1 / distance);
         racer.position.copy(circle.position).addScaledVector(normal, radius);
@@ -3959,18 +3963,18 @@ export const ArcadeRace3D = ({
       const altitude = isPlane ? player.flightAltitude : player.jumpHeight;
       const chaseDistance = isPlane
         ? vehicle.cameraDistance + speedRatio * 4.5
-        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.distance : vehicle.cameraDistance + 26) +
-          speedRatio * (raceViewport.mobile ? 0.8 : 4.5);
+        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.distance : vehicle.cameraDistance + 12) +
+          speedRatio * (raceViewport.mobile ? 0.8 : 2.4);
       const chaseHeight =
         isPlane
           ? altitude + vehicle.cameraHeight + speedRatio * 1.5
-          : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.height : vehicle.cameraHeight + 9.4) +
+          : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.height : vehicle.cameraHeight + 5.6) +
             speedRatio * 1.5 +
             altitude * 0.18;
       const lookAhead = isPlane
         ? 24 + speedRatio * 8
-        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.lookAhead + 4 : 52) + speedRatio * 8;
-      const lookHeight = isPlane ? altitude + 1.2 : (raceViewport.mobile ? 5.8 : 8.6) + altitude * 0.12;
+        : (raceViewport.mobile ? CAMERA_PRESETS.mobileChase.lookAhead + 4 : 42) + speedRatio * 6;
+      const lookHeight = isPlane ? altitude + 1.2 : (raceViewport.mobile ? 5.8 : 7.2) + altitude * 0.12;
       const desired = player.position
         .clone()
         .addScaledVector(forward, -chaseDistance)
@@ -4118,7 +4122,12 @@ export const ArcadeRace3D = ({
     const nearestCollisionClearance = () => {
       if (!collisionCircles.length) return Infinity;
       const nearest = collisionCircles.reduce((best, circle) => {
-        const clearance = distance2D(race.player.position, circle.position) - (circle.radius || 0);
+        const circleRoad = compiled.nearest(circle.position);
+        const circleRoadWidth = circleRoad.roadWidth || compiled.roadWidth;
+        const corridorClearance = circleRoad.distance - circleRoadWidth * 0.5;
+        const effectiveRadius = Math.min(circle.radius || 0, Math.max(0, corridorClearance - 2.5));
+        if (effectiveRadius <= 0) return best;
+        const clearance = distance2D(race.player.position, circle.position) - effectiveRadius;
         return Math.min(best, clearance);
       }, Infinity);
       return Number(nearest.toFixed(2));
@@ -4393,10 +4402,10 @@ export const ArcadeRace3D = ({
   const isKartOnly = Boolean(track.kartOnly || track.courseV2?.kartOnly);
   const minimap = makeRaceMinimap(track);
   return (
-    <div className="arcade-race-shell relative left-1/2 w-[min(100vw,1440px)] -translate-x-1/2 overflow-hidden border-y border-white/16 bg-[#10151d] shadow-[0_24px_70px_rgba(0,0,0,0.35)] lg:rounded-lg lg:border">
+    <div className="arcade-race-shell relative left-1/2 min-h-[100svh] w-screen -translate-x-1/2 overflow-hidden bg-[#10151d]">
       <canvas
         ref={canvasRef}
-        className="arcade-race-canvas block h-[min(88svh,900px)] min-h-[640px] w-full touch-none max-sm:h-[100svh] max-sm:min-h-[100svh]"
+        className="arcade-race-canvas block h-[100svh] min-h-[640px] w-full touch-none max-sm:min-h-[100svh]"
         style={{ filter: telemetry.boost > 0 ? 'saturate(1.18) contrast(1.08)' : 'none' }}
       />
 
@@ -4414,7 +4423,7 @@ export const ArcadeRace3D = ({
         />
       )}
 
-      <div className="pointer-events-none absolute left-3 top-3 w-[min(222px,calc(100vw-154px))] sm:left-4 sm:w-[320px]">
+      <div className="pointer-events-none absolute left-3 top-3 w-[min(222px,calc(100vw-154px))] sm:hidden">
         <div className="race-objective-card p-2.5 text-white backdrop-blur-md">
           <div className="grid grid-cols-[46px_1fr] items-center gap-2.5">
             <div className="grid h-11 w-11 place-items-center rounded-lg border-2 border-[#80ff62] bg-[#80ff62]/15 text-[#80ff62] shadow-[0_0_18px_rgba(128,255,98,0.22)]">
@@ -4452,9 +4461,9 @@ export const ArcadeRace3D = ({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute right-3 top-3 grid w-[116px] gap-2 text-white sm:right-4 sm:w-[132px]">
+      <div className="pointer-events-none absolute right-3 top-3 grid w-[116px] gap-2 text-white sm:hidden">
         <CurrencyStack />
-        <div className="hidden grid-cols-2 gap-2 sm:grid">
+        <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => queueLocalCommand('item')}
@@ -4483,13 +4492,13 @@ export const ArcadeRace3D = ({
       )}
 
       {telemetry.positionNotice && (
-        <div className="pointer-events-none absolute left-1/2 top-[29%] -translate-x-1/2 arcade-hud-panel border border-[#2cc8ff]/60 bg-[#10151d]/90 px-4 py-2 font-mono text-[11px] font-black uppercase tracking-[0.14em] text-[#2cc8ff] shadow-[0_16px_42px_rgba(0,0,0,0.36)]">
+        <div className="pointer-events-none absolute left-1/2 top-[29%] -translate-x-1/2 arcade-hud-panel border border-[#2cc8ff]/60 bg-[#10151d]/90 px-4 py-2 font-mono text-[11px] font-black uppercase tracking-[0.14em] text-[#2cc8ff] shadow-[0_16px_42px_rgba(0,0,0,0.36)] sm:hidden">
           {telemetry.positionNotice.text}
         </div>
       )}
 
-      <div className="arcade-touch-controls pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+18px)] z-30 flex items-end justify-between px-3">
-        <div className="pointer-events-none">
+      <div className="arcade-touch-controls pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+18px)] z-30 flex items-end justify-between px-3 sm:justify-end sm:px-5">
+        <div className="pointer-events-none sm:hidden">
           <div className="race-minimap">
             {minimap ? (
               <svg className="race-minimap__svg" viewBox="0 0 100 100" aria-hidden="true">
@@ -4554,16 +4563,6 @@ export const ArcadeRace3D = ({
             >
               <Sparkles size={18} />
             </button>
-            <button
-              type="button"
-              className="arcade-touch-button"
-              onPointerDown={press({ brake: 1 })}
-              onPointerUp={release({ brake: 0 })}
-              onPointerCancel={release({ brake: 0 })}
-              aria-label="Brake"
-            >
-              <ArrowDown size={18} />
-            </button>
           </div>
           <div className="grid gap-2 justify-items-end">
             {(telemetry.driftActive || telemetry.boost > 0 || telemetry.offroad) && (
@@ -4594,7 +4593,7 @@ export const ArcadeRace3D = ({
         </div>
       </div>
 
-      <div className="pointer-events-auto absolute bottom-[calc(env(safe-area-inset-bottom)+100px)] left-3 hidden gap-2 sm:flex">
+      <div className="pointer-events-auto absolute bottom-[calc(env(safe-area-inset-bottom)+100px)] left-3 hidden gap-2">
         <button
           type="button"
           onClick={() => queueLocalCommand('reset')}

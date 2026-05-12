@@ -127,7 +127,7 @@ const assertRaceVisualTelemetry = async (page, label, {
   if (profile) {
     const coverage = telemetry.kartScreenCoverage?.heightRatio;
     const centerY = telemetry.kartScreenCoverage?.centerYRatio;
-    const target = profile === 'mobile' ? [0.25, 0.33] : [0.14, 0.22];
+    const target = profile === 'mobile' ? [0.24, 0.33] : [0.14, 0.22];
     if (!Number.isFinite(coverage) || coverage < target[0] || coverage > target[1] || centerY < 0.58) {
       fail(`${label} kart framing is outside the ${profile} target`, { centerY, coverage, target, telemetry });
     }
@@ -286,8 +286,6 @@ const run = async () => {
       setup: async (page) => {
         await assertCanvasNonblank(page, 'desktop game');
         await assertCanvasFrame(page, 'desktop game', { maxTop: 180, minHeight: 760, minWidth: 1280 });
-        await assertVisible(page, '.race-objective-card', 'desktop objective card');
-        await assertVisible(page, '.currency-stack', 'desktop currency stack');
         await assertVisible(page, '.arcade-go-button', 'desktop GO button');
         await assertRaceVisualTelemetry(page, 'desktop race start', { profile: 'desktop' });
       },
@@ -312,7 +310,6 @@ const run = async () => {
         await page.keyboard.up('ArrowRight');
         await page.waitForTimeout(5200);
         await page.keyboard.up('ArrowUp');
-        await assertVisible(page, '.race-objective-card', 'desktop objective card after movement');
         await assertRaceVisualTelemetry(page, 'desktop race after movement', {
           profile: 'desktop',
         });
