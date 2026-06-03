@@ -1,0 +1,16 @@
+
+> comeback-tracker@1.0.0 test:release:smoke
+> node scripts/release-smoke-test.mjs
+
+Blocking browser errors recorded during release smoke
+{
+  "errors": {
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ],
+    "httpErrors": [],
+    "pageErrors": [],
+    "requestFailures": []
+  },
+  "label": "core tracker navigation"
+}

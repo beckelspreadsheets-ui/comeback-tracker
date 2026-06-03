@@ -41,6 +41,14 @@ const latestEvidence = {
     '.agent/runs/kart-racer-production-readiness/evidence/monitoring-support-001-20260524T025102Z/',
   perfKept:
     '.agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/perf-023-kept-far-range-summary.json',
+  previewDeploy:
+    '.agent/runs/kart-racer-production-readiness/evidence/preview-deploy-001-20260603T163200Z/preview-deploy-summary.md',
+  previewDeployedHeaders:
+    '.agent/runs/kart-racer-production-readiness/evidence/preview-deploy-001-20260603T163200Z/deployed-headers-smoke-summary-preview.json',
+  previewReleaseSmoke:
+    '.agent/runs/kart-racer-production-readiness/evidence/preview-deploy-001-20260603T163200Z/release-smoke-summary-preview-after-console-policy-fix.json',
+  previewWebglContext:
+    '.agent/runs/kart-racer-production-readiness/evidence/preview-deploy-001-20260603T163200Z/webgl-context-preview/webgl-context-smoke-summary.json',
   pwaUpdate: '.agent/runs/kart-racer-production-readiness/evidence/pwa-update-001-20260523T234355Z/',
   raceDisable: '.agent/runs/kart-racer-production-readiness/evidence/race-disable-001-20260523T200640Z/',
   rcChecklist:
@@ -303,30 +311,36 @@ const run = async () => {
     }),
     await gate({
       acceptance: 'CSP, cache headers, Permissions-Policy, and camera/autoplay requirements match production scope.',
-      evidence: [latestEvidence.cspHeaders],
+      evidence: [latestEvidence.cspHeaders, latestEvidence.previewDeployedHeaders],
       id: 'header-permission-safety',
       level: 'P0',
       notes:
-        'Local built-app header smoke is proven, barcode/camera are scoped out until the 2026-06-08 follow-up, and deployed headers remain pending.',
+        'Local built-app header smoke and preview deployed headers are proven, barcode/camera are scoped out until the 2026-06-08 follow-up, and production deployed headers remain pending.',
       status: 'Partial - production scope/evidence required',
     }),
     await gate({
       acceptance: 'Cloudflare project/domain/branch policy is confirmed.',
-      evidence: [docs.runbook, latestEvidence.releaseDecision],
+      evidence: [docs.runbook, latestEvidence.releaseDecision, latestEvidence.previewDeploy],
       id: 'production-target',
       level: 'P0',
       notes:
-        'Target is selected as Cloudflare Pages project showcase-designs-preview with preview branch comebacktrackerkartgame for preview smoke, release branch codex/release-v1-comebacktracker-kart-racer, canonical preview URL if Wrangler confirms it, and the Pages production deployment for same-build production smoke/native rollback proof after preview smoke passes.',
+        'Target is selected as Cloudflare Pages project showcase-designs-preview with preview branch comebacktrackerkartgame. Preview URL, deployment URL, deployment ID, and source commit are proven; same-build production smoke/native rollback proof still uses the Pages production deployment.',
       status: 'Proven',
     }),
     await gate({
       acceptance: 'Preview deployment passes race and app smoke checks.',
-      evidence: [docs.runbook],
+      evidence: [
+        docs.runbook,
+        latestEvidence.previewDeploy,
+        latestEvidence.previewReleaseSmoke,
+        latestEvidence.previewDeployedHeaders,
+        latestEvidence.previewWebglContext,
+      ],
       id: 'preview-smoke',
       level: 'P0',
       notes:
-        'Planned preview URL is https://comebacktrackerkartgame.showcase-designs-preview.pages.dev; actual deployment URL, deployment ID, commit SHA, and smoke results are not supplied.',
-      status: 'Missing - deployed evidence required',
+        'Preview deployment, release smoke, deployed headers, core tracker navigation, desktop/mobile race smoke, and WebGL context-loss fallback are proven for https://comebacktrackerkartgame.showcase-designs-preview.pages.dev.',
+      status: 'Proven',
     }),
     await gate({
       acceptance: 'Production deployment passes race and app smoke checks.',
@@ -427,10 +441,10 @@ const run = async () => {
     }),
     await gate({
       acceptance: 'Context loss/fallback behavior is tested.',
-      evidence: [latestEvidence.webglContext],
+      evidence: [latestEvidence.webglContext, latestEvidence.previewWebglContext],
       id: 'webgl-context-loss',
       level: 'P1',
-      notes: 'Local built-preview context-loss proof exists; target-browser/device evidence is missing.',
+      notes: 'Local built-preview and deployed preview context-loss proof exist; target-browser/device evidence is missing.',
       status: 'Partial - target-browser evidence or exception required',
     }),
     await gate({
@@ -460,11 +474,11 @@ const run = async () => {
     }),
     await gate({
       acceptance: '_headers policy is verified in deployed response headers.',
-      evidence: [docs.runbook, latestEvidence.deployedHeaders],
+      evidence: [docs.runbook, latestEvidence.deployedHeaders, latestEvidence.previewDeployedHeaders],
       id: 'production-cache-headers',
       level: 'P1',
       notes: deployedHeadersEvidenceExists
-        ? 'Local Cloudflare-style header simulation and URL-capable response-header smoke are recorded; preview/production URL deployed response evidence is still missing.'
+        ? 'Local Cloudflare-style header simulation and preview URL deployed response evidence are recorded; production URL deployed response evidence is still missing.'
         : 'Deployed response-header evidence is not supplied.',
       status: deployedHeadersEvidenceExists
         ? 'Partial - deployed evidence required'
@@ -569,7 +583,7 @@ const run = async () => {
     p1Summary,
     requiredOwnerQuestions: [
       'Provide manual QA scores, mobile/desktop playthrough evidence, owner clip/fresh-user result, and target-browser/device accessibility sign-off.',
-      'Provide preview and production URLs/deployment IDs, smoke results, deployed headers, Cloudflare rollback evidence, monitoring/version signal, and final sign-offs.',
+      'Provide production URL/deployment IDs, smoke results, deployed headers, Cloudflare rollback evidence, monitoring/version signal, and final sign-offs.',
       'Provide actual CI run URL or owner-accepted manual release checklist execution from the clean release branch/worktree.',
       'If any new ChatGPT Image Gen assets, UI, item silhouettes, tracks, or audio are added, repeat inventory, source scan, and protected-similarity review before release.',
     ],

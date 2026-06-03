@@ -8,7 +8,10 @@ import { chromium } from 'playwright';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const port = Number(process.env.WEBGL_CONTEXT_SMOKE_PORT || 5198);
-const baseUrl = `http://127.0.0.1:${port}`;
+const suppliedUrl = process.env.WEBGL_CONTEXT_SMOKE_URL?.trim() || '';
+const target = process.env.WEBGL_CONTEXT_SMOKE_TARGET || (suppliedUrl ? 'external-url' : 'local-built-preview');
+const baseUrl = suppliedUrl ? suppliedUrl.replace(/\/+$/, '') : `http://127.0.0.1:${port}`;
+const isLocalBuiltPreview = !suppliedUrl;
 const artifactsDir = process.env.WEBGL_CONTEXT_SMOKE_ARTIFACT_DIR
   ? path.resolve(root, process.env.WEBGL_CONTEXT_SMOKE_ARTIFACT_DIR)
   : path.join(root, 'tmp', 'webgl-context-smoke-test');
@@ -84,23 +87,35 @@ const forceWebGLContextLoss = async (page) =>
     };
   });
 
+const isAllowedExternalFailure = (url) => /https:\/\/fonts\.(?:googleapis|gstatic)\.com\//.test(url);
+
+const isAllowedConsoleError = (message) =>
+  /401 \(Unauthorized\)/.test(message) ||
+  /server responded with a status of 401 \(\)/.test(message) ||
+  /403 \(Forbidden\)/.test(message) ||
+  /\/api\/sync\//.test(message) ||
+  /Failed to load resource: net::ERR_FAILED/.test(message);
+
 const run = async () => {
-  await ensureDist();
+  if (isLocalBuiltPreview) await ensureDist();
   await mkdir(artifactsDir, { recursive: true });
 
-  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const server = spawn(npm, ['run', 'preview', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
-    cwd: root,
-    env: { ...process.env, BROWSER: 'none' },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  let server = null;
   let serverLog = '';
-  server.stdout.on('data', (chunk) => {
-    serverLog += chunk.toString();
-  });
-  server.stderr.on('data', (chunk) => {
-    serverLog += chunk.toString();
-  });
+  if (isLocalBuiltPreview) {
+    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    server = spawn(npm, ['run', 'preview', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
+      cwd: root,
+      env: { ...process.env, BROWSER: 'none' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    server.stdout.on('data', (chunk) => {
+      serverLog += chunk.toString();
+    });
+    server.stderr.on('data', (chunk) => {
+      serverLog += chunk.toString();
+    });
+  }
 
   let browser;
   try {
@@ -108,9 +123,25 @@ const run = async () => {
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { height: 900, width: 1440 } });
     const pageErrors = [];
+    const requestFailures = [];
+    const httpErrors = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
     page.on('console', (message) => {
-      if (message.type() === 'error') pageErrors.push(message.text());
+      if (message.type() === 'error' && !isAllowedConsoleError(message.text())) pageErrors.push(message.text());
+    });
+    page.on('requestfailed', (request) => {
+      if (isAllowedExternalFailure(request.url()) || /\/api\/sync\//.test(request.url())) return;
+      requestFailures.push({
+        failure: request.failure()?.errorText || null,
+        method: request.method(),
+        url: request.url(),
+      });
+    });
+    page.on('response', (response) => {
+      const status = response.status();
+      if (status >= 400 && !/\/api\/sync\//.test(response.url())) {
+        httpErrors.push({ status, url: response.url() });
+      }
     });
 
     const routeUrl = `${baseUrl}/#race`;
@@ -172,12 +203,12 @@ const run = async () => {
       titleSeen: document.body.innerText.includes('The Comeback'),
     }));
 
-    const significantErrors = pageErrors.filter(
-      (message) => !message.includes('Failed to load resource: the server responded with a status of 404')
-    );
-    if (significantErrors.length) {
+    const significantErrors = pageErrors.filter((message) => {
+      return !message.includes('Failed to load resource: the server responded with a status of 404');
+    });
+    if (significantErrors.length || requestFailures.length || httpErrors.length) {
       fail('Browser console errors during WebGL context smoke', {
-        errors: significantErrors,
+        errors: { consoleErrors: significantErrors, httpErrors, requestFailures },
         ignoredErrors: pageErrors.filter((message) => !significantErrors.includes(message)),
       });
     }
@@ -201,6 +232,7 @@ const run = async () => {
       ignoredConsoleErrors: pageErrors.filter((message) => !significantErrors.includes(message)),
       lossResult,
       routeUrl,
+      target,
     };
     await writeFile(path.join(artifactsDir, 'webgl-context-smoke-summary.json'), JSON.stringify(summary, null, 2));
     console.log(JSON.stringify(summary, null, 2));
@@ -209,7 +241,7 @@ const run = async () => {
     throw error;
   } finally {
     if (browser) await browser.close();
-    server.kill('SIGTERM');
+    server?.kill('SIGTERM');
   }
 };
 

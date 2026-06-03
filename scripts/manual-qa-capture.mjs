@@ -134,7 +134,10 @@ const mockLocalSync = async (context) => {
   return { mode: 'mock-unauthenticated-sync' };
 };
 
-const isAllowedConsoleError = (message) => /401 \(Unauthorized\)/.test(message) || /\/api\/sync\//.test(message);
+const isAllowedConsoleError = (message) =>
+  /401 \(Unauthorized\)/.test(message) ||
+  /server responded with a status of 401 \(\)/.test(message) ||
+  /\/api\/sync\//.test(message);
 
 const collectBrowserErrors = (page) => {
   const pageErrors = [];

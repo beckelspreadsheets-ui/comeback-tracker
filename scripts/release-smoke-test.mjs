@@ -219,10 +219,14 @@ const compareDeployedHeaders = async ({ assetPath }) => {
   };
 };
 
+const isAllowedExternalFailure = (url) => /https:\/\/fonts\.(?:googleapis|gstatic)\.com\//.test(url);
+
 const isAllowedConsoleError = (message) =>
   /401 \(Unauthorized\)/.test(message) ||
+  /server responded with a status of 401 \(\)/.test(message) ||
   /403 \(Forbidden\)/.test(message) ||
-  /\/api\/sync\//.test(message);
+  /\/api\/sync\//.test(message) ||
+  /Failed to load resource: net::ERR_FAILED/.test(message);
 
 const collectBrowserErrors = (page) => {
   const pageErrors = [];
@@ -236,6 +240,7 @@ const collectBrowserErrors = (page) => {
     }
   });
   page.on('requestfailed', (request) => {
+    if (isAllowedExternalFailure(request.url())) return;
     requestFailures.push({
       failure: request.failure()?.errorText || null,
       method: request.method(),

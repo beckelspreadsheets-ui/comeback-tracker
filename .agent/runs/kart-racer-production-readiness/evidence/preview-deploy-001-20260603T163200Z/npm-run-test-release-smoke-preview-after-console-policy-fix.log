@@ -1,3 +1,7 @@
+
+> comeback-tracker@1.0.0 test:release:smoke
+> node scripts/release-smoke-test.mjs
+
 {
   "apiProbes": {
     "fatSecretShortQuery": {

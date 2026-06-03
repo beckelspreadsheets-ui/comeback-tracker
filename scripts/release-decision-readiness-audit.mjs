@@ -198,7 +198,7 @@ const run = async () => {
     ),
     paths: Object.fromEntries(Object.entries(docs).map(([key, filePath]) => [key, path.relative(root, filePath)])),
     requiredOwnerQuestions: [
-      'Provide preview and production URLs, Cloudflare Pages project/branch/deployment IDs, commit SHAs, smoke results, rollback target, deployed monitoring/version signal, and final sign-offs.',
+      'Provide production URL, Cloudflare Pages production deployment IDs, commit SHAs, smoke results, rollback target, deployed monitoring/version signal, and final sign-offs.',
       'Provide manual QA scores, target-browser/device accessibility sign-off, and final screenshot/silhouette/binary provenance review.',
       'Provide the actual CI run URL or owner-accepted manual release checklist execution from the clean release branch/worktree.',
     ],
