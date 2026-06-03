@@ -2,6 +2,25 @@
 
 Use this after `node verify-world.mjs` passes and after both device QA reports in `DEVICE_QA.md` pass.
 
+## Current Status
+
+As of 2026-06-03, local launch-readiness validation passes, but production still serves the stale Vercel site.
+
+Current direct-upload package:
+
+```text
+deploy-artifacts/showcase-designs-dist-20260603-103616.zip
+SHA256 5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92
+```
+
+Latest production check:
+
+```text
+SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs
+Result: 54 production checks failed
+Reason: showcase-designs.com still serves the old Vercel build; /world and /thanks return 404.
+```
+
 ## Local Gate
 
 ```bash

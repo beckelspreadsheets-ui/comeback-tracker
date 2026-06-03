@@ -27,6 +27,8 @@ Source for Showcase Designs v3: a static marketing page plus an opt-in 3D studio
 - `LOCAL_BROWSER_AUDIT.md` — local Lighthouse evidence for `/` and `/world.html?try=1`
 - `PRODUCTION_AUDIT.md` — current production route and source audit
 - `OUTBOUND_LINK_AUDIT.md` — current external live-site URL audit
+- `LAUNCH_ACQUISITION_SYSTEM.md` — business-card, UTM, outreach, compliance, and weekly tracking runbook
+- `OUTREACH_TRACKER.csv` — blank 100-lead launch CRM tracker template
 - `privacy.html`, `terms.html` — linked from the footer
 - `img/` — mobile screenshots used by the approved launch case-study grid
 - `img/world/` — optimized gallery textures used by `/world`

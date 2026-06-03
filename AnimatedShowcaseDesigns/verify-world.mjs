@@ -640,6 +640,7 @@ assert("robots file points at sitemap", robots.includes("User-agent: *") && robo
 assert("sitemap includes canonical static route only", sitemap.includes("<loc>https://showcase-designs.com/</loc>") && !sitemap.includes("/world"));
 assert("contact form posts to FormSubmit", index.includes('class="contact-form" action="https://formsubmit.co/hello@showcase-designs.com" method="POST"'));
 assert("contact form hidden fields are configured", index.includes('name="_subject" value="New Showcase Designs inquiry"') && index.includes('name="_captcha" value="false"') && index.includes('name="_template" value="table"') && index.includes('name="_next" value="https://showcase-designs.com/thanks"'));
+assert("contact form captures attribution fields", ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "landing_page", "referrer"].every((name) => index.includes(`name="${name}" value=""`)));
 assert("contact form required fields are configured", index.includes('id="name" name="name" type="text" required') && index.includes('id="email" name="email" type="email" required') && index.includes('id="business" name="business" required') && index.includes('id="package" name="package" required'));
 assert("contact form includes privacy consent link", index.includes('By submitting, you agree to our') && index.includes('href="privacy.html"'));
 assert("thanks page is noindexed confirmation", thanks.includes("<title>Thanks | Showcase Designs</title>") && thanks.includes('content="noindex,follow"') && thanks.includes("Message received"));
@@ -688,6 +689,7 @@ assert("world idle look ends with intro", worldJs.includes("function requestIdle
 assert("world warmup render loop is time-boxed", worldJs.includes("function runWarmupCheck") && worldJs.includes("now - start < 900") && worldJs.includes("lastWarmup"));
 assert("world continuous QA rendering is qa-only", worldJs.includes("function runQaFrameProbe") && worldJs.includes("if (!qaState || qaState.running) return") && worldJs.includes("if (!qaMode) return"));
 assert("static analytics hooks cover mode routing", index.includes("window.dataLayer.push") && index.includes('window.gtag("event"') && index.includes("window.sdTrack") && index.includes('"mode_enter_world"') && index.includes('"mode_return_static"'));
+assert("static analytics hooks cover conversion events", ["form_submit", "phone_click", "email_click", "pricing_cta_click", "business_card_qr_visit", "live_project_click"].every((eventName) => index.includes(`"${eventName}"`)) && index.includes("syncAttributionFields") && index.includes("trackCampaignVisit"));
 assert("world analytics hooks cover mode and station events", worldJs.includes("window.dataLayer.push") && worldJs.includes('window.gtag("event"') && ["mode_enter_world", "mode_return_static", "station_click_live", "station_click_case_study", "station_hover", "world_fallback_shown", "webgl_context_lost"].every((eventName) => worldJs.includes(`"${eventName}"`)));
 assert("world portrait camera starts inside walkable right-reference gallery room", worldJs.includes("const cameraFov = portraitViewport ? 62 : 54") && worldJs.includes("const basePose = galleryCameraPose()") && worldJs.includes("new THREE.Vector3(-4.72, 1.5, 4.86)") && worldJs.includes("new THREE.Vector3(-0.8, 1.4, -5.18)"));
 assert("world portrait station panel has compact toggle", world.includes('class="station-panel is-compact"') && world.includes('id="panelToggleButton"') && world.includes('aria-controls="stationPanelBody"') && world.includes('aria-expanded="false"') && worldCss.includes(".station-panel.is-compact") && worldJs.includes("syncStationPanelMode"));
@@ -878,6 +880,9 @@ try {
 
   const staticLitePreferenceDom = await dumpDom(browser, origin, "/index.html?lite=1&verifyMode=1&seedMode=world");
   assert("static lite clears mode preference at runtime", staticLitePreferenceDom.includes('data-mode-preference="null"') && staticLitePreferenceDom.includes("case-study-evenpath"));
+
+  const staticTrackingDom = await dumpDom(browser, origin, "/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch&utm_content=verifier&verifyTracking=1");
+  assert("static business-card UTM tracking runs at runtime", staticTrackingDom.includes('data-form-utm-source="business_card"') && staticTrackingDom.includes('data-form-utm-medium="offline"') && staticTrackingDom.includes('data-form-utm-campaign="v3_launch"') && staticTrackingDom.includes('data-last-static-event="business_card_qr_visit"') && numericAttr(staticTrackingDom, "data-static-data-layer-count") >= 1);
 
   const staticReducedScenicDom = await dumpDom(browser, origin, "/index.html?scenic=1&verifyMode=1", ["--force-prefers-reduced-motion=reduce"]);
   assert("static reduced motion blocks scenic routing", staticReducedScenicDom.includes("case-study-evenpath") && !staticReducedScenicDom.includes('id="stationControls"'));

@@ -32,11 +32,11 @@ Production branch: the branch connected to showcase-designs.com
 Last verified upload package:
 
 ```text
-deploy-artifacts/showcase-designs-dist-20260519-110740.zip
-SHA256 a92d3df5ec26b05adeb8dec470ee88e04ec7e4748db84d3e459c116ee7e1b00b
+deploy-artifacts/showcase-designs-dist-20260603-103616.zip
+SHA256 5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92
 ```
 
-This retained package is the latest deployed preview artifact. It includes the 2026-05-18 presentation photo-lock CSS, the normal-mode stone slab overlay, and the 2026-05-19 renderer/camera visual tuning pass.
+This retained package is the current launch-readiness artifact generated on 2026-06-03. It includes the trust-safe pricing copy, capped Growth scope, UTM/contact-form attribution capture, static conversion tracking hooks, and the acquisition-launch copy updates. It has not been verified on `showcase-designs.com` yet because production still serves the stale Vercel site.
 
 Use this path when deploying manually with Wrangler:
 
@@ -71,6 +71,8 @@ Previous photo-lock/stone-overlay deployment: https://b47e5e1b.showcase-designs-
 Current render/camera tuning deployment: https://d6444b74.showcase-designs-preview.pages.dev
 Stable preview: https://showcase-designs-preview.pages.dev
 ```
+
+The stable preview URLs above are older than the 2026-06-03 launch-readiness package unless a new preview deployment is recorded here after this note.
 
 Do not use the parent `../wrangler.toml` for this workspace. That file is for the separate `comeback-tracker` Pages project and is not evidence of the `showcase-designs.com` Cloudflare project.
 

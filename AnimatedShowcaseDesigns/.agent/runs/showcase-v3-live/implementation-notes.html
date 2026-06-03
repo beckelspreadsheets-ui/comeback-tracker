@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Showcase v3 Live - Implementation Notes</title>
+  <style>
+    body {
+      color: #202124;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      margin: 0 auto;
+      max-width: 920px;
+      padding: 40px 24px;
+    }
+    h1, h2 { line-height: 1.2; }
+    code {
+      background: #f1f3f4;
+      border-radius: 4px;
+      padding: 2px 5px;
+    }
+    .meta {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .timeline {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      max-height: 360px;
+      overflow: auto;
+      padding: 8px;
+    }
+    .timeline-note {
+      color: #5f6368;
+      margin-bottom: 10px;
+    }
+    .event {
+      background: #fff;
+      border: 1px solid #e8eaed;
+      border-radius: 8px;
+      margin: 8px 0;
+      padding: 12px 14px;
+    }
+    .event-head {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .event-summary {
+      margin: 0;
+    }
+    .event time {
+      color: #5f6368;
+      font-size: 13px;
+    }
+    .badge, .phase, .actor {
+      border-radius: 999px;
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 5px 8px;
+      text-transform: uppercase;
+    }
+    .badge { background: #e8f0fe; color: #174ea6; }
+    .status-done, .status-validated { background: #e6f4ea; color: #137333; }
+    .status-blocked, .status-failed { background: #fce8e6; color: #c5221f; }
+    .status-decision { background: #fef7e0; color: #b06000; }
+    .phase, .actor {
+      background: #f1f3f4;
+      color: #3c4043;
+      font-weight: 600;
+    }
+    li { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>Showcase v3 Live</h1>
+  <div class="meta">
+    <p><strong>Goal ID:</strong> <code>showcase-v3-live</code></p>
+    <p><strong>Started:</strong> 2026-06-03T16:52:40Z</p>
+    <p><strong>Parent goal:</strong> none</p>
+    <p><strong>Mode:</strong> full</p>
+    <p><strong>Objective:</strong> Implement Showcase Designs v3 from SHOWCASE_V3_LIVE_PRD.md, verify pricing with current market research, and prepare the site for production launch.</p>
+  </div>
+
+  <h2>Resume Here</h2>
+  <ul>
+    <li><strong>Status:</strong> [doing] Pricing research, trust-safe copy, acquisition system, conversion tracking hooks, local deploy package, and local verification are complete. Production launch is not complete.</li>
+    <li><strong>Current phase:</strong> Launch readiness, waiting on operator-controlled production inputs and live-domain deployment.</li>
+    <li><strong>Completed work:</strong> Created goal ledger; checked pricing against current web design/local SEO market sources; updated `index.html` and `v3-preview.html` pricing/trust copy; added launch acquisition runbook; added blank 100-lead tracker; wired static conversion tracking and UTM form capture; regenerated `dist/`; ran local verification gates.</li>
+    <li><strong>Active work:</strong> Keep public prices at `$149/mo + $1,500 setup` and `$399/mo + $3,500 setup`, with Growth scope capped and no ranking guarantees.</li>
+    <li><strong>Blockers:</strong> Cloudflare project/branch, live production deploy, GA4/equivalent measurement ID, Google Search Console/Bing setup, final public contact details, approved client/project list, approved business-card QR target, compliant mailing address/PO box, and real production verification are not proven locally.</li>
+    <li><strong>Next exact action:</strong> Get Andrew's operator confirmations from `SHOWCASE_V3_LIVE_PRD.md` section 11, then deploy the generated Cloudflare `dist/` package and run `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs`.</li>
+    <li><strong>Last validation:</strong> `node verify-world.mjs` passed 367 checks; `node verify-outbound.mjs` passed 9 checks; CSV validation confirmed 32 columns and 100 lead rows; `node prepare-cloudflare-deploy.mjs` ran inside the full verifier and prepared the Cloudflare `dist/` package; local production verifier passed against `dist/` inside the full verifier.</li>
+    <li><strong>Protected paths:</strong> Existing parent-level dirty work under `/Users/andrewferguson/Downloads/comeback-tracker` is user-owned and was not modified.</li>
+  </ul>
+
+  <h2>Progress Timeline</h2>
+  <p class="timeline-note">Progress is rendered directly in this file from the inline <code>progressEvents</code> array below. Append a new event to that array whenever execution reality changes meaningfully.</p>
+  <div id="progress-timeline" class="timeline"></div>
+
+  <h2>Decisions Outside The Spec</h2>
+  <ul>
+    <li>[done] Treat `SHOWCASE_V3_LIVE_PRD.md` pricing as a hypothesis until checked against current sources. The checked decision is to keep the prices but tighten the ongoing Growth promise.</li>
+    <li>[done] Replace the public `Google Analytics` bullet with `Analytics-ready event tracking` because the source has `dataLayer`/`gtag` hooks but no confirmed GA4 measurement ID.</li>
+    <li>[done] Keep first-preview messaging only as a target after scope/content are clear, not as a blanket turnaround guarantee.</li>
+    <li>[done] Add public copy that local SEO results require reviews, fresh photos, accurate business details, and proof from the client. This directly addresses weak or hard-to-update client-side local signals.</li>
+    <li>[done] Use a manual low-volume outreach cadence only. Automated bulk cold email remains out of scope until compliance, mailing address, deliverability, and tracking are intentionally set up.</li>
+    <li>[done] Track conversion events through `dataLayer` and optional `gtag` hooks rather than installing a guessed GA4 measurement ID.</li>
+  </ul>
+
+  <h2>Changes And Tradeoffs</h2>
+  <ul>
+    <li>[done] `index.html` and `v3-preview.html` remain byte-identical after copy changes.</li>
+    <li>[done] Growth no longer promises `2 blog posts per month`; it now promises one priority monthly content/update cycle.</li>
+    <li>[done] Custom no longer says `Dedicated project manager`; it now says direct founder-led project management.</li>
+    <li>[done] Starter domain language now says hosting is included and domain setup is handled, avoiding confusion about domain ownership and renewals.</li>
+    <li>[done] Pricing section now states rankings are not guaranteed and that local SEO depends on client participation.</li>
+    <li>[done] The checked market suggests Growth can move to `$499/mo` after 3-5 stronger proof clients, but that public change needs Andrew's approval because the PRD currently says keep `$399/mo`.</li>
+    <li>[done] `LAUNCH_ACQUISITION_SYSTEM.md` now documents the free-review output, UTM conventions, business-card QR URL, scripts, compliance rules, and operator confirmations before scaling.</li>
+    <li>[done] `OUTREACH_TRACKER.csv` now provides a blank 100-lead CRM template with status, contact, website, GBP, issue, UTM, follow-up, and outcome columns.</li>
+    <li>[done] The contact form now captures UTM fields, landing page, and referrer in hidden fields for FormSubmit leads.</li>
+    <li>[done] Static conversion hooks now track form submits, phone clicks, email clicks, pricing CTA clicks, business-card QR visits, live project clicks, and `/world` entry.</li>
+  </ul>
+
+  <h2>Validation</h2>
+  <ul>
+    <li>[done] `node verify-world.mjs` passed 367 checks.</li>
+    <li>[done] `node verify-outbound.mjs` passed 9 checks.</li>
+    <li>[done] CSV validation confirmed `OUTREACH_TRACKER.csv` has 32 columns and 100 lead rows.</li>
+    <li>[done] `node prepare-cloudflare-deploy.mjs` prepared `dist/` with 21 files.</li>
+    <li>[done] `SHOWCASE_ORIGIN=http://127.0.0.1:8876 node verify-production.mjs` passed 63 checks against the generated `dist/` package.</li>
+    <li>[done] In-app browser desktop pricing check at 1280x720 found 3 pricing cards, visible pricing note, and no horizontal overflow.</li>
+    <li>[done] In-app browser mobile pricing check at 390x844 found visible pricing note, 3 pricing cards, and no horizontal overflow.</li>
+    <li>[blocked] Live `https://showcase-designs.com` verification was not run because production deployment and Cloudflare project details are operator-controlled.</li>
+  </ul>
+
+  <h2>Evidence</h2>
+  <ul>
+    <li><a href="evidence/pricing-research-20260603.md">Pricing research check, 2026-06-03</a></li>
+    <li><a href="../../../../LAUNCH_ACQUISITION_SYSTEM.md">Launch acquisition system runbook</a></li>
+    <li><a href="../../../../OUTREACH_TRACKER.csv">Blank 100-lead outreach tracker</a></li>
+  </ul>
+
+  <h2>Next Goal Candidates</h2>
+  <ul>
+    <li>Production deploy and post-deploy verification after Andrew confirms Cloudflare project/branch.</li>
+    <li>Business-card QR and outreach tracker after the production URL, contact details, and approved public offer are final.</li>
+    <li>GA4/Search Console/Bing setup after account access and property details are available.</li>
+  </ul>
+  <script>
+    const progressEvents = [
+      {
+        ts: "2026-06-03T16:52:40Z",
+        status: "created",
+        phase: "start",
+        actor: "agent",
+        summary: "Goal ledger created."
+      },
+      {
+        ts: "2026-06-03T17:07:14Z",
+        status: "done",
+        phase: "pricing-research",
+        actor: "agent",
+        summary: "Checked public prices against current web design, local SEO, Arizona competitor, and Google Business Profile sources; kept prices but capped Growth scope.",
+        evidence: ["evidence/pricing-research-20260603.md"]
+      },
+      {
+        ts: "2026-06-03T17:07:14Z",
+        status: "done",
+        phase: "copy-update",
+        actor: "agent",
+        summary: "Updated index.html and v3-preview.html with trust-safe pricing copy, no ranking guarantees, capped Growth deliverables, safer analytics language, and founder-led Custom wording."
+      },
+      {
+        ts: "2026-06-03T17:07:14Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Validated local site and deploy package: verify-world passed 364 checks, verify-outbound passed 9 checks, prepare-cloudflare-deploy produced 21 files, and dist production dry run passed 63 checks."
+      },
+      {
+        ts: "2026-06-03T17:34:21Z",
+        status: "done",
+        phase: "acquisition-system",
+        actor: "agent",
+        summary: "Added launch acquisition runbook, blank 100-lead tracker, UTM form capture, and static conversion event hooks for form, phone, email, pricing, QR, live-project, and world-entry interactions."
+      },
+      {
+        ts: "2026-06-03T17:34:21Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Validated acquisition and tracking pass: verify-world passed 367 checks, verify-outbound passed 9 checks, and CSV validation confirmed 32 columns with 100 lead rows."
+      }
+    ];
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderEvent(event) {
+      const status = escapeHtml(event.status || "event");
+      const phase = escapeHtml(event.phase || "general");
+      const actor = escapeHtml(event.actor || "agent");
+      const timestamp = escapeHtml(event.ts || "");
+      const summary = escapeHtml(event.summary || "");
+      return `
+        <article class="event">
+          <div class="event-head">
+            <span class="badge status-${status}">${status}</span>
+            <span class="phase">${phase}</span>
+            <span class="actor">${actor}</span>
+            <time datetime="${timestamp}">${timestamp}</time>
+          </div>
+          <p class="event-summary">${summary}</p>
+        </article>
+      `;
+    }
+
+    function renderProgressTimeline() {
+      const target = document.getElementById("progress-timeline");
+      const events = Array.isArray(progressEvents) ? progressEvents : [];
+      if (events.length === 0) {
+        target.innerHTML = "<p>No progress events recorded yet.</p>";
+        return;
+      }
+      target.innerHTML = events.map(renderEvent).join("");
+    }
+    renderProgressTimeline();
+  </script>
+</body>
+</html>

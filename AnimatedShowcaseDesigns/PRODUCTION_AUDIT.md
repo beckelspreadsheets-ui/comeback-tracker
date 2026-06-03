@@ -53,11 +53,11 @@ SHA256 68902e6d81ed1fc8d57af765167c9dc69571dc7719fd637bd5fcb6c77e40a7bd
 Latest verified direct-upload package:
 
 ```text
-deploy-artifacts/showcase-designs-dist-20260519-110740.zip
-SHA256 a92d3df5ec26b05adeb8dec470ee88e04ec7e4748db84d3e459c116ee7e1b00b
+deploy-artifacts/showcase-designs-dist-20260603-103616.zip
+SHA256 5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92
 ```
 
-The 2026-05-19 render/camera tuning `/world` build is now deployed to the stable preview URL.
+The 2026-06-03 launch-readiness package includes the pricing/trust copy pass, launch acquisition system, UTM/contact-form attribution capture, and static conversion event hooks. It is generated locally and ready for an approved Cloudflare Pages upload, but it is not yet deployed to `showcase-designs.com`.
 
 Observed: 2026-05-19 18:07 UTC preview deploy evidence from `node verify-production.mjs`, `node verify-photo-match.mjs`, and direct `curl` checks.
 
@@ -67,9 +67,11 @@ Domain checked: `https://showcase-designs.com`
 
 Production is not serving this workspace build yet. Latest verifier result on 2026-05-11: `50 production checks failed for https://showcase-designs.com.`
 
+Latest verifier result on 2026-06-03: `54 production checks failed for https://showcase-designs.com.`
+
 | URL | Expected | Observed | Status |
 | --- | --- | --- | --- |
-| `https://showcase-designs.com/` | Current `index.html` with Studio links and case-study anchors | HTTP/2 200, but source is the older Vercel page last modified 2026-04-27 | Failing |
+| `https://showcase-designs.com/` | Current `index.html` with Studio links, free-review offer, and case-study anchors | HTTP/2 200, but source is the older Vercel page last modified 2026-05-29 | Failing |
 | `https://showcase-designs.com/world` | Current `world.html` gallery shell | HTTP/2 404, serving `404.html` | Failing |
 | `https://showcase-designs.com/world.html` | Current `world.html` gallery shell, if direct file access is supported | HTTP/2 404, serving `404.html` | Failing |
 | `https://showcase-designs.com/thanks` | Current `thanks.html` form confirmation page | HTTP/2 404, serving `404.html` | Failing |
@@ -86,12 +88,11 @@ curl -I --max-time 12 https://showcase-designs.com/world.html
 curl -I --max-time 12 https://showcase-designs.com/thanks
 ```
 
-Observed headers on 2026-05-11:
+Observed headers on 2026-06-03:
 
-- `/` returned `HTTP/2 200`, `server: Vercel`, `x-vercel-cache: HIT`, `last-modified: Mon, 27 Apr 2026 15:16:04 GMT`, `content-length: 80612`.
-- `/world` returned `HTTP/2 404`, `content-disposition: inline; filename="404.html"`, `last-modified: Mon, 27 Apr 2026 15:04:10 GMT`.
-- `/world.html` returned `HTTP/2 404`, `content-disposition: inline; filename="404.html"`, `last-modified: Mon, 27 Apr 2026 15:04:10 GMT`.
-- `/thanks` returned `HTTP/2 404`, `content-disposition: inline; filename="404.html"`, `last-modified: Mon, 27 Apr 2026 15:04:10 GMT`.
+- `/` returned `HTTP/2 200`, `server: Vercel`, `x-vercel-cache: HIT`, `last-modified: Fri, 29 May 2026 04:39:38 GMT`, `content-length: 80612`.
+- `/world` returned `HTTP/2 404`, `content-disposition: inline; filename="404.html"`, `last-modified: Fri, 29 May 2026 02:39:27 GMT`.
+- `/thanks` returned `HTTP/2 404`, `content-disposition: inline; filename="404.html"`, `last-modified: Fri, 29 May 2026 02:39:27 GMT`.
 
 Source checks:
 
@@ -101,12 +102,13 @@ curl -sS --max-time 12 https://showcase-designs.com/world | head -40
 curl -sS --max-time 12 https://showcase-designs.com/ | head -30
 ```
 
-Observed source findings:
+Observed source findings on 2026-06-03:
 
 - `/` did not include `Explore the studio`, `js-world-link`, `case-study-evenpath`, `world.html`, or `/world`.
 - The only `Three` match on `/` was old marketing copy: `Three tiers.<br><em>Zero surprises.</em>`.
 - `/world` served the existing production 404 page titled `404 - Page Not Found | Showcase Designs`.
 - `/` served the older page titled `Showcase Designs - Premium Web Design for Local Businesses`.
+- `/` still includes old pricing and trust claims, including `Autopilot ($199/mo)`, `Pro ($399/mo)`, `Elite ($2,497)`, `40+ Sites Built`, `100% Satisfaction`, and `48hr Turnaround`.
 
 ## Required Fix
 
@@ -143,10 +145,10 @@ node verify-production.mjs
 
 This command is expected to fail until production serves this workspace build.
 
-Latest observed result from 2026-05-11 18:03:45 UTC:
+Latest observed result from 2026-06-03 17:36:07 UTC:
 
 ```text
-50 production checks failed for https://showcase-designs.com.
+54 production checks failed for https://showcase-designs.com.
 ```
 
 Notable failures include:

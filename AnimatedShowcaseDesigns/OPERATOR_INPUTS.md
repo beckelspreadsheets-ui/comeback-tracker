@@ -53,9 +53,9 @@ Preview note from 2026-05-19: `world.js` now raises the seamless-mode DPR cap in
 Last verified direct-upload artifact retained for reference:
 
 ```text
-Archive: deploy-artifacts/showcase-designs-dist-20260519-110740.zip
-SHA256: a92d3df5ec26b05adeb8dec470ee88e04ec7e4748db84d3e459c116ee7e1b00b
-Source: generated from the allowlisted `dist/` package after `node verify-world.mjs`, `node verify-photo-match.mjs`, and local-dist `verify-production.mjs` passed; this is the latest deployed preview package and includes the 2026-05-18 presentation photo-lock CSS, normal-mode stone overlay, and 2026-05-19 renderer/camera visual tuning.
+Archive: deploy-artifacts/showcase-designs-dist-20260603-103616.zip
+SHA256: 5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92
+Source: generated from the allowlisted `dist/` package after the 2026-06-03 pricing/trust copy pass, launch acquisition runbook, UTM/contact-form attribution capture, and static conversion event hooks were added. Local verification passed with `node verify-world.mjs` and local-dist `verify-production.mjs`.
 ```
 
 Production is deferred until the owner explicitly approves it. Preview sharing is approved.
@@ -84,15 +84,15 @@ node verify-production.mjs
 
 Update `PRODUCTION_AUDIT.md` with the result.
 
-Current outbound note from 2026-05-19:
+Current outbound note from 2026-06-03:
 
 ```text
 Approved station live URLs: PASS
-FormSubmit endpoint: FAIL, HTTP 522
+FormSubmit endpoint: PASS
 Command: node verify-outbound.mjs
 ```
 
-Before launch, rerun `node verify-outbound.mjs`. If FormSubmit still returns 522, use an owner-approved alternate form provider or fallback contact flow before production approval.
+Before launch, rerun `node verify-outbound.mjs`. If FormSubmit fails, use an owner-approved alternate form provider or fallback contact flow before production approval.
 
 ## 2. Real-Device QA Reports
 
