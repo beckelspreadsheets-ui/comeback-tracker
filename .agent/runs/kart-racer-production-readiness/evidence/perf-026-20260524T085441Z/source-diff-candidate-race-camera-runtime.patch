@@ -1,0 +1,28 @@
+--- .agent/runs/kart-racer-production-readiness/evidence/perf-026-20260524T085441Z/raceCameraRuntime.before.js	2026-05-24 01:54:55
++++ src/game/race/raceCameraRuntime.js	2026-05-24 01:59:22
+@@ -1,5 +1,8 @@
+ import * as THREE from 'three';
+-import { updateChaseCameraFrame } from './camera/chaseCamera.js';
++import {
++  createChaseCameraFrameScratch,
++  updateChaseCameraFrame,
++} from './camera/chaseCamera.js';
+ import { VEHICLES } from './physics/kartTuning.js';
+ import { visualScenarioUsesHeadingCamera } from './playtest/raceVisualScenarios.js';
+ 
+@@ -20,6 +23,7 @@
+ } = {}) => {
+   const raycaster = createRaycaster();
+   if (raycaster) raycaster.camera = camera;
++  const frameScratch = createChaseCameraFrameScratch();
+   let cameraInitialized = false;
+   let routeLookahead = null;
+ 
+@@ -37,6 +41,7 @@
+       race,
+       raycaster,
+       reducedMotion: getReducedMotion(),
++      scratch: frameScratch,
+       useHeadingCamera: useHeadingCameraFor(playtest),
+       vehicle: vehicles[race.player.vehicleMode] || vehicles.kart,
+     });

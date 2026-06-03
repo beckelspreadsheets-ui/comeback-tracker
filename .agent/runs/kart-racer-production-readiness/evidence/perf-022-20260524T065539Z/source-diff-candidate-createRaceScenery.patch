@@ -1,0 +1,60 @@
+--- .agent/runs/kart-racer-production-readiness/evidence/perf-022-20260524T065539Z/createRaceScenery-before.js	2026-05-23 23:55:50
++++ .agent/runs/kart-racer-production-readiness/evidence/perf-022-20260524T065539Z/createRaceScenery-candidate.js	2026-05-24 00:00:21
+@@ -1036,26 +1036,40 @@
+   addPerimeterSkyline();
+ 
+   const addMountainsAndClouds = () => {
++    const mountainGeometry = new THREE.ConeGeometry(1, 1, 4);
++    const snowGeometry = new THREE.ConeGeometry(1, 1, 4);
++    const mountainMats = [createBasicMaterial('#8eb3c8'), createBasicMaterial('#9bc2d3')];
++    const mountainMatrices = mountainMats.map(() => []);
++    const snowMatrices = [];
+     [-128, -82, -38, 62, 116, 160].forEach((lateral, index) => {
+       const p = cityPoint(382 + (index % 2) * 18, lateral, 0);
+-      const mountain = new THREE.Mesh(
+-        new THREE.ConeGeometry(28 + (index % 3) * 7, 52 + (index % 2) * 18, 4),
+-        createBasicMaterial(index % 2 ? '#9bc2d3' : '#8eb3c8')
+-      );
+-      mountain.position.set(p.x, 20, p.z);
+-      mountain.rotation.y = Math.PI / 4;
+-      freezeStaticTransform(mountain);
+-      world.add(mountain);
+-
+-      const snow = new THREE.Mesh(
+-        new THREE.ConeGeometry(10 + (index % 3) * 2, 16, 4),
+-        raceCityMaterials.light
+-      );
+-      snow.position.set(p.x, 52 + (index % 2) * 8, p.z);
+-      snow.rotation.y = Math.PI / 4;
+-      freezeStaticTransform(snow);
+-      world.add(snow);
++      addInstanceMatrix(mountainMatrices[index % 2], {
++        position: new THREE.Vector3(p.x, 20, p.z),
++        rotationY: Math.PI / 4,
++        scale: new THREE.Vector3(28 + (index % 3) * 7, 52 + (index % 2) * 18, 28 + (index % 3) * 7),
++      });
++      addInstanceMatrix(snowMatrices, {
++        position: new THREE.Vector3(p.x, 52 + (index % 2) * 8, p.z),
++        rotationY: Math.PI / 4,
++        scale: new THREE.Vector3(10 + (index % 3) * 2, 16, 10 + (index % 3) * 2),
++      });
+     });
++    mountainMatrices.forEach((matrices, index) => {
++      const mesh = createInstancedMesh({
++        geometry: mountainGeometry,
++        material: mountainMats[index],
++        matrices,
++        parent: world,
++      });
++      if (mesh) mesh.userData.kind = 'distant-mountain-batch';
++    });
++    const snowMesh = createInstancedMesh({
++      geometry: snowGeometry,
++      material: raceCityMaterials.light,
++      matrices: snowMatrices,
++      parent: world,
++    });
++    if (snowMesh) snowMesh.userData.kind = 'distant-snow-batch';
+ 
+     const cloudMat = new THREE.MeshBasicMaterial({ color: '#f7fbff', opacity: 0.82, transparent: true });
+     const puffGeometry = new THREE.DodecahedronGeometry(1, 0);

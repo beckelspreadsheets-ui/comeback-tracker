@@ -10,23 +10,42 @@ const num = (v) => {
   return Number.isFinite(n) ? Math.round(n * 10) / 10 : 0;
 };
 
-// Normalise an OFF product to our entry shape (per serving if available, else per 100g).
+// Per-gram values: 4 decimal precision (milligram-level).
+const numPerGram = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round((n / 100) * 10000) / 10000 : 0;
+};
+
+// Normalise an OFF product to our entry shape. Uses per-serving data when
+// available; otherwise stores per-gram macros with unit='gram'.
 const mapOffProduct = (p) => {
   if (!p) return null;
   const n = p.nutriments || {};
   const hasServing = n['energy-kcal_serving'] != null || n.proteins_serving != null;
-  const servingDesc = hasServing
-    ? p.serving_size || (p.serving_quantity ? `${p.serving_quantity}g` : '1 serving')
-    : '100g';
+  if (hasServing) {
+    return {
+      source: 'off',
+      name: p.product_name || p.generic_name || 'Unnamed',
+      brand: p.brands || '',
+      cal: num(n['energy-kcal_serving']),
+      p: num(n.proteins_serving),
+      c: num(n.carbohydrates_serving),
+      f: num(n.fat_serving),
+      unit: 'serving',
+      servingDesc: p.serving_size || (p.serving_quantity ? `${p.serving_quantity}g` : '1 serving'),
+      barcode: p.code || '',
+    };
+  }
   return {
     source: 'off',
     name: p.product_name || p.generic_name || 'Unnamed',
     brand: p.brands || '',
-    cal: num(hasServing ? n['energy-kcal_serving'] : n['energy-kcal_100g']),
-    p: num(hasServing ? n.proteins_serving : n.proteins_100g),
-    c: num(hasServing ? n.carbohydrates_serving : n.carbohydrates_100g),
-    f: num(hasServing ? n.fat_serving : n.fat_100g),
-    servingDesc,
+    cal: numPerGram(n['energy-kcal_100g']),
+    p: numPerGram(n.proteins_100g),
+    c: numPerGram(n.carbohydrates_100g),
+    f: numPerGram(n.fat_100g),
+    unit: 'gram',
+    servingDesc: '1 g',
     barcode: p.code || '',
   };
 };
@@ -34,22 +53,34 @@ const mapOffProduct = (p) => {
 const mapUsdaFood = (f) => {
   if (!f) return null;
   const getN = (id) => f.foodNutrients?.find((x) => x.nutrientId === id)?.value;
-  // USDA returns per 100g for SR Legacy / Foundation; for Branded it's per serving.
+  // USDA: SR Legacy / Foundation per 100g → gram mode; Branded per serving.
   const isBranded = f.dataType === 'Branded';
-  const servingDesc = isBranded
-    ? f.servingSize
-      ? `${f.servingSize}${f.servingSizeUnit || 'g'}`
-      : '1 serving'
-    : '100g';
+  if (isBranded) {
+    return {
+      source: 'usda',
+      name: f.description || 'Unnamed',
+      brand: f.brandOwner || f.brandName || '',
+      cal: num(getN(1008)),
+      p: num(getN(1003)),
+      c: num(getN(1005)),
+      f: num(getN(1004)),
+      unit: 'serving',
+      servingDesc: f.servingSize
+        ? `${f.servingSize}${f.servingSizeUnit || 'g'}`
+        : '1 serving',
+      barcode: f.gtinUpc || '',
+    };
+  }
   return {
     source: 'usda',
     name: f.description || 'Unnamed',
     brand: f.brandOwner || f.brandName || '',
-    cal: num(getN(1008)),
-    p: num(getN(1003)),
-    c: num(getN(1005)),
-    f: num(getN(1004)),
-    servingDesc,
+    cal: numPerGram(getN(1008)),
+    p: numPerGram(getN(1003)),
+    c: numPerGram(getN(1005)),
+    f: numPerGram(getN(1004)),
+    unit: 'gram',
+    servingDesc: '1 g',
     barcode: f.gtinUpc || '',
   };
 };

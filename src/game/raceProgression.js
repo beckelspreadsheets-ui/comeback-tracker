@@ -34,7 +34,7 @@ export const RACE_ITEMS = [
   },
   {
     key: 'shield',
-    name: 'Guard Shell',
+    name: 'Guard Gel',
     cost: 110,
     summary: 'Blocks one rough contact window',
   },
@@ -82,13 +82,13 @@ export const RACE_ITEMS = [
   },
   {
     key: 'bananaMagnet',
-    name: 'Banana Magnet',
+    name: 'Fuel Magnet',
     cost: 115,
-    summary: 'Pulls nearby bananas into your vehicle',
+    summary: 'Pulls nearby fuel tokens into your vehicle',
   },
   {
     key: 'invincibility',
-    name: 'Star Shield',
+    name: 'Comeback Surge',
     cost: 190,
     summary: 'Brief invincibility against traps, hazards, and contact',
   },

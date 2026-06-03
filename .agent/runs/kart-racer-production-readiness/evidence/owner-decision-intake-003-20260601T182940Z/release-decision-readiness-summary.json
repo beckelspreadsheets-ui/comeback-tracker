@@ -1,0 +1,926 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/owner-decision-intake-003-20260601T182940Z",
+  "capturedAt": "2026-06-01T18:38:40.094Z",
+  "gateStatus": "owner-release-decisions-missing-r3-blocked",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c26bcdec19e8175f63a09e490f5400231aa",
+    "dirty": true
+  },
+  "note": "This audit records repo-visible release-owner/product/design/legal decisions that are still marked Not supplied. It does not infer decisions or convert local technical evidence into production sign-off.",
+  "decisions": [
+    {
+      "id": "visual-target-and-scope",
+      "label": "Approved visual target, viewport priority, HUD, and V1 scope",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "approved visual composition target"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md"
+          ],
+          "term": "v1 vehicle scope"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "hud direction"
+        }
+      ]
+    },
+    {
+      "id": "target-device-and-performance",
+      "label": "Minimum desktop/mobile device and performance target policy",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "minimum desktop device/browser"
+        },
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "minimum mobile device/browser"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "desktop-first"
+        }
+      ]
+    },
+    {
+      "id": "manual-qa-and-fresh-user",
+      "label": "Manual QA tester and fresh-user reviewer",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "manual qa tester"
+        },
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "fresh-user reviewer"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md"
+          ],
+          "term": "manual reviewers"
+        }
+      ]
+    },
+    {
+      "id": "ip-provenance-legal",
+      "label": "IP/provenance reviewer and item naming decisions",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "ip/provenance reviewer"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md"
+          ],
+          "term": "item naming/ip direction"
+        },
+        {
+          "matches": [],
+          "term": "guard shell name acceptable"
+        }
+      ]
+    },
+    {
+      "id": "cloudflare-release-target",
+      "label": "Production Cloudflare Pages project/domain and preview policy",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "production cloudflare pages project/domain"
+        },
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "production cloudflare pages project"
+        },
+        {
+          "matches": [
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "preview branch/project policy"
+        }
+      ]
+    },
+    {
+      "id": "deploy-gate-policy",
+      "label": "Clean deploy policy and CI/manual release gate acceptance",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "clean production deploy policy"
+        },
+        {
+          "matches": [
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "clean deploy policy"
+        },
+        {
+          "matches": [
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "ci url or manual checklist acceptance"
+        }
+      ]
+    },
+    {
+      "id": "rollback-and-race-disable",
+      "label": "Launch/rollback owners and race-disable activation policy",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "launch owner and rollback owner"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "rollback owner"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "race-disable activation policy"
+        }
+      ]
+    },
+    {
+      "id": "cloud-sync-d1-scope",
+      "label": "Cloudflare Functions, D1 sync, backups, and data rollback scope",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "sync/cloud api production scope"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md"
+          ],
+          "term": "cloudflare sync/d1 production scope"
+        },
+        {
+          "matches": [
+            "docs/race-v1-definition-of-done-checklist.md",
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "d1"
+        }
+      ]
+    },
+    {
+      "id": "fatsecret-barcode-camera-scope",
+      "label": "FatSecret proxy, barcode scanner, and camera permission scope",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md"
+          ],
+          "term": "fatsecret/barcode production scope"
+        },
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "fatsecret and barcode scanner production scope"
+        },
+        {
+          "matches": [
+            "docs/race-v1-definition-of-done-checklist.md",
+            "docs/race-manual-qa-rubric.md",
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "camera"
+        }
+      ]
+    },
+    {
+      "id": "telemetry-privacy-log-retention",
+      "label": "Telemetry privacy, log retention, and redaction owner",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md"
+          ],
+          "term": "telemetry retention and log redaction owner"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md"
+          ],
+          "term": "telemetry/log retention owner"
+        },
+        {
+          "matches": [
+            "docs/race-v1-definition-of-done-checklist.md",
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "privacy"
+        }
+      ]
+    },
+    {
+      "id": "monitoring-and-support",
+      "label": "Monitoring provider/no-provider risk, support path, and post-launch window",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "monitoring provider"
+        },
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "support contact/path"
+        },
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "post-launch monitoring window"
+        }
+      ]
+    },
+    {
+      "id": "accessibility-review",
+      "label": "Target-browser/device accessibility reviewer or exception",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "accessibility target-browser/device reviewer"
+        },
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md"
+          ],
+          "term": "accessibility reviewer and target device/browser set"
+        }
+      ]
+    },
+    {
+      "id": "web-vitals-lighthouse",
+      "label": "Web Vitals/Lighthouse targets or dated exception",
+      "status": "missing-owner-input",
+      "terms": [
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "web vitals/lighthouse target"
+        }
+      ]
+    },
+    {
+      "id": "bundle-budget",
+      "label": "Bundle/asset budget threshold or exception",
+      "status": "missing-owner-input",
+      "terms": [
+        {
+          "matches": [
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "bundle/asset budget threshold or exception"
+        }
+      ]
+    },
+    {
+      "id": "source-map-debug-test-hook-policy",
+      "label": "Source-map/debug/test-hook policy",
+      "status": "not-currently-marked-not-supplied",
+      "terms": [
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "source-map/debug/test-hook policy"
+        }
+      ]
+    },
+    {
+      "id": "production-dependency-audit-policy",
+      "label": "Production dependency audit split or full-audit advisory decision",
+      "status": "missing-owner-input",
+      "terms": [
+        {
+          "matches": [
+            "docs/race-owner-review-packet.md"
+          ],
+          "term": "production dependency audit policy"
+        },
+        {
+          "matches": [
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "vite/esbuild advisory decision"
+        }
+      ]
+    },
+    {
+      "id": "preview-production-smoke-signoff",
+      "label": "Preview/prod smoke metadata and sign-offs",
+      "status": "missing-owner-input",
+      "terms": [
+        {
+          "matches": [
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "preview url"
+        },
+        {
+          "matches": [
+            "docs/race-v1-definition-of-done-checklist.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "production url"
+        },
+        {
+          "matches": [
+            "docs/race-v1-definition-of-done-checklist.md",
+            "docs/race-manual-qa-rubric.md",
+            "docs/race-owner-review-packet.md",
+            "docs/comeback-city-kart-racer-production-readiness-plan.md",
+            "docs/race-release-operations-runbook.md"
+          ],
+          "term": "sign-off"
+        }
+      ]
+    }
+  ],
+  "missingDecisionCount": 4,
+  "missingDecisions": [
+    {
+      "id": "web-vitals-lighthouse",
+      "label": "Web Vitals/Lighthouse targets or dated exception"
+    },
+    {
+      "id": "bundle-budget",
+      "label": "Bundle/asset budget threshold or exception"
+    },
+    {
+      "id": "production-dependency-audit-policy",
+      "label": "Production dependency audit split or full-audit advisory decision"
+    },
+    {
+      "id": "preview-production-smoke-signoff",
+      "label": "Preview/prod smoke metadata and sign-offs"
+    }
+  ],
+  "notSuppliedRows": [
+    {
+      "cells": [
+        "Desired kart screen size and placement",
+        "Not supplied",
+        "Confirms or adjusts the PRD ranges before framing tuning claims are made."
+      ],
+      "line": 54,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Desired kart screen size and placement | Not supplied | Confirms or adjusts the PRD ranges before framing tuning claims are made. |"
+    },
+    {
+      "cells": [
+        "Desired horizon and road visibility",
+        "Not supplied",
+        "Confirms or adjusts composition gates and screenshot review criteria."
+      ],
+      "line": 55,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Desired horizon and road visibility | Not supplied | Confirms or adjusts composition gates and screenshot review criteria. |"
+    },
+    {
+      "cells": [
+        "Object density and landmark expectations",
+        "Not supplied",
+        "Defines what is enough for the city to stop reading as empty or flat."
+      ],
+      "line": 56,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Object density and landmark expectations | Not supplied | Defines what is enough for the city to stop reading as empty or flat. |"
+    },
+    {
+      "cells": [
+        "Production dependency audit policy",
+        "Not supplied",
+        "Determines whether `npm audit --omit=dev` is accepted as production dependency evidence and whether the remaining full-audit Vite/esbuild/vite-plugin-pwa dev/build-tool advisories get a semver-major upgrade now or a dated release-owner exception."
+      ],
+      "line": 66,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Production dependency audit policy | Not supplied | Determines whether `npm audit --omit=dev` is accepted as production dependency evidence and whether the remaining full-audit Vite/esbuild/vite-plugin-pwa dev/build-tool advisories get a semver-major upgrade now or a dated release-owner exception. |"
+    },
+    {
+      "cells": [
+        "Kart height target",
+        "Not supplied"
+      ],
+      "line": 84,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Kart height target | Not supplied |"
+    },
+    {
+      "cells": [
+        "Kart bottom/center placement target",
+        "Not supplied"
+      ],
+      "line": 85,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Kart bottom/center placement target | Not supplied |"
+    },
+    {
+      "cells": [
+        "Horizon placement target",
+        "Not supplied"
+      ],
+      "line": 86,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Horizon placement target | Not supplied |"
+    },
+    {
+      "cells": [
+        "Road-ahead visibility target",
+        "Not supplied"
+      ],
+      "line": 87,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Road-ahead visibility target | Not supplied |"
+    },
+    {
+      "cells": [
+        "Foreground density notes",
+        "Not supplied"
+      ],
+      "line": 88,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Foreground density notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "Midground density notes",
+        "Not supplied"
+      ],
+      "line": 89,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Midground density notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "Background density notes",
+        "Not supplied"
+      ],
+      "line": 90,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Background density notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "Color/lighting notes",
+        "Not supplied"
+      ],
+      "line": 92,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Color/lighting notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "`Guard Shell` name acceptable?",
+        "Not supplied"
+      ],
+      "line": 111,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| `Guard Shell` name acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "`Star Shield` name acceptable?",
+        "Not supplied"
+      ],
+      "line": 112,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| `Star Shield` name acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "`Banana Magnet` and banana pickups acceptable?",
+        "Not supplied"
+      ],
+      "line": 113,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| `Banana Magnet` and banana pickups acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "`Oil Slick` acceptable?",
+        "Not supplied"
+      ],
+      "line": 114,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| `Oil Slick` acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Feedback cue ids with `star` terminology acceptable?",
+        "Not supplied"
+      ],
+      "line": 115,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Feedback cue ids with `star` terminology acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Current binary assets under `src/assets/game/**` have confirmed provenance?",
+        "Not supplied"
+      ],
+      "line": 116,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Current binary assets under `src/assets/game/**` have confirmed provenance? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Reference-derived plaza measurement data is acceptable for product scope?",
+        "Not supplied"
+      ],
+      "line": 117,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Reference-derived plaza measurement data is acceptable for product scope? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Current screenshots/captures pass protected-similarity review?",
+        "Not supplied"
+      ],
+      "line": 118,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Current screenshots/captures pass protected-similarity review? | Not supplied |"
+    },
+    {
+      "cells": [
+        "CI versus manual release gates",
+        "Release evidence differs if checks run in CI or from a local release checklist.",
+        "Not supplied"
+      ],
+      "line": 341,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| CI versus manual release gates | Release evidence differs if checks run in CI or from a local release checklist. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Web Vitals/Lighthouse target",
+        "Production page-quality acceptance requires agreed targets or explicit exception.",
+        "Not supplied"
+      ],
+      "line": 344,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Web Vitals/Lighthouse target | Production page-quality acceptance requires agreed targets or explicit exception. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Bundle/asset budget threshold or exception",
+        "Not supplied"
+      ],
+      "line": 27,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Bundle/asset budget threshold or exception | Not supplied |"
+    },
+    {
+      "cells": [
+        "Vite/esbuild advisory decision",
+        "Not supplied"
+      ],
+      "line": 30,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Vite/esbuild advisory decision | Not supplied |"
+    },
+    {
+      "cells": [
+        "Production dependency audit split acceptance",
+        "Not supplied"
+      ],
+      "line": 31,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Production dependency audit split acceptance | Not supplied |"
+    },
+    {
+      "cells": [
+        "Preview URL",
+        "Not supplied"
+      ],
+      "line": 236,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Preview URL | Not supplied |"
+    },
+    {
+      "cells": [
+        "Deployment ID",
+        "Not supplied"
+      ],
+      "line": 237,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Deployment ID | Not supplied |"
+    },
+    {
+      "cells": [
+        "Commit SHA",
+        "Not supplied"
+      ],
+      "line": 238,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Commit SHA | Not supplied |"
+    },
+    {
+      "cells": [
+        "App home loads",
+        "Not supplied"
+      ],
+      "line": 239,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| App home loads | Not supplied |"
+    },
+    {
+      "cells": [
+        "`/#race` loads",
+        "Not supplied"
+      ],
+      "line": 240,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| `/#race` loads | Not supplied |"
+    },
+    {
+      "cells": [
+        "Race starts and canvas is nonblank",
+        "Not supplied"
+      ],
+      "line": 241,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Race starts and canvas is nonblank | Not supplied |"
+    },
+    {
+      "cells": [
+        "Desktop keyboard acceleration works",
+        "Not supplied"
+      ],
+      "line": 242,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Desktop keyboard acceleration works | Not supplied |"
+    },
+    {
+      "cells": [
+        "Mobile viewport controls render",
+        "Not supplied"
+      ],
+      "line": 243,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Mobile viewport controls render | Not supplied |"
+    },
+    {
+      "cells": [
+        "WebGL fallback or context-loss path remains navigable",
+        "Not supplied"
+      ],
+      "line": 244,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| WebGL fallback or context-loss path remains navigable | Not supplied |"
+    },
+    {
+      "cells": [
+        "Core tracker smoke passes on preview",
+        "Not supplied"
+      ],
+      "line": 245,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Core tracker smoke passes on preview | Not supplied |"
+    },
+    {
+      "cells": [
+        "In-scope API smoke passes on preview or is scoped out",
+        "Not supplied"
+      ],
+      "line": 246,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| In-scope API smoke passes on preview or is scoped out | Not supplied |"
+    },
+    {
+      "cells": [
+        "`_headers`/CSP/Permissions-Policy/cache headers match release scope",
+        "Not supplied"
+      ],
+      "line": 247,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| `_headers`/CSP/Permissions-Policy/cache headers match release scope | Not supplied |"
+    },
+    {
+      "cells": [
+        "Console P0 error count is zero",
+        "Not supplied"
+      ],
+      "line": 248,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Console P0 error count is zero | Not supplied |"
+    },
+    {
+      "cells": [
+        "Service worker and manifest responses are sane",
+        "Not supplied"
+      ],
+      "line": 249,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Service worker and manifest responses are sane | Not supplied |"
+    },
+    {
+      "cells": [
+        "Production URL",
+        "Not supplied"
+      ],
+      "line": 255,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Production URL | Not supplied |"
+    },
+    {
+      "cells": [
+        "Deployment ID",
+        "Not supplied"
+      ],
+      "line": 256,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Deployment ID | Not supplied |"
+    },
+    {
+      "cells": [
+        "Commit SHA",
+        "Not supplied"
+      ],
+      "line": 257,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Commit SHA | Not supplied |"
+    },
+    {
+      "cells": [
+        "Fresh profile app load",
+        "Not supplied"
+      ],
+      "line": 258,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Fresh profile app load | Not supplied |"
+    },
+    {
+      "cells": [
+        "`/#race` first-lap smoke",
+        "Not supplied"
+      ],
+      "line": 259,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| `/#race` first-lap smoke | Not supplied |"
+    },
+    {
+      "cells": [
+        "Desktop smoke",
+        "Not supplied"
+      ],
+      "line": 260,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Desktop smoke | Not supplied |"
+    },
+    {
+      "cells": [
+        "Mobile smoke",
+        "Not supplied"
+      ],
+      "line": 261,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Mobile smoke | Not supplied |"
+    },
+    {
+      "cells": [
+        "Core tracker smoke",
+        "Not supplied"
+      ],
+      "line": 262,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Core tracker smoke | Not supplied |"
+    },
+    {
+      "cells": [
+        "In-scope API smoke or scope exception",
+        "Not supplied"
+      ],
+      "line": 263,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| In-scope API smoke or scope exception | Not supplied |"
+    },
+    {
+      "cells": [
+        "Monitoring/version signal, if enabled",
+        "Not supplied"
+      ],
+      "line": 265,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Monitoring/version signal, if enabled | Not supplied |"
+    },
+    {
+      "cells": [
+        "Rollback target identified",
+        "Not supplied"
+      ],
+      "line": 266,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Rollback target identified | Not supplied |"
+    },
+    {
+      "cells": [
+        "Race disable/recovery path identified",
+        "Not supplied"
+      ],
+      "line": 267,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Race disable/recovery path identified | Not supplied |"
+    }
+  ],
+  "notSuppliedRowsByFile": {
+    "docs/race-v1-definition-of-done-checklist.md": 0,
+    "docs/race-manual-qa-rubric.md": 0,
+    "docs/race-owner-review-packet.md": 20,
+    "docs/comeback-city-kart-racer-production-readiness-plan.md": 2,
+    "docs/race-release-operations-runbook.md": 29
+  },
+  "paths": {
+    "checklist": "docs/race-v1-definition-of-done-checklist.md",
+    "manualQa": "docs/race-manual-qa-rubric.md",
+    "ownerPacket": "docs/race-owner-review-packet.md",
+    "plan": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+    "runbook": "docs/race-release-operations-runbook.md"
+  },
+  "requiredOwnerQuestions": [
+    "Provide the approved visual target/scope decisions or mark the race target and V1 scope explicitly out of release scope.",
+    "Provide production Cloudflare project/domain, preview policy, clean deploy/CI policy, launch owner, and rollback owner.",
+    "Choose race-disable/rollback policy, monitoring/support posture, post-launch window, and telemetry/log-retention owner.",
+    "Scope Cloudflare Functions/D1/FatSecret/barcode/camera for production or explicitly scope them out.",
+    "Provide source-map/debug/test-hook policy, bundle/Web Vitals acceptance, accessibility reviewer, manual QA owner, and dependency-audit decision."
+  ]
+}

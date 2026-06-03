@@ -1,7 +1,10 @@
 import { typeColors } from '../lib/utils.js';
 
-export const Card = ({ children, className = '' }) => (
-  <div className={`border border-bone/[0.06] bg-bone/[0.015] backdrop-blur-xl ${className}`}>
+export const Card = ({ children, className = '', ...props }) => (
+  <div
+    {...props}
+    className={`border border-bone/[0.06] bg-bone/[0.015] backdrop-blur-xl ${className}`}
+  >
     {children}
   </div>
 );

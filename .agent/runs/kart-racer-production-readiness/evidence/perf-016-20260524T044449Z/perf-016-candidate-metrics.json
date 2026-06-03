@@ -1,0 +1,68 @@
+{
+  "candidate": "precomputed static collision-circle effective radius for world collision and telemetry checks",
+  "decision": "reject",
+  "reason": "focused desktop product-facing actual FPS regressed despite lower telemetry cost and a sustained FPS improvement",
+  "before": {
+    "capturedAt": "2026-05-24T04:34:16.814Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAvgActualFps": 34.99,
+    "focusedAvgActualFps": 38.11,
+    "focusedMinActualFps": 23.6,
+    "sustainedAvgActualFps": 17.04,
+    "sustainedMinActualFps": 15.5,
+    "focusedFrameWorkMs": 15.64,
+    "focusedWorldMs": 0.14,
+    "focusedTelemetryMs": 0.96,
+    "focusedRenderMs": 12.64,
+    "scene": {
+      "geometries": 704,
+      "groups": 94,
+      "instancedMeshes": 132,
+      "lights": 3,
+      "materials": 201,
+      "meshes": 835,
+      "objects": 948,
+      "rootCount": 1,
+      "triangles": 82894
+    }
+  },
+  "after": {
+    "capturedAt": "2026-05-24T04:50:18.386Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAvgActualFps": 35.02,
+    "focusedAvgActualFps": 35.41,
+    "focusedMinActualFps": 24.4,
+    "sustainedAvgActualFps": 17.84,
+    "sustainedMinActualFps": 15.6,
+    "focusedFrameWorkMs": 15.11,
+    "focusedWorldMs": 0.16,
+    "focusedTelemetryMs": 0.3,
+    "focusedRenderMs": 12.7,
+    "scene": {
+      "geometries": 704,
+      "groups": 94,
+      "instancedMeshes": 132,
+      "lights": 3,
+      "materials": 201,
+      "meshes": 835,
+      "objects": 948,
+      "rootCount": 1,
+      "triangles": 82894
+    }
+  },
+  "delta": {
+    "raceCount": 0,
+    "visualCheckCount": 0,
+    "desktopAvgActualFps": 0.03,
+    "focusedAvgActualFps": -2.7,
+    "focusedMinActualFps": 0.8,
+    "sustainedAvgActualFps": 0.8,
+    "sustainedMinActualFps": 0.1,
+    "focusedFrameWorkMs": -0.53,
+    "focusedWorldMs": 0.02,
+    "focusedTelemetryMs": -0.66,
+    "focusedRenderMs": 0.06
+  }
+}

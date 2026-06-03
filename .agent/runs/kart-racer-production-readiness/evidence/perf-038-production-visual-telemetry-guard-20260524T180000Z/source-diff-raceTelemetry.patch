@@ -1,0 +1,131 @@
+--- .agent/runs/kart-racer-production-readiness/evidence/perf-038-production-visual-telemetry-guard-20260524T180000Z/raceTelemetry-before.js	2026-05-24 10:41:59
++++ src/game/race/raceTelemetry.js	2026-05-24 10:43:40
+@@ -486,6 +486,7 @@
+   collisionCircles = [],
+   compiled,
+   driftTuning = DRIFT_TUNING,
++  includeVisualTelemetry = true,
+   kartOnly = false,
+   playtest = {},
+   playerVehicleGroup = null,
+@@ -533,62 +534,68 @@
+     player.jumpHeight <= 0.05 &&
+     playerNearest.distance > playerRoadWidth * 0.52;
+   if (offroad) stats.offroadSlowdownSeen = true;
+-  const visibleBranchCount = countVisibleBranches({ camera, compiled, player });
+-  if (visibleBranchCount > 0) stats.branchVisibleSeen = true;
+-  const visibleRivals = countVisibleRivals({ camera, rivals: race.rivals });
+-  stats.visibleRivalsSeen = Math.max(stats.visibleRivalsSeen || 0, visibleRivals);
++  let visibleBranchCount = 0;
++  let visibleRivals = 0;
++  if (includeVisualTelemetry) {
++    visibleBranchCount = countVisibleBranches({ camera, compiled, player });
++    if (visibleBranchCount > 0) stats.branchVisibleSeen = true;
++    visibleRivals = countVisibleRivals({ camera, rivals: race.rivals });
++    stats.visibleRivalsSeen = Math.max(stats.visibleRivalsSeen || 0, visibleRivals);
++  }
+   const heldItemKey =
+     typeof player.heldBalloon === 'string'
+       ? player.heldBalloon
+       : player.heldBalloon?.itemKey || player.heldBalloon?.key || null;
+-  const raceVisualTelemetry = buildRaceVisualTelemetry({
+-    activeSurface: activeSurfaceFor({
+-      compiled,
+-      nearest: playerNearest,
+-      offroad,
+-      progress: player.progress,
+-    }),
+-    assetLoadState:
+-      compiled.courseV2?.assetLoadState || {
+-        externalAssets: 0,
+-        manifestPath: '/src/assets/game/asset-manifest.json',
+-        missing: [],
+-        state: 'procedural-ready',
+-      },
+-    boostTimer: player.boostTimer,
+-    camera: {
+-      distance: camera.position.distanceTo(player.position),
+-      fov: camera.fov,
+-      height: camera.position.y - player.position.y,
+-      horizonYRatio: estimateHorizonYRatio({ camera, player }),
+-      routeLookahead: cameraRouteLookahead,
+-    },
+-    driftTier,
+-    heldItemKey,
+-    kartOnly,
+-    kartScreenCoverage: measureObjectScreenCoverage(playerVehicleGroup, camera),
+-    nearestCollisionDistance: nearestCollisionClearance({
+-      collisionCircles,
+-      compiled,
+-      playerPosition: player.position,
+-    }),
+-    normalizedSpeed,
+-    offroadSlowdown: offroad ? playerVehicleConfig.offroad : 1,
+-    player,
+-    race: {
+-      audioMuted: Boolean(race.audioMuted),
+-      lap: Math.min(player.lap, compiled.laps),
+-      place: player.rank,
+-      reducedMotion: Boolean(race.reducedMotion),
+-    },
+-    rendererInfo: rendererInfoTelemetryFor(renderer),
+-    roadAheadCoverage: estimateRoadAheadCoverage({ camera, compiled, player }),
+-    sceneBudget,
+-    stats,
+-    trackKey: compiled.key,
+-    visibleBranchCount,
+-    visibleRivals,
+-  });
++  const raceVisualTelemetry = includeVisualTelemetry
++    ? buildRaceVisualTelemetry({
++        activeSurface: activeSurfaceFor({
++          compiled,
++          nearest: playerNearest,
++          offroad,
++          progress: player.progress,
++        }),
++        assetLoadState:
++          compiled.courseV2?.assetLoadState || {
++            externalAssets: 0,
++            manifestPath: '/src/assets/game/asset-manifest.json',
++            missing: [],
++            state: 'procedural-ready',
++          },
++        boostTimer: player.boostTimer,
++        camera: {
++          distance: camera.position.distanceTo(player.position),
++          fov: camera.fov,
++          height: camera.position.y - player.position.y,
++          horizonYRatio: estimateHorizonYRatio({ camera, player }),
++          routeLookahead: cameraRouteLookahead,
++        },
++        driftTier,
++        heldItemKey,
++        kartOnly,
++        kartScreenCoverage: measureObjectScreenCoverage(playerVehicleGroup, camera),
++        nearestCollisionDistance: nearestCollisionClearance({
++          collisionCircles,
++          compiled,
++          playerPosition: player.position,
++        }),
++        normalizedSpeed,
++        offroadSlowdown: offroad ? playerVehicleConfig.offroad : 1,
++        player,
++        race: {
++          audioMuted: Boolean(race.audioMuted),
++          lap: Math.min(player.lap, compiled.laps),
++          place: player.rank,
++          reducedMotion: Boolean(race.reducedMotion),
++        },
++        rendererInfo: rendererInfoTelemetryFor(renderer),
++        roadAheadCoverage: estimateRoadAheadCoverage({ camera, compiled, player }),
++        sceneBudget,
++        stats,
++        trackKey: compiled.key,
++        visibleBranchCount,
++        visibleRivals,
++      })
++    : null;
+   const hudTelemetry = raceHudTelemetryForFrame({
+     compiled,
+     driftTier,

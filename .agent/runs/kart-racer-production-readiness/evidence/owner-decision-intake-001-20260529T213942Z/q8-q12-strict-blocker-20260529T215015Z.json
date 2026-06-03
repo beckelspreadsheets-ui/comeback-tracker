@@ -1,0 +1,40 @@
+{
+  "observedAt": "2026-05-29T21:50:15Z",
+  "status": "blocked",
+  "blocker": "Q8-Q12 owner approvals remain missing after three consecutive resumed goal continuations.",
+  "stopCondition": "R3 Production Ready cannot be proven until the owner approves or replaces the pending Q8-Q12 decisions, because the release docs still contain Not supplied values and the gate audits remain blocked.",
+  "pendingOwnerDecisions": [
+    "Q8: IP-safe Mario Kart genre-reference wording.",
+    "Q9: Browser baseline.",
+    "Q10: Device baseline.",
+    "Q11: Production asset-source policy.",
+    "Q12: Manual QA sign-off model."
+  ],
+  "latestKnownGateEvidence": {
+    "releaseDecisionSummary": ".agent/runs/kart-racer-production-readiness/evidence/owner-decision-intake-001-20260529T213942Z/release-decision-readiness-summary.json",
+    "releaseDecisionStatus": "owner-release-decisions-missing-r3-blocked",
+    "missingDecisionCategories": 17,
+    "releaseDecisionNotSuppliedRows": 97,
+    "productionGateSummary": ".agent/runs/kart-racer-production-readiness/evidence/owner-decision-intake-001-20260529T213942Z/production-gate-readiness-summary.json",
+    "productionGateStatus": "r3-blocked-gates-remain",
+    "p0Proven": "2/21",
+    "p1Proven": "2/14",
+    "dodRowsNotProvenLike": 11,
+    "manualQaRowsWithoutPassingScore": 10,
+    "productionGateNotSuppliedRows": 103,
+    "evidenceLinkFailures": 0
+  },
+  "repeatedCheckpoints": [
+    "owner-decision-intake-001-formal-doc-sync",
+    "goal-continuation-q8-q12-recheck",
+    "goal-continuation-q8-q12-second-recheck",
+    "goal-continuation-q8-q12-strict-blocker"
+  ],
+  "authoritativeEvidence": [
+    ".agent/runs/kart-racer-production-readiness/evidence/owner-decision-intake-001-20260529T213942Z/owner-decision-intake-001.md",
+    "docs/race-owner-review-packet.md",
+    ".agent/runs/kart-racer-production-readiness/implementation-notes.html",
+    ".agent/runs/kart-racer-production-readiness/GOAL.md"
+  ],
+  "nextRequiredOwnerInput": "Answer Q8-Q12 in chat. After that, update the owner packet, production readiness plan, visual target brief, DoD checklist, release runbook, and gate evidence without guessing."
+}

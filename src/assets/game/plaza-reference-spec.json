@@ -1,0 +1,216 @@
+{
+  "name": "Comeback City desktop plaza panel 1 reference spec",
+  "version": 1,
+  "coordinateSpace": "panel-1 crop pixels",
+  "source": {
+    "referenceImage": "src/assets/game/reference/comeback-city-original-reference.png",
+    "crop": { "x": 4, "y": 5, "width": 1058, "height": 522 },
+    "size": { "width": 1058, "height": 522 }
+  },
+  "testTolerances": {
+    "landmarkCenterPx": 24,
+    "landmarkSizeRatio": 0.25,
+    "roundaboutCenterPx": 24,
+    "roundaboutSizeRatio": 0.22,
+    "roadAveragePointPx": 28,
+    "bandCenterPx": 34,
+    "bandSizeRatio": 0.3
+  },
+  "ui": {
+    "logoBox": { "x": 38, "y": 32, "width": 218, "height": 157 },
+    "panelLabelBox": { "x": 0, "y": 0, "width": 205, "height": 36 },
+    "sloganBox": { "x": 508, "y": 134, "width": 178, "height": 35 }
+  },
+  "districtOrder": ["gym", "food", "lab", "clinic", "garage"],
+  "landmarks": {
+    "gym": {
+      "full": { "x": 36, "y": 214, "width": 195, "height": 175 },
+      "body": { "x": 51, "y": 254, "width": 170, "height": 122 },
+      "sign": { "x": 108, "y": 228, "width": 82, "height": 45 },
+      "roof": { "x": 62, "y": 216, "width": 134, "height": 40 },
+      "portal": { "x": 88, "y": 286, "width": 65, "height": 82 }
+    },
+    "food": {
+      "full": { "x": 215, "y": 209, "width": 166, "height": 148 },
+      "body": { "x": 223, "y": 248, "width": 143, "height": 99 },
+      "sign": { "x": 271, "y": 222, "width": 96, "height": 32 },
+      "roof": { "x": 218, "y": 211, "width": 133, "height": 37 },
+      "portal": { "x": 289, "y": 279, "width": 58, "height": 72 }
+    },
+    "lab": {
+      "full": { "x": 387, "y": 188, "width": 126, "height": 168 },
+      "body": { "x": 397, "y": 223, "width": 105, "height": 126 },
+      "sign": { "x": 441, "y": 201, "width": 47, "height": 28 },
+      "roof": { "x": 407, "y": 190, "width": 78, "height": 35 },
+      "portal": { "x": 438, "y": 262, "width": 55, "height": 76 }
+    },
+    "clinic": {
+      "full": { "x": 700, "y": 207, "width": 152, "height": 152 },
+      "body": { "x": 711, "y": 244, "width": 127, "height": 107 },
+      "sign": { "x": 727, "y": 220, "width": 89, "height": 33 },
+      "roof": { "x": 735, "y": 208, "width": 78, "height": 36 },
+      "portal": { "x": 749, "y": 282, "width": 59, "height": 74 }
+    },
+    "garage": {
+      "full": { "x": 887, "y": 216, "width": 158, "height": 166 },
+      "body": { "x": 898, "y": 252, "width": 139, "height": 120 },
+      "sign": { "x": 901, "y": 223, "width": 99, "height": 34 },
+      "roof": { "x": 908, "y": 216, "width": 111, "height": 37 },
+      "portal": { "x": 943, "y": 289, "width": 68, "height": 83 }
+    }
+  },
+  "beacon": {
+    "beam": { "x": 595, "y": 0, "width": 13, "height": 393 },
+    "badge": { "x": 571, "y": 289, "width": 59, "height": 68 },
+    "base": { "x": 544, "y": 374, "width": 121, "height": 52 }
+  },
+  "roundabout": {
+    "center": { "x": 604, "y": 398 },
+    "outerEllipse": { "x": 456, "y": 331, "width": 301, "height": 147 },
+    "innerIsland": { "x": 543, "y": 371, "width": 125, "height": 53 },
+    "ringMarkings": [
+      { "x": 487, "y": 348, "width": 239, "height": 109 },
+      { "x": 520, "y": 361, "width": 178, "height": 82 },
+      { "x": 556, "y": 383, "width": 92, "height": 32 }
+    ]
+  },
+  "roads": [
+    {
+      "id": "backbone",
+      "label": "center road toward skyline",
+      "width": 31,
+      "polyline": [
+        [603, 168],
+        [604, 217],
+        [606, 279],
+        [606, 338],
+        [604, 397]
+      ]
+    },
+    {
+      "id": "midArc",
+      "label": "district front arterial",
+      "width": 54,
+      "polyline": [
+        [0, 389],
+        [132, 374],
+        [284, 365],
+        [439, 373],
+        [604, 398],
+        [756, 380],
+        [907, 356],
+        [1058, 330]
+      ]
+    },
+    {
+      "id": "foregroundArc",
+      "label": "foreground sweeping arterial",
+      "width": 72,
+      "polyline": [
+        [0, 467],
+        [143, 433],
+        [302, 410],
+        [470, 408],
+        [604, 430],
+        [756, 423],
+        [922, 438],
+        [1058, 466]
+      ]
+    },
+    {
+      "id": "leftFeeder",
+      "label": "gym and food feeder",
+      "width": 35,
+      "polyline": [
+        [145, 332],
+        [243, 344],
+        [352, 365],
+        [500, 392],
+        [604, 398]
+      ]
+    },
+    {
+      "id": "rightFeeder",
+      "label": "clinic and garage feeder",
+      "width": 36,
+      "polyline": [
+        [852, 318],
+        [792, 346],
+        [712, 376],
+        [640, 394],
+        [604, 398]
+      ]
+    },
+    {
+      "id": "bridgeApproach",
+      "label": "bridge approach at bottom left",
+      "width": 37,
+      "polyline": [
+        [0, 421],
+        [102, 401],
+        [207, 390],
+        [319, 392],
+        [424, 403]
+      ]
+    }
+  ],
+  "crosswalks": [
+    { "id": "left-plaza", "box": { "x": 264, "y": 361, "width": 83, "height": 28 }, "angleDegrees": -13 },
+    { "id": "bridge-left", "box": { "x": 50, "y": 412, "width": 79, "height": 18 }, "angleDegrees": -19 },
+    { "id": "center-left", "box": { "x": 356, "y": 392, "width": 64, "height": 24 }, "angleDegrees": -10 },
+    { "id": "right-plaza", "box": { "x": 758, "y": 374, "width": 84, "height": 27 }, "angleDegrees": -11 },
+    { "id": "right-foreground", "box": { "x": 868, "y": 386, "width": 88, "height": 28 }, "angleDegrees": -15 }
+  ],
+  "bridge": {
+    "deckPolygon": [
+      [0, 429],
+      [227, 392],
+      [493, 456],
+      [581, 522],
+      [0, 522]
+    ],
+    "railPolygon": [
+      [0, 414],
+      [225, 384],
+      [462, 432],
+      [452, 448],
+      [214, 401],
+      [0, 434]
+    ]
+  },
+  "water": {
+    "polygon": [
+      [0, 438],
+      [154, 416],
+      [237, 522],
+      [0, 522]
+    ]
+  },
+  "skyline": {
+    "band": { "x": 252, "y": 67, "width": 806, "height": 194 },
+    "majorTowers": {
+      "leftSpire": { "x": 373, "y": 117, "width": 29, "height": 103 },
+      "leftGlassPair": { "x": 418, "y": 96, "width": 38, "height": 122 },
+      "centerNeedle": { "x": 536, "y": 126, "width": 34, "height": 112 },
+      "tallCenter": { "x": 700, "y": 69, "width": 37, "height": 176 },
+      "rightBlue": { "x": 837, "y": 112, "width": 48, "height": 119 },
+      "rightWhite": { "x": 971, "y": 57, "width": 72, "height": 177 }
+    }
+  },
+  "mountains": {
+    "visibilityBand": { "x": 0, "y": 113, "width": 1058, "height": 100 },
+    "majorPeaks": {
+      "leftSnow": { "x": 246, "y": 137, "width": 108, "height": 74 },
+      "rightRidge": { "x": 882, "y": 135, "width": 176, "height": 79 }
+    }
+  },
+  "clouds": {
+    "visibilityBand": { "x": 174, "y": 8, "width": 822, "height": 111 },
+    "boxes": {
+      "leftLarge": { "x": 198, "y": 27, "width": 162, "height": 63 },
+      "centerSmall": { "x": 442, "y": 70, "width": 71, "height": 29 },
+      "rightLarge": { "x": 770, "y": 11, "width": 187, "height": 74 },
+      "rightSmall": { "x": 910, "y": 83, "width": 117, "height": 43 }
+    }
+  }
+}

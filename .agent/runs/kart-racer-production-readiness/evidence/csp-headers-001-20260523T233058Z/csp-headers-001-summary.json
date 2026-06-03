@@ -1,0 +1,104 @@
+{
+  "capturedAt": "2026-05-23T23:34:01.012Z",
+  "evidenceDir": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z",
+  "gateStatus": "local-csp-header-policy-proven-not-deployed-header-signoff",
+  "changes": [
+    "Added Content-Security-Policy to public/_headers for current app resource surfaces.",
+    "Updated npm run test:pwa to serve dist through a local header-aware static server so Chromium receives and enforces the parsed _headers policy during the PWA/offline shell smoke.",
+    "Re-ran local built-preview release smoke after the CSP/header change."
+  ],
+  "csp": {
+    "deliveredToBrowser": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+    "directiveCount": 13,
+    "directives": {
+      "default-src": "'self'",
+      "base-uri": "'self'",
+      "object-src": "'none'",
+      "frame-ancestors": "'self'",
+      "form-action": "'self'",
+      "script-src": "'self'",
+      "worker-src": "'self'",
+      "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src": "'self' https://fonts.gstatic.com data:",
+      "img-src": "'self' data: blob: https://images.openfoodfacts.org",
+      "connect-src": "'self' https://world.openfoodfacts.org https://api.nal.usda.gov",
+      "manifest-src": "'self'",
+      "media-src": "'self' blob: data:"
+    },
+    "presentInPublicAndDistHeaders": true
+  },
+  "pwa": {
+    "cacheKeys": [
+      "workbox-precache-v2-http://pwa-smoke.localhost:5197/"
+    ],
+    "controller": true,
+    "manifest": {
+      "display": "standalone",
+      "iconCount": 3,
+      "name": "Comeback Tracker",
+      "scope": "/",
+      "shortName": "Comeback",
+      "startUrl": "/"
+    },
+    "offlineShell": "served app shell while browser context was offline",
+    "serviceWorkerScript": "http://pwa-smoke.localhost:5197/sw.js",
+    "toleratedRequestFailures": [
+      {
+        "errorText": "net::ERR_FAILED",
+        "url": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      },
+      {
+        "errorText": "net::ERR_FAILED",
+        "url": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      },
+      {
+        "errorText": "net::ERR_INTERNET_DISCONNECTED",
+        "url": "http://pwa-smoke.localhost:5197/api/sync/me"
+      }
+    ]
+  },
+  "releaseSmoke": {
+    "apiProbeStatus": "local-vite-fallback-only-not-functions-evidence",
+    "gateStatus": "local-smoke-script-proven-not-deploy-evidence",
+    "desktopSpeed": 0.429,
+    "mobileSpeed": 0.548,
+    "deployedHeaders": "local-preview-skipped"
+  },
+  "validation": [
+    {
+      "command": "node --check scripts/header-pwa-smoke-test.mjs",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z/node-check-header-pwa-smoke.log",
+      "result": "pass"
+    },
+    {
+      "command": "node --check scripts/release-smoke-test.mjs",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z/node-check-release-smoke.log",
+      "result": "pass"
+    },
+    {
+      "command": "npm run build",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z/npm-run-build.log",
+      "result": "pass with existing large-chunk warning"
+    },
+    {
+      "command": "npm run test:pwa",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z/npm-run-test-pwa.log",
+      "result": "pass"
+    },
+    {
+      "command": "npm run test:release:smoke",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z/npm-run-test-release-smoke.log",
+      "result": "pass"
+    },
+    {
+      "command": "git diff --check",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z/git-diff-check.log",
+      "result": "pass"
+    }
+  ],
+  "unresolvedReleaseDecisions": [
+    "Barcode/camera production scope remains unresolved because Permissions-Policy still denies camera.",
+    "Deployed Cloudflare response headers are not proven until RELEASE_SMOKE_URL runs against preview and production.",
+    "Production API/D1/FatSecret bindings, rollback, monitoring/support, and release-owner sign-off remain missing."
+  ]
+}

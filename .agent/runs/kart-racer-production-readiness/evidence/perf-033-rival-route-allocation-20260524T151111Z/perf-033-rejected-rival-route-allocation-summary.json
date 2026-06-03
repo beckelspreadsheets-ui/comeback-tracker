@@ -1,0 +1,75 @@
+{
+  "capturedAt": "2026-05-24T15:27:06.007Z",
+  "id": "perf-033-rival-route-allocation",
+  "decision": "reject-and-revert",
+  "reason": "Candidate passed syntax, race content, and browser gates, but sustained normal-play actual FPS regressed and sustained frame-work/render timings worsened, so no performance evidence was promoted.",
+  "change": "Replaced per-rival route-layer score object allocation/sort with a winner loop and reused a transient normal vector in rival position updates.",
+  "evidenceDirectory": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z",
+  "baseline": {
+    "capturedAt": "2026-05-24T15:14:43.920Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedActualFps": 37.5455,
+    "desktopAllActualFps": 34.5913,
+    "sustainedActualFps": 17.69,
+    "desktopFocusedFrameWorkMs": 22.3318,
+    "desktopFocusedRenderMs": 11.9655,
+    "desktopFocusedRenderCalls": 661.5455,
+    "desktopFocusedRenderTriangles": 68847.6364,
+    "sustainedFrameWorkMs": 2.13,
+    "sustainedRenderMs": 0.85
+  },
+  "candidate": {
+    "capturedAt": "2026-05-24T15:21:08.218Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedActualFps": 38.0545,
+    "desktopAllActualFps": 36.7696,
+    "sustainedActualFps": 17.31,
+    "desktopFocusedFrameWorkMs": 22.9591,
+    "desktopFocusedRenderMs": 11.9027,
+    "desktopFocusedRenderCalls": 657.1818,
+    "desktopFocusedRenderTriangles": 68524.9091,
+    "sustainedFrameWorkMs": 2.18,
+    "sustainedRenderMs": 0.93
+  },
+  "delta": {
+    "raceCount": 0,
+    "visualCheckCount": 0,
+    "desktopFocusedActualFps": 0.509,
+    "desktopAllActualFps": 2.1783,
+    "sustainedActualFps": -0.38,
+    "desktopFocusedFrameWorkMs": 0.6273,
+    "desktopFocusedRenderMs": -0.0628,
+    "desktopFocusedRenderCalls": -4.3637,
+    "desktopFocusedRenderTriangles": -322.7273,
+    "sustainedFrameWorkMs": 0.05,
+    "sustainedRenderMs": 0.08
+  },
+  "postRevert": {
+    "sourceDiffBytes": {
+      "raceRivals": 0
+    },
+    "browserCapturedAt": "2026-05-24T15:25:32.315Z",
+    "raceCount": 24,
+    "visualCheckCount": 28
+  },
+  "latestKeptPerformanceCheckpoint": ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z",
+  "artifacts": {
+    "baselineBrowserLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/baseline-race-browser.log",
+    "baselineBrowserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/baseline-race-browser-playtest-summary.json",
+    "candidatePatch": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/source-diff-candidate-raceRivals.patch",
+    "candidateRaceTest": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/npm-run-test-race-candidate.log",
+    "candidateBrowserLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/candidate-race-browser.log",
+    "candidateBrowserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/candidate-race-browser-playtest-summary.json",
+    "candidateDelta": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/candidate-delta.json",
+    "postRevertSourceDiff": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/post-revert-raceRivals-diff.log",
+    "postRevertSyntax": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/node-check-raceRivals-post-revert.log",
+    "postRevertRaceTest": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/npm-run-test-race-post-revert.log",
+    "postRevertBrowserLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/post-revert-race-browser.log",
+    "postRevertBrowserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/post-revert-race-browser-playtest-summary.json",
+    "postRevertBuild": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/npm-run-build-post-revert.log",
+    "postRevertVisual": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/npm-run-test-visual-post-revert.log",
+    "postRevertDiffCheck": ".agent/runs/kart-racer-production-readiness/evidence/perf-033-rival-route-allocation-20260524T151111Z/git-diff-check-post-revert.log"
+  }
+}

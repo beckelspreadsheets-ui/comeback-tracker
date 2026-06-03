@@ -1,0 +1,40 @@
+{
+  "before": {
+    "capturedAt": "2026-05-24T13:46:15.608Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedAverageActualFps": 39.09,
+    "desktopAllAverageActualFps": 35.63,
+    "sustainedAverageActualFps": 17.67,
+    "sustainedSampleCount": 53,
+    "focusedRenderCallsAverage": 689.57,
+    "focusedTrianglesAverage": 71228.29,
+    "sceneMaterials": 201,
+    "sceneryMaterials": 122
+  },
+  "after": {
+    "capturedAt": "2026-05-24T13:50:34.233Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedAverageActualFps": 35.49,
+    "desktopAllAverageActualFps": 33.99,
+    "sustainedAverageActualFps": 17.59,
+    "sustainedSampleCount": 53,
+    "focusedRenderCallsAverage": 684.29,
+    "focusedTrianglesAverage": 70818.29,
+    "sceneMaterials": 172,
+    "sceneryMaterials": 93
+  },
+  "delta": {
+    "raceCount": 0,
+    "visualCheckCount": 0,
+    "desktopFocusedAverageActualFps": -3.6,
+    "desktopAllAverageActualFps": -1.64,
+    "sustainedAverageActualFps": -0.08,
+    "sustainedSampleCount": 0,
+    "focusedRenderCallsAverage": -5.28,
+    "focusedTrianglesAverage": -410,
+    "sceneMaterials": -29,
+    "sceneryMaterials": -29
+  }
+}

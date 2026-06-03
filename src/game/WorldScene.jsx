@@ -50,6 +50,46 @@ const CITY_STYLE = {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+const DEFAULT_SPAWN = { x: 0, z: -42, heading: 0 };
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+const sanitizeSpawn = (spawn) => {
+  const x = Number(spawn?.x);
+  const z = Number(spawn?.z);
+  const heading = Number(spawn?.heading);
+  return {
+    heading: Number.isFinite(heading) ? heading : DEFAULT_SPAWN.heading,
+    x: Number.isFinite(x) ? clamp(x, WORLD_BOUNDS.minX + 4, WORLD_BOUNDS.maxX - 4) : DEFAULT_SPAWN.x,
+    z: Number.isFinite(z) ? clamp(z, WORLD_BOUNDS.minZ + 4, WORLD_BOUNDS.maxZ - 4) : DEFAULT_SPAWN.z,
+  };
+};
+
+const normalizeHexColor = (value, fallback) => {
+  const raw = String(value || '').trim();
+  if (!HEX_COLOR.test(raw)) return fallback;
+  if (raw.length === 4) {
+    return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`.toLowerCase();
+  }
+  return raw.toLowerCase();
+};
+
+const normalizeHubCosmetics = (cosmetics, avatar) => {
+  const paintChoice = GAME_AVATARS.find((item) => item.key === cosmetics?.kartPaint);
+  const rawPaintColor = paintChoice?.chassis || cosmetics?.kartPaint;
+  const kartPaintColor = normalizeHexColor(rawPaintColor, avatar?.chassis || '#ef4334');
+  const trailColor = normalizeHexColor(cosmetics?.trailColor, paintChoice?.accent || avatar?.accent || '#ffd34f');
+  const bannerSet = ['classic', 'neon', 'race'].includes(cosmetics?.bannerSet)
+    ? cosmetics.bannerSet
+    : 'classic';
+
+  return {
+    bannerSet,
+    kartPaint: paintChoice?.key || (normalizeHexColor(cosmetics?.kartPaint, null) ? 'custom' : avatar?.key || 'nova'),
+    kartPaintColor,
+    trailColor,
+  };
+};
+
 const damp = (current, target, smoothing, dt) =>
   THREE.MathUtils.lerp(current, target, 1 - Math.exp(-smoothing * dt));
 
@@ -86,8 +126,49 @@ const worldToFallbackPoint = (position) => ({
   top: `${((position.z - WORLD_BOUNDS.minZ) / (WORLD_BOUNDS.maxZ - WORLD_BOUNDS.minZ)) * 100}%`,
 });
 
-const FallbackWorld = ({ activeDestinationKey, destinations, onEnter }) => (
-  <div className="absolute inset-0 overflow-hidden bg-[#10151d]">
+const createEmptyPerformanceTelemetry = () => ({
+  drawCalls: 0,
+  geometries: 0,
+  instancedMeshCount: 0,
+  lines: 0,
+  meshCount: 0,
+  objectCount: 0,
+  points: 0,
+  textures: 0,
+  triangles: 0,
+});
+
+const isHubDebugOverlayEnabled = () => {
+  if (typeof window === 'undefined') return false;
+  const query = new URLSearchParams(window.location.search);
+  if (query.get('hubDebug') === '1' || query.get('hubDebug') === 'true') return true;
+  try {
+    return window.localStorage?.getItem('comeback-city-hub-debug') === '1';
+  } catch {
+    return false;
+  }
+};
+
+const FallbackWorld = ({ activeDestinationKey, destinations, onEnter, reducedMotion = false }) => (
+  <div
+    className="absolute inset-0 overflow-hidden bg-[#10151d]"
+    data-active-destination-key={activeDestinationKey || ''}
+    data-draw-calls="0"
+    data-fallback="true"
+    data-geometry-count="0"
+    data-scene-instanced-mesh-count="0"
+    data-scene-mesh-count="0"
+    data-scene-object-count="0"
+    data-telemetry-ready="true"
+    data-reduced-motion={reducedMotion ? 'true' : 'false'}
+    data-route-guide-active-key={activeDestinationKey || ''}
+    data-route-guide-arrived-key=""
+    data-route-guide-intensity="1"
+    data-route-guide-target-key={activeDestinationKey || ''}
+    data-texture-count="0"
+    data-triangles="0"
+    data-testid="world-fallback-map"
+  >
     <div className="absolute inset-0 bg-[linear-gradient(#20384b_1px,transparent_1px),linear-gradient(90deg,#20384b_1px,transparent_1px)] bg-[size:34px_34px] opacity-35" />
     <div className="absolute inset-x-[-18%] top-[24%] h-24 rotate-[-9deg] bg-[#323844] shadow-[0_0_0_2px_rgba(255,226,119,0.18)]" />
     <div className="absolute inset-x-[-18%] top-[53%] h-24 rotate-[8deg] bg-[#323844] shadow-[0_0_0_2px_rgba(255,226,119,0.18)]" />
@@ -100,6 +181,8 @@ const FallbackWorld = ({ activeDestinationKey, destinations, onEnter }) => (
           key={destination.key}
           type="button"
           onClick={() => onEnter(destination)}
+          data-destination-key={destination.key}
+          data-testid={`fallback-destination-${destination.key}`}
           className={`world-hud-panel pointer-events-auto absolute z-10 w-[96px] -translate-x-1/2 -translate-y-1/2 border px-2 py-2 text-left shadow-[0_16px_38px_rgba(0,0,0,0.34)] backdrop-blur-sm transition-transform hover:scale-105 ${
             active ? 'border-[#ffd34f] bg-[#10151d]/[0.92] text-[#ffd34f]' : 'border-white/14 bg-[#10151d]/[0.76] text-white'
           }`}
@@ -121,9 +204,24 @@ const FallbackWorld = ({ activeDestinationKey, destinations, onEnter }) => (
   </div>
 );
 
-export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnter, onNearbyChange }) => {
+export const WorldScene = ({
+  activeDestinationKey,
+  destinations,
+  hubCosmetics = null,
+  initialSpawn = null,
+  profile,
+  onEnter,
+  onNearbyChange,
+  onPlayerPoseChange = null,
+  referenceMode = false,
+  reducedMotion = false,
+  telemetryDetails = null,
+}) => {
   const canvasRef = useRef(null);
   const activeDestinationRef = useRef(activeDestinationKey);
+  const initialSpawnRef = useRef(initialSpawn);
+  const onPlayerPoseChangeRef = useRef(onPlayerPoseChange);
+  const telemetryDetailsRef = useRef(telemetryDetails);
   const touchControlRef = useRef({ drift: 0, jumpQueued: false, steer: 0, throttle: 0 });
   const nearbyDestinationRef = useRef(null);
   const [renderFallback, setRenderFallback] = useState(false);
@@ -132,22 +230,72 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     activeDestinationRef.current = activeDestinationKey;
   }, [activeDestinationKey]);
 
+  useEffect(() => {
+    telemetryDetailsRef.current = telemetryDetails;
+  }, [telemetryDetails]);
+
+  useEffect(() => {
+    onPlayerPoseChangeRef.current = onPlayerPoseChange;
+  }, [onPlayerPoseChange]);
+
+  useEffect(() => {
+    if (!renderFallback || referenceMode || typeof window === 'undefined') return undefined;
+    const effectiveReducedMotion = Boolean(
+      reducedMotion || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    );
+    window.__comebackCityHubTelemetry = {
+      ...(telemetryDetailsRef.current || {}),
+      activeDestinationKey: activeDestinationRef.current || null,
+      fallback: true,
+      fpsEstimate: null,
+      hubCosmetics: normalizeHubCosmetics(hubCosmetics, profile.avatar),
+      nearbyDestinationKey: null,
+      performance: createEmptyPerformanceTelemetry(),
+      player: null,
+      ready: true,
+      reducedMotion: effectiveReducedMotion,
+      routeGuide: {
+        activeKey: activeDestinationRef.current || null,
+        arrivedKey: null,
+        intensity: 1,
+        targetKey: activeDestinationRef.current || null,
+      },
+    };
+    return () => {
+      if (window.__comebackCityHubTelemetry?.fallback) {
+        delete window.__comebackCityHubTelemetry;
+      }
+    };
+  }, [hubCosmetics, profile.avatar, reducedMotion, referenceMode, renderFallback]);
+
   const pressDrive = (input) => (event) => {
     event.preventDefault();
     Object.assign(touchControlRef.current, input);
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Synthetic pointer events used by smoke tests may not own a browser pointer capture.
+    }
   };
 
   const releaseDrive = (input) => (event) => {
     event.preventDefault();
     Object.assign(touchControlRef.current, input);
-    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    try {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    } catch {
+      // See pressDrive.
+    }
   };
 
   const jumpDrive = (event) => {
     event.preventDefault();
     touchControlRef.current.jumpQueued = true;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // See pressDrive.
+    }
   };
 
   const enterNearby = (event) => {
@@ -160,7 +308,24 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     if (renderFallback) return undefined;
     if (!canvas) return undefined;
 
+    const webglProbe = document.createElement('canvas');
+    const webglSupported = Boolean(
+      webglProbe.getContext('webgl2') ||
+        webglProbe.getContext('webgl') ||
+        webglProbe.getContext('experimental-webgl')
+    );
+    if (!webglSupported) {
+      setRenderFallback(true);
+      return undefined;
+    }
+
     const driveTune = { ...DRIVE, ...(profile.avatar.drive || {}) };
+    const hubTheme = normalizeHubCosmetics(hubCosmetics, profile.avatar);
+    const getBannerColor = (destination) => {
+      if (hubTheme.bannerSet === 'neon') return destination.accent;
+      if (hubTheme.bannerSet === 'race') return hubTheme.trailColor;
+      return destination.banner || destination.accent;
+    };
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(CITY_STYLE.sky);
     scene.fog = new THREE.Fog(CITY_STYLE.fog, 248, 560);
@@ -186,6 +351,24 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
 
+    const reducedMotionQuery =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)')
+        : null;
+    const getReducedMotion = (mediaMatches = reducedMotionQuery?.matches) =>
+      Boolean(reducedMotion || mediaMatches);
+    const motionState = { reduced: getReducedMotion() };
+    const syncReducedMotion = (event) => {
+      motionState.reduced = getReducedMotion(event.matches);
+      canvas.dataset.reducedMotion = motionState.reduced ? 'true' : 'false';
+    };
+    canvas.dataset.reducedMotion = motionState.reduced ? 'true' : 'false';
+    if (reducedMotionQuery?.addEventListener) {
+      reducedMotionQuery.addEventListener('change', syncReducedMotion);
+    } else {
+      reducedMotionQuery?.addListener?.(syncReducedMotion);
+    }
+
     let lastFrameTime = performance.now();
     const interactiveObjects = [];
     const collisionBoxes = [];
@@ -194,6 +377,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     const portalPads = new Map();
     const routeGuides = new Map();
     const boostPads = [];
+    const debugOverlayEnabled = !referenceMode && isHubDebugOverlayEnabled();
     const animatedClouds = [];
     const animatedBanners = [];
     const animatedDistrictParts = [];
@@ -208,6 +392,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     const viewport = { mobile: false };
     const gestureDrive = { active: false, originX: 0, originY: 0, steer: 0, throttle: 0 };
     const pointerDown = { x: 0, y: 0, t: 0, moved: false };
+    const spawn = sanitizeSpawn(initialSpawnRef.current);
     const kartState = {
       boostTimer: 0,
       boostTier: 0,
@@ -217,19 +402,35 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       driftInput: 0,
       driftReleasePulse: 0,
       grounded: true,
-      heading: 0,
+      heading: spawn.heading,
       height: 0,
       jumpCooldown: 0,
       jumpQueued: false,
       landPulse: 0,
       nearbyKey: null,
-      position: new THREE.Vector3(0, 0, -42),
+      position: new THREE.Vector3(spawn.x, 0, spawn.z),
       speed: 0,
       steerInput: 0,
       throttleInput: 0,
       velocity: new THREE.Vector3(0, 0, 0),
       verticalVelocity: 0,
       visualRoll: 0,
+    };
+    let poseEmitElapsed = 0;
+    let lastPoseEmit = { heading: spawn.heading, x: spawn.x, z: spawn.z };
+
+    const emitPlayerPose = (force = false) => {
+      const pose = {
+        heading: Number(kartState.heading.toFixed(3)),
+        x: Number(kartState.position.x.toFixed(2)),
+        z: Number(kartState.position.z.toFixed(2)),
+      };
+      const moved =
+        Math.hypot(pose.x - lastPoseEmit.x, pose.z - lastPoseEmit.z) > 1.2 ||
+        Math.abs(pose.heading - lastPoseEmit.heading) > 0.08;
+      if (!force && !moved) return;
+      lastPoseEmit = pose;
+      onPlayerPoseChangeRef.current?.(pose);
     };
 
     const createToonRampTexture = () => {
@@ -280,6 +481,23 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         side: THREE.DoubleSide,
         transparent: true,
       });
+
+    const setGuideObjectOpacity = (object, opacityScale) => {
+      if (!object) return;
+      const targets = Array.isArray(object) ? object : [object];
+      targets.forEach((target) => {
+        target?.traverse?.((node) => {
+          const materials = Array.isArray(node.material) ? node.material : node.material ? [node.material] : [];
+          materials.forEach((material) => {
+            if (material.userData.baseGuideOpacity == null) {
+              material.userData.baseGuideOpacity = material.opacity == null ? 1 : material.opacity;
+            }
+            material.transparent = true;
+            material.opacity = material.userData.baseGuideOpacity * opacityScale;
+          });
+        });
+      });
+    };
 
     const createSurfaceTexture = (base, accents, flecks = 900) => {
       const textureCanvas = document.createElement('canvas');
@@ -588,6 +806,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         banners: [],
         gates: [],
         signs: [],
+        statusMarkers: [],
       };
       Object.entries(effect).forEach(([key, value]) => {
         if (Array.isArray(current[key])) current[key].push(value);
@@ -1617,6 +1836,75 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       }
     };
 
+    const addDistrictProgressMarker = (destination, group, frontDirection) => {
+      const progress = clamp(Number(destination.hubProgressPct) || 0, 0, 100) / 100;
+      const complete = destination.hubComplete || progress >= 1;
+      const { w, d } = destination.size;
+      const surfaceDistance = Math.abs(frontDirection.x) > Math.abs(frontDirection.z) ? w / 2 + 7 : d / 2 + 7;
+      const { front, right } = frontBasis(frontDirection);
+      const marker = new THREE.Group();
+      const markerPosition = front
+        .clone()
+        .multiplyScalar(surfaceDistance)
+        .add(right.clone().multiplyScalar(w * 0.42));
+      marker.position.set(markerPosition.x, 0.2, markerPosition.z);
+      marker.rotation.y = directionToYaw(frontDirection);
+
+      const color = complete ? '#71f09a' : destination.accent;
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.25, 1.55, 1.1, 7),
+        flatMaterial('#20384b', { roughness: 0.82 })
+      );
+      base.position.y = 0.55;
+      base.castShadow = true;
+      marker.add(base);
+
+      const mast = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.34, 0.48, 7.4, 7),
+        flatMaterial('#10151d', { roughness: 0.86 })
+      );
+      mast.position.y = 4.55;
+      mast.castShadow = true;
+      marker.add(mast);
+
+      const fillHeight = Math.max(0.42, 6.2 * progress);
+      const fill = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.62, 0.72, fillHeight, 7),
+        flatMaterial(color, { emissive: color, emissiveIntensity: complete ? 0.84 : 0.48 })
+      );
+      fill.position.y = 1.2 + fillHeight / 2;
+      marker.add(fill);
+
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.95, 0.16, 5, 18),
+        translucentMaterial(color, complete ? 0.42 : 0.28)
+      );
+      ring.position.y = 8.85;
+      ring.rotation.x = Math.PI / 2;
+      marker.add(ring);
+
+      const badge = new THREE.Mesh(
+        complete
+          ? new THREE.DodecahedronGeometry(1.1, 0)
+          : new THREE.BoxGeometry(2.4, 0.56, 0.44),
+        flatMaterial(color, { emissive: color, emissiveIntensity: complete ? 1 : 0.62 })
+      );
+      badge.position.y = 8.85;
+      if (!complete) badge.scale.x = Math.max(0.28, progress);
+      marker.add(badge);
+
+      marker.userData.statusProgress = progress;
+      marker.userData.statusComplete = complete;
+      group.add(marker);
+      animatedDistrictParts.push({
+        baseScale: complete ? 1.08 : 0.94,
+        object: ring,
+        phase: animatedDistrictParts.length * 0.63,
+        type: 'statusRing',
+      });
+      registerDestinationEffect(destination, { statusMarkers: marker });
+    };
+
     const createTrimmedBuilding = (destination) => {
       addDistrictPad(destination);
 
@@ -1757,26 +2045,29 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         trim: trimMat,
       });
       createDistrictProps(destination, group, frontDirection);
+      addDistrictProgressMarker(destination, group, frontDirection);
       addWallSign(destination, group, frontDirection);
-      addRooftopSign(destination, group);
+      if (!referenceMode) {
+        addRooftopSign(destination, group);
 
-      const floatingLabels = {
-        clinic: ['Clinic', '+'],
-        food: ['Food Court', 'F'],
-        garage: ['Garage', 'W'],
-        gym: ['Gym', 'G'],
-        home: ['Home Base', 'H'],
-        lab: ['Lab', 'L'],
-      };
-      const [floatingLabel, floatingIcon] = floatingLabels[destination.key] || [
-        destination.shortTitle,
-        destination.shortTitle.charAt(0),
-      ];
-      const labelFace = PLAZA_CENTER.clone().sub(toVec3(destination.position)).normalize();
-      const labelPosition = toVec3(destination.position, destination.size.h + 18).add(
-        labelFace.multiplyScalar(Math.max(w, d) * 0.64)
-      );
-      createFloatingLabel(destination, floatingLabel, floatingIcon, labelPosition);
+        const floatingLabels = {
+          clinic: ['Clinic', '+'],
+          food: ['Food Court', 'F'],
+          garage: ['Garage', 'W'],
+          gym: ['Gym', 'G'],
+          home: ['Home Base', 'H'],
+          lab: ['Lab', 'L'],
+        };
+        const [floatingLabel, floatingIcon] = floatingLabels[destination.key] || [
+          destination.shortTitle,
+          destination.shortTitle.charAt(0),
+        ];
+        const labelFace = PLAZA_CENTER.clone().sub(toVec3(destination.position)).normalize();
+        const labelPosition = toVec3(destination.position, destination.size.h + 18).add(
+          labelFace.multiplyScalar(Math.max(w, d) * 0.64)
+        );
+        createFloatingLabel(destination, floatingLabel, floatingIcon, labelPosition);
+      }
 
       markInteractive(group, destination);
       destinationGroups.set(destination.key, group);
@@ -2040,7 +2331,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
 
         const marker = new THREE.Mesh(
           new THREE.ConeGeometry(1.35, 3.4, 4),
-          flatMaterial(color, { emissive: color, emissiveIntensity: 0.42 })
+          flatMaterial(color, { emissive: color, emissiveIntensity: 0.42, opacity: 0.88, transparent: true })
         );
         marker.position.set(point.x, 1.3, point.z);
         marker.rotation.x = Math.PI / 2;
@@ -2428,6 +2719,88 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       });
     };
 
+    const createDebugOverlay = () => {
+      if (!debugOverlayEnabled) {
+        return {
+          boostPads: boostPads.length,
+          collisionBoxes: collisionBoxes.length,
+          enabled: false,
+          portals: portalPads.size,
+        };
+      }
+
+      const group = new THREE.Group();
+      group.name = 'HubDebugOverlay';
+      group.renderOrder = 80;
+      const collisionMaterial = new THREE.LineBasicMaterial({
+        color: '#ff4f8b',
+        depthTest: false,
+        transparent: true,
+        opacity: 0.9,
+      });
+      const portalMaterial = new THREE.LineBasicMaterial({
+        color: '#49d9ff',
+        depthTest: false,
+        transparent: true,
+        opacity: 0.88,
+      });
+      const boostMaterial = new THREE.LineBasicMaterial({
+        color: '#ffd34f',
+        depthTest: false,
+        transparent: true,
+        opacity: 0.9,
+      });
+
+      collisionBoxes.forEach((box) => {
+        const geometry = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(box.minX, 0.72, box.minZ),
+          new THREE.Vector3(box.maxX, 0.72, box.minZ),
+          new THREE.Vector3(box.maxX, 0.72, box.maxZ),
+          new THREE.Vector3(box.minX, 0.72, box.maxZ),
+        ]);
+        const line = new THREE.LineLoop(geometry, collisionMaterial);
+        line.renderOrder = 82;
+        group.add(line);
+      });
+
+      destinations.forEach((destination) => {
+        const entry = destination.entry || destination.position;
+        const radius = destination.portalRadius || 13;
+        const points = [];
+        for (let index = 0; index < 48; index += 1) {
+          const angle = (Math.PI * 2 * index) / 48;
+          points.push(new THREE.Vector3(entry.x + Math.cos(angle) * radius, 0.86, entry.z + Math.sin(angle) * radius));
+        }
+        const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), portalMaterial);
+        line.renderOrder = 83;
+        group.add(line);
+      });
+
+      boostPads.forEach((boost) => {
+        const width = 13.2;
+        const depth = 8.6;
+        const points = [
+          new THREE.Vector3(-width / 2, 0.95, -depth / 2),
+          new THREE.Vector3(width / 2, 0.95, -depth / 2),
+          new THREE.Vector3(width / 2, 0.95, depth / 2),
+          new THREE.Vector3(-width / 2, 0.95, depth / 2),
+        ];
+        const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), boostMaterial);
+        line.position.copy(boost.group.position);
+        line.rotation.copy(boost.group.rotation);
+        line.renderOrder = 84;
+        group.add(line);
+      });
+
+      world.add(group);
+      return {
+        boostPads: boostPads.length,
+        collisionBoxes: collisionBoxes.length,
+        enabled: true,
+        portals: portalPads.size,
+      };
+    };
+
     createSkyGradient();
     createGround();
 
@@ -2487,7 +2860,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
 
     destinations.forEach((destination) => {
       createTrimmedBuilding(destination);
-      createFreestandingBillboard(destination);
+      if (!referenceMode) createFreestandingBillboard(destination);
       createPortal(destination);
       createObjectiveGuide(destination);
     });
@@ -2498,13 +2871,15 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       const entryPosition = toVec3(entry);
       const facing = building.sub(entryPosition).normalize();
       const yaw = directionToYaw(facing);
-      createBanner(
-        entry.x + facing.x * 11 + facing.z * 8,
-        entry.z + facing.z * 11 - facing.x * 8,
-        yaw,
-        destination.banner || destination.accent,
-        destination.shortTitle
-      );
+      if (!referenceMode) {
+        createBanner(
+          entry.x + facing.x * 11 + facing.z * 8,
+          entry.z + facing.z * 11 - facing.x * 8,
+          yaw,
+          getBannerColor(destination),
+          destination.shortTitle
+        );
+      }
       createStreetLight(
         entry.x + facing.x * 6 + facing.z * 7,
         entry.z + facing.z * 6 - facing.x * 7,
@@ -2537,16 +2912,17 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     createBackgroundSilhouettes();
     createSkylineLandmark();
     createBoundary();
+    const debugOverlayStats = createDebugOverlay();
 
     const createKartModel = (vehicleAvatar, { scale = 1, showDriver = true } = {}) => {
       const body = new THREE.Group();
       body.scale.setScalar(scale);
       const style = vehicleAvatar.carStyle || 'sprinter';
       const heroKart = showDriver && scale >= 0.9;
-      const chassisColor = heroKart ? '#ef4334' : vehicleAvatar.chassis;
-      const accentColor = heroKart ? '#46d9ef' : vehicleAvatar.accent;
+      const chassisColor = heroKart ? vehicleAvatar.hubChassis || '#ef4334' : vehicleAvatar.chassis;
+      const accentColor = heroKart ? vehicleAvatar.hubAccent || '#46d9ef' : vehicleAvatar.accent;
       const suitColor = heroKart ? '#202837' : vehicleAvatar.suit;
-      const trimColor = heroKart ? '#eef5f2' : vehicleAvatar.accent;
+      const trimColor = heroKart ? vehicleAvatar.hubTrim || '#eef5f2' : vehicleAvatar.accent;
       const chassisMaterial = flatMaterial(chassisColor, {
         emissive: chassisColor,
         emissiveIntensity: heroKart ? 0.18 : 0.12,
@@ -2728,7 +3104,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
 
       const underglow = new THREE.Mesh(
         new THREE.PlaneGeometry(8.4, 14.2),
-        translucentMaterial(vehicleAvatar.accent, 0.18)
+        translucentMaterial(accentColor, 0.18)
       );
       underglow.rotation.x = -Math.PI / 2;
       underglow.position.y = 0.42;
@@ -2761,7 +3137,15 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     };
 
     const kart = new THREE.Group();
-    const avatar = profile.avatar;
+    const baseAvatar = profile.avatar;
+    const avatar = {
+      ...baseAvatar,
+      accent: hubTheme.trailColor,
+      chassis: hubTheme.kartPaintColor,
+      hubAccent: hubTheme.trailColor,
+      hubChassis: hubTheme.kartPaintColor,
+      hubTrim: hubTheme.bannerSet === 'race' ? '#ffd34f' : '#eef5f2',
+    };
     const {
       body: kartBody,
       boostFlame,
@@ -2790,18 +3174,22 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
 
     kart.add(kartBody);
     disableDynamicShadows(kart);
+    kart.visible = !referenceMode;
     world.add(kart);
     const kartShadow = createVehicleShadow(1.12);
+    kartShadow.visible = !referenceMode;
 
-    const rivalCars = GAME_AVATARS.filter((item) => item.key !== avatar.key)
+    const rivalCars = GAME_AVATARS.filter((item) => item.key !== baseAvatar.key)
       .slice(0, 5)
       .map((rival, index) => {
         const group = new THREE.Group();
         const vehicle = createKartModel(rival, { scale: 0.58 });
         group.add(vehicle.body);
         disableDynamicShadows(group);
+        group.visible = !referenceMode;
         world.add(group);
         const shadow = createVehicleShadow(0.58);
+        shadow.visible = !referenceMode;
         return {
           group,
           phase: index * 1.25 + 0.4,
@@ -2862,7 +3250,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
 
     const boostTrailColors = [
       new THREE.Color(CITY_STYLE.cream),
-      new THREE.Color(avatar.accent),
+      new THREE.Color(hubTheme.trailColor),
       new THREE.Color('#49d9ff'),
     ];
     const boostTrailMesh = new THREE.InstancedMesh(
@@ -2933,6 +3321,13 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       driftSparkMesh.instanceColor.needsUpdate = true;
     };
 
+    const sceneMetrics = createEmptyPerformanceTelemetry();
+    scene.traverse((object) => {
+      if (object !== scene) sceneMetrics.objectCount += 1;
+      if (object.isMesh) sceneMetrics.meshCount += 1;
+      if (object.isInstancedMesh) sceneMetrics.instancedMeshCount += 1;
+    });
+
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.needsUpdate = true;
 
@@ -2946,6 +3341,8 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     };
     let qualityElapsed = 0;
     let qualityFrames = 0;
+    let lastFpsEstimate = null;
+    const destinationScreenPoint = new THREE.Vector3();
 
     const setRendererPixelRatio = (ratio) => {
       const next = clamp(ratio, renderSize.minPixelRatio, renderSize.maxPixelRatio);
@@ -2987,8 +3384,30 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       return null;
     };
 
+    const getDestinationScreenPoints = () =>
+      Object.fromEntries(
+        destinations.map((destination) => {
+          destinationScreenPoint
+            .set(
+              destination.position.x,
+              Math.max(4, (destination.size?.h || 18) * 0.54),
+              destination.position.z
+            )
+            .project(camera);
+          return [
+            destination.key,
+            {
+              visible: destinationScreenPoint.z >= -1 && destinationScreenPoint.z <= 1,
+              x: Number((((destinationScreenPoint.x + 1) / 2) * renderSize.width).toFixed(1)),
+              y: Number((((-destinationScreenPoint.y + 1) / 2) * renderSize.height).toFixed(1)),
+            },
+          ];
+        })
+      );
+
     const enterDestination = (destination) => {
       if (!destination) return;
+      emitPlayerPose(true);
       kartState.speed = 0;
       kartState.velocity.set(0, 0, 0);
       onEnter(destination);
@@ -3141,20 +3560,24 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
     const animateSign = (sign, active, now, phase = 0) => {
       if (!sign?.userData?.halo) return;
       const halo = sign.userData.halo;
-      const pulse = active ? 0.3 + Math.sin(now / 140 + phase) * 0.11 : 0.12;
+      const wave = motionState.reduced ? 0 : Math.sin(now / 140 + phase);
+      const pulse = active ? 0.3 + wave * 0.11 : 0.12;
       halo.material.opacity = pulse;
-      halo.scale.setScalar(active ? 1.04 + Math.sin(now / 180 + phase) * 0.025 : 1);
-      sign.position.y = sign.userData.baseY + (active ? Math.sin(now / 210 + phase) * 0.12 : 0);
+      halo.scale.setScalar(active ? 1.04 + wave * 0.025 : 1);
+      sign.position.y = sign.userData.baseY + (active ? wave * 0.12 : 0);
     };
 
     const animate = () => {
       const now = performance.now();
       const dt = Math.min((now - lastFrameTime) / 1000, 0.04);
       lastFrameTime = now;
+      const motionScale = motionState.reduced ? 0 : 1;
+      const pulseScale = motionState.reduced ? 0.18 : 1;
       qualityElapsed += dt;
       qualityFrames += 1;
       if (qualityElapsed >= 0.75) {
         const fps = qualityFrames / qualityElapsed;
+        lastFpsEstimate = fps;
         const pixelStep = fps < 52 ? -0.14 : fps > 58 ? 0.08 : 0;
         if (pixelStep !== 0) setRendererPixelRatio(renderSize.pixelRatio + pixelStep);
         qualityElapsed = 0;
@@ -3180,7 +3603,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       }
 
       const driftPressed =
-        touchInput.drift || keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyX');
+        touchInput.drift || keys.has('Space') || keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyX');
       kartState.throttleInput = damp(
         kartState.throttleInput,
         clamp(rawThrottle, -1, 1),
@@ -3358,11 +3781,11 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
           }
           pad.cooldown = 1.15;
         }
-        const pulse = 1 + Math.sin(now / 95 + index) * 0.04;
+        const pulse = 1 + Math.sin(now / 95 + index) * 0.04 * pulseScale;
         pad.group.scale.set(pulse, 1, pulse);
-        pad.glow.material.opacity = 0.14 + Math.sin(now / 120 + index) * 0.06;
+        pad.glow.material.opacity = 0.14 + Math.sin(now / 120 + index) * 0.06 * pulseScale;
         pad.strips.forEach((strip, stripIndex) => {
-          strip.position.y = 0.22 + Math.sin(now / 90 + stripIndex) * 0.035;
+          strip.position.y = 0.22 + Math.sin(now / 90 + stripIndex) * 0.035 * pulseScale;
         });
       });
       kartState.boostTimer = Math.max(0, kartState.boostTimer - dt);
@@ -3373,7 +3796,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       const slipAmount = Math.abs(kartState.velocity.dot(right));
       const driftIntensity = clamp((slipAmount / 10 + kartState.driftInput * 0.55) * speedRatio, 0, 1);
       skidEmitTimer -= dt;
-      if (kartState.grounded && driftIntensity > 0.28 && skidEmitTimer <= 0) {
+      if (!motionState.reduced && kartState.grounded && driftIntensity > 0.28 && skidEmitTimer <= 0) {
         [-1, 1].forEach((side) => {
           const mark = skidMarks[skidCursor];
           skidCursor = (skidCursor + 1) % skidMarks.length;
@@ -3399,7 +3822,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       });
 
       driftSparkEmitTimer -= dt;
-      if (kartState.driftActive && driftIntensity > 0.18 && driftSparkEmitTimer <= 0) {
+      if (!motionState.reduced && kartState.driftActive && driftIntensity > 0.18 && driftSparkEmitTimer <= 0) {
         const sparkLevel = getDriftSparkLevel();
         [-1, 1].forEach((side) => {
           const offset = new THREE.Vector3(side * 4.55, 0.55, -5.9).applyAxisAngle(Y_AXIS, kartState.heading);
@@ -3434,7 +3857,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
 
       kart.position.copy(kartState.position);
       kart.position.y =
-        0.22 + kartState.height + Math.sin(now / 110) * (0.018 + speedRatio * 0.065);
+        0.22 + kartState.height + Math.sin(now / 110) * (0.018 + speedRatio * 0.065) * pulseScale;
       kart.rotation.y = kartState.heading;
       kart.visible =
         kartState.velocity.length() > 0.9 ||
@@ -3475,7 +3898,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       wheels.forEach((wheel, wheelIndex) => {
         wheel.position.y =
           wheel.userData.baseY +
-          Math.sin(now / 92 + wheelIndex * 0.84) * speedRatio * 0.09 -
+          Math.sin(now / 92 + wheelIndex * 0.84) * speedRatio * 0.09 * pulseScale -
           kartState.landPulse * 0.16;
         wheel.rotation.x += kartState.speed * dt * 2.35;
         if (wheel.userData.front) wheel.rotation.y = kartState.steerInput * 0.38;
@@ -3490,13 +3913,13 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         });
         boostRing.material.color.copy(turboColor);
         boostRing.material.opacity = 0.42 + kartState.boostTier * 0.08;
-        const flameScale = 0.82 + Math.sin(now / 45) * 0.2 + speedRatio * 0.28;
+        const flameScale = 0.82 + Math.sin(now / 45) * 0.2 * pulseScale + speedRatio * 0.28;
         boostFlame.scale.set(1, 1, flameScale);
-        boostRing.rotation.z += dt * 5.4;
+        boostRing.rotation.z += dt * 5.4 * motionScale;
       }
 
       boostTrailEmitTimer -= dt;
-      if (boostFlame.visible && boostTrailEmitTimer <= 0) {
+      if (!motionState.reduced && boostFlame.visible && boostTrailEmitTimer <= 0) {
         const exhaustOrigin = kartState.position.clone().addScaledVector(forward, -8.2);
         [-2.25, 2.25].forEach((side, sideIndex) => {
           spawnBoostTrail(exhaustOrigin, forward, side, (kartState.boostTier + sideIndex) % boostTrailColors.length);
@@ -3546,6 +3969,9 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       let nearbyDestination = null;
       let nearbyDistance = Infinity;
       const objectiveKey = activeDestinationRef.current;
+      let routeGuideActiveKey = null;
+      let routeGuideArrivedKey = null;
+      let routeGuideIntensity = 0;
       destinations.forEach((destination, index) => {
         const entry = toVec3(destination.entry || destination.position);
         const distance = entry.distanceTo(kartState.position);
@@ -3553,7 +3979,8 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         const portal = portalPads.get(destination.key);
         const effects = destinationEffects.get(destination.key);
         const guide = routeGuides.get(destination.key);
-        const active = distance < (destination.portalRadius || 13);
+        const portalRadius = destination.portalRadius || 13;
+        const active = distance < portalRadius;
         const objective = objectiveKey === destination.key;
         if (group) {
           const targetScale = active ? 1.045 : objective ? 1.022 : 1;
@@ -3566,61 +3993,79 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         if (portal) {
           const highlighted = active || objective;
           const pulse = active
-            ? 1 + Math.sin(now / 125 + index) * 0.065
+            ? 1 + Math.sin(now / 125 + index) * 0.065 * pulseScale
             : objective
-            ? 1 + Math.sin(now / 160 + index) * 0.04
-            : 1 + Math.sin(now / 260 + index) * 0.018;
+            ? 1 + Math.sin(now / 160 + index) * 0.04 * pulseScale
+            : 1 + Math.sin(now / 260 + index) * 0.018 * pulseScale;
           portal.scale.lerp(new THREE.Vector3(pulse, active ? 1.09 : objective ? 1.045 : 1, pulse), 0.12);
-          portal.userData.ring.rotation.z += dt * (active ? 1.8 : objective ? 1.1 : 0.48);
-          portal.userData.innerRing.rotation.z -= dt * (active ? 2.3 : objective ? 1.45 : 0.62);
+          portal.userData.ring.rotation.z += dt * (active ? 1.8 : objective ? 1.1 : 0.48) * motionScale;
+          portal.userData.innerRing.rotation.z -= dt * (active ? 2.3 : objective ? 1.45 : 0.62) * motionScale;
           portal.userData.veil.material.opacity = active
-            ? 0.23 + Math.sin(now / 120) * 0.07
+            ? 0.23 + Math.sin(now / 120) * 0.07 * pulseScale
             : objective
-            ? 0.18 + Math.sin(now / 180) * 0.045
+            ? 0.18 + Math.sin(now / 180) * 0.045 * pulseScale
             : 0.12;
           portal.userData.aura.material.opacity = active
-            ? 0.28 + Math.sin(now / 140) * 0.08
+            ? 0.28 + Math.sin(now / 140) * 0.08 * pulseScale
             : objective
-            ? 0.22 + Math.sin(now / 190) * 0.06
+            ? 0.22 + Math.sin(now / 190) * 0.06 * pulseScale
             : 0.16;
           portal.userData.aura.scale.setScalar(active ? 1.08 : objective ? 1.03 : 1);
           portal.userData.outerRingMaterial.emissiveIntensity = active ? 1.45 : objective ? 1.16 : 0.86;
           portal.userData.portalLight.intensity = active ? 2.8 : objective ? 1.55 : 0.82;
           portal.userData.swirls?.forEach((swirl, swirlIndex) => {
-            swirl.rotation.z += dt * (active ? 2.35 : objective ? 1.35 : 0.54) * (swirlIndex % 2 ? -1 : 1);
+            swirl.rotation.z +=
+              dt * (active ? 2.35 : objective ? 1.35 : 0.54) * (swirlIndex % 2 ? -1 : 1) * motionScale;
             swirl.material.opacity = active
-              ? 0.26 + Math.sin(now / 115 + swirl.userData.phase) * 0.08
+              ? 0.26 + Math.sin(now / 115 + swirl.userData.phase) * 0.08 * pulseScale
               : objective
-              ? 0.2 + Math.sin(now / 180 + swirl.userData.phase) * 0.05
+              ? 0.2 + Math.sin(now / 180 + swirl.userData.phase) * 0.05 * pulseScale
               : 0.12;
           });
           portal.userData.sparks.forEach((spark) => {
-            const phase = spark.userData.phase + now / (active ? 430 : highlighted ? 560 : 760);
+            const phase =
+              spark.userData.phase + (motionState.reduced ? 0 : now / (active ? 430 : highlighted ? 560 : 760));
             spark.position.set(Math.cos(phase) * 6.2, 8.35 + Math.sin(phase * 1.7) * 2.6, Math.sin(phase) * 0.56 + 0.5);
             spark.scale.setScalar(active ? 1.15 : objective ? 1 : 0.86);
           });
         }
         if (guide) {
-          guide.visible = objective;
+          const fadeStart = portalRadius * 1.85;
+          const fadeEnd = portalRadius * 0.72;
+          const guideFade =
+            objective && fadeStart > fadeEnd ? clamp((distance - fadeEnd) / (fadeStart - fadeEnd), 0, 1) : 0;
+          const guideArrived = objective && active;
+          const pathOpacity = guideFade;
+          const beaconOpacity = objective ? (guideArrived ? 0.34 : clamp(0.48 + guideFade * 0.52, 0, 1)) : 0;
+          const signOpacity = objective ? (guideArrived ? 0.36 : clamp(0.68 + guideFade * 0.32, 0, 1)) : 0;
+          guide.visible = objective && (guideFade > 0.02 || guideArrived);
+          guide.userData.pathOpacity = pathOpacity;
+          guide.userData.beaconOpacity = beaconOpacity;
+          guide.userData.signOpacity = signOpacity;
           if (objective) {
+            routeGuideIntensity = Number(guideFade.toFixed(2));
+            if (guideFade > 0.08) routeGuideActiveKey = destination.key;
+            if (guideArrived) routeGuideArrivedKey = destination.key;
             guide.userData.rings?.forEach((ring, ringIndex) => {
-              const wave = Math.sin(now / 155 + ring.userData.phase + ringIndex * 0.15);
+              const wave = Math.sin(now / 155 + ring.userData.phase + ringIndex * 0.15) * pulseScale;
               ring.scale.setScalar(1.02 + wave * 0.08);
-              ring.rotation.z += dt * (0.7 + ringIndex * 0.04);
+              ring.rotation.z += dt * (0.7 + ringIndex * 0.04) * motionScale;
               if (ring.material?.opacity != null) {
-                ring.material.opacity = 0.24 + wave * 0.08;
+                ring.material.opacity = Math.max(0, (0.24 + wave * 0.08) * pathOpacity);
               }
             });
             if (guide.userData.beam) {
-              const beamWave = Math.sin(now / 240 + index);
+              const beamWave = Math.sin(now / 240 + index) * pulseScale;
               guide.userData.beam.scale.set(1 + beamWave * 0.05, 1, 1 + beamWave * 0.05);
-              guide.userData.beam.material.opacity = 0.1 + beamWave * 0.035;
-              guide.userData.beamCrown.rotation.z += dt * 0.74;
-              guide.userData.beamCrown.material.opacity = 0.3 + beamWave * 0.08;
+              guide.userData.beam.material.opacity = Math.max(0, (0.1 + beamWave * 0.035) * beaconOpacity);
+              guide.userData.beamCrown.rotation.z += dt * 0.74 * motionScale;
+              guide.userData.beamCrown.material.opacity = Math.max(0, (0.3 + beamWave * 0.08) * beaconOpacity);
             }
             if (guide.userData.sign) {
+              guide.userData.sign.visible = signOpacity > 0.08;
+              setGuideObjectOpacity(guide.userData.sign, signOpacity);
               guide.userData.sign.position.y =
-                guide.userData.signBaseY + Math.sin(now / 220 + index) * 0.16;
+                guide.userData.signBaseY + Math.sin(now / 220 + index) * 0.16 * pulseScale;
             }
           }
         }
@@ -3639,50 +4084,54 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       animatedBanners.forEach((banner, index) => {
         const cloth = banner.userData.cloth;
         if (!cloth) return;
-        cloth.rotation.z = Math.sin(now / 520 + index) * 0.025;
-        cloth.position.y = banner.userData.baseY + Math.sin(now / 650 + index) * 0.06;
+        cloth.rotation.z = Math.sin(now / 520 + index) * 0.025 * pulseScale;
+        cloth.position.y = banner.userData.baseY + Math.sin(now / 650 + index) * 0.06 * pulseScale;
       });
 
       animatedDistrictParts.forEach((part) => {
-        const wave = Math.sin(now / 420 + part.phase);
+        const wave = Math.sin(now / 420 + part.phase) * pulseScale;
         if (part.type === 'scanBeam') {
-          part.object.rotation.y += dt * 0.38;
+          part.object.rotation.y += dt * 0.38 * motionScale;
           part.object.material.opacity = 0.12 + wave * 0.04;
         } else if (part.type === 'homeRing') {
-          part.object.rotation.z += dt * (0.34 + part.phase * 0.03);
+          part.object.rotation.z += dt * (0.34 + part.phase * 0.03) * motionScale;
           part.object.scale.setScalar(1 + wave * 0.055);
         } else if (part.type === 'wrench') {
           part.object.rotation.z = wave * 0.045;
         } else if (part.type === 'pulse') {
           part.object.scale.setScalar(1 + wave * 0.035);
+        } else if (part.type === 'statusRing') {
+          part.object.rotation.z += dt * (0.48 + part.phase * 0.015) * motionScale;
+          part.object.scale.setScalar((part.baseScale || 1) * (1 + wave * 0.07));
         } else if (part.type === 'ferris') {
-          part.object.rotation.z += dt * 0.06;
+          part.object.rotation.z += dt * 0.06 * motionScale;
         }
       });
 
       animatedClouds.forEach((cloud, index) => {
-        cloud.position.x += cloud.userData.cloudSpeed;
+        cloud.position.x += cloud.userData.cloudSpeed * motionScale;
         if (cloud.position.x > 158) cloud.position.x = -158;
-        cloud.rotation.z = Math.sin(now / 1800 + index) * 0.015;
+        cloud.rotation.z = Math.sin(now / 1800 + index) * 0.015 * pulseScale;
       });
 
       if (progressTower.userData.beacon) {
-        progressTower.userData.beacon.rotation.y += dt * 0.8;
-        progressTower.userData.beacon.scale.setScalar(1 + Math.sin(now / 270) * 0.065);
-        progressTower.userData.cityBeam.rotation.y += dt * 0.12;
-        progressTower.userData.cityBeam.material.opacity = 0.16 + Math.sin(now / 360) * 0.04;
-        progressTower.userData.beamCore.material.opacity = 0.28 + Math.sin(now / 220) * 0.08;
-        progressTower.userData.objectiveBadge.rotation.y += dt * 0.9;
-        progressTower.userData.objectiveBadge.position.y = 35.5 + Math.sin(now / 340) * 0.45;
-        progressTower.userData.halo.rotation.z += dt * 0.32;
-        progressTower.userData.halo.material.opacity = 0.16 + Math.sin(now / 300) * 0.06;
+        progressTower.userData.beacon.rotation.y += dt * 0.8 * motionScale;
+        progressTower.userData.beacon.scale.setScalar(1 + Math.sin(now / 270) * 0.065 * pulseScale);
+        progressTower.userData.cityBeam.rotation.y += dt * 0.12 * motionScale;
+        progressTower.userData.cityBeam.material.opacity = 0.16 + Math.sin(now / 360) * 0.04 * pulseScale;
+        progressTower.userData.beamCore.material.opacity = 0.28 + Math.sin(now / 220) * 0.08 * pulseScale;
+        progressTower.userData.objectiveBadge.rotation.y += dt * 0.9 * motionScale;
+        progressTower.userData.objectiveBadge.position.y = 35.5 + Math.sin(now / 340) * 0.45 * pulseScale;
+        progressTower.userData.halo.rotation.z += dt * 0.32 * motionScale;
+        progressTower.userData.halo.material.opacity = 0.16 + Math.sin(now / 300) * 0.06 * pulseScale;
         progressTower.userData.rings.forEach((ring, index) => {
-          ring.rotation.z += dt * (0.18 + index * 0.02);
+          ring.rotation.z += dt * (0.18 + index * 0.02) * motionScale;
         });
       }
 
       const baseFov = viewport.mobile ? 68 : CAMERA_PRESETS.desktopPlaza.fov;
-      const targetFov = baseFov + speedRatio * 4 + (kartState.boostTimer > 0 ? 1.6 : 0);
+      const targetFov =
+        baseFov + speedRatio * (motionState.reduced ? 1.2 : 4) + (kartState.boostTimer > 0 && !motionState.reduced ? 1.6 : 0);
       camera.fov = damp(camera.fov, targetFov, 4.2, dt);
       camera.updateProjectionMatrix();
 
@@ -3713,7 +4162,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
         WORLD_BOUNDS.minZ - (viewport.mobile ? 30 : 146),
         WORLD_BOUNDS.maxZ + 42
       );
-      if (kartState.boostTimer > 0) {
+      if (kartState.boostTimer > 0 && !motionState.reduced) {
         const shake = 0.18 + kartState.boostTier * 0.08;
         desiredCamera.x += Math.sin(now / 34) * shake;
         desiredCamera.y += Math.sin(now / 41) * shake * 0.35;
@@ -3742,6 +4191,92 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       camera.lookAt(cameraLookTarget);
 
       renderer.render(scene, camera);
+      if (!referenceMode && typeof window !== 'undefined') {
+        poseEmitElapsed += dt;
+        if (poseEmitElapsed >= 1.1) {
+          poseEmitElapsed = 0;
+          emitPlayerPose();
+        }
+        const telemetry = {
+          ...(telemetryDetailsRef.current || {}),
+          activeDestinationKey: activeDestinationRef.current || null,
+          destinationScreenPoints: getDestinationScreenPoints(),
+          fallback: false,
+          fpsEstimate: lastFpsEstimate ? Number(lastFpsEstimate.toFixed(1)) : null,
+          hubCosmetics: hubTheme,
+          nearbyDestinationKey: nearbyDestination?.key || null,
+          performance: {
+            ...sceneMetrics,
+            drawCalls: renderer.info.render.calls || 0,
+            geometries: renderer.info.memory.geometries || 0,
+            lines: renderer.info.render.lines || 0,
+            points: renderer.info.render.points || 0,
+            textures: renderer.info.memory.textures || 0,
+            triangles: renderer.info.render.triangles || 0,
+          },
+          pixelRatio: Number(renderSize.pixelRatio.toFixed(2)),
+          player: {
+            driftActive: Boolean(kartState.driftActive),
+            driftCharge: Number(kartState.driftCharge.toFixed(2)),
+            forwardSpeed: Number(kartState.velocity.dot(forward).toFixed(2)),
+            heading: Number(kartState.heading.toFixed(3)),
+            speed: Number(kartState.velocity.length().toFixed(2)),
+            x: Number(kartState.position.x.toFixed(2)),
+            z: Number(kartState.position.z.toFixed(2)),
+          },
+          ready: true,
+          reducedMotion: motionState.reduced,
+          routeGuide: {
+            activeKey: routeGuideActiveKey,
+            arrivedKey: routeGuideArrivedKey,
+            intensity: routeGuideIntensity,
+            targetKey: objectiveKey || null,
+          },
+          debugOverlay: debugOverlayStats,
+          viewport: {
+            height: renderSize.height,
+            mobile: viewport.mobile,
+            width: renderSize.width,
+          },
+        };
+        window.__comebackCityHubTelemetry = telemetry;
+        canvas.dataset.telemetryReady = 'true';
+        canvas.dataset.activeDestinationKey = telemetry.activeDestinationKey || '';
+        canvas.dataset.activeMissionKey = telemetry.activeMission?.key || '';
+        canvas.dataset.districtFeedback = JSON.stringify(telemetry.districtFeedback || []);
+        canvas.dataset.drawCalls = String(telemetry.performance.drawCalls);
+        canvas.dataset.fallback = 'false';
+        canvas.dataset.fpsEstimate = telemetry.fpsEstimate == null ? '' : String(telemetry.fpsEstimate);
+        canvas.dataset.debugBoostPadCount = String(telemetry.debugOverlay.boostPads);
+        canvas.dataset.debugCollisionBoxCount = String(telemetry.debugOverlay.collisionBoxes);
+        canvas.dataset.debugOverlayEnabled = telemetry.debugOverlay.enabled ? 'true' : 'false';
+        canvas.dataset.debugPortalCount = String(telemetry.debugOverlay.portals);
+        canvas.dataset.geometryCount = String(telemetry.performance.geometries);
+        canvas.dataset.hubBannerSet = telemetry.hubCosmetics.bannerSet;
+        canvas.dataset.hubKartPaint = telemetry.hubCosmetics.kartPaint;
+        canvas.dataset.hubKartPaintColor = telemetry.hubCosmetics.kartPaintColor;
+        canvas.dataset.hubTrailColor = telemetry.hubCosmetics.trailColor;
+        canvas.dataset.nearbyDestinationKey = telemetry.nearbyDestinationKey || '';
+        canvas.dataset.pixelRatio = String(telemetry.pixelRatio);
+        canvas.dataset.playerDriftActive = telemetry.player.driftActive ? 'true' : 'false';
+        canvas.dataset.playerDriftCharge = String(telemetry.player.driftCharge);
+        canvas.dataset.playerForwardSpeed = String(telemetry.player.forwardSpeed);
+        canvas.dataset.playerHeading = String(telemetry.player.heading);
+        canvas.dataset.playerSpeed = String(telemetry.player.speed);
+        canvas.dataset.playerX = String(telemetry.player.x);
+        canvas.dataset.playerZ = String(telemetry.player.z);
+        canvas.dataset.reducedMotion = telemetry.reducedMotion ? 'true' : 'false';
+        canvas.dataset.routeGuideActiveKey = telemetry.routeGuide.activeKey || '';
+        canvas.dataset.routeGuideArrivedKey = telemetry.routeGuide.arrivedKey || '';
+        canvas.dataset.routeGuideIntensity = String(telemetry.routeGuide.intensity);
+        canvas.dataset.routeGuideTargetKey = telemetry.routeGuide.targetKey || '';
+        canvas.dataset.sceneInstancedMeshCount = String(telemetry.performance.instancedMeshCount);
+        canvas.dataset.sceneMeshCount = String(telemetry.performance.meshCount);
+        canvas.dataset.sceneObjectCount = String(telemetry.performance.objectCount);
+        canvas.dataset.textureCount = String(telemetry.performance.textures);
+        canvas.dataset.triangles = String(telemetry.performance.triangles);
+        canvas.dataset.viewportMobile = telemetry.viewport.mobile ? 'true' : 'false';
+      }
       frame = requestAnimationFrame(animate);
     };
 
@@ -3764,12 +4299,20 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      if (reducedMotionQuery?.removeEventListener) {
+        reducedMotionQuery.removeEventListener('change', syncReducedMotion);
+      } else {
+        reducedMotionQuery?.removeListener?.(syncReducedMotion);
+      }
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerup', handlePointerUp);
       canvas.removeEventListener('pointercancel', handlePointerUp);
       nearbyDestinationRef.current = null;
       onNearbyChange(null);
+      if (!referenceMode && typeof window !== 'undefined' && !window.__comebackCityHubTelemetry?.fallback) {
+        delete window.__comebackCityHubTelemetry;
+      }
       const disposedMaterials = new Set();
       const disposedGeometries = new Set();
       const disposedTextures = new Set();
@@ -3794,7 +4337,17 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
       });
       renderer.dispose();
     };
-  }, [destinations, onEnter, onNearbyChange, profile.avatar, profile.level, renderFallback]);
+  }, [
+    destinations,
+    hubCosmetics,
+    onEnter,
+    onNearbyChange,
+    profile.avatar,
+    profile.level,
+    reducedMotion,
+    referenceMode,
+    renderFallback,
+  ]);
 
   return (
     <>
@@ -3803,6 +4356,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
           activeDestinationKey={activeDestinationKey}
           destinations={destinations}
           onEnter={onEnter}
+          reducedMotion={reducedMotion}
         />
       ) : (
         <>
@@ -3810,7 +4364,10 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
             ref={canvasRef}
             className="world-scene-canvas absolute inset-0 h-full w-full"
             aria-label="Comeback City 3D world"
+            data-playable-world="true"
+            data-testid="world-scene-canvas"
           />
+          {!referenceMode && (
           <div className="world-touch-controls pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-30 flex items-end justify-between px-4">
             <div className="pointer-events-auto grid grid-cols-3 gap-2">
               <span />
@@ -3890,6 +4447,7 @@ export const WorldScene = ({ activeDestinationKey, destinations, profile, onEnte
               </button>
             </div>
           </div>
+          )}
         </>
       )}
     </>

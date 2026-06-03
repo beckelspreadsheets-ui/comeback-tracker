@@ -1,0 +1,80 @@
+--- .agent/runs/kart-racer-production-readiness/evidence/perf-038-production-visual-telemetry-guard-20260524T180000Z/race-content-playtest-before.mjs	2026-05-24 10:41:59
++++ scripts/race-content-playtest.mjs	2026-05-24 10:43:55
+@@ -6896,6 +6896,61 @@
+       telemetryWindow,
+     });
+   }
++  const noVisualStats = createRaceTelemetryStats();
++  let noVisualHudTelemetry = null;
++  const noVisualFrame = publishRaceTelemetryFrame({
++    camera: {
++      position: {
++        distanceTo: () => fail('Visual telemetry should not read camera distance when disabled'),
++      },
++    },
++    cameraRouteLookahead: {
++      seconds: 1.24,
++      usedRoute: true,
++    },
++    collisionCircles: [
++      {
++        position: new THREE.Vector3(999, 0, 999),
++        radius: 12,
++      },
++    ],
++    compiled: {
++      ...telemetryCompiled,
++      pointAt: () => fail('Visual telemetry should not sample road points when disabled'),
++    },
++    includeVisualTelemetry: false,
++    playerVehicleGroup: {
++      updateMatrixWorld: () => fail('Visual telemetry should not measure player screen coverage when disabled'),
++    },
++    race: telemetryRace,
++    renderer: {
++      get info() {
++        fail('Visual telemetry should not read renderer counters when disabled');
++        return null;
++      },
++    },
++    setTelemetry: (nextTelemetry) => {
++      noVisualHudTelemetry = nextTelemetry;
++    },
++    stats: noVisualStats,
++    vehicles: { kart: { maxSpeed: 50, offroad: 0.6, reverse: 12.5 } },
++  });
++  if (
++    noVisualFrame.raceVisualTelemetry !== null ||
++    noVisualFrame.normalizedSpeed !== 0.8 ||
++    noVisualFrame.visibleBranchCount !== 0 ||
++    noVisualStats.branchVisibleSeen ||
++    noVisualStats.visibleRivalsSeen !== 0 ||
++    noVisualHudTelemetry?.lap !== 2 ||
++    noVisualHudTelemetry?.speed !== 232 ||
++    noVisualHudTelemetry?.audioMuted !== true
++  ) {
++    fail('Race telemetry frame publisher should skip visual diagnostics while preserving HUD telemetry', {
++      noVisualFrame,
++      noVisualHudTelemetry,
++      noVisualStats,
++    });
++  }
+   if (
+     rendererInfoTelemetry.calls !== 222 ||
+     rendererInfoTelemetry.frame !== 19 ||
+@@ -6932,6 +6987,7 @@
+     collisionCircles,
+     compiled,
+     getCameraRouteLookahead: () => routeLookahead,
++    includeVisualTelemetry: false,
+     intervalMs: 90,
+     kartOnly: true,
+     playtest,
+@@ -6982,6 +7038,7 @@
+     telemetryPayloads[0].cameraRouteLookahead.seconds !== 1.1 ||
+     telemetryPayloads[0].collisionCircles !== collisionCircles ||
+     telemetryPayloads[0].compiled !== compiled ||
++    telemetryPayloads[0].includeVisualTelemetry !== false ||
+     telemetryPayloads[0].kartOnly !== true ||
+     telemetryPayloads[0].playtest !== playtest ||
+     telemetryPayloads[0].playerVehicleGroup !== playerVehicleGroup ||

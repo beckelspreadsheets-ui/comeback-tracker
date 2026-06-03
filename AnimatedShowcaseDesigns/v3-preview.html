@@ -1,0 +1,2875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Websites & Local SEO for Contractors | Showcase Designs</title>
+    <meta name="description" content="We build websites and run local SEO for contractors and home service businesses. More qualified calls, less wasted ad spend. See our work.">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta property="og:title" content="Websites & Local SEO for Contractors | Showcase Designs">
+    <meta property="og:description" content="We build websites and run local SEO for contractors and home service businesses. More qualified calls, less wasted ad spend. See our work.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://showcase-designs.com">
+    <meta property="og:image" content="https://showcase-designs.com/og-image.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Showcase Designs websites and local SEO for contractors">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Websites & Local SEO for Contractors | Showcase Designs">
+    <meta name="twitter:description" content="We build websites and run local SEO for contractors and home service businesses. More qualified calls, less wasted ad spend. See our work.">
+    <meta name="twitter:image" content="https://showcase-designs.com/og-image.png">
+    <meta name="twitter:image:alt" content="Showcase Designs websites and local SEO for contractors">
+    <link rel="canonical" href="https://showcase-designs.com/">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script>
+        window.__showcaseLoadFonts = function () {
+            if (document.querySelector('link[data-showcase-fonts="loaded"]')) return;
+            var link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = "https://fonts.googleapis.com/css2?family=Prata&family=Manrope:wght@300;400;500;600;700;800&display=optional";
+            link.setAttribute("data-showcase-fonts", "loaded");
+            document.head.appendChild(link);
+        };
+        if ("requestIdleCallback" in window) {
+            window.requestIdleCallback(window.__showcaseLoadFonts, { timeout: 2500 });
+        } else {
+            window.addEventListener("load", function () {
+                window.setTimeout(window.__showcaseLoadFonts, 0);
+            });
+        }
+    </script>
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Prata&family=Manrope:wght@300;400;500;600;700;800&display=optional" rel="stylesheet"></noscript>
+    <script>
+        (function () {
+            function track(eventName, detail) {
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({ event: eventName, detail: detail || {} });
+                if (typeof window.gtag === "function") {
+                    window.gtag("event", eventName, detail || {});
+                }
+            }
+
+            window.sdTrack = window.sdTrack || track;
+
+            var params = new URLSearchParams(window.location.search);
+            var prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+            function setModePreference(value) {
+                try {
+                    if (value) {
+                        window.localStorage.setItem("mode-preference", value);
+                    } else {
+                        window.localStorage.removeItem("mode-preference");
+                    }
+                } catch (error) {}
+            }
+
+            function isLocalhost() {
+                var host = window.location.hostname;
+                return host === "localhost" || host === "127.0.0.1" || host === "";
+            }
+
+            function exposeModePreferenceForVerifier() {
+                if (!isLocalhost() || params.get("verifyMode") !== "1") return;
+                try {
+                    document.documentElement.setAttribute("data-mode-preference", window.localStorage.getItem("mode-preference") || "null");
+                } catch (error) {}
+            }
+
+            if (isLocalhost() && params.has("seedMode")) {
+                setModePreference(params.get("seedMode"));
+            }
+
+            function worldUrl() {
+                var host = window.location.hostname;
+                if (isLocalhost() && params.get("verifyMode") === "1") return "world.html?try=1&verifyMode=1";
+                return isLocalhost() ? "world.html" : "/world";
+            }
+
+            function supportsWebGL2() {
+                try {
+                    var canvas = document.createElement("canvas");
+                    return !!canvas.getContext("webgl2", {
+                        antialias: false,
+                        powerPreference: "high-performance"
+                    });
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            function isEligibleForWorld() {
+                var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                var memory = navigator.deviceMemory;
+                if (connection && connection.saveData) return false;
+                if (typeof memory === "number" && memory < 3) return false;
+                return supportsWebGL2();
+            }
+
+            if (prefersReduced) {
+                setModePreference("static");
+                exposeModePreferenceForVerifier();
+                return;
+            }
+
+            if (params.get("lite") === "1") {
+                setModePreference(null);
+                track("mode_return_static", { source: "query_param" });
+                exposeModePreferenceForVerifier();
+                return;
+            }
+
+            if (params.get("scenic") === "1") {
+                if (isEligibleForWorld()) {
+                    setModePreference("world");
+                    track("mode_enter_world", { source: "query_param" });
+                    window.location.replace(worldUrl());
+                } else {
+                    setModePreference("static");
+                    exposeModePreferenceForVerifier();
+                }
+            }
+
+            exposeModePreferenceForVerifier();
+        })();
+    </script>
+    <script>
+        (function () {
+            var skipAnimations = false;
+            try {
+                skipAnimations =
+                    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+                    window.matchMedia("(pointer: coarse)").matches ||
+                    window.matchMedia("(max-width: 759px)").matches;
+            } catch (error) {}
+
+            if (skipAnimations) {
+                document.documentElement.setAttribute("data-animation-cdn", "skipped");
+                return;
+            }
+
+            [
+                "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js",
+                "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js",
+                "https://cdn.jsdelivr.net/npm/lenis@1.1.16/dist/lenis.min.js",
+                "https://unpkg.com/split-type"
+            ].forEach(function (src) {
+                var script = document.createElement("script");
+                script.src = src;
+                script.async = false;
+                script.defer = true;
+                script.setAttribute("data-animation-cdn", "true");
+                document.head.appendChild(script);
+            });
+        })();
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "ProfessionalService",
+        "name": "Showcase Designs",
+        "description": "We build websites and run local SEO for contractors and home service businesses to drive more qualified calls.",
+        "url": "https://showcase-designs.com",
+        "email": "hello@showcase-designs.com",
+        "telephone": "(520) 367-2769",
+        "areaServed": "US",
+        "serviceType": "Web Design, Local SEO",
+        "sameAs": [],
+        "offers": [
+            {
+                "@type": "Offer",
+                "name": "Starter",
+                "description": "5-7 page custom website with mobile-first design, contact forms, Google Business Profile optimization, and basic local SEO setup"
+            },
+            {
+                "@type": "Offer",
+                "name": "Growth",
+                "description": "Website and ongoing SEO with 10+ pages, monthly strategy, city landing pages, Google Business Profile management, and reporting"
+            },
+            {
+                "@type": "Offer",
+                "name": "Custom",
+                "description": "Fully scoped to your business with multi-location support, voice agents, CRM integration, advanced analytics, and dedicated project manager"
+            }
+        ]
+    }
+    </script>
+    <style>
+        :root {
+            --black: #0a0a0a;
+            --warm-white: #f5f0e8;
+            --cream: #ece6d9;
+            --gold: #c9a227;
+            --gold-light: #dbb94e;
+            --text: #e8e4dc;
+            --text-dim: #8a8578;
+            --line: rgba(255, 255, 255, 0.08);
+            --line-soft: rgba(255, 255, 255, 0.04);
+            --panel: rgba(255, 255, 255, 0.03);
+            --panel-strong: rgba(255, 255, 255, 0.05);
+            --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+            --radius: 28px;
+            --container: min(1180px, calc(100vw - 2rem));
+            --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: auto;
+        }
+
+        body {
+            font-family: "Manrope", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(201, 162, 39, 0.12), transparent 30%),
+                radial-gradient(circle at 80% 20%, rgba(201, 162, 39, 0.08), transparent 24%),
+                linear-gradient(180deg, #080808 0%, #0a0a0a 36%, #0c0c0c 100%);
+            color: var(--text);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        body.nav-open {
+            overflow: hidden;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        img {
+            display: block;
+            max-width: 100%;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        .ph {
+            position: relative;
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            flex: 0 0 auto;
+            color: inherit;
+            vertical-align: -0.12em;
+        }
+
+        .ph::before,
+        .ph::after {
+            content: "";
+            position: absolute;
+            box-sizing: border-box;
+        }
+
+        .ph-check::before {
+            left: 0.3em;
+            top: 0.08em;
+            width: 0.42em;
+            height: 0.72em;
+            border: solid currentColor;
+            border-width: 0 0.12em 0.12em 0;
+            transform: rotate(42deg);
+        }
+
+        .ph-list::before {
+            left: 0.14em;
+            right: 0.14em;
+            top: 0.22em;
+            height: 0.1em;
+            border-radius: 999px;
+            background: currentColor;
+            box-shadow: 0 0.27em 0 currentColor, 0 0.54em 0 currentColor;
+        }
+
+        .ph-lightning::before,
+        .ph-crown-simple::before {
+            inset: 0.14em 0.2em;
+            background: currentColor;
+        }
+
+        .ph-lightning::before {
+            clip-path: polygon(48% 0, 86% 0, 58% 42%, 82% 42%, 34% 100%, 44% 55%, 18% 55%);
+        }
+
+        .ph-crown-simple::before {
+            clip-path: polygon(0 72%, 15% 24%, 39% 58%, 50% 12%, 61% 58%, 85% 24%, 100% 72%, 100% 88%, 0 88%);
+        }
+
+        .ph-sparkle::before,
+        .ph-sparkle::after {
+            left: 0.45em;
+            top: 0.1em;
+            width: 0.1em;
+            height: 0.8em;
+            border-radius: 999px;
+            background: currentColor;
+        }
+
+        .ph-sparkle::after {
+            transform: rotate(90deg);
+        }
+
+        .ph-chart-line-up::before {
+            left: 0.12em;
+            bottom: 0.2em;
+            width: 0.78em;
+            height: 0.58em;
+            border-left: 0.1em solid currentColor;
+            border-bottom: 0.1em solid currentColor;
+        }
+
+        .ph-chart-line-up::after {
+            left: 0.28em;
+            top: 0.38em;
+            width: 0.56em;
+            height: 0.1em;
+            border-radius: 999px;
+            background: currentColor;
+            transform: rotate(-32deg);
+            transform-origin: left center;
+        }
+
+        .ph-rocket-launch::before {
+            left: 0.2em;
+            top: 0.12em;
+            width: 0.62em;
+            height: 0.62em;
+            border: 0.11em solid currentColor;
+            border-radius: 70% 70% 70% 24%;
+            transform: rotate(-45deg);
+        }
+
+        .ph-rocket-launch::after {
+            left: 0.24em;
+            top: 0.72em;
+            width: 0.34em;
+            height: 0.1em;
+            border-radius: 999px;
+            background: currentColor;
+            box-shadow: -0.12em 0.14em 0 currentColor;
+        }
+
+        .ph-diamonds-four::before {
+            left: 0.22em;
+            top: 0.1em;
+            width: 0.24em;
+            height: 0.24em;
+            border: 0.09em solid currentColor;
+            transform: rotate(45deg);
+            box-shadow: 0.36em -0.36em 0 -0.09em var(--black), 0.36em -0.36em 0 0 currentColor, 0.36em 0.36em 0 -0.09em var(--black), 0.36em 0.36em 0 0 currentColor, 0.72em 0 0 -0.09em var(--black), 0.72em 0 0 0 currentColor;
+        }
+
+        ::selection {
+            background: var(--gold);
+            color: var(--black);
+        }
+
+        .grain {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            pointer-events: none;
+            opacity: 0.045;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.8'/%3E%3C/svg%3E");
+            mix-blend-mode: soft-light;
+        }
+
+        .progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 2px;
+            width: 0;
+            z-index: 120;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light));
+            transform-origin: left center;
+        }
+
+        .cursor,
+        .cursor-ring {
+            display: none !important;
+        }
+
+        .container {
+            width: var(--container);
+            margin: 0 auto;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.28em;
+            font-size: 0.68rem;
+            font-weight: 600;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 2.5rem;
+            height: 1px;
+            background: currentColor;
+            transform-origin: left center;
+        }
+
+        .section {
+            position: relative;
+            padding: 5rem 0;
+        }
+
+        .section-head {
+            display: grid;
+            gap: 1.25rem;
+            margin-bottom: 2.25rem;
+        }
+
+        .section-title {
+            font-family: "Prata", serif;
+            font-size: clamp(2.35rem, 8vw, 4.75rem);
+            line-height: 0.95;
+            letter-spacing: -0.03em;
+            font-weight: 700;
+            color: var(--warm-white);
+        }
+
+        .section-title em,
+        .hero-headline em,
+        .industry-rotator em {
+            font-style: italic;
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .section-copy,
+        .lede,
+        .project-copy,
+        .pricing-copy,
+        .burn-copy,
+        .form-copy {
+            color: var(--text-dim);
+            line-height: 1.8;
+            font-size: 0.98rem;
+        }
+
+        .site-nav {
+            position: fixed;
+            inset: 0 0 auto;
+            z-index: 110;
+            padding: 0.9rem 0;
+            transition: background 220ms ease, border-color 220ms ease, backdrop-filter 220ms ease;
+        }
+
+        .site-nav.is-scrolled {
+            background: rgba(10, 10, 10, 0.76);
+            border-bottom: 1px solid rgba(201, 162, 39, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .nav-shell {
+            width: var(--container);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .nav-logo {
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--warm-white);
+        }
+
+        .nav-logo span {
+            color: var(--gold);
+        }
+
+        .nav-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            height: 3rem;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: transparent;
+            color: var(--warm-white);
+        }
+
+        .nav-links {
+            position: fixed;
+            top: 4.8rem;
+            left: 1rem;
+            right: 1rem;
+            display: grid;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: rgba(10, 10, 10, 0.96);
+            border: 1px solid rgba(201, 162, 39, 0.15);
+            border-radius: 1.2rem;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-12px);
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+
+        .nav-links.is-open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            font-size: 0.84rem;
+            text-transform: uppercase;
+            letter-spacing: 0.22em;
+            color: var(--text-dim);
+            padding: 0.85rem 0.25rem;
+        }
+
+        .nav-links a:hover,
+        .nav-links a:focus-visible {
+            color: var(--gold);
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.7rem;
+            min-height: 3.3rem;
+            padding: 0.9rem 1.35rem;
+            border-radius: 999px;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            transition: transform 220ms ease, border-color 220ms ease, background 220ms ease, color 220ms ease;
+        }
+
+        .button:hover,
+        .button:focus-visible {
+            transform: translateY(-2px);
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, var(--gold-light), var(--gold));
+            color: var(--black);
+            box-shadow: 0 14px 30px rgba(201, 162, 39, 0.18);
+        }
+
+        .button-secondary {
+            color: var(--warm-white);
+            border-color: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .button-secondary:hover,
+        .button-secondary:focus-visible {
+            border-color: rgba(201, 162, 39, 0.45);
+            color: var(--gold);
+        }
+
+        .hero {
+            position: relative;
+            min-height: 100svh;
+            display: flex;
+            align-items: center;
+            padding: 7rem 0 3rem;
+            overflow: clip;
+        }
+
+        .hero::before,
+        .hero::after {
+            content: "";
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(80px);
+            opacity: 0.55;
+            pointer-events: none;
+        }
+
+        .hero::before {
+            width: 18rem;
+            height: 18rem;
+            top: 12%;
+            left: -4rem;
+            background: rgba(201, 162, 39, 0.16);
+        }
+
+        .hero::after {
+            width: 14rem;
+            height: 14rem;
+            right: -2rem;
+            bottom: 12%;
+            background: rgba(245, 240, 232, 0.08);
+        }
+
+        .hero-grid {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            gap: 2.5rem;
+        }
+
+        .hero-copy {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.85rem;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.38em;
+            font-size: 0.68rem;
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        .hero-tag::before {
+            content: "";
+            width: var(--tag-line-width, 0);
+            height: 1px;
+            background: currentColor;
+            transition: width 420ms ease;
+        }
+
+        .hero-headline {
+            max-width: 12ch;
+            font-family: "Prata", serif;
+            font-size: clamp(3rem, 10vw, 8rem);
+            line-height: 0.9;
+            letter-spacing: -0.04em;
+            font-weight: 700;
+            color: var(--warm-white);
+        }
+
+        .industry-rotator {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--text-dim);
+            font-size: 0.92rem;
+            letter-spacing: 0.02em;
+        }
+
+        .hero-headline-wrap {
+            font-size: clamp(2.35rem, 8vw, 4.75rem);
+            line-height: 0.95;
+            letter-spacing: -0.03em;
+            font-weight: 700;
+            color: var(--warm-white);
+            font-family: "Prata", serif;
+        }
+
+        .hero-headline-wrap .hero-headline {
+            display: block;
+        }
+
+        .hero-headline-wrap .hero-headline-line2 {
+            display: block;
+        }
+
+        .industry-word {
+            position: relative;
+            display: block;
+            width: 100%;
+            height: 1.35em;
+            overflow: hidden;
+            vertical-align: baseline;
+        }
+
+        .industry-word span {
+            position: absolute;
+            left: 0;
+            top: 0;
+            white-space: nowrap;
+            font-family: "Prata", serif;
+            font-style: italic;
+            color: var(--gold);
+            font-size: inherit;
+            line-height: inherit;
+            opacity: 0;
+        }
+
+        .hero-lede {
+            max-width: 36rem;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+        }
+
+        .hero-proof {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.8rem;
+            padding-top: 0.3rem;
+        }
+
+        .proof-card {
+            padding: 1rem;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+            border: 1px solid var(--line-soft);
+            border-radius: 1rem;
+        }
+
+        .proof-label {
+            display: block;
+            margin-bottom: 0.3rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 0.62rem;
+        }
+
+        .proof-value {
+            font-size: 0.95rem;
+            line-height: 1.55;
+        }
+
+        .hero-stage {
+            position: relative;
+            min-height: 28.5rem;
+        }
+
+        .spotlight,
+        .spotlight-alt {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(70px);
+            pointer-events: none;
+        }
+
+        .spotlight {
+            inset: auto 18% 10% auto;
+            width: 12rem;
+            height: 12rem;
+            background: rgba(201, 162, 39, 0.2);
+        }
+
+        .spotlight-alt {
+            inset: 5% auto auto 8%;
+            width: 10rem;
+            height: 10rem;
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .hero-device-stack {
+            position: absolute;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 1rem;
+        }
+
+        .hero-stage-note {
+            position: absolute;
+            left: 50%;
+            bottom: -0.25rem;
+            transform: translateX(-50%);
+            width: max-content;
+            max-width: min(90%, 32rem);
+            text-align: center;
+            font-size: 0.72rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .device-card {
+            position: relative;
+            width: min(240px, 42vw);
+            padding: 0.45rem;
+            border-radius: 2rem;
+            background: linear-gradient(180deg, #181818, #090909);
+            box-shadow: var(--shadow), 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 45px rgba(201, 162, 39, 0.12);
+        }
+
+        .device-card.secondary {
+            width: min(190px, 35vw);
+            transform: translateY(2.5rem) rotate(-8deg);
+            opacity: 0.86;
+        }
+
+        .device-inner {
+            position: relative;
+            border-radius: 1.6rem;
+            overflow: hidden;
+            aspect-ratio: 9 / 16;
+            background: linear-gradient(180deg, #151515, #0d0d0d);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .device-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 42%;
+            height: 1.1rem;
+            background: #111;
+            border-radius: 0 0 1rem 1rem;
+            transform: translateX(-50%);
+            z-index: 2;
+        }
+
+        .screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            padding: 2rem 0.9rem 0.9rem;
+            background:
+                linear-gradient(180deg, rgba(201, 162, 39, 0.14), transparent 24%),
+                linear-gradient(180deg, #111 0%, #0c0c0c 100%);
+        }
+
+        .mini-site {
+            display: grid;
+            gap: 0.65rem;
+            height: 100%;
+            color: var(--warm-white);
+        }
+
+        .mini-top {
+            padding: 0.95rem 0.9rem;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, rgba(201, 162, 39, 0.3), rgba(255, 255, 255, 0.04));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .mini-kicker {
+            display: block;
+            font-size: 0.45rem;
+            text-transform: uppercase;
+            letter-spacing: 0.28em;
+            color: rgba(245, 240, 232, 0.65);
+            margin-bottom: 0.45rem;
+        }
+
+        .mini-top strong {
+            display: block;
+            font-family: "Prata", serif;
+            font-size: 1rem;
+            line-height: 0.95;
+        }
+
+        .mini-grid {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .mini-card {
+            padding: 0.7rem;
+            border-radius: 0.8rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .mini-card strong {
+            display: block;
+            margin-bottom: 0.2rem;
+            font-size: 0.54rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .mini-card span {
+            display: block;
+            color: var(--text-dim);
+            font-size: 0.48rem;
+            line-height: 1.5;
+        }
+
+        .mini-bar {
+            margin-top: auto;
+            padding: 0.7rem 0.8rem;
+            border-radius: 999px;
+            text-align: center;
+            font-size: 0.48rem;
+            text-transform: uppercase;
+            letter-spacing: 0.22em;
+            font-weight: 700;
+            color: var(--black);
+            background: linear-gradient(90deg, var(--gold-light), var(--gold));
+        }
+
+        .scroll-cue {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-top: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.22em;
+            font-size: 0.64rem;
+        }
+
+        .scroll-pill {
+            width: 2rem;
+            height: 3rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            padding: 0.35rem;
+        }
+
+        .scroll-pill span {
+            display: block;
+            width: 100%;
+            height: 0.6rem;
+            border-radius: 999px;
+            background: var(--gold);
+        }
+
+        .trust-strip {
+            border-top: 1px solid var(--line-soft);
+            border-bottom: 1px solid var(--line-soft);
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        .trust-inner {
+            display: grid;
+            gap: 0.75rem;
+            padding: 1.1rem 0;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.24em;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+        }
+
+        .trust-inner strong {
+            color: var(--warm-white);
+        }
+
+        .differentiator-grid,
+        .roi-grid,
+        .cta-grid,
+        .contact-grid,
+        .burn-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .differentiator-card,
+        .roi-card,
+        .pricing-card,
+        .addon-card,
+        .process-card,
+        .burn-card,
+        .contact-card,
+        .testimonial-card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+            border: 1px solid var(--line-soft);
+            border-radius: 1.4rem;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+        }
+
+        .differentiator-card {
+            padding: 1.5rem;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .differentiator-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gold);
+            background: rgba(201, 162, 39, 0.12);
+            border: 1px solid rgba(201, 162, 39, 0.18);
+            font-size: 1.2rem;
+        }
+
+        .differentiator-card h3,
+        .process-card h3,
+        .burn-card h3,
+        .pricing-card h3 {
+            font-size: 1rem;
+            color: var(--warm-white);
+            line-height: 1.45;
+        }
+
+        .work-header {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .projects {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .project {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            min-height: 34rem;
+            background:
+                linear-gradient(135deg, rgba(201, 162, 39, 0.1), transparent 36%),
+                var(--project-bg, linear-gradient(180deg, #121212, #0a0a0a));
+        }
+
+        .project::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(180deg, rgba(10, 10, 10, 0.16), rgba(10, 10, 10, 0.8)),
+                radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 24%);
+            pointer-events: none;
+        }
+
+        .project-inner {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            gap: 1.5rem;
+            padding: 1.35rem;
+            min-height: 100%;
+        }
+
+        .project-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            color: rgba(245, 240, 232, 0.68);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-size: 0.66rem;
+        }
+
+        .project-number {
+            font-family: "Prata", serif;
+            font-size: 2.5rem;
+            line-height: 1;
+            color: rgba(255, 255, 255, 0.12);
+        }
+
+        .project-copy-wrap {
+            display: grid;
+            gap: 1rem;
+            align-content: start;
+        }
+
+        .project-title {
+            font-family: "Prata", serif;
+            font-size: clamp(2.2rem, 8vw, 4.2rem);
+            line-height: 0.96;
+            letter-spacing: -0.03em;
+            color: var(--warm-white);
+        }
+
+        .project-points {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+        }
+
+        .project-points span {
+            padding: 0.55rem 0.7rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.64rem;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: rgba(245, 240, 232, 0.78);
+        }
+
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            color: var(--gold);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .project-device-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-top: 0.8rem;
+        }
+
+        .project-device {
+            width: min(260px, 58vw);
+        }
+
+        .project-device .screen {
+            padding-top: 1.9rem;
+        }
+
+        .project-device .mini-top strong {
+            font-size: 0.92rem;
+        }
+
+        .see-more {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .see-more a {
+            text-decoration: none;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-size: 0.76rem;
+            font-weight: 600;
+        }
+
+        .stats {
+            padding-top: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-card {
+            padding: 1.3rem;
+            border-radius: 1.2rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--line-soft);
+            text-align: center;
+        }
+
+        .stat-value {
+            display: block;
+            font-family: "Prata", serif;
+            font-size: clamp(2.2rem, 8vw, 4rem);
+            line-height: 0.95;
+            color: var(--gold);
+        }
+
+        .stat-label {
+            display: block;
+            margin-top: 0.55rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-size: 0.64rem;
+        }
+
+        .roi-card {
+            padding: 1.5rem;
+            display: grid;
+            gap: 1rem;
+        }
+
+        .roi-grid strong {
+            color: var(--warm-white);
+        }
+
+        .roi-metric {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.95rem 0;
+            border-bottom: 1px solid var(--line-soft);
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        .roi-metric:last-child {
+            border-bottom: 0;
+        }
+
+        .roi-metric strong {
+            font-family: "Prata", serif;
+            font-size: 1.15rem;
+            color: var(--gold);
+        }
+
+        .pricing-head {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .pricing-grid {
+            display: grid;
+            gap: 1rem;
+            grid-auto-rows: 1fr;
+        }
+
+        .pricing-card {
+            position: relative;
+            padding: 1.5rem;
+            display: grid;
+            gap: 1rem;
+            height: 100%;
+            align-content: start;
+        }
+
+        .pricing-card.featured {
+            border-color: rgba(201, 162, 39, 0.28);
+            background:
+                radial-gradient(circle at top right, rgba(201, 162, 39, 0.18), transparent 30%),
+                linear-gradient(180deg, rgba(201, 162, 39, 0.08), rgba(255, 255, 255, 0.02));
+            transform: scale(1.01);
+        }
+
+        /* Safety: critical revenue sections never hide longer than load */
+        @keyframes forceReveal {
+            to { opacity: 1 !important; transform: none !important; }
+        }
+        #pricing .reveal,
+        #addons .reveal {
+            animation: forceReveal 0.6s ease 2s both !important;
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.45rem 0.7rem;
+            border-radius: 999px;
+            background: var(--gold);
+            color: var(--black);
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+        }
+
+        .pricing-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--gold);
+            border: 1px solid rgba(201, 162, 39, 0.15);
+            font-size: 1.2rem;
+        }
+
+        .pricing-tier {
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.24em;
+            font-size: 0.64rem;
+            font-weight: 600;
+        }
+
+        .pricing-price {
+            font-family: "Prata", serif;
+            font-size: clamp(2.8rem, 8vw, 4.25rem);
+            line-height: 0.9;
+            color: var(--warm-white);
+            white-space: nowrap;
+        }
+
+        .pricing-price small {
+            font-family: "Manrope", sans-serif;
+            font-size: 0.26em;
+            color: var(--text-dim);
+            margin-left: 0.2rem;
+        }
+
+        .pricing-price-text {
+            font-size: clamp(2.15rem, 5vw, 3rem);
+            line-height: 1;
+        }
+
+        .pricing-subnote {
+            color: #888;
+            font-size: 0.8rem;
+            margin-top: -0.5rem;
+        }
+
+        .pricing-card .button {
+            margin-top: auto;
+            justify-self: start;
+        }
+
+        .pricing-note {
+            color: var(--text-dim);
+            font-size: 0.82rem;
+            line-height: 1.7;
+        }
+
+        .pricing-list {
+            list-style: none;
+            display: grid;
+            gap: 0.7rem;
+        }
+
+        .pricing-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            color: var(--text);
+            font-size: 0.86rem;
+            line-height: 1.7;
+        }
+
+        .pricing-list i {
+            color: var(--gold);
+            font-size: 0.95rem;
+            margin-top: 0.2rem;
+        }
+
+        .addons-grid,
+        .process-grid,
+        .testimonials-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .addon-card,
+        .process-card,
+        .testimonial-card {
+            padding: 1.35rem;
+        }
+
+        .addon-top,
+        .process-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .addon-price,
+        .process-step {
+            font-family: var(--mono);
+            font-size: 0.74rem;
+            letter-spacing: 0.08em;
+            color: var(--gold);
+            text-transform: uppercase;
+        }
+
+        .burn-grid {
+            padding: 1.25rem;
+            border-radius: 1.6rem;
+            background:
+                radial-gradient(circle at top left, rgba(201, 162, 39, 0.12), transparent 28%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+            border: 1px solid rgba(201, 162, 39, 0.12);
+        }
+
+        .burn-cards {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .burn-card {
+            padding: 1.25rem;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .burn-card p {
+            color: var(--text-dim);
+            line-height: 1.75;
+            font-size: 0.9rem;
+        }
+
+        .testimonials-grid {
+            margin-top: 1.5rem;
+        }
+
+        .testimonial-card {
+            display: grid;
+            gap: 0.9rem;
+        }
+
+        .play-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .play-button {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--black);
+            background: var(--gold);
+        }
+
+        .mockup {
+            padding: 5rem 0;
+        }
+
+        .cta-card {
+            padding: 1.4rem;
+            border-radius: 1.8rem;
+            border: 1px solid rgba(201, 162, 39, 0.16);
+            background:
+                radial-gradient(circle at top right, rgba(201, 162, 39, 0.18), transparent 28%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+        }
+
+        .cta-card ul {
+            list-style: none;
+            display: grid;
+            gap: 0.7rem;
+            margin-top: 1.2rem;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .cta-card li {
+            display: flex;
+            gap: 0.65rem;
+            align-items: flex-start;
+        }
+
+        .cta-card li i {
+            color: var(--gold);
+            margin-top: 0.2rem;
+        }
+
+        .contact-card {
+            padding: 1.4rem;
+        }
+
+        .contact-list {
+            display: grid;
+            gap: 0.9rem;
+            margin-top: 1.25rem;
+            color: var(--text-dim);
+            font-size: 0.92rem;
+        }
+
+        .contact-list strong {
+            color: var(--warm-white);
+        }
+
+        .contact-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .field {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .field label {
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 0.62rem;
+            font-weight: 600;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            min-height: 3.25rem;
+            padding: 0.95rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            color: var(--warm-white);
+            outline: none;
+            transition: border-color 180ms ease, background 180ms ease;
+        }
+
+        .field textarea {
+            min-height: 8.5rem;
+            resize: vertical;
+        }
+
+        .field input:focus,
+        .field select:focus,
+        .field textarea:focus {
+            border-color: rgba(201, 162, 39, 0.45);
+            background: rgba(255, 255, 255, 0.045);
+        }
+
+        .form-note {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            line-height: 1.7;
+        }
+
+        footer {
+            padding: 2rem 0 3rem;
+            border-top: 1px solid var(--line-soft);
+        }
+
+        .footer-shell {
+            width: var(--container);
+            margin: 0 auto;
+            display: grid;
+            gap: 0.75rem;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.76rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .footer-links a {
+            text-decoration: none;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+        }
+
+        .reveal.is-visible,
+        .no-gsap .reveal {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        #pricing .pricing-card.reveal {
+            opacity: 1 !important;
+            transform: none !important;
+        }
+
+        @media (min-width: 760px) {
+            .nav-links {
+                position: static;
+                opacity: 1;
+                pointer-events: auto;
+                transform: none;
+                padding: 0;
+                border: 0;
+                border-radius: 0;
+                background: transparent;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 1.35rem;
+            }
+
+            .nav-toggle {
+                display: none;
+            }
+
+            .hero {
+                padding-top: 8.5rem;
+            }
+
+            .hero-grid,
+            .differentiator-grid,
+            .roi-grid,
+            .cta-grid,
+            .contact-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                align-items: center;
+            }
+
+            .hero-proof {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .trust-inner {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .projects {
+                gap: 2rem;
+            }
+
+            .project-inner {
+                grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+                align-items: end;
+                padding: 2rem;
+            }
+
+            .project:nth-child(even) .project-inner {
+                grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+            }
+
+            .project:nth-child(even) .project-copy-wrap {
+                order: 2;
+            }
+
+            .project:nth-child(even) .project-device-wrap {
+                order: 1;
+            }
+
+            .stats-grid,
+            .addons-grid,
+            .process-grid,
+            .pricing-grid,
+            .burn-cards,
+            .testimonials-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .form-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .field.full {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (min-width: 1040px) {
+            .cursor,
+            .cursor-ring {
+                display: none !important;
+            }
+
+            .stats-grid,
+            .pricing-grid,
+            .addons-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+
+            .pricing-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                align-items: stretch;
+            }
+
+            .pricing-card.featured {
+                transform: scale(1.055);
+            }
+
+            .process-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+
+            .burn-grid {
+                grid-template-columns: 0.95fr 1.05fr;
+                align-items: start;
+            }
+
+            .testimonials-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html:focus-within {
+                scroll-behavior: auto;
+            }
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+
+            .reveal {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+
+            .cursor,
+            .cursor-ring {
+                display: none !important;
+            }
+        }
+    </style>
+    <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
+</head>
+<body>
+    <div class="progress" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="cursor" aria-hidden="true"></div>
+    <div class="cursor-ring" aria-hidden="true"></div>
+
+    <nav class="site-nav" id="siteNav">
+        <div class="nav-shell">
+            <a class="nav-logo magnetic" href="#top">SHOWCASE <span>DESIGNS</span></a>
+            <button class="nav-toggle magnetic" id="navToggle" type="button" aria-expanded="false" aria-controls="navLinks" aria-label="Toggle navigation">
+                <i class="ph ph-list"></i>
+            </button>
+            <div class="nav-links" id="navLinks">
+                <a class="magnetic" href="#work">Work</a>
+                <a class="magnetic" href="#portfolio">Portfolio</a>
+                <a class="magnetic" href="#pricing">Pricing</a>
+                <a class="magnetic js-world-link" href="/world">Studio</a>
+                <a class="button button-primary magnetic" href="#mockup">Get a Free Website Review</a>
+            </div>
+        </div>
+    </nav>
+
+    <main id="top">
+        <section class="hero">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <div class="hero-tag">WEB DESIGN + LOCAL SEO</div>
+                    <h1 class="hero-headline-wrap">
+                        <span class="hero-headline" id="heroHeadline">More qualified calls for</span>
+                        <span class="industry-word" aria-live="polite"><span>Roofers</span><span>Plumbers</span><span>Electricians</span><span>HVAC</span><span>Contractors</span><span>Landscapers</span><span>Painters</span><span>Concrete</span></span>
+                        <span class="hero-headline hero-headline-line2" id="heroHeadline2">through better websites and local SEO.</span>
+                    </h1>
+                    <div class="industry-rotator">
+                        <span>We don't build websites. We build your</span>
+                        <em>best salesperson.</em>
+                    </div>
+                    <p class="lede hero-lede">We build websites and run local SEO for contractors and home service businesses. More qualified calls. Less wasted time on leads that go nowhere.</p>
+                    <div class="hero-actions">
+                        <a class="button button-primary magnetic" href="#mockup">Get a Free Website Review &rarr;</a>
+                        <a class="button button-secondary magnetic" href="#work">See Our Work</a>
+                        <a class="button button-secondary magnetic js-world-link" href="/world">Explore the studio &rarr;</a>
+                    </div>
+                    <div class="hero-proof">
+                        <div class="proof-card">
+                            <span class="proof-label">Fast Start</span>
+                            <div class="proof-value">Get your first preview in 48 hours.</div>
+                        </div>
+                        <div class="proof-card">
+                            <span class="proof-label">Premium Feel</span>
+                            <div class="proof-value">Custom design that makes your business look established.</div>
+                        </div>
+                        <div class="proof-card">
+                            <span class="proof-label">Built To Convert</span>
+                            <div class="proof-value">Clear calls to action, trust signals, and lead forms that bring in more inquiries.</div>
+                        </div>
+                    </div>
+                    <div class="scroll-cue">
+                        <div class="scroll-pill"><span></span></div>
+                        <span>Scroll to enter</span>
+                    </div>
+                </div>
+
+                <div class="hero-stage">
+                    <div class="spotlight"></div>
+                    <div class="spotlight-alt"></div>
+                    <div class="hero-device-stack">
+                        <div class="device-card secondary">
+                            <div class="device-inner">
+                                <div class="device-notch"></div>
+                                <div class="screen">
+                                    <img src="img/world/felco-mobile.jpg" alt="Felco Vending — live client site" width="415" height="900" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="device-card">
+                            <div class="device-inner">
+                                <div class="device-notch"></div>
+                                <div class="screen">
+                                    <img src="img/world/evenpath-mobile.jpg" alt="EvenPath Homes — live client site" width="459" height="900" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="hero-stage-note">Real client sites shown: Felco + EvenPath. Mobile-first by default.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="trust-strip" aria-label="Trust indicators">
+            <div class="container trust-inner">
+                <div><strong>Built for contractors and home services</strong></div>
+                <div><strong>First preview in 48 hours</strong></div>
+                <div><strong>No long-term contracts</strong></div>
+            </div>
+        </section>
+
+        <section class="section" id="portfolio">
+            <div class="container">
+                <div class="differentiator-grid">
+                    <div class="section-head reveal">
+                        <span class="eyebrow">Why It Hits Different</span>
+                        <h2 class="section-title split-heading">Built faster. <em>Feels higher-end.</em></h2>
+                        <p class="section-copy">Most local business websites look the same. We build fast, keep the process lean, and focus on design that makes your business feel established — so you get a site that looks custom, loads fast, and starts moving sooner.</p>
+                    </div>
+                    <div class="differentiator-grid">
+                        <article class="differentiator-card reveal">
+                            <div class="differentiator-icon"><i class="ph ph-lightning"></i></div>
+                            <h3>First preview in 48 hours, not weeks of waiting.</h3>
+                            <p class="section-copy">You get a real preview fast, then we refine around your business instead of wasting time in meetings.</p>
+                        </article>
+                        <article class="differentiator-card reveal">
+                            <div class="differentiator-icon"><i class="ph ph-sparkle"></i></div>
+                            <h3>High-end design without agency overhead.</h3>
+                            <p class="section-copy">Premium typography, intentional motion, and refined layouts that make your brand look expensive.</p>
+                        </article>
+                        <article class="differentiator-card reveal">
+                            <div class="differentiator-icon"><i class="ph ph-chart-line-up"></i></div>
+                            <h3>Built to convert in every section.</h3>
+                            <p class="section-copy">Clear offers, trust-building flow, strong button placement, and pages designed to turn visits into calls.</p>
+                        </article>
+                        <article class="differentiator-card reveal">
+                            <div class="differentiator-icon"><i class="ph ph-rocket-launch"></i></div>
+                            <h3>Performance-first builds that stay fast after launch.</h3>
+                            <p class="section-copy">No page-builder bloat, no theme clutter, and no mystery plugins slowing the whole experience down.</p>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="work">
+            <div class="container">
+                <div class="work-header reveal">
+                    <span class="eyebrow">Featured Work</span>
+                    <h2 class="section-title split-heading">Real projects. <em>Real screens.</em></h2>
+                    <p class="section-copy">Most of your traffic is mobile. Each project is designed to build trust in under five seconds and make the next step obvious.</p>
+                </div>
+
+                <div class="projects">
+                    <article class="project reveal" id="case-study-evenpath" style="--project-bg: linear-gradient(180deg, #1a1a0d 0%, #0a0a0a 100%);">
+                        <div class="project-inner">
+                            <div class="project-copy-wrap">
+                                <div class="project-meta">
+                                    <span>Real Estate Services</span>
+                                    <span class="project-number">01</span>
+                                </div>
+                                <h3 class="project-title split-heading">EvenPath Homes</h3>
+                                <p class="project-copy">A high-conversion real estate site with two clear homeowner paths, stronger lead capture, Spanish support, and local search pages across Tucson.</p>
+                                <div class="project-points">
+                                    <span>Dual-path conversion</span>
+                                    <span>Multi-step lead capture</span>
+                                    <span>Local SEO architecture</span>
+                                </div>
+                                <a class="project-link magnetic" href="https://evenpathhomes.com" target="_blank" rel="noopener noreferrer">View live site &rarr;</a>
+                            </div>
+                            <div class="project-device-wrap">
+                                <div class="device-card project-device">
+                                    <div class="device-inner">
+                                        <div class="device-notch"></div>
+                                        <div class="screen">
+                                            <img src="img/world/evenpath-mobile.jpg" alt="EvenPath Homes — live site" width="459" height="900" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="project reveal" id="case-study-felco" style="--project-bg: linear-gradient(180deg, #1a1a2e 0%, #0a0a0a 100%);">
+                        <div class="project-inner">
+                            <div class="project-copy-wrap">
+                                <div class="project-meta">
+                                    <span>Service Business</span>
+                                    <span class="project-number">02</span>
+                                </div>
+                                <h3 class="project-title split-heading">Felco Vending</h3>
+                                <p class="project-copy">A more modern site for an established service business, built to show credibility fast and help win larger accounts.</p>
+                                <div class="project-points">
+                                    <span>Catalog clarity</span>
+                                    <span>B2B trust</span>
+                                    <span>Search-friendly structure</span>
+                                </div>
+                                <a class="project-link magnetic" href="https://felcovending.com" target="_blank" rel="noopener noreferrer">View live site &rarr;</a>
+                            </div>
+                            <div class="project-device-wrap">
+                                <div class="device-card project-device">
+                                    <div class="device-inner">
+                                        <div class="device-notch"></div>
+                                        <div class="screen">
+                                            <img src="img/world/felco-mobile.jpg" alt="Felco Vending — live site" width="415" height="900" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="project reveal" id="case-study-abel" style="--project-bg: linear-gradient(180deg, #0e3326 0%, #0a0a0a 100%);">
+                        <div class="project-inner">
+                            <div class="project-copy-wrap">
+                                <div class="project-meta">
+                                    <span>Health &amp; Fitness</span>
+                                    <span class="project-number">03</span>
+                                </div>
+                                <h3 class="project-title split-heading">Abel M. Fitness</h3>
+                                <p class="project-copy">A premium fitness site built around clarity, trust, and a more mature audience.</p>
+                                <div class="project-points">
+                                    <span>Senior-friendly clarity</span>
+                                    <span>Trust-first positioning</span>
+                                    <span>Motion-led storytelling</span>
+                                </div>
+                                <a class="project-link magnetic" href="https://abelfitness.com/" target="_blank" rel="noopener noreferrer">View live site &rarr;</a>
+                            </div>
+                            <div class="project-device-wrap">
+                                <div class="device-card project-device">
+                                    <div class="device-inner">
+                                        <div class="device-notch"></div>
+                                        <div class="screen">
+                                            <img src="img/world/abel-mobile.jpg" alt="Abel M. Fitness — live site" width="415" height="900" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="project reveal" id="case-study-beckel" style="--project-bg: linear-gradient(180deg, #0d1b2a 0%, #0a0a0a 100%);">
+                        <div class="project-inner">
+                            <div class="project-copy-wrap">
+                                <div class="project-meta">
+                                    <span>Digital Products</span>
+                                    <span class="project-number">04</span>
+                                </div>
+                                <h3 class="project-title split-heading">Beckel Spreadsheets</h3>
+                                <p class="project-copy">A polished digital product storefront built to make spreadsheets feel credible, useful, and worth buying. Strong hierarchy now, bigger revamp next.</p>
+                                <div class="project-points">
+                                    <span>Digital product sales</span>
+                                    <span>Purchase confidence</span>
+                                    <span>Revamp queued</span>
+                                </div>
+                                <a class="project-link magnetic" href="https://beckel-store.vercel.app" target="_blank" rel="noopener noreferrer">View live site &rarr;</a>
+                            </div>
+                            <div class="project-device-wrap">
+                                <div class="device-card project-device">
+                                    <div class="device-inner">
+                                        <div class="device-notch"></div>
+                                        <div class="screen">
+                                            <img src="img/world/beckel-mobile.jpg" alt="Beckel Spreadsheets — live site" width="415" height="900" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="see-more reveal">
+                    <a class="magnetic js-world-link" href="/world">See More Work &rarr;</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="section-head reveal">
+                    <span class="eyebrow">Built to convert</span>
+                    <h2 class="section-title split-heading">Smart Conversion Features. <em>Not just prettier pages.</em></h2>
+                    <p class="section-copy">We build the advanced features that turn visitors into leads — guided quote forms, Pretext-style choose-your-path flows, interactive comparisons, calculators, before-and-after galleries, and pages that educate while they sell.</p>
+                </div>
+                <div class="addons-grid">
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Pretext-style sales flows</h3><span class="addon-price">SIGNATURE</span></div>
+                        <p class="section-copy">Interactive choose-your-path sequences, comparison layouts, and trust-building flow that help visitors understand the offer and qualify themselves faster.</p>
+                    </article>
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Guided quote forms</h3><span class="addon-price">CUSTOM</span></div>
+                        <p class="section-copy">Budget ranges, service matchers, FAQ funnels, estimate logic, and other guided flows that turn curiosity into cleaner leads.</p>
+                    </article>
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Fast concept mockups</h3><span class="addon-price">OPTIONAL</span></div>
+                        <p class="section-copy">When a fast concept helps the sale, we can spin one up quickly — without mixing concept work into the live-site portfolio.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="about">
+            <div class="container">
+                <div class="reveal">
+                    <span class="eyebrow">About Us</span>
+                    <h2 class="section-title split-heading" style="margin-bottom: 2.5rem;">Built different. <em>On purpose.</em></h2>
+                    <div style="max-width: 720px; margin: 0 auto;">
+                        <p class="section-copy" style="margin-bottom: 24px; line-height: 1.7;">Most contractors do not need a giant agency. They need a site that looks legit, builds trust fast, and helps turn traffic into calls.</p>
+                        <p class="section-copy" style="margin-bottom: 24px; line-height: 1.7;">We build custom sites with local SEO and conversion strategy baked in — no stock-template feel, no six-month timelines, and no mystery about what you are paying for.</p>
+                        <p class="section-copy" style="line-height: 1.7;">Based in Tucson, Arizona. Small team, hands-on approach. When you work with us, you talk directly to the person building your site.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section stats">
+            <div class="container">
+                <div class="stats-grid">
+                    <article class="stat-card reveal">
+                        <span class="stat-value" data-counter="15">0</span>
+                        <span class="stat-label">Projects Built</span>
+                    </article>
+                    <article class="stat-card reveal">
+                        <span class="stat-value" data-counter="48" data-suffix="hr">0</span>
+                        <span class="stat-label">First Preview</span>
+                    </article>
+                    <article class="stat-card reveal">
+                        <span class="stat-value" data-text="Same-Day">Same-Day</span>
+                        <span class="stat-label">Replies</span>
+                    </article>
+                    <article class="stat-card reveal">
+                        <span class="stat-value" data-counter="100" data-prefix="" data-suffix="%">0</span>
+                        <span class="stat-label">You Keep The Code</span>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container roi-grid">
+                <div class="section-head reveal">
+                    <span class="eyebrow">Why it pays for itself</span>
+                    <h2 class="section-title split-heading">One good job can pay for the <em>site</em>.</h2>
+                    <p class="section-copy">If one booked roofing, plumbing, landscaping, or HVAC job is worth thousands, your website does not need a huge lift to make the investment worth it. It just needs to help more of the right people call you.</p>
+                </div>
+                <div class="roi-card reveal">
+                    <div class="roi-metric"><span>Average monthly investment</span><strong>Varies by scope</strong></div>
+                    <div class="roi-metric"><span>Average value of one booked service job</span><strong>$1k-$15k</strong></div>
+                    <div class="roi-metric"><span>Break-even scenario</span><strong>1 conversion</strong></div>
+                    <div class="roi-metric"><span>Long-term upside</span><strong>More calls, better jobs</strong></div>
+                    <p class="pricing-copy">That is why pricing is framed around outcomes, not pages. A site is either helping you book better work, or it is quietly leaking demand.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="pricing">
+            <div class="container">
+                <div class="pricing-head reveal">
+                    <span class="eyebrow">Pricing</span>
+                    <h2 class="section-title split-heading">Three tiers. <em>One goal: more calls.</em></h2>
+                    <p class="section-copy">Every engagement starts with a free website review. We look at your current site, your local competition, and where the opportunities are. Then we recommend the right level of service — no pressure, no upsell.</p>
+                </div>
+
+                <div class="pricing-grid">
+                    <article class="pricing-card reveal">
+                        <div class="pricing-icon"><i class="ph ph-rocket-launch"></i></div>
+                        <span class="pricing-tier">STARTER</span>
+                        <h3>Your professional online presence.</h3>
+                        <div class="pricing-price">$149<span style="font-size: 0.4em; font-weight: 400;">/mo</span></div>
+                        <div class="pricing-subnote">One-time setup from $1,500</div>
+                        <ul class="pricing-list">
+                            <li><i class="ph ph-check"></i><span>5-8 page responsive website</span></li>
+                            <li><i class="ph ph-check"></i><span>Mobile-first design</span></li>
+                            <li><i class="ph ph-check"></i><span>Basic SEO setup</span></li>
+                            <li><i class="ph ph-check"></i><span>Contact form with real backend</span></li>
+                            <li><i class="ph ph-check"></i><span>Google Analytics</span></li>
+                            <li><i class="ph ph-check"></i><span>1 revision round</span></li>
+                            <li><i class="ph ph-check"></i><span>Hosting + domain included</span></li>
+                        </ul>
+                        <a class="button button-secondary magnetic" href="#mockup">Get a Free Website Review</a>
+                    </article>
+
+                    <article class="pricing-card featured reveal">
+                        <span class="popular-badge">Most Popular</span>
+                        <div class="pricing-icon"><i class="ph ph-crown-simple"></i></div>
+                        <span class="pricing-tier">GROWTH</span>
+                        <h3>Your lead generation engine.</h3>
+                        <div class="pricing-price">$399<span style="font-size: 0.4em; font-weight: 400;">/mo</span></div>
+                        <div class="pricing-subnote">One-time setup from $3,500</div>
+                        <ul class="pricing-list">
+                            <li><i class="ph ph-check"></i><span>Everything in Starter plus:</span></li>
+                            <li><i class="ph ph-check"></i><span>10-15+ pages</span></li>
+                            <li><i class="ph ph-check"></i><span>Local SEO strategy + GBP optimization</span></li>
+                            <li><i class="ph ph-check"></i><span>City/service area pages</span></li>
+                            <li><i class="ph ph-check"></i><span>Monthly SEO reporting</span></li>
+                            <li><i class="ph ph-check"></i><span>2 blog posts per month</span></li>
+                            <li><i class="ph ph-check"></i><span>Review acquisition strategy</span></li>
+                            <li><i class="ph ph-check"></i><span>Quarterly conversion improvements</span></li>
+                        </ul>
+                        <a class="button button-primary magnetic" href="#mockup">Get a Free Website Review</a>
+                    </article>
+
+                    <article class="pricing-card reveal">
+                        <div class="pricing-icon"><i class="ph ph-diamonds-four"></i></div>
+                        <span class="pricing-tier">CUSTOM</span>
+                        <h3>Fully scoped to your business.</h3>
+                        <div class="pricing-price pricing-price-text">Custom</div>
+                        <div class="pricing-subnote">Scoped after the review</div>
+                        <ul class="pricing-list">
+                            <li><i class="ph ph-check"></i><span>Fully scoped to your business</span></li>
+                            <li><i class="ph ph-check"></i><span>Multi-location support</span></li>
+                            <li><i class="ph ph-check"></i><span>Voice agents + CRM integration</span></li>
+                            <li><i class="ph ph-check"></i><span>Advanced analytics</span></li>
+                            <li><i class="ph ph-check"></i><span>Dedicated project manager</span></li>
+                            <li><i class="ph ph-check"></i><span>Everything in Growth included</span></li>
+                        </ul>
+                        <a class="button button-secondary magnetic" href="#mockup">Get a Free Website Review</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="section-head reveal">
+                    <span class="eyebrow">Add-ons</span>
+                    <h2 class="section-title split-heading">Extra leverage. <em>No bloat.</em></h2>
+                </div>
+                <div class="addons-grid">
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Monthly SEO</h3><span class="addon-price">Custom</span></div>
+                        <p class="section-copy">Content, structure, and optimization work that keeps your site improving after launch.</p>
+                    </article>
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>E-commerce</h3><span class="addon-price">Custom</span></div>
+                        <p class="section-copy">Product pages, checkout setup, and a cleaner buying path for physical or digital goods.</p>
+                    </article>
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Brand Identity</h3><span class="addon-price">Custom</span></div>
+                        <p class="section-copy">Logo refinements, color system, and visual consistency across web and social.</p>
+                    </article>
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Custom Motion</h3><span class="addon-price">Custom</span></div>
+                        <p class="section-copy">Section-specific animation systems that make the brand feel more premium and intentional.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="section-head reveal">
+                    <span class="eyebrow">Advanced Lead Flow</span>
+                    <h2 class="section-title split-heading">The kind of pages that make people <em>keep clicking.</em></h2>
+                    <p class="section-copy">This is the stuff most local shops never show well: choose-your-path sales experiences, interactive comparisons, and guided journeys that help people self-qualify instead of bouncing.</p>
+                </div>
+                <div class="addons-grid">
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Choose-your-path sections</h3><span class="addon-price">PRETEXT STYLE</span></div>
+                        <p class="section-copy">Let visitors pick their situation, budget, or goal and move them into the right pitch without making the page feel complicated.</p>
+                    </article>
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Objection-killing comparisons</h3><span class="addon-price">HIGH INTENT</span></div>
+                        <p class="section-copy">Side-by-side service comparisons, process breakdowns, and trust layers that answer the question before they leave to go shopping.</p>
+                    </article>
+                    <article class="addon-card reveal">
+                        <div class="addon-top"><h3>Guided conversion journeys</h3><span class="addon-price">QUALIFIED LEADS</span></div>
+                        <p class="section-copy">Pages that educate, filter, and sell at the same time so the form fill or call feels like the obvious next step.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="process">
+            <div class="container">
+                <div class="section-head reveal">
+                    <span class="eyebrow">Process</span>
+                    <h2 class="section-title split-heading">Fast path. <em>Zero theater.</em></h2>
+                </div>
+                <div class="process-grid">
+                    <article class="process-card reveal">
+                        <div class="process-top"><h3>Discovery</h3><span class="process-step">01</span></div>
+                        <p class="section-copy">You send the business, the offer, and the examples you like. We strip it down to what actually matters.</p>
+                    </article>
+                    <article class="process-card reveal">
+                        <div class="process-top"><h3>Free Review</h3><span class="process-step">02</span></div>
+                        <p class="section-copy">We review your current site, search presence, and positioning. If the direction needs adjusting, we fix it before you commit.</p>
+                    </article>
+                    <article class="process-card reveal">
+                        <div class="process-top"><h3>Build</h3><span class="process-step">03</span></div>
+                        <p class="section-copy">We turn the approved direction into a full live website with mobile views, copy, and CTA structure.</p>
+                    </article>
+                    <article class="process-card reveal">
+                        <div class="process-top"><h3>Launch</h3><span class="process-step">04</span></div>
+                        <p class="section-copy">Final revisions, domain connection, form testing, and handoff or managed support depending on the tier.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="burned-before">
+            <div class="container burn-grid reveal">
+                <div>
+                    <span class="eyebrow">Burned Before?</span>
+                    <h2 class="section-title split-heading">If your last site felt cheap, slow, or impossible to update, <em>that was not normal.</em></h2>
+                    <p class="burn-copy">Most businesses who come to us paid for a site that looked generic, launched late, or never produced real leads.</p>
+                </div>
+                <div class="burn-cards">
+                    <article class="burn-card reveal">
+                        <h3>You paid for "custom" and got a slightly edited template.</h3>
+                        <p>We lead with a clear review and art direction so you know what you are buying before the full build starts.</p>
+                    </article>
+                    <article class="burn-card reveal">
+                        <h3>Your developer disappeared after launch.</h3>
+                        <p>Our offers are explicit about support, delivery windows, and what happens after the site goes live.</p>
+                    </article>
+                    <article class="burn-card reveal">
+                        <h3>The site never felt like it matched your pricing.</h3>
+                        <p>We build for premium perception first, because cheap-looking design forces you to justify your prices harder.</p>
+                    </article>
+                </div>
+            </div>
+
+            <!-- Video testimonials section — saved for later when client reviews are ready -->
+        </section>
+
+        <section class="mockup" id="mockup">
+            <div class="container cta-grid">
+                <div class="cta-card reveal">
+                    <span class="eyebrow">Free Website Review</span>
+                    <h2 class="section-title split-heading">Get a free website review for <em>your</em> business.</h2>
+                    <p class="section-copy">Share your service area, current website, and goals. We will review what is blocking better rankings and better leads, then map the clearest path to more qualified calls.</p>
+                    <ul>
+                        <li><i class="ph ph-check"></i><span>Website and local SEO review focused on lead quality</span></li>
+                        <li><i class="ph ph-check"></i><span>Clear next steps you can act on fast</span></li>
+                        <li><i class="ph ph-check"></i><span>No contracts and no bloated sales process</span></li>
+                    </ul>
+                    <div style="margin-top:1.4rem;">
+                        <a class="button button-primary magnetic" href="#contact">Get a Free Website Review &rarr;</a>
+                    </div>
+                </div>
+                <div class="device-card reveal" style="justify-self:center; width:min(290px, 72vw);">
+                    <div class="device-inner">
+                        <div class="device-notch"></div>
+                        <div class="screen">
+                            <div class="mini-site">
+                                <div class="mini-top">
+                                    <span class="mini-kicker">Your Brand Here</span>
+                                    <strong>Premium concept</strong>
+                                </div>
+                                <div class="mini-grid">
+                                    <div class="mini-card"><strong>Offer headline</strong><span>Speak to the right buyer immediately.</span></div>
+                                    <div class="mini-card"><strong>Trust stack</strong><span>Reviews, guarantees, and proof in the first screen.</span></div>
+                                    <div class="mini-card"><strong>Conversion path</strong><span>CTA built around calls, forms, or bookings.</span></div>
+                                </div>
+                                <div class="mini-bar">First preview in 48 hours</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="contact">
+            <div class="container contact-grid">
+                <div class="contact-card reveal">
+                    <span class="eyebrow">Contact</span>
+                    <h2 class="section-title split-heading">Ready when <em>you</em> are.</h2>
+                    <p class="form-copy">Use the form to request a free website review or start a direct project inquiry.</p>
+                    <div class="contact-list">
+                        <div><strong>Email:</strong> <a href="mailto:hello@showcase-designs.com">hello@showcase-designs.com</a></div>
+                        <div><strong>Phone:</strong> <a href="tel:5203672769">(520) 367-2769</a></div>
+                        <div><strong>Delivery:</strong> First preview target in 48 hours</div>
+                        <div><strong>Coverage:</strong> Nationwide remote work</div>
+                        <div><strong>Offer:</strong> No contracts. Clear scope. Fast response.</div>
+                    </div>
+                </div>
+
+                <div class="contact-card reveal">
+                    <form class="contact-form" action="https://formsubmit.co/hello@showcase-designs.com" method="POST">
+                        <input type="hidden" name="_subject" value="New Showcase Designs inquiry">
+                        <input type="hidden" name="_captcha" value="false">
+                        <input type="hidden" name="_template" value="table">
+                        <input type="hidden" name="_next" value="https://showcase-designs.com/thanks">
+
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="name">Name</label>
+                                <input id="name" name="name" type="text" required placeholder="John Smith">
+                            </div>
+                            <div class="field">
+                                <label for="email">Email</label>
+                                <input id="email" name="email" type="email" required placeholder="john@business.com">
+                            </div>
+                            <div class="field">
+                                <label for="business">Industry</label>
+                                <select id="business" name="business" required>
+                                    <option value="">Select your industry</option>
+                                    <option>Landscaping / Tree Service</option>
+                                    <option>Roofing / Exterior</option>
+                                    <option>HVAC / Plumbing / Electrical</option>
+                                    <option>Concrete / Masonry</option>
+                                    <option>Painting / Remodeling</option>
+                                    <option>Real Estate</option>
+                                    <option>Fitness / Wellness</option>
+                                    <option>Vending / Service Business</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="package">Package</label>
+                                <select id="package" name="package" required>
+                                    <option value="">Choose a package</option>
+                                    <option>Starter - $149/mo</option>
+                                    <option>Growth - $399/mo</option>
+                                    <option>Custom - Let's Talk</option>
+                                    <option>Not sure yet</option>
+                                </select>
+                            </div>
+                            <div class="field full">
+                                <label for="message">What do you want the website to do better?</label>
+                                <textarea id="message" name="message" placeholder="Tell us what you sell, who you want to attract, and what feels broken about your current site."></textarea>
+                            </div>
+                        </div>
+
+                        <button class="button button-primary magnetic" type="submit">Get a Free Website Review &rarr;</button>
+                        <p class="form-note">We typically reply within 24 hours. No spam, no sales calls.</p>
+                        <p style="font-size: 0.75rem; color: #666; margin-top: 12px;">By submitting, you agree to our <a href="privacy.html" style="color: #888; text-decoration: underline;">Privacy Policy</a>.</p>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-shell">
+            <div>© 2026 Showcase Designs</div>
+            <div class="footer-links">
+                <a href="#work">Work</a>
+                <a class="js-world-link" href="/world">Studio</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#burned-before">Burned Before?</a>
+                <a href="#contact">Contact</a>
+                <a href="privacy.html">Privacy Policy</a>
+                <a href="terms.html">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        (function () {
+        var STATIC_FALLBACK_MS = 3500;
+        window.__showcaseStaticEnhanced = false;
+        window.__showcaseStaticFallbackApplied = false;
+
+        function prefersReducedMotion() {
+            return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        }
+
+        function setFinalStatValue(el) {
+            if (!el) return;
+            if (el.dataset.text) {
+                el.textContent = el.dataset.text;
+                return;
+            }
+            var prefix = el.dataset.prefix || "";
+            var suffix = el.dataset.suffix || "+";
+            el.textContent = prefix + el.dataset.counter + suffix;
+        }
+
+        function revealStaticFallback(reason) {
+            window.__showcaseStaticFallbackApplied = true;
+            document.documentElement.classList.add("no-gsap");
+            if (reason) {
+                document.documentElement.setAttribute("data-static-fallback", reason);
+            }
+            document.querySelectorAll(".reveal").forEach(function (el) {
+                el.style.opacity = "1";
+                el.style.transform = "none";
+            });
+            document.querySelectorAll(".stat-value").forEach(setFinalStatValue);
+            var nav = document.getElementById("siteNav");
+            if (nav) nav.classList.add("is-scrolled");
+        }
+
+        function bindWorldLinks() {
+            document.querySelectorAll(".js-world-link").forEach(function (link) {
+                if (link.dataset.worldBound === "true") return;
+                link.dataset.worldBound = "true";
+                link.addEventListener("click", function (event) {
+                    try {
+                        window.localStorage.setItem("mode-preference", "world");
+                    } catch (error) {}
+                    if (typeof window.sdTrack === "function") {
+                        window.sdTrack("mode_enter_world", { source: "static_link" });
+                    }
+                    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "") {
+                        event.preventDefault();
+                        window.location.href = "world.html";
+                    }
+                });
+            });
+        }
+
+        function bindMobileNav() {
+            var nav = document.getElementById("siteNav");
+            var navToggle = document.getElementById("navToggle");
+            var navLinks = document.getElementById("navLinks");
+            var progress = document.querySelector(".progress");
+
+            function closeNav() {
+                if (!navToggle || !navLinks) return;
+                navLinks.classList.remove("is-open");
+                navToggle.setAttribute("aria-expanded", "false");
+                document.body.classList.remove("nav-open");
+            }
+
+            window.__showcaseCloseNav = closeNav;
+
+            if (navToggle && navLinks && navToggle.dataset.navBound !== "true") {
+                navToggle.dataset.navBound = "true";
+                navToggle.addEventListener("click", function () {
+                    var expanded = navToggle.getAttribute("aria-expanded") === "true";
+                    navToggle.setAttribute("aria-expanded", String(!expanded));
+                    navLinks.classList.toggle("is-open");
+                    document.body.classList.toggle("nav-open");
+                });
+            }
+
+            if (navLinks) {
+                navLinks.querySelectorAll("a").forEach(function (link) {
+                    if (link.dataset.navCloseBound === "true") return;
+                    link.dataset.navCloseBound = "true";
+                    link.addEventListener("click", closeNav);
+                });
+            }
+
+            if (!window.__showcaseNavScrollBound) {
+                window.__showcaseNavScrollBound = true;
+                var syncNav = function () {
+                    if (nav) nav.classList.toggle("is-scrolled", window.scrollY > 20);
+                    if (progress) {
+                        var max = document.documentElement.scrollHeight - window.innerHeight;
+                        var pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+                        progress.style.width = pct + "%";
+                    }
+                };
+                syncNav();
+                window.addEventListener("scroll", syncNav, { passive: true });
+            }
+        }
+
+        function initIndustryWords() {
+            if (window.__showcaseIndustryReady) return;
+            var industryWords = document.querySelectorAll(".industry-word span");
+            if (!industryWords.length) return;
+            window.__showcaseIndustryReady = true;
+
+            industryWords.forEach(function (word, index) {
+                word.style.transition = "transform 420ms ease, opacity 420ms ease";
+                word.style.opacity = index === 0 ? "1" : "0";
+                word.style.transform = index === 0 ? "translateY(0)" : "translateY(100%)";
+            });
+
+            if (prefersReducedMotion()) return;
+
+            var wordIndex = 0;
+            setInterval(function () {
+                industryWords[wordIndex].style.opacity = "0";
+                industryWords[wordIndex].style.transform = "translateY(100%)";
+                wordIndex = (wordIndex + 1) % industryWords.length;
+                industryWords[wordIndex].style.opacity = "1";
+                industryWords[wordIndex].style.transform = "translateY(0)";
+            }, 2200);
+        }
+
+        function initCriticalUi() {
+            bindWorldLinks();
+            bindMobileNav();
+            initIndustryWords();
+        }
+
+        window.__showcaseRevealStatic = revealStaticFallback;
+        initCriticalUi();
+
+        window.setTimeout(function () {
+            if (!window.__showcaseStaticEnhanced) {
+                revealStaticFallback("cdn-timeout");
+            }
+        }, STATIC_FALLBACK_MS);
+
+        window.addEventListener("DOMContentLoaded", function () {
+            window.__showcaseStaticEnhanced = true;
+            var prefersReduced = prefersReducedMotion();
+            var nav = document.getElementById("siteNav");
+            var navToggle = document.getElementById("navToggle");
+            var navLinks = document.getElementById("navLinks");
+            var progress = document.querySelector(".progress");
+            var industryWords = document.querySelectorAll(".industry-word span");
+
+            document.querySelectorAll(".js-world-link").forEach(function (link) {
+                if (link.dataset.worldBound === "true") return;
+                link.dataset.worldBound = "true";
+                link.addEventListener("click", function (event) {
+                    try {
+                        window.localStorage.setItem("mode-preference", "world");
+                    } catch (error) {}
+                    if (typeof window.sdTrack === "function") {
+                        window.sdTrack("mode_enter_world", { source: "static_link" });
+                    }
+                    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "") {
+                        event.preventDefault();
+                        window.location.href = "world.html";
+                    }
+                });
+            });
+
+            function closeNav() {
+                if (!navToggle || !navLinks) return;
+                navLinks.classList.remove("is-open");
+                navToggle.setAttribute("aria-expanded", "false");
+                document.body.classList.remove("nav-open");
+            }
+
+            if (navToggle && navLinks && navToggle.dataset.navBound !== "true") {
+                navToggle.dataset.navBound = "true";
+                navToggle.addEventListener("click", function () {
+                    var expanded = navToggle.getAttribute("aria-expanded") === "true";
+                    navToggle.setAttribute("aria-expanded", String(!expanded));
+                    navLinks.classList.toggle("is-open");
+                    document.body.classList.toggle("nav-open");
+                });
+
+                navLinks.querySelectorAll("a").forEach(function (link) {
+                    if (link.dataset.navCloseBound === "true") return;
+                    link.dataset.navCloseBound = "true";
+                    link.addEventListener("click", closeNav);
+                });
+            }
+
+            if (!window.__showcaseIndustryReady) {
+                var wordIndex = 0;
+                if (industryWords.length) {
+                    industryWords[0].style.opacity = "1";
+                    industryWords[0].style.transform = "translateY(0)";
+                    if (!prefersReduced) {
+                        setInterval(function () {
+                            industryWords[wordIndex].style.opacity = "0";
+                            industryWords[wordIndex].style.transform = "translateY(100%)";
+                            wordIndex = (wordIndex + 1) % industryWords.length;
+                            industryWords[wordIndex].style.opacity = "1";
+                            industryWords[wordIndex].style.transform = "translateY(0)";
+                        }, 2200);
+                    } else {
+                        industryWords.forEach(function (word, index) {
+                            word.style.opacity = index === 0 ? "1" : "0";
+                        });
+                    }
+                }
+
+                document.querySelectorAll(".industry-word span").forEach(function (word) {
+                    word.style.transition = "transform 420ms ease, opacity 420ms ease";
+                    word.style.transform = "translateY(100%)";
+                });
+                if (industryWords[0]) {
+                    industryWords[0].style.transform = "translateY(0)";
+                }
+                window.__showcaseIndustryReady = true;
+            }
+
+            if (prefersReduced || window.__showcaseStaticFallbackApplied || typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
+                revealStaticFallback(prefersReduced ? "reduced-motion" : "animation-unavailable");
+                return;
+            }
+
+            gsap.registerPlugin(ScrollTrigger);
+
+            var lenis = null;
+            if (typeof Lenis !== "undefined") {
+                lenis = new Lenis({
+                    duration: 1.08,
+                    smoothWheel: true,
+                    lerp: 0.09
+                });
+
+                lenis.on("scroll", ScrollTrigger.update);
+                gsap.ticker.add(function (time) {
+                    lenis.raf(time * 1000);
+                });
+                gsap.ticker.lagSmoothing(0);
+            }
+
+            document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+                anchor.addEventListener("click", function (event) {
+                    var href = anchor.getAttribute("href");
+                    if (!href || href === "#") return;
+                    var target = document.querySelector(href);
+                    if (!target) return;
+                    event.preventDefault();
+                    closeNav();
+                    if (lenis) {
+                        lenis.scrollTo(target, { offset: -88 });
+                    } else {
+                        target.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                });
+            });
+
+            ScrollTrigger.create({
+                start: 24,
+                end: "max",
+                onUpdate: function () {
+                    var max = document.documentElement.scrollHeight - window.innerHeight;
+                    var pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+                    if (progress) progress.style.width = pct + "%";
+                    if (nav) nav.classList.toggle("is-scrolled", window.scrollY > 20);
+                }
+            });
+
+            var heroHeadline = document.getElementById("heroHeadline");
+            var heroTag = document.querySelector(".hero-tag");
+            var heroTimeline = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+            if (heroHeadline) {
+                heroTimeline
+                    .to(heroTag, { opacity: 1, y: 0, duration: 0.35 }, 0.05)
+                    .to(heroTag, { onStart: function () { heroTag.style.setProperty("--tag-line-width", "2.5rem"); } }, 0)
+                    .from(".industry-rotator", { opacity: 0, y: 14, duration: 0.28 }, 0.35)
+                    .from(".hero-lede", { opacity: 0, y: 16, duration: 0.3 }, 0.45)
+                    .from(".hero-actions .button", { opacity: 0, scale: 0.96, y: 10, stagger: 0.08, duration: 0.25 }, 0.55)
+                    .from(".hero-proof .proof-card", { opacity: 0, y: 14, stagger: 0.06, duration: 0.3 }, 0.62)
+                    .from(".scroll-cue", { opacity: 0, y: 14, duration: 0.25 }, 0.8)
+                    .from(".device-card", { opacity: 0, y: 28, rotateY: 8, stagger: 0.08, duration: 0.55 }, 0.25);
+            }
+
+            gsap.to(".scroll-pill span", {
+                y: 20,
+                duration: 0.8,
+                ease: "power1.inOut",
+                yoyo: true,
+                repeat: -1
+            });
+
+            document.querySelectorAll(".split-heading").forEach(function (heading) {
+                if (typeof SplitType === "undefined") return;
+                var split = new SplitType(heading, { types: "words" });
+                gsap.set(split.words, { yPercent: 110, opacity: 0 });
+                gsap.to(split.words, {
+                    yPercent: 0,
+                    opacity: 1,
+                    duration: 0.7,
+                    stagger: 0.05,
+                    ease: "power3.out",
+                    scrollTrigger: {
+                        trigger: heading,
+                        start: "top 82%"
+                    }
+                });
+            });
+
+            gsap.utils.toArray(".reveal").forEach(function (el) {
+                gsap.fromTo(el,
+                    { opacity: 0, y: 28 },
+                    {
+                        opacity: 1,
+                        y: 0,
+                        duration: 0.8,
+                        ease: "power3.out",
+                        scrollTrigger: {
+                            trigger: el,
+                            start: "top 92%"
+                        }
+                    }
+                );
+            });
+
+            /* Bulletproof fallback: if GSAP ScrollTrigger fails to reveal
+               elements within 1.5s of them entering the viewport, force them visible.
+               This catches mobile scroll issues, Lenis conflicts, etc. */
+            (function() {
+                var fallbackObserver = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            var el = entry.target;
+                            setTimeout(function() {
+                                var opacity = window.getComputedStyle(el).opacity;
+                                if (parseFloat(opacity) < 0.1) {
+                                    gsap.set(el, { opacity: 1, y: 0, clearProps: "transform" });
+                                    el.classList.add("is-visible");
+                                }
+                            }, 1500);
+                            fallbackObserver.unobserve(el);
+                        }
+                    });
+                }, { threshold: 0.05 });
+
+                document.querySelectorAll(".reveal").forEach(function(el) {
+                    fallbackObserver.observe(el);
+                });
+            })();
+
+            gsap.utils.toArray(".project").forEach(function (project) {
+                var device = project.querySelector(".project-device");
+                var title = project.querySelector(".project-title");
+                gsap.fromTo(project,
+                    { backgroundPosition: "50% 0%" },
+                    {
+                        backgroundPosition: "50% 100%",
+                        ease: "none",
+                        scrollTrigger: {
+                            trigger: project,
+                            start: "top bottom",
+                            end: "bottom top",
+                            scrub: true
+                        }
+                    }
+                );
+
+                if (device) {
+                    gsap.fromTo(device,
+                        { x: 60, opacity: 0, rotate: 6 },
+                        {
+                            x: 0,
+                            opacity: 1,
+                            rotate: 0,
+                            duration: 1,
+                            ease: "power3.out",
+                            scrollTrigger: {
+                                trigger: project,
+                                start: "top 72%"
+                            }
+                        }
+                    );
+                }
+
+                if (title && typeof SplitType !== "undefined") {
+                    var titleSplit = new SplitType(title, { types: "words" });
+                    gsap.set(titleSplit.words, { opacity: 0, yPercent: 105 });
+                    gsap.to(titleSplit.words, {
+                        opacity: 1,
+                        yPercent: 0,
+                        duration: 0.65,
+                        stagger: 0.04,
+                        ease: "power3.out",
+                        scrollTrigger: {
+                            trigger: project,
+                            start: "top 72%"
+                        }
+                    });
+                }
+            });
+
+            document.querySelectorAll(".stat-value").forEach(function (stat) {
+                if (stat.dataset.text) {
+                    stat.textContent = stat.dataset.text;
+                    return;
+                }
+                var target = parseInt(stat.dataset.counter, 10);
+                var prefix = stat.dataset.prefix || "";
+                var suffix = stat.dataset.suffix || "+";
+                var value = { current: 0 };
+
+                ScrollTrigger.create({
+                    trigger: stat,
+                    start: "top 84%",
+                    once: true,
+                    onEnter: function () {
+                        gsap.to(value, {
+                            current: target,
+                            duration: 1.4,
+                            ease: "power2.out",
+                            onUpdate: function () {
+                                stat.textContent = prefix + Math.round(value.current) + suffix;
+                            }
+                        });
+                    }
+                });
+            });
+
+            var supportsFinePointer = window.matchMedia("(pointer:fine)").matches && window.innerWidth >= 1040;
+            if (supportsFinePointer) {
+                var cursor = document.querySelector(".cursor");
+                var ring = document.querySelector(".cursor-ring");
+                var cursorPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+                var ringPos = { x: cursorPos.x, y: cursorPos.y };
+
+                window.addEventListener("mousemove", function (event) {
+                    cursorPos.x = event.clientX;
+                    cursorPos.y = event.clientY;
+                    gsap.set(cursor, { x: cursorPos.x, y: cursorPos.y });
+                });
+
+                gsap.ticker.add(function () {
+                    ringPos.x += (cursorPos.x - ringPos.x) * 0.16;
+                    ringPos.y += (cursorPos.y - ringPos.y) * 0.16;
+                    gsap.set(ring, { x: ringPos.x, y: ringPos.y });
+                });
+
+                document.querySelectorAll(".magnetic").forEach(function (element) {
+                    element.addEventListener("mousemove", function (event) {
+                        var rect = element.getBoundingClientRect();
+                        var relX = event.clientX - rect.left - rect.width / 2;
+                        var relY = event.clientY - rect.top - rect.height / 2;
+                        gsap.to(element, {
+                            x: relX * 0.14,
+                            y: relY * 0.14,
+                            duration: 0.25,
+                            ease: "power2.out"
+                        });
+                        ring.style.width = "3.4rem";
+                        ring.style.height = "3.4rem";
+                        ring.style.borderColor = "rgba(201, 162, 39, 0.7)";
+                    });
+
+                    element.addEventListener("mouseleave", function () {
+                        gsap.to(element, {
+                            x: 0,
+                            y: 0,
+                            duration: 0.3,
+                            ease: "power2.out"
+                        });
+                        ring.style.width = "2.6rem";
+                        ring.style.height = "2.6rem";
+                        ring.style.borderColor = "rgba(201, 162, 39, 0.4)";
+                    });
+                });
+            }
+
+            // Safety fallback: force visible after 1.5s if GSAP hasn't fired
+            setTimeout(function () {
+                document.querySelectorAll(".reveal").forEach(function (el) {
+                    if (getComputedStyle(el).opacity === "0") {
+                        el.classList.add("is-visible");
+                    }
+                });
+            }, 1500);
+
+            // Additional fallback: IntersectionObserver as backup for reveal
+            if ("IntersectionObserver" in window) {
+                var observer = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add("is-visible");
+                        }
+                    });
+                }, { threshold: 0.05 });
+                document.querySelectorAll(".reveal").forEach(function (el) {
+                    observer.observe(el);
+                });
+            }
+        });
+        })();
+    </script>
+</body>
+</html>

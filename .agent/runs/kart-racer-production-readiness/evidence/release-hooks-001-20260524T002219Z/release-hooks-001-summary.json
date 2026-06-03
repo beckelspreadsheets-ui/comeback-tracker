@@ -1,0 +1,107 @@
+{
+  "checkpoint": "release-hooks-001",
+  "capturedAt": "2026-05-24T00:26:28.784Z",
+  "status": "standard-production-playtest-hooks-disabled-locally-policy-needed",
+  "evidenceDir": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z",
+  "implementation": {
+    "defaultProductionBehavior": "raceAutoplay/raceNoFinish query playtest automation is disabled unless VITE_RACE_PLAYTEST_HOOKS=true or the app is running under the Vite dev server.",
+    "devHarnessBehavior": "Vite dev race-playtest.html keeps automation hooks enabled so npm run test:race:browser can continue to exercise the full browser harness."
+  },
+  "commands": [
+    {
+      "command": "node --check src/game/race/playtest/racePlaytestState.js",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/node-check-race-playtest-state.log"
+    },
+    {
+      "command": "node --check src/game/race/raceRuntimeSetup.js",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/node-check-race-runtime-setup.log"
+    },
+    {
+      "command": "node --check scripts/release-smoke-test.mjs",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/node-check-release-smoke.log"
+    },
+    {
+      "command": "node --check scripts/race-content-playtest.mjs",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/node-check-race-content-playtest.log"
+    },
+    {
+      "command": "npm run test:race",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/npm-run-test-race.log"
+    },
+    {
+      "command": "npm run build",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/npm-run-build.log",
+      "notes": "Build still reports the existing large-chunk warning."
+    },
+    {
+      "command": "RELEASE_SMOKE_ARTIFACT_DIR=.agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z npm run test:release:smoke",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/npm-run-test-release-smoke.log"
+    },
+    {
+      "command": "RELEASE_ARTIFACT_SAFETY_ARTIFACT_DIR=.agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z npm run test:release:artifacts",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/npm-run-test-release-artifacts.log"
+    },
+    {
+      "command": "npm run test:race:browser",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/npm-run-test-race-browser.log"
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/git-diff-check.log"
+    },
+    {
+      "command": "release hook summary/report/package JSON parse",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/release-hooks-json-check.log"
+    },
+    {
+      "command": "implementation-notes progressEvents parse",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/implementation-notes-progress-events-check.log"
+    }
+  ],
+  "releaseSmoke": {
+    "summary": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/release-smoke-summary.json",
+    "playtestHookProbe": {
+      "route": "/?raceAutoplay=1&raceMode=visual-kart&raceVisualScenario=acceleration&raceNoFinish=1#race",
+      "hasPlaytestEvents": false,
+      "hasPlaytestResult": false,
+      "hasTelemetrySamples": false,
+      "normalizedSpeed": 0,
+      "status": "pass"
+    },
+    "desktopKeyboardSpeed": 0.45,
+    "mobileTouchSpeed": 0.546
+  },
+  "raceBrowser": {
+    "summary": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/race-browser-playtest-summary.json",
+    "capturedAt": "2026-05-24T00:26:28.784Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "sustainedNormalPlayActualFpsAverage": 17.68,
+    "sustainedNormalPlaySampleCount": 53
+  },
+  "artifactSafety": {
+    "report": ".agent/runs/kart-racer-production-readiness/evidence/release-hooks-001-20260524T002219Z/release-artifact-safety-report.json",
+    "noSecretNameOrKnownSecretValueLeaks": true,
+    "noSourceMapFiles": true,
+    "noSourceMappingUrlReferences": true,
+    "noStandalonePlaytestOrDebugFiles": true,
+    "staticPlaytestRuntimeHooks": "present-needs-release-owner-policy"
+  },
+  "remainingBlockers": [
+    "Static playtest/debug strings remain in built race chunks, so source-map/debug/test-hook policy still needs release-owner approval or a dated removal/guard follow-up.",
+    "Preview/prod deployed artifact evidence and sign-off are still missing.",
+    "Desktop performance remains below target."
+  ]
+}

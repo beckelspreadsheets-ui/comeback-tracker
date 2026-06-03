@@ -1,0 +1,39 @@
+{
+  "afterExit": {
+    "hash": "",
+    "homeVisible": true,
+    "raceScreenCount": 0,
+    "titleSeen": false
+  },
+  "beforeLoss": {
+    "hash": "#race",
+    "renderer": "webgl",
+    "telemetryTrack": "comeback-city"
+  },
+  "capturedAt": "2026-05-23T23:08:20.543Z",
+  "fallbackScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/lazy-route-001-20260523T225320Z/webgl-context-loss-fallback.png",
+  "fallbackState": {
+    "canvasDataUrlLength": 354014,
+    "hash": "#race",
+    "renderer": "canvas2d-fallback",
+    "webglContextStatus": {
+      "defaultPrevented": true,
+      "fallbackRequested": true,
+      "lost": true,
+      "restored": false,
+      "trackKey": "comeback-city"
+    }
+  },
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c2"
+  },
+  "ignoredConsoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "lossResult": {
+    "method": "WEBGL_lose_context",
+    "ok": true
+  },
+  "routeUrl": "http://127.0.0.1:5198/#race"
+}

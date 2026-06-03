@@ -1,0 +1,31 @@
+--- .agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/kartPhysics-before.js	2026-05-24 06:05:26
++++ .agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/kartPhysics-candidate.js	2026-05-24 06:09:53
+@@ -829,6 +829,7 @@
+   defaultRoadWidth = 0,
+   nearestRoadForPosition = null,
+   racer = null,
++  racerRadius = 3.2,
+ } = {}) => {
+   if (!racer || racer.vehicleMode === 'plane' || racer.ghostTimer > 0 || racer.invincibleTimer > 0) {
+     return { collided: false, contacts: [] };
+@@ -836,6 +837,12 @@
+ 
+   const contacts = [];
+   collisionCircles.forEach((circle) => {
++    const collisionReach = (circle.radius || 0) + racerRadius;
++    if (racer.position && circle.position && collisionReach > 0) {
++      const dx = racer.position.x - circle.position.x;
++      const dz = racer.position.z - circle.position.z;
++      if (dx * dx + dz * dz >= collisionReach * collisionReach) return;
++    }
+     const nearestRoad = nearestRoadForPosition?.(circle.position) || {};
+     const collision = resolveWorldCircleCollision({
+       circle,
+@@ -844,6 +851,7 @@
+         roadWidth: nearestRoad.roadWidth || defaultRoadWidth,
+       },
+       racer,
++      racerRadius,
+     });
+     if (collision.collided) {
+       contacts.push({

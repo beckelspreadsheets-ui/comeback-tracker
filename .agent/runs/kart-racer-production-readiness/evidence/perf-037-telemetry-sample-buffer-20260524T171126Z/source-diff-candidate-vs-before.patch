@@ -1,0 +1,17 @@
+--- .agent/runs/kart-racer-production-readiness/evidence/perf-037-telemetry-sample-buffer-20260524T171126Z/raceTelemetryDiagnostics-before.js	2026-05-24 10:11:26
++++ src/game/race/raceTelemetryDiagnostics.js	2026-05-24 10:14:53
+@@ -3,10 +3,10 @@
+     if (!windowRef || !raceVisualTelemetry) return null;
+     windowRef.__raceVisualTelemetry = raceVisualTelemetry;
+     if (playtest.enabled) {
+-      windowRef.__raceVisualTelemetrySamples = [
+-        ...(windowRef.__raceVisualTelemetrySamples || []),
+-        { at: Number(race.time.toFixed(3)), telemetry: raceVisualTelemetry },
+-      ].slice(-160);
++      const samples = windowRef.__raceVisualTelemetrySamples || [];
++      samples.push({ at: Number(race.time.toFixed(3)), telemetry: raceVisualTelemetry });
++      if (samples.length > 160) samples.splice(0, samples.length - 160);
++      windowRef.__raceVisualTelemetrySamples = samples;
+     }
+     return raceVisualTelemetry;
+   },

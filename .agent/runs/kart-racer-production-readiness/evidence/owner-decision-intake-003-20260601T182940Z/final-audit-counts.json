@@ -1,0 +1,36 @@
+{
+  "release": {
+    "status": "owner-release-decisions-missing-r3-blocked",
+    "missingDecisionCount": 4,
+    "notSuppliedRows": 51,
+    "missingDecisions": [
+      {
+        "id": "web-vitals-lighthouse",
+        "label": "Web Vitals/Lighthouse targets or dated exception"
+      },
+      {
+        "id": "bundle-budget",
+        "label": "Bundle/asset budget threshold or exception"
+      },
+      {
+        "id": "production-dependency-audit-policy",
+        "label": "Production dependency audit split or full-audit advisory decision"
+      },
+      {
+        "id": "preview-production-smoke-signoff",
+        "label": "Preview/prod smoke metadata and sign-offs"
+      }
+    ]
+  },
+  "gates": {
+    "status": "r3-blocked-gates-remain",
+    "p0Proven": 2,
+    "p0Total": 21,
+    "p1Proven": 2,
+    "p1Total": 14,
+    "dodRowsNotProven": 11,
+    "manualQaRowsWithoutPassingScore": 10,
+    "notSuppliedRows": 56,
+    "evidenceLinkFailures": 0
+  }
+}

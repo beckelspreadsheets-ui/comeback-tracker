@@ -1,0 +1,11 @@
+--- .agent/runs/kart-racer-production-readiness/evidence/perf-021-20260524T063735Z/createRaceScene-before.js	2026-05-23 23:37:35
++++ src/game/race/render/createRaceScene.js	2026-05-23 23:37:40
+@@ -1,7 +1,7 @@
+ import * as THREE from 'three';
+ 
+ export const RACE_RENDERER_OPTIONS = Object.freeze({
+-  antialias: true,
++  antialias: false,
+   depth: true,
+   powerPreference: 'high-performance',
+   preserveDrawingBuffer: false,

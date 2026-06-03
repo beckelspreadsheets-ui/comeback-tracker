@@ -24,7 +24,6 @@ import {
   upgradeCost,
 } from './raceProgression.js';
 import { ArcadeRace3D } from './ArcadeRace3D.jsx';
-import { KartDesignSheet } from './comebackCityVisuals.jsx';
 import { BANKED_ITEMS, COMMON_BOX_ITEMS, ITEM_META } from './raceItems.js';
 import { RACE_TRACKS } from './raceTracks.js';
 
@@ -46,6 +45,20 @@ const formatTime = (seconds = 0) => {
 };
 const ordinal = (value) => (value === 1 ? '1st' : value === 2 ? '2nd' : value === 3 ? '3rd' : `${value}th`);
 const scoreCar = (car) => (car.lap - 1) + car.progress + (car.finished ? 10 : 0);
+
+const hasWebGLSupport = () => {
+  if (typeof document === 'undefined') return true;
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(
+      canvas.getContext('webgl2') ||
+        canvas.getContext('webgl') ||
+        canvas.getContext('experimental-webgl')
+    );
+  } catch {
+    return false;
+  }
+};
 
 const angleDelta = (a, b) => {
   let delta = a - b;
@@ -380,7 +393,11 @@ const createRace = (compiled, profile) => {
   };
 };
 
-const RaceCanvas = ({ command, inventory, onFinish, onInventoryUse, profile, runId, track }) => {
+/**
+ * @deprecated Fallback-only Canvas2D renderer for browsers without WebGL.
+ * ArcadeRace3D is the primary race mode; do not add kart-racer V1 mechanics here.
+ */
+const RaceCanvasFallback = ({ command, inventory, onFinish, onInventoryUse, profile, runId, track }) => {
   const canvasRef = useRef(null);
   const commandRef = useRef(null);
   const inventoryRef = useRef(inventory);
@@ -1379,6 +1396,8 @@ const RaceCanvas = ({ command, inventory, onFinish, onInventoryUse, profile, run
       <canvas
         ref={canvasRef}
         className="race-canvas block h-[min(72vh,620px)] min-h-[420px] w-full touch-none"
+        data-testid="race-fallback-canvas"
+        data-visual-canvas="race-fallback"
       />
       <div className="pointer-events-none absolute left-3 right-3 top-3 grid grid-cols-4 gap-2 text-bone sm:left-4 sm:right-auto sm:w-[520px]">
         <div className="race-hud-panel border border-white/18 bg-ink/78 p-2 backdrop-blur-md">
@@ -1510,6 +1529,84 @@ const StatBar = ({ label, value }) => (
   </div>
 );
 
+const MiniKartModel = ({ accent, color, label, view = 'hero' }) => {
+  const sideView = view === 'side';
+  const topView = view === 'top';
+  const backView = view === 'back';
+  return (
+    <div className="relative h-full min-h-[74px] overflow-hidden rounded-lg border border-bone/[0.08] bg-ink/55">
+      <span className="absolute inset-x-0 top-0 z-10 bg-ink/70 py-1 text-center font-mono text-[8px] font-black uppercase tracking-[0.16em] text-bone">
+        {label}
+      </span>
+      <div className="absolute inset-x-5 bottom-4 h-2 rounded-full bg-black/30 blur-sm" />
+      <div
+        className={`absolute left-1/2 top-1/2 h-12 rounded-[18px] border border-white/20 ${
+          sideView ? 'w-28 -translate-x-1/2 -translate-y-1/2' : topView ? 'w-16 -translate-x-1/2 -translate-y-1/2' : 'w-20 -translate-x-1/2 -translate-y-1/2'
+        }`}
+        style={{
+          background: `linear-gradient(135deg, ${color}, ${accent})`,
+          transform: `translate(-50%, -50%) ${backView ? 'rotate(180deg)' : ''}`,
+        }}
+      >
+        <span className="absolute left-1/2 top-2 h-5 w-9 -translate-x-1/2 rounded-full bg-white/30" />
+        <span className="absolute bottom-1 left-1/2 h-2 w-10 -translate-x-1/2 rounded-full bg-ink/55" />
+        <span className="absolute -left-2 top-2 h-4 w-4 rounded-full bg-zinc-950" />
+        <span className="absolute -right-2 top-2 h-4 w-4 rounded-full bg-zinc-950" />
+        <span className="absolute -left-2 bottom-2 h-4 w-4 rounded-full bg-zinc-950" />
+        <span className="absolute -right-2 bottom-2 h-4 w-4 rounded-full bg-zinc-950" />
+      </div>
+    </div>
+  );
+};
+
+const KartDesignSheet = ({ profile }) => {
+  const stats = profile?.race?.statBars || {};
+  const avatar = profile?.avatar || {};
+  const color = avatar.chassis || '#36a7e2';
+  const accent = avatar.accent || '#ffd34f';
+  const swatches = [color, accent, '#f4f7f8', '#202837', '#2cc8ff'];
+
+  return (
+    <section
+      className="overflow-hidden rounded-lg border border-bone/[0.08] bg-gradient-to-br from-zinc-500/35 via-slate-700/40 to-ink p-4 shadow-2xl"
+      data-visual-section="garage-sheet"
+    >
+      <div className="mb-3 flex items-center gap-2 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-gold">
+        <Car size={14} />
+        Kart Design Sheet
+      </div>
+      <div className="grid gap-3 lg:grid-cols-[1.05fr_1.4fr]">
+        <MiniKartModel accent={accent} color={color} label={avatar.name || 'Kart'} />
+        <div className="grid grid-cols-4 gap-2">
+          <MiniKartModel accent={accent} color={color} label="Front" view="front" />
+          <MiniKartModel accent={accent} color={color} label="Side" view="side" />
+          <MiniKartModel accent={accent} color={color} label="Back" view="back" />
+          <MiniKartModel accent={accent} color={color} label="Top" view="top" />
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1.4fr]">
+        <div className="flex items-center gap-2">
+          {swatches.map((swatch) => (
+            <span
+              key={swatch}
+              className="h-8 flex-1 rounded border border-white/30 shadow-lg"
+              style={{ background: swatch }}
+            />
+          ))}
+        </div>
+        <div className="rounded-lg border border-bone/[0.06] bg-ink/44 p-3">
+          <div className="grid gap-2">
+            <StatBar label="Speed" value={Math.max(0, Math.min(100, Number(stats.speed) || 72))} />
+            <StatBar label="Acceleration" value={Math.max(0, Math.min(100, Number(stats.acceleration) || 62))} />
+            <StatBar label="Handling" value={Math.max(0, Math.min(100, Number(stats.grip) || 55))} />
+            <StatBar label="Boost" value={Math.max(0, Math.min(100, Number(stats.boost) || 66))} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const InventoryButton = ({ count, icon: Icon, label, onClick }) => (
   <button
     type="button"
@@ -1590,7 +1687,7 @@ const TrackIntel = ({ track }) => (
   </Card>
 );
 
-export const RaceScreen = ({ readOnly = false, setState, state }) => {
+export const RaceScreen = ({ onExit = null, readOnly = false, setState, state }) => {
   const profile = useMemo(() => deriveGameProfile(state), [state]);
   const raceStageRef = useRef(null);
   const [trackKey, setTrackKey] = useState(RACE_TRACKS[0].key);
@@ -1598,6 +1695,7 @@ export const RaceScreen = ({ readOnly = false, setState, state }) => {
   const [raceProfile, setRaceProfile] = useState(null);
   const [command, setCommand] = useState(null);
   const [lastResult, setLastResult] = useState(null);
+  const [webGLAvailable, setWebGLAvailable] = useState(hasWebGLSupport);
   const track = RACE_TRACKS.find((item) => item.key === trackKey) || RACE_TRACKS[0];
   const garage = profile.race.garage;
   const results = state.game?.raceResults || {};
@@ -1735,6 +1833,51 @@ export const RaceScreen = ({ readOnly = false, setState, state }) => {
   );
 
   return (
+    <div
+      ref={raceStageRef}
+      className="relative min-h-[100svh] overflow-hidden bg-[#10151d]"
+      data-race-renderer={webGLAvailable ? 'webgl' : 'canvas2d-fallback'}
+      data-race-track={track.key}
+      data-testid="race-screen"
+    >
+      {onExit && (
+        <button
+          type="button"
+          className="arcade-hud-panel pointer-events-auto absolute left-3 top-3 z-50 flex min-h-11 items-center gap-2 border border-white/18 bg-[#10151d]/[0.86] px-3 font-mono text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-[0_14px_34px_rgba(0,0,0,0.3)] backdrop-blur-md transition-colors hover:bg-[#ffd34f]/10 hover:text-[#ffd34f] sm:left-5 sm:top-5"
+          data-testid="race-exit-button"
+          onClick={onExit}
+        >
+          <ArrowLeft size={14} />
+          Today
+        </button>
+      )}
+      {webGLAvailable ? (
+        <ArcadeRace3D
+          command={command}
+          inventory={garage.inventory}
+          onFinish={handleFinish}
+          onInventoryUse={consumeInventory}
+          onWebGLUnavailable={() => setWebGLAvailable(false)}
+          profile={raceProfile || profile}
+          reducedMotion={Boolean(state.game?.hub?.reducedMotion)}
+          runId={runId}
+          track={track}
+        />
+      ) : (
+        <RaceCanvasFallback
+          command={command}
+          inventory={garage.inventory}
+          onFinish={handleFinish}
+          onInventoryUse={consumeInventory}
+          profile={raceProfile || profile}
+          runId={runId}
+          track={track}
+        />
+      )}
+    </div>
+  );
+
+  return (
     <div className="space-y-6">
       <div ref={raceStageRef} className="grid gap-4 scroll-mt-16">
         <div className="space-y-3">
@@ -1744,6 +1887,7 @@ export const RaceScreen = ({ readOnly = false, setState, state }) => {
             onFinish={handleFinish}
             onInventoryUse={consumeInventory}
             profile={raceProfile || profile}
+            reducedMotion={Boolean(state.game?.hub?.reducedMotion)}
             runId={runId}
             track={track}
           />

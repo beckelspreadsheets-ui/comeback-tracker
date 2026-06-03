@@ -32,7 +32,7 @@ const USER_PRESETS = {
   },
 };
 
-const PRESET_KEY = import.meta.env.VITE_USER_PRESET;
+const PRESET_KEY = import.meta.env?.VITE_USER_PRESET;
 const PRESET = USER_PRESETS[PRESET_KEY];
 
 export const DEFAULT_SETTINGS = PRESET?.settings ?? {
@@ -52,6 +52,7 @@ export const DEFAULT_FOOD = {
   },
   library: [],
   log: {},
+  templates: [],
 };
 
 // 1RM keys correspond to Settings!B13-B36 formula lookups in the xlsx

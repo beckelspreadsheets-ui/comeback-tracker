@@ -1,0 +1,110 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/header-pwa-smoke-test",
+  "status": "ok",
+  "headers": {
+    "assetCacheControl": "public, max-age=31536000, immutable",
+    "contentSecurityPolicy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+    "contentSecurityPolicyDirectives": {
+      "directiveCount": 13,
+      "directives": {
+        "default-src": "'self'",
+        "base-uri": "'self'",
+        "object-src": "'none'",
+        "frame-ancestors": "'self'",
+        "form-action": "'self'",
+        "script-src": "'self'",
+        "worker-src": "'self'",
+        "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src": "'self' https://fonts.gstatic.com data:",
+        "img-src": "'self' data: blob: https://images.openfoodfacts.org",
+        "connect-src": "'self' https://world.openfoodfacts.org https://api.nal.usda.gov",
+        "manifest-src": "'self'",
+        "media-src": "'self' blob: data:"
+      }
+    },
+    "contentSecurityPolicyPresent": true,
+    "frameOptions": "SAMEORIGIN",
+    "manifestCacheControl": "public, max-age=3600",
+    "permissionsPolicy": "camera=(), microphone=(), geolocation=()",
+    "permissionsPolicyCamera": "denied",
+    "referrerPolicy": "strict-origin-when-cross-origin",
+    "registerSwCacheControl": "no-cache, no-store, must-revalidate",
+    "serviceWorkerCacheControl": "no-cache, no-store, must-revalidate",
+    "xContentTypeOptions": "nosniff"
+  },
+  "manifest": {
+    "display": "standalone",
+    "iconCount": 3,
+    "name": "Comeback Tracker",
+    "scope": "/",
+    "shortName": "Comeback",
+    "startUrl": "/"
+  },
+  "browser": {
+    "controlledServiceWorker": {
+      "cacheKeys": [
+        "workbox-precache-v2-http://pwa-smoke.localhost:5197/"
+      ],
+      "controller": true,
+      "isSecureContext": true,
+      "registrations": [
+        {
+          "activeScriptURL": "http://pwa-smoke.localhost:5197/sw.js",
+          "activeState": "activated",
+          "scope": "http://pwa-smoke.localhost:5197/",
+          "waitingScriptURL": null
+        }
+      ],
+      "scriptURL": "http://pwa-smoke.localhost:5197/sw.js",
+      "state": "activated",
+      "supported": true
+    },
+    "deliveredHeaders": {
+      "contentSecurityPolicy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+      "rootCacheControl": null,
+      "xContentTypeOptions": "nosniff"
+    },
+    "firstServiceWorker": {
+      "cacheKeys": [
+        "workbox-precache-v2-http://pwa-smoke.localhost:5197/"
+      ],
+      "controller": true,
+      "isSecureContext": true,
+      "registrations": [
+        {
+          "activeScriptURL": "http://pwa-smoke.localhost:5197/sw.js",
+          "activeState": "activated",
+          "scope": "http://pwa-smoke.localhost:5197/",
+          "waitingScriptURL": null
+        }
+      ],
+      "scriptURL": "http://pwa-smoke.localhost:5197/sw.js",
+      "state": "activated",
+      "supported": true
+    },
+    "manifestFetch": {
+      "contentType": "application/manifest+json; charset=utf-8",
+      "parsedName": "Comeback Tracker",
+      "status": 200
+    },
+    "offlineShell": "served app shell while browser context was offline",
+    "toleratedRequestFailures": [
+      {
+        "errorText": "net::ERR_FAILED",
+        "url": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      },
+      {
+        "errorText": "net::ERR_FAILED",
+        "url": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      },
+      {
+        "errorText": "net::ERR_INTERNET_DISCONNECTED",
+        "url": "http://pwa-smoke.localhost:5197/api/sync/me"
+      }
+    ]
+  },
+  "unresolvedReleaseDecisions": {
+    "cameraPolicy": "public/_headers denies camera; barcode scanner production scope still needs owner/release decision",
+    "csp": "Content-Security-Policy present"
+  }
+}

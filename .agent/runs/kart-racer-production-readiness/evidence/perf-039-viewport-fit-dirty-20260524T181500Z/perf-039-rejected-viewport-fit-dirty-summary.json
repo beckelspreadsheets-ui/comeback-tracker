@@ -1,0 +1,71 @@
+{
+  "checkpoint": "perf-039-viewport-fit-dirty",
+  "status": "rejected-reverted",
+  "hypothesis": "Drive renderer fit from initial layout/resize signals instead of calling fitRaceRendererToCanvas every animation frame.",
+  "decision": "Rejected because the candidate passed visual/control/fallback gates but failed keep criteria: sustained, desktop-all, focused, and desktop-driving actual FPS did not improve versus the fresh baseline.",
+  "baseline": {
+    "capturedAt": "2026-05-24T18:09:48.057Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAllActualFps": 34.66,
+    "desktopFocusedActualFps": 35.7,
+    "sustainedActualFps": 17.87,
+    "desktopDrivingActualFps": 37.5,
+    "desktopDrivingFitRendererMs": 0.34,
+    "sustainedFitRendererMs": 0.06
+  },
+  "candidate": {
+    "capturedAt": "2026-05-24T18:13:43.169Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAllActualFps": 34.63,
+    "desktopFocusedActualFps": 35.67,
+    "sustainedActualFps": 17.77,
+    "desktopDrivingActualFps": 37.4,
+    "desktopDrivingFitRendererMs": 0.25,
+    "sustainedFitRendererMs": 0.06
+  },
+  "postRevert": {
+    "capturedAt": "2026-05-24T18:17:41.550Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAllActualFps": 36.1,
+    "desktopFocusedActualFps": 37.21,
+    "sustainedActualFps": 17.4,
+    "desktopDrivingActualFps": 37.4,
+    "desktopDrivingFitRendererMs": 0.3,
+    "sustainedFitRendererMs": 0.06
+  },
+  "candidateDelta": {
+    "raceCount": 0,
+    "visualCheckCount": 0,
+    "desktopAllActualFps": -0.03,
+    "desktopFocusedActualFps": -0.03,
+    "sustainedActualFps": -0.1,
+    "desktopDrivingActualFps": -0.1,
+    "desktopDrivingFitRendererMs": -0.09,
+    "sustainedFitRendererMs": 0
+  },
+  "postRevertDeltaFromBaseline": {
+    "raceCount": 0,
+    "visualCheckCount": 0,
+    "desktopAllActualFps": 1.44,
+    "desktopFocusedActualFps": 1.51,
+    "sustainedActualFps": -0.47,
+    "desktopDrivingActualFps": -0.1,
+    "desktopDrivingFitRendererMs": -0.04,
+    "sustainedFitRendererMs": 0
+  },
+  "evidence": {
+    "baseline": "baseline-race-browser-playtest-summary.json",
+    "candidate": "candidate-race-browser-playtest-summary.json",
+    "postRevert": "post-revert-race-browser-playtest-summary.json",
+    "sourceDiff": "source-diff-ArcadeRace3D-candidate.patch",
+    "identifierCheck": "viewport-fit-candidate-identifiers-post-revert.log",
+    "postRevertRace": "npm-run-test-race-post-revert.log",
+    "postRevertBrowser": "post-revert-race-browser.log",
+    "postRevertBuild": "npm-run-build-post-revert.log",
+    "postRevertVisual": "npm-run-test-visual-post-revert.log",
+    "postRevertDiffCheck": "git-diff-check-post-revert.log"
+  }
+}

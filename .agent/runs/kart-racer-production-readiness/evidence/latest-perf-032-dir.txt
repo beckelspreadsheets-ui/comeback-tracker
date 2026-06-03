@@ -1,0 +1,1 @@
+.agent/runs/kart-racer-production-readiness/evidence/perf-032-vehicle-mode-cache-20260524T144114Z

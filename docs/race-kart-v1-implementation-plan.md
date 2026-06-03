@@ -1,0 +1,2208 @@
+# Comeback City Kart Racer V1 Implementation Plan
+
+Status: planning, Phase 0 owner input still required
+Date: 2026-05-19
+Source: `docs/comeback-city-kart-racer-prd.md`
+
+Planning index: `docs/race-kart-v1-planning-index.md`
+
+## Current Evidence
+
+- `src/game/ArcadeRace3D.jsx` is the active Three.js race runtime and is 484 lines.
+- `src/game/race/physics/kartTuning.js` now owns the existing vehicle/drift tuning constants, vehicle order, flight altitude limits, the current kart acceleration value, and the high-speed acceleration taper tuned to PRD non-boost time-to-speed targets.
+- `src/game/race/raceTelemetry.js` now builds and publishes the nested PRD telemetry shape, owns reusable visual metric helpers, maps Three renderer info counters for performance evidence, mutates timing/evidence stats, records actual-frame and frame-phase timing fields, records visible-rival history, appends browser playtest samples, and maps the React HUD telemetry while preserving existing flat telemetry fields.
+- `src/game/race/raceVehicleRuntime.js` now owns boost application source telemetry, vehicle mode switching presentation glue, and next-vehicle-mode helper wiring.
+- `src/game/race/raceState.js` now owns the extracted race state factory for player, rivals, bananas, item boxes, boost pads, flight gates, switch pads, and track hazards; the initial rival grid now stages the three rivals ahead in-lane so the chase camera sees competition immediately.
+- `src/game/race/playtest/raceVisualScenarios.js` now owns the extracted visual-playtest scenario predicates, steering speed ratios, heading-camera scenario detection, shared kart reset helper, manual visual scenario priming, manual visual primed-state helpers, and manual visual frame stabilization.
+- `src/game/race/playtest/raceAutoplay.js` now owns the extracted browser playtest player autoplay, visual-kart pose/state setup, playtest item/banana/hazard/zone counters, lap simulation, and autoplay timer decay.
+- `src/game/race/playtest/racePlaytestState.js` now owns the extracted race playtest URL parsing, counter/set initialization, browser global reset, and playtest event recording helpers.
+- `src/game/race/raceRuntimeSetup.js` now owns race runtime setup for track compilation, playtest parsing, kart-only/default-vehicle selection, race state creation, key set creation, and visual stats initialization.
+- `src/game/race/raceSceneRuntime.js` now owns race scene runtime assembly for scene shell creation, WebGL renderer creation/fallback callback wiring, track mesh creation, boost pad mesh creation, pickup mesh creation, scenery/collider/collision-circle setup, and player/rival vehicle mesh setup.
+- `src/game/race/raceUpdateRuntime.js` now owns race frame-update callback wiring for lap progress, vehicle integration, autoplay player updates, track hazards/events, world collision return values, player update, rival updates, hazard-by-type triggers, and ranking updates.
+- `src/game/race/raceCameraRuntime.js` now owns race camera runtime state for raycaster creation, camera-initialized state, route-lookahead telemetry storage, mobile profile handoff, heading-camera scenario selection, and per-frame chase camera update calls.
+- `src/game/race/raceTelemetryRuntime.js` now owns race telemetry publication cadence, publication/skip counters, route-lookahead handoff, renderer-info handoff, and render-loop telemetry argument wiring.
+- `src/game/race/raceMotionRuntime.js` now owns race reduced-motion resolution from the saved setting plus `prefers-reduced-motion`, canvas dataset publication, and media-query listener cleanup.
+- `src/game/race/raceRuntimeActions.js` now owns runtime item use, held/banked item dispatch, item-box collection telemetry, remote hazard triggering, vehicle cycling, and player reset actions.
+- `src/game/race/raceDropRuntime.js` now owns dropped banana spawn/scatter mesh side effects, dropped trap spawn mesh side effects, and the drop-runtime factory used by race actions.
+- `src/game/race/raceHitRuntime.js` now owns player hit feedback, rival hit feedback, camera/screen flash timer mutation, hit cue playback, banana scatter dispatch, and the hit-runtime factory used by race actions.
+- `src/game/race/raceFrameUpdates.js` now owns vehicle integration, track hazard contact dispatch, track event mutation/scheduling, hazard-by-type runtime triggers, world-collision telemetry mutation, and ranking-frame mutation.
+- `src/game/race/raceFrameClock.js` now owns render-loop dt capping, simulation FPS smoothing, actual-frame FPS/budget-miss telemetry, frame-phase timing aggregation, race timer advancement, camera/screen flash timer decay, and position-notice expiry.
+- `src/game/race/raceFinishRuntime.js` now owns finish-result construction, playtest finish global publication, finish event recording, and finish callback dispatch.
+- `src/game/race/racePlayerFrame.js` now owns the current player-frame update loop, including control flip application, lap progress dispatch, steering smoothing, hop/drift state, drive forces, lateral grip, road assist, track boundary handling, speed cap application, plane flight state, ground jump/trick boost, position bounds, world-collision dispatch, stuck recovery, bananas, item boxes, boost pads, flight gates, dropped hazards, rival bumps, and vehicle integration dispatch.
+- `src/game/race/physics/kartPhysics.js` now owns the extracted acceleration taper, vehicle mode transition, vehicle integration switch-pad/zone/lock behavior, player/rival hit response, player/rival bump collision resolution, drive force resolution, ground jump/landing update, lateral grip/drift slip, position/bounds update, player timer/state decay, road assist, track-boundary guide, off-road detection, speed cap resolution/application, boost-pad activation resolution, flight-gate activation resolution, hop/drift, drift charge, drift release boost mapping, drift steering, heading delta, world circle collision response/contact resolution, boost stacking, and stuck recovery helper functions.
+- `src/game/race/camera/chaseCamera.js` now owns the extracted chase camera profile, route-lookahead, per-frame camera update, roll, and collision-avoidance helpers.
+- `src/game/race/track/trackGeometry.js` now owns the extracted legacy/courseV2 track compiler, road constants, layer altitude/offset helpers, and point conversion/sampling helpers.
+- `src/game/race/render/raceSceneTheme.js` now owns the extracted track theme colors and default Comeback City district landmark values.
+- `src/game/race/render/createRaceScene.js` now owns the extracted Three.js race scene shell, WebGL renderer options/configuration/fallback wrapper, renderer/canvas resize fitting, fog, camera, primary lighting, no-realtime-shadow render policy, rim light, and world group creation.
+- `src/game/race/render/createTrackMesh.js` now owns the extracted track render material creation, ground plane, road segments, shoulder/curb/line/rail meshes, track caps, start grid tiles, boost pad mesh factory, Comeback City clean-course visual segment chunking, and clean-track box instancing.
+- `src/game/race/render/createRaceScenery.js` now owns the extracted scenery, district landmark, skyline, objective marker, water/bridge, mountain/cloud, camera-collider, collision-circle, city animation hook setup, instanced window batches for repeated building, district, and perimeter skyline windows, and skyline block/roof instancing for far city/perimeter silhouettes.
+- `src/game/race/render/createRacePickups.js` now owns the extracted track banana, item box, flight gate, switch pad, track hazard, dropped banana, and dropped trap mesh factories.
+- `src/game/race/render/createKartModel.js` now owns the extracted basic material and current race vehicle model factory.
+- `src/game/race/render/createRaceVehicles.js` now owns the extracted player vehicle mesh setup, lightweight rival vehicle mesh setup, and vehicle switch-ring mesh factory.
+- `src/game/race/render/syncRaceMeshes.js` now owns the extracted per-frame player, rival, pickup, hazard, city animation, trap, and dropped-banana mesh synchronization loop.
+- `src/game/race/render/createBillboardText.js` now owns the extracted billboard/signage sprite helper and style constants.
+- `src/game/race/render/raceVfx.js` now owns the extracted drift spark tier, color, animation-frame, group application, boost-flame presentation frame and group application, player/rival vehicle presentation frame, switch-ring frame, world pickup frame, hazard presentation frame, trap frame, and dropped-banana frame helpers.
+- `src/game/race/raceHud.jsx` now owns the rendered race HUD, memoized minimap, canvas shell, audio mute toggle, and touch/button overlay.
+- `src/game/race/raceAudio.js` now owns the current generated cue mapping, ambient voice mapping, WebAudio controller, and mutable cue/ambient mute state.
+- `src/game/race/raceControls.js` now owns the race keyboard allowlist, default touch-control shape, keyboard event filtering, Space jump queueing, touch patch/pointer-capture behavior, live keyboard/touch control resolution, scripted visual-playtest control resolution, external command dispatch, per-frame command id suppression, and one-shot key command consumption.
+- `src/game/race/raceProgress.js` now owns deterministic race scoring, lap crossing, anti-reverse-wrap protection, finish marking, lap split updates, and position-rank notice resolution.
+- `src/game/race/raceRivals.js` now owns rival route-layer scoring, signature trigger thresholds, standard rival frame updates, finish crossing, and visual rival-cluster placement.
+- `src/game/raceItems.js` now owns item color metadata, held-item object construction, item-use request gating, high-level item-use orchestration, item boost payload resolution, self-status item timer application, opponent item payload resolution, remote-hazard item payload resolution, trap-use option resolution, item-box selection filtering for track, vehicle, rare, fallback, and signature-item pools, item-box cooldown/pickup gating, combined item-box collection/leveling/source reporting, banana scatter drop resolution, track/dropped banana pickup and magnet update behavior, banana-magnet rival pull behavior, banana spend/held-item upgrade/rare pickup/double-slot purchase behavior, held-item slotting after pickup, and held-item advancement after use.
+- `src/game/raceHazards.js` now owns track event scheduling/message aging, track hazard contact/cooldown resolution, track hazard effect application, track event mutation, timed hazard window/active-state helpers, remote-hazard activation selection, hazard-by-type trigger payloads, pulse/cooldown mutation, triggered/no-armed presentation payload resolution, dropped trap hazard descriptor construction, dropped-hazard contact decisions, and dropped-hazard frame update/drag/hit/filter behavior.
+- `src/game/RaceScreen.jsx` now names the Canvas2D path `RaceCanvasFallback` and marks it deprecated/fallback-only; `<ArcadeRace3D>` remains the primary race renderer and the fallback path is used only when WebGL is unavailable.
+- Race browser and content checks are available through `npm run test:race` and `npm run test:race:browser`.
+- `npm run test:race` now includes deterministic assertions for item-box selection filtering, pickup gating, combined item-box collection/leveling/source reporting, held-item construction, item-use gating, high-level item-use orchestration, boost-use options, self-status effects, banana-magnet rival pull, opponent item options, remote-hazard item options, remote-hazard activation behavior, trap-use options, banana scatter drop resolution, track/dropped banana pickup and magnet update behavior, banana spend/held-item upgrade/rare pickup/double-slot purchase behavior, drop-runtime banana/scatter/trap mesh side effects, hit-runtime player/rival feedback side effects, dropped-hazard descriptors/contact, dropped-hazard frame update/drag/hit/filter behavior, track-hazard contacts, hazard type triggers/effects, timed hazard windows, track event scheduling/mutation, held-item slotting, and post-use promotion, vehicle mode order/switch/lock behavior, vehicle runtime boost/source/vehicle switching behavior, vehicle integration switch-pad/zone/lock behavior and frame wrapper behavior, frame-clock dt/FPS/timer behavior, finish-result construction/publication behavior, player-frame drift-hop/item-pickup/boost-pad/collision/touch/vehicle-integration behavior, plane player-frame control preservation, player/rival hit response behavior, player/rival bump collision behavior, race progress scoring/lap/rank notice behavior, ranking frame wrapper behavior, frame-update runtime callback wiring, telemetry frame publishing/sample/stat/HUD mapping behavior, telemetry runtime publication cadence/argument wiring behavior, race audio cue/ambient mute gating behavior, reduced-motion runtime/settings/media/canvas cleanup behavior, rival route-layer selection/signature triggers/frame movement/finish crossing/visual cluster behavior, the kart acceleration taper, boost-pad activation resolution, flight-gate activation resolution, drive force acceleration/braking/coasting/hit drag behavior, ground jump integration/landing/trick-boost request behavior, lateral grip damping and directional drift slip behavior, position/bounds movement and bounce behavior, player timer/state decay, road assist heading/velocity/recenter behavior, track-boundary edge drag/return guide behavior, non-boost time-to-speed targets, off-road detection, banana/shield/boost/reverse speed caps and cap application, drift charge, drift release boost mapping, drift steering composition, speed-damped heading response, world circle collision response/contact resolution and telemetry wrapper behavior, chase camera frame update behavior, camera runtime raycaster/update-state/route-lookahead/reduced-motion forwarding behavior, drift spark VFX tier/color/frame values, boost-flame VFX visibility/group values, vehicle presentation frame values, world pickup/hazard presentation frame values, billboard text/sprite drawing values, scene shell camera/fog/lighting/world defaults, renderer options/configuration/fallback/fit behavior, track mesh material/ground/start-grid/boost-pad behavior, scenery/landmark helper behavior, pickup/hazard mesh factory behavior, player/rival vehicle mesh setup behavior, scene runtime assembly values, per-frame mesh sync behavior, track theme/default district values, legacy/courseV2 track compiler values, initial race state factory values, race runtime setup values, visual-playtest scenario helper, primer, and frame values, browser autoplay playtest values, race playtest state/recorder values, race control defaults/input blending/scripted visual controls/keyboard events/touch events/command dispatch/key-command consumption/command-frame id suppression, runtime action side effects, and race vehicle model structure.
+- `scripts/race-browser-playtest.mjs` captures per-race screenshots and telemetry JSON artifacts.
+- `scripts/race-browser-playtest.mjs` now writes `tmp/race-playtests/race-browser-playtest-summary.json` with git metadata, race results, visual screenshot paths, screenshot visual stats, telemetry paths, route URLs, viewports, thresholds, renderer complexity counters, actual-frame timing fields, frame-phase timing fields, telemetry cadence counters, and compact telemetry summaries for PR evidence.
+- `scripts/race-browser-playtest.mjs` now runs focused Comeback City visual/control snapshots for desktop idle, desktop driving, desktop acceleration, desktop braking, desktop reverse, desktop low-speed steering, desktop high-speed steering, desktop turn approach, desktop branch decision, desktop opening sequence, desktop collision mechanics, desktop off-road slowdown, desktop drift, desktop drift Tier 1, desktop drift mechanics, desktop drift-release boost, desktop boost, desktop boost pad mechanics, desktop item pickup, desktop item box mechanics, desktop rival cluster, desktop finish line, desktop stuck recovery, mobile idle, mobile driving, audio mute control, reduced motion, and WebGL fallback.
+- Focused visual/control snapshots fail on blank canvas, bad kart size, camera clipping, insufficient road visibility, HUD overlap with the kart or protected road-focus rect, missing route lookahead, missing non-boost acceleration targets, missing braking target, missing reverse-speed cap evidence, missing steering timing target, missing turn-approach curvature, missing branch-decision visibility, missing opening-sequence progress/branch/rival/lookahead evidence, missing collision impact/speed-loss/recovery evidence, missing off-road slowdown evidence, missing drift state, missing separate drift Tier 1 evidence, missing physics-path drift hop/tier/release boost evidence, missing drift-release boost source, missing boost state, missing boost pad activation/speed/FOV response, missing held item, missing item box pickup/key evidence, missing normal-driving rival visibility, missing rival-cluster visibility, missing final-lap state, missing stuck recovery telemetry, bad reduced-motion speed-line suppression, or bad audio mute toggle state/telemetry.
+- Visual telemetry JSON now embeds HUD layout evidence for each focused snapshot, including visible HUD element rects plus overlap areas against the measured kart rect and protected road-focus rect.
+- Visual telemetry JSON and focused summaries now include renderer complexity counters for calls, triangles, geometries, textures, and programs.
+- WebGL blank-canvas checks now use screenshot PNG variance instead of `canvas.toDataURL()`, allowing the production renderer to keep `preserveDrawingBuffer` disabled.
+- Focused and per-race WebGL screenshots now retry when the decoded PNG variance fails the nonblank gate, which protects against transient early sky/geometry frames while still failing persistently bad captures.
+- WebGL fallback capture verifies the actual `/#race` route enters `canvas2d-fallback` mode with a nonblank fallback canvas when WebGL contexts are unavailable.
+- `docs/race-kart-v1-planning-index.md` is the entrypoint for the current planning artifact set and work order.
+- `docs/comeback-city-kart-racer-v1-blocker-resolution-prd.md` defines the milestone to close owner target/scope input, desktop FPS, manual QA, fresh-user review, IP/provenance sign-off, and product/design review.
+- `docs/comeback-city-kart-racer-production-readiness-plan.md` defines the broader goal-mode plan for production readiness, including game-quality sign-off, performance, manual QA, accessibility, IP, security/privacy, PWA/cache reliability, deployment, rollback, monitoring, support, and post-launch gates.
+- `docs/race-implementation-planning-completeness-audit.md` checks the planning package against PRD phases, immediate tickets, evidence gates, and blockers.
+- `docs/race-kart-v1-acceptance-audit.md` records the current PRD/ticket evidence matrix, including automated proof, failing performance targets, and missing owner/manual sign-off items.
+- `docs/race-v1-definition-of-done-checklist.md` maps every PRD Section 20 DoD item to current evidence, status, and proof needed to close.
+- `docs/race-owner-review-packet.md` records the owner-facing decision request for `RACE-001`, V1 scope, mobile target, and IP/provenance review inputs.
+- `docs/race-v1-blocker-backlog.md` records the current cross-ticket blocker queue, owner decision packet, and proof required to close each V1 blocker.
+- `docs/race-performance-triage-plan.md` records the current performance evidence split between normal render cost, visual-scenario setup overhead, and mobile snapshot limitations.
+- `docs/race-performance-next-pass-plan.md` records the controlled next pass for `RACE-PERF-002`, including sustained normal-play capture, scene budget telemetry, one-category visual reduction, and keep/reject criteria.
+- `docs/race-immediate-ticket-breakdown.md` records the engineering handoff for `RACE-001` through `RACE-009`, including dependencies, write scopes, next actions, proof to close, and stop conditions.
+- `docs/race-pr-evidence-template.md` provides a copyable PR evidence checklist for race-quality changes so screenshots, telemetry, commands, reviews, regressions, and known issues are captured consistently.
+- `docs/race-manual-qa-rubric.md` now provides the `RACE-009` scoring template, automated-artifact intake, preflight commands, desktop/mobile manual route checklists, fresh-user clip check, and result record; it is not a completed QA pass.
+- `docs/race-visual-target-brief.md` now provides the blocked `RACE-001` owner-input template and explicit IP boundary; it is not an approved visual target brief until the owner supplies the target reference and required decisions.
+- `docs/race-ip-provenance-audit.md` now records the current-state race IP/provenance scan, including live-runtime asset findings, repository binary inventory, item-name risk flags, and required review before V1 sign-off.
+- `docs/race-ip-provenance-audit.md` now fingerprints all current files under `src/assets/game` with SHA-256 hashes and records whether each is imported by live race runtime, plaza/reference surfaces, or metadata only.
+- `docs/race-first-30-seconds-vertical-slice-plan.md` now maps `RACE-006` to authored Comeback City progress markers, current focused screenshots/telemetry, and the remaining manual/design evidence needed before first-slice sign-off.
+
+## Phase 0 Blocker
+
+`RACE-001` cannot be completed without the owner-selected target screenshot or capture. The PRD explicitly requires the brief to include the target reference, viewport, kart size, horizon placement, road visibility, object density, HUD placement, color/lighting notes, and IP boundary.
+
+Do not infer the target from existing temporary screenshots. Use them only as current-state evidence after the owner confirms which image or capture is the target reference.
+
+A blocked intake template now exists at `docs/race-visual-target-brief.md`. It records the required owner fields and PRD defaults without approving a visual target.
+
+Required owner decisions before implementation changes that affect feel or art direction:
+
+- Exact visual composition target screenshot or capture.
+- Desktop-first, mobile-first, or equal priority for V1 tuning.
+- Kart-only V1 versus retaining hover/plane modes during the V1 quality pass.
+- Whether items and audio are required in the first quality pass or staged after driving/camera.
+- Whether race V1 is standalone first or immediately tied to city progression.
+- Whether current item names with shell/star/banana language should be renamed or re-skinned before V1.
+
+## Ticket Order
+
+Engineering handoff details for these tickets now live in `docs/race-immediate-ticket-breakdown.md`.
+
+1. `RACE-001: Confirm Target Visual Brief`
+   - `docs/race-visual-target-brief.md` exists as a blocked owner-input template.
+   - The approved output still requires the owner-supplied target screenshot/capture plus measurable composition targets and explicit IP boundaries.
+   - Gate: owner confirms the brief before art/camera tuning claims are made.
+
+2. `RACE-002: Extract Kart Tuning`
+   - Create `src/game/race/physics/kartTuning.js`.
+   - Move the existing `DRIFT_TUNING`, `VEHICLES`, and `DEFAULT_VEHICLE_BY_STYLE` constants out of `ArcadeRace3D.jsx`.
+   - Keep values unchanged.
+   - Gate: `npm run build` and `npm run test:race:browser`.
+   - Current status: complete for the constant extraction; validation passed on 2026-05-19.
+
+3. `RACE-003: Add Physics Telemetry`
+   - Create `src/game/race/raceTelemetry.js`.
+   - Add normalized speed, time-to-speed-80, time-to-speed-98, drift start, drift tier, boost source, stuck recovery, and nested PRD telemetry fields.
+   - Update `scripts/race-browser-playtest.mjs` to write telemetry JSON beside screenshots.
+   - Gate: telemetry is readable from `window.__raceVisualTelemetry` and browser playtest artifacts include JSON.
+   - Current status: complete for telemetry fields and JSON artifact capture; visual threshold assertions remain part of `RACE-008`.
+
+Architecture cleanup status:
+
+- `RACE-002` tuning extraction is complete.
+- `RACE-003` telemetry extraction is complete for the nested telemetry builder, speed/boost/drift/stuck recovery stats, reusable visual metric helpers, browser sample publication, and HUD telemetry mapping.
+- `raceState.js` extraction is complete for current race state creation, including player/rival initialization and world pickup/hazard runtime state.
+- `raceVisualScenarios.js` extraction is complete for current visual-playtest scenario predicates, shared kart setup, heading-camera detection, manual visual scenario priming, and post-update frame stabilization.
+- `raceAutoplay.js` extraction is complete for current browser playtest player autoplay, including visual scenario setup, lap simulation, item/banana/hazard/zone counters, and player timer decay.
+- `racePlaytestState.js` extraction is complete for current playtest URL parsing, event recording, and browser global reset setup.
+- `raceRuntimeSetup.js` extraction is complete for current track compilation, playtest parsing, kart-only/default-vehicle selection, race state creation, key set creation, and visual stats initialization.
+- `raceSceneRuntime.js` extraction is complete for current scene shell creation, WebGL renderer creation/fallback callback wiring, track mesh creation, boost pad mesh creation, pickup mesh creation, scenery/collider/collision-circle setup, and player/rival vehicle mesh setup.
+- `raceUpdateRuntime.js` extraction is complete for current frame-update callback wiring, including lap progress finish marking, vehicle integration, autoplay, track hazards/events, world collision return values, player updates, rival updates, hazard-by-type triggers, and ranking updates.
+- `raceCameraRuntime.js` extraction is complete for current race camera runtime state, including raycaster creation, camera-initialized state, route-lookahead telemetry storage, mobile profile handoff, heading-camera scenario selection, and per-frame chase camera update calls.
+- `raceTelemetryRuntime.js` extraction is complete for the current default 140 ms telemetry publication cadence, explicit interval overrides, route-lookahead handoff, publication/skip counters, and telemetry argument wiring.
+- `raceMotionRuntime.js` extraction is complete for current race reduced-motion state resolution, canvas dataset publication, and media-query listener cleanup.
+- `raceRuntimeActions.js` extraction is complete for current runtime item use, held/banked item dispatch, item-box collection telemetry, remote hazard triggering, vehicle cycling, and reset actions.
+- `raceDropRuntime.js` extraction is complete for current dropped banana spawn/scatter mesh side effects and dropped trap spawn mesh side effects.
+- `raceHitRuntime.js` extraction is complete for current player/rival hit feedback, camera/screen flash timer mutation, hit cue playback, and banana scatter dispatch.
+- `raceFrameUpdates.js` extraction is complete for current vehicle integration frame dispatch, track hazard contact/effect dispatch, track event mutation/scheduling, hazard-by-type runtime triggers, world-collision telemetry mutation, and rank notice mutation.
+- `raceFrameClock.js` extraction is complete for current frame dt capping, FPS smoothing, race timer advancement, camera/screen flash timer decay, and position-notice expiry.
+- `raceFinishRuntime.js` extraction is complete for current finish-result construction, playtest finish global publication, finish event recording, and finish callback dispatch.
+- `racePlayerFrame.js` extraction is complete for the current player frame update path, with runtime-only callbacks now wired through `raceUpdateRuntime.js` for lap progress, world collision resolution, and vehicle integration.
+- `raceTelemetry.js` extraction is complete for the current telemetry frame builder/publisher, with `raceTelemetryRuntime.js` now scheduling the publication cadence and passing runtime objects from `ArcadeRace3D.jsx`.
+- `raceVehicleRuntime.js` extraction is complete for current boost application source telemetry, vehicle mode switching presentation, and next-vehicle-mode closure wiring.
+- `RACE-005` camera extraction is partial; profile, route lookahead, per-frame camera update, roll, collision avoidance, raycaster setup, initialized-state storage, and route-lookahead telemetry storage are extracted, but PRD V2 camera tuning and collision-volume acceptance are not complete.
+- `trackGeometry.js` extraction is complete for the current legacy/courseV2 track compiler, road constants, layer altitude/offset helpers, and point conversion/sampling helpers.
+- `raceSceneTheme.js` extraction is complete for current track theme colors and default Comeback City district values.
+- `createRaceScene.js` extraction is started for current scene shell, WebGL renderer options/configuration/fallback wrapper, renderer/canvas resize fitting, fog, camera, lighting, shadow bounds, and world group setup.
+- `createTrackMesh.js` extraction is started for current track render materials, ground plane, road segments, caps, start tiles, boost pad meshes, clean-course visual segment chunking, and clean-course track-box instancing.
+- `createRaceScenery.js` extraction is complete for current scenery, landmarks, skyline/background, objective marker, water/bridge, mountain/cloud, camera-collider registration, collision-circle registration, city animation hook setup, and skyline instancing.
+- `createRacePickups.js` extraction is complete for current track banana, item box, flight gate, switch pad, track hazard, dropped banana, and dropped trap mesh factories.
+- `createRaceVehicles.js` extraction is complete for current player/rival vehicle mesh setup and switch-ring creation.
+- `syncRaceMeshes.js` extraction is complete for current per-frame mesh synchronization across player/rival vehicles, pickup meshes, hazard meshes, city animation hooks, dropped traps, and dropped bananas.
+- Vehicle mode transition, vehicle integration switch-pad/zone/lock behavior, player/rival hit response, player/rival bump collision behavior, world collision contact resolution, boost-pad activation resolution, and flight-gate activation resolution are extracted to `kartPhysics.js`; the player-frame orchestration now lives in `racePlayerFrame.js`; boost application and vehicle-mode presentation glue now live in `raceVehicleRuntime.js`; boost-flame presentation helpers now live in `raceVfx.js`; audio feedback and direct Three.js mesh mutation still live in runtime/render helpers.
+- Item color metadata, held-item construction, item-use request gating, high-level item-use orchestration, item boost payload resolution, self-status item timer application, banana-magnet rival pull behavior, opponent item payload resolution, remote-hazard item payload resolution, trap-use option resolution, item-box selection filtering, pickup gating, combined item-box collection/leveling/source reporting, banana scatter drop resolution, track/dropped banana pickup and magnet update behavior, banana spend/held-item upgrade/rare pickup/double-slot purchase behavior, held-item slotting, and post-use held-item advancement are extracted to `raceItems.js`.
+- Track event scheduling/message aging, track hazard contact/cooldown resolution, track hazard effect application, track event mutation, timed hazard phase/window/active-state resolution, remote-hazard activation selection, hazard-by-type trigger pulse/message payload resolution, event pulse maxing, cooldown reset, triggered/no-armed message payloads, dropped trap hazard descriptor construction, dropped-hazard contact decisions, and dropped-hazard frame update/drag/hit/filter behavior are extracted to `raceHazards.js`; runtime item action glue now lives in `raceRuntimeActions.js`, dropped-object mesh side effects live in `raceDropRuntime.js`, hit feedback glue lives in `raceHitRuntime.js`, and per-frame dropped hazard mesh synchronization still routes through render helpers.
+- `createKartModel.js` extraction is complete for the current race vehicle mesh factory and shared material helper.
+- `createBillboardText.js` extraction is complete for the current in-world label/sign billboard sprite helper.
+- `raceControls.js` extraction is complete for current keyboard/touch input resolution, keyboard event filtering, Space jump queueing, touch patch/pointer-capture behavior, scripted visual-playtest control overrides, external command dispatch, per-frame command id suppression, and one-shot key command consumption.
+- Legacy 2D `RaceCanvas` confusion is reduced by renaming it `RaceCanvasFallback`, marking it deprecated/fallback-only, and keeping browser coverage for `canvas2d-fallback`.
+- `raceHud.jsx` extraction is complete for the current rendered race shell and overlay, including the race audio mute toggle.
+- `RACE-007` VFX extraction is partial; drift spark presentation helpers, boost-flame presentation helpers, player/rival vehicle presentation frame helpers, switch-ring frame helpers, and world pickup/hazard presentation frame helpers are extracted.
+- `raceProgress.js` extraction is complete for current scoring, lap crossing, finish, split, and ranking notice behavior.
+- `raceRivals.js` extraction is complete for current rival route-layer selection, signature trigger thresholds, standard rival frame movement/timers/rubberbanding/lap finish crossing, and visual rival-cluster placement.
+- Remaining Phase 1 extraction candidates: manual-review-oriented cleanup after owner decisions.
+
+4. `RACE-004: Implement Drift V2`
+   - Create or extend `src/game/race/physics/kartPhysics.js` around hop, drift, counter-steer, tier charge, and release boost.
+   - Keep first pass kart-focused unless the owner confirms hover/plane must remain first-class in V1.
+   - Gate: telemetry records Tier 1 and Tier 2; screenshots show side slip, sparks, and release boost.
+   - Current status: partial. Drift now starts through a short hop gate, `kartPhysics.js` owns helper logic for vehicle mode transition, vehicle integration, player/rival hit response, drive force resolution, ground jump/landing update, lateral grip/drift slip, position/bounds update, player timer/state decay, boost-pad activation resolution, road assist, track-boundary guide, hop activation, drift tier calculation, drift charge, drift release boost mapping, drift steering composition, heading delta, speed caps/application, world circle collision response, boost stacking, and stuck recovery detection/response. `npm run test:race` asserts those helpers, telemetry exposes drift hop and stuck recovery state, and the browser harness captures separate Tier 1, Tier 2, synthetic drift-release boost, and physics-path hop/hold/release drift evidence. Manual drift, collision, and stuck-recovery feel review is still required.
+
+5. `RACE-005: Implement Chase Camera V2`
+   - Create `src/game/race/camera/chaseCamera.js`.
+   - Implement route lookahead, upcoming curvature, boost FOV, kart coverage measurement, road-ahead coverage, and camera collision avoidance.
+   - Gate: desktop speed/drift screenshots show road ahead, kart coverage is 0.14-0.24, and camera clip count is zero.
+   - Current status: partial. The chase camera profile calculation, route-lookahead target helper, route curvature telemetry, per-frame camera update, steering/drift camera roll helper, and camera collision avoidance helper are extracted and covered by `npm run test:race`. Browser visual checks assert route-lookahead use and a 1.0-1.5 second lookahead window for the desktop driving scenario. Upcoming curvature is exposed in telemetry, but manual camera feel review is still required.
+
+6. `RACE-006: Rebuild Comeback City GP First 30 Seconds`
+   - Rework only the Comeback City GP first segment first.
+   - Include start arch, first straight, first boost, first item, first drift turn, and first district landmark.
+   - Gate: a first-lap route is understandable without minimap and no large empty plane dominates the camera view.
+   - Current planning artifact: `docs/race-first-30-seconds-vertical-slice-plan.md`.
+
+7. `RACE-007: Add Core VFX And Audio`
+   - Add feedback for drift, boost, item pickup/use, collision, lap, and finish.
+   - Respect mute and reduced motion.
+   - Gate: every mechanic is readable without debug telemetry.
+   - Current status: partial. `raceAudio.js` extracts the existing generated WebAudio cue and ambient-loop behavior with helper assertions and now supports mutable mute state for cue and ambient playback. `raceHud.jsx` exposes an icon-only race audio mute toggle. `raceVfx.js` extracts the current drift spark tier/color/frame and boost-flame visibility/group behavior with helper assertions. `raceMotionRuntime.js` now propagates reduced-motion state into the race camera and HUD, suppressing camera shake randomness, camera roll helper output, boost FOV pulse, and speed-line HUD overlays when active. Browser checks now cover mute toggle behavior and reduced-motion speed-line suppression. This does not yet satisfy the full RACE-007 feedback/audio acceptance criteria because manual mechanic-readability review is still missing.
+
+8. `RACE-008: Visual Test Harness`
+   - Extend browser visual testing to capture desktop/mobile idle, speed, drift, drift-release, boost, item pickup, rival cluster, finish, stuck recovery, and WebGL fallback.
+   - Write screenshot path, telemetry JSON, route URL, viewport, timestamp, and git branch/commit when available.
+   - Gate: fail on blank canvas, bad kart size, camera clipping, or insufficient road visibility.
+   - Current status: automated capture matrix complete for the named visual states plus separate drift Tier 1, audio mute control, and HUD layout overlap gates. Manual visual review is still required before claiming kart-racer quality.
+
+9. `RACE-009: Manual QA Pass`
+   - Run the PRD rubric and attach scores.
+   - Gate: no category below 4 before V1 is called complete.
+   - Current planning artifact: `docs/race-manual-qa-rubric.md`.
+
+## Evidence Gates
+
+Use `docs/race-pr-evidence-template.md` for PRs that claim race-quality improvement.
+
+Every race-quality PR must include:
+
+- Before failure description or screenshot.
+- After desktop screenshot.
+- After mobile screenshot when touch, camera, HUD, or layout changed.
+- At least one driving or drift screenshot.
+- Telemetry summary covering FPS, camera, speed, drift, collisions, and visible rivals.
+- Commands run and result.
+- Known remaining issues.
+
+Required commands before V1 completion:
+
+```sh
+npm run build
+npm run test:race
+npm run test:race:browser
+```
+
+## Validation Log
+
+2026-05-23:
+
+- Production-readiness planning:
+  - `docs/comeback-city-kart-racer-production-readiness-plan.md` now defines the exhaustive goal-mode execution plan needed before the kart racer can be called production-ready.
+  - The plan extends the V1 blocker work with release, deployment, rollback, monitoring, support, PWA/cache, WebGL reliability, accessibility, security/privacy, cross-browser/device QA, and post-launch gates.
+  - This does not close any runtime blocker by itself; it gives future goal-mode work the production-ready acceptance contract.
+
+2026-05-20:
+
+- Manual QA runbook hardening:
+  - `docs/race-manual-qa-rubric.md` now separates automated inputs from manual scores so autoplay, screenshots, and telemetry cannot be treated as a completed `RACE-009` pass.
+  - The runbook records the current browser summary path and capture timestamp, preflight commands, desktop keyboard route checks, mobile touch route checks, fresh-user 10 second clip review, and a result record template.
+  - This advances the QA handoff but does not close `RACE-009`; no manual scores or fresh-user review evidence exist yet.
+
+- V1 blocker backlog:
+  - `docs/race-v1-blocker-backlog.md` now sequences the remaining blockers across `RACE-001`, performance, manual desktop/mobile playthroughs, fresh-user review, IP/provenance sign-off, `RACE-006`, `RACE-007`, and the future hard FPS gate.
+  - The backlog records the owner decision packet without filling unknown values, and it defines close evidence for each blocker so autoplay success, screenshot variance, hashes, or current-state screenshots cannot be treated as V1 proof by themselves.
+
+- Owner review packet:
+  - `docs/race-owner-review-packet.md` now consolidates the owner/product/design/legal inputs needed before `RACE-001`, IP review, mobile performance acceptance, V1 scope, and manual sign-off can close.
+  - The packet keeps every unknown value as `Not supplied`, includes a concise owner prompt, and defines the follow-up updates needed once decisions are provided.
+
+- Performance next-pass plan:
+  - `docs/race-performance-next-pass-plan.md` now defines the next controlled `RACE-PERF-002` sequence: add sustained normal-play capture, add scene budget telemetry, apply one normal-view reduction, and explicitly keep or reject the change based on product FPS plus existing visual gates.
+  - The plan now records kept 2026-05-23 progress: sustained capture, scene budget telemetry, lamp instancing, and boost-filter cleanup improved normal desktop focused average to `41.54 actualFps`, but the desktop FPS gate remains below the local `45` floor and PRD `55` target.
+
+- Immediate ticket breakdown:
+  - `docs/race-immediate-ticket-breakdown.md` now converts `RACE-001` through `RACE-009` into engineering-ready rows with current status, dependencies, primary write scope, next action, proof to close, and stop conditions.
+  - The breakdown keeps complete tickets guarded, keeps partial tickets from being claimed from staged evidence alone, and routes performance work through `docs/race-performance-next-pass-plan.md`.
+
+- PR evidence template:
+  - `docs/race-pr-evidence-template.md` now gives implementers a copyable evidence format for commands, screenshots/captures, browser summary artifacts, telemetry deltas, manual/design/IP review, regression gates, known issues, and claim guardrails.
+  - The template preserves the PRD rule that tests and rendering are not enough for final race-quality claims.
+
+- V1 definition-of-done checklist:
+  - `docs/race-v1-definition-of-done-checklist.md` now maps every PRD Section 20 V1 DoD item to current evidence, status, and proof needed to close.
+  - The checklist explicitly marks V1 as incomplete while owner target, desktop FPS, manual desktop/mobile playthroughs, fresh-user review, manual QA scores, IP/provenance review, and design review remain open.
+
+- Planning index:
+  - `docs/race-kart-v1-planning-index.md` now provides the entrypoint for the planning docs, current headline state, document routing, work order, do-not-claim list, and validation minimums.
+
+- Implementation-planning completeness audit:
+  - `docs/race-implementation-planning-completeness-audit.md` now checks planning coverage against PRD phases, immediate tickets, evidence gates, and blocker status.
+  - The audit marks implementation planning as covered enough to guide next work while keeping V1 implementation/sign-off explicitly incomplete.
+
+- Blocker-resolution PRD:
+  - `docs/comeback-city-kart-racer-v1-blocker-resolution-prd.md` now defines the implementation milestone for closing owner target/scope input, desktop FPS, manual desktop/mobile QA, fresh-user review, IP/provenance sign-off, and product/design review.
+  - The PRD incorporates internal evidence plus primary-source research for browser frame budgets, `requestAnimationFrame`, Three.js object optimization, reduced-motion accessibility, and IP/provenance review boundaries.
+
+- IP/provenance evidence hardening:
+  - `docs/race-ip-provenance-audit.md` now includes a current hash inventory for every file under `src/assets/game`, including byte size, SHA-256, and current import status.
+  - The latest targeted prohibited-term scan over `src/game`, `src/assets/game`, and `scripts/race-*` returned no matches for the Nintendo/Mario-character and track-name terms used by the audit command.
+  - Current import scan confirms `src/game/ArcadeRace3D.jsx` and `src/game/race/**` do not import binary images or sampled audio; race audio remains oscillator-generated through `src/game/race/raceAudio.js`.
+  - Current non-race game-surface imports remain `src/game/comebackCityVisuals.jsx` for `comeback-city-race-backdrop-v2.png` and `src/game/ComebackCityScene3D.jsx` for plaza measurement JSON plus generated district facade PNGs.
+  - This strengthens V1 provenance evidence but does not close IP sign-off. Owner/design review is still required for item names such as `Guard Shell`, `Star Shield`, `Banana Magnet`, `Oil Slick`, and feedback cue ids such as `star-on`.
+
+- Clean track batch-size retest and rejection:
+  - A temporary `src/game/race/render/createTrackMesh.js` change increased `CLEAN_TRACK_BOX_BATCH_SEGMENTS` from `6` to `8`.
+  - `npm run test:race` passed with the temporary change.
+  - `npm run test:race:browser` passed with the temporary change at `2026-05-20T18:12:39.395Z`, but normal desktop actual FPS regressed to `38.6` on average despite normal desktop draw calls falling to about `685`. Representative weak samples were desktop idle `32.1 actualFps` and desktop item pickup `23.4 actualFps`.
+  - The temporary change was reverted to `6`.
+  - `npm run test:race` passed after the revert.
+  - `npm run test:race:browser` passed after the revert with 24 completed browser races and 28 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T18:16:31.541Z`.
+  - Latest grouped telemetry after the revert: normal desktop visual states averaged `42.0 actualFps`, `19.6ms frameWorkMs`, `15.3ms render`, and `717 / 69,781` calls/triangles; manual desktop mechanic states averaged `34.7 actualFps`, `38.4ms frameWorkMs`, `11.8ms render`, `19.9ms visualPrime`, and `592 / 59,886` calls/triangles; the opening-sequence state recorded `10.5 actualFps`, `1.7ms frameWorkMs`, `1.0ms render`, and `293 / 35,782` calls/triangles; mobile focused states averaged `35.9 actualFps`, `9.5ms frameWorkMs`, `6.2ms render`, and `478 / 49,593` calls/triangles.
+  - Performance note: the retest is rejected because it improved draw calls without improving the product FPS gate. Keep preserving camera/steering evidence and investigate frame pacing/render spikes before more broad batching.
+
+- Reduced-motion browser-route evidence:
+  - `src/game/race/raceTelemetry.js` now publishes reduced-motion state in `window.__raceVisualTelemetry.reducedMotion` and `window.__raceVisualTelemetry.player.reducedMotion`; HUD telemetry already carried the same state.
+  - `src/game/race/raceHud.jsx` marks the speed-line overlay with `data-testid="race-speed-lines"` so the browser harness can prove it is absent under reduced motion.
+  - `scripts/race-browser-playtest.mjs` now includes `comeback-city-reduced-motion`, emulates `prefers-reduced-motion: reduce`, waits for the actual race route at speed, and fails if shell/canvas reduced-motion attributes are not `true`, telemetry reduced motion is not `true`, or speed-line feedback is present.
+  - `node --check src/game/race/raceTelemetry.js`, `node --check scripts/race-browser-playtest.mjs`, and `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 28 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T18:16:31.541Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest reduced-motion telemetry: `normalizedSpeed: 0.985`, `reducedMotion: true`, `telemetryPlayerReducedMotion: true`, `shellReducedMotion: true`, `canvasReducedMotion: true`, and `speedLineCount: 0`.
+  - Latest grouped telemetry: normal desktop visual states averaged `42.0 actualFps`, `19.6ms frameWorkMs`, `15.3ms render`, and `717 / 69,781` calls/triangles; manual desktop mechanic states averaged `34.7 actualFps`, `38.4ms frameWorkMs`, `11.8ms render`, `19.9ms visualPrime`, and `592 / 59,886` calls/triangles; the opening-sequence state recorded `10.5 actualFps`, `1.7ms frameWorkMs`, `1.0ms render`, and `293 / 35,782` calls/triangles; mobile focused states averaged `35.9 actualFps`, `9.5ms frameWorkMs`, `6.2ms render`, and `478 / 49,593` calls/triangles.
+  - Performance note: this closes a browser evidence gap for `RACE-007` reduced-motion behavior, not the V1 performance gate.
+
+- Opening-sequence visual gate and camera avoidance resolution:
+  - `src/game/race/raceTelemetry.js` now exposes `player.progress` in `window.__raceVisualTelemetry.player.progress` and the browser compact summaries as `playerProgress`.
+  - `scripts/race-browser-playtest.mjs` now includes `comeback-city-desktop-opening-sequence` and fails it unless the run reaches progress `0.235+`, uses route lookahead in the `1.0`-`1.5s` PRD window, sees at least one branch, records `visibleRivalsSeen >= 3`, and reports `cameraClipCount: 0`.
+  - `src/game/race/camera/chaseCamera.js` now lets camera collision avoidance make multiple pull/lift attempts before reporting an unresolved clip. The opening-sequence scenario initially caught `cameraClipCount: 1`; after the fix it records `cameraAvoidanceCount: 12` and `cameraClipCount: 0`.
+  - `node --check src/game/race/camera/chaseCamera.js`, `node --check src/game/race/raceTelemetry.js`, `node --check scripts/race-browser-playtest.mjs`, and `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 27 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T17:50:15.526Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest opening-sequence telemetry: `playerProgress: 0.249`, `kartHeightRatio: 0.170`, `roadAheadCoverage: 1.0`, `routeLookaheadSeconds: 1.333`, `visibleRivalsSeen: 3`, `cameraAvoidanceCount: 12`, `cameraClipCount: 0`.
+  - Latest grouped telemetry: normal desktop visual states averaged `40.6 actualFps`, `20.0ms frameWorkMs`, `15.5ms render`, and `714 / 69,331` calls/triangles; manual desktop mechanic states averaged `34.3 actualFps`, `40.9ms frameWorkMs`, `12.7ms render`, `21.2ms visualPrime`, `107.9ms visualPrimeSetup`, `0.0ms visualPrimeRuntime`, and `613 / 61,537` calls/triangles; the opening-sequence state recorded `10.7 actualFps`, `1.7ms frameWorkMs`, `1.0ms render`, and `287 / 35,302` calls/triangles; mobile focused states averaged `32.1 actualFps`, `7.8ms frameWorkMs`, `5.7ms render`, and `500 / 51,050` calls/triangles.
+  - Performance note: the new opening sequence is useful for camera/route/rival evidence, not V1 performance sign-off. Desktop FPS remains below the PRD target and below the local floor in several focused states.
+
+- Cumulative steady-FPS telemetry retest and rejection:
+  - A temporary `steadyActualFps` measurement was added after a one-second warmup, then rejected because the cumulative value folded headless/browser `requestAnimationFrame` gaps into the metric and did not represent sustained runtime performance.
+  - The bad evidence was a passing browser harness at `2026-05-20T17:24:12.457Z` with misleading summaries such as desktop idle `steadyActualFps: 7.9` and desktop driving `steadyActualFps: 8.5`.
+  - The temporary fields were removed from `src/game/race/raceFrameClock.js`, `src/game/race/raceTelemetry.js`, `scripts/race-browser-playtest.mjs`, and `scripts/race-content-playtest.mjs`.
+  - `node --check src/game/race/raceFrameClock.js`, `node --check src/game/race/raceTelemetry.js`, `node --check scripts/race-browser-playtest.mjs`, and `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T17:29:07.549Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest grouped telemetry: normal desktop visual states averaged `41.8 actualFps`, `20.2ms frameWorkMs`, `15.8ms render`, and `715 / 69,461` calls/triangles; manual desktop mechanic states averaged `38.9 actualFps`, `42.9ms frameWorkMs`, `13.1ms render`, `22.0ms visualPrime`, `91.6ms visualPrimeSetup`, `0.0ms visualPrimeRuntime`, and `621 / 62,131` calls/triangles; mobile focused states averaged `34.1 actualFps`, `8.6ms frameWorkMs`, `6.2ms render`, and `504 / 51,506` calls/triangles.
+  - Performance note: keep using `actualFps`, frame elapsed/budget misses, and phase timings until a better sustained-runtime measurement is designed and validated. Desktop FPS remains below the PRD target and below the local floor in several focused states.
+
+- Decorative scenery batching retest and rejection:
+  - A temporary `src/game/race/render/createRaceScenery.js` change batched street lamps, plaza lamps, water ripples, mountains, and cloud puffs with `InstancedMesh`.
+  - The browser harness passed at `2026-05-20T17:10:50.969Z`, but normal desktop actual FPS regressed to `41.4` on average even though draw calls fell to `670`; triangles rose to `71,220` and renderer programs rose to `7`.
+  - The batching retest was removed because it lowered draw calls without improving the product FPS gate.
+  - `node --check src/game/race/render/createRaceScenery.js` passed after removal.
+  - `node --check scripts/race-content-playtest.mjs` passed after restoring the content assertion.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Browser summary was captured at `2026-05-20T17:16:15.156Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest grouped telemetry after removal: normal desktop visual states averaged `42.6 actualFps`, `19.6ms frameWorkMs`, `14.9ms render`, and `719 / 69,911` calls/triangles; manual desktop mechanic states averaged `37.9 actualFps`, `42.7ms frameWorkMs`, `13.2ms render`, `22.0ms visualPrime`, `91.0ms visualPrimeSetup`, `0.0ms visualPrimeRuntime`, and `617 / 61,931` calls/triangles; mobile focused states averaged `31.5 actualFps`, `7.5ms frameWorkMs`, `5.4ms render`, and `482 / 49,777` calls/triangles.
+  - Performance note: broad decorative instancing is rejected for now; the next RACE-PERF-002 attempt should preserve culling behavior and investigate frame pacing/render spikes instead of assuming draw-call reduction alone is sufficient.
+
+- Visual-prime setup/runtime evidence split:
+  - `src/game/race/playtest/raceVisualScenarios.js` now exposes manual visual-scenario primed-state helpers so the render loop can tell one-time scenario setup apart from steady mechanic-state runtime.
+  - `src/game/ArcadeRace3D.jsx` keeps the existing `visualPrime` phase and additionally records `visualPrimeSetup` on the first scenario-prime frame and `visualPrimeRuntime` on later manual visual-scenario frames.
+  - `scripts/race-content-playtest.mjs` now asserts the visual-scenario primed keys and enabled-mode behavior.
+  - `node --check src/game/race/playtest/raceVisualScenarios.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T17:00:04.906Z`.
+  - Latest grouped telemetry: normal desktop visual states averaged `42.6 actualFps`, `20.0ms frameWorkMs`, `15.3ms render`, and `716 / 69,596` calls/triangles; manual desktop mechanic states averaged `38.2 actualFps`, `40.9ms frameWorkMs`, `12.9ms render`, `21.4ms visualPrime`, `108.0ms visualPrimeSetup`, `0.0ms visualPrimeRuntime`, and `619 / 61,995` calls/triangles; mobile focused states averaged `32.7 actualFps`, `8.2ms frameWorkMs`, `5.7ms render`, and `504 / 51,450` calls/triangles.
+  - Performance note: this completes `RACE-PERF-003` evidence separation, but desktop actual FPS remains below the PRD `55` target and below the local `45` FPS floor in several normal visual states. This is not V1 performance sign-off.
+
+- HUD minimap memoization and transition-scheduling retest:
+  - `src/game/race/raceHud.jsx` now memoizes the static minimap route and branch geometry per track so telemetry-driven HUD renders do not rebuild it on every publication.
+  - A temporary `src/game/ArcadeRace3D.jsx` change wrapped HUD telemetry state updates in React `startTransition`. It passed the browser harness but regressed normal desktop actual FPS to `38.8` on average, including weak drift Tier 1 and finish-line samples, so the transition scheduling change was removed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T16:51:57.168Z`.
+  - Latest grouped telemetry: normal desktop visual states averaged `43.6 actualFps`, `20.1ms frameWorkMs`, `15.6ms render`, `1.6ms telemetry`, and `720 / 70,008` calls/triangles; manual desktop mechanic states averaged `35.9 actualFps`, `43.9ms frameWorkMs`, `13.2ms render`, `22.8ms visualPrime`, and `616 / 61,787` calls/triangles; mobile focused states averaged `33.4 actualFps`, `8.9ms frameWorkMs`, `6.5ms render`, and `504 / 51,506` calls/triangles.
+  - Performance note: the memoization cleanup preserves browser gates, but desktop actual FPS remains below the PRD `55` target and below the local `45` FPS floor in most normal visual states. This is not V1 performance sign-off.
+
+- Telemetry cadence and performance evidence pass:
+  - `src/game/race/raceTelemetryRuntime.js` now defaults visual/HUD telemetry publication to `140ms` instead of `90ms`, while preserving explicit interval overrides for tests and future harness tuning.
+  - `src/game/race/raceTelemetry.js` now publishes `telemetry.intervalMs`, `telemetry.publishCount`, and `telemetry.skipCount` in `window.__raceVisualTelemetry`; `scripts/race-browser-playtest.mjs` includes the same counters in compact visual summaries.
+  - `scripts/race-content-playtest.mjs` now asserts both explicit `90ms` runtime cadence behavior and the default `140ms` cadence/counter behavior.
+  - A temporary desktop render-scale retest at `0.88` passed the browser harness but produced mixed/worse actual-FPS evidence in normal states, including idle `41.5`, drift `39.7`, boost `42.0`, item pickup `42.0`, and finish line `41.9`; `RACE_RENDER_SCALE.desktop` was restored to `0.92`.
+  - `node --check src/game/race/raceTelemetryRuntime.js` passed.
+  - `node --check src/game/race/raceTelemetry.js` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T16:35:47.203Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the build/check pass.
+  - Latest grouped telemetry: normal desktop visual states averaged `42.1 actualFps`, `19.5ms frameWorkMs`, `15.2ms render`, `1.7ms telemetry`, and `717 / 69,746` calls/triangles; manual desktop mechanic states averaged `39.1 actualFps`, `43.0ms frameWorkMs`, `13.0ms render`, `22.1ms visualPrime`, and `618 / 62,067` calls/triangles; mobile focused states averaged `33.3 actualFps`, `8.3ms frameWorkMs`, `5.7ms render`, and `500 / 51,050` calls/triangles.
+  - Performance note: telemetry overhead is lower and browser gates remain green, but desktop actual FPS remains below the PRD `55` target and below the local `45` FPS floor in most normal visual states. This is not V1 performance sign-off.
+
+- Rival LOD performance pass:
+  - `src/game/race/render/createRaceVehicles.js` now keeps the full kart model for the player but uses a lower-detail rival model with distinct body/accent colors, four wheel groups, kart/hover/plane mode toggles, and boost-flame hooks.
+  - Local vehicle probe reported each rival reduced from about `63` meshes, `63` geometries, and `3440` triangles to `22` meshes, `22` geometries, and `472` triangles. Three-rival total moved from `189` meshes and `10,320` triangles to `66` meshes and `1,416` triangles.
+  - `scripts/race-content-playtest.mjs` now asserts the lightweight rival model's wheels, boost flames, mode toggles, mesh count, and triangle budget.
+  - `node --check src/game/race/render/createRaceVehicles.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T16:17:11.839Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest grouped telemetry: normal desktop visual states averaged `41.6 actualFps`, `20.5ms frameWorkMs`, `15.8ms render`, and `715 / 69,532` calls/triangles; manual desktop mechanic states averaged `37.7 actualFps`, `44.1ms frameWorkMs`, `13.9ms render`, `23.0ms visualPrime`, and `613 / 61,541` calls/triangles; mobile focused states averaged `32.6 actualFps`, `8.6ms frameWorkMs`, `6.5ms render`, and `499 / 50,958` calls/triangles.
+  - Performance note: this reduces render complexity and keeps `3` visible rivals in normal driving, but actual desktop FPS remains below the local `45` FPS floor and PRD `55` target.
+
+- Clean track box batching pass:
+  - `src/game/race/render/createTrackMesh.js` now batches clean Comeback City road, shoulder, edge-line, center-dash, and curb boxes in small spatial `InstancedMesh` chunks instead of one global batch.
+  - The local track object probe reported direct track children reduced from `1171` to `374`, with `104` instanced track batches and `901` visual box instances.
+  - `scripts/race-content-playtest.mjs` now asserts that clean-course track batching is present and that non-clean tracks remain unbatched.
+  - `node --check src/game/race/render/createTrackMesh.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T16:05:47.183Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest grouped telemetry: normal desktop visual states averaged `43.7 actualFps`, `21.0ms frameWorkMs`, `16.2ms render`, and `806 / 75,990` calls/triangles; manual desktop mechanic states averaged `38.9 actualFps`, `44.2ms frameWorkMs`, `13.8ms render`, `23.2ms visualPrime`, and `685 / 66,727` calls/triangles; mobile focused states averaged `33.3 actualFps`, `9.5ms frameWorkMs`, `7.3ms render`, and `594 / 58,020` calls/triangles.
+  - Performance note: this is a material render-cost improvement, but it is not V1 performance sign-off. Normal desktop average actual FPS is still below the local `45` FPS floor and PRD `55` FPS target.
+
+- Skyline instancing performance pass:
+  - `src/game/race/render/createRaceScenery.js` now batches city/perimeter skyline blocks and roofs with `InstancedMesh` while preserving the existing authored silhouette placement.
+  - The first browser run registered the new far skyline batches as camera colliders and reproduced a high-speed steering readiness timeout. Far skyline batches were removed from camera-collider registration; nearby scenery colliders and collision circles remain unchanged.
+  - `scripts/race-content-playtest.mjs` now asserts instanced scenery meshes and a reduced camera-collider range.
+  - `node --check src/game/race/render/createRaceScenery.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T15:52:04.744Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest grouped telemetry: normal desktop visual states averaged `40.4 actualFps`, `25.6ms frameWorkMs`, `20.3ms render`, and `1,308 / 72,106` calls/triangles; manual desktop mechanic states averaged `39.0 actualFps`, `51.0ms frameWorkMs`, `17.3ms render`, `25.7ms visualPrime`, and `1,144 / 64,200` calls/triangles; mobile focused states averaged `32.8 actualFps`, `12.2ms frameWorkMs`, `9.4ms render`, and `895 / 54,248` calls/triangles.
+  - Performance note: draw calls and geometries are lower, but desktop FPS is still below the PRD `55` FPS target and local `45` FPS minimum. This is mixed progress, not V1 performance sign-off.
+
+- Frame-phase performance triage pass:
+  - `src/game/ArcadeRace3D.jsx` now records phase timings around clock, renderer fit, command processing, visual scenario priming, player update, world update, mesh sync, camera, render, telemetry, and finish publication.
+  - `src/game/race/raceFrameClock.js` now aggregates `framePhaseMs`, `framePhaseMaxMs`, `frameWorkMs`, and `frameWorkMaxMs`.
+  - `src/game/race/raceTelemetry.js` publishes those frame-phase fields in `window.__raceVisualTelemetry`, and `scripts/race-browser-playtest.mjs` includes them in focused summaries.
+  - `scripts/race-content-playtest.mjs` asserts phase timing updates, zero-initialized `frameWorkMs` handling, and visual telemetry publication.
+  - `docs/race-performance-triage-plan.md` now records the performance split: normal desktop visual states average `43.6 actualFps`, `25.0ms frameWorkMs`, and `19.8ms render`; manual desktop mechanic states average `40.2 actualFps`, `50.0ms frameWorkMs`, and `24.7ms visualPrime`; mobile focused states average `32.0 actualFps` and `10.6ms frameWorkMs`.
+  - `node --check src/game/race/raceFrameClock.js`, `node --check src/game/race/raceTelemetry.js`, `node --check scripts/race-browser-playtest.mjs`, and `node --check scripts/race-content-playtest.mjs` passed. `node --check src/game/ArcadeRace3D.jsx` is not usable because Node rejects the `.jsx` extension; build remains the JSX validation gate.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T15:40:03.238Z`.
+  - Performance note: normal desktop evidence is render-dominated, while several forced mechanic snapshots are dominated by visual-scenario setup. The next product-facing performance pass is `RACE-PERF-002` normal-play render cost, with `RACE-PERF-003` test-harness setup cost kept separate.
+
+- Actual-frame timing telemetry pass:
+  - `src/game/race/raceFrameClock.js` now records actual elapsed-frame FPS, frame dt milliseconds, elapsed-frame milliseconds, and frame-budget miss count alongside the existing clamped simulation `fps`.
+  - `src/game/race/raceTelemetry.js` publishes `actualFps`, `frameDtMs`, `frameElapsedMs`, and `frameBudgetMissCount` in `window.__raceVisualTelemetry`.
+  - `scripts/race-browser-playtest.mjs` now includes those actual-frame fields in focused visual summaries, and `scripts/race-content-playtest.mjs` asserts both direct frame-stat updates and frame-clock integration.
+  - `node --check src/game/race/raceFrameClock.js`, `node --check src/game/race/raceTelemetry.js`, `node --check scripts/race-browser-playtest.mjs`, and `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T15:26:23.357Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest focused actual-frame telemetry: desktop idle actual FPS `40.5`; desktop driving actual FPS `46.7`, `1,400` calls, `71,422` triangles, `1,664` geometries, kart height `0.152`; desktop acceleration actual FPS `24.9`, time-to-speed-80 `1.504s`, time-to-speed-98 `2.490s`; braking actual FPS `43.5`, time-to-25 `0.931s`; reverse actual FPS `44.1`; low-speed steering `0.861s`; high-speed steering `1.123s`; turn approach actual FPS `39.8`; branch decision actual FPS `34.4`; desktop drift Tier 2 with actual FPS `44.2`; drift mechanics actual FPS `41.1`; boost actual FPS `43.8`; boost-pad mechanics actual FPS `41.3`; drift-release actual FPS `44.0`; item pickup actual FPS `40.9`; item-box mechanics held item `invincibility` with pickup delay `0.16s`; rival-cluster visible rivals `3` with actual FPS `50.4`; collision speed-loss ratio `0.417`; off-road slowdown `0.58`; stuck recovery count `1` with recovered speed `0.816`; mobile driving kart height `0.200`, mobile driving actual FPS `34.9`; mobile idle actual FPS `31.1`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: `actualFps` tracks the previous smoothed `fps` closely across the focused samples, so the performance blocker is not only an artifact of clamped simulation dt. Many focused samples still exceed the 45 FPS frame budget, and this is not V1 performance sign-off.
+
+- Rejected shoulder-underlay and antialias performance attempts:
+  - A temporary `createTrackMesh.js` change replaced each pair of clean-course shoulder strips with one lower wide shoulder underlay. It reduced the local track direct-child count to `1057`, but the browser visual harness timed out at the high-speed steering check; a direct high-speed steering probe reported about `7.4` FPS and steering time `0.99s`, below the PRD `1.0`-`1.45s` gate. The shoulder-strip render path was restored.
+  - A temporary `createRaceScene.js` renderer option change set `antialias: false`. It passed `npm run test:race` but failed the full browser visual-readiness gate, so `antialias: true` was restored.
+  - After reverting both attempts, `node --check src/game/race/render/createRaceScene.js`, `node --check src/game/race/render/createTrackMesh.js`, `node --check scripts/race-content-playtest.mjs`, and `npm run test:race` passed.
+  - `npm run test:race:browser` passed again with the validated segment-chunking path, 24 completed browser races, and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T15:18:35.964Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest focused telemetry after the revert: desktop idle FPS `46.7`; desktop driving FPS `43.9`, `1,385` calls, `70,292` triangles, `1,666` geometries, kart height `0.152`; desktop acceleration FPS `26.4`, time-to-speed-80 `1.493s`, time-to-speed-98 `2.401s`; braking FPS `27.6`, time-to-25 `0.893s`; reverse FPS `44.3`; low-speed steering `0.855s`; high-speed steering `1.094s`; turn approach FPS `39.7`; branch decision FPS `28.6`; desktop drift Tier 2 with FPS `44.3`; drift mechanics FPS `31.0`; boost FPS `43.8`; boost-pad mechanics FPS `44.2`; drift-release FPS `44.3`; item pickup FPS `54.2`; item-box mechanics held item `invincibility` with pickup delay `0.16s`; rival-cluster visible rivals `3` with FPS `44.1`; collision speed-loss ratio `0.416`; off-road slowdown `0.58`; stuck recovery count `1` with recovered speed `0.825`; mobile driving kart height `0.200`, mobile driving FPS `33.2`; mobile idle FPS `33.8`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: both attempted shortcuts were rejected because they failed browser evidence. The remaining path keeps the validated camera/physics gates but is still not V1 performance sign-off.
+
+- Clean-course visual segment chunking cap pass:
+  - `src/game/race/render/createTrackMesh.js` now combines adjacent low-curvature Comeback City clean-course visual segments while leaving compiled route, physics, nearest-point, and lap data unchanged.
+  - The chunking is capped at three source segments per visual chunk and preserves sharp heading changes, so local turn signage/curbs stay separated around meaningful bends.
+  - `scripts/race-content-playtest.mjs` now asserts straight-ish visual segment combining, the bounded three-source-segment cap, sharp-turn preservation, exact clean-track visual segment counts, and unchanged non-clean track behavior.
+  - Local object-count probe reported track direct children reduced from `2006` to `1171`, with `visualSegmentCount: 114`.
+  - `node --check src/game/race/render/createTrackMesh.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T15:04:09.623Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest focused telemetry after this pass: desktop idle FPS `40.6`; desktop driving FPS `44.2`, `1,399` calls, `71,410` triangles, `1,662` geometries, kart height `0.152`; desktop acceleration FPS `26.5`, time-to-speed-80 `1.517s`, time-to-speed-98 `2.418s`; braking FPS `54.1`, time-to-25 `0.905s`; reverse FPS `44.1`; low-speed steering `0.853s`; high-speed steering `1.024s`; turn approach FPS `39.7`; branch decision FPS `36.3`; desktop drift Tier 2 with FPS `44.2`; drift mechanics FPS `41.2`; boost FPS `44.0`; boost-pad mechanics FPS `41.4`; drift-release FPS `41.4`; item pickup FPS `50.6`; item-box mechanics held item `shield` with pickup delay `0.16s`; rival-cluster visible rivals `3` with FPS `47.4`; collision speed-loss ratio `0.417`; off-road slowdown `0.58`; stuck recovery count `1` with recovered speed `0.821`; mobile driving kart height `0.201`, mobile driving FPS `32.0`; mobile idle FPS `33.7`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the pass reduces draw pressure and keeps visual/camera/physics gates green, but it is not V1 performance sign-off. Acceleration, idle, driving, reverse, steering, turn approach, branch decision, drift, boost, boost-pad mechanics, drift-release, item-box mechanics, stuck recovery, and mobile samples still miss the PRD `55` FPS target or local `45` FPS minimum. The visual segment chunking also needs manual visual review before design sign-off.
+
+- Camera collision broad-phase pass:
+  - `src/game/race/raceSceneRuntime.js` now precomputes a bounding sphere for real Three.js camera colliders when scenery registers them.
+  - `src/game/race/camera/chaseCamera.js` now filters camera-collision candidates by distance to the camera ray before calling `Raycaster.intersectObjects`, while preserving unbounded colliders as conservative candidates.
+  - `scripts/race-content-playtest.mjs` now asserts near/far/unbounded broad-phase behavior, verifies distant bounded colliders skip raycaster work, and verifies registered Three.js camera colliders receive metadata.
+  - `node --check src/game/race/camera/chaseCamera.js` passed.
+  - `node --check src/game/race/raceSceneRuntime.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T14:41:29.743Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest focused telemetry after this pass: desktop idle FPS `43.2`; desktop driving FPS `43.4`, `1,906` calls, `75,248` triangles, kart height `0.153`; desktop acceleration FPS `27.4`, time-to-speed-80 `1.440s`, time-to-speed-98 `2.458s`; braking FPS `50.0`, time-to-25 `0.960s`; reverse FPS `58.0`; low-speed steering `0.889s`; high-speed steering `1.001s`; desktop drift Tier 2 with FPS `43.8`; boost FPS `53.8`; item-box mechanics FPS `43.8`; rival-cluster visible rivals `3` with FPS `40.6`; mobile driving kart height `0.200`, mobile driving FPS `37.1`; mobile idle FPS `37.9`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: this improves several previously weak samples, especially drift, reverse, mobile idle, and mobile driving, but it is not V1 performance sign-off. Desktop driving regressed below the local `45` FPS minimum in this capture, and acceleration, branch decision, rival cluster, stuck recovery, and mobile samples still miss the PRD `55` FPS target or local minimum.
+
+- Static scenery transform cleanup:
+  - `src/game/race/render/createRaceScenery.js` now freezes matrix updates for static scenery meshes after placement, including building shells, skyline pieces, lamps, water/bridge props, static landmark groups, and instanced window meshes.
+  - Animated district/objective elements that change transform every frame remain live: portal rings, portal pulse disc, objective beam, objective badge, and objective pad ring.
+  - `scripts/race-content-playtest.mjs` now asserts that a large scenery set is frozen while the animated portal/objective pieces keep `matrixAutoUpdate` enabled.
+  - `node --check src/game/race/render/createRaceScenery.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T14:33:39.000Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest focused telemetry after this pass: desktop idle FPS `43.2`; desktop driving FPS `46.7`, `1,942` calls, `76,892` triangles, kart height `0.153`; desktop acceleration FPS `27.4`, time-to-speed-80 `1.426s`, time-to-speed-98 `2.458s`; braking FPS `46.5`, time-to-25 `0.950s`; low-speed steering `0.873s`; high-speed steering `1.003s`; desktop drift Tier 2 with FPS `26.2`; boost FPS `43.4`; item-box mechanics FPS `40.9`; rival-cluster visible rivals `3` with FPS `43.5`; mobile driving kart height `0.202`, mobile driving FPS `34.6`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: this improves desktop idle, driving, braking, turn-approach, and mobile driving versus the previous pass, but it is not V1 performance sign-off. Acceleration, reverse, steering snapshots, branch decision, drift, boost, item-box mechanics, rival cluster, stuck recovery, and mobile samples still miss the PRD `55` FPS target or local `45` FPS minimum.
+
+- Steering gate and visual harness isolation pass:
+  - A temporary resize-driven renderer-fit runtime was tested and rejected because it reproduced the high-speed steering failure pattern, reporting about `2.107s` at `~7` FPS for the 90-degree high-speed steering gate. The current code keeps the validated per-frame `fitRaceRendererToCanvas` path, which still skips redundant DPR/projection updates internally.
+  - `src/game/race/physics/kartPhysics.js` retunes the normal kart steering speed curve from the over-damped high-speed curve to `clamp(0.68 - speedRatio * 0.06, 0.61, 0.67)`. This keeps low-speed steering in the PRD `0.65`-`0.95s` target while restoring high-speed steering to the PRD `1.0`-`1.45s` target under the browser harness.
+  - `scripts/race-content-playtest.mjs` now asserts the revised low/high-speed kart steering helper ranges and moving heading delta.
+  - `scripts/race-browser-playtest.mjs` now uses `RACE_VISUAL_READY_TIMEOUT_MS` with a default `25000ms` readiness window for focused visual snapshots and launches each focused visual/audio/fallback check in an isolated Chromium instance. This preserves the same visual thresholds while avoiding browser-process buildup from the 24 autoplay race pages and previous visual checks.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T14:24:10.926Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest focused telemetry after this pass: desktop driving FPS `43.6`, `1,923` calls, `76,048` triangles, kart height `0.153`; desktop acceleration FPS `27.4`, time-to-speed-80 `1.440s`, time-to-speed-98 `2.465s`; low-speed steering `0.884s`; high-speed steering `1.031s`; desktop drift Tier 2 with FPS `25.2`; boost FPS `53.9`; item-box mechanics FPS `46.9`; rival-cluster visible rivals `3` with FPS `46.7`; mobile driving kart height `0.242`, mobile driving FPS `24.5`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: this restores the high-speed steering evidence and stabilizes the visual harness, but it is not V1 performance sign-off. Desktop idle, driving, acceleration, braking, steering, turn approach, branch decision, drift, off-road slowdown, stuck recovery, and mobile samples still miss the PRD `55` FPS target or local `45` FPS minimum.
+
+- Race render-scale pass:
+  - `src/game/race/render/createRaceScene.js` now exports `RACE_RENDER_SCALE` and applies a modest race-only effective DPR scale during renderer fitting: `0.92` on desktop and `0.86` on mobile, with a `0.75` lower bound.
+  - `fitRaceRendererToCanvas` preserves the raw device pixel ratio on `raceViewport.rawDpr`, stores the effective `raceViewport.dpr`, and records the applied `raceViewport.renderScale` so screenshot telemetry/debugging can distinguish device DPR from race render scale.
+  - `scripts/race-content-playtest.mjs` now asserts the scaled desktop/mobile DPR behavior and the stable-fit render-scale contract.
+  - `node --check src/game/race/render/createRaceScene.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T13:53:19.384Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest focused telemetry after the render-scale pass: desktop driving FPS `50.1`, `1983` calls, `78,518` triangles, kart height `0.153`; desktop acceleration FPS `28.8`, time-to-speed-80 `1.440s`, time-to-speed-98 `2.367s`; low-speed steering `0.895s`; high-speed steering `1.379s`; desktop drift Tier 2 with FPS `43.9`; boost FPS `43.6`; item-box mechanics FPS `43.7`; rival-cluster visible rivals `3` with FPS `43.4`; mobile driving kart height `0.201`, mobile driving FPS `34.1`; mobile idle FPS `32.9`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the full browser gates pass and normal desktop driving is above the local `45` FPS minimum, but this is mixed progress, not V1 performance sign-off. Acceleration, braking, steering snapshots, branch decision, drift, boost, rival cluster, off-road slowdown, stuck recovery, and mobile snapshots still miss the PRD `55` desktop target or need stable manual-device evidence.
+
+- Static track transform cleanup:
+  - `src/game/race/render/createTrackMesh.js` now freezes matrix updates for static track meshes after placement: ground plane, road/shoulder/curb/line/rail/cap meshes, start tiles, and boost-pad static transforms.
+  - `scripts/race-content-playtest.mjs` now asserts the static matrix contract for the ground, start tiles, boost-pad group, and boost-pad children.
+  - `node --check src/game/race/render/createTrackMesh.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T13:45:37.467Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest focused telemetry after the cleanup: desktop driving FPS `43.3`, `1892` calls, `74,776` triangles, kart height `0.154`; desktop acceleration FPS `23.6`, time-to-speed-80 `1.442s`, time-to-speed-98 `2.376s`; low-speed steering `0.788s`; high-speed steering `1.328s`; desktop drift Tier 2 with FPS `46.7`; boost FPS `50.0`; item-box mechanics FPS `57.9`; rival-cluster visible rivals `3` with FPS `43.3`; mobile driving kart height `0.202`, mobile driving FPS `37.4`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the change preserves all current browser gates and improves several mechanic snapshots, but acceleration, reverse, turn approach, rival cluster, stuck recovery, and mobile idle still miss the PRD FPS target or local minimum.
+
+- Chase-camera projection hot-path cleanup:
+  - `src/game/race/camera/chaseCamera.js` now skips `camera.updateProjectionMatrix()` when the computed FOV delta is `<= 0.01`, while still updating projection immediately when boost or another camera profile change moves FOV materially.
+  - `scripts/race-content-playtest.mjs` now asserts both stable-FOV skip behavior and boost-FOV projection updates.
+  - `node --check src/game/race/camera/chaseCamera.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T13:38:47.539Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest focused telemetry after the cleanup: desktop driving FPS `43.3`, `1893` calls, `74,788` triangles, kart height `0.154`; desktop acceleration FPS `28.8`, time-to-speed-80 `1.440s`, time-to-speed-98 `2.372s`; low-speed steering `0.797s`; high-speed steering `1.410s`; desktop drift Tier 2 with FPS `43.5`; boost FPS `30.4`; rival-cluster visible rivals `3` with FPS `40.3`; mobile driving kart height `0.204`, mobile driving FPS `36.8`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser gates still pass and several focused samples improved versus the previous run, but the PRD desktop `55` FPS target and local `45` minimum remain unmet in acceleration, braking, boost, rival cluster, stuck recovery, and mobile samples.
+
+- Rejected global clean-track batching retest and restored validated path:
+  - Two temporary `src/game/race/render/createTrackMesh.js` performance attempts were tested and rejected: global clean-course `InstancedMesh` batches for road/shoulder/line/curb/cap visuals, then global merged static geometry for the same visual-only track pieces.
+  - Both attempts reduced renderer calls in early focused probes, but both regressed the high-speed steering acceptance evidence. Direct high-speed probes stabilized at about `8`-`8.5` FPS and reported 90-degree steering time around `2.13`-`2.15s`, outside the PRD `1.0`-`1.45s` target.
+  - The batching code was removed and the validated non-batched track render path was restored.
+  - `node --check src/game/race/render/createTrackMesh.js` passed after restoring the path.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T13:31:19.909Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest restored-path focused telemetry: desktop driving FPS `26.3`, `1819` calls, `72,944` triangles; desktop acceleration FPS `28.8`, time-to-speed-80 `1.440s`, time-to-speed-98 `2.379s`; low-speed steering `0.782s`; high-speed steering `1.377s`; desktop drift Tier 2 with FPS `23.5`; boost FPS `43.3`; rival-cluster visible rivals `3` with FPS `43.3`; mobile driving kart height `0.252`, mobile driving FPS `34.1`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: global track batching is currently unsafe in the browser renderer even though it reduces draw calls. The next optimization should preserve visibility culling, reduce authored mesh count before render construction, or target other high-cost scenery paths, with the high-speed steering probe as the first acceptance gate.
+
+- Renderer fit stable-frame cleanup:
+  - `src/game/race/render/createRaceScene.js` now stores the current DPR and aspect on `raceViewport` and skips redundant `renderer.setPixelRatio()` and camera projection updates when the canvas has not changed.
+  - `scripts/race-content-playtest.mjs` now asserts that repeated stable `fitRaceRendererToCanvas` calls do not reapply DPR/projection work.
+  - `node --check src/game/race/render/createRaceScene.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T13:14:40.092Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest focused telemetry after the cleanup: desktop idle FPS `46.4`; desktop driving FPS `28.0`, `1819` calls, `72,932` triangles; desktop acceleration FPS `28.8`, time-to-speed-80 `1.440s`, time-to-speed-98 `2.365s`; low-speed steering `0.780s`; high-speed steering `1.400s`; desktop drift Tier 2 with FPS `25.1`; boost FPS `43.2`; rival-cluster visible rivals `3` with FPS `46.4`; mobile driving kart height `0.242`, mobile driving FPS `36.9`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: this removes redundant stable-frame renderer work, but it is not sufficient to satisfy the PRD FPS target. The dominant blocker remains render-call/object-count pressure and/or scenario-specific frame-time spikes.
+
+- Rejected clean-track instancing optimization and restored validated render path:
+  - A targeted Comeback City track batching attempt reduced draw calls in early focused samples but failed the browser harness before the high-speed steering artifact was written.
+  - A direct high-speed steering probe on the attempted chunked batching path reported 90-degree steering time `2.159s`, outside the PRD `1.0`-`1.45s` target, with FPS degrading after the scenario stabilized. The attempted batching was reverted.
+  - `node --check src/game/race/render/createTrackMesh.js` passed after reverting the attempted batching.
+  - `node --check scripts/race-content-playtest.mjs` passed after reverting the temporary batching assertion.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks on the restored render path. Latest browser summary was captured at `2026-05-20T13:00:58.970Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest restored-path focused telemetry: desktop driving FPS `43.3`, `1798` calls, `72,288` triangles; desktop acceleration FPS `28.8`, `1529` calls, `63,328` triangles, time-to-speed-80 `1.440s`, time-to-speed-98 `2.381s`; low-speed steering `0.900s`; high-speed steering `1.408s`; desktop drift Tier 2 with FPS `46.6`; boost FPS `40.4`; rival-cluster visible rivals `3` with FPS `40.4`; mobile driving kart height `0.241`, mobile driving FPS `34.4`; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: draw-call/object-count optimization remains necessary, but broad track-surface instancing is currently unsafe unless it preserves the steering timing gates.
+
+- Renderer-info telemetry and latest performance evidence:
+  - `src/game/race/raceTelemetry.js` now maps Three renderer info into telemetry for render calls, triangles, geometries, textures, and programs.
+  - `src/game/race/raceTelemetryRuntime.js` now forwards the runtime renderer into telemetry publication.
+  - `src/game/ArcadeRace3D.jsx` passes the WebGL renderer into `createRaceTelemetryRuntime`.
+  - `scripts/race-browser-playtest.mjs` now includes renderer complexity counters in focused visual summaries.
+  - `scripts/race-content-playtest.mjs` now asserts renderer-info mapping and telemetry-runtime renderer forwarding.
+  - `node --check src/game/race/raceTelemetry.js` passed.
+  - `node --check src/game/race/raceTelemetryRuntime.js` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T12:42:16.280Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the build/check pass.
+  - Latest focused renderer telemetry: desktop idle FPS `40.2`, `2221` calls, `85,904` triangles; desktop driving FPS `43.3`, `1793` calls, `72,228` triangles, `2,383` geometries, `15` textures; desktop acceleration FPS `28.8`, `1534` calls, `63,388` triangles; desktop drift FPS `43.5`, `1817` calls, `72,916` triangles; desktop rival-cluster FPS `31.2`, `1819` calls, `72,944` triangles; mobile driving FPS `37.5`, `1030` calls, `48,992` triangles.
+  - Performance note: the new counters point to draw-call/object-count pressure as the next optimization target. FPS remains below the PRD desktop `55` target and local `45` minimum in multiple focused scenarios.
+
+- Manual QA rubric template and restored browser evidence:
+  - `docs/race-manual-qa-rubric.md` now defines the `RACE-009` manual scoring scale, required evidence fields, and ten PRD rubric categories without filling scores from automation.
+  - A global track-mesh instancing attempt was rejected during validation because it caused the high-speed steering browser scenario to miss the PRD steering-time gate. The final code keeps the validated non-instanced track mesh path.
+  - `node --check src/game/race/render/createTrackMesh.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T12:34:49.452Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser/build pass.
+  - Latest focused telemetry after the restored path: desktop driving FPS `34.0`, acceleration FPS `28.9` with time-to-speed-80 `1.440s` and time-to-speed-98 `2.365s`, low-speed steering `0.796s`, high-speed steering `1.391s`, desktop drift Tier 2 with FPS `43.5`, boost FPS `37.7`, boost-pad mechanics FPS `43.4`, item-box mechanics held item `invincibility` with pickup delay `0.160s`, rival-cluster visible rivals `3` with FPS `57.8`, mobile driving kart height `0.245`, mobile driving FPS `36.1`, and WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passes current visual and control thresholds, but this run reinforces that FPS remains a V1 blocker.
+
+- Scenery window instancing and screenshot retry validation:
+  - `src/game/race/render/createRaceScenery.js` now batches repeated building, district facade, and perimeter skyline windows with `InstancedMesh` while keeping the authored window placement patterns.
+  - `scripts/race-browser-playtest.mjs` now retries WebGL screenshots that fail the decoded PNG nonblank/variance gate, preserving the hard visual gate while avoiding transient early-frame captures.
+  - `src/game/race/playtest/raceVisualScenarios.js` now stabilizes the steering timing snapshots after the turn-time evidence is recorded, so road-ahead coverage is measured from a route-aligned camera pose.
+  - `node --check src/game/race/render/createRaceScenery.js` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `node --check src/game/race/playtest/raceVisualScenarios.js` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T12:19:10.005Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `git diff --check` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser playtest/build pass.
+  - Latest focused telemetry after this change: desktop driving FPS `43.2`, acceleration FPS `28.9` with time-to-speed-80 `1.440s`, low-speed steering `0.782s`, high-speed steering `1.373s`, desktop drift Tier 2 with FPS `43.5`, boost FPS `43.3`, boost-pad mechanics FPS `46.5`, item-box mechanics held item `rocket` with pickup delay `0.160s`, rival-cluster visible rivals `3` with FPS `46.4`, mobile driving kart height `0.242`, mobile driving FPS `36.6`, and WebGL fallback rendered with `canvas2d-fallback`.
+  - Screenshot visual stats continue to prove nonblank captures, for example desktop driving `colorBucketCount: 233`, `luminanceRange: 241.01`, `sampleCount: 7416`.
+  - Performance note: the browser harness passes current visual and control thresholds, but the PRD desktop `55` FPS target and local `45` FPS minimum are still not met across the full focused suite.
+
+- Race renderer performance pass:
+  - `src/game/race/render/createRaceScene.js` now disables real-time shadow maps and keeps the existing hemisphere, sun, and rim lighting for form without a shadow-render pass.
+  - `src/game/race/render/createRaceScenery.js` now removes district portal `PointLight` instances and pulses the existing emissive portal geometry instead.
+  - `scripts/race-content-playtest.mjs` now asserts the performance-oriented renderer contract: shadow maps disabled, sun shadow casting disabled, and renderer fallback behavior preserved.
+  - `node --check src/game/race/render/createRaceScene.js` passed.
+  - `node --check src/game/race/render/createRaceScenery.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T11:57:39.300Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest FPS samples improved in some normal scenarios but still fail the PRD target: desktop driving `35.1`, desktop drift `32.9`, rival cluster `32.8`, mobile driving `32.3`; desktop acceleration remains `22.3`, and off-road slowdown reports `19.0`.
+  - Visual telemetry thresholds still pass after the render change: desktop driving kart height `0.187`, road-ahead coverage `1.0`, visible rivals `3`, camera clip count `0`, and HUD overlap `0`.
+  - Performance note: this is measurable progress, not V1 performance sign-off.
+
+- Preserved drawing buffer removal:
+  - `src/game/race/render/createRaceScene.js` now sets `preserveDrawingBuffer: false` for the WebGL renderer.
+  - `scripts/race-browser-playtest.mjs` now decodes screenshot PNGs with built-in Node APIs, samples the central gameplay area, and fails on low color/luminance variance instead of using WebGL `canvas.toDataURL()` for blank checks.
+  - Per-race telemetry JSON and focused visual telemetry JSON now include `screenshotVisualStats`.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `node --check src/game/race/render/createRaceScene.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T12:05:49.319Z`.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Latest focused FPS samples after this change: desktop driving `49.9`, desktop acceleration `28.7`, desktop drift `43.3`, desktop boost `53.7`, desktop rival cluster `43.2`, desktop off-road slowdown `40.8`, mobile driving `33.6`, and mobile idle `34.9`.
+  - Screenshot visual stats now show nonblank evidence, for example desktop driving `colorBucketCount: 226`, `luminanceRange: 242.42`, `sampleCount: 7416`.
+  - Performance note: normal desktop driving is now above the PRD local minimum of `45`, but the desktop suite overall still fails the PRD performance target because acceleration, drift, rival cluster, and off-road slowdown remain below `45` or `55` depending on the gate.
+
+- HUD/touch overlap gate validation:
+  - `src/game/race/raceHud.jsx` now marks the live HUD, item panel, control hint, minimap, and mobile Go button with stable test IDs for browser layout evidence.
+  - `src/game/race/raceTelemetry.js` now includes horizontal kart screen coverage fields, allowing the browser harness to derive a measured kart rect instead of assuming the kart is centered.
+  - `scripts/race-browser-playtest.mjs` now measures visible HUD element rects, writes `hudLayout` into visual telemetry JSON and the summary, and fails when any visible HUD overlaps the kart rect or protected road-focus rect.
+  - The first browser rerun exposed a real mobile driving issue: the minimap overlapped the kart rect by `189.86px^2` and the protected road focus by `8.58px^2`.
+  - `src/game/comebackCityVisuals.css` now hides the minimap below the `sm` breakpoint; desktop keeps the minimap.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T11:48:48.573Z`.
+  - Desktop driving HUD layout recorded `maxKartOverlapArea: 0`, `maxRoadFocusOverlapArea: 0`, and `visibleElementCount: 6`; mobile driving recorded `maxKartOverlapArea: 0`, `maxRoadFocusOverlapArea: 0`, and `visibleElementCount: 3`.
+  - Mobile driving now records kart height `0.260`, road-ahead coverage `1.0`, camera clip count `0`, visible rivals `3`, and FPS `32.7`.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - Performance note: HUD overlap is now automatically gated for the current snapshot matrix, but desktop FPS remains below the PRD target.
+
+- Drift Tier 1 evidence and acceptance-audit validation:
+  - `src/game/race/playtest/raceAutoplay.js` now supports a `drift-tier-1` visual scenario that holds active drift at Tier 1 charge instead of reusing the Tier 2 drift snapshot.
+  - `scripts/race-browser-playtest.mjs` now includes `comeback-city-desktop-drift-tier-1` and fails if drift is inactive, `driftTier !== 1`, or Tier 1 was not recorded in telemetry.
+  - `docs/race-kart-v1-acceptance-audit.md` now records a current PRD/ticket evidence matrix, separating automated proof from failing FPS targets, missing owner input, missing manual QA, and not-yet-proven normal-play/readability requirements.
+  - Current code/doc line counts after this update: `raceAutoplay.js` 273; `race-browser-playtest.mjs` 960; `race-kart-v1-implementation-plan.md` 1,701; `race-kart-v1-acceptance-audit.md` 78.
+  - `node --check src/game/race/playtest/raceAutoplay.js` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T11:17:13.905Z`.
+  - New Tier 1 artifact: `tmp/race-playtests/visual-comeback-city-desktop-drift-tier-1.png` and `tmp/race-playtests/visual-comeback-city-desktop-drift-tier-1.telemetry.json`; summary recorded drift active `true`, `driftTier: 1`, `driftTierSeen: 1`, kart height `0.184`, road-ahead coverage `1.0`, camera clip count `0`.
+  - Latest telemetry after Tier 1 evidence: desktop driving kart height `0.188`, road-ahead coverage `1.0`, route lookahead `1.333s`, camera clip count `0`, desktop driving FPS `28.6`; desktop acceleration time-to-speed-80 `1.440s`, time-to-speed-98 `2.400s`, and FPS `22.3`; desktop drift Tier 2 captured separately; drift-mechanics boost source `drift`; item-box mechanics held item `ghostReplay` with pickup delay `0.160s`; rival-cluster visible rivals `3`; mobile driving kart height `0.262` and FPS `28.7`; audio mute and WebGL fallback checks passed on `/#race`.
+  - Performance note: the browser harness passed current thresholds, but desktop and mobile FPS samples remain below PRD targets; the acceptance audit records this as not V1 sign-off.
+
+- Normal-play rival visibility validation:
+  - `src/game/race/raceState.js` now initializes the rival grid ahead of the player with tighter in-lane offsets, so normal chase-camera driving starts with visible competition instead of relying on the staged rival-cluster scenario.
+  - `src/game/race/raceTelemetry.js` now records `race.visibleRivalsSeen`, the maximum visible rival count observed during the current playtest sample window.
+  - `scripts/race-browser-playtest.mjs` now summarizes `visibleRivalsSeen` and requires the desktop driving visual check to observe at least 3 visible rivals.
+  - `scripts/race-content-playtest.mjs` now asserts the updated in-lane rival grid and visible-rival telemetry mutation.
+  - `node --check src/game/race/raceState.js` passed.
+  - `node --check src/game/race/raceTelemetry.js` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 26 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T11:29:09.084Z`.
+  - Desktop driving now records visible rivals `3`, `visibleRivalsSeen: 3`, kart height `0.188`, road-ahead coverage `1.0`, route lookahead `1.333s`, camera clip count `0`, and FPS `28.6`.
+  - Mobile driving now records visible rivals `3`, `visibleRivalsSeen: 3`, kart height `0.261`, road-ahead coverage `1.0`, camera clip count `0`, and FPS `30.7`.
+  - Performance note: normal-play rival visibility is now proven by the browser harness, but desktop FPS remains below the PRD target.
+
+- Race audio mute control validation:
+  - `src/game/race/raceAudio.js` now accepts an initial `muted` state, exposes `setMuted` and `isMuted`, prevents audio context creation and cue playback while muted, and mutes/restores active ambient gain nodes.
+  - `src/game/ArcadeRace3D.jsx` now keeps audio mute state outside the render-loop restart path, passes the state into `createRaceAudioController`, writes `race.audioMuted` for HUD telemetry, and forwards the toggle handler to `RaceHud`.
+  - `src/game/race/raceHud.jsx` now renders an icon-only `race-audio-toggle` button with `aria-pressed`, `Mute race audio` / `Unmute race audio` labels, and no extra in-game instructional text.
+  - `src/game/race/raceTelemetry.js` now maps `race.audioMuted` into visual telemetry and HUD telemetry.
+  - `scripts/race-content-playtest.mjs` now asserts muted cue calls do not create an audio context, unmuting enables cue plus ambient creation, remuting prevents new cue oscillators, and active ambient gain nodes are muted/restored.
+  - `scripts/race-browser-playtest.mjs` now includes `runAudioMuteControlSnapshot`, writes screenshot/telemetry JSON for the actual `/#race` route, asserts initial and muted `aria-pressed`/label state, asserts `window.__raceVisualTelemetry.player.audioMuted === true` after toggling, and ignores the same harmless 404 console noise as the WebGL fallback check.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 484; `raceAudio.js` 111; `raceHud.jsx` 244; `raceTelemetry.js` 534; `race-browser-playtest.mjs` 945; `race-content-playtest.mjs` 8,408.
+  - `node --check src/game/race/raceAudio.js` passed.
+  - `node --check src/game/race/raceTelemetry.js` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - First `npm run test:race:browser` after adding the audio-control snapshot failed because the new `/#race` check treated harmless 404 console noise as a failure; the check now uses the same ignore filter as WebGL fallback.
+  - `npm run test:race:browser` passed with 24 completed browser races and 25 focused visual/control/fallback checks. Latest browser summary was captured at `2026-05-20T11:05:06.427Z`.
+  - Audio mute control artifact: `tmp/race-playtests/visual-comeback-city-audio-mute-control.png` and `tmp/race-playtests/visual-comeback-city-audio-mute-control.telemetry.json`; summary recorded `aria-pressed` `false` -> `true`, label `Mute race audio` -> `Unmute race audio`, and telemetry audio muted `true`.
+  - Latest telemetry after audio mute control: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 32.7; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 25.2; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.262 and FPS 28.8; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains RACE-007 mute-control progress, not V1 performance sign-off.
+
+- Race reduced-motion runtime validation:
+  - `src/game/race/raceMotionRuntime.js` now exports `createRaceMotionRuntime`, combining the saved reduced-motion setting with `prefers-reduced-motion`, publishing `data-reduced-motion` on the race canvas, and cleaning up media-query listeners.
+  - `src/game/RaceScreen.jsx` now passes `state.game.hub.reducedMotion` into `<ArcadeRace3D>`.
+  - `src/game/ArcadeRace3D.jsx` now creates the race motion runtime, writes `race.reducedMotion` each frame, passes reduced-motion state into `createRaceCameraRuntime`, and passes the current setting into `RaceHud`.
+  - `src/game/race/camera/chaseCamera.js` now suppresses boost FOV pulse and camera shake randomness when reduced motion is active; `cameraRollFor` returns zero under reduced motion.
+  - `src/game/race/raceHud.jsx` now publishes `data-reduced-motion`, hides speed-line overlays under reduced motion, and caps flash opacity lower when reduced motion is active.
+  - `scripts/race-content-playtest.mjs` now asserts reduced-motion camera profile behavior, camera roll helper suppression, frame-level shake/FOV suppression, camera runtime reduced-motion forwarding, and motion-runtime setting/media/canvas/listener behavior.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 465; `raceMotionRuntime.js` 45; `chaseCamera.js` 254; `raceCameraRuntime.js` 54; `raceHud.jsx` 228; `raceTelemetry.js` 531; `race-content-playtest.mjs` 8,297.
+  - `node --check src/game/race/raceMotionRuntime.js` passed.
+  - `node --check src/game/race/camera/chaseCamera.js` passed.
+  - `node --check src/game/race/raceCameraRuntime.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - First `npm run test:race` after this change failed because the frame-level test treated any nonzero Euler `z` after `camera.lookAt()` as camera roll; the assertion now verifies helper-level roll suppression separately and frame-level shake/FOV suppression directly.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T10:37:51.350Z`.
+  - Latest telemetry after reduced-motion propagation: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 37.5; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `boost` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.251 and FPS 30.8; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains RACE-007 architecture/evidence progress, not V1 performance sign-off.
+
+- Race telemetry runtime helper extraction validation:
+  - `src/game/race/raceTelemetryRuntime.js` now exports `createRaceTelemetryRuntime`, preserving the 90 ms telemetry publication cadence, route-lookahead callback handoff, player vehicle group handoff, browser/window handoff, and `publishRaceTelemetryFrame` argument wiring.
+  - `src/game/ArcadeRace3D.jsx` now delegates telemetry cadence and publication argument wiring to `createRaceTelemetryRuntime`, while retaining render-loop ordering and using `raceCamera.getRouteLookahead`.
+  - `scripts/race-content-playtest.mjs` now asserts initial skip before interval, first publish after interval, skipped publish inside interval, second publish after interval, last publish time storage, route-lookahead refresh, and payload reference forwarding.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 453; `raceTelemetryRuntime.js` 46; `race-content-playtest.mjs` 8,180.
+  - `node --check src/game/race/raceTelemetryRuntime.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T10:25:56.373Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `invincibility` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.252 and FPS 30.4; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race camera runtime helper extraction validation:
+  - `src/game/race/raceCameraRuntime.js` now exports `createRaceCameraRuntime`, preserving raycaster setup, camera-initialized state, route-lookahead telemetry storage, mobile profile handoff, heading-camera scenario selection, fallback vehicle selection, and per-frame chase camera update argument wiring.
+  - `src/game/ArcadeRace3D.jsx` now delegates camera runtime state and update calls to `createRaceCameraRuntime`, while retaining the current camera preset source, render-loop order, and telemetry publication cadence.
+  - `scripts/race-content-playtest.mjs` now asserts raycaster camera assignment, initial route-lookahead state, camera-initialized state transition, route-lookahead storage, mobile state forwarding, heading-camera forwarding, and vehicle/fallback selection.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 457; `raceCameraRuntime.js` 52; `race-content-playtest.mjs` 8,108.
+  - `node --check src/game/race/raceCameraRuntime.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T10:17:48.411Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `switchBolt` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.251 and FPS 31.1; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race update runtime helper extraction validation:
+  - `src/game/race/raceUpdateRuntime.js` now exports `createRaceUpdateRuntime`, preserving frame-update callback wiring for lap progress, vehicle integration, autoplay player updates, track hazards/events, world collision return values, player updates, rival updates, hazard-by-type triggers, and ranking updates.
+  - `src/game/ArcadeRace3D.jsx` now delegates those update callbacks to `createRaceUpdateRuntime`, while retaining the render-loop order, camera update, mesh sync, telemetry cadence, and finish publication.
+  - `scripts/race-content-playtest.mjs` now asserts update-runtime callback wiring for vehicle integration, autoplay integration, player controls/touch handoff, jump queue mutation, lap-finish marking, world-collision return values, hazard effect forwarding, track event scoring, default hazard trigger values, rival-triggered hazards, and ranking dispatch.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 473; `raceUpdateRuntime.js` 204; `race-content-playtest.mjs` 8,019.
+  - `node --check src/game/race/raceUpdateRuntime.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T10:09:34.735Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `tideHorn` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.248 and FPS 45.0; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race scene runtime helper extraction validation:
+  - `src/game/race/raceSceneRuntime.js` now exports `createRaceRuntimeScene`, preserving scene shell creation, renderer creation/fallback callback wiring, track mesh creation, boost pad mesh creation, pickup mesh creation, scenery/collider/collision-circle setup, and player/rival vehicle mesh setup.
+  - `src/game/ArcadeRace3D.jsx` now delegates initial scene/render/track/pickup/scenery/vehicle assembly to `createRaceRuntimeScene`, while retaining frame-loop ownership and passing the existing Comeback City visual palette.
+  - `scripts/race-content-playtest.mjs` now asserts theme selection, renderer callback forwarding, track material/dimension handoff, boost pad creation, pickup creation, scenery collider/collision-circle registration, vehicle setup, and the renderer-unavailable short-circuit path.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 589; `raceSceneRuntime.js` 134; `race-content-playtest.mjs` 7,839.
+  - `node --check src/game/race/raceSceneRuntime.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - First `npm run test:race` after extraction failed because the new assertion expected a renderer fallback callback without passing one; the test now passes the callback and verifies exact forwarding.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T09:59:27.984Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `invincibility` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.249 and FPS 44.9; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race runtime setup helper extraction validation:
+  - `src/game/race/raceRuntimeSetup.js` now exports `defaultRaceVehicleFor` and `createRaceRuntimeSetup`, preserving track compilation, playtest query parsing, kart-only/default-vehicle selection, race state creation, key/relevant-key set creation, and visual stats initialization.
+  - `src/game/ArcadeRace3D.jsx` now delegates runtime setup to `createRaceRuntimeSetup` before scene and renderer creation.
+  - `scripts/race-content-playtest.mjs` now asserts compiled track identity, visual playtest parsing, race index/scenario parsing, kart-only flag calculation, default vehicle fallback behavior, race default vehicle/player mode consistency, key set initialization, relevant key coverage, and visual stats defaults.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 644; `raceRuntimeSetup.js` 36; `race-content-playtest.mjs` 7,676.
+  - `node --check src/game/race/raceRuntimeSetup.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - First `npm run test:race` after extraction failed because the new assertion expected `visualStats.fps` to start at 0; the existing helper default is 60, and the assertion was corrected.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T09:48:20.718Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `switchBolt` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.252 and FPS 30.9; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race input event helper extraction validation:
+  - `src/game/race/raceControls.js` now exports `applyRaceKeyDown`, `applyRaceKeyUp`, and `applyRaceTouchPatch`, preserving relevant-key filtering, `Space` jump queueing, key release mutation, touch state patching, and pointer capture/release behavior.
+  - `src/game/ArcadeRace3D.jsx` now delegates keyboard event handling and touch press/release mutation to the race control helpers.
+  - `scripts/race-content-playtest.mjs` now asserts key filtering, repeated `Space` handling, ignored non-race keys, key release, touch state patching, and pointer capture/release behavior.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 647; `raceControls.js` 289; `race-content-playtest.mjs` 7,618.
+  - `node --check src/game/race/raceControls.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T09:39:59.842Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 35.0; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 26.8; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `switchBolt` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.251 and FPS 30.9; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race command-frame helper extraction validation:
+  - `src/game/race/raceControls.js` now exports `processRaceCommandFrame`, preserving external command dispatch, local command dispatch, duplicate command-id suppression, and one-shot key command consumption for each render frame.
+  - `src/game/ArcadeRace3D.jsx` now delegates per-frame external/local command handling and key command consumption to `processRaceCommandFrame`.
+  - `scripts/race-content-playtest.mjs` now asserts first-frame external/local command handling, duplicate-id suppression, one-shot key removal, and non-command key preservation.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 653; `raceControls.js` 228; `race-content-playtest.mjs` 7,532.
+  - `node --check src/game/race/raceControls.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T09:31:44.610Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 26.8; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `tideHorn` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.250 and FPS 35.0; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race finish runtime helper extraction validation:
+  - `src/game/race/raceFinishRuntime.js` now exports `buildRaceFinishResult` and `publishRaceFinishResult`.
+  - `src/game/ArcadeRace3D.jsx` now delegates finish-result construction, playtest result publication, finish event recording, and finish callback dispatch to `publishRaceFinishResult`.
+  - `scripts/race-content-playtest.mjs` now asserts normal finish payloads, playtest finish payloads, hazard rounding, set-to-array conversion, playtest global publication, finish event recording, and callback dispatch.
+  - Current code line counts after this update: `ArcadeRace3D.jsx` 665; `raceFinishRuntime.js` 49; `race-content-playtest.mjs` 7,481.
+  - `node --check src/game/race/raceFinishRuntime.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T09:22:42.547Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `decoyCrate` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.251 and FPS 30.9; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race frame clock helper extraction validation:
+  - `src/game/race/raceFrameClock.js` now exports `resolveRaceFrameDelta`, `updateRaceFrameStats`, `updateRaceRuntimeTimers`, and `advanceRaceFrameClock`.
+  - `src/game/ArcadeRace3D.jsx` now delegates render-loop dt capping, FPS smoothing, race timer advancement, camera/screen flash timer decay, and position-notice expiry to `advanceRaceFrameClock`.
+  - `scripts/race-content-playtest.mjs` now asserts non-playtest and playtest dt caps, FPS smoothing, timer decay, position-notice expiry, and combined frame-clock advancement.
+  - Current line counts after this update: `ArcadeRace3D.jsx` 686; `raceFrameClock.js` 79; `race-content-playtest.mjs` 7,402; `race-kart-v1-implementation-plan.md` 1,541.
+  - `node --check src/game/race/raceFrameClock.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check src/game/ArcadeRace3D.jsx` is not applicable because Node does not syntax-check `.jsx` files in this repo; `npm run build` covered the JSX entrypoint instead.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T09:13:05.813Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 37.5; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `decoyCrate` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.250 and FPS 33.0; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race boost flame VFX helper extraction validation:
+  - `src/game/race/render/raceVfx.js` now exports `boostFlamePresentationFrameFor` and `applyBoostFlameGroupFrame`, preserving the current boost-flame visibility threshold and explicit visibility override path.
+  - `src/game/race/render/syncRaceMeshes.js` now delegates player and rival boost-flame group visibility mutation through `applyBoostFlameGroupFrame`.
+  - `scripts/race-content-playtest.mjs` now asserts boost-flame timer threshold behavior, forced visibility behavior, group mutation, and nested player/rival vehicle presentation frame values.
+  - Current line counts after this update: `ArcadeRace3D.jsx` 688; `raceVfx.js` 197; `syncRaceMeshes.js` 164; `race-content-playtest.mjs` 7,330; `race-kart-v1-implementation-plan.md` 1,525.
+  - `node --check src/game/race/render/raceVfx.js` passed.
+  - `node --check src/game/race/render/syncRaceMeshes.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T09:04:02.680Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 32.7; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 23.7; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.253 and FPS 32.3; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race hit runtime helper extraction validation:
+  - `src/game/race/raceHitRuntime.js` now exports `applyPlayerHitRuntime`, `applyRivalHitRuntime`, and `createRaceHitRuntime`.
+  - `src/game/race/raceRuntimeActions.js` now delegates player hit feedback and rival hit feedback to the hit runtime helper while preserving action-level item, drop, and reset orchestration.
+  - `scripts/race-content-playtest.mjs` now asserts player hit timer/velocity feedback, camera/screen flash mutation, cue playback, banana scatter dispatch, shield-blocked hit behavior, rival speed/timer feedback, and hit-runtime factory wiring.
+  - Current line counts after this update: `ArcadeRace3D.jsx` 688; `raceHitRuntime.js` 47; `raceRuntimeActions.js` 173; `race-content-playtest.mjs` 7,306; `race-kart-v1-implementation-plan.md` 1,511.
+  - `node --check src/game/race/raceHitRuntime.js` passed.
+  - `node --check src/game/race/raceRuntimeActions.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T08:55:15.985Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `switchBolt` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.250 and FPS 32.9; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race drop runtime helper extraction validation:
+  - `src/game/race/raceDropRuntime.js` now exports `spawnDroppedRaceBanana`, `scatterDroppedRaceBananas`, `spawnDroppedRaceTrap`, and `createRaceDropRuntime`.
+  - `src/game/race/raceRuntimeActions.js` now delegates dropped banana spawn, banana scatter, and dropped trap creation to the drop runtime helper while preserving action-level item and hit orchestration.
+  - `scripts/race-content-playtest.mjs` now asserts dropped banana spawn cloning, banana scatter mesh insertion, dropped trap mesh insertion, and drop-runtime factory wiring.
+  - Current line counts after this update: `ArcadeRace3D.jsx` 688; `raceDropRuntime.js` 125; `raceRuntimeActions.js` 189; `race-content-playtest.mjs` 7,191; `race-kart-v1-implementation-plan.md` 1,495.
+  - `node --check src/game/race/raceDropRuntime.js` passed.
+  - `node --check src/game/race/raceRuntimeActions.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T08:46:55.060Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `bubbleTrap` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.251 and FPS 32.6; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race vehicle runtime helper extraction validation:
+  - `src/game/race/raceVehicleRuntime.js` now exports `applyRaceBoostRuntime`, `applyRaceVehicleModeRuntime`, and `createRaceVehicleRuntime`.
+  - `src/game/ArcadeRace3D.jsx` now delegates `addBoost`, `setVehicleMode`, and `nextVehicleMode` to the runtime helper.
+  - `scripts/race-content-playtest.mjs` now asserts player boost source telemetry, rival boost isolation from player stats, player vehicle-mode presentation updates, switch-lock and kart-only blocking reasons, and factory wiring for next-mode, boost, and vehicle-mode helpers.
+  - Current line counts after this update: `ArcadeRace3D.jsx` 688; `raceVehicleRuntime.js` 116; `race-content-playtest.mjs` 7,102; `race-kart-v1-implementation-plan.md` 1,479.
+  - `node --check src/game/race/raceVehicleRuntime.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T08:37:27.692Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `boost` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.249 and FPS 33.0; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race telemetry frame publisher extraction validation:
+  - `src/game/race/raceTelemetry.js` now exports `publishRaceTelemetryFrame` and `raceHudTelemetryForFrame`, preserving reverse-speed stats, time-to-speed stats, braking stats, drift-tier stats, off-road/branch flags, nested visual telemetry construction, browser sample appending, and React HUD telemetry mapping.
+  - `src/game/ArcadeRace3D.jsx` now delegates the telemetry publication block to `publishRaceTelemetryFrame` while keeping only the 90 ms publication cadence in the render loop.
+  - `scripts/race-content-playtest.mjs` now asserts visual telemetry construction, playtest sample append, drift tier calculation, reverse cap stats, time-to-speed stats, branch visibility mutation, held item mapping, and HUD telemetry mapping.
+  - Current line counts after this update: `ArcadeRace3D.jsx` 718; `raceTelemetry.js` 530; `race-content-playtest.mjs` 6,911; `race-kart-v1-implementation-plan.md` 1,464.
+  - `node --check src/game/race/raceTelemetry.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - First `npm run test:race:browser` after extraction timed out on a visual drift gate because `publishRaceTelemetryFrame` defaulted drift tuning to an empty object; the helper now imports the race tuning defaults and the browser rerun passed.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T08:27:39.137Z`.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/raceTelemetry.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md tmp/race-playtests/race-browser-playtest-summary.json` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser playtest.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 30.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `shield` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.248 and FPS 42.1; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race player frame helper extraction validation:
+  - `src/game/race/racePlayerFrame.js` now exports `updateRacePlayerForFrame`, preserving the current player update path for control flip, lap-progress dispatch, steering smoothing, hop/drift start and release, drive force application, lateral grip, road assist, track boundary handling, speed caps, plane flight state, ground jump/trick boost, position bounds, world-collision dispatch, stuck recovery, banana/item-box/boost-pad/flight-gate interactions, dropped hazards, rival bumps, and vehicle integration dispatch.
+  - `src/game/ArcadeRace3D.jsx` now delegates player frame updates to `updateRacePlayerForFrame` while keeping runtime callbacks for boost application, lap progress, item collection, hit effects, world-collision resolution, vehicle integration, and touch/jump queue ownership.
+  - `scripts/race-content-playtest.mjs` now asserts player-frame drift-hop start, drift activation, touch jump clearing, item pickup dispatch, boost-pad telemetry, world-collision camera shake, vehicle integration dispatch, and plane touch-jump/flight-state preservation.
+  - Current line counts after this update: `ArcadeRace3D.jsx` 836; `racePlayerFrame.js` 403; `race-content-playtest.mjs` 6,770; `race-kart-v1-implementation-plan.md` 1,447.
+  - `node --check src/game/race/racePlayerFrame.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T08:11:46.865Z`.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/racePlayerFrame.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md tmp/race-playtests/race-browser-playtest-summary.json` passed.
+  - Port cleanup check: `lsof -ti tcp:5187` returned no running dev server after the browser playtest.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 30.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `rocket` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.250 and FPS 32.8; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race frame update helper extraction validation:
+  - `src/game/race/raceFrameUpdates.js` now exports frame wrappers for vehicle integration, track hazard effects/contacts, hazard-by-type runtime triggers, direct and scheduled track events, world-collision telemetry mutation, and ranking-frame mutation.
+  - `src/game/ArcadeRace3D.jsx` now delegates those frame updates to `raceFrameUpdates.js` while keeping the main player update loop, boost callback, vehicle callback, and runtime visual/audio callbacks in the component.
+  - `scripts/race-content-playtest.mjs` now asserts switch-pad integration and Comeback City non-playtest skip behavior, hazard effect dispatch and lightning-rod redirect behavior, track-hazard contact dispatch, hazard trigger/event scheduling/message mutation, world-collision telemetry mutation, and ranking notice assignment.
+  - Current line counts before this entry: `ArcadeRace3D.jsx` 1,187; `raceFrameUpdates.js` 188; `race-content-playtest.mjs` 6,558; `race-kart-v1-implementation-plan.md` 1,415.
+  - `node --check src/game/race/raceFrameUpdates.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T07:57:22.033Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.186, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 40.2; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `boost` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.251 and FPS 32.6; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Rival frame helper extraction validation:
+  - `src/game/race/raceRivals.js` now exports `maybeUseRivalSignature` and `updateRaceRivalsForFrame`, preserving current rival signature triggers, timer decay, route-layer selection, vehicle preference switching, rubberband speed target, hit slowdown, progress/lap crossing, and visual `rival-cluster` placement behavior.
+  - `src/game/ArcadeRace3D.jsx` now delegates rival frame updates to `updateRaceRivalsForFrame` while keeping hazard trigger and vehicle-mode callbacks in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts signature trigger thresholds, one-shot signature mutation, timer decay, layer switching, rubberband movement, finish crossing, and visual rival-cluster placement.
+  - Current line counts before this entry: `ArcadeRace3D.jsx` 1,230; `raceRivals.js` 190; `race-content-playtest.mjs` 6,276; `race-kart-v1-implementation-plan.md` 1,402.
+  - `node --check src/game/race/raceRivals.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T07:45:40.486Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.251 and FPS 30.9; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race runtime action and command extraction validation:
+  - `src/game/race/raceRuntimeActions.js` now exports `createRaceRuntimeActions`, preserving current item application, held/banked item use, item-box collection telemetry, dropped banana/trap mesh insertion, player/rival hit side effects, remote hazard triggering, vehicle cycling, and player reset behavior.
+  - `src/game/race/raceControls.js` now exports `handleRaceCommand` and `consumeRaceKeyCommands`, moving external command dispatch and one-shot key command consumption out of `ArcadeRace3D.jsx`.
+  - `src/game/ArcadeRace3D.jsx` now delegates runtime actions through `raceActions` and delegates command/key dispatch to race control helpers.
+  - `scripts/race-content-playtest.mjs` now asserts command dispatch, key-command consumption, and runtime action side effects for held/banked item use, pickup telemetry, trap/drop insertion, hit scatter, remote hazard triggering, vehicle cycling, and reset.
+  - Current line counts before this entry: `ArcadeRace3D.jsx` 1,299; `raceRuntimeActions.js` 233; `raceControls.js` 193; `race-content-playtest.mjs` 6,089; `race-kart-v1-implementation-plan.md` 1,385.
+  - `node --check src/game/race/raceRuntimeActions.js` passed.
+  - `node --check src/game/race/raceControls.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T07:34:08.872Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `boost` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.249 and FPS 35.1; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race autoplay helper extraction validation:
+  - `src/game/race/playtest/raceAutoplay.js` now exports `updateRaceAutoplayPlayer`, preserving current browser playtest player autoplay, visual-kart scenario pose/state setup, signature item use, item-box collection/use, banana collection, hazard/zone/lock/switch-pad counters, lap simulation, boost/timer decay, and vehicle integration callback behavior.
+  - `src/game/ArcadeRace3D.jsx` now delegates autoplay player updates to `updateRaceAutoplayPlayer` while retaining runtime callbacks for item application, box collection, vehicle mode changes, playtest event recording, and vehicle integration.
+  - `scripts/race-content-playtest.mjs` now asserts extracted autoplay behavior for both visual-kart and non-visual playtest modes, including start/upgrade events, visual boost setup, layer/vehicle tracking, signature item use, item-box collection/use, banana max, hazard/zone/lock/switch counters, lap crossing, timer decay, and integration callback invocation.
+  - Current line counts: `ArcadeRace3D.jsx` 1,471; `raceAutoplay.js` 270; `race-content-playtest.mjs` 5,839; `race-kart-v1-implementation-plan.md` 1,370 before this entry.
+  - `node --check src/game/race/playtest/raceAutoplay.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T07:19:11.547Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 35.0; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `switchBolt` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.252 and FPS 30.8; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race visual scenario frame helper extraction validation:
+  - `src/game/race/playtest/raceVisualScenarios.js` now exports `manualVisualScenarioIsActive` and `applyVisualKartScenarioFrame`, preserving current post-`updatePlayer` stabilization for reverse, boost-pad mechanics, braking, collision mechanics, drift mechanics, off-road slowdown, item-box mechanics, steering, acceleration, and stuck-recovery visual scenarios.
+  - `src/game/ArcadeRace3D.jsx` now uses one manual visual scenario branch: prime scenario state, run `updatePlayer`, then delegate post-update capture stabilization to `applyVisualKartScenarioFrame`.
+  - `scripts/race-content-playtest.mjs` now asserts frame behavior for reverse speed ratio/cap capture, boost-pad boost hold, braking speed hold, collision capture placement, drift boost capture, off-road slowdown capture, item-box approach/capture, steering hold, acceleration no-op, and stuck-recovery no-op.
+  - Current line counts: `ArcadeRace3D.jsx` 1,690; `raceVisualScenarios.js` 503; `race-content-playtest.mjs` 5,631; `race-kart-v1-implementation-plan.md` 1,357 before this entry.
+  - `node --check src/game/race/playtest/raceVisualScenarios.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T07:07:54.223Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 28.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `shield` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.251 and FPS 32.4; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race visual scenario primer extraction validation:
+  - `src/game/race/playtest/raceVisualScenarios.js` now exports `primeVisualKartScenario`, preserving current manual visual scenario setup for acceleration, braking, reverse, boost-pad mechanics, collision mechanics, off-road slowdown, item-box mechanics, drift mechanics, steering, and stuck recovery.
+  - `src/game/ArcadeRace3D.jsx` now calls `primeVisualKartScenario` once from the frame loop before manual visual scenario updates, removing the local per-scenario primer functions while keeping post-update capture stabilization in the runtime.
+  - `scripts/race-content-playtest.mjs` now asserts the extracted primer behavior for all current manual visual scenarios, including player reset state, boost/item/stat resets, collision placement, off-road placement, steering timing setup, and stuck-recovery probe setup.
+  - Current line counts: `ArcadeRace3D.jsx` 1,785; `raceVisualScenarios.js` 344; `race-content-playtest.mjs` 5,510; `race-kart-v1-implementation-plan.md` 1,344 before this entry.
+  - `node --check src/game/race/playtest/raceVisualScenarios.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T06:57:21.048Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 30.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `shield` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; stuck-recovery count 1; mobile driving kart height 0.256 and FPS 32.4; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture/playtest evidence, not V1 performance sign-off.
+
+- Race chase camera frame helper extraction validation:
+  - `src/game/race/camera/chaseCamera.js` now exports `updateChaseCameraFrame`, preserving current camera profile selection, route lookahead, chase position, look target, shake offset, collision avoidance, initial placement, lerp, roll, FOV update, and projection-matrix update behavior.
+  - `src/game/ArcadeRace3D.jsx` now calls `updateChaseCameraFrame` from the frame loop while retaining only runtime state assignment for camera initialization and route-lookahead telemetry.
+  - `scripts/race-content-playtest.mjs` now asserts initial chase placement, route lookahead, FOV, drift roll, collision-avoidance counter updates, safe camera pull-in, and heading-camera route-lookahead suppression through the extracted helper.
+  - Current line counts: `ArcadeRace3D.jsx` 2,058; `chaseCamera.js` 246; `race-content-playtest.mjs` 5,318; `race-kart-v1-implementation-plan.md` 1,331 before this entry.
+  - `node --check src/game/race/camera/chaseCamera.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T06:43:58.224Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 30.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `decoyCrate` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251 and FPS 30.9; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture evidence, not V1 performance sign-off.
+
+- Race mesh sync helper extraction validation:
+  - `src/game/race/render/syncRaceMeshes.js` now exports `syncRaceMeshes`, preserving current per-frame player vehicle transform/wheel/boost/drift-spark updates, switch-ring updates, rival vehicle transforms/modes, track banana/item-box/boost-pad/flight-gate/switch-pad/track-hazard presentation updates, city animation hooks, dropped trap presentation, and dropped banana presentation.
+  - `src/game/ArcadeRace3D.jsx` now calls `syncRaceMeshes` from the frame loop with the existing race state, mesh arrays, world hooks, compiled route, player/rival models, and dropped item meshes.
+  - `scripts/race-content-playtest.mjs` now asserts player/rival mesh mutation, switch-ring mutation, pickup/hazard mesh visibility and transforms, inactive kart-mode flight-gate presentation, city animation hook invocation, trap opacity, and dropped banana transform through the extracted helper.
+  - Current line counts: `ArcadeRace3D.jsx` 2,112; `syncRaceMeshes.js` 163; `race-content-playtest.mjs` 5,218; `race-kart-v1-implementation-plan.md` 1,316 before this entry.
+  - `node --check src/game/race/render/syncRaceMeshes.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T06:35:06.931Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 30.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `bubbleTrap` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.253 and FPS 32.5; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed current thresholds, but focused desktop FPS samples remain below the PRD's 55 FPS target, so this remains architecture evidence, not V1 performance sign-off.
+
+- Race scenery helper extraction validation:
+  - `src/game/race/render/createRaceScenery.js` now exports `createRaceScenery`, preserving current building blocks, legacy landmarks, Comeback City district landmarks/signs/props, branch signs, objective marker, skyline/perimeter buildings, mountains/clouds, water/bridge, plaza lamps, camera collider registration, collision-circle registration, and city animation hook setup.
+  - `src/game/ArcadeRace3D.jsx` now calls `createRaceScenery` after track pickup mesh setup and before player/rival vehicle setup, preserving the existing world, collider, collision-circle, track material, dimension, and visual palette inputs.
+  - `scripts/race-content-playtest.mjs` now asserts extracted scenery creation for landmark labels, district labels, city animation hooks, world child counts, camera colliders, authored collision zones, and collision-circle counts with a stubbed canvas document.
+  - Current line counts: `ArcadeRace3D.jsx` 2,228; `createRaceScenery.js` 1,040; `race-content-playtest.mjs` 5,062; `race-kart-v1-implementation-plan.md` 1,301 before this entry.
+  - `node --check src/game/race/render/createRaceScenery.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T06:24:34.669Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0, desktop driving FPS 30.6; desktop acceleration time-to-speed-80 1.440 seconds, time-to-speed-98 2.400 seconds, and FPS 22.3; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251 and FPS 32.8; WebGL fallback rendered with `canvas2d-fallback`.
+  - Performance note: the browser harness passed its current visual thresholds, but the latest focused desktop FPS samples remain below the PRD's 55 FPS target, so this validation is architecture evidence, not V1 performance sign-off.
+
+- Race vehicle mesh helper extraction validation:
+  - `src/game/race/render/createRaceVehicles.js` now exports `createVehicleSwitchRing` and `createRaceVehicleMeshes`, preserving current player vehicle colors/scale/suit, player mode setup, switch-ring geometry/material/visibility, rival model colors/scale, rival default mode setup, and world parenting.
+  - `src/game/ArcadeRace3D.jsx` now calls `createRaceVehicleMeshes` after scenery creation and continues to use the returned player vehicle, rival models, and switch ring in the existing runtime update loop.
+  - `scripts/race-content-playtest.mjs` now asserts switch-ring geometry/materials, player/rival model scale and parentage, hover/plane mode visibility, and world child count through the extracted helper.
+  - Current line counts: `ArcadeRace3D.jsx` 3,218; `createRaceVehicles.js` 49; `race-content-playtest.mjs` 4,958; `race-kart-v1-implementation-plan.md` 1,287 before this entry.
+  - `node --check src/game/race/render/createRaceVehicles.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T06:13:34.939Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.186, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race pickup mesh helper extraction validation:
+  - `src/game/race/render/createRacePickups.js` now exports material and mesh helpers for track bananas, item boxes, flight gates, switch pads, track hazards, dropped bananas, and dropped traps while preserving current geometry, material colors, emissive values, visibility rules, layer-height offsets, and world parenting.
+  - `src/game/ArcadeRace3D.jsx` now calls `createRacePickupMeshes` for static pickup/hazard mesh arrays and uses `createDroppedBananaMesh`/`createDroppedTrapMesh` for runtime item drops.
+  - `scripts/race-content-playtest.mjs` now asserts banana/item-box/gate/switch/hazard/drop/trap geometry, color, opacity, visibility, transform, and batch factory behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 3,239; `createRacePickups.js` 188; `race-content-playtest.mjs` 4,903; `race-kart-v1-implementation-plan.md` 1,273 before this entry.
+  - `node --check src/game/race/render/createRacePickups.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T06:05:16.322Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `rocket` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Track mesh helper extraction validation:
+  - `src/game/race/render/createTrackMesh.js` now exports `createTrackRenderMaterials`, `createTrackMesh`, and `createBoostPadMesh`, preserving current road material defaults, ground sizing/placement, road segment shoulders/asphalt/curbs/lines/rails, track caps, start-grid tiles, and boost pad geometry/material behavior.
+  - `src/game/ArcadeRace3D.jsx` now calls `createTrackMesh` after renderer/scene setup and uses the returned dimensions/materials for existing scenery and boost pad setup.
+  - `scripts/race-content-playtest.mjs` now asserts extracted track material colors/roughness, ground sizing and transform, start tile count/depth/parenting, boost pad position/rotation/child count/base dimensions, and shared line material use.
+  - Current line counts: `ArcadeRace3D.jsx` 3,359; `createTrackMesh.js` 287; `race-content-playtest.mjs` 4,745; `race-kart-v1-implementation-plan.md` 1,259 before this entry.
+  - `node --check src/game/race/render/createTrackMesh.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T05:55:44.918Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `shield` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race renderer fit helper extraction validation:
+  - `src/game/race/render/createRaceScene.js` now exports `fitRaceRendererToCanvas`, preserving the current canvas `getBoundingClientRect` sizing path, `raceViewport` width/height/mobile updates, DPR cap at 2, renderer pixel ratio updates, resize gating through `setSize`, camera aspect calculation, and projection-matrix refresh.
+  - `src/game/ArcadeRace3D.jsx` now calls `fitRaceRendererToCanvas` from its local fit callback while preserving the existing resize observer and initial fit flow.
+  - `scripts/race-content-playtest.mjs` now asserts DPR capping, mobile viewport detection, renderer pixel ratio updates, resize gating, and camera aspect/projection updates through injected canvas/window/renderer fixtures.
+  - Current line counts: `ArcadeRace3D.jsx` 3,584; `createRaceScene.js` 97; `race-content-playtest.mjs` 4,653; `race-kart-v1-implementation-plan.md` 1,247 before this entry.
+  - `node --check src/game/race/render/createRaceScene.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T05:44:45.238Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `tideHorn` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race renderer helper extraction validation:
+  - `src/game/race/render/createRaceScene.js` now exports `RACE_RENDERER_OPTIONS`, `configureRaceRenderer`, and `createRaceRenderer`, preserving current WebGL renderer construction options, output color space, tone mapping, exposure, shadow-map enablement/type, fallback warning, fallback callback, and null return on renderer failure.
+  - `src/game/ArcadeRace3D.jsx` now calls `createRaceRenderer` after creating the scene shell; WebGL fallback routing still exits the effect when the renderer is unavailable.
+  - `scripts/race-content-playtest.mjs` now asserts renderer option values through an injected renderer class, renderer output/tone/shadow configuration, fallback warning text, callback error identity, and disabled renderer return value.
+  - Current line counts: `ArcadeRace3D.jsx` 3,591; `createRaceScene.js` 74; `race-content-playtest.mjs` 4,570; `race-kart-v1-implementation-plan.md` 1,235 before this entry.
+  - `node --check src/game/race/render/createRaceScene.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T05:37:09.378Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `rocket` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.249; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race scene shell extraction validation:
+  - `src/game/race/render/createRaceScene.js` now exports `createRaceSceneShell`, preserving current Three.js scene background/fog defaults, perspective camera defaults, hemisphere light, directional sun, sun shadow map/bounds, rim light, and world group creation.
+  - `src/game/ArcadeRace3D.jsx` now imports the scene shell helper while renderer creation, world population, camera update, and render loop remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts scene background/fog colors and range, camera FOV/aspect/near/far, scene child order, light colors/intensities/positions, sun cast-shadow configuration, shadow map size, shadow camera bounds, and world group type.
+  - Current line counts: `ArcadeRace3D.jsx` 3,602; `createRaceScene.js` 38; `race-content-playtest.mjs` 4,511; `race-kart-v1-implementation-plan.md` 1,221 before this entry.
+  - `node --check src/game/race/render/createRaceScene.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T05:29:42.577Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `shield` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race playtest state helper extraction validation:
+  - `src/game/race/playtest/racePlaytestState.js` now exports `createRacePlaytestState`, `resetRacePlaytestGlobals`, and `recordRacePlaytestEvent`, preserving URL parsing for autoplay/mode/race index/visual scenario, mutable playtest counter and set initialization, browser visual telemetry reset, and event metadata recording.
+  - `src/game/ArcadeRace3D.jsx` now imports those helpers instead of parsing `window.location.search` and pushing `window.__racePlaytestEvents` inline; final result assignment remains in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts default and visual-kart URL parsing, counter/set defaults, enabled/disabled global reset behavior, event metadata, event append behavior, and disabled playtest no-op behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 3,621; `racePlaytestState.js` 53; `raceControls.js` 110; `race-content-playtest.mjs` 4,459; `race-kart-v1-implementation-plan.md` 1,207 before this entry.
+  - `node --check src/game/race/playtest/racePlaytestState.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T05:22:15.906Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.252; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race control helper extraction validation:
+  - `src/game/race/raceControls.js` now exports `RACE_RELEVANT_KEY_CODES`, `defaultRaceTouchControls`, and `resolveRaceControls`, preserving the current keyboard/touch control blend and the scripted visual-playtest inputs for acceleration, braking, reverse, steering, drift mechanics, boost-pad mechanics, collision, off-road, item-box, and stuck-recovery scenarios.
+  - `src/game/ArcadeRace3D.jsx` now imports those helpers for touch default state, keyboard event filtering, and per-frame control resolution; command handling and HUD press/release wiring remain in the race component.
+  - `scripts/race-content-playtest.mjs` now asserts touch defaults, relevant key coverage, keyboard/touch brake-throttle blending, clamped steering, drift/jump input resolution, and scripted visual scenario controls.
+  - Current line counts: `ArcadeRace3D.jsx` 3,640; `raceControls.js` 110; `race-content-playtest.mjs` 4,364; `race-kart-v1-implementation-plan.md` 1,193 before this entry.
+  - `node --check src/game/race/raceControls.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T05:14:16.028Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `bananaMagnet` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race scene theme extraction validation:
+  - `src/game/race/render/raceSceneTheme.js` now exports `TRACK_THEME` and `createDefaultRaceCityDistricts`, preserving current track sky/fog/ground/horizon colors and default Comeback City district label/progress/side/base/dark/roof/icon values.
+  - `src/game/ArcadeRace3D.jsx` now imports the theme data and creates default district anchors with the existing `VISUAL_PALETTE`; authored `compiled.districtAnchors` still override the defaults.
+  - `scripts/race-content-playtest.mjs` now asserts theme values for Comeback City, Tide Pier, Magnet Mine, and Static Storm, plus the default district order, accent injection, progress, side, and roof values.
+  - Current line counts: `ArcadeRace3D.jsx` 3,716; `raceSceneTheme.js` 79; `race-content-playtest.mjs` 4,243; `race-kart-v1-implementation-plan.md` 1,179 before this entry.
+  - `node --check src/game/race/render/raceSceneTheme.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T05:04:36.467Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `switchBolt` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Visual scenario helper extraction validation:
+  - `src/game/race/playtest/raceVisualScenarios.js` now exports `VISUAL_KART_MANUAL_SCENARIOS`, `visualKartScenarioMatches`, `steeringScenarioSpeedRatio`, `visualScenarioUsesHeadingCamera`, `manualVisualScenarioFlags`, and `resetKartPlayerForVisualScenario`.
+  - `src/game/ArcadeRace3D.jsx` now imports those helpers for manual visual scenario predicates, heading-camera route-lookahead suppression, steering speed ratios, and shared kart reset setup in acceleration, braking, reverse, boost-pad, off-road, item-box, drift, and steering scenario primers.
+  - `scripts/race-content-playtest.mjs` now asserts visual-kart predicate gating, heading-camera scenarios, steering speed ratios, manual scenario flags, and shared kart reset behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 3,790; `raceVisualScenarios.js` 68; `race-content-playtest.mjs` 4,204; `race-kart-v1-implementation-plan.md` 1,164 before this entry.
+  - `node --check src/game/race/playtest/raceVisualScenarios.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check src/game/race/raceState.js` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T04:57:20.837Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `bubbleTrap` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race state helper extraction validation:
+  - `src/game/race/raceState.js` now exports `BALLOON_TYPES`, `BALLOON_BY_KEY`, and `createRaceState`, preserving current player, rival, banana, item-box, boost-pad, flight-gate, switch-pad, and track-hazard initialization.
+  - `src/game/ArcadeRace3D.jsx` now imports the race state factory instead of defining it inline while existing runtime call sites stay on the same `createRaceState(compiled, profile, defaultVehicle)` API.
+  - `scripts/race-content-playtest.mjs` now asserts initial player state, plane altitude state, rival lanes/ranks/speeds, banana placement, item-box source type, boost-pad placement, generated flight gates, switch pad state, hazard state, and empty dropped/event containers.
+  - Current line counts: `ArcadeRace3D.jsx` 3,875; `raceState.js` 251; `race-content-playtest.mjs` 4,108; `race-kart-v1-implementation-plan.md` 1,150 before this entry.
+  - `node --check src/game/race/raceState.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T04:47:30.019Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `rocket` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.252; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Track geometry compiler extraction validation:
+  - `src/game/race/track/trackGeometry.js` now exports `compileTrack3D`, road constants, `layerAltitude`, `layerOffset`, `toWorldPoint`, `toCourseV2Point`, and `sampleCourseLine`, preserving current legacy point-track and `courseV2` compilation behavior.
+  - `src/game/ArcadeRace3D.jsx` now imports the track geometry helpers instead of defining the compiler inline while existing race state, placement, scenery, camera, and playtest call sites stay on the same helper API.
+  - `scripts/race-content-playtest.mjs` now asserts legacy point conversion, course point conversion, short-line sampling, layer altitude/offset values, legacy loop road width/length/route layers/items/hazards/branch/switch/zone/lock behavior, and authored `courseV2` road width/sampled points/branch/metadata behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,116; `trackGeometry.js` 315; `race-content-playtest.mjs` 4,038; `race-kart-v1-implementation-plan.md` 1,136 before this entry.
+  - `node --check src/game/race/track/trackGeometry.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T04:37:48.031Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Billboard text helper extraction validation:
+  - `src/game/race/render/createBillboardText.js` now exports `BILLBOARD_TEXT_STYLE` and `createBillboardText`, preserving current canvas size, background/stroke/text drawing, uppercase label text, SRGB canvas texture, sprite material options, and sprite scale.
+  - `src/game/ArcadeRace3D.jsx` now imports the billboard helper instead of defining it inline while existing label/sign call sites stay unchanged.
+  - `scripts/race-content-playtest.mjs` now asserts drawing calls and sprite material/texture/scale values through an injected document/canvas shim.
+  - Current line counts: `ArcadeRace3D.jsx` 4,410; `createBillboardText.js` 52; `createKartModel.js` 181; `raceVfx.js` 183; `race-content-playtest.mjs` 3,888; `race-kart-v1-implementation-plan.md` 1,119 before this entry.
+  - `node --check src/game/race/render/createBillboardText.js` passed.
+  - `node --check src/game/race/render/createKartModel.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/render/createBillboardText.js src/game/race/render/createKartModel.js src/game/race/render/raceVfx.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T04:25:28.633Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `bananaMagnet` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.252; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race vehicle model helper extraction validation:
+  - `src/game/race/render/createKartModel.js` now exports `createBasicMaterial` and `createVehicleModel`, preserving the current chunky kart/hover/plane model construction, material defaults, wheel groups, boost flames, drift sparks, and mode toggles.
+  - `src/game/ArcadeRace3D.jsx` now imports the model factory and material helper instead of defining them inline.
+  - `scripts/race-content-playtest.mjs` now asserts material defaults, wheel count/front-wheel tagging, wheel child structure, boost-flame count, drift-spark count, scale, and plane/kart mode wheel visibility.
+  - Current line counts: `ArcadeRace3D.jsx` 4,434; `createKartModel.js` 181; `raceVfx.js` 183; `race-content-playtest.mjs` 3,816; `race-kart-v1-implementation-plan.md` 1,102 before this entry.
+  - `node --check src/game/race/render/createKartModel.js` passed.
+  - `node --check src/game/race/render/raceVfx.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/render/createKartModel.js src/game/race/render/raceVfx.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T04:16:11.807Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `decoyCrate` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- World pickup/hazard VFX helper extraction validation:
+  - `src/game/race/render/raceVfx.js` now exports presentation-frame helpers for track bananas, item boxes, boost pads, flight gates, switch pads, track hazards, dropped traps, and dropped bananas, preserving current visibility, bob, pulse, opacity, scale, and spin values.
+  - `src/game/ArcadeRace3D.jsx` now delegates those frame calculations to `raceVfx.js` while keeping Three.js object mutation and active-hazard state lookup in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts active/cooling/hidden states for the extracted world pickup and hazard presentation helpers.
+  - Current line counts: `ArcadeRace3D.jsx` 4,598; `raceVfx.js` 183; `race-content-playtest.mjs` 3,766; `race-kart-v1-implementation-plan.md` 1,088 before this entry.
+  - `node --check src/game/race/render/raceVfx.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/render/raceVfx.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T04:06:38.643Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `switchBolt` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Vehicle presentation VFX helper extraction validation:
+  - `src/game/race/render/raceVfx.js` now exports `playerVehiclePresentationFrameFor`, `switchRingFrameFor`, and `rivalVehiclePresentationFrameFor`, preserving current player/rival mesh height, rotation, wheel spin, front-wheel steer, boost-flame visibility, and switch-ring opacity/scale/spin values.
+  - `src/game/ArcadeRace3D.jsx` now delegates vehicle presentation math to the helpers while keeping Three.js object mutation in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts kart, plane, switch-ring, and rival presentation frame values.
+  - Current line counts: `ArcadeRace3D.jsx` 4,583; `raceVfx.js` 118; `race-content-playtest.mjs` 3,635; `race-kart-v1-implementation-plan.md` 1,074 before this entry.
+  - `node --check src/game/race/render/raceVfx.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/render/raceVfx.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T03:56:17.935Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop acceleration time-to-speed-80 1.440 seconds and time-to-speed-98 2.400 seconds; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `invincibility` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Rival route-layer helper extraction validation:
+  - `src/game/race/raceRivals.js` now exports `chooseRaceRivalRouteLayer`, preserving route-layer scoring from AI weight, vehicle-layer score, rival risk bias, held-item bonus, and empty-route fallback.
+  - `src/game/ArcadeRace3D.jsx` now delegates AI route-layer selection to the helper while vehicle switching and rival movement remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts plane, kart, hover, and empty-route selections.
+  - Current line counts: `ArcadeRace3D.jsx` 4,582; `raceRivals.js` 31; `race-content-playtest.mjs` 3,562; `race-kart-v1-implementation-plan.md` 1,058 before this entry.
+  - `node --check src/game/race/raceRivals.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/raceRivals.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T03:46:16.402Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `rocket` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Flight-gate boost helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `resolveFlightGateForFrame`, preserving cooldown decay, plane-only gating, distance threshold, altitude tolerance, cooldown reset, and the 0.5 second/8.5 impulse/tier 1 pad boost payload.
+  - `src/game/ArcadeRace3D.jsx` now delegates flight-gate activation decisions to the helper while the existing `addBoost` path still applies the returned pad boost.
+  - `scripts/race-content-playtest.mjs` now asserts cooling-gate no-op behavior, active plane-gate boost payload, non-plane suppression, and altitude-miss suppression.
+  - Current line counts: `ArcadeRace3D.jsx` 4,598; `kartPhysics.js` 1,159; `race-content-playtest.mjs` 3,521; `race-kart-v1-implementation-plan.md` 1,044 before this entry.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T03:37:51.236Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `boost` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.253; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Banana-magnet rival-pull helper extraction validation:
+  - `src/game/raceItems.js` now exports `applyBananaMagnetRivalPullForFrame`, preserving active magnet gating, finished-rival suppression, ahead-of-player scoring filter, nearest target selection, flat pull vector calculation, and `11 * dt` velocity impulse.
+  - `src/game/ArcadeRace3D.jsx` now delegates banana-magnet rival pull to the helper while score and distance callbacks remain supplied by the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts nearest ahead-rival targeting, finished/behind rival suppression, inactive magnet no-op behavior, and the exact pull impulse.
+  - Current line counts: `ArcadeRace3D.jsx` 4,595; `raceItems.js` 1,251; `race-content-playtest.mjs` 3,458; `race-kart-v1-implementation-plan.md` 1,030 before this entry.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T03:29:46.460Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `shield` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Player/rival bump helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `resolvePlayerRivalBumpsForFrame`, preserving player/rival proximity push distance, shield redirect to rival hit, player-hit callback dispatch, live hit-timer gating, jump-height gating, and plane-mode skip behavior.
+  - `src/game/ArcadeRace3D.jsx` now delegates the player/rival bump loop to the helper while existing `hitPlayer` and `hitRival` presentation side effects remain in the race component.
+  - `scripts/race-content-playtest.mjs` now asserts push distance, shield redirect, callback dispatch, hit-timer gating, and plane skip behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,596; `kartPhysics.js` 1,106; `race-content-playtest.mjs` 3,412; `race-kart-v1-implementation-plan.md` 1,016 before this entry.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T03:20:59.370Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop collision speed-loss ratio 0.417; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `bubbleTrap` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.253; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Dropped-hazard frame helper extraction validation:
+  - `src/game/raceHazards.js` now exports `updateDroppedHazardsForFrame`, preserving dropped-hazard life decay, contact resolution, drag-back movement, player/rival hit callback dispatch, hazard expiration, and active-hazard filtering.
+  - `src/game/ArcadeRace3D.jsx` now delegates dropped-hazard update/contact handling to the helper while hit presentation and dropped-hazard mesh rendering remain in the race component.
+  - `scripts/race-content-playtest.mjs` now asserts life decay, drag-back, player/rival hit callbacks, and active hazard filtering.
+  - Current line counts: `ArcadeRace3D.jsx` 4,596; `raceHazards.js` 666; `race-content-playtest.mjs` 3,335; `race-kart-v1-implementation-plan.md` 1,002 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T03:12:02.245Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Banana economy helper extraction validation:
+  - `src/game/raceItems.js` now exports `spendRaceBananasForPlayer`, `upgradeHeldRaceItemForPlayer`, `buyRareRacePickupForPlayer`, and `buyRaceDoubleSlotForPlayer`, preserving banana spend gating, held-item tier upgrades, rare-next-pickup purchase, and double-slot purchase behavior.
+  - `src/game/ArcadeRace3D.jsx` now delegates `upgradeHeldItem`, `buyRareNextPickup`, and `buyDoubleSlot` to those helpers while command scheduling and inventory UI callbacks remain in the race component.
+  - `scripts/race-content-playtest.mjs` now asserts successful and blocked spend, upgrade, max-tier, rare-pickup, and double-slot purchase paths.
+  - Current line counts: `ArcadeRace3D.jsx` 4,606; `raceItems.js` 1,189; `race-content-playtest.mjs` 3,297; `race-kart-v1-implementation-plan.md` 988 before this entry.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T02:56:16.517Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `rocket` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Banana pickup/update helper extraction validation:
+  - `src/game/raceItems.js` now exports `updateTrackBananasForPlayer` and `updateDroppedBananasForPlayer`, preserving track banana cooldown decay, magnet pull, pickup cooldown reset, dropped-banana life decay, velocity drag, dropped-banana magnet pull, pickup collection, and expired dropped-banana filtering.
+  - `src/game/ArcadeRace3D.jsx` now delegates the track and dropped banana update loops to those helpers while dropped-banana mesh creation and mesh syncing remain in the race component.
+  - `scripts/race-content-playtest.mjs` now asserts track banana magnet pull/pickup, dropped-banana life/drag/magnet pull, pickup collection, and active dropped-banana filtering.
+  - Current line counts: `ArcadeRace3D.jsx` 4,619; `raceItems.js` 1,085; `race-content-playtest.mjs` 3,228; `race-kart-v1-implementation-plan.md` 974 before this entry.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T02:48:12.762Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `invincibility` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Banana scatter helper extraction validation:
+  - `src/game/raceItems.js` now exports `resolveBananaScatterForRacer`, preserving available-banana clamping, racer banana count mutation, drop angle spread, drop spacing, and drop velocity payloads.
+  - `src/game/ArcadeRace3D.jsx` now delegates `scatterBananas` to the helper while Three.js mesh construction and dropped-banana runtime rendering remain in the race component.
+  - `scripts/race-content-playtest.mjs` now asserts banana scatter count mutation, drop angles, positions, velocities, and empty-scatter behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,634; `raceItems.js` 969; `race-content-playtest.mjs` 3,172; `race-kart-v1-implementation-plan.md` 960 before this entry.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T02:39:44.545Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.186, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `tideHorn` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Vehicle integration helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `resolveVehicleIntegrationForFrame`, preserving switch-pad cooldown/activation, vehicle-zone auto-switch/block/penalty behavior, vehicle-lock switch timing, and skip behavior.
+  - `src/game/ArcadeRace3D.jsx` now delegates `applyVehicleIntegration` to the helper while player vehicle presentation, hit feedback, and audio side effects remain in runtime callbacks.
+  - `scripts/race-content-playtest.mjs` now asserts switch-pad hits, skipped frames, auto-switch zones, block zones, penalty zones, and vehicle-lock behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,637; `kartPhysics.js` 1,051; `race-content-playtest.mjs` 3,141; `race-kart-v1-implementation-plan.md` 947 before this entry.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T02:30:47.115Z`.
+  - Latest telemetry after extraction: desktop driving kart height 0.186, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-mechanics boost source `drift`; boost-pad mechanics source `pad`; item-box mechanics held item `hazardBell` with pickup delay 0.160 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Item-use orchestration helper extraction validation:
+  - `src/game/raceItems.js` now exports `applyRaceItemUse`, preserving allowed-item gating, player vehicle restriction checks, activation cue reporting, boost use, self-status use, nearest-rival targeting, trap drops, switch lock timing, lift jammer timers, remote hazard triggers, warhorn ahead/radius targeting, and polarity swap effects through runtime callbacks.
+  - `src/game/ArcadeRace3D.jsx` now delegates the local `applyRaceItem` branch logic to `applyRaceItemUse`; runtime-only callbacks still own boost application, trap rendering, rival hit presentation, vehicle switching, remote hazard event messages, and player audio cues.
+  - `scripts/race-content-playtest.mjs` now asserts high-level item-use orchestration for boost, shield, rocket, oil trap, switch bolt, lift jammer, hazard bell, warhorn, polarity swap, and blocked vehicle-restricted use.
+  - Current line counts: `ArcadeRace3D.jsx` 4,657; `raceItems.js` 913; `race-content-playtest.mjs` 3,083; `race-kart-v1-implementation-plan.md` 934 before this entry.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T02:20:58.370Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics picked up `shield` with `itemBoxPickupDelay` 0.160 seconds; desktop boost scenario held item `boost` with boost source `pad`; desktop rival cluster visible rivals 3; camera clip count 0.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; mobile driving kart height 0.252; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Item-box collection helper extraction validation:
+  - `src/game/raceItems.js` now exports `collectRaceItemBoxForPlayer`, preserving item-box selection, rare-next-pickup clearing, stacked held-item level increments, held item construction, primary/secondary slotting through `applyRaceItemBoxPickup`, cooldown reset, and source-type reporting.
+  - `src/game/ArcadeRace3D.jsx` now delegates `collectBalloon` item choice, level, item construction, cooldown, and slotting to the helper while keeping browser visual telemetry recording in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts combined item-box collection behavior, including level-up from an existing held item, source type reporting, rare-next-pickup clearing, primary slot assignment, cooldown reset, and held-item level mutation.
+  - Current line counts: `ArcadeRace3D.jsx` 4,766; `raceItems.js` 731; `race-content-playtest.mjs` 2,972; `race-kart-v1-implementation-plan.md` 921 before this entry.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T02:10:09.805Z`.
+  - Latest item-box telemetry after extraction: desktop item-box mechanics picked up `ghostReplay`, held item `ghostReplay`, pickup source type `red`, pickup delay 0.160 seconds, kart height 0.236, road-ahead coverage 1.0, and camera clip count 0.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+
+- Race progress helper extraction validation:
+  - `src/game/race/raceProgress.js` now exports `scoreRacer`, `applyLapProgress`, and `applyRaceRankings`, preserving finished-racer score bonus behavior, lap crossing, lap split/best-lap updates, final-lap finish marking, anti-reverse-wrap protection, rank sorting, and position notice text.
+  - `src/game/ArcadeRace3D.jsx` now delegates player/rival lap progress and ranking updates to those helpers while keeping race-finished and notice assignment as runtime integration glue.
+  - `scripts/race-content-playtest.mjs` now asserts lap crossing, split tracking, best-lap updates, reverse-wrap rejection, finish marking, score bonus behavior, rank loss notices, and rank gain notices.
+  - Current line counts: `ArcadeRace3D.jsx` 4,777; `raceProgress.js` 96; `race-content-playtest.mjs` 2,940; `race-kart-v1-implementation-plan.md` 902 before this entry.
+  - `node --check src/game/race/raceProgress.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/raceProgress.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T01:59:57.388Z`.
+  - Latest progress-adjacent telemetry after extraction: Comeback City browser races completed with place 1 across free-switch and vehicle-restricted runs; desktop finish-line visual reported lap 3, kart height 0.188, road-ahead coverage 1.0, and camera clip count 0.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.247; WebGL fallback rendered with `canvas2d-fallback`.
+
+2026-05-19:
+
+- World collision contact helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `resolveWorldCollisionContactsForFrame`, preserving ground-collision eligibility, nearest-road lookup, default road-width fallback, sequential circle response application, collision contact payloads, and ineligible racer short-circuiting.
+  - `src/game/ArcadeRace3D.jsx` now calls that helper from `resolveWorldCollisions`; player visual collision telemetry remains in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts contact collection, default road-width usage, push-out mutation, nearest-road call count, missed circles, and ghost-racer skip behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,786; `kartPhysics.js` 965; `race-content-playtest.mjs` 2,841; `race-kart-v1-implementation-plan.md` 888 before this entry.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T01:49:25.029Z`.
+  - Latest collision telemetry after extraction: desktop collision mechanics recorded `collisionSpeedLossRatio` 0.417, kart height 0.237, road-ahead coverage 1.0, route lookahead 1.415 seconds, and camera clip count 0.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.252; WebGL fallback rendered with `canvas2d-fallback`.
+- Track event scheduler helper extraction validation:
+  - `src/game/raceHazards.js` now exports `resolveRaceTrackEventsForFrame`, preserving repeat-interval cooldown checks, one-shot fired flags, lap/time/position/player readiness checks, leader scoring via callback, in-order event application callbacks, and event-message aging after new messages are added.
+  - `src/game/ArcadeRace3D.jsx` now calls that helper from `updateTrackEvents`; applying track event side effects still routes through the local `runTrackEvent` callback.
+  - `scripts/race-content-playtest.mjs` now asserts repeat, lap, position, and player-flag triggering, blocked future-time events, blocked already-fired events, repeat cooldown updates, fired flag writes, callback order/meta, expired message removal, and newly-added message aging.
+  - Current line counts: `ArcadeRace3D.jsx` 4,793; `raceHazards.js` 623; `race-content-playtest.mjs` 2,786; `race-kart-v1-implementation-plan.md` 874 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T01:41:15.453Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `ghostReplay` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+- Track hazard contact helper extraction validation:
+  - `src/game/raceHazards.js` now exports `resolveRaceTrackHazardContactsForFrame`, preserving cooldown decay, event-pulse decay, timed active-window checks, inactive hazard suppression, pre-hit cooldown suppression, default radius behavior, finished-racer ignore behavior, multi-racer contact collection, and hit-cooldown mutation.
+  - `src/game/ArcadeRace3D.jsx` now calls that helper from `updateTrackHazards`; applying gameplay effects still routes through the local `applyHazardEffect` callback.
+  - `scripts/race-content-playtest.mjs` now asserts contact ordering, player/rival contact collection, finished-racer ignore behavior, event-pulse decay, custom hit cooldown, cooling-hazard suppression, inactive-hazard suppression, and default-radius contact behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,805; `raceHazards.js` 567; `race-content-playtest.mjs` 2,713; `race-kart-v1-implementation-plan.md` 860 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T01:31:56.266Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `boost` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.257; WebGL fallback rendered with `canvas2d-fallback`.
+- Hazard effect helper extraction validation:
+  - `src/game/raceHazards.js` now exports `applyRaceHazardEffect`, preserving vehicle filtering, player invincibility gating, lightning-rod redirect, slow velocity/speed scaling, spin/knock-back/polarity hit callbacks, pull and boost callbacks, force-switch callbacks, and blind/control-flip/polarity/switch-lock timers.
+  - `src/game/ArcadeRace3D.jsx` now delegates `applyHazardEffect` to the helper while keeping runtime-only callbacks for boost, hit, vehicle mode, and lightning target selection in the race component.
+  - `scripts/race-content-playtest.mjs` now asserts slow scaling, vehicle-filter ignore, invincible ignore, boost-through-invincible behavior, lightning redirect, knock-back push/hit, plane pull trick boost, force-switch callback, blind/control-flip/polarity/switch-lock timers, and polarity mismatch hit.
+  - Current line counts: `ArcadeRace3D.jsx` 4,808; `raceHazards.js` 539; `race-content-playtest.mjs` 2,647; `race-kart-v1-implementation-plan.md` 846 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T01:23:05.352Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `hazardBell` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Hazard type trigger helper extraction validation:
+  - `src/game/raceHazards.js` now exports `triggerRaceHazardByType`, preserving type lookup, event-pulse maxing, missing-target no-op behavior, and optional message payload creation.
+  - `src/game/ArcadeRace3D.jsx` now calls that helper from `triggerHazardByType`; AI signature timing and event-message insertion remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts target hit behavior, event-pulse maxing, larger-pulse preservation, null-message behavior, missing-target behavior, and message payload life/text.
+  - Current line counts: `ArcadeRace3D.jsx` 4,835; `raceHazards.js` 405; `race-content-playtest.mjs` 2,415; `race-kart-v1-implementation-plan.md` 832 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T01:09:08.592Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `hazardBell` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Dropped hazard contact helper extraction validation:
+  - `src/game/raceHazards.js` now exports `resolveDroppedHazardContact`, preserving owner, finished-racer, vehicle-filter, expired-life, distance/radius, drag, player-hit severity, and rival spin-hit severity decisions for dropped traps.
+  - `src/game/ArcadeRace3D.jsx` now calls that helper from the dropped hazard update loop; life decrement, drag movement, hit side effects, and hazard removal remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts hover-allowed kart-filter contact, owner ignore, finished ignore, vehicle-filter ignore, spin rival severity, drag distance, and expired-hazard ignore behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,830; `raceHazards.js` 387; `race-content-playtest.mjs` 2,377; `race-kart-v1-implementation-plan.md` 818 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T01:01:38.026Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `invincibility` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+- Track event mutation helper extraction validation:
+  - `src/game/raceHazards.js` now exports `applyRaceTrackEvent`, preserving event message payloads, event flag writes, trigger-hazard pulse maxing, vehicle-zone activation, player switch-lock timing, and polarity hazard rotation/pulse behavior.
+  - `src/game/ArcadeRace3D.jsx` now calls that helper from `runTrackEvent`; event scheduling and event message insertion remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts event flag values, message payloads, hazard pulse mutation, vehicle-zone activation, switch-lock timing, polarity rotation and pulse preservation, missing-hazard no-op behavior, and empty-event no-op behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,826; `raceHazards.js` 351; `race-content-playtest.mjs` 2,322; `race-kart-v1-implementation-plan.md` 804 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T00:53:01.912Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `invincibility` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Timed hazard window helper extraction validation:
+  - `src/game/raceHazards.js` now exports `hazardCyclePhaseForTime`, `hazardWindowOpenForTime`, and `trackHazardActiveForTime`, preserving timed open/closed windows, always-open hazards without a cycle, event-pulse override, and inactive-hazard suppression without an event pulse.
+  - `src/game/ArcadeRace3D.jsx` now calls `trackHazardActiveForTime` for both hazard collision checks and hazard mesh visibility; gameplay effects and rendering side effects remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts phase wrapping, open-window detection, closed-window detection, inactive no-pulse suppression, pulsed inactive activation, and no-cycle always-open behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,838; `raceHazards.js` 291; `race-content-playtest.mjs` 2,239; `race-kart-v1-implementation-plan.md` 790 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T00:45:03.982Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `ghostReplay` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.253; WebGL fallback rendered with `canvas2d-fallback`.
+- Dropped trap hazard descriptor extraction validation:
+  - `src/game/raceHazards.js` now exports `resolveDroppedRaceHazard`, preserving drop-behind placement from racer heading, item effect fallback, item duration fallback, owner reference, radius scaling, anchor drag strength, and vehicle-filter fallback.
+  - `src/game/ArcadeRace3D.jsx` now calls that helper from `dropTrap`; Three.js mesh construction and dropped hazard rendering remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts dropped oil and anchor hazard descriptors, including position, life, radius, owner, effect, drag strength, and vehicle filter.
+  - A first browser rerun caught a stale `position` reference in the mesh placement path; the final call site now copies `hazard.position`.
+  - Current line counts: `ArcadeRace3D.jsx` 4,845; `raceHazards.js` 271; `race-content-playtest.mjs` 2,207; `race-kart-v1-implementation-plan.md` 775 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - Direct `node --check src/game/ArcadeRace3D.jsx` is not usable in this repo because Node reports `ERR_UNKNOWN_FILE_EXTENSION` for `.jsx`; `npm run build` covers that call site.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T00:36:37.361Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `bubbleTrap` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Remote hazard activation helper extraction validation:
+  - `src/game/raceHazards.js` now exports `triggerNearestRemoteHazard`, preserving nearest active hazard selection, inactive hazard ignoring, event pulse maxing, cooldown reset, and triggered/no-armed message payloads.
+  - `src/game/ArcadeRace3D.jsx` now calls that helper from `triggerRemoteHazard`; event message insertion remains in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts nearest active selection, inactive hazard ignore behavior, event pulse maxing, cooldown reset, larger-pulse preservation, and no-active-hazard message payloads.
+  - Current line counts: `ArcadeRace3D.jsx` 4,839; `raceHazards.js` 240; `race-content-playtest.mjs` 2,162; `race-kart-v1-implementation-plan.md` 759 before this entry.
+  - `node --check src/game/raceHazards.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceHazards.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T00:25:37.647Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `ghostReplay` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+- Hit response helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `applyPlayerHitResponse` and `applyRivalHitResponse`, preserving invincible gating, airborne gating, shield drain/block behavior, player hit timer, player velocity loss, rival hit timer, and rival speed loss.
+  - `src/game/ArcadeRace3D.jsx` now calls those helpers from `hitPlayer` and `hitRival`; camera shake, screen flash, item-hit audio cue, and banana scatter side effects remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts invincible no-op, airborne no-op, shield-blocked hit behavior, normal player hit timer/velocity/presentation payloads, invincible rival no-op, normal rival hit, and strong rival minimum speed-loss clamp.
+  - Current line counts: `ArcadeRace3D.jsx` 4,837; `kartPhysics.js` 929; `race-content-playtest.mjs` 2,123.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T00:18:02.807Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `bananaMagnet` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.252; WebGL fallback rendered with `canvas2d-fallback`.
+- Vehicle mode helper extraction validation:
+  - `src/game/race/physics/kartTuning.js` now exports `VEHICLE_ORDER` and `FLIGHT_ALTITUDE_LIMITS`, preserving the existing kart, hover, and plane order plus flight min, cruise, and max altitude values.
+  - `src/game/race/physics/kartPhysics.js` now exports `nextVehicleModeFor` and `applyVehicleModeChange`, preserving unknown-vehicle rejection, kart-only rejection, switch-lock rejection, forced transition behavior, transform/invincibility timers, plane altitude setup, and ground-mode flight reset.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyVehicleModeChange` in `setVehicleMode`; player-only boost flash, `playerVehicle.setMode`, and vehicle-switch audio cue remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts vehicle order cycling, lock gates, forced plane transition setup, and ground-mode reset behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,837; `kartPhysics.js` 823; `kartTuning.js` 106; `race-content-playtest.mjs` 2,003.
+  - `node --check src/game/race/physics/kartTuning.js` passed.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js src/game/race/physics/kartTuning.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T00:08:45.252Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `invincibility` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+- Opponent and remote-hazard item-use helper extraction validation:
+  - `src/game/raceItems.js` now exports `resolveRaceItemOpponentUse` and `resolveRaceItemRemoteHazardUse`, preserving Rocket hit severity, Switch Bolt vehicle-switch lock and hit severity, Lift Jammer duration and plane-hit severity, Warhorn radius and hit severity, Polarity Swap flip duration and hit severity, and Hazard Bell, Tide Horn, and Warhorn remote-hazard strengths.
+  - `src/game/ArcadeRace3D.jsx` now calls those helpers in `applyRaceItem`; nearest-rival lookup, vehicle switching, rival iteration, score/distance checks, `hitRival`, and `triggerRemoteHazard` side effects remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts opponent-use payloads, remote-hazard payloads, and no-op behavior for unrelated items.
+  - Current line counts: `ArcadeRace3D.jsx` 4,846; `raceItems.js` 686; `race-content-playtest.mjs` 1,904.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-20T00:00:30.931Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `bubbleTrap` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Self-status item-use helper extraction validation:
+  - `src/game/raceItems.js` now exports `resolveRaceItemSelfStatusUse` and `applyRaceItemSelfStatusUse`, preserving Shield, Ghost Replay, Banana Magnet, Invincibility, Boardwalk Grip, Phase Key, and Lightning Rod timer effects.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyRaceItemSelfStatusUse` in `applyRaceItem`; opponent targeting, remote hazard triggering, item VFX, and dropped hazard rendering remain in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts self-status application, duration values, no-status behavior for non-status items, and `Math.max` preservation when an existing timer is higher.
+  - Current line counts: `ArcadeRace3D.jsx` 4,839; `raceItems.js` 606; `race-content-playtest.mjs` 1,853.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T23:52:00.921Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `switchBolt` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; desktop drift tier 2; drift-release boost source `drift`; boost scenario source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Item boost payload helper extraction validation:
+  - `src/game/raceItems.js` now exports `resolveRaceItemBoostUse`, preserving boost payloads for Turbo/boost, Tier 3 Shield, Rocket, Ghost Replay, Invincibility, Boardwalk Grip, Warhorn, and Phase Key item effects.
+  - `src/game/ArcadeRace3D.jsx` now calls `resolveRaceItemBoostUse` in `applyRaceItem`; the actual `addBoost` side effect remains in the race runtime.
+  - `scripts/race-content-playtest.mjs` now asserts item boost duration, impulse, tier, source, and no-boost behavior for non-boosting items.
+  - Current line counts: `ArcadeRace3D.jsx` 4,834; `raceItems.js` 553; `race-content-playtest.mjs` 1,771.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T23:43:04.826Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `switchBolt` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; boost-pad source `pad`; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Trap item-use helper extraction validation:
+  - `src/game/raceItems.js` now exports `TRAP_ITEM_KEYS` and `resolveRaceTrapItemUse`, preserving trap item classification, oil/bubble slow effects, decoy spin effect, anchor drag effect, and level-scaled trap lifetime.
+  - `src/game/ArcadeRace3D.jsx` now calls `resolveRaceTrapItemUse` in `applyRaceItem`; Three.js trap mesh creation, hazard insertion, and dropped hazard rendering remain in the existing `dropTrap` path.
+  - `scripts/race-content-playtest.mjs` now asserts oil, bubble, decoy, anchor, and non-trap item-use option behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,827; `raceItems.js` 467; `race-content-playtest.mjs` 1,715.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T23:35:19.905Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `boost` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; boost-pad source `pad`; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.249; WebGL fallback rendered with `canvas2d-fallback`.
+- RaceScreen Canvas2D fallback deprecation validation:
+  - `src/game/RaceScreen.jsx` now renames `RaceCanvas` to `RaceCanvasFallback` and marks it deprecated/fallback-only, preserving the Canvas2D path only for browsers without WebGL.
+  - The race route still reports `data-race-renderer="webgl"` for the primary `<ArcadeRace3D>` renderer and `data-race-renderer="canvas2d-fallback"` when WebGL contexts are unavailable.
+  - `docs/CODEBASE_MAP.md` now reflects that the Canvas2D renderer is fallback-only rather than dead primary-race code.
+  - Current line count: `RaceScreen.jsx` 2,079.
+  - `git diff --check -- src/game/RaceScreen.jsx` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T23:27:09.707Z`.
+  - Latest fallback telemetry after deprecation: WebGL fallback rendered with `canvas2d-fallback` and nonblank canvas data length 364,990.
+  - Latest broader telemetry after deprecation: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; boost-pad source `pad`; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.249.
+- Item-use request gating helper extraction validation:
+  - `src/game/raceItems.js` now exports `resolveRaceItemUseRequest`, preserving item key extraction, definition lookup, track restriction checks, optional player vehicle restriction checks, and the prior behavior where non-player use can bypass vehicle restriction gates.
+  - `src/game/ArcadeRace3D.jsx` now calls `resolveRaceItemUseRequest` at the start of `applyRaceItem`; item effects, VFX, audio cue playback, and dropped hazard rendering remain on the existing path.
+  - `scripts/race-content-playtest.mjs` now asserts allowed held-item use, missing item rejection, unknown item rejection, track restriction rejection, player vehicle restriction rejection, and non-player vehicle restriction bypass behavior.
+  - Current line counts: `ArcadeRace3D.jsx` 4,825; `raceItems.js` 443; `race-content-playtest.mjs` 1,670.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T23:20:12.045Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `tideHorn` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; boost-pad source `pad`; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.257; WebGL fallback rendered with `canvas2d-fallback`.
+- Held-item construction helper extraction validation:
+  - `src/game/raceItems.js` now exports `ITEM_COLORS` and `createHeldRaceItem`, preserving held-item category, color, key, label, clamped level, rarity, and vehicle restriction fields.
+  - `src/game/ArcadeRace3D.jsx` now calls `createHeldRaceItem` for item-box pickups, held-item upgrades, signature item priming, and visual playtest item priming instead of constructing held items inline.
+  - `scripts/race-content-playtest.mjs` now asserts held-item level clamping, item color precedence, definition-backed metadata, fallback type color, and unknown-item defaults.
+  - Current line counts: `ArcadeRace3D.jsx` 4,823; `raceItems.js` 397; `race-content-playtest.mjs` 1,619.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T23:11:09.287Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics held item `invincibility` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; boost-pad source `pad`; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.254; WebGL fallback rendered with `canvas2d-fallback`.
+- Held-item post-use helper extraction validation:
+  - `src/game/raceItems.js` now exports `advanceHeldRaceItemAfterUse`, preserving secondary-slot promotion after item use, clearing the secondary slot, held-balloon synchronization, and empty-slot clearing when no secondary is available.
+  - `src/game/ArcadeRace3D.jsx` now calls `advanceHeldRaceItemAfterUse` in both manual held-item use and the autoplay item-use path instead of keeping duplicate post-use state updates inline.
+  - `scripts/race-content-playtest.mjs` now asserts secondary promotion, held-balloon synchronization, secondary-slot clearing, and clearing held item/balloon when no secondary item exists.
+  - Current line counts: `ArcadeRace3D.jsx` 4,858; `raceItems.js` 360; `race-content-playtest.mjs` 1,605.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T23:00:29.183Z`.
+  - Latest item-use telemetry after extraction: desktop item-box mechanics held item `hazardBell` with `itemBoxPickupDelay` 0.160 seconds; desktop item-pickup held item `shield`; desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; boost-pad source `pad`; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.255; WebGL fallback rendered with `canvas2d-fallback`.
+- Item-box held-item slotting helper extraction validation:
+  - `src/game/raceItems.js` now exports `applyRaceItemBoxPickup`, preserving primary held-item assignment, held-balloon synchronization, secondary-slot assignment when double-slot is available, double-slot consumption, and item-box cooldown reset.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyRaceItemBoxPickup` from `collectBalloon`; item choice, held-item object creation, and pickup telemetry remain on the existing path.
+  - `scripts/race-content-playtest.mjs` now asserts same-item primary replacement, held-balloon synchronization, different-item secondary slot assignment, double-slot consumption, and cooldown reset.
+  - Current line counts: `ArcadeRace3D.jsx` 4,861; `raceItems.js` 341; `race-content-playtest.mjs` 1,580.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T22:52:05.337Z`.
+  - Latest item-slot telemetry after extraction: desktop item-box mechanics picked up `rocket` with `itemBoxPickupDelay` 0.160 seconds, desktop item-pickup held item `shield`, and desktop boost scenario held item `boost`.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; boost-pad source `pad`; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.257; WebGL fallback rendered with `canvas2d-fallback`.
+- Item-box pickup helper extraction validation:
+  - `src/game/raceItems.js` now exports `resolveItemBoxPickupForFrame`, preserving item-box cooldown decay and pickup-distance gating.
+  - `src/game/ArcadeRace3D.jsx` now calls `resolveItemBoxPickupForFrame` before the existing `collectBalloon` item assignment and telemetry path.
+  - `scripts/race-content-playtest.mjs` now asserts cooling boxes do not pick up, exact-threshold distance does not pick up, ready in-range boxes do pick up, and cooldown clamps to zero.
+  - Current line counts: `ArcadeRace3D.jsx` 4,867; `raceItems.js` 306; `race-content-playtest.mjs` 1,536.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/raceItems.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T22:42:37.198Z`.
+  - Latest item-box telemetry after extraction: desktop item-box mechanics picked up `bubbleTrap` with `itemBoxPickupDelay` 0.160 seconds, kart height 0.236, road-ahead coverage 1.0, route lookahead 1.312 seconds, and camera clip count 0.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; boost-pad source `pad`; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.253; WebGL fallback rendered with `canvas2d-fallback`.
+- Boost-pad helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `resolveBoostPadForFrame`, preserving boost-pad cooldown decay, activation distance/speed gates, standard boost payload, perfect boost payload, pad boost source, and perfect-boost timer value.
+  - `src/game/ArcadeRace3D.jsx` now calls `resolveBoostPadForFrame` instead of keeping boost-pad activation resolution inline; the existing `addBoost` path still applies the returned pad boost.
+  - `scripts/race-content-playtest.mjs` now asserts cooling pads do not activate, slow passes do not activate, standard pad boosts use 0.82 seconds/14 impulse/tier 2, and perfect pad boosts use 1.36 seconds/22 impulse/tier 3 with a 1.1 second perfect timer.
+  - Current line counts: `ArcadeRace3D.jsx` 4,862; `kartPhysics.js` 756; `race-content-playtest.mjs` 1,502.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T22:33:32.022Z`.
+  - Latest boost-pad telemetry after extraction: desktop boost-pad mechanics recorded boost source `pad`, normalized speed 0.860, `timeToSpeed80` 0.160 seconds, kart height 0.208, road-ahead coverage 1.0, route lookahead 1.250 seconds, and camera clip count 0.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; drift tier 2 with drift-release boost source `drift`; rival-cluster visible rivals 3; mobile driving kart height 0.254; WebGL fallback rendered with `canvas2d-fallback`.
+- Item-box selection helper extraction validation:
+  - `src/game/raceItems.js` now exports `chooseRaceBoxItem`, preserving item-box pool filtering by track and vehicle, rare-pool preference, common fallback behavior, and signature-item inclusion.
+  - `src/game/ArcadeRace3D.jsx` now calls `chooseRaceBoxItem` from the local `chooseBoxItem` wrapper instead of keeping item-box selection filtering inline.
+  - `scripts/race-content-playtest.mjs` now asserts vehicle filtering, rare item preference, fallback-to-common selection, and track signature item inclusion.
+  - Current line counts: `ArcadeRace3D.jsx` 4,857; `raceItems.js` 284; `race-content-playtest.mjs` 1,437.
+  - `node --check src/game/raceItems.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `git diff --check -- src/game/raceItems.js src/game/ArcadeRace3D.jsx scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T22:24:36.151Z`.
+  - Latest item telemetry after extraction: desktop item-box mechanics picked up `rocket` with `itemBoxPickupDelay` 0.160 seconds, desktop item-pickup held item `shield`, and desktop boost scenario held item `boost`.
+  - Latest camera/visual telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; drift tier 2 with drift-release boost source `drift`; boost pad source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.258; WebGL fallback rendered with `canvas2d-fallback`.
+- Player timer helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `applyPlayerTimersForFrame`, preserving player boost expiry, status timer decay, polarity reset, plane-bob advance, and signed speed projection.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyPlayerTimersForFrame` instead of keeping the player timer/state decay block inline.
+  - `scripts/race-content-playtest.mjs` now asserts boost expiry metadata, blind/control/ghost/invincible/jump/drift-hop/landing/lift/lightning/shield/magnet/perfect-boost/polarity/transform timer decay, polarity reset, plane-bob advance, and speed projection.
+  - Current line counts: `ArcadeRace3D.jsx` 4,863; `kartPhysics.js` 713; `race-content-playtest.mjs` 1,398.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T22:14:41.795Z`.
+  - Latest timer-adjacent telemetry after extraction: desktop drift active true with drift tier 2, drift-release boost source `drift`, boost pad source `pad`, stuck recovery count 1 in the stuck-recovery scenario, and WebGL fallback rendered with `canvas2d-fallback`.
+  - Latest camera/visual telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; acceleration `timeToSpeed80` 1.440 seconds and `timeToSpeed98` 2.400 seconds; braking `timeFromTopSpeedTo25` 0.960 seconds; reverse speed ratio 0.250; rival-cluster visible rivals 3; mobile driving kart height 0.254.
+- Position bounds helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `applyPositionBoundsForFrame`, preserving position integration, ground and plane map margins, bounds clamping, and ground/plane bounce damping.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyPositionBoundsForFrame` instead of keeping position integration and map-bounds clamping inline.
+  - `scripts/race-content-playtest.mjs` now asserts ground X clamping, plane Z clamping, inside-bounds movement, margin calculation, and bounce damping.
+  - Current line counts: `ArcadeRace3D.jsx` 4,883; `kartPhysics.js` 666; `race-content-playtest.mjs` 1,340.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T22:03:47.531Z`.
+  - Latest movement/recovery telemetry after extraction: stuck recovery count 1 in the stuck-recovery scenario, collision speed-loss ratio 0.417, off-road slowdown 0.580 with speed-loss ratio 0.356.
+  - Latest camera/visual telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; acceleration `timeToSpeed80` 1.440 seconds and `timeToSpeed98` 2.400 seconds; rival-cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Ground jump helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `applyGroundJumpForFrame`, preserving ground jump integration, landing reset, landing timer, flight-state reset, and drift trick-boost request behavior.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyGroundJumpForFrame` for non-plane movement and applies the returned trick-boost request with the existing `addBoost` path.
+  - `scripts/race-content-playtest.mjs` now asserts airborne integration, gravity, flight reset, landing reset, landing timer, drift trick-boost request, and non-drift landing suppression of trick boost.
+  - Current line counts: `ArcadeRace3D.jsx` 4,894; `kartPhysics.js` 618; `race-content-playtest.mjs` 1,278.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T21:56:12.438Z`.
+  - Latest jump-adjacent telemetry after extraction: desktop drift active true, drift tier 2, drift-release boost source `drift`, stuck recovery count 1 in the stuck-recovery scenario, and boost pad source `pad`.
+  - Latest camera/visual telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; acceleration `timeToSpeed80` 1.440 seconds and `timeToSpeed98` 2.400 seconds; mobile driving kart height 0.252; WebGL fallback rendered with `canvas2d-fallback`.
+- Speed cap application helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `applySpeedCapForFrame`, preserving signed forward-speed cap selection and velocity length clamping for forward, reverse, and off-road movement.
+  - `src/game/ArcadeRace3D.jsx` now calls `applySpeedCapForFrame` instead of keeping speed-cap selection and `setLength` inline.
+  - `scripts/race-content-playtest.mjs` now asserts forward cap clamping, reverse cap clamping while preserving direction, and off-road cap clamping.
+  - Current line counts: `ArcadeRace3D.jsx` 4,895; `kartPhysics.js` 565; `race-content-playtest.mjs` 1,210.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T21:48:28.532Z`.
+  - Latest speed telemetry after extraction: acceleration `timeToSpeed80` 1.440 seconds, `timeToSpeed98` 2.400 seconds; braking `timeFromTopSpeedTo25` 0.960 seconds; reverse speed ratio 0.250; off-road slowdown 0.580 with speed-loss ratio 0.356.
+  - Latest camera/visual telemetry after extraction: desktop driving kart height 0.187, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; drift tier seen 2; boost pad source `pad`; rival-cluster visible rivals 3; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+- Lateral grip helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `applyLateralGripForFrame`, preserving normal lateral grip damping and directional drift slip impulse.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyLateralGripForFrame` instead of keeping the lateral velocity damping and drift slip impulse inline.
+  - `scripts/race-content-playtest.mjs` now asserts normal grip damping, drift grip damping, right/left drift slip impulse direction, and velocity mutation.
+  - Current line counts: `ArcadeRace3D.jsx` 4,898; `kartPhysics.js` 527; `race-content-playtest.mjs` 1,151.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T21:41:32.333Z`.
+  - Latest drift/camera telemetry after extraction: desktop drift active true, drift tier 2, kart height 0.183, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0.
+  - Latest drive telemetry after extraction: acceleration `timeToSpeed80` 1.440 seconds, `timeToSpeed98` 2.400 seconds; braking `timeFromTopSpeedTo25` 0.960 seconds; reverse speed ratio 0.250.
+  - Latest broader telemetry after extraction: drift-release boost source `drift`, boost pad source `pad`, off-road slowdown 0.580 with speed-loss ratio 0.356, rival-cluster visible rivals 3, mobile driving kart height 0.247, WebGL fallback rendered with `canvas2d-fallback`.
+- Track boundary helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `applyTrackBoundaryForFrame`, preserving soft edge drag, guide-limit return, outward velocity damping, tangent velocity lerp, hover-width guide limits, shield gate behavior, and plane suppression.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyTrackBoundaryForFrame` instead of keeping track-boundary velocity mutation inline.
+  - `scripts/race-content-playtest.mjs` now asserts edge drag, return strength, outward damping, return lerp, player velocity mutation, hover guide width, shield suppression of drag, and plane suppression.
+  - Current line counts: `ArcadeRace3D.jsx` 4,899; `kartPhysics.js` 490; `race-content-playtest.mjs` 1,093.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T21:34:34.892Z`.
+  - Latest boundary/camera telemetry after extraction: desktop driving kart height 0.188, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; off-road slowdown 0.580 with speed-loss ratio 0.356; collision speed-loss ratio 0.417.
+  - Latest drive telemetry after extraction: acceleration `timeToSpeed80` 1.440 seconds, `timeToSpeed98` 2.400 seconds; braking `timeFromTopSpeedTo25` 0.960 seconds; reverse speed ratio 0.250.
+  - Latest broader telemetry after extraction: drift tier seen 2 with boost source `drift`, boost pad source `pad`, rival-cluster visible rivals 3, mobile driving kart height 0.250, WebGL fallback rendered with `canvas2d-fallback`.
+- Road assist helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `applyRoadAssistForFrame`, preserving track-heading blend, edge tangent velocity guide, cruise recentering, drift assist damping, and plane/speed suppression.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyRoadAssistForFrame` instead of keeping road-assist heading and velocity mutation inline.
+  - `scripts/race-content-playtest.mjs` now asserts heading correction, edge assist, cruise assist, recentering, tangent velocity lerp, player velocity mutation, and plane suppression.
+  - Current line counts: `ArcadeRace3D.jsx` 4,909; `kartPhysics.js` 432; `race-content-playtest.mjs` 997.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T21:27:01.264Z`.
+  - Latest road/camera telemetry after extraction: desktop driving kart height 0.186, road-ahead coverage 1.0, route lookahead 1.333 seconds, camera clip count 0; collision speed-loss ratio 0.417; stuck recovery count 1 in the stuck-recovery scenario.
+  - Latest drive telemetry after extraction: acceleration `timeToSpeed80` 1.440 seconds, `timeToSpeed98` 2.400 seconds; braking `timeFromTopSpeedTo25` 0.960 seconds; reverse speed ratio 0.250.
+  - Latest broader telemetry after extraction: drift tier seen 2 with boost source `drift`, boost pad source `pad`, rival-cluster visible rivals 3, mobile driving kart height 0.253, WebGL fallback rendered with `canvas2d-fallback`.
+- Drive force helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `driveForcesForFrame`, preserving hit drag, throttle acceleration with taper, brake impulse, coasting drag, and hit timer decrement behavior.
+  - `src/game/ArcadeRace3D.jsx` now applies the helper result to velocity and `hitTimer` instead of keeping drive force branching inline.
+  - `scripts/race-content-playtest.mjs` now asserts acceleration impulse, high-speed acceleration taper, brake impulse, coast drag, hit drag, and hit timer decrement.
+  - Current line counts: `ArcadeRace3D.jsx` 4,930; `kartPhysics.js` 368; `race-content-playtest.mjs` 935.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T21:17:29.001Z`.
+  - Latest drive telemetry after extraction: acceleration `timeToSpeed80` 1.440 seconds, `timeToSpeed98` 2.400 seconds; braking `timeFromTopSpeedTo25` 0.960 seconds; reverse speed ratio 0.250.
+  - Latest camera/visual telemetry after extraction: desktop driving kart height 0.184, road-ahead coverage 1.0, camera clip count 0; drift tier seen 2 with boost source `drift`; boost pad source `pad`; mobile driving kart height 0.250; WebGL fallback rendered with `canvas2d-fallback`.
+- Drift release helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `driftReleaseForState`, preserving the existing release gate when drift is no longer held or speed drops below 8, plus the tiered drift mini-turbo duration/strength/source mapping.
+  - `src/game/ArcadeRace3D.jsx` now calls `driftReleaseForState` before applying the drift boost and resetting drift state instead of keeping the release decision inline.
+  - `scripts/race-content-playtest.mjs` now asserts held-drift non-release, Tier 2 release boost duration/strength/source, and low-speed release without a boost when charge is below Tier 1.
+  - Current line counts: `ArcadeRace3D.jsx` 4,933; `kartPhysics.js` 320; `race-content-playtest.mjs` 881.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T21:10:15.185Z`.
+  - Latest drift telemetry after extraction: desktop drift active true, drift tier 2, kart height 0.186, road-ahead coverage 1.0, camera clip count 0.
+  - Latest drift mechanics telemetry after extraction: drift tier seen 2, boost active true, boost source `drift`, normalized speed 0.860, kart height 0.206, road-ahead coverage 1.0, camera clip count 0.
+  - Latest drift-release telemetry after extraction: boost active true, boost source `drift`, drift tier seen 2, kart height 0.172, road-ahead coverage 1.0, camera clip count 0.
+  - Latest broader telemetry after extraction: boost pad source `pad`, desktop driving kart height 0.187, mobile driving kart height 0.250, WebGL fallback rendered with `canvas2d-fallback`.
+- Speed cap helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `surfaceOffroadForState` and `speedCapsForState`, preserving the existing road-edge off-road gate, plane/jump suppression, banana bonus, boost cap, shielded off-road behavior, off-road slowdown multiplier, and reverse cap.
+  - `src/game/ArcadeRace3D.jsx` now calls those helpers for the player off-road check, forward speed cap, and reverse/forward speed clamp instead of keeping those calculations inline.
+  - `scripts/race-content-playtest.mjs` now asserts off-road detection gates plus banana, off-road, shield, boost, and reverse speed cap outputs.
+  - Current line counts: `ArcadeRace3D.jsx` 4,924; `kartPhysics.js` 300; `race-content-playtest.mjs` 837.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T21:02:50.970Z`.
+  - Latest speed telemetry after extraction: acceleration `timeToSpeed80` 1.440 seconds, `timeToSpeed98` 2.400 seconds, normalized speed 1.000, camera clip count 0.
+  - Latest reverse telemetry after extraction: reverse speed ratio 0.250, reverse cap ratio 0.250, reverse tuning ratio 0.250, road-ahead coverage 1.0, camera clip count 0.
+  - Latest off-road telemetry after extraction: active surface `offroad`, slowdown 0.580, speed-loss ratio 0.356, normalized speed 0.580, road-ahead coverage 1.0, camera clip count 0.
+  - Latest broader telemetry after extraction: boost pad source `pad`, desktop driving kart height 0.188, desktop drift tier 2, mobile driving kart height 0.250, WebGL fallback rendered with `canvas2d-fallback`.
+- World collision helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `resolveWorldCircleCollision`, preserving the existing ground collision eligibility, corridor clearance, push-out radius, bounce, speed retention, and speed-loss reporting behavior.
+  - `src/game/ArcadeRace3D.jsx` now calls `resolveWorldCircleCollision` from `resolveWorldCollisions` instead of keeping the circle response math inline.
+  - `scripts/race-content-playtest.mjs` now asserts collision push-out radius, effective radius, PRD direct-hit speed-loss band, and plane-mode collision suppression.
+  - Current line counts: `ArcadeRace3D.jsx` 4,908; `kartPhysics.js` 270; `race-content-playtest.mjs` 773.
+  - `node --check src/game/race/physics/kartPhysics.js` passed.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T20:55:35.579Z`.
+  - Latest collision telemetry after extraction: collision speed-loss ratio 0.417, normalized speed 0.620, kart height 0.237, road-ahead coverage 1.0, route lookahead 1.415 seconds, camera clip count 0.
+  - Latest broader telemetry after extraction: desktop driving kart height 0.188; desktop drift tier 2; acceleration `timeToSpeed80` 1.440 seconds and `timeToSpeed98` 2.400 seconds; rival cluster visible rivals 3; mobile driving kart height 0.251; WebGL fallback rendered with `canvas2d-fallback`.
+- Drift spark VFX helper extraction validation:
+  - `src/game/race/render/raceVfx.js` now exports `driftSparkTierForCharge`, `driftSparkColorForTier`, `driftSparkFrameFor`, and `applyDriftSparkGroupFrame`.
+  - `src/game/ArcadeRace3D.jsx` now calls `applyDriftSparkGroupFrame` for player drift spark visibility, tier color, emissive intensity, scale, and animated placement instead of keeping that rendering math inline.
+  - `scripts/race-content-playtest.mjs` now asserts drift spark tier resolution, Tier 2 color mapping, emissive intensity, scale, and position frame values.
+  - Current line counts: `ArcadeRace3D.jsx` 4,913; `raceVfx.js` 49; `race-content-playtest.mjs` 733.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check src/game/race/render/raceVfx.js` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/render/raceVfx.js scripts/race-content-playtest.mjs` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T20:47:44.206Z`.
+  - Latest drift telemetry after extraction: desktop drift tier 2, kart height 0.186, road-ahead coverage 1.0, camera clip count 0.
+  - Latest drift mechanics telemetry after extraction: drift tier seen 2, boost active true, boost source `drift`, kart height 0.206, road-ahead coverage 1.0, camera clip count 0.
+  - Latest broader telemetry after extraction: acceleration `timeToSpeed80` 1.440 seconds and `timeToSpeed98` 2.400 seconds; boost pad source `pad`; item box pickup delay 0.160 seconds; rival cluster visible rivals 3; mobile driving kart height 0.248; WebGL fallback rendered with `canvas2d-fallback`.
+- Latest physics helper extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now exports `driftChargeForFrame`, `steeringTurnInputForState`, `steeringTurnSpeedForState`, and `headingDeltaForFrame`.
+  - `src/game/ArcadeRace3D.jsx` now calls those helpers for drift charge and kart heading changes instead of keeping that math inline in the frame update.
+  - `scripts/race-content-playtest.mjs` now asserts drift charge behavior, drift steering composition, low/high-speed steering bounds, stopped heading gating, and moving high-speed heading delta.
+  - Current line counts: `ArcadeRace3D.jsx` 4,929; `kartPhysics.js` 230; `race-content-playtest.mjs` 711.
+  - `node --check scripts/race-content-playtest.mjs` passed.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `git diff --check -- src/game/ArcadeRace3D.jsx src/game/race/physics/kartPhysics.js scripts/race-content-playtest.mjs docs/race-kart-v1-implementation-plan.md` passed.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks. Latest browser summary was captured at `2026-05-19T20:39:16.220Z`.
+  - Latest key telemetry: acceleration `timeToSpeed80` 1.440 seconds, `timeToSpeed98` 2.400 seconds, kart height 0.203, road-ahead coverage 1.0, camera clip count 0.
+  - Latest key telemetry: braking `timeFromTopSpeedTo25` 0.960 seconds; reverse speed ratio 0.250; low-speed 90 degree steering 0.800 seconds; high-speed 90 degree steering 1.280 seconds.
+  - Latest key telemetry: drift mechanics reached Tier 2 and released boost source `drift`; boost pad mechanics captured boost source `pad`; item box mechanics held item `switchBolt` with pickup delay 0.160 seconds; rival cluster visible rivals 3.
+  - Latest key telemetry: mobile driving kart height 0.250, road-ahead coverage 1.0, camera clip count 0; WebGL fallback rendered with `canvas2d-fallback`.
+- `npm run build` passed.
+- `npm run test:race` passed.
+- `npm run test:race:browser` passed with 24 completed browser races.
+- Browser telemetry artifact check found 24 per-race `.telemetry.json` files plus 24 focused visual/fallback telemetry files in `tmp/race-playtests/`.
+- Browser summary artifact check found `tmp/race-playtests/race-browser-playtest-summary.json` with 24 race results, 24 focused visual/fallback checks, git commit metadata, and screenshot/telemetry/route paths for every visual check.
+- Focused Comeback City visual checks passed in `npm run test:race:browser`:
+  - desktop idle: kart height 0.234, speed 0, road-ahead coverage 1.0, camera clip count 0.
+  - desktop driving: kart height 0.188, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+  - desktop acceleration: non-boost time to 80 percent top speed 1.440 seconds, time to 98 percent top speed 2.400 seconds, boost active false, boost source null, normalized speed 1.000, kart height 0.208, road-ahead coverage 0.889, camera clip count 0.
+  - desktop braking: time from top speed to 25 percent speed 0.960 seconds, held capture speed 0.250, kart height 0.256, road-ahead coverage 1.0, camera clip count 0.
+  - desktop reverse: reverse speed ratio 0.250, reverse cap ratio 0.250, forward-normalized speed 0.250, kart height 0.272, road-ahead coverage 1.0, camera clip count 0.
+  - desktop low-speed steering: 90 degree turn time 0.800 seconds at normalized speed 0.300, kart height 0.258, road-ahead coverage 0.833, camera clip count 0.
+  - desktop high-speed steering: 90 degree turn time 1.280 seconds at normalized speed 0.800, kart height 0.219, road-ahead coverage 1.0, camera clip count 0.
+  - desktop turn approach: route-lookahead curvature -0.668, kart height 0.223, road-ahead coverage 1.0, horizon ratio 0.492, camera clip count 0.
+  - desktop branch decision: visible branch count 1, kart height 0.224, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+  - desktop collision mechanics: collision count 1, speed before 0.580, speed after 0.338, speed-loss ratio 0.417, capture speed 0.620, kart height 0.237, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+  - desktop off-road slowdown: active surface `offroad`, slowdown factor 0.580, speed before 0.900, speed after 0.580, speed-loss ratio 0.356, capture speed 0.580, kart height 0.266, road-ahead coverage 1.0, horizon ratio 0.494, camera clip count 0.
+  - desktop drift: kart height 0.186, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0, drift active, drift tier 2.
+  - desktop drift mechanics: drift hop start 0.160 seconds, hop duration 0.260 seconds, drift start count 1, drift tier seen 2, release boost source `drift`, kart height 0.206, road-ahead coverage 1.0, camera clip count 0.
+  - desktop boost: kart height 0.173, road-ahead coverage 1.0, camera clip count 0, boost active, boost source `pad`.
+  - desktop boost pad mechanics: pad activation delay 0.160 seconds, speed before 0.441, speed after 0.747, capture speed 0.860, FOV 70, kart height 0.217, road-ahead coverage 1.0, camera clip count 0.
+  - desktop drift-release: kart height 0.172, road-ahead coverage 1.0, camera clip count 0, boost active, boost source `drift`.
+  - desktop item pickup: kart height 0.188, road-ahead coverage 1.0, camera clip count 0, held item `shield`.
+  - desktop item box mechanics: held item `switchBolt`, pickup key `switchBolt`, pickup delay 0.160 seconds, source type `red`, capture speed 0.680, kart height 0.236, road-ahead coverage 1.0, camera clip count 0.
+  - desktop rival cluster: kart height 0.188, road-ahead coverage 1.0, camera clip count 0, visible rivals 3.
+  - desktop finish line: kart height 0.188, road-ahead coverage 1.0, camera clip count 0, lap 3.
+  - desktop stuck recovery: stuck recovery count 1, normalized speed 1.163, kart height 0.193, road-ahead coverage 1.0, camera clip count 0.
+  - mobile driving: kart height 0.249, road-ahead coverage 1.0, horizon ratio 0.479, camera clip count 0.
+  - mobile idle: kart height 0.270, speed 0, road-ahead coverage 1.0, camera clip count 0.
+  - WebGL fallback: `/#race` rendered with `data-race-renderer="canvas2d-fallback"` and a nonblank fallback canvas.
+- RACE-004 partial validation:
+  - `npm run test:race` passed with drift-hop helper assertions.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 11 focused visual/fallback checks.
+  - Desktop drift telemetry: normalized speed 0.667, drift active true, drift tier 2, kart height 0.186, road-ahead coverage 1.0, camera clip count 0.
+  - Desktop boost telemetry: normalized speed 0.667, boost active true, boost source `pad`, kart height 0.172, road-ahead coverage 1.0, camera clip count 0.
+  - Desktop drift-release telemetry: normalized speed 0.667, boost active true, boost source `drift`, kart height 0.172, road-ahead coverage 1.0, camera clip count 0.
+- RACE-005 partial validation:
+  - `npm run test:race` passed with chase camera helper assertions for desktop kart, mobile boosted kart, plane chase, and drift camera roll.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 11 focused visual/fallback checks.
+  - Desktop driving camera telemetry: distance 53.270, height 10.667, FOV 66, horizon ratio 0.493, kart height 0.188, road-ahead coverage 1.0, camera clip count 0.
+  - Desktop drift camera telemetry: distance 53.274, height 10.667, FOV 66, horizon ratio 0.493, kart height 0.186, road-ahead coverage 1.0, camera clip count 0.
+  - Mobile driving camera telemetry: distance 42.897, height 10.800, FOV 66, horizon ratio 0.479, kart height 0.247, road-ahead coverage 1.0, camera clip count 0.
+- Race HUD extraction validation:
+  - `src/game/race/raceHud.jsx` now contains the race HUD, minimap, canvas shell, and touch/button overlay.
+  - `src/game/ArcadeRace3D.jsx` line count after extraction: 4,465.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 11 focused visual/fallback checks.
+  - Desktop driving after HUD extraction: kart height 0.186, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+  - Desktop drift after HUD extraction: kart height 0.186, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+  - Mobile driving after HUD extraction: kart height 0.249, road-ahead coverage 1.0, horizon ratio 0.479, camera clip count 0.
+- Boost stacking extraction validation:
+  - `src/game/race/physics/kartPhysics.js` now owns `applyBoost`, covering timer extension, tier priority, explicit boost source updates, retained source when no new source is supplied, impulse application, and boost speed cap.
+  - `npm run test:race` passed with boost stacking assertions.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 11 focused visual/fallback checks.
+  - Desktop boost telemetry after extraction: normalized speed 0.667, boost active true, boost source `pad`, kart height 0.173, road-ahead coverage 1.0, camera clip count 0.
+  - Desktop drift-release telemetry after extraction: normalized speed 0.667, boost active true, boost source `drift`, kart height 0.172, road-ahead coverage 1.0, camera clip count 0.
+- Race audio extraction validation:
+  - `src/game/race/raceAudio.js` now owns the existing generated cue frequency mapping, wave type mapping, ambient voices, WebAudio cue playback, ambient start, and cleanup.
+  - `src/game/ArcadeRace3D.jsx` line count after audio extraction: 4,393.
+  - `npm run test:race` passed with race audio helper assertions.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 11 focused visual/fallback checks.
+  - Desktop driving after audio extraction: normalized speed 0.667, kart height 0.188, road-ahead coverage 1.0, camera clip count 0.
+  - Desktop boost after audio extraction: normalized speed 0.667, boost active true, boost source `pad`, kart height 0.174, road-ahead coverage 1.0, camera clip count 0.
+  - Desktop drift-release after audio extraction: normalized speed 0.667, boost active true, boost source `drift`, kart height 0.172, road-ahead coverage 1.0, camera clip count 0.
+- Visual telemetry metric extraction validation:
+  - `src/game/race/raceTelemetry.js` now owns kart screen coverage, projected point visibility, road-ahead coverage, visible branch count, visible rival count, horizon ratio, nearest collision clearance, and active surface classification helpers.
+  - `src/game/ArcadeRace3D.jsx` line count after extraction: 4,284.
+  - `npm run test:race` passed with active surface helper assertions.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 11 focused visual/fallback checks.
+  - Desktop driving after metric extraction: normalized speed 0.667, kart height 0.185, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0, active surface `asphalt`.
+  - Desktop drift after metric extraction: normalized speed 0.667, kart height 0.183, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0, active surface `asphalt`.
+  - Mobile driving after metric extraction: normalized speed 0.667, kart height 0.249, road-ahead coverage 1.0, horizon ratio 0.479, camera clip count 0, active surface `asphalt`.
+  - Desktop rival cluster after metric extraction: visible rivals 3, kart height 0.188, road-ahead coverage 1.0, camera clip count 0.
+- Camera collision helper extraction validation:
+  - `src/game/race/camera/chaseCamera.js` now owns `applyCameraCollisionAvoidance`, preserving the existing raycast threshold, pull-in distance, vertical lift, and residual clipping check.
+  - `src/game/ArcadeRace3D.jsx` line count after extraction: 4,271.
+  - `npm run test:race` passed with clear-path and blocked-path camera collision helper assertions.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 11 focused visual/fallback checks.
+  - Desktop driving after camera collision extraction: normalized speed 0.667, kart height 0.188, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0, camera avoidance count 0.
+  - Desktop drift after camera collision extraction: normalized speed 0.667, drift tier 2, kart height 0.186, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0, camera avoidance count 0.
+  - Desktop boost after camera collision extraction: normalized speed 0.667, boost active true, boost source `pad`, kart height 0.173, road-ahead coverage 1.0, camera clip count 0.
+  - Desktop drift-release after camera collision extraction: normalized speed 0.667, boost active true, boost source `drift`, kart height 0.172, road-ahead coverage 1.0, camera clip count 0.
+  - Mobile driving after camera collision extraction: normalized speed 0.667, kart height 0.249, road-ahead coverage 1.0, horizon ratio 0.479, camera clip count 0.
+  - Desktop rival cluster after camera collision extraction: visible rivals 3, kart height 0.186, road-ahead coverage 1.0, camera clip count 0.
+- Stuck recovery implementation validation:
+  - `src/game/race/physics/kartPhysics.js` now owns `STUCK_RECOVERY_TUNING`, `updateStuckRecoveryState`, and `applyStuckRecovery`.
+  - Manual player physics now detects PRD stuck conditions: grounded kart, throttle held, near-zero speed, little position change, and duration over 1.25 seconds.
+  - Stuck recovery rotates the player toward the route, applies a forward push along the track tangent, adds a small centerline pull, records `stuckRecoveryCount`, and exposes `stuckTimer` plus `stuckRecoveryCooldown` in `window.__raceVisualTelemetry.player`.
+  - `src/game/ArcadeRace3D.jsx` line count after stuck recovery implementation: 4,300.
+  - `npm run test:race` passed with stuck delay, moving-kart suppression, plane-mode suppression, and recovery-push helper assertions.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 11 focused visual/fallback checks.
+  - Desktop driving after stuck recovery implementation: normalized speed 0.667, kart height 0.188, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0, stuck recovery count 0.
+  - Desktop drift after stuck recovery implementation: normalized speed 0.667, drift tier 2, kart height 0.184, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0, stuck recovery count 0.
+  - Desktop boost after stuck recovery implementation: normalized speed 0.667, boost active true, boost source `pad`, kart height 0.174, road-ahead coverage 1.0, camera clip count 0, stuck recovery count 0.
+  - Desktop drift-release after stuck recovery implementation: normalized speed 0.667, boost active true, boost source `drift`, kart height 0.172, road-ahead coverage 1.0, camera clip count 0, stuck recovery count 0.
+  - Mobile driving after stuck recovery implementation: normalized speed 0.667, kart height 0.249, road-ahead coverage 1.0, horizon ratio 0.479, camera clip count 0, stuck recovery count 0.
+  - Desktop rival cluster after stuck recovery implementation: visible rivals 3, kart height 0.186, road-ahead coverage 1.0, camera clip count 0.
+- Focused stuck recovery browser validation:
+  - `scripts/race-browser-playtest.mjs` now includes `comeback-city-desktop-stuck-recovery` and fails if `window.__raceVisualTelemetry.player.stuckRecoveryCount` is below 1.
+  - `src/game/ArcadeRace3D.jsx` line count after adding the focused stuck-recovery scenario: 4,335.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 12 focused visual/fallback checks.
+  - Desktop stuck-recovery telemetry: normalized speed 0.930, stuck recovery count 1, stuck timer 0, stuck recovery cooldown 0, kart height 0.204, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+  - Desktop driving after focused stuck-recovery scenario: normalized speed 0.667, kart height 0.185, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+- Route-lookahead camera validation:
+  - `src/game/race/camera/chaseCamera.js` now owns `resolveRouteLookaheadTarget`, which samples the authored route ahead using the PRD midpoint of 1.25 seconds while preserving the existing lookahead floor.
+  - `window.__raceVisualTelemetry.camera` now includes `routeLookaheadUsed`, `routeLookaheadSeconds`, `routeLookaheadDistance`, and `routeLookaheadCurvature`.
+  - `scripts/race-browser-playtest.mjs` now fails the desktop driving visual check if route lookahead is not used or if route-lookahead seconds are outside 1.0-1.5.
+  - `src/game/ArcadeRace3D.jsx` line count after route-lookahead integration: 4,347.
+  - `npm run test:race` passed with route-lookahead route-sample and fallback assertions.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 12 focused visual/fallback checks.
+  - Desktop driving route-lookahead telemetry: used true, seconds 1.333, distance 64, curvature 0.043, kart height 0.188, road-ahead coverage 1.0, camera clip count 0.
+  - Desktop drift route-lookahead telemetry: used true, seconds 1.333, distance 64, curvature 0.043, drift tier 2, kart height 0.186, road-ahead coverage 1.0, camera clip count 0.
+  - Mobile driving route-lookahead telemetry: used true, seconds 1.417, distance 68, curvature 0.087, kart height 0.250, road-ahead coverage 1.0, camera clip count 0.
+- Focused turn-approach camera validation:
+  - `ArcadeRace3D.jsx` now supports the `turn-approach` visual scenario at the authored `camera-near-lab` checkpoint.
+  - `scripts/race-browser-playtest.mjs` now fails `turn-approach` if route lookahead is missing, route-lookahead seconds are outside 1.0-1.5, or absolute route curvature is below 0.5 radians.
+  - `src/game/ArcadeRace3D.jsx` line count after adding the turn-approach scenario: 4,358.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 13 focused visual/fallback checks.
+  - Desktop turn-approach telemetry: route lookahead used true, seconds 1.333, distance 64, curvature -0.668, kart height 0.223, road-ahead coverage 1.0, horizon ratio 0.492, camera clip count 0.
+  - Desktop driving after turn-approach scenario: route lookahead used true, seconds 1.333, distance 64, curvature 0.043, kart height 0.188, road-ahead coverage 1.0, camera clip count 0.
+- Focused branch-decision visibility validation:
+  - `ArcadeRace3D.jsx` now supports the `branch-decision` visual scenario at the authored `branch-food` camera checkpoint.
+  - `raceTelemetry.countVisibleBranches` now counts a branch when the decision cue has just passed but the branch entry is still ahead, matching the authored `branch-food` checkpoint.
+  - `scripts/race-browser-playtest.mjs` now fails `branch-decision` if `visibleBranchCount` is below 1.
+  - `src/game/ArcadeRace3D.jsx` line count after adding the branch-decision scenario: 4,369.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 14 focused visual/fallback checks.
+  - Desktop branch-decision telemetry: visible branch count 1, branch visible seen true, route lookahead used true, seconds 1.333, curvature 0.189, kart height 0.224, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+  - Desktop driving after branch-decision scenario: visible branch count 1, route lookahead used true, seconds 1.333, curvature 0.071, kart height 0.187, road-ahead coverage 1.0, camera clip count 0.
+- Focused acceleration target validation:
+  - `src/game/race/physics/kartTuning.js` changed `VEHICLES.kart.acceleration` from 82 to 46 and now adds a high-speed acceleration taper so full-throttle manual acceleration stays inside both PRD speed targets.
+  - `src/game/race/physics/kartPhysics.js` now owns `accelerationMultiplierForSpeed`, keeping the taper calculation out of the frame-update loop.
+  - `scripts/race-content-playtest.mjs` now simulates non-boost kart acceleration from rest and fails if time to 80 percent speed is outside 1.2-1.8 seconds or time to 98 percent speed is outside 2.2-3.0 seconds.
+  - `ArcadeRace3D.jsx` now supports the `acceleration` visual scenario through manual player physics with throttle held from rest and boost pads disabled for the probe.
+  - `src/game/race/raceTelemetry.js` now records `timeToSpeed98` alongside `timeToSpeed80`.
+  - `scripts/race-browser-playtest.mjs` now fails `acceleration` if `timeToSpeed80` is missing or outside 1.2-1.8 seconds, if `timeToSpeed98` is missing or outside 2.2-3.0 seconds, if a boost is active or sourced, or if capture speed is below 98 percent.
+  - `src/game/ArcadeRace3D.jsx` line count after adding the acceleration scenario, non-boost gate, helper extraction, and stabilized item-box capture: 4,930.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks.
+  - Desktop acceleration telemetry: normalized speed 1.000, boost active false, boost source null, time to 80 percent top speed 1.440 seconds, time to 98 percent top speed 2.400 seconds, kart height 0.208, road-ahead coverage 0.889, horizon ratio 0.494, camera clip count 0.
+  - Desktop driving after acceleration tuning: normalized speed 0.667, kart height 0.188, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+- Focused braking target validation:
+  - `src/game/race/raceTelemetry.js` now records `timeFromTopSpeedTo25` for browser evidence.
+  - `ArcadeRace3D.jsx` now supports the `braking` visual scenario through manual player physics starting at non-boost kart top speed with brake held until the 25 percent speed timing sample is captured.
+  - `scripts/race-browser-playtest.mjs` now fails `braking` if `window.__raceVisualTelemetry.player.timeFromTopSpeedTo25` is missing or outside 0.8-1.3 seconds, and captures the post-braking visual at 25 percent speed.
+  - `src/game/ArcadeRace3D.jsx` line count after adding the braking scenario: 4,447.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 16 focused visual/fallback checks.
+  - Desktop braking telemetry: normalized speed 0.250, time from top speed to 25 percent speed 0.960 seconds, kart height 0.256, road-ahead coverage 1.0, horizon ratio 0.494, camera clip count 0.
+  - Desktop stuck-recovery telemetry after tightening the capture gate: normalized speed 1.163, stuck recovery count 1, kart height 0.193, road-ahead coverage 1.0, horizon ratio 0.497, camera clip count 0.
+- Focused steering target validation:
+  - `src/game/race/raceTelemetry.js` now records `steeringTurn90Time`, `steeringTurnDegrees`, and current steering input for browser evidence.
+  - `ArcadeRace3D.jsx` now supports `steering-low-speed` and `steering-high-speed` visual scenarios through manual player physics at 30 percent and 80 percent kart top speed.
+  - Normal kart steering now uses a speed-damped arcade curve so low-speed steering is responsive and high-speed steering remains stable.
+  - Steering diagnostic scenarios use heading-based camera framing rather than route lookahead because the test intentionally turns the kart off the authored route to measure response.
+  - `scripts/race-browser-playtest.mjs` now fails `steering-low-speed` unless 90 degree turn time is within 0.65-0.95 seconds, and fails `steering-high-speed` unless 90 degree turn time is within 1.0-1.45 seconds.
+  - `src/game/ArcadeRace3D.jsx` line count after adding the steering scenarios: 4,513.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 18 focused visual/fallback checks.
+  - Desktop low-speed steering telemetry: normalized speed 0.300, 90 degree turn time 0.800 seconds, turn angle 92.8 degrees, kart height 0.258, road-ahead coverage 0.833, horizon ratio 0.494, camera clip count 0.
+  - Desktop high-speed steering telemetry: normalized speed 0.800, 90 degree turn time 1.280 seconds, turn angle 93.2 degrees, kart height 0.219, road-ahead coverage 1.0, horizon ratio 0.492, camera clip count 0.
+- Focused physics-path drift validation:
+  - `src/game/race/raceTelemetry.js` now records drift hop start count, first hop start time, and hop duration for browser evidence.
+  - `ArcadeRace3D.jsx` now supports the `drift-mechanics` visual scenario through manual player physics: start at speed, hold drift plus steering, reach Tier 2, release drift, and capture the resulting drift boost.
+  - `scripts/race-browser-playtest.mjs` now fails `drift-mechanics` if hop start count is below 1, first hop starts after 0.2 seconds, hop duration is outside 0.18-0.30 seconds, drift start count is below 1, max drift tier seen is below 2, or the release boost is not active with source `drift`.
+  - `src/game/ArcadeRace3D.jsx` line count after adding the drift mechanics scenario: 4,580.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 19 focused visual/fallback checks.
+  - Desktop drift mechanics telemetry: normalized speed 0.860, drift hop start count 1, first hop start 0.160 seconds, hop duration 0.260 seconds, drift start count 1, max drift tier seen 2, release boost active true, boost source `drift`, kart height 0.206, road-ahead coverage 1.0, horizon ratio 0.492, camera clip count 0.
+- Focused boost pad mechanics validation:
+  - `src/game/race/raceTelemetry.js` now records boost pad activation time, activation delay, and normalized speed before/after pad boost.
+  - `ArcadeRace3D.jsx` now supports the `boost-pad-mechanics` visual scenario through manual player physics, placing the kart before a real boost pad and letting the existing zipper collision path trigger source `pad`.
+  - `scripts/race-browser-playtest.mjs` now fails `boost-pad-mechanics` if the pad boost is not active with source `pad`, activation delay is above 0.35 seconds, normalized speed delta is below 0.18, capture speed is below 0.75, or boosted FOV is below 67.
+  - `src/game/ArcadeRace3D.jsx` line count after adding the boost pad mechanics scenario: 4,643.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 20 focused visual/fallback checks.
+  - Desktop boost pad mechanics telemetry: normalized speed 0.860, boost active true, boost source `pad`, activation delay 0.160 seconds, speed before 0.441, speed after 0.747, FOV 70, kart height 0.217, road-ahead coverage 1.0, horizon ratio 0.494, camera clip count 0.
+- Focused item box mechanics validation:
+  - `src/game/race/raceTelemetry.js` now records item box pickup time, pickup delay, pickup key, and source type for browser evidence.
+  - `ArcadeRace3D.jsx` now supports the `item-box-mechanics` visual scenario through manual player physics, placing the kart before a real item box and letting the existing `collectBalloon` collision path assign the held item.
+  - `scripts/race-browser-playtest.mjs` now fails `item-box-mechanics` if no held item is reported, pickup key is missing, pickup key does not match the held item, pickup delay is above 0.4 seconds, or capture speed is below 0.35.
+  - Item-box mechanics capture now holds at the real pickup progress after the item collision path succeeds, preventing delayed screenshot capture from drifting into camera-avoidance geometry.
+  - `src/game/ArcadeRace3D.jsx` line count after item-box, collision, off-road, reverse, and acceleration visual instrumentation: 4,930.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks.
+  - Desktop item box mechanics telemetry: normalized speed 0.680, held item `switchBolt`, pickup key `switchBolt`, pickup delay 0.160 seconds, pickup source type `red`, kart height 0.236, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+- Focused collision mechanics validation:
+  - `src/game/race/raceTelemetry.js` now records collision count, impact time, normalized speed before/after impact, and speed-loss ratio for browser evidence.
+  - `ArcadeRace3D.jsx` now supports the `collision-mechanics` visual scenario through manual player physics, placing the kart into a real world-collision circle and letting `resolveWorldCollisions` record the impact.
+  - Direct collision response now keeps 62 percent of pre-impact speed after the bounce, keeping the measured direct-hit speed loss inside the PRD 25-45 percent target while still visibly slowing the kart.
+  - `scripts/race-browser-playtest.mjs` now fails `collision-mechanics` if collision count is below 1, speed-loss ratio is outside 0.25-0.50, or capture speed falls below 0.25.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks.
+  - Desktop collision mechanics telemetry: normalized speed 0.620, collision count 1, speed before 0.580, speed after 0.338, speed-loss ratio 0.417, kart height 0.237, road-ahead coverage 1.0, horizon ratio 0.493, camera clip count 0.
+- Focused off-road slowdown validation:
+  - `src/game/race/raceTelemetry.js` now records off-road speed before/after and speed-loss ratio for browser evidence.
+  - `ArcadeRace3D.jsx` now supports the `offroad-slowdown` visual scenario through manual player physics, placing the kart outside the road threshold and letting the existing off-road speed cap slow it from 90 percent speed to the kart off-road cap.
+  - `scripts/race-browser-playtest.mjs` now fails `offroad-slowdown` if active surface is not `offroad`, the slowdown factor is not recorded, speed-loss ratio is outside 0.25-0.45, or capture speed is outside 0.45-0.65.
+  - `npm run test:race` passed.
+  - `npm run build` passed with the existing large-chunk warning.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks.
+  - Desktop off-road slowdown telemetry: normalized speed 0.580, active surface `offroad`, slowdown factor 0.580, speed before 0.900, speed after 0.580, speed-loss ratio 0.356, kart height 0.266, road-ahead coverage 1.0, horizon ratio 0.494, camera clip count 0.
+- Browser PR evidence summary validation:
+  - `scripts/race-browser-playtest.mjs` now writes `tmp/race-playtests/race-browser-playtest-summary.json`.
+  - The summary includes `capturedAt`, git branch/commit, all 24 race results, all 24 focused visual/fallback checks, screenshot paths, telemetry paths, route URLs, viewports, thresholds, and compact telemetry values for FPS, kart coverage, road coverage, camera clipping, drift, boost, items, collisions, off-road slowdown, reverse speed, stuck recovery, and rivals.
+  - `node --check scripts/race-browser-playtest.mjs` passed.
+  - `npm run test:race:browser` passed and produced the summary artifact.
+  - Latest summary artifact: 24 race results, 24 focused visual/fallback checks, git commit metadata present, and screenshot/telemetry/route paths present for every visual check.
+- Focused reverse speed validation:
+  - `ArcadeRace3D.jsx` now enforces `VEHICLES.kart.reverse` when the player is moving backward, instead of allowing reverse motion to use the forward top-speed cap.
+  - `src/game/race/raceTelemetry.js` now exposes reverse speed ratio, reverse cap ratio, and reverse tuning ratio in `window.__raceVisualTelemetry.player`.
+  - `scripts/race-browser-playtest.mjs` now includes `comeback-city-desktop-reverse` and fails if reverse speed is outside 0.20-0.28, does not match the tuning cap within 0.03, or is not slower than forward speed.
+  - Targeted reverse browser probe passed: reverse speed ratio 0.250, reverse cap ratio 0.250, kart height 0.271, road-ahead coverage 1.0, camera clip count 0.
+  - `npm run test:race:browser` passed with 24 completed browser races and 24 focused visual/fallback checks.
+  - Desktop reverse telemetry: normalized speed 0.250, reverse speed ratio 0.250, reverse cap ratio 0.250, reverse tuning ratio 0.250, kart height 0.272, road-ahead coverage 1.0, horizon ratio 0.500, camera clip count 0.
+
+## Implementation Constraints
+
+- Keep new racing systems out of `ArcadeRace3D.jsx` unless they are temporary integration glue.
+- Use the existing track data and Three.js runtime as the source of truth when extracting modules.
+- Preserve current behavior for extraction tickets unless the ticket explicitly changes feel.
+- Do not claim kart-racer quality from autoplay completion alone.
+- Do not copy Nintendo characters, tracks, items, icons, UI layouts, audio, names, or visual assets.

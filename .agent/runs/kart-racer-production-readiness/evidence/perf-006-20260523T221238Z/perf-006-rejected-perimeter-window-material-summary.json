@@ -1,0 +1,110 @@
+{
+  "checkpoint": "perf-006",
+  "capturedAt": "2026-05-23T22:21:26.923Z",
+  "status": "rejected-reverted",
+  "change": "Consolidated far perimeter skyline windows from a separate transparent material onto the shared opaque city glass material.",
+  "decision": "Reject and revert. The candidate reduced material count and improved immediate focused/render measurements, but the two-run average still trailed the latest kept perf-003 baseline for sustained, desktop average, and focused desktop actual FPS. It does not satisfy the performance keep criteria.",
+  "evidenceDir": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z",
+  "baselinePerf003": {
+    "capturedAt": "2026-05-23T19:27:29.195Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "sustainedActualFpsAverage": 17.7,
+    "sustainedFrameWorkMsAverage": 2.22,
+    "sustainedRenderPhaseMsAverage": 0.88,
+    "sceneMaterials": 201,
+    "sceneryMaterials": 122,
+    "desktopAverageActualFps": 37.29,
+    "desktopFocusedAverageActualFps": 38.36,
+    "desktopAverageFrameWorkMs": 26.91,
+    "desktopAverageRenderMs": 11.25
+  },
+  "beforeWebglCheckpoint": {
+    "capturedAt": "2026-05-23T22:00:45.699Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "sustainedActualFpsAverage": 17.44,
+    "sustainedFrameWorkMsAverage": 2.15,
+    "sustainedRenderPhaseMsAverage": 0.88,
+    "sceneMaterials": 201,
+    "sceneryMaterials": 122,
+    "desktopAverageActualFps": 33.67,
+    "desktopFocusedAverageActualFps": 35.63,
+    "desktopAverageFrameWorkMs": 27.09,
+    "desktopAverageRenderMs": 11.26
+  },
+  "candidateRuns": [
+    {
+      "capturedAt": "2026-05-23T22:16:11.391Z",
+      "raceCount": 24,
+      "visualCheckCount": 28,
+      "sustainedActualFpsAverage": 17.35,
+      "sustainedFrameWorkMsAverage": 2.07,
+      "sustainedRenderPhaseMsAverage": 0.91,
+      "sceneMaterials": 200,
+      "sceneryMaterials": 121,
+      "desktopAverageActualFps": 34.87,
+      "desktopFocusedAverageActualFps": 38.76,
+      "desktopAverageFrameWorkMs": 25.48,
+      "desktopAverageRenderMs": 10.18
+    },
+    {
+      "capturedAt": "2026-05-23T22:19:58.079Z",
+      "raceCount": 24,
+      "visualCheckCount": 28,
+      "sustainedActualFpsAverage": 17.86,
+      "sustainedFrameWorkMsAverage": 2,
+      "sustainedRenderPhaseMsAverage": 0.89,
+      "sceneMaterials": 200,
+      "sceneryMaterials": 121,
+      "desktopAverageActualFps": 34.19,
+      "desktopFocusedAverageActualFps": 36.64,
+      "desktopAverageFrameWorkMs": 25.67,
+      "desktopAverageRenderMs": 10.15
+    }
+  ],
+  "candidateAverage": {
+    "sustainedActualFpsAverage": 17.61,
+    "desktopAverageActualFps": 34.53,
+    "desktopFocusedAverageActualFps": 37.7,
+    "desktopAverageRenderMs": 10.16,
+    "sceneMaterials": 200,
+    "sceneryMaterials": 121
+  },
+  "deltaCandidateAverageVsBeforeWebglCheckpoint": {
+    "sustainedActualFpsAverage": 0.17,
+    "desktopAverageActualFps": 0.86,
+    "desktopFocusedAverageActualFps": 2.07,
+    "desktopAverageRenderMs": -1.1
+  },
+  "deltaCandidateAverageVsPerf003": {
+    "sustainedActualFpsAverage": -0.09,
+    "desktopAverageActualFps": -2.76,
+    "desktopFocusedAverageActualFps": -0.66,
+    "desktopAverageRenderMs": -1.09
+  },
+  "validation": {
+    "candidateTestRace": "pass",
+    "candidateBrowserRun1": "pass; 24 races and 28 visual/control/fallback checks",
+    "candidateBrowserRun2": "pass; 24 races and 28 visual/control/fallback checks",
+    "afterRevertNodeCheck": "pass",
+    "afterRevertTestRace": "pass",
+    "afterRevertBuild": "pass with existing large-chunk warning",
+    "afterRevertGitDiffCheck": "pass",
+    "finalGitDiffCheck": "pass",
+    "implementationNotesProgressEventsCheck": "pass",
+    "summaryJsonCheck": "pass"
+  },
+  "artifacts": {
+    "candidateBrowserLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/npm-run-test-race-browser.log",
+    "candidateBrowserRepeatLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/npm-run-test-race-browser-repeat.log",
+    "candidateSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/race-browser-playtest-summary.json",
+    "candidateRepeatSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/race-browser-playtest-summary-repeat.json",
+    "afterRevertBuildLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/npm-run-build-after-revert.log",
+    "afterRevertTestRaceLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/npm-run-test-race-after-revert.log",
+    "afterRevertGitDiffCheckLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/git-diff-check-after-revert.log",
+    "finalGitDiffCheckLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/git-diff-check-final.log",
+    "implementationNotesProgressEventsCheckLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/implementation-notes-progress-events-check.log",
+    "summaryJsonCheckLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-006-20260523T221238Z/perf-006-summary-json-check.log"
+  }
+}

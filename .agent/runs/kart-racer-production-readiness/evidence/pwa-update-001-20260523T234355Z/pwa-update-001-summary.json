@@ -1,0 +1,104 @@
+{
+  "capturedAt": "2026-05-23T23:52:38.760Z",
+  "evidenceDir": ".agent/runs/kart-racer-production-readiness/evidence/pwa-update-001-20260523T234355Z",
+  "gateStatus": "local-installed-pwa-update-proven-not-target-browser-or-production-evidence",
+  "changes": [
+    "Added npm run test:pwa:update local installed-app update smoke.",
+    "Smoke serves versioned built dist artifacts, forces service worker updatefound/controllerchange, verifies updated app shell marker online and offline."
+  ],
+  "pwaUpdate": {
+    "markers": {
+      "offline": "pwa-update-smoke-v2",
+      "versionOne": "pwa-update-smoke-v1",
+      "versionOneBeforeReload": "pwa-update-smoke-v1",
+      "versionTwo": "pwa-update-smoke-v2"
+    },
+    "updateResult": {
+      "activeScriptURL": "http://pwa-update.localhost:5198/sw.js",
+      "controllerScriptURL": "http://pwa-update.localhost:5198/sw.js",
+      "events": [
+        "updatefound",
+        "controllerchange"
+      ],
+      "waitingScriptURL": null
+    },
+    "beforeUpdate": {
+      "cacheKeys": [
+        "workbox-precache-v2-http://pwa-update.localhost:5198/"
+      ],
+      "controllerScriptURL": "http://pwa-update.localhost:5198/sw.js",
+      "controllerState": "activated",
+      "registrations": [
+        {
+          "activeScriptURL": "http://pwa-update.localhost:5198/sw.js",
+          "activeState": "activated",
+          "installingState": null,
+          "scope": "http://pwa-update.localhost:5198/",
+          "waitingState": null
+        }
+      ],
+      "supported": true,
+      "waitingScriptURL": null
+    },
+    "afterUpdate": {
+      "cacheKeys": [
+        "workbox-precache-v2-http://pwa-update.localhost:5198/"
+      ],
+      "controllerScriptURL": "http://pwa-update.localhost:5198/sw.js",
+      "controllerState": "activated",
+      "registrations": [
+        {
+          "activeScriptURL": "http://pwa-update.localhost:5198/sw.js",
+          "activeState": "activated",
+          "installingState": null,
+          "scope": "http://pwa-update.localhost:5198/",
+          "waitingState": null
+        }
+      ],
+      "supported": true,
+      "waitingScriptURL": null
+    },
+    "versions": {
+      "versionOne": {
+        "marker": "pwa-update-smoke-v1",
+        "swRevision": "eda70aa61666df54e4145467409fb995"
+      },
+      "versionTwo": {
+        "marker": "pwa-update-smoke-v2",
+        "swRevision": "b6c03965859739fd3a12c53afa98ca8b"
+      }
+    }
+  },
+  "validation": [
+    {
+      "command": "node --check scripts/pwa-update-smoke-test.mjs",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/pwa-update-001-20260523T234355Z/node-check-pwa-update-smoke.log",
+      "result": "pass"
+    },
+    {
+      "command": "npm run build",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/pwa-update-001-20260523T234355Z/npm-run-build.log",
+      "result": "pass with existing large-chunk warning"
+    },
+    {
+      "command": "npm run test:pwa:update",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/pwa-update-001-20260523T234355Z/npm-run-test-pwa-update.log",
+      "result": "pass"
+    },
+    {
+      "command": "git diff --check",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/pwa-update-001-20260523T234355Z/git-diff-check.log",
+      "result": "pass"
+    },
+    {
+      "command": "Ledger progressEvents syntax check",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/pwa-update-001-20260523T234355Z/implementation-notes-progress-events-check.log",
+      "result": "pass"
+    }
+  ],
+  "unresolvedReleaseDecisions": [
+    "Production URL installed-app update behavior is not proven until deployed preview/production targets are supplied.",
+    "Target browser/device installed-app update matrix remains missing.",
+    "Release-owner PWA support and rollback policy remains missing."
+  ]
+}

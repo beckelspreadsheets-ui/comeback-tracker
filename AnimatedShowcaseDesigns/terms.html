@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service | Showcase Designs</title>
+    <meta name="description" content="Terms of service for Showcase Designs. Covers our web design and SEO services, payment terms, ownership, and liability.">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="canonical" href="https://showcase-designs.com/terms.html">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Sora:wght@300;400;500;600;700&display=optional" rel="stylesheet">
+    <style>
+        :root {
+            --black: #0a0a0a;
+            --warm-white: #f5f0e8;
+            --cream: #ece6d9;
+            --gold: #c9a227;
+            --gold-light: #dbb94e;
+            --text: #e8e4dc;
+            --text-dim: #8a8578;
+            --line: rgba(255, 255, 255, 0.08);
+            --line-soft: rgba(255, 255, 255, 0.04);
+            --panel: rgba(255, 255, 255, 0.03);
+            --container: min(820px, calc(100vw - 2rem));
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Sora", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(201, 162, 39, 0.12), transparent 30%),
+                radial-gradient(circle at 80% 20%, rgba(201, 162, 39, 0.08), transparent 24%),
+                linear-gradient(180deg, #080808 0%, #0a0a0a 36%, #0c0c0c 100%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            line-height: 1.7;
+        }
+
+        a { color: var(--gold); }
+        a:hover { color: var(--gold-light); }
+
+        ::selection {
+            background: var(--gold);
+            color: var(--black);
+        }
+
+        .grain {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            pointer-events: none;
+            opacity: 0.045;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.8'/%3E%3C/svg%3E");
+            mix-blend-mode: soft-light;
+        }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1.1rem 0;
+            background: rgba(10, 10, 10, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .nav-shell {
+            width: var(--container);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .nav-logo {
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--warm-white);
+        }
+
+        .nav-logo span { color: var(--gold); }
+
+        .nav-back {
+            text-decoration: none;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--text-dim);
+            transition: color 180ms ease;
+        }
+
+        .nav-back:hover { color: var(--gold); }
+
+        .container {
+            width: var(--container);
+            margin: 0 auto;
+        }
+
+        .page-header {
+            padding: 4.5rem 0 2.5rem;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .page-title {
+            font-family: "Bodoni Moda", serif;
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            line-height: 1;
+            letter-spacing: -0.03em;
+            font-weight: 700;
+            color: var(--warm-white);
+        }
+
+        .page-subtitle {
+            margin-top: 0.75rem;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        .content {
+            padding: 3rem 0 5rem;
+        }
+
+        .content h2 {
+            font-family: "Bodoni Moda", serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--warm-white);
+            margin: 2.5rem 0 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .content h2:first-child {
+            margin-top: 0;
+        }
+
+        .content p {
+            margin-bottom: 1rem;
+            font-size: 0.92rem;
+            color: var(--text);
+        }
+
+        .content ul, .content ol {
+            margin: 0.5rem 0 1rem 1.25rem;
+            font-size: 0.92rem;
+        }
+
+        .content li {
+            margin-bottom: 0.4rem;
+        }
+
+        .content strong {
+            color: var(--warm-white);
+        }
+
+        footer {
+            padding: 2rem 0 3rem;
+            border-top: 1px solid var(--line-soft);
+        }
+
+        .footer-shell {
+            width: var(--container);
+            margin: 0 auto;
+            display: grid;
+            gap: 0.75rem;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.76rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .footer-links a {
+            text-decoration: none;
+            color: var(--text-dim);
+            transition: color 180ms ease;
+        }
+
+        .footer-links a:hover { color: var(--gold); }
+    </style>
+</head>
+<body>
+    <div class="grain"></div>
+
+    <nav>
+        <div class="nav-shell">
+            <a class="nav-logo" href="index.html">SHOWCASE <span>DESIGNS</span></a>
+            <a class="nav-back" href="index.html">&larr; Back to Home</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <h1 class="page-title">Terms of Service</h1>
+            <p class="page-subtitle">Last updated: March 23, 2026</p>
+        </header>
+
+        <div class="content">
+            <h2>What We Do</h2>
+            <p>Showcase Designs ("we," "us") provides website design, search engine optimization (SEO), and ongoing maintenance services for contractors and home-service businesses. These terms govern the relationship between Showcase Designs and you ("Client") when you engage us for services.</p>
+            <p>By hiring us or using our website, you agree to these terms.</p>
+
+            <h2>Scope of Services</h2>
+            <p>Our services typically include:</p>
+            <ul>
+                <li>Custom website design and development</li>
+                <li>Local SEO setup and ongoing management</li>
+                <li>Google Business Profile optimization</li>
+                <li>Website hosting coordination and maintenance</li>
+                <li>Content creation for web pages and landing pages</li>
+            </ul>
+            <p>The specific deliverables for your project will be outlined in a proposal or agreement before work begins.</p>
+
+            <h2>Payment Terms</h2>
+            <p>Unless otherwise agreed in writing:</p>
+            <ul>
+                <li><strong>50% deposit</strong> is due before work begins</li>
+                <li><strong>Remaining 50%</strong> is due upon project delivery, before the site goes live</li>
+                <li>For ongoing services (SEO, maintenance), invoices are billed monthly and due within 15 days</li>
+            </ul>
+            <p>We accept payment via bank transfer, credit card, or other methods specified in your invoice. Late payments may result in paused services until the balance is resolved.</p>
+
+            <h2>Ownership &amp; Intellectual Property</h2>
+            <p><strong>You own your website.</strong> Once final payment is received, you own the website code, content, and design files we created for your project. This includes HTML, CSS, JavaScript, images we produced, and written copy.</p>
+            <p>Exceptions:</p>
+            <ul>
+                <li>Third-party assets (stock photos, fonts, plugins) remain subject to their own licenses</li>
+                <li>We retain the right to use your project in our portfolio, case studies, and marketing materials</li>
+            </ul>
+
+            <h2>Portfolio Rights</h2>
+            <p>We love showing off great work. Unless you tell us otherwise in writing, we may feature your completed project on our website, social media, and other promotional materials. We'll always represent the work accurately.</p>
+
+            <h2>Client Responsibilities</h2>
+            <p>To keep your project on track, we need you to:</p>
+            <ul>
+                <li>Provide content, photos, logos, and brand materials in a timely manner</li>
+                <li>Be available for feedback and approvals at key milestones</li>
+                <li>Ensure any content you provide doesn't infringe on anyone else's rights</li>
+            </ul>
+            <p>Delays caused by missing content or unresponsive approvals may push back your timeline.</p>
+
+            <h2>Revisions</h2>
+            <p>Our proposals include a defined number of revision rounds. Additional revisions beyond the agreed scope will be billed at our standard hourly rate, which we'll communicate before any extra work begins.</p>
+
+            <h2>Limitation of Liability</h2>
+            <p>We stand behind our work, but here's the reality: we build websites and run SEO&mdash;we can't guarantee specific business results like revenue, leads, or search rankings. Search engines and markets change constantly.</p>
+            <p>To the maximum extent permitted by law, Showcase Designs' total liability for any claim arising from our services is limited to the amount you paid us for the specific service in question. We are not liable for indirect, incidental, or consequential damages, including lost profits or business interruption.</p>
+
+            <h2>Termination</h2>
+            <p><strong>By the Client:</strong> You may cancel a project at any time with written notice (email is fine). Work completed up to the cancellation date will be billed, and the deposit is non-refundable. We'll deliver all completed work to you.</p>
+            <p><strong>By us:</strong> We may terminate the engagement if payment is overdue by more than 30 days, or if the working relationship becomes untenable. We'll give reasonable notice and deliver completed work.</p>
+            <p><strong>For ongoing services:</strong> Either party can cancel with 30 days' written notice. You'll be billed through the end of the notice period.</p>
+
+            <h2>Warranties &amp; Disclaimers</h2>
+            <p>We warrant that our work will be performed with professional skill and care. Beyond that, our services are provided "as is." We don't warrant that your website will be error-free at all times, or that SEO results will hit specific benchmarks.</p>
+
+            <h2>Indemnification</h2>
+            <p>You agree to hold us harmless from claims arising from content you provide, your use of the website, or any violation of these terms on your part. Similarly, we'll hold you harmless from claims arising from our negligence or breach of these terms.</p>
+
+            <h2>Governing Law</h2>
+            <p>These terms are governed by the laws of the State of Arizona. Any disputes will be resolved in the courts of Pima County, Arizona.</p>
+
+            <h2>Changes to These Terms</h2>
+            <p>We may update these terms from time to time. The updated version will be posted here with a new date. For active clients, we'll notify you of material changes via email.</p>
+
+            <h2>Contact</h2>
+            <p>Questions about these terms? Reach out:</p>
+            <p><a href="mailto:andrew@showcase-designs.com">andrew@showcase-designs.com</a> &middot; <a href="tel:+15203672769">(520) 367-2769</a></p>
+            <p>Showcase Designs &middot; Tucson, AZ</p>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-shell">
+            <div>&copy; 2026 Showcase Designs</div>
+            <div class="footer-links">
+                <a href="index.html">Home</a>
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

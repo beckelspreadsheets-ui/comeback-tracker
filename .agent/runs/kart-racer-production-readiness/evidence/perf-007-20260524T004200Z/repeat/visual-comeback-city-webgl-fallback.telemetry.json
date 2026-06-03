@@ -1,0 +1,23 @@
+{
+  "capturedAt": "2026-05-24T00:44:02.914Z",
+  "detail": {
+    "canvasDataUrlLength": 368602,
+    "renderer": "canvas2d-fallback",
+    "text": "TODAY\nLAP\n1/3\nPLACE\n3rd\nSPEED\n0\nTIME\n0:00.19\nDRIFT\nITEM --\nBOOST --\nGRIP --\nPHASE --\nDRAFT --\nJUMP --"
+  },
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c2"
+  },
+  "ignoredConsoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "routeUrl": "http://127.0.0.1:5187/#race",
+  "scenario": "webgl-fallback",
+  "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-webgl-fallback.png",
+  "viewport": {
+    "height": 900,
+    "width": 1440
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "evidenceDir": ".agent/runs/kart-racer-production-readiness/evidence/baseline-20260523T180505Z",
+  "commandStatuses": {
+    "build": 0,
+    "testRace": 0,
+    "testRaceBrowser": 0,
+    "testHub": 0,
+    "testVisual": 0,
+    "npmAudit": 1
+  },
+  "raceBrowser": {
+    "capturedAt": "2026-05-23T18:26:58.812Z",
+    "git": {
+      "branch": "main",
+      "commit": "9fb87c2"
+    },
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "normalDesktopAverageActualFps": 37.6,
+    "normalDesktopBelow45": [
+      {
+        "actualFps": 43.9,
+        "cameraClipCount": 0,
+        "maxKartOverlapArea": 0,
+        "maxRoadFocusOverlapArea": 0,
+        "name": "comeback-city-desktop-idle",
+        "renderCalls": 782,
+        "roadAheadCoverage": 1,
+        "visibleRivals": 3
+      },
+      {
+        "actualFps": 44.3,
+        "cameraClipCount": 0,
+        "maxKartOverlapArea": 0,
+        "maxRoadFocusOverlapArea": 0,
+        "name": "comeback-city-desktop-driving",
+        "renderCalls": 710,
+        "roadAheadCoverage": 1,
+        "visibleRivals": 3
+      },
+      {
+        "actualFps": 44.6,
+        "cameraClipCount": 0,
+        "maxKartOverlapArea": 0,
+        "maxRoadFocusOverlapArea": 0,
+        "name": "comeback-city-desktop-drift",
+        "renderCalls": 721,
+        "roadAheadCoverage": 1,
+        "visibleRivals": 3
+      },
+      {
+        "actualFps": 41.6,
+        "cameraClipCount": 0,
+        "maxKartOverlapArea": 0,
+        "maxRoadFocusOverlapArea": 0,
+        "name": "comeback-city-desktop-boost",
+        "renderCalls": 705,
+        "roadAheadCoverage": 1,
+        "visibleRivals": 3
+      },
+      {
+        "actualFps": 24,
+        "cameraClipCount": 0,
+        "maxKartOverlapArea": 0,
+        "maxRoadFocusOverlapArea": 0,
+        "name": "comeback-city-desktop-item-pickup",
+        "renderCalls": 669,
+        "roadAheadCoverage": 1,
+        "visibleRivals": 3
+      },
+      {
+        "actualFps": 23.2,
+        "cameraClipCount": 0,
+        "maxKartOverlapArea": 0,
+        "maxRoadFocusOverlapArea": 0,
+        "name": "comeback-city-desktop-rival-cluster",
+        "renderCalls": 669,
+        "roadAheadCoverage": 1,
+        "visibleRivals": 3
+      },
+      {
+        "actualFps": 41.3,
+        "cameraClipCount": 0,
+        "maxKartOverlapArea": 0,
+        "maxRoadFocusOverlapArea": 0,
+        "name": "comeback-city-desktop-finish-line",
+        "renderCalls": 699,
+        "roadAheadCoverage": 1,
+        "visibleRivals": 3
+      }
+    ],
+    "mobileDriving": {
+      "actualFps": 36.5,
+      "cameraClipCount": 0,
+      "maxKartOverlapArea": 0,
+      "maxRoadFocusOverlapArea": 0,
+      "name": "comeback-city-mobile-driving",
+      "renderCalls": 473,
+      "roadAheadCoverage": 1,
+      "visibleRivals": 3
+    },
+    "mobileIdle": {
+      "actualFps": 33,
+      "cameraClipCount": 0,
+      "maxKartOverlapArea": 0,
+      "maxRoadFocusOverlapArea": 0,
+      "name": "comeback-city-mobile-idle",
+      "renderCalls": 536,
+      "roadAheadCoverage": 1,
+      "visibleRivals": 3
+    },
+    "reducedMotion": {
+      "canvasReducedMotion": "true",
+      "normalizedSpeed": 0.993,
+      "reducedMotion": true,
+      "shellReducedMotion": "true",
+      "speedLineCount": 0,
+      "telemetryPlayerReducedMotion": true,
+      "screenshotVisualStats": {
+        "colorBucketCount": 299,
+        "luminanceRange": 235.41,
+        "sampleCount": 7416
+      }
+    },
+    "webglFallback": {
+      "canvasDataUrlLength": 372466,
+      "renderer": "canvas2d-fallback"
+    },
+    "audioMuteControl": {
+      "afterLabel": "Unmute race audio",
+      "afterPressed": "true",
+      "beforeLabel": "Mute race audio",
+      "beforePressed": "false",
+      "screenshotVisualStats": {
+        "colorBucketCount": 249,
+        "luminanceRange": 242.42,
+        "sampleCount": 7416
+      },
+      "telemetryAudioMuted": true
+    }
+  },
+  "knownRemainingLocalBlockers": [
+    "npm audit exits 1 with 9 vulnerabilities: 3 high, 6 moderate.",
+    "Desktop normal focused FPS average remains below PRD 55 FPS target and several normal states remain below local 45 FPS floor.",
+    "Manual desktop/mobile QA, fresh-user review, IP/provenance sign-off, preview/prod smoke, rollback, monitoring/support, and owner decisions remain missing."
+  ]
+}

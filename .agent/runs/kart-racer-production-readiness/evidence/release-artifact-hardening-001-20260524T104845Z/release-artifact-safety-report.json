@@ -1,0 +1,96 @@
+{
+  "artifactDir": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/release-artifact-hardening-001-20260524T104845Z",
+  "capturedAt": "2026-05-24T10:48:58.680Z",
+  "distDir": "/Users/andrewferguson/Downloads/comeback-tracker/dist",
+  "fileCount": 38,
+  "gateStatus": "technical-artifacts-pass-policy-needed",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c26bcdec19e8175f63a09e490f5400231aa",
+    "dirty": true
+  },
+  "note": "This proves local built dist artifact safety checks only. Release owner still must decide production source-map/debug/test-hook policy, diagnostic telemetry privacy posture, and whether visual review route strings are acceptable in shipped chunks.",
+  "diagnosticTelemetry": {
+    "matches": [
+      {
+        "count": 4,
+        "label": "race visual telemetry global",
+        "path": "assets/RaceScreen-WiiDGEOV.js"
+      },
+      {
+        "count": 3,
+        "label": "race visual telemetry samples global",
+        "path": "assets/RaceScreen-WiiDGEOV.js"
+      }
+    ],
+    "status": "present-needs-privacy-monitoring-policy"
+  },
+  "playtestRuntimeHooks": {
+    "matches": [
+      {
+        "count": 4,
+        "label": "race visual telemetry global",
+        "path": "assets/RaceScreen-WiiDGEOV.js"
+      },
+      {
+        "count": 3,
+        "label": "race visual telemetry samples global",
+        "path": "assets/RaceScreen-WiiDGEOV.js"
+      }
+    ],
+    "status": "present-needs-release-owner-policy"
+  },
+  "runtimePlaytestAutomation": {
+    "matches": [],
+    "status": "not-detected"
+  },
+  "visualReviewRouteStrings": {
+    "matches": [],
+    "status": "not-detected"
+  },
+  "checks": {
+    "noSecretNameOrKnownSecretValueLeaks": true,
+    "noSourceMapFiles": true,
+    "noSourceMappingUrlReferences": true,
+    "noStandalonePlaytestOrDebugFiles": true
+  },
+  "failures": [],
+  "scans": {
+    "diagnosticTelemetryPatterns": [
+      "race visual telemetry global",
+      "race visual telemetry samples global"
+    ],
+    "runtimePlaytestAutomationPatterns": [
+      "race autoplay query flag",
+      "race no-finish query flag",
+      "race visual scenario query flag",
+      "race playtest globals"
+    ],
+    "secretLeakPatterns": [
+      "FatSecret client secret env name",
+      "Cloudflare Access audience env name",
+      "sync user registry env name",
+      "known test FatSecret secret value",
+      "Cloudflare API token env name",
+      "Wrangler API token env name",
+      "private key marker"
+    ],
+    "textFileExtensions": [
+      ".css",
+      ".html",
+      ".js",
+      ".json",
+      ".mjs",
+      ".svg",
+      ".txt",
+      ".webmanifest",
+      ".xml"
+    ],
+    "visualReviewRoutePatterns": [
+      "visual kart route or mode string"
+    ]
+  },
+  "sourceMapFiles": [],
+  "sourceMappingUrlMatches": [],
+  "standaloneDebugFiles": []
+}

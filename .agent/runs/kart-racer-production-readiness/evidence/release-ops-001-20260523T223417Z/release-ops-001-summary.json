@@ -1,0 +1,40 @@
+{
+  "checkpoint": "release-ops-001",
+  "capturedAt": "2026-05-23T22:34:17Z",
+  "status": "templates-recorded-not-signoff",
+  "decision": "Keep the release operations runbook, draft release notes, and post-launch report template as owner-neutral release artifacts. Do not close preview, production, rollback, monitoring, release-notes, support, or post-launch gates until owner decisions and executed evidence are supplied.",
+  "evidenceDir": ".agent/runs/kart-racer-production-readiness/evidence/release-ops-001-20260523T223417Z",
+  "artifacts": {
+    "releaseOperationsRunbook": "docs/race-release-operations-runbook.md",
+    "releaseNotesDraft": "docs/race-release-notes-draft-2026-05-23.md",
+    "postLaunchReportTemplate": "docs/race-post-launch-report-template.md"
+  },
+  "coveredPlanItems": [
+    "Preview smoke checklist path exists, but preview URL/deployment evidence is not supplied.",
+    "Production smoke checklist path exists, but production URL/deployment evidence is not supplied.",
+    "Rollback procedure template exists, but rollback owner, target, and drill evidence are not supplied.",
+    "Monitoring/support triage template exists, but monitoring provider or risk acceptance is not supplied.",
+    "Release notes draft exists, but release-owner/product/legal approval is not supplied.",
+    "Post-launch report template exists, but no launch or monitoring window has occurred."
+  ],
+  "remainingRequiredInputs": [
+    "Release owner",
+    "Rollback owner",
+    "Cloudflare Pages project/domain",
+    "Clean deploy policy",
+    "CI versus manual release-gate policy",
+    "Race-disable activation policy",
+    "Monitoring provider or accepted no-monitoring risk",
+    "Support contact/path",
+    "Post-launch monitoring window",
+    "Release notes approval",
+    "Preview/prod deployment evidence",
+    "Rollback drill evidence"
+  ],
+  "validation": {
+    "gitDiffCheck": ".agent/runs/kart-racer-production-readiness/evidence/release-ops-001-20260523T223417Z/git-diff-check.log",
+    "implementationNotesProgressEventsCheck": ".agent/runs/kart-racer-production-readiness/evidence/release-ops-001-20260523T223417Z/implementation-notes-progress-events-check.log",
+    "releaseOpsPathsCheck": ".agent/runs/kart-racer-production-readiness/evidence/release-ops-001-20260523T223417Z/release-ops-paths-check.log",
+    "summaryJsonCheck": ".agent/runs/kart-racer-production-readiness/evidence/release-ops-001-20260523T223417Z/release-ops-summary-json-check.log"
+  }
+}

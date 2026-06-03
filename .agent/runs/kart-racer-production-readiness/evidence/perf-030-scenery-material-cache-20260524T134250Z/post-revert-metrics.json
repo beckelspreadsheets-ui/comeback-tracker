@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-05-24T13:54:36.126Z",
+  "raceCount": 24,
+  "visualCheckCount": 28,
+  "desktopFocusedAverageActualFps": 36.86,
+  "desktopAllAverageActualFps": 34.16,
+  "sustainedAverageActualFps": 17.91,
+  "sustainedSampleCount": 53,
+  "focusedRenderCallsAverage": 682.14,
+  "focusedTrianglesAverage": 70622.86,
+  "sceneMaterials": 201,
+  "sceneryMaterials": 122
+}

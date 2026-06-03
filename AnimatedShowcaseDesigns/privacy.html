@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | Showcase Designs</title>
+    <meta name="description" content="Privacy policy for Showcase Designs. Learn how we handle your data when you use our website and contact forms.">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="canonical" href="https://showcase-designs.com/privacy.html">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=Sora:wght@300;400;500;600;700&display=optional" rel="stylesheet">
+    <style>
+        :root {
+            --black: #0a0a0a;
+            --warm-white: #f5f0e8;
+            --cream: #ece6d9;
+            --gold: #c9a227;
+            --gold-light: #dbb94e;
+            --text: #e8e4dc;
+            --text-dim: #8a8578;
+            --line: rgba(255, 255, 255, 0.08);
+            --line-soft: rgba(255, 255, 255, 0.04);
+            --panel: rgba(255, 255, 255, 0.03);
+            --container: min(820px, calc(100vw - 2rem));
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Sora", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(201, 162, 39, 0.12), transparent 30%),
+                radial-gradient(circle at 80% 20%, rgba(201, 162, 39, 0.08), transparent 24%),
+                linear-gradient(180deg, #080808 0%, #0a0a0a 36%, #0c0c0c 100%);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            line-height: 1.7;
+        }
+
+        a { color: var(--gold); }
+        a:hover { color: var(--gold-light); }
+
+        ::selection {
+            background: var(--gold);
+            color: var(--black);
+        }
+
+        .grain {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            pointer-events: none;
+            opacity: 0.045;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.8'/%3E%3C/svg%3E");
+            mix-blend-mode: soft-light;
+        }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1.1rem 0;
+            background: rgba(10, 10, 10, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .nav-shell {
+            width: var(--container);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .nav-logo {
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--warm-white);
+        }
+
+        .nav-logo span { color: var(--gold); }
+
+        .nav-back {
+            text-decoration: none;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--text-dim);
+            transition: color 180ms ease;
+        }
+
+        .nav-back:hover { color: var(--gold); }
+
+        .container {
+            width: var(--container);
+            margin: 0 auto;
+        }
+
+        .page-header {
+            padding: 4.5rem 0 2.5rem;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .page-title {
+            font-family: "Bodoni Moda", serif;
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            line-height: 1;
+            letter-spacing: -0.03em;
+            font-weight: 700;
+            color: var(--warm-white);
+        }
+
+        .page-subtitle {
+            margin-top: 0.75rem;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        .content {
+            padding: 3rem 0 5rem;
+        }
+
+        .content h2 {
+            font-family: "Bodoni Moda", serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--warm-white);
+            margin: 2.5rem 0 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .content h2:first-child {
+            margin-top: 0;
+        }
+
+        .content p {
+            margin-bottom: 1rem;
+            font-size: 0.92rem;
+            color: var(--text);
+        }
+
+        .content ul {
+            margin: 0.5rem 0 1rem 1.25rem;
+            font-size: 0.92rem;
+        }
+
+        .content li {
+            margin-bottom: 0.4rem;
+        }
+
+        .content strong {
+            color: var(--warm-white);
+        }
+
+        footer {
+            padding: 2rem 0 3rem;
+            border-top: 1px solid var(--line-soft);
+        }
+
+        .footer-shell {
+            width: var(--container);
+            margin: 0 auto;
+            display: grid;
+            gap: 0.75rem;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.76rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .footer-links a {
+            text-decoration: none;
+            color: var(--text-dim);
+            transition: color 180ms ease;
+        }
+
+        .footer-links a:hover { color: var(--gold); }
+    </style>
+</head>
+<body>
+    <div class="grain"></div>
+
+    <nav>
+        <div class="nav-shell">
+            <a class="nav-logo" href="index.html">SHOWCASE <span>DESIGNS</span></a>
+            <a class="nav-back" href="index.html">&larr; Back to Home</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <h1 class="page-title">Privacy Policy</h1>
+            <p class="page-subtitle">Last updated: March 23, 2026</p>
+        </header>
+
+        <div class="content">
+            <h2>Who We Are</h2>
+            <p>Showcase Designs is a web design and local SEO studio based in Tucson, Arizona. We build websites and manage search visibility for contractors and home-service businesses.</p>
+            <p><strong>Contact:</strong> <a href="mailto:andrew@showcase-designs.com">andrew@showcase-designs.com</a> &middot; <a href="tel:+15203672769">(520) 367-2769</a></p>
+
+            <h2>What We Collect</h2>
+            <p>When you fill out our contact form, we collect:</p>
+            <ul>
+                <li>Your name</li>
+                <li>Email address</li>
+                <li>Business type</li>
+                <li>Package preference (Starter, Growth, or Dominate)</li>
+                <li>Your message (free-text)</li>
+            </ul>
+            <p>That's it. We don't collect anything else automatically&mdash;no IP logging, no device fingerprinting, no tracking pixels.</p>
+
+            <h2>How We Use Your Information</h2>
+            <p>We use the information you submit through our contact form for one purpose: to respond to your inquiry and discuss how we can help your business. We may follow up by email or phone based on the contact details you provide.</p>
+
+            <h2>Form Processing</h2>
+            <p>Our contact form is processed by <strong>FormSubmit.co</strong>, a third-party form handling service. When you submit the form, your data passes through their servers and is forwarded to us via email. FormSubmit.co's own privacy practices are governed by their privacy policy.</p>
+
+            <h2>Cookies &amp; Analytics</h2>
+            <p>We do not use cookies. We do not run any analytics, tracking scripts, or third-party advertising on this website. Your visit is not tracked.</p>
+
+            <h2>Data Sharing</h2>
+            <p>We do not sell, rent, or share your personal information with anyone. The only third party that processes your data is FormSubmit.co, as described above, and solely for the purpose of delivering your form submission to us.</p>
+
+            <h2>Data Retention</h2>
+            <p>We keep your contact form submissions in our email inbox for as long as needed to respond to your inquiry and maintain an ongoing business relationship. If you'd like us to delete your information, just email us and we'll take care of it.</p>
+
+            <h2>Your Rights (CCPA)</h2>
+            <p>If you're a California resident, you have the right to:</p>
+            <ul>
+                <li><strong>Know</strong> what personal information we've collected about you</li>
+                <li><strong>Request deletion</strong> of your personal information</li>
+                <li><strong>Opt out</strong> of the sale of your personal information (we don't sell it, but you still have this right)</li>
+                <li><strong>Non-discrimination</strong>&mdash;we won't treat you differently for exercising your rights</li>
+            </ul>
+            <p>To exercise any of these rights, email us at <a href="mailto:andrew@showcase-designs.com">andrew@showcase-designs.com</a>. We'll respond within 45 days.</p>
+
+            <h2>Children's Privacy</h2>
+            <p>Our website and services are not directed at anyone under 16. We don't knowingly collect information from minors.</p>
+
+            <h2>Changes to This Policy</h2>
+            <p>If we make meaningful changes to this policy, we'll update the date at the top of the page. For significant changes, we may also note the update on our homepage.</p>
+
+            <h2>Questions?</h2>
+            <p>Reach out anytime: <a href="mailto:andrew@showcase-designs.com">andrew@showcase-designs.com</a> or call <a href="tel:+15203672769">(520) 367-2769</a>.</p>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-shell">
+            <div>&copy; 2026 Showcase Designs</div>
+            <div class="footer-links">
+                <a href="index.html">Home</a>
+                <a href="privacy.html">Privacy</a>
+                <a href="terms.html">Terms</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

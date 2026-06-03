@@ -1,0 +1,16 @@
+{
+  "capturedAt": "2026-05-24T16:16:13.846Z",
+  "raceCount": 24,
+  "visualCheckCount": 28,
+  "desktopFocusedActualFps": 35.6,
+  "desktopAllActualFps": 35.0783,
+  "sustainedActualFps": 17.91,
+  "desktopFocusedFrameWorkMs": 31.7914,
+  "desktopFocusedRenderMs": 11.7786,
+  "desktopFocusedTelemetryMs": 1.3057,
+  "desktopFocusedRenderCalls": 689.1429,
+  "desktopFocusedRenderTriangles": 71446,
+  "sustainedFrameWorkMs": 2.2,
+  "sustainedRenderMs": 0.86,
+  "sustainedTelemetryMs": 0.37
+}

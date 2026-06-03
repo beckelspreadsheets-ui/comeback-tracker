@@ -1,0 +1,902 @@
+{
+  "artifactFiles": [
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/accessibility-001-20260524T005933Z/accessibility-home.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/accessibility-001-20260524T005933Z/accessibility-race-desktop.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/accessibility-001-20260524T005933Z/accessibility-race-mobile.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/accessibility-001-20260524T005933Z/accessibility-smoke-summary.json"
+  ],
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/accessibility-001-20260524T005933Z",
+  "baseUrl": "http://127.0.0.1:5211",
+  "capturedAt": "2026-05-24T01:09:09.287Z",
+  "gateStatus": "local-accessibility-smoke-proven-not-manual-signoff",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c2",
+    "dirty": true
+  },
+  "home": {
+    "contrast": [
+      {
+        "background": {
+          "a": 1,
+          "b": 14,
+          "g": 11,
+          "r": 11
+        },
+        "color": {
+          "a": 1,
+          "b": 224,
+          "g": 236,
+          "r": 243
+        },
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "label": "home first button",
+        "minimum": 4.5,
+        "ratio": 16.74,
+        "selector": "button",
+        "status": "pass",
+        "text": "金Comeback"
+      }
+    ],
+    "focus": {
+      "label": "home tab order",
+      "sequence": [
+        {
+          "ariaLabel": "Home",
+          "className": "flex items-center gap-2.5 active:scale-95 transition-transform",
+          "hasShadow": false,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Home",
+          "outlineColor": "rgb(0, 95, 204)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 28,
+            "width": 94,
+            "x": 400,
+            "y": 14
+          },
+          "tagName": "button",
+          "testId": null,
+          "visible": true
+        },
+        {
+          "ariaLabel": "Export JSON backup",
+          "className": "w-8 h-8 border border-transparent hover:border-bone/10 flex items-center justify-center text-stone hover:text-bone active:scale-95 transition-all",
+          "hasShadow": false,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Export JSON backup",
+          "outlineColor": "rgb(70, 117, 170)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 32,
+            "width": 32,
+            "x": 970,
+            "y": 12
+          },
+          "tagName": "button",
+          "testId": null,
+          "visible": true
+        },
+        {
+          "ariaLabel": null,
+          "className": "flex items-center justify-center gap-2 px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] transition-colors text-stone hover:text-bone",
+          "hasShadow": false,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "World",
+          "outlineColor": "rgb(0, 95, 204)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 39,
+            "width": 319,
+            "x": 401,
+            "y": 82
+          },
+          "tagName": "button",
+          "testId": null,
+          "visible": true
+        },
+        {
+          "ariaLabel": null,
+          "className": "flex items-center justify-center gap-2 px-3 py-3 text-[10px] font-mono uppercase tracking-[0.22em] transition-colors bg-gold/[0.08] text-gold",
+          "hasShadow": false,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Basic",
+          "outlineColor": "rgb(0, 95, 204)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 39,
+            "width": 319,
+            "x": 720,
+            "y": 82
+          },
+          "tagName": "button",
+          "testId": null,
+          "visible": true
+        },
+        {
+          "ariaLabel": "Previous week",
+          "className": "w-5 h-5 border border-bone/10 hover:border-gold/50 hover:text-gold flex items-center justify-center text-stone active:scale-95 transition-all",
+          "hasShadow": false,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Previous week",
+          "outlineColor": "rgb(91, 124, 159)",
+          "outlineStyle": "auto",
+          "outlineWidth": "2px",
+          "rect": {
+            "height": 20,
+            "width": 20,
+            "x": 417,
+            "y": 444
+          },
+          "tagName": "button",
+          "testId": null,
+          "visible": true
+        },
+        {
+          "ariaLabel": "Next week",
+          "className": "w-5 h-5 border border-bone/10 hover:border-gold/50 hover:text-gold flex items-center justify-center text-stone active:scale-95 transition-all",
+          "hasShadow": false,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Next week",
+          "outlineColor": "rgb(74, 119, 167)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 20,
+            "width": 20,
+            "x": 577,
+            "y": 444
+          },
+          "tagName": "button",
+          "testId": null,
+          "visible": true
+        },
+        {
+          "ariaLabel": null,
+          "className": "mt-3 text-[11px] font-mono uppercase tracking-[0.22em] text-gold hover:text-gold/80 inline-flex items-center gap-1",
+          "hasShadow": false,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Go to calibration",
+          "outlineColor": "rgb(0, 95, 204)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 17,
+            "width": 169,
+            "x": 473,
+            "y": 625
+          },
+          "tagName": "button",
+          "testId": null,
+          "visible": true
+        },
+        {
+          "ariaLabel": null,
+          "className": "w-full text-left grid grid-cols-[52px_1fr_auto] items-center gap-4 px-3 py-4 border-b border-bone/[0.04] last:border-0 hover:bg-gold/[0.025] active:bg-gold/[0.04] transition-colors",
+          "hasShadow": false,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Day1Heavy Squat DayHeavy · 9 ex·",
+          "outlineColor": "rgb(0, 95, 204)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 79,
+            "width": 640,
+            "x": 400,
+            "y": 737
+          },
+          "tagName": "button",
+          "testId": null,
+          "visible": true
+        }
+      ],
+      "status": "pass",
+      "usableCount": 8
+    },
+    "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/accessibility-001-20260524T005933Z/accessibility-home.png",
+    "signals": {
+      "duplicateIds": [],
+      "htmlLang": "en",
+      "interactiveCount": 21,
+      "title": "Comeback · 181 → 238",
+      "unlabeledInteractive": [],
+      "viewportMeta": "width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no",
+      "visibleImagesWithoutAlt": [],
+      "visibleNamedInteractives": [
+        {
+          "name": "Home",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Export JSON backup",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "World",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Basic",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Previous week",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Next week",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Go to calibration",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Day1Heavy Squat DayHeavy · 9 ex·",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Day2Heavy Horizontal PressHeavy · 8 ex·",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Day3Heavy Hinge DayHeavy · 8 ex·",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Day4Active Recovery / Light Full BodyRecovery · 8 ex·",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Day5Heavy Vertical PressHeavy · 8 ex·",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Day6Heavy Pull DayHeavy · 8 ex·",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Day7Active Recovery / Joint Work + Arm PumpRecovery · 9 ex·",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Today",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Calib",
+          "tagName": "button",
+          "testId": null
+        }
+      ]
+    },
+    "status": "pass"
+  },
+  "note": "Local built-preview accessibility smoke for accessible names, duplicate IDs, visible image alt text, keyboard focus visibility, mute toggle keyboard operation, reduced motion propagation, mobile Go touch control, and representative contrast samples. It is not a substitute for manual target-device accessibility sign-off.",
+  "raceDesktop": {
+    "audioToggle": {
+      "afterKeyboardToggle": "true",
+      "beforeKeyboardToggle": "false",
+      "finalPressed": "false",
+      "name": "Mute race audio"
+    },
+    "contrast": [
+      {
+        "background": {
+          "a": 1,
+          "b": 29,
+          "g": 21,
+          "r": 16
+        },
+        "color": {
+          "a": 1,
+          "b": 224,
+          "g": 236,
+          "r": 243
+        },
+        "fontSize": "10px",
+        "fontWeight": "900",
+        "label": "race exit button",
+        "minimum": 4.5,
+        "ratio": 15.59,
+        "selector": "[data-testid=\"race-exit-button\"]",
+        "status": "pass",
+        "text": "Today"
+      },
+      {
+        "background": {
+          "a": 1,
+          "b": 29,
+          "g": 21,
+          "r": 16
+        },
+        "color": {
+          "a": 1,
+          "b": 79,
+          "g": 211,
+          "r": 255
+        },
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "label": "race audio icon button",
+        "minimum": 3,
+        "ratio": 12.8,
+        "selector": "[data-testid=\"race-audio-toggle\"]",
+        "status": "pass",
+        "text": ""
+      },
+      {
+        "background": {
+          "a": 1,
+          "b": 29,
+          "g": 21,
+          "r": 16
+        },
+        "color": {
+          "a": 1,
+          "b": 224,
+          "g": 236,
+          "r": 243
+        },
+        "fontSize": "20px",
+        "fontWeight": "900",
+        "label": "race live hud title",
+        "minimum": 4.5,
+        "ratio": 15.59,
+        "selector": "[data-testid=\"race-live-hud\"] .truncate",
+        "status": "pass",
+        "text": "Comeback City Grand Prix"
+      },
+      {
+        "background": {
+          "a": 1,
+          "b": 29,
+          "g": 21,
+          "r": 16
+        },
+        "color": {
+          "a": 1,
+          "b": 79,
+          "g": 211,
+          "r": 255
+        },
+        "fontSize": "9px",
+        "fontWeight": "900",
+        "label": "race item button",
+        "minimum": 4.5,
+        "ratio": 12.8,
+        "selector": "[data-testid=\"race-item-panel\"] button",
+        "status": "pass",
+        "text": "Use item"
+      }
+    ],
+    "desktopGoButton": {
+      "ariaDisabled": null,
+      "disabled": false,
+      "label": "race desktop go button",
+      "name": "Go",
+      "rect": {
+        "height": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      },
+      "selector": "[data-testid=\"race-go-button\"]",
+      "status": "hidden",
+      "tagName": "button"
+    },
+    "focus": {
+      "audioToggle": {
+        "focus": {
+          "ariaLabel": "Mute race audio",
+          "className": "arcade-hud-panel pointer-events-auto absolute right-3 top-3 z-30 grid h-11 w-11 place-items-center border border-white/18 bg-[#10151d]/[0.82] text-[#ffd34f] shadow-[0_14px_34px_rgba(0,0,0,0.3)] backdrop-blur-md transition-colors hover:bg-[#ffd34f]/10 sm:right-5 sm:top-5",
+          "hasShadow": true,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Mute race audio",
+          "outlineColor": "rgb(0, 95, 204)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 44,
+            "width": 44,
+            "x": 976,
+            "y": 101
+          },
+          "tagName": "button",
+          "testId": "race-audio-toggle",
+          "visible": true
+        },
+        "label": "race audio toggle",
+        "selector": "[data-testid=\"race-audio-toggle\"]",
+        "status": "pass"
+      },
+      "exitButton": {
+        "focus": {
+          "ariaLabel": null,
+          "className": "arcade-hud-panel pointer-events-auto absolute left-3 top-3 z-50 flex min-h-11 items-center gap-2 border border-white/18 bg-[#10151d]/[0.86] px-3 font-mono text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-[0_14px_34px_rgba(0,0,0,0.3)] backdrop-blur-md transition-colors hover:bg-[#ffd34f]/10 hover:text-[#ffd34f] sm:left-5 sm:top-5",
+          "hasShadow": true,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Today",
+          "outlineColor": "rgb(0, 95, 204)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 44,
+            "width": 85,
+            "x": 420,
+            "y": 101
+          },
+          "tagName": "button",
+          "testId": "race-exit-button",
+          "visible": true
+        },
+        "label": "race exit button",
+        "selector": "[data-testid=\"race-exit-button\"]",
+        "status": "pass"
+      },
+      "tabOrder": {
+        "label": "race desktop tab order",
+        "sequence": [
+          {
+            "ariaLabel": "Mute race audio",
+            "className": "arcade-hud-panel pointer-events-auto absolute right-3 top-3 z-30 grid h-11 w-11 place-items-center border border-white/18 bg-[#10151d]/[0.82] text-[#ffd34f] shadow-[0_14px_34px_rgba(0,0,0,0.3)] backdrop-blur-md transition-colors hover:bg-[#ffd34f]/10 sm:right-5 sm:top-5",
+            "hasShadow": true,
+            "hasVisibleIndicator": true,
+            "id": null,
+            "name": "Mute race audio",
+            "outlineColor": "rgb(0, 95, 204)",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 44,
+              "width": 44,
+              "x": 976,
+              "y": 101
+            },
+            "tagName": "button",
+            "testId": "race-audio-toggle",
+            "visible": true
+          },
+          {
+            "ariaLabel": null,
+            "className": "flex flex-col items-center justify-center gap-1 transition-colors relative text-stone hover:text-bone/70",
+            "hasShadow": false,
+            "hasVisibleIndicator": true,
+            "id": null,
+            "name": "Today",
+            "outlineColor": "rgb(0, 95, 204)",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 64,
+              "width": 94,
+              "x": 392,
+              "y": 836
+            },
+            "tagName": "button",
+            "testId": null,
+            "visible": true
+          },
+          {
+            "ariaLabel": null,
+            "className": "flex flex-col items-center justify-center gap-1 transition-colors relative text-stone hover:text-bone/70",
+            "hasShadow": false,
+            "hasVisibleIndicator": true,
+            "id": null,
+            "name": "Calib",
+            "outlineColor": "rgb(0, 95, 204)",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 64,
+              "width": 94,
+              "x": 486,
+              "y": 836
+            },
+            "tagName": "button",
+            "testId": null,
+            "visible": true
+          },
+          {
+            "ariaLabel": null,
+            "className": "flex flex-col items-center justify-center gap-1 transition-colors relative text-stone hover:text-bone/70",
+            "hasShadow": false,
+            "hasVisibleIndicator": true,
+            "id": null,
+            "name": "Joints",
+            "outlineColor": "rgb(0, 95, 204)",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 64,
+              "width": 94,
+              "x": 579,
+              "y": 836
+            },
+            "tagName": "button",
+            "testId": null,
+            "visible": true
+          },
+          {
+            "ariaLabel": null,
+            "className": "flex flex-col items-center justify-center gap-1 transition-colors relative text-stone hover:text-bone/70",
+            "hasShadow": false,
+            "hasVisibleIndicator": true,
+            "id": null,
+            "name": "Body",
+            "outlineColor": "rgb(0, 95, 204)",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 64,
+              "width": 94,
+              "x": 673,
+              "y": 836
+            },
+            "tagName": "button",
+            "testId": null,
+            "visible": true
+          },
+          {
+            "ariaLabel": null,
+            "className": "flex flex-col items-center justify-center gap-1 transition-colors relative text-stone hover:text-bone/70",
+            "hasShadow": false,
+            "hasVisibleIndicator": true,
+            "id": null,
+            "name": "Food",
+            "outlineColor": "rgb(0, 95, 204)",
+            "outlineStyle": "auto",
+            "outlineWidth": "1px",
+            "rect": {
+              "height": 64,
+              "width": 94,
+              "x": 767,
+              "y": 836
+            },
+            "tagName": "button",
+            "testId": null,
+            "visible": true
+          }
+        ],
+        "status": "pass",
+        "usableCount": 6
+      }
+    },
+    "itemButton": {
+      "ariaDisabled": null,
+      "disabled": true,
+      "label": "race item button",
+      "name": "Use item",
+      "rect": {
+        "height": 36,
+        "width": 164,
+        "x": 843,
+        "y": 212
+      },
+      "selector": "[data-testid=\"race-item-panel\"] button",
+      "status": "visible",
+      "tagName": "button"
+    },
+    "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/accessibility-001-20260524T005933Z/accessibility-race-desktop.png",
+    "signals": {
+      "duplicateIds": [],
+      "htmlLang": "en",
+      "interactiveCount": 12,
+      "title": "Comeback · 181 → 238",
+      "unlabeledInteractive": [],
+      "viewportMeta": "width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no",
+      "visibleImagesWithoutAlt": [],
+      "visibleNamedInteractives": [
+        {
+          "name": "Home",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Export JSON backup",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Today",
+          "tagName": "button",
+          "testId": "race-exit-button"
+        },
+        {
+          "name": "Mute race audio",
+          "tagName": "button",
+          "testId": "race-audio-toggle"
+        },
+        {
+          "name": "Use item",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Today",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Calib",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Joints",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Body",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Food",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Race",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Setup",
+          "tagName": "button",
+          "testId": null
+        }
+      ]
+    },
+    "status": "pass"
+  },
+  "raceMobile": {
+    "afterInput": {
+      "normalizedSpeed": 0.526
+    },
+    "beforeInput": {
+      "normalizedSpeed": 0
+    },
+    "contrast": [
+      {
+        "background": {
+          "a": 1,
+          "b": 29,
+          "g": 21,
+          "r": 16
+        },
+        "color": {
+          "a": 1,
+          "b": 255,
+          "g": 251,
+          "r": 247
+        },
+        "fontSize": "19px",
+        "fontWeight": "950",
+        "label": "race mobile go button text",
+        "minimum": 4.5,
+        "ratio": 17.61,
+        "selector": "[data-testid=\"race-go-button\"] span",
+        "status": "pass",
+        "text": "Go!"
+      },
+      {
+        "background": {
+          "a": 1,
+          "b": 33.5,
+          "g": 21,
+          "r": 7
+        },
+        "color": {
+          "a": 1,
+          "b": 224,
+          "g": 236,
+          "r": 243
+        },
+        "fontSize": "13px",
+        "fontWeight": "800",
+        "label": "race mobile objective body",
+        "minimum": 4.5,
+        "ratio": 15.71,
+        "selector": ".race-objective-card p",
+        "status": "pass",
+        "text": "Hold 4th"
+      },
+      {
+        "background": {
+          "a": 1,
+          "b": 33.5,
+          "g": 21,
+          "r": 7
+        },
+        "color": {
+          "a": 1,
+          "b": 79,
+          "g": 255,
+          "r": 155
+        },
+        "fontSize": "16px",
+        "fontWeight": "700",
+        "label": "race mobile objective lap",
+        "minimum": 4.5,
+        "ratio": 14.76,
+        "selector": ".race-objective-card b",
+        "status": "pass",
+        "text": "Lap 1/3"
+      },
+      {
+        "background": {
+          "a": 1,
+          "b": 33.3,
+          "g": 21,
+          "r": 7.4
+        },
+        "color": {
+          "a": 1,
+          "b": 255,
+          "g": 251,
+          "r": 247
+        },
+        "fontSize": "13px",
+        "fontWeight": "950",
+        "label": "race mobile status speed",
+        "minimum": 4.5,
+        "ratio": 17.73,
+        "selector": ".race-status-stack strong",
+        "status": "pass",
+        "text": "220"
+      }
+    ],
+    "focus": {
+      "goButton": {
+        "focus": {
+          "ariaLabel": "Go",
+          "className": "arcade-go-button sm:hidden",
+          "hasShadow": true,
+          "hasVisibleIndicator": true,
+          "id": null,
+          "name": "Go",
+          "outlineColor": "rgb(229, 151, 0)",
+          "outlineStyle": "auto",
+          "outlineWidth": "1px",
+          "rect": {
+            "height": 74,
+            "width": 82,
+            "x": 276,
+            "y": 749
+          },
+          "tagName": "button",
+          "testId": "race-go-button",
+          "visible": true
+        },
+        "label": "race mobile go button",
+        "selector": "[data-testid=\"race-go-button\"]",
+        "status": "pass"
+      }
+    },
+    "goButtonBox": {
+      "x": 276,
+      "y": 749,
+      "width": 82,
+      "height": 74
+    },
+    "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/accessibility-001-20260524T005933Z/accessibility-race-mobile.png",
+    "signals": {
+      "duplicateIds": [],
+      "htmlLang": "en",
+      "interactiveCount": 12,
+      "title": "Comeback · 181 → 238",
+      "unlabeledInteractive": [],
+      "viewportMeta": "width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no",
+      "visibleImagesWithoutAlt": [],
+      "visibleNamedInteractives": [
+        {
+          "name": "Home",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Export JSON backup",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Today",
+          "tagName": "button",
+          "testId": "race-exit-button"
+        },
+        {
+          "name": "Mute race audio",
+          "tagName": "button",
+          "testId": "race-audio-toggle"
+        },
+        {
+          "name": "Go",
+          "tagName": "button",
+          "testId": "race-go-button"
+        },
+        {
+          "name": "Today",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Calib",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Joints",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Body",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Food",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Race",
+          "tagName": "button",
+          "testId": null
+        },
+        {
+          "name": "Setup",
+          "tagName": "button",
+          "testId": null
+        }
+      ]
+    },
+    "status": "pass"
+  },
+  "reducedMotion": {
+    "state": {
+      "canvasReducedMotion": "true",
+      "shellReducedMotion": "true",
+      "speedLineCount": 0,
+      "telemetryReducedMotion": true
+    },
+    "status": "pass"
+  },
+  "unresolvedReleaseDecisions": [
+    "Target browser/device accessibility matrix and manual sign-off",
+    "Manual keyboard/touch QA result with all rubric categories at 4+",
+    "Release-owner acceptance of this Playwright smoke as local accessibility evidence"
+  ]
+}

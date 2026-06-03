@@ -1,0 +1,119 @@
+{
+  "checkpoint": "perf-015",
+  "capturedAt": "2026-05-24T04:34:59.262Z",
+  "candidate": "small pickup and hazard geometry tessellation reduction",
+  "touchedFiles": [
+    "src/game/race/render/createRacePickups.js"
+  ],
+  "gateStatus": "rejected-focused-product-fps-regression-restored",
+  "decision": "rejected and reverted",
+  "reason": "The candidate reduced pickup triangles and improved sustained actual FPS, but desktop average and focused desktop actual FPS regressed, so it failed the performance keep criteria.",
+  "before": {
+    "capturedAt": "2026-05-24T04:25:09.297Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAvgActualFps": 34.88,
+    "focusedAvgActualFps": 38.44,
+    "focusedMinActualFps": 22.4,
+    "sustainedAvgActualFps": 16.76,
+    "sustainedMinActualFps": 15.5,
+    "focusedFrameWorkMs": 16.18,
+    "focusedRenderMs": 12.97,
+    "focusedRenderCalls": 692,
+    "focusedTriangles": 71254.29,
+    "sceneTriangles": 82894,
+    "pickupTriangles": 8384
+  },
+  "candidateMetrics": {
+    "capturedAt": "2026-05-24T04:29:42.036Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAvgActualFps": 32.54,
+    "focusedAvgActualFps": 35.97,
+    "focusedMinActualFps": 24.1,
+    "sustainedAvgActualFps": 17.7,
+    "sustainedMinActualFps": 15.5,
+    "focusedFrameWorkMs": 16.34,
+    "focusedRenderMs": 12.68,
+    "focusedRenderCalls": 688.14,
+    "focusedTriangles": 67914,
+    "sceneTriangles": 78622,
+    "pickupTriangles": 4112
+  },
+  "deltaVsBefore": {
+    "raceCount": 0,
+    "visualCheckCount": 0,
+    "desktopAvgActualFps": -2.34,
+    "focusedAvgActualFps": -2.47,
+    "focusedMinActualFps": 1.7,
+    "sustainedAvgActualFps": 0.94,
+    "sustainedMinActualFps": 0,
+    "focusedFrameWorkMs": 0.16,
+    "focusedRenderMs": -0.29,
+    "focusedRenderCalls": -3.86,
+    "focusedTriangles": -3340.29,
+    "sceneTriangles": -4272,
+    "pickupTriangles": -4272
+  },
+  "restoredMetrics": {
+    "capturedAt": "2026-05-24T04:34:16.814Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAvgActualFps": 34.99,
+    "focusedAvgActualFps": 38.11,
+    "focusedMinActualFps": 23.6,
+    "sustainedAvgActualFps": 17.04,
+    "sustainedMinActualFps": 15.5,
+    "focusedFrameWorkMs": 15.64,
+    "focusedRenderMs": 12.64,
+    "focusedRenderCalls": 688.86,
+    "focusedTriangles": 71018.86,
+    "sceneTriangles": 82894,
+    "pickupTriangles": 8384
+  },
+  "restoredDeltaVsBefore": {
+    "raceCount": 0,
+    "visualCheckCount": 0,
+    "desktopAvgActualFps": 0.11,
+    "focusedAvgActualFps": -0.33,
+    "focusedMinActualFps": 1.2,
+    "sustainedAvgActualFps": 0.28,
+    "sustainedMinActualFps": 0,
+    "focusedFrameWorkMs": -0.54,
+    "focusedRenderMs": -0.33,
+    "focusedRenderCalls": -3.14,
+    "focusedTriangles": -235.43,
+    "sceneTriangles": 0,
+    "pickupTriangles": 0
+  },
+  "validation": {
+    "candidate": {
+      "nodeCheck": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/node-check-create-race-pickups.log",
+      "testRace": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-test-race.log",
+      "testRaceBrowser": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-test-race-browser.log",
+      "browserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/race-browser-playtest-summary.json"
+    },
+    "restored": {
+      "nodeCheck": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/node-check-create-race-pickups-after-revert.log",
+      "testRace": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-test-race-after-revert.log",
+      "testRaceBrowser": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-test-race-browser-after-revert.log",
+      "browserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/race-browser-playtest-summary-after-revert.json",
+      "build": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-build-after-revert.log",
+      "diffCheck": ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/git-diff-create-race-pickups-after-revert.patch"
+    }
+  },
+  "evidence": [
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/race-browser-playtest-summary-before.json",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/race-browser-playtest-summary.json",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/race-browser-playtest-summary-after-revert.json",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/perf-015-candidate-metrics.json",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-test-race.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-test-race-browser.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/node-check-create-race-pickups.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-test-race-after-revert.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-test-race-browser-after-revert.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/npm-run-build-after-revert.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/node-check-create-race-pickups-after-revert.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-015-20260524T042136Z/git-diff-create-race-pickups-after-revert.patch"
+  ]
+}

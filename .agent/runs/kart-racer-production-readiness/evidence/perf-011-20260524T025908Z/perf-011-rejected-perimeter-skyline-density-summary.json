@@ -1,0 +1,193 @@
+{
+  "capturedAt": "2026-05-24T03:05:00.533Z",
+  "candidate": "reduce far perimeter skyline block count from 26/17 loop counts to 22/14 loop counts",
+  "decision": "rejected-and-reverted",
+  "gateStatus": "rejected-focused-desktop-fps-regression",
+  "reason": "The browser harness passed, and sustained actual FPS rose slightly, but the focused desktop product-facing average regressed versus the latest kept perf-003 baseline. Keep criteria require no countervailing FPS/readability regression.",
+  "baseline": {
+    "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-003-20260523T192252Z/race-browser-playtest-summary.json",
+    "metrics": {
+      "rows": [
+        {
+          "scenario": "idle",
+          "actualFps": 41.8,
+          "frameWorkMs": 17.16,
+          "renderPhaseMs": 13.39,
+          "renderCalls": 747,
+          "renderTriangles": 76618,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        },
+        {
+          "scenario": "driving",
+          "actualFps": 42.2,
+          "frameWorkMs": 17.09,
+          "renderPhaseMs": 13.35,
+          "renderCalls": 657,
+          "renderTriangles": 68320,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        },
+        {
+          "scenario": "drift-mechanics",
+          "actualFps": 37.5,
+          "frameWorkMs": 42.17,
+          "renderPhaseMs": 11.51,
+          "renderCalls": 652,
+          "renderTriangles": 67548,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        },
+        {
+          "scenario": "boost-pad-mechanics",
+          "actualFps": 37.7,
+          "frameWorkMs": 40.23,
+          "renderPhaseMs": 10.88,
+          "renderCalls": 533,
+          "renderTriangles": 58486,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 2
+        },
+        {
+          "scenario": "item-box-mechanics",
+          "actualFps": 39.7,
+          "frameWorkMs": 42.69,
+          "renderPhaseMs": 11.96,
+          "renderCalls": 535,
+          "renderTriangles": 58712,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 2
+        },
+        {
+          "scenario": "rival-cluster",
+          "actualFps": 42.3,
+          "frameWorkMs": 17.33,
+          "renderPhaseMs": 13.67,
+          "renderCalls": 687,
+          "renderTriangles": 70810,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        },
+        {
+          "scenario": "finish-line",
+          "actualFps": 42.2,
+          "frameWorkMs": 17.19,
+          "renderPhaseMs": 13.37,
+          "renderCalls": 686,
+          "renderTriangles": 70698,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        }
+      ],
+      "averages": {
+        "actualFps": 40.49,
+        "frameWorkMs": 27.69,
+        "renderPhaseMs": 12.59,
+        "renderCalls": 642.43,
+        "renderTriangles": 67313.14
+      },
+      "sustainedActualFpsAverage": 17.7,
+      "sceneTriangles": 82894,
+      "sceneryTriangles": 29534
+    }
+  },
+  "candidateEvidence": {
+    "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-011-20260524T025908Z/race-browser-playtest-summary.json",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "metrics": {
+      "rows": [
+        {
+          "scenario": "idle",
+          "actualFps": 41.8,
+          "frameWorkMs": 15.91,
+          "renderPhaseMs": 13.17,
+          "renderCalls": 747,
+          "renderTriangles": 74914,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        },
+        {
+          "scenario": "driving",
+          "actualFps": 37.5,
+          "frameWorkMs": 14.67,
+          "renderPhaseMs": 11.44,
+          "renderCalls": 676,
+          "renderTriangles": 68242,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        },
+        {
+          "scenario": "drift-mechanics",
+          "actualFps": 38,
+          "frameWorkMs": 40.11,
+          "renderPhaseMs": 11.61,
+          "renderCalls": 652,
+          "renderTriangles": 65844,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        },
+        {
+          "scenario": "boost-pad-mechanics",
+          "actualFps": 37.9,
+          "frameWorkMs": 39.59,
+          "renderPhaseMs": 11.35,
+          "renderCalls": 533,
+          "renderTriangles": 56782,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 2
+        },
+        {
+          "scenario": "item-box-mechanics",
+          "actualFps": 24.1,
+          "frameWorkMs": 41.64,
+          "renderPhaseMs": 11.62,
+          "renderCalls": 535,
+          "renderTriangles": 57008,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 2
+        },
+        {
+          "scenario": "rival-cluster",
+          "actualFps": 42.5,
+          "frameWorkMs": 17.48,
+          "renderPhaseMs": 13.9,
+          "renderCalls": 689,
+          "renderTriangles": 69230,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        },
+        {
+          "scenario": "finish-line",
+          "actualFps": 37.6,
+          "frameWorkMs": 16.21,
+          "renderPhaseMs": 12.79,
+          "renderCalls": 677,
+          "renderTriangles": 68338,
+          "cameraClipCount": 0,
+          "visibleRivalsSeen": 3
+        }
+      ],
+      "averages": {
+        "actualFps": 37.06,
+        "frameWorkMs": 26.52,
+        "renderPhaseMs": 12.27,
+        "renderCalls": 644.14,
+        "renderTriangles": 65765.43
+      },
+      "sustainedActualFpsAverage": 17.94,
+      "sceneTriangles": 81190,
+      "sceneryTriangles": 27830
+    }
+  },
+  "delta": {
+    "focusedDesktopActualFps": -3.43,
+    "sustainedActualFps": 0.24,
+    "sceneTriangles": -1704,
+    "sceneryTriangles": -1704
+  },
+  "preservation": {
+    "candidateBrowserHarnessPassed": true,
+    "revertedToPreviousPerimeterSkylineCounts": true
+  }
+}

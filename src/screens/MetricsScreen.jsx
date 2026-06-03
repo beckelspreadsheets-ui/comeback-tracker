@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { CheckCircle2, Dumbbell, FlaskConical, HeartPulse, Plus, Target, Trophy, Utensils } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -12,12 +12,30 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { Card, SectionTitle } from '../components/primitives.jsx';
+import { deriveGameProfile } from '../game/gameProfile.js';
+import { buildGameMissions, getActiveMission } from '../game/gameMissions.js';
 import { calcTargets } from '../lib/nutrition.js';
 import { proteinCompliance12w } from '../lib/foodHelpers.js';
+import { LIFTS, PROGRAM } from '../lib/program.js';
 
 // Kintsugi gold for chart stroke — must match Tailwind gold.DEFAULT
 const GOLD = '#d4af37';
 const PINE = '#6b9e7a';
+
+const pct = (value) => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+
+const RecapStat = ({ Icon, label, value, suffix = '' }) => (
+  <div className="border border-bone/[0.08] bg-ink/45 p-3">
+    <div className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.18em] text-stone">
+      <Icon size={12} className="text-gold" />
+      {label}
+    </div>
+    <div className="mt-2 font-display text-3xl leading-none text-bone tabular-nums">
+      {value}
+      {suffix && <span className="ml-1 font-mono text-[10px] text-stone">{suffix}</span>}
+    </div>
+  </div>
+);
 
 export const MetricsScreen = ({ state, setState }) => {
   const rows = state.metrics.length
@@ -87,14 +105,73 @@ export const MetricsScreen = ({ state, setState }) => {
     [state.food.log, foodTargets]
   );
   const hasComplianceData = complianceData.some((d) => d.logged > 0);
+  const profile = useMemo(() => deriveGameProfile(state), [state]);
+  const missions = useMemo(() => buildGameMissions(state, profile), [state, profile]);
+  const activeMission = useMemo(() => getActiveMission(missions), [missions]);
+  const xpPct = pct((profile.currentLevelXp / profile.nextLevelXp) * 100);
 
   return (
     <div className="space-y-8">
       <SectionTitle
         eyebrow="Tracking"
-        title="Body metrics"
-        desc="Weekly: weight, waist, arms, thighs. Joint status: 🟢 good · 🟡 cautious · 🔴 flared."
+        title="Home Base"
+        desc="Body metrics, city progress recap, and the next useful mission from Comeback City."
       />
+
+      <Card className="p-5 border-sky-400/20 bg-sky-400/[0.03]" data-testid="home-base-recap">
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.22em] text-gold">
+              <Trophy size={13} />
+              Home Base Recap
+            </div>
+            <div className="mt-3 grid grid-cols-[52px_1fr] items-center gap-3">
+              <div className="grid h-[52px] w-[52px] place-items-center border-2 border-gold bg-gold/[0.08] font-display text-3xl leading-none text-gold">
+                {profile.level}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-stone">
+                    City XP
+                  </span>
+                  <span className="font-mono text-[10px] text-gold tabular-nums">
+                    {profile.currentLevelXp}/{profile.nextLevelXp}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 border border-bone/[0.12] bg-ink/70">
+                  <div className="h-full bg-gold transition-all duration-500" style={{ width: `${xpPct}%` }} />
+                </div>
+              </div>
+            </div>
+            {activeMission && (
+              <div className="mt-4 border border-gold/20 bg-ink/50 p-3" data-testid="home-base-next-mission">
+                <div className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.18em] text-gold">
+                  {activeMission.complete ? <CheckCircle2 size={12} /> : <Target size={12} />}
+                  Next mission
+                </div>
+                <div className="mt-2 font-display text-2xl leading-none text-bone">
+                  {activeMission.title}
+                </div>
+                <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-stone">
+                  {activeMission.summary}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <RecapStat
+              Icon={Dumbbell}
+              label="Courses"
+              value={profile.workout.completedCourses}
+              suffix={`/${PROGRAM.length}`}
+            />
+            <RecapStat Icon={Utensils} label="Food days" value={profile.foodDays} />
+            <RecapStat Icon={FlaskConical} label="Calibrated" value={profile.filledRMs} suffix={`/${LIFTS.length}`} />
+            <RecapStat Icon={HeartPulse} label="Shield" value={profile.recoveryShield} />
+          </div>
+        </div>
+      </Card>
 
       {hasChartData && (
         <Card className="p-5">

@@ -1,0 +1,1 @@
+.agent/runs/kart-racer-production-readiness/evidence/perf-039-viewport-fit-dirty-20260524T181500Z

@@ -6,6 +6,7 @@ import {
   Dumbbell,
   FlaskConical,
   Gauge,
+  HelpCircle,
   HeartPulse,
   Home,
   MapPin,
@@ -51,6 +52,29 @@ const miniMapPoint = (position) => ({
   left: `${((position.x - WORLD_BOUNDS.minX) / (WORLD_BOUNDS.maxX - WORLD_BOUNDS.minX)) * 100}%`,
   top: `${100 - ((position.z - WORLD_BOUNDS.minZ) / (WORLD_BOUNDS.maxZ - WORLD_BOUNDS.minZ)) * 100}%`,
 });
+
+const CONTROL_HINTS = {
+  drive: {
+    Icon: Car,
+    label: 'Drive',
+    desktop: 'WASD / Arrows',
+    mobile: 'Pad + gas',
+    secondaryDesktop: 'S/Down Brake / Space Drift',
+    secondaryMobile: 'Brake / Drift / Enter',
+  },
+  portal: {
+    Icon: Target,
+    label: 'Portal',
+    desktop: 'Approach glow',
+    mobile: 'Tap district',
+  },
+  enter: {
+    Icon: Zap,
+    label: 'Enter',
+    desktop: 'E / Enter',
+    mobile: 'Tap Enter',
+  },
+};
 
 const MiniMap = ({ activeMission, className = '', destinations, nearbyDestination, onEnter }) => {
   const objectiveKey = !activeMission?.complete ? activeMission?.destinationKey : null;
@@ -102,7 +126,10 @@ const MissionPanel = ({ destination, mission, onEnter }) => {
   const DestinationIcon = destination ? ICONS[destination.icon] || Sparkles : MissionIcon;
 
   return (
-    <div className="world-hud-panel pointer-events-auto border border-white/18 bg-[#10151d]/[0.92] px-3 py-2.5 text-white shadow-[0_14px_32px_rgba(0,0,0,0.32)] backdrop-blur-md">
+    <div
+      className="world-hud-panel pointer-events-auto border border-white/18 bg-[#10151d]/[0.92] px-3 py-2.5 text-white shadow-[0_14px_32px_rgba(0,0,0,0.32)] backdrop-blur-md"
+      data-testid="world-mission-panel"
+    >
       <div className="grid grid-cols-[38px_1fr_auto] items-center gap-2.5">
         <div
           className="grid h-[38px] w-[38px] place-items-center border bg-black/28"
@@ -185,6 +212,8 @@ const DestinationButton = ({ active, activeMission, destination, mission, onEnte
     <button
       type="button"
       onClick={() => onEnter(destination)}
+      data-destination-key={destination.key}
+      data-testid={`world-destination-${destination.key}`}
       className={`world-destination-button pointer-events-auto relative grid h-[48px] min-w-[80px] grid-cols-[22px_1fr] items-center gap-2 overflow-hidden border px-2 pb-3 text-left text-white shadow-[0_10px_24px_rgba(0,0,0,0.24)] backdrop-blur-md transition-all hover:-translate-y-0.5 active:translate-y-0 sm:h-[46px] sm:min-w-[74px] sm:flex-1 ${
         active || isObjective
           ? 'border-[#ffd34f] bg-[#10151d]/[0.94]'
@@ -223,14 +252,120 @@ const DestinationButton = ({ active, activeMission, destination, mission, onEnte
   );
 };
 
+const ControlHintPanel = ({ hub, nearbyDestination, step = 'drive' }) => {
+  if (hub?.onboardingSeen || step === 'done') return null;
+  const hint = CONTROL_HINTS[step] || CONTROL_HINTS.drive;
+  const Icon = hint.Icon;
+  const enterLabel = nearbyDestination ? nearbyDestination.shortTitle : 'Portal';
+  const SecondaryIcon = step === 'enter' ? Zap : MapPin;
+  const secondaryDesktop = hint.secondaryDesktop || (step === 'enter' ? enterLabel : 'Mission route');
+  const secondaryMobile = hint.secondaryMobile || (step === 'enter' ? enterLabel : 'Mission route');
+
+  return (
+    <div
+      className="world-hud-panel pointer-events-auto absolute left-2 top-[174px] z-[55] w-[min(64vw,230px)] border border-white/18 bg-[#10151d]/[0.88] px-3 py-2 text-white shadow-[0_14px_34px_rgba(0,0,0,0.32)] backdrop-blur-md sm:left-5 sm:top-auto sm:bottom-[172px] sm:w-[218px]"
+      data-onboarding-step={step}
+      data-testid="world-control-hints"
+    >
+      <div className="flex items-center gap-2 font-mono text-[8px] font-black uppercase leading-none tracking-[0.16em] text-[#ffd34f]">
+        <Icon size={11} />
+        {hint.label}
+      </div>
+      <div className="mt-2 grid gap-1.5 font-mono text-[9px] font-black uppercase tracking-[0.1em] text-white/72">
+        <div className="hidden items-center gap-2 sm:flex">
+          <ChevronsRight size={12} className="text-[#46d9ef]" />
+          {hint.desktop}
+        </div>
+        <div className="hidden items-center gap-2 sm:flex">
+          <SecondaryIcon size={12} className="text-[#ffd34f]" />
+          {secondaryDesktop}
+        </div>
+        <div className="flex items-center gap-2 sm:hidden">
+          <ChevronsRight size={12} className="text-[#46d9ef]" />
+          {hint.mobile}
+        </div>
+        <div className="flex items-center gap-2 sm:hidden">
+          <SecondaryIcon size={12} className="text-[#ffd34f]" />
+          {secondaryMobile}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WorldHelpButton = ({ onShowHelp }) => (
+  <button
+    type="button"
+    aria-label="Show world controls"
+    className="pointer-events-auto grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/20 bg-[#10151d]/[0.94] text-white shadow-[0_12px_28px_rgba(0,0,0,0.3)] backdrop-blur-md transition-colors hover:border-[#ffd34f]/70 hover:text-[#ffd34f] sm:h-11 sm:w-11"
+    data-testid="world-help-button"
+    onClick={onShowHelp}
+    title="Show controls"
+  >
+    <HelpCircle size={15} />
+  </button>
+);
+
+const RewardPulse = ({ rewardPulse }) => {
+  if (!rewardPulse) return null;
+  const actionSummary =
+    rewardPulse.actions?.length > 0
+      ? rewardPulse.actions.slice(0, 2).join(' / ')
+      : 'City progress updated';
+  const extraCount = Math.max(0, (rewardPulse.actions?.length || 0) - 2);
+  const nextRoute =
+    rewardPulse.nextMissionTitle && rewardPulse.nextDestinationTitle
+      ? `${rewardPulse.nextMissionTitle} -> ${rewardPulse.nextDestinationTitle}`
+      : null;
+
+  return (
+    <div
+      className="world-hud-panel pointer-events-auto absolute left-1/2 top-[74px] z-[65] w-[min(88vw,360px)] -translate-x-1/2 border border-[#ffd34f]/60 bg-[#10151d]/[0.94] px-4 py-3 text-white shadow-[0_18px_46px_rgba(0,0,0,0.34)] backdrop-blur-md sm:top-5"
+      data-action-count={rewardPulse.actions?.length || 0}
+      data-next-destination-key={rewardPulse.nextDestinationKey || ''}
+      data-next-mission-key={rewardPulse.nextMissionKey || ''}
+      data-testid="world-reward-pulse"
+      data-xp-delta={rewardPulse.xpDelta || 0}
+    >
+      <div className="flex items-center gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center border border-[#ffd34f]/80 bg-[#ffd34f]/16 text-[#ffd34f]">
+          <Sparkles size={20} />
+        </div>
+        <div className="min-w-0">
+          <div className="font-mono text-[8px] font-black uppercase leading-none tracking-[0.16em] text-[#ffd34f]">
+            City Feedback
+          </div>
+          <div className="mt-1 truncate font-mono text-sm font-black uppercase leading-none">
+            +{rewardPulse.xpDelta || 0} City XP
+          </div>
+          <div className="mt-1 truncate font-mono text-[9px] uppercase tracking-[0.1em] text-white/58">
+            {actionSummary}
+            {extraCount > 0 ? ` +${extraCount}` : ''}
+          </div>
+          {nextRoute && (
+            <div className="mt-2 flex min-w-0 items-center gap-1.5 border-t border-white/12 pt-2 font-mono text-[8px] font-black uppercase tracking-[0.12em] text-[#ffd34f]">
+              <Target size={10} />
+              <span className="truncate">Next route: {nextRoute}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const HudOverlay = ({
   activeMission,
   destinations,
+  hub,
   missions = [],
   nearbyDestination,
   onBasicMode,
   onEnter,
+  onboardingStep = 'drive',
+  onShowHelp,
   profile,
+  rewardPulse,
 }) => {
   const xpPct = Math.round((profile.currentLevelXp / profile.nextLevelXp) * 100);
   const shieldTone =
@@ -245,7 +380,7 @@ export const HudOverlay = ({
     : null;
   const raceDestination = destinations.find((destination) => destination.key === 'raceway');
   const routeDestination = nearbyDestination || (!activeMission?.complete ? missionDestination : null);
-  const hudDestinations = destinations.filter((destination) => DISTRICT_VISUALS[destination.key]);
+  const closeupDestinations = destinations.filter((destination) => DISTRICT_VISUALS[destination.key]);
   const missionsByDestination = new Map(
     missions.map((mission) => [mission.destinationKey, mission])
   );
@@ -259,6 +394,9 @@ export const HudOverlay = ({
       <div className="comeback-slogan-badge pointer-events-none absolute left-1/2 top-[126px] hidden -translate-x-1/2 px-5 py-2 font-mono text-[11px] font-black uppercase tracking-[0.12em] text-white sm:block">
         Train. Improve. Comeback.
       </div>
+
+      <ControlHintPanel hub={hub} nearbyDestination={nearbyDestination} step={onboardingStep} />
+      <RewardPulse rewardPulse={rewardPulse} />
 
       <div className="world-hud-panel pointer-events-auto absolute left-5 top-[132px] hidden w-[300px] border border-white/18 bg-[#061522]/[0.88] p-2.5 text-white shadow-[0_14px_34px_rgba(0,0,0,0.28)] backdrop-blur-md xl:block">
         <div className="grid grid-cols-[44px_1fr] items-center gap-2.5">
@@ -327,6 +465,7 @@ export const HudOverlay = ({
 
         <div className="flex shrink-0 items-start gap-2">
           <CurrencyStack className="hidden sm:grid" />
+          {onShowHelp && <WorldHelpButton onShowHelp={onShowHelp} />}
           {raceDestination && (
             <button
               type="button"
@@ -348,7 +487,7 @@ export const HudOverlay = ({
         </div>
       </div>
 
-      <div className="absolute left-2 top-2 grid max-w-[min(74vw,286px)] gap-2 sm:hidden">
+      <div className="absolute left-2 top-[58px] grid max-w-[min(74vw,286px)] gap-2 sm:hidden">
         <div className="world-hud-panel hidden border border-white/18 bg-[#10151d]/[0.94] px-3 py-2 text-white shadow-[0_10px_26px_rgba(0,0,0,0.3)] backdrop-blur-md">
           <div className="flex items-center gap-2 font-mono text-[9px] font-black uppercase leading-none tracking-[0.16em] text-white/62">
             <MapPin size={12} className="text-[#ffd34f]" />
@@ -393,7 +532,7 @@ export const HudOverlay = ({
         <MiniMap
           activeMission={activeMission}
           className="scale-[0.82] origin-bottom-left"
-          destinations={hudDestinations}
+          destinations={destinations}
           nearbyDestination={nearbyDestination}
           onEnter={onEnter}
         />
@@ -403,14 +542,14 @@ export const HudOverlay = ({
         <MiniMap
           activeMission={activeMission}
           className="hidden sm:block"
-          destinations={hudDestinations}
+          destinations={destinations}
           nearbyDestination={nearbyDestination}
           onEnter={onEnter}
         />
       </div>
 
       <div className="absolute bottom-[86px] left-1/2 hidden -translate-x-1/2 lg:block">
-        <DistrictCloseupStrip destinations={hudDestinations} onEnter={onEnter} />
+        <DistrictCloseupStrip destinations={closeupDestinations} onEnter={onEnter} />
       </div>
 
       <div className="absolute inset-x-0 bottom-0 border-t border-white/14 bg-[#10151d]/[0.93] px-2 pb-[calc(env(safe-area-inset-bottom)+7px)] pt-2 backdrop-blur-md sm:left-1/2 sm:right-auto sm:top-auto sm:bottom-4 sm:w-[min(720px,calc(100vw-360px))] sm:-translate-x-1/2 sm:border sm:p-2">
@@ -419,7 +558,7 @@ export const HudOverlay = ({
           Districts
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-none sm:overflow-visible">
-          {hudDestinations.map((destination) => (
+          {destinations.map((destination) => (
             <DestinationButton
               key={destination.key}
               active={nearbyDestination?.key === destination.key}

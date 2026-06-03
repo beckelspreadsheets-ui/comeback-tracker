@@ -28,7 +28,8 @@ const trackKey = query.get('raceTrack') || RACE_TRACKS[0].key;
 const track = RACE_TRACKS.find((item) => item.key === trackKey) || RACE_TRACKS[0];
 const raceIndex = Number(query.get('raceIndex') || 1);
 const raceMode = query.get('raceMode') || 'free-switch';
-const visualMode = query.get('visual') === '1';
+const autoplay = query.get('raceAutoplay') === '1';
+const visualMode = query.get('visual') === '1' || autoplay;
 
 const Harness = () => {
   const [result, setResult] = useState(null);

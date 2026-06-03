@@ -1,0 +1,110 @@
+name: Race Production Gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  local-release-gates:
+    name: Local release gate evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Build production artifact
+        run: npm run build
+
+      - name: Race content tests
+        run: npm run test:race
+
+      - name: Race browser harness
+        run: npm run test:race:browser
+
+      - name: Race disable smoke
+        run: npm run test:race:disable
+
+      - name: Core tracker smoke
+        run: npm run test:core
+
+      - name: Hub smoke
+        run: npm run test:hub
+
+      - name: Visual reference checks
+        run: npm run test:visual
+
+      - name: API data smoke
+        run: npm run test:api:data
+
+      - name: Header PWA smoke
+        run: npm run test:pwa
+
+      - name: PWA update smoke
+        run: npm run test:pwa:update
+
+      - name: Page lifecycle and audio smoke
+        run: npm run test:lifecycle
+
+      - name: WebGL context smoke
+        run: npm run test:webgl
+
+      - name: Release smoke
+        run: npm run test:release:smoke
+
+      - name: Release rollback smoke
+        run: npm run test:release:rollback
+
+      - name: Release artifact safety
+        run: npm run test:release:artifacts
+
+      - name: Accessibility smoke
+        run: npm run test:accessibility
+
+      - name: Cross-browser smoke
+        run: npm run test:cross-browser
+
+      - name: Device matrix smoke
+        run: npm run test:device:matrix
+
+      - name: Deployed-header comparator smoke
+        run: npm run test:headers:deployed
+
+      - name: Bundle report
+        run: npm run test:bundle
+
+      - name: Lab readiness smoke
+        run: npm run test:lab
+
+      - name: Manual QA capture prep
+        run: npm run test:qa:capture
+
+      - name: Monitoring support readiness audit
+        run: npm run test:monitoring:support
+
+      - name: Production dependency audit
+        run: npm run test:security:prod
+
+      - name: Release decision audit
+        run: npm run test:release:decisions
+
+      - name: Production gate readiness audit
+        run: npm run test:production:gates
+
+      - name: CI workflow structure audit
+        run: npm run test:ci:release

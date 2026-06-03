@@ -1,0 +1,49 @@
+{
+  "id": "perf-016",
+  "capturedAt": "2026-05-24T04:56:48.116Z",
+  "candidate": "precompute static collision-circle effective radius for world collision and telemetry checks",
+  "decision": "rejected",
+  "reason": "The candidate reduced focused telemetry cost and improved sustained actual FPS, but focused desktop product-facing actual FPS regressed by 2.70, so it failed keep criteria.",
+  "status": "reverted",
+  "latestKeptPerformanceCheckpoint": ".agent/runs/kart-racer-production-readiness/evidence/perf-003-20260523T192252Z/",
+  "evidenceDirectory": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/",
+  "candidateEvidence": {
+    "metrics": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/perf-016-candidate-metrics.json",
+    "browserSummaryBefore": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/race-browser-playtest-summary-before.json",
+    "browserSummaryCandidate": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/race-browser-playtest-summary.json",
+    "testRaceLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/npm-run-test-race.log",
+    "testRaceBrowserLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/npm-run-test-race-browser.log"
+  },
+  "metricDelta": {
+    "desktopAvgActualFps": 0.03,
+    "focusedAvgActualFps": -2.7,
+    "focusedMinActualFps": 0.8,
+    "sustainedAvgActualFps": 0.8,
+    "sustainedMinActualFps": 0.1,
+    "focusedFrameWorkMs": -0.53,
+    "focusedWorldMs": 0.02,
+    "focusedTelemetryMs": -0.66,
+    "focusedRenderMs": 0.06
+  },
+  "postRevertValidation": {
+    "nodeCheckKartPhysics": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/node-check-kart-physics-after-revert.log",
+    "nodeCheckCreateRaceScenery": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/node-check-create-race-scenery-after-revert.log",
+    "nodeCheckRaceTelemetry": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/node-check-race-telemetry-after-revert.log",
+    "nodeCheckRaceContentPlaytest": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/node-check-race-content-playtest-after-revert.log",
+    "testRace": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/npm-run-test-race-after-revert.log",
+    "testRaceBrowser": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/npm-run-test-race-browser-after-revert.log",
+    "browserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/race-browser-playtest-summary-after-revert.json",
+    "build": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/npm-run-build-after-revert.log"
+  },
+  "postRevertBrowserSummary": {
+    "capturedAt": "2026-05-24T04:56:48.116Z",
+    "raceCount": 24,
+    "visualCheckCount": 28
+  },
+  "revertChecks": {
+    "cachedRadiusIdentifiersAbsent": true,
+    "rawGitDiffPatch": ".agent/runs/kart-racer-production-readiness/evidence/perf-016-20260524T044449Z/git-diff-collision-cache-after-revert.patch",
+    "rawGitDiffPatchBytes": 303986,
+    "rawGitDiffNote": "This patch is nonzero because these files already carry broader goal work relative to Git; rg found no pushCollisionCircle, cachedCollisionFrame, cachedCollisionNearestCalls, circle.effectiveRadius, or hasCachedEffectiveRadius identifiers after revert."
+  }
+}

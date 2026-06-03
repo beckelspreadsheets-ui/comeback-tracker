@@ -1,0 +1,1978 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/perf-034-player-frame-vector-scratch-20260524T154421Z",
+  "capturedAt": "2026-05-24T16:10:31.243Z",
+  "dodStatus": {
+    "nonProvenRows": [
+      {
+        "item": "`/#race` opens a full-screen playable kart race.",
+        "line": 51,
+        "proofNeeded": "Desktop keyboard manual run confirms full-screen playable race, start-to-finish route, pause/resume, and exit path.",
+        "status": "Partial"
+      },
+      {
+        "item": "The race uses original Comeback City art and does not copy protected game assets.",
+        "line": 52,
+        "proofNeeded": "Owner/design/legal review confirms item names/silhouettes, binary asset provenance, reference-data scope, visual target safety, and screenshot/audio similarity.",
+        "status": "Partial"
+      },
+      {
+        "item": "The player can accelerate, brake, steer, hop, drift, release mini-turbo, use items, hit boost pads, collide, recover, and finish a race.",
+        "line": 53,
+        "proofNeeded": "Manual desktop keyboard and mobile touch runs prove all core actions are usable by a human player.",
+        "status": "Partial"
+      },
+      {
+        "item": "Drift is the central satisfying mechanic.",
+        "line": 54,
+        "proofNeeded": "Manual QA gives drift score `4+` with notes for start, hold, charge, side slip, sparks/audio, and release boost.",
+        "status": "Partial"
+      },
+      {
+        "item": "The chase camera frames the kart and road like an arcade kart racer.",
+        "line": 55,
+        "proofNeeded": "Owner-approved target plus speed/drift/turn screenshots and manual camera score `4+`.",
+        "status": "Partial"
+      },
+      {
+        "item": "Comeback City GP has dense district landmarks, readable turns, barriers, boost pads, item boxes, hazards, and finish-line presentation.",
+        "line": 56,
+        "proofNeeded": "Product/design review confirms landmarks/density/route readability against approved target; manual first-lap run confirms route can be followed without minimap.",
+        "status": "Partial"
+      },
+      {
+        "item": "HUD supports race decisions without blocking the view.",
+        "line": 58,
+        "proofNeeded": "Manual/design review confirms HUD readability and no route/apex/item/rival obstruction on desktop and mobile.",
+        "status": "Partial"
+      },
+      {
+        "item": "Desktop keyboard and mobile touch both work.",
+        "line": 59,
+        "proofNeeded": "Manual desktop keyboard run and mobile touch run are recorded with results and scores.",
+        "status": "Partial"
+      },
+      {
+        "item": "Visual screenshots meet telemetry thresholds.",
+        "line": 65,
+        "proofNeeded": "FPS must meet agreed floor; screenshots and telemetry must still pass after performance and visual changes.",
+        "status": "Partial / Failing"
+      },
+      {
+        "item": "Manual QA rubric scores are all 4 or higher.",
+        "line": 66,
+        "proofNeeded": "Completed manual QA artifact with every category scored `4+`.",
+        "status": "Missing"
+      },
+      {
+        "item": "A fresh user watching 10 seconds of gameplay describes it as a kart race, not a menu or tech demo.",
+        "line": 67,
+        "proofNeeded": "Fresh reviewer answer recorded in manual QA runbook or dated review artifact.",
+        "status": "Missing"
+      }
+    ],
+    "nonProvenRowCount": 11,
+    "rowCount": 17
+  },
+  "evidenceLinkFailures": [],
+  "gateStatus": "r3-blocked-gates-remain",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c26bcdec19e8175f63a09e490f5400231aa",
+    "dirty": true
+  },
+  "latestPerformance": {
+    "desktopAllAverageActualFps": 34.91,
+    "desktopFocusedAverageActualFps": 36.72,
+    "localFloorFps": 45,
+    "prdTargetFps": 55,
+    "sustainedAverageActualFps": 17.79
+  },
+  "manualQaStatus": {
+    "failingRows": [
+      {
+        "category": "First impression",
+        "line": 161,
+        "requiredCheck": "A silent 10 second clip reads as a kart race, not a menu or tech demo.",
+        "score": "Not run"
+      },
+      {
+        "category": "Controls",
+        "line": 162,
+        "requiredCheck": "Keyboard acceleration, braking, steering, drift, and item use feel responsive in the first lap.",
+        "score": "Not run"
+      },
+      {
+        "category": "Drift",
+        "line": 163,
+        "requiredCheck": "Hop, side slip, tier feedback, and release boost are easy to start and understand.",
+        "score": "Not run"
+      },
+      {
+        "category": "Camera",
+        "line": 164,
+        "requiredCheck": "Player can see road, apexes, hazards, item boxes, rivals, and exits without fighting the camera.",
+        "score": "Not run"
+      },
+      {
+        "category": "Track readability",
+        "line": 165,
+        "requiredCheck": "First lap can be followed without minimap or prior route knowledge.",
+        "score": "Not run"
+      },
+      {
+        "category": "Visual polish",
+        "line": 166,
+        "requiredCheck": "City density, landmarks, surface detail, VFX, and finish/start presentation feel intentional.",
+        "score": "Not run"
+      },
+      {
+        "category": "Race drama",
+        "line": 167,
+        "requiredCheck": "Rivals, items, boosts, hazards, and position changes are noticeable during normal play.",
+        "score": "Not run"
+      },
+      {
+        "category": "HUD",
+        "line": 168,
+        "requiredCheck": "Position, lap, timer, item, drift/boost state, and controls are readable without blocking the route.",
+        "score": "Not run"
+      },
+      {
+        "category": "Performance",
+        "line": 169,
+        "requiredCheck": "Desktop and mobile stay smooth enough for manual play, with telemetry attached.",
+        "score": "Not run"
+      },
+      {
+        "category": "Mobile",
+        "line": 170,
+        "requiredCheck": "Touch controls can complete a race without hiding kart, route, apex, or item boxes.",
+        "score": "Not run"
+      }
+    ],
+    "failingRowCount": 10,
+    "rowCount": 10
+  },
+  "missingPlanGateLabels": [],
+  "note": "This audit records P0/P1 hard-gate status from repo-visible evidence only. It does not infer owner, legal, release, QA, deployment, or production monitoring decisions.",
+  "notSuppliedRows": [
+    {
+      "cells": [
+        "Target screenshot/capture for `RACE-001`",
+        "Not supplied",
+        "Required before art, camera, HUD, and first-slice quality can be judged against an approved composition target."
+      ],
+      "line": 51,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Target screenshot/capture for `RACE-001` | Not supplied | Required before art, camera, HUD, and first-slice quality can be judged against an approved composition target. |"
+    },
+    {
+      "cells": [
+        "Target reference source/license",
+        "Not supplied",
+        "Required to confirm the reference is safe for composition-only use and will not become copied production art."
+      ],
+      "line": 52,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Target reference source/license | Not supplied | Required to confirm the reference is safe for composition-only use and will not become copied production art. |"
+    },
+    {
+      "cells": [
+        "Target viewport priority",
+        "Not supplied",
+        "Determines whether next tuning optimizes desktop first, mobile first, or both equally."
+      ],
+      "line": 53,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Target viewport priority | Not supplied | Determines whether next tuning optimizes desktop first, mobile first, or both equally. |"
+    },
+    {
+      "cells": [
+        "Desired kart screen size and placement",
+        "Not supplied",
+        "Confirms or adjusts the PRD ranges before camera tuning claims are made."
+      ],
+      "line": 54,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Desired kart screen size and placement | Not supplied | Confirms or adjusts the PRD ranges before camera tuning claims are made. |"
+    },
+    {
+      "cells": [
+        "Desired horizon and road visibility",
+        "Not supplied",
+        "Confirms or adjusts camera composition gates and screenshot review criteria."
+      ],
+      "line": 55,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Desired horizon and road visibility | Not supplied | Confirms or adjusts camera composition gates and screenshot review criteria. |"
+    },
+    {
+      "cells": [
+        "Object density and landmark expectations",
+        "Not supplied",
+        "Defines what is enough for the city to stop reading as empty or flat."
+      ],
+      "line": 56,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Object density and landmark expectations | Not supplied | Defines what is enough for the city to stop reading as empty or flat. |"
+    },
+    {
+      "cells": [
+        "HUD direction",
+        "Not supplied",
+        "Determines how close the HUD should be to genre conventions versus Comeback City brand."
+      ],
+      "line": 57,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| HUD direction | Not supplied | Determines how close the HUD should be to genre conventions versus Comeback City brand. |"
+    },
+    {
+      "cells": [
+        "V1 vehicle scope",
+        "Not supplied",
+        "Confirms kart-only V1 or retained hover/plane modes for V1 acceptance."
+      ],
+      "line": 58,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| V1 vehicle scope | Not supplied | Confirms kart-only V1 or retained hover/plane modes for V1 acceptance. |"
+    },
+    {
+      "cells": [
+        "Item scope",
+        "Not supplied",
+        "Confirms whether items are required in the first quality pass or can be staged after driving/camera."
+      ],
+      "line": 59,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Item scope | Not supplied | Confirms whether items are required in the first quality pass or can be staged after driving/camera. |"
+    },
+    {
+      "cells": [
+        "Audio scope",
+        "Not supplied",
+        "Confirms whether generated audio cues are required for V1 acceptance."
+      ],
+      "line": 60,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Audio scope | Not supplied | Confirms whether generated audio cues are required for V1 acceptance. |"
+    },
+    {
+      "cells": [
+        "Progression scope",
+        "Not supplied",
+        "Confirms standalone race quality first or city-progression integration before V1 sign-off."
+      ],
+      "line": 61,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Progression scope | Not supplied | Confirms standalone race quality first or city-progression integration before V1 sign-off. |"
+    },
+    {
+      "cells": [
+        "Mobile performance target device/profile",
+        "Not supplied",
+        "Required before mobile performance evidence can be judged as representative."
+      ],
+      "line": 62,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Mobile performance target device/profile | Not supplied | Required before mobile performance evidence can be judged as representative. |"
+    },
+    {
+      "cells": [
+        "Item naming/IP direction",
+        "Not supplied",
+        "Determines whether shell/star/banana/oil terminology must be renamed or re-skinned before sign-off."
+      ],
+      "line": 63,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Item naming/IP direction | Not supplied | Determines whether shell/star/banana/oil terminology must be renamed or re-skinned before sign-off. |"
+    },
+    {
+      "cells": [
+        "Race-disable activation policy",
+        "Not supplied",
+        "Determines whether production recovery uses `VITE_RACE_DISABLED=true`, rollback-only recovery, or another release-owner-approved path."
+      ],
+      "line": 64,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Race-disable activation policy | Not supplied | Determines whether production recovery uses `VITE_RACE_DISABLED=true`, rollback-only recovery, or another release-owner-approved path. |"
+    },
+    {
+      "cells": [
+        "Source-map/debug/test-hook policy",
+        "Not supplied",
+        "Determines whether production source maps stay disabled and whether protected monitoring upload is required. Local standard-build evidence now records no shipped playtest/debug route strings or diagnostic telemetry globals."
+      ],
+      "line": 65,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Source-map/debug/test-hook policy | Not supplied | Determines whether production source maps stay disabled and whether protected monitoring upload is required. Local standard-build evidence now records no shipped playtest/debug route strings or diagnostic telemetry globals. |"
+    },
+    {
+      "cells": [
+        "Production dependency audit policy",
+        "Not supplied",
+        "Determines whether `npm audit --omit=dev` is accepted as production dependency evidence and whether the remaining full-audit Vite/esbuild/vite-plugin-pwa dev/build-tool advisories get a semver-major upgrade now or a dated release-owner exception."
+      ],
+      "line": 66,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Production dependency audit policy | Not supplied | Determines whether `npm audit --omit=dev` is accepted as production dependency evidence and whether the remaining full-audit Vite/esbuild/vite-plugin-pwa dev/build-tool advisories get a semver-major upgrade now or a dated release-owner exception. |"
+    },
+    {
+      "cells": [
+        "Clean/dirty deploy and checklist acceptance",
+        "Not supplied",
+        "Determines whether the dirty local RC checklist evidence can be used for a release candidate, whether production deploys require a clean branch, and whether CI or a manual checklist is the release gate."
+      ],
+      "line": 67,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Clean/dirty deploy and checklist acceptance | Not supplied | Determines whether the dirty local RC checklist evidence can be used for a release candidate, whether production deploys require a clean branch, and whether CI or a manual checklist is the release gate. |"
+    },
+    {
+      "cells": [
+        "Launch owner and rollback owner",
+        "Not supplied",
+        "Required before preview/prod deploy, rollback drill, and race-disable/recovery evidence can close."
+      ],
+      "line": 68,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Launch owner and rollback owner | Not supplied | Required before preview/prod deploy, rollback drill, and race-disable/recovery evidence can close. |"
+    },
+    {
+      "cells": [
+        "Cloudflare sync/D1 production scope",
+        "Not supplied",
+        "Determines whether `/api/sync/**`, D1 migration, Access JWT, backups, and data rollback compatibility must pass production-like URL smoke with owner-supplied `API_DATA_SMOKE_URL` and `API_DATA_SMOKE_JWT`."
+      ],
+      "line": 69,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Cloudflare sync/D1 production scope | Not supplied | Determines whether `/api/sync/**`, D1 migration, Access JWT, backups, and data rollback compatibility must pass production-like URL smoke with owner-supplied `API_DATA_SMOKE_URL` and `API_DATA_SMOKE_JWT`. |"
+    },
+    {
+      "cells": [
+        "FatSecret/barcode production scope",
+        "Not supplied",
+        "Determines whether `/api/fatsecret/**`, FatSecret secrets, scanner/camera UX, `Permissions-Policy: camera=()`, and owner-approved live `API_DATA_SMOKE_FATSECRET_LIVE_QUERY` smoke need production sign-off or explicit scoping out."
+      ],
+      "line": 70,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| FatSecret/barcode production scope | Not supplied | Determines whether `/api/fatsecret/**`, FatSecret secrets, scanner/camera UX, `Permissions-Policy: camera=()`, and owner-approved live `API_DATA_SMOKE_FATSECRET_LIVE_QUERY` smoke need production sign-off or explicit scoping out. |"
+    },
+    {
+      "cells": [
+        "Telemetry/log retention owner",
+        "Not supplied",
+        "Required before sync/API/race logs and support workflows can be considered privacy-safe."
+      ],
+      "line": 71,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Telemetry/log retention owner | Not supplied | Required before sync/API/race logs and support workflows can be considered privacy-safe. |"
+    },
+    {
+      "cells": [
+        "Accessibility reviewer and target device/browser set",
+        "Not supplied",
+        "Required before the local accessibility smoke can become production accessibility sign-off."
+      ],
+      "line": 72,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Accessibility reviewer and target device/browser set | Not supplied | Required before the local accessibility smoke can become production accessibility sign-off. |"
+    },
+    {
+      "cells": [
+        "Target reference path or URL",
+        "Not supplied"
+      ],
+      "line": 80,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Target reference path or URL | Not supplied |"
+    },
+    {
+      "cells": [
+        "Reference owner/source/license",
+        "Not supplied"
+      ],
+      "line": 81,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Reference owner/source/license | Not supplied |"
+    },
+    {
+      "cells": [
+        "Review is composition-only, not production art",
+        "Not supplied"
+      ],
+      "line": 82,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Review is composition-only, not production art | Not supplied |"
+    },
+    {
+      "cells": [
+        "Target viewport",
+        "Not supplied"
+      ],
+      "line": 83,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Target viewport | Not supplied |"
+    },
+    {
+      "cells": [
+        "Kart height target",
+        "Not supplied"
+      ],
+      "line": 84,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Kart height target | Not supplied |"
+    },
+    {
+      "cells": [
+        "Kart bottom/center placement target",
+        "Not supplied"
+      ],
+      "line": 85,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Kart bottom/center placement target | Not supplied |"
+    },
+    {
+      "cells": [
+        "Horizon placement target",
+        "Not supplied"
+      ],
+      "line": 86,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Horizon placement target | Not supplied |"
+    },
+    {
+      "cells": [
+        "Road-ahead visibility target",
+        "Not supplied"
+      ],
+      "line": 87,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Road-ahead visibility target | Not supplied |"
+    },
+    {
+      "cells": [
+        "Foreground density notes",
+        "Not supplied"
+      ],
+      "line": 88,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Foreground density notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "Midground density notes",
+        "Not supplied"
+      ],
+      "line": 89,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Midground density notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "Background density notes",
+        "Not supplied"
+      ],
+      "line": 90,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Background density notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "HUD placement notes",
+        "Not supplied"
+      ],
+      "line": 91,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| HUD placement notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "Color/lighting notes",
+        "Not supplied"
+      ],
+      "line": 92,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Color/lighting notes | Not supplied |"
+    },
+    {
+      "cells": [
+        "IP restrictions beyond PRD",
+        "Not supplied"
+      ],
+      "line": 93,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| IP restrictions beyond PRD | Not supplied |"
+    },
+    {
+      "cells": [
+        "Desktop-first, mobile-first, or equal priority",
+        "Not supplied"
+      ],
+      "line": 99,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Desktop-first, mobile-first, or equal priority | Not supplied |"
+    },
+    {
+      "cells": [
+        "V1 vehicle modes",
+        "Not supplied"
+      ],
+      "line": 100,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| V1 vehicle modes | Not supplied |"
+    },
+    {
+      "cells": [
+        "V1 item set required",
+        "Not supplied"
+      ],
+      "line": 101,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| V1 item set required | Not supplied |"
+    },
+    {
+      "cells": [
+        "V1 audio required",
+        "Not supplied"
+      ],
+      "line": 102,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| V1 audio required | Not supplied |"
+    },
+    {
+      "cells": [
+        "V1 progression integration required",
+        "Not supplied"
+      ],
+      "line": 103,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| V1 progression integration required | Not supplied |"
+    },
+    {
+      "cells": [
+        "Minimum mobile device/profile",
+        "Not supplied"
+      ],
+      "line": 104,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Minimum mobile device/profile | Not supplied |"
+    },
+    {
+      "cells": [
+        "Required manual reviewers",
+        "Not supplied"
+      ],
+      "line": 105,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Required manual reviewers | Not supplied |"
+    },
+    {
+      "cells": [
+        "`Guard Shell` name acceptable?",
+        "Not supplied"
+      ],
+      "line": 111,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| `Guard Shell` name acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "`Star Shield` name acceptable?",
+        "Not supplied"
+      ],
+      "line": 112,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| `Star Shield` name acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "`Banana Magnet` and banana pickups acceptable?",
+        "Not supplied"
+      ],
+      "line": 113,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| `Banana Magnet` and banana pickups acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "`Oil Slick` acceptable?",
+        "Not supplied"
+      ],
+      "line": 114,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| `Oil Slick` acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Feedback cue ids with `star` terminology acceptable?",
+        "Not supplied"
+      ],
+      "line": 115,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Feedback cue ids with `star` terminology acceptable? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Current binary assets under `src/assets/game/**` have confirmed provenance?",
+        "Not supplied"
+      ],
+      "line": 116,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Current binary assets under `src/assets/game/**` have confirmed provenance? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Reference-derived plaza measurement data is acceptable for product scope?",
+        "Not supplied"
+      ],
+      "line": 117,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Reference-derived plaza measurement data is acceptable for product scope? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Current screenshots/captures pass protected-similarity review?",
+        "Not supplied"
+      ],
+      "line": 118,
+      "path": "docs/race-owner-review-packet.md",
+      "raw": "| Current screenshots/captures pass protected-similarity review? | Not supplied |"
+    },
+    {
+      "cells": [
+        "Approved visual composition target",
+        "Camera, kart size, horizon, art density, HUD, and first impression require it.",
+        "Not supplied"
+      ],
+      "line": 328,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Approved visual composition target | Camera, kart size, horizon, art density, HUD, and first impression require it. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Desktop-first, mobile-first, or equal priority",
+        "Performance and camera tradeoffs differ by target.",
+        "Not supplied"
+      ],
+      "line": 329,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Desktop-first, mobile-first, or equal priority | Performance and camera tradeoffs differ by target. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Minimum desktop device/browser",
+        "FPS acceptance must map to actual hardware.",
+        "Not supplied"
+      ],
+      "line": 330,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Minimum desktop device/browser | FPS acceptance must map to actual hardware. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Minimum mobile device/browser",
+        "Touch and WebGL acceptance must map to actual hardware.",
+        "Not supplied"
+      ],
+      "line": 331,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Minimum mobile device/browser | Touch and WebGL acceptance must map to actual hardware. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Kart-only V1 or retained hover/plane modes",
+        "Scope affects controls, QA, route design, and bug surface.",
+        "Not supplied"
+      ],
+      "line": 332,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Kart-only V1 or retained hover/plane modes | Scope affects controls, QA, route design, and bug surface. | Not supplied |"
+    },
+    {
+      "cells": [
+        "V1 item/audio scope",
+        "Production claims change if items/audio are staged out.",
+        "Not supplied"
+      ],
+      "line": 333,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| V1 item/audio scope | Production claims change if items/audio are staged out. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Standalone race or city-progression integration",
+        "Release smoke and product metrics differ.",
+        "Not supplied"
+      ],
+      "line": 334,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Standalone race or city-progression integration | Release smoke and product metrics differ. | Not supplied |"
+    },
+    {
+      "cells": [
+        "HUD direction",
+        "Determines design sign-off and visual test thresholds.",
+        "Not supplied"
+      ],
+      "line": 335,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| HUD direction | Determines design sign-off and visual test thresholds. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Production Cloudflare Pages project/domain",
+        "Deploy and rollback proof require a target.",
+        "Not supplied"
+      ],
+      "line": 336,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Production Cloudflare Pages project/domain | Deploy and rollback proof require a target. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Monitoring/error provider or explicit no-provider risk acceptance",
+        "Production support needs an observable failure path.",
+        "Not supplied"
+      ],
+      "line": 337,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Monitoring/error provider or explicit no-provider risk acceptance | Production support needs an observable failure path. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Analytics/privacy posture for race metrics",
+        "Race metrics must include only approved, privacy-safe fields.",
+        "Not supplied"
+      ],
+      "line": 338,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Analytics/privacy posture for race metrics | Race metrics must include only approved, privacy-safe fields. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Sync/cloud API production scope",
+        "Pages Functions, D1, backups, and Cloudflare Access checks differ if sync is in scope.",
+        "Not supplied"
+      ],
+      "line": 339,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Sync/cloud API production scope | Pages Functions, D1, backups, and Cloudflare Access checks differ if sync is in scope. | Not supplied |"
+    },
+    {
+      "cells": [
+        "FatSecret and barcode scanner production scope",
+        "API secrets, external nutrition requests, and camera permissions differ if food scanning/search is in scope.",
+        "Not supplied"
+      ],
+      "line": 340,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| FatSecret and barcode scanner production scope | API secrets, external nutrition requests, and camera permissions differ if food scanning/search is in scope. | Not supplied |"
+    },
+    {
+      "cells": [
+        "CI versus manual release gates",
+        "Release evidence differs if checks run in CI or from a local release checklist.",
+        "Not supplied"
+      ],
+      "line": 341,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| CI versus manual release gates | Release evidence differs if checks run in CI or from a local release checklist. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Race disable or kill-switch policy",
+        "Production recovery differs if rollback is the only mitigation versus a rebuild/redeploy race disable control. Local technical flag evidence exists at `.agent/runs/kart-racer-production-readiness/evidence/race-disable-001-20260523T200640Z/`, but release-owner activation policy is still required.",
+        "Not supplied"
+      ],
+      "line": 342,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Race disable or kill-switch policy | Production recovery differs if rollback is the only mitigation versus a rebuild/redeploy race disable control. Local technical flag evidence exists at `.agent/runs/kart-racer-production-readiness/evidence/race-disable-001-20260523T200640Z/`, but release-owner activation policy is still required. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Clean production deploy policy",
+        "Existing scripts allow dirty deploys; release owner must define allowed production deploy state.",
+        "Not supplied"
+      ],
+      "line": 343,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Clean production deploy policy | Existing scripts allow dirty deploys; release owner must define allowed production deploy state. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Web Vitals/Lighthouse target",
+        "Production page-quality acceptance requires agreed targets or explicit exception.",
+        "Not supplied"
+      ],
+      "line": 344,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Web Vitals/Lighthouse target | Production page-quality acceptance requires agreed targets or explicit exception. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Telemetry retention and log redaction owner",
+        "Race and tracker logs need a privacy-safe retention/redaction policy.",
+        "Not supplied"
+      ],
+      "line": 345,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Telemetry retention and log redaction owner | Race and tracker logs need a privacy-safe retention/redaction policy. | Not supplied |"
+    },
+    {
+      "cells": [
+        "IP/provenance reviewer",
+        "Legal/design sign-off must have an owner.",
+        "Not supplied"
+      ],
+      "line": 346,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| IP/provenance reviewer | Legal/design sign-off must have an owner. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Manual QA tester and fresh-user reviewer",
+        "Implementer-only review is not enough.",
+        "Not supplied"
+      ],
+      "line": 347,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Manual QA tester and fresh-user reviewer | Implementer-only review is not enough. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Launch owner and rollback owner",
+        "Release operations need accountable humans.",
+        "Not supplied"
+      ],
+      "line": 348,
+      "path": "docs/comeback-city-kart-racer-production-readiness-plan.md",
+      "raw": "| Launch owner and rollback owner | Release operations need accountable humans. | Not supplied |"
+    },
+    {
+      "cells": [
+        "Release owner",
+        "Not supplied"
+      ],
+      "line": 15,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Release owner | Not supplied |"
+    },
+    {
+      "cells": [
+        "Rollback owner",
+        "Not supplied"
+      ],
+      "line": 16,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Rollback owner | Not supplied |"
+    },
+    {
+      "cells": [
+        "Production Cloudflare Pages project",
+        "Not supplied"
+      ],
+      "line": 17,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Production Cloudflare Pages project | Not supplied |"
+    },
+    {
+      "cells": [
+        "Production URL/domain",
+        "Not supplied"
+      ],
+      "line": 18,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Production URL/domain | Not supplied |"
+    },
+    {
+      "cells": [
+        "Preview branch/project policy",
+        "Not supplied"
+      ],
+      "line": 19,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Preview branch/project policy | Not supplied |"
+    },
+    {
+      "cells": [
+        "Clean deploy policy",
+        "Not supplied"
+      ],
+      "line": 20,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Clean deploy policy | Not supplied |"
+    },
+    {
+      "cells": [
+        "Race-disable activation policy",
+        "Not supplied"
+      ],
+      "line": 22,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Race-disable activation policy | Not supplied |"
+    },
+    {
+      "cells": [
+        "API smoke URL/JWT/live FatSecret approval, if sync/FatSecret ship",
+        "Not supplied"
+      ],
+      "line": 23,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| API smoke URL/JWT/live FatSecret approval, if sync/FatSecret ship | Not supplied |"
+    },
+    {
+      "cells": [
+        "Monitoring provider or accepted no-monitoring risk",
+        "Not supplied"
+      ],
+      "line": 24,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Monitoring provider or accepted no-monitoring risk | Not supplied |"
+    },
+    {
+      "cells": [
+        "Support contact/path",
+        "Not supplied"
+      ],
+      "line": 25,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Support contact/path | Not supplied |"
+    },
+    {
+      "cells": [
+        "Post-launch monitoring window",
+        "Not supplied"
+      ],
+      "line": 26,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Post-launch monitoring window | Not supplied |"
+    },
+    {
+      "cells": [
+        "Bundle/asset budget threshold or exception",
+        "Not supplied"
+      ],
+      "line": 27,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Bundle/asset budget threshold or exception | Not supplied |"
+    },
+    {
+      "cells": [
+        "Source-map/debug/test-hook policy",
+        "Not supplied"
+      ],
+      "line": 28,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Source-map/debug/test-hook policy | Not supplied |"
+    },
+    {
+      "cells": [
+        "Accessibility target-browser/device reviewer or exception",
+        "Not supplied"
+      ],
+      "line": 29,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Accessibility target-browser/device reviewer or exception | Not supplied |"
+    },
+    {
+      "cells": [
+        "Vite/esbuild advisory decision",
+        "Not supplied"
+      ],
+      "line": 30,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Vite/esbuild advisory decision | Not supplied |"
+    },
+    {
+      "cells": [
+        "Production dependency audit split acceptance",
+        "Not supplied"
+      ],
+      "line": 31,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Production dependency audit split acceptance | Not supplied |"
+    },
+    {
+      "cells": [
+        "Preview URL",
+        "Not supplied"
+      ],
+      "line": 236,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Preview URL | Not supplied |"
+    },
+    {
+      "cells": [
+        "Deployment ID",
+        "Not supplied"
+      ],
+      "line": 237,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Deployment ID | Not supplied |"
+    },
+    {
+      "cells": [
+        "Commit SHA",
+        "Not supplied"
+      ],
+      "line": 238,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Commit SHA | Not supplied |"
+    },
+    {
+      "cells": [
+        "App home loads",
+        "Not supplied"
+      ],
+      "line": 239,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| App home loads | Not supplied |"
+    },
+    {
+      "cells": [
+        "`/#race` loads",
+        "Not supplied"
+      ],
+      "line": 240,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| `/#race` loads | Not supplied |"
+    },
+    {
+      "cells": [
+        "Race starts and canvas is nonblank",
+        "Not supplied"
+      ],
+      "line": 241,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Race starts and canvas is nonblank | Not supplied |"
+    },
+    {
+      "cells": [
+        "Desktop keyboard acceleration works",
+        "Not supplied"
+      ],
+      "line": 242,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Desktop keyboard acceleration works | Not supplied |"
+    },
+    {
+      "cells": [
+        "Mobile viewport controls render",
+        "Not supplied"
+      ],
+      "line": 243,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Mobile viewport controls render | Not supplied |"
+    },
+    {
+      "cells": [
+        "WebGL fallback or context-loss path remains navigable",
+        "Not supplied"
+      ],
+      "line": 244,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| WebGL fallback or context-loss path remains navigable | Not supplied |"
+    },
+    {
+      "cells": [
+        "Core tracker smoke passes on preview",
+        "Not supplied"
+      ],
+      "line": 245,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Core tracker smoke passes on preview | Not supplied |"
+    },
+    {
+      "cells": [
+        "In-scope API smoke passes on preview or is scoped out",
+        "Not supplied"
+      ],
+      "line": 246,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| In-scope API smoke passes on preview or is scoped out | Not supplied |"
+    },
+    {
+      "cells": [
+        "`_headers`/CSP/Permissions-Policy/cache headers match release scope",
+        "Not supplied"
+      ],
+      "line": 247,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| `_headers`/CSP/Permissions-Policy/cache headers match release scope | Not supplied |"
+    },
+    {
+      "cells": [
+        "Console P0 error count is zero",
+        "Not supplied"
+      ],
+      "line": 248,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Console P0 error count is zero | Not supplied |"
+    },
+    {
+      "cells": [
+        "Service worker and manifest responses are sane",
+        "Not supplied"
+      ],
+      "line": 249,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Service worker and manifest responses are sane | Not supplied |"
+    },
+    {
+      "cells": [
+        "Production URL",
+        "Not supplied"
+      ],
+      "line": 255,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Production URL | Not supplied |"
+    },
+    {
+      "cells": [
+        "Deployment ID",
+        "Not supplied"
+      ],
+      "line": 256,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Deployment ID | Not supplied |"
+    },
+    {
+      "cells": [
+        "Commit SHA",
+        "Not supplied"
+      ],
+      "line": 257,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Commit SHA | Not supplied |"
+    },
+    {
+      "cells": [
+        "Fresh profile app load",
+        "Not supplied"
+      ],
+      "line": 258,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Fresh profile app load | Not supplied |"
+    },
+    {
+      "cells": [
+        "`/#race` first-lap smoke",
+        "Not supplied"
+      ],
+      "line": 259,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| `/#race` first-lap smoke | Not supplied |"
+    },
+    {
+      "cells": [
+        "Desktop smoke",
+        "Not supplied"
+      ],
+      "line": 260,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Desktop smoke | Not supplied |"
+    },
+    {
+      "cells": [
+        "Mobile smoke",
+        "Not supplied"
+      ],
+      "line": 261,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Mobile smoke | Not supplied |"
+    },
+    {
+      "cells": [
+        "Core tracker smoke",
+        "Not supplied"
+      ],
+      "line": 262,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Core tracker smoke | Not supplied |"
+    },
+    {
+      "cells": [
+        "In-scope API smoke or scope exception",
+        "Not supplied"
+      ],
+      "line": 263,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| In-scope API smoke or scope exception | Not supplied |"
+    },
+    {
+      "cells": [
+        "Monitoring/version signal, if enabled",
+        "Not supplied"
+      ],
+      "line": 265,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Monitoring/version signal, if enabled | Not supplied |"
+    },
+    {
+      "cells": [
+        "Rollback target identified",
+        "Not supplied"
+      ],
+      "line": 266,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Rollback target identified | Not supplied |"
+    },
+    {
+      "cells": [
+        "Race disable/recovery path identified",
+        "Not supplied"
+      ],
+      "line": 267,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Race disable/recovery path identified | Not supplied |"
+    },
+    {
+      "cells": [
+        "App load errors",
+        "Not supplied",
+        "Missing"
+      ],
+      "line": 300,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| App load errors | Not supplied | Missing |"
+    },
+    {
+      "cells": [
+        "Race route load errors",
+        "Not supplied",
+        "Missing"
+      ],
+      "line": 301,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Race route load errors | Not supplied | Missing |"
+    },
+    {
+      "cells": [
+        "Pages Functions errors",
+        "Not supplied",
+        "Missing"
+      ],
+      "line": 303,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Pages Functions errors | Not supplied | Missing |"
+    },
+    {
+      "cells": [
+        "Manual support reports",
+        "Not supplied",
+        "Missing"
+      ],
+      "line": 311,
+      "path": "docs/race-release-operations-runbook.md",
+      "raw": "| Manual support reports | Not supplied | Missing |"
+    },
+    {
+      "cells": [
+        "Target screenshot/capture",
+        "Not supplied",
+        "Required before this brief can be approved."
+      ],
+      "line": 17,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Target screenshot/capture | Not supplied | Required before this brief can be approved. |"
+    },
+    {
+      "cells": [
+        "Reference source/license",
+        "Not supplied",
+        "Must be safe for composition reference and not copied as production art."
+      ],
+      "line": 18,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Reference source/license | Not supplied | Must be safe for composition reference and not copied as production art. |"
+    },
+    {
+      "cells": [
+        "Target viewport",
+        "Not supplied",
+        "Specify desktop, mobile, or both."
+      ],
+      "line": 19,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Target viewport | Not supplied | Specify desktop, mobile, or both. |"
+    },
+    {
+      "cells": [
+        "Desired kart screen size",
+        "Not supplied",
+        "PRD desktop normal range is `14%`-`24%` viewport height; mobile range is `16%`-`28%`."
+      ],
+      "line": 20,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Desired kart screen size | Not supplied | PRD desktop normal range is `14%`-`24%` viewport height; mobile range is `16%`-`28%`. |"
+    },
+    {
+      "cells": [
+        "Horizon placement",
+        "Not supplied",
+        "PRD desktop target is usually `35%`-`48%` from top."
+      ],
+      "line": 21,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Horizon placement | Not supplied | PRD desktop target is usually `35%`-`48%` from top. |"
+    },
+    {
+      "cells": [
+        "Road visibility",
+        "Not supplied",
+        "PRD road-ahead target is at least `45%` lower/middle viewport coverage."
+      ],
+      "line": 22,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Road visibility | Not supplied | PRD road-ahead target is at least `45%` lower/middle viewport coverage. |"
+    },
+    {
+      "cells": [
+        "Object density",
+        "Not supplied",
+        "Define expected foreground, midground, and background density from the target."
+      ],
+      "line": 23,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Object density | Not supplied | Define expected foreground, midground, and background density from the target. |"
+    },
+    {
+      "cells": [
+        "HUD placement",
+        "Not supplied",
+        "Must preserve route, apex, item box, and kart visibility."
+      ],
+      "line": 24,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| HUD placement | Not supplied | Must preserve route, apex, item box, and kart visibility. |"
+    },
+    {
+      "cells": [
+        "Color and lighting notes",
+        "Not supplied",
+        "Must stay original to Comeback City."
+      ],
+      "line": 25,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Color and lighting notes | Not supplied | Must stay original to Comeback City. |"
+    },
+    {
+      "cells": [
+        "Desktop/mobile priority",
+        "Not supplied",
+        "Needed before camera and performance tuning tradeoffs."
+      ],
+      "line": 26,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Desktop/mobile priority | Not supplied | Needed before camera and performance tuning tradeoffs. |"
+    },
+    {
+      "cells": [
+        "V1 vehicle scope",
+        "Not supplied",
+        "Confirm kart-only V1 or retained hover/plane modes."
+      ],
+      "line": 27,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| V1 vehicle scope | Not supplied | Confirm kart-only V1 or retained hover/plane modes. |"
+    },
+    {
+      "cells": [
+        "Item/audio scope",
+        "Not supplied",
+        "Confirm whether items and audio are required in the first quality pass."
+      ],
+      "line": 28,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Item/audio scope | Not supplied | Confirm whether items and audio are required in the first quality pass. |"
+    },
+    {
+      "cells": [
+        "Progression scope",
+        "Not supplied",
+        "Confirm standalone race first or city-progression integration first."
+      ],
+      "line": 29,
+      "path": "docs/race-visual-target-brief.md",
+      "raw": "| Progression scope | Not supplied | Confirm standalone race first or city-progression integration first. |"
+    }
+  ],
+  "notSuppliedRowsByFile": {
+    "docs/race-v1-definition-of-done-checklist.md": 0,
+    "docs/race-manual-qa-rubric.md": 0,
+    "docs/race-owner-review-packet.md": 51,
+    "docs/comeback-city-kart-racer-production-readiness-plan.md": 21,
+    "docs/race-release-operations-runbook.md": 46,
+    "docs/race-visual-target-brief.md": 13
+  },
+  "p0": [
+    {
+      "acceptance": "Approved visual target and owner decisions are filled in the visual target brief.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-visual-target-brief.md"
+        },
+        {
+          "exists": true,
+          "path": "docs/race-owner-review-packet.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-policy-audit-001-20260524T031952Z/release-decision-readiness-summary.json"
+        }
+      ],
+      "id": "owner-target-locked",
+      "level": "P0",
+      "notes": "The visual target brief and owner packet still contain Not supplied rows.",
+      "status": "Blocked - owner input required"
+    },
+    {
+      "acceptance": "Every DoD traceability row is Proven.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-v1-definition-of-done-checklist.md"
+        }
+      ],
+      "id": "v1-dod-proven",
+      "level": "P0",
+      "notes": "11 DoD rows are not Proven-like. Exact row status values are preserved in dodStatus.",
+      "status": "Blocked - DoD rows not Proven"
+    },
+    {
+      "acceptance": "Agreed desktop target is met in sustained and focused race evidence.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/perf-023-kept-far-range-summary.json"
+        }
+      ],
+      "id": "desktop-performance",
+      "level": "P0",
+      "notes": "Latest kept evidence reports 36.72 focused desktop actual FPS and 17.79 sustained actual FPS, below local 45 and PRD 55 targets.",
+      "status": "Failing - below performance target"
+    },
+    {
+      "acceptance": "Manual touch playthrough passes on agreed mobile target.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-manual-qa-rubric.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-telemetry-hardening-001-20260524T111734Z/accessibility-smoke-summary.json"
+        }
+      ],
+      "id": "mobile-playability",
+      "level": "P0",
+      "notes": "Local touch acceleration is proven, but a human mobile touch playthrough has not been run.",
+      "status": "Missing - manual QA required"
+    },
+    {
+      "acceptance": "Every rubric category scores 4+.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-manual-qa-rubric.md"
+        }
+      ],
+      "id": "manual-qa",
+      "level": "P0",
+      "notes": "10 rubric rows do not have a numeric score of 4 or 5.",
+      "status": "Missing - manual QA required"
+    },
+    {
+      "acceptance": "Fresh user describes the 10 second clip as a race or kart race.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-manual-qa-rubric.md"
+        }
+      ],
+      "id": "fresh-user-read",
+      "level": "P0",
+      "notes": "No fresh-user reviewer, clip, answer, or dated result is recorded.",
+      "status": "Missing - fresh-user result required"
+    },
+    {
+      "acceptance": "Assets, names, audio, and references are approved or removed.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-ip-provenance-audit.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-policy-audit-001-20260524T031952Z/release-decision-readiness-summary.json"
+        }
+      ],
+      "id": "ip-provenance",
+      "level": "P0",
+      "notes": "Current audit exists, but owner/legal/design sign-off is not supplied.",
+      "status": "Blocked - owner input required"
+    },
+    {
+      "acceptance": "First 30 seconds, camera, track, density, HUD, and feedback are signed off.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-first-30-seconds-vertical-slice-plan.md"
+        },
+        {
+          "exists": true,
+          "path": "docs/race-visual-target-brief.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-policy-audit-001-20260524T031952Z/release-decision-readiness-summary.json"
+        }
+      ],
+      "id": "product-design",
+      "level": "P0",
+      "notes": "Local screenshots/telemetry exist, but approved visual target and design sign-off are not supplied.",
+      "status": "Blocked - owner input required"
+    },
+    {
+      "acceptance": "Build, race, browser, hub, and visual commands pass.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/rc-local-checklist-001-20260524T013026Z/"
+        }
+      ],
+      "id": "build-and-tests",
+      "level": "P0",
+      "notes": "Latest local RC checklist records passing commands, but it is not deploy approval.",
+      "status": "Proven"
+    },
+    {
+      "acceptance": "Core tracker smoke passes after race changes.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/core-tracker-001-20260523T204431Z/"
+        }
+      ],
+      "id": "core-tracker-regression",
+      "level": "P0",
+      "notes": "Local core tracker smoke is recorded.",
+      "status": "Proven"
+    },
+    {
+      "acceptance": "Local/cloud migration, backup/restore, conflict handling, and rollback compatibility are proven or scoped out.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/api-data-url-smoke-001-20260524T095257Z/"
+        }
+      ],
+      "id": "data-safety",
+      "level": "P0",
+      "notes": "Local same-schema D1 backup restore is proven; production binding scope and rollback compatibility are not supplied.",
+      "status": "Partial - production scope/evidence required"
+    },
+    {
+      "acceptance": "In-scope Functions, D1, Access JWT, backup endpoints, FatSecret, and external API states pass production-like smoke.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/api-data-url-smoke-001-20260524T095257Z/"
+        }
+      ],
+      "id": "functions-api-safety",
+      "level": "P0",
+      "notes": "Local mocked smoke exists; production-like binding evidence or explicit scope-out decision is missing.",
+      "status": "Partial - production scope/evidence required"
+    },
+    {
+      "acceptance": "CSP, cache headers, Permissions-Policy, and camera/autoplay requirements match production scope.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z/"
+        }
+      ],
+      "id": "header-permission-safety",
+      "level": "P0",
+      "notes": "Local built-app header smoke is proven; barcode/camera scope and deployed headers are not supplied.",
+      "status": "Partial - production scope/evidence required"
+    },
+    {
+      "acceptance": "Cloudflare project/domain/branch policy is confirmed.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-release-operations-runbook.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-policy-audit-001-20260524T031952Z/release-decision-readiness-summary.json"
+        }
+      ],
+      "id": "production-target",
+      "level": "P0",
+      "notes": "Production Cloudflare Pages project/domain is Not supplied.",
+      "status": "Blocked - owner input required"
+    },
+    {
+      "acceptance": "Preview deployment passes race and app smoke checks.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-release-operations-runbook.md"
+        }
+      ],
+      "id": "preview-smoke",
+      "level": "P0",
+      "notes": "Preview URL, deployment ID, and smoke results are Not supplied.",
+      "status": "Missing - deployed evidence required"
+    },
+    {
+      "acceptance": "Production deployment passes race and app smoke checks.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-release-operations-runbook.md"
+        }
+      ],
+      "id": "production-smoke",
+      "level": "P0",
+      "notes": "Production URL, deployment ID, and smoke results are Not supplied.",
+      "status": "Missing - deployed evidence required"
+    },
+    {
+      "acceptance": "Rollback target and steps are proven or rehearsed on a safe production deployment.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-telemetry-hardening-001-20260524T111734Z/release-rollback-smoke-summary.json"
+        }
+      ],
+      "id": "rollback-drill",
+      "level": "P0",
+      "notes": "Local rollback drill is proven; Cloudflare rollback target, approval, and production smoke are missing.",
+      "status": "Partial - production scope/evidence required"
+    },
+    {
+      "acceptance": "Release owner can bypass, hide, disable, or roll back /#race quickly.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/race-disable-001-20260523T200640Z/"
+        },
+        {
+          "exists": true,
+          "path": "docs/race-disable-recovery-runbook.md"
+        }
+      ],
+      "id": "race-disable-recovery-control",
+      "level": "P0",
+      "notes": "Local technical flag is proven; production activation policy and project owner are not supplied.",
+      "status": "Partial - production scope/evidence required"
+    },
+    {
+      "acceptance": "Security headers, dependency audit, artifact safety, data handling, and telemetry privacy are reviewed.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/csp-headers-001-20260523T233058Z/"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-telemetry-hardening-001-20260524T111734Z/release-artifact-safety-report.json"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-telemetry-hardening-001-20260524T111734Z/validation-summary.json"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/security-prod-audit-001-20260524T012143Z/security-production-audit-summary.json"
+        }
+      ],
+      "id": "security-privacy",
+      "level": "P0",
+      "notes": "Production dependency audit passes and standard production artifact safety is locally proven with no shipped diagnostic telemetry globals; full dev/build-tool advisory, data-handling privacy posture, deployed-header/security validation, and production sign-off remain missing.",
+      "status": "Partial - owner policy required"
+    },
+    {
+      "acceptance": "Reduced motion, mute, keyboard, touch, focus, and contrast gates pass.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-telemetry-hardening-001-20260524T111734Z/accessibility-smoke-summary.json"
+        }
+      ],
+      "id": "accessibility",
+      "level": "P0",
+      "notes": "Local accessibility smoke passes; manual target-browser/device sign-off is missing.",
+      "status": "Partial - manual sign-off required"
+    },
+    {
+      "acceptance": "Error, performance, race metric, and incident path is active or accepted as unsupported risk.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/monitoring-support-001-20260524T025102Z/"
+        },
+        {
+          "exists": true,
+          "path": "docs/race-release-operations-runbook.md"
+        }
+      ],
+      "id": "monitoring-support",
+      "level": "P0",
+      "notes": "Local runbook structure is proven; provider/risk acceptance, support contact, thresholds, deployed signals, and sign-off are missing.",
+      "status": "Partial - owner policy required"
+    }
+  ],
+  "p0Summary": {
+    "byStatus": {
+      "Blocked - owner input required": 4,
+      "Blocked - DoD rows not Proven": 1,
+      "Failing - below performance target": 1,
+      "Missing - manual QA required": 2,
+      "Missing - fresh-user result required": 1,
+      "Proven": 2,
+      "Partial - production scope/evidence required": 5,
+      "Missing - deployed evidence required": 2,
+      "Partial - owner policy required": 2,
+      "Partial - manual sign-off required": 1
+    },
+    "proven": 2,
+    "total": 21
+  },
+  "p1": [
+    {
+      "acceptance": "Chrome, Safari, Firefox, and Edge behavior is checked.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-release-operations-runbook.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/cross-browser-001-20260524T121434Z/cross-browser-smoke-summary.json"
+        }
+      ],
+      "id": "cross-browser-matrix",
+      "level": "P1",
+      "notes": "Local Chrome/Chromium/Firefox/WebKit smoke is recorded; actual Safari, Edge when unavailable, target-device coverage, and release-owner sign-off are still missing.",
+      "status": "Partial - target-browser evidence or exception required"
+    },
+    {
+      "acceptance": "At least one ordinary laptop and one modern phone pass agreed smoke/manual path.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-manual-qa-rubric.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/device-matrix-001-20260524T122649Z/device-matrix-smoke-summary.json"
+        }
+      ],
+      "id": "device-matrix",
+      "level": "P1",
+      "notes": "Local desktop viewport and emulated-phone smoke are recorded; physical laptop, physical phone, human playthrough, and release-owner sign-off are still missing.",
+      "status": "Partial - physical device evidence or exception required"
+    },
+    {
+      "acceptance": "Existing installed app updates cleanly without stale asset breakage.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/pwa-update-001-20260523T234355Z/"
+        }
+      ],
+      "id": "pwa-update",
+      "level": "P1",
+      "notes": "Local installed-app update smoke is proven; production URL and target-device update evidence are missing.",
+      "status": "Partial - production evidence or exception required"
+    },
+    {
+      "acceptance": "Context loss/fallback behavior is tested.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-telemetry-hardening-001-20260524T111734Z/webgl-context-smoke-summary.json"
+        }
+      ],
+      "id": "webgl-context-loss",
+      "level": "P1",
+      "notes": "Local built-preview context-loss proof exists; target-browser/device evidence is missing.",
+      "status": "Partial - target-browser evidence or exception required"
+    },
+    {
+      "acceptance": "Background tab, visibilitychange, pagehide/pageshow, and bfcache return preserve route behavior.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/lifecycle-audio-001-20260523T210212Z/"
+        }
+      ],
+      "id": "page-lifecycle",
+      "level": "P1",
+      "notes": "Local lifecycle smoke is proven; target-browser/device bfcache evidence is missing.",
+      "status": "Partial - target-browser evidence or exception required"
+    },
+    {
+      "acceptance": "Race audio starts after user intent, mute remains available, and blocked autoplay does not break gameplay.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/lifecycle-audio-001-20260523T210212Z/"
+        }
+      ],
+      "id": "web-audio-autoplay",
+      "level": "P1",
+      "notes": "Local blocked-resume and mute behavior are proven.",
+      "status": "Proven"
+    },
+    {
+      "acceptance": "Lighthouse/equivalent records performance, accessibility, best practices, and PWA signals.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/lazy-route-001-20260523T225320Z/"
+        }
+      ],
+      "id": "lighthouse-web-vitals",
+      "level": "P1",
+      "notes": "Local lab report exists; release-owner Web Vitals/Lighthouse targets or exception are missing.",
+      "status": "Partial - owner policy required"
+    },
+    {
+      "acceptance": "_headers policy is verified in deployed response headers.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-release-operations-runbook.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/deployed-headers-001-20260524T123726Z/deployed-headers-smoke-summary.json"
+        }
+      ],
+      "id": "production-cache-headers",
+      "level": "P1",
+      "notes": "Local Cloudflare-style header simulation and URL-capable response-header smoke are recorded; preview/production URL deployed response evidence is still missing.",
+      "status": "Partial - deployed evidence required"
+    },
+    {
+      "acceptance": "Asset and JS bundle sizes are recorded and accepted.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/lazy-route-001-20260523T225320Z/"
+        }
+      ],
+      "id": "bundle-asset-budget",
+      "level": "P1",
+      "notes": "Local bundle report exists; budget threshold/acceptance or exception is missing.",
+      "status": "Partial - owner policy required"
+    },
+    {
+      "acceptance": "Release gates run in CI or owner-approved manual checklist records equivalent evidence.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-release-operations-runbook.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/ci-release-automation-001-20260524T124743Z/ci-release-automation-summary.json"
+        },
+        {
+          "exists": true,
+          "path": ".github/workflows/race-production-gates.yml"
+        }
+      ],
+      "id": "ci-release-automation",
+      "level": "P1",
+      "notes": "GitHub Actions workflow structure and local audit are recorded; actual CI run URL, release-owner CI/manual policy, and dirty-worktree deploy policy remain missing.",
+      "status": "Partial - CI run or owner acceptance required"
+    },
+    {
+      "acceptance": "Standard production artifact has no source maps, debug/playtest files, runtime test hooks, diagnostic telemetry globals, or visual-review route strings, and production query hooks remain disabled.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-telemetry-hardening-001-20260524T111734Z/release-artifact-safety-report.json"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/release-telemetry-hardening-001-20260524T111734Z/validation-summary.json"
+        }
+      ],
+      "id": "source-map-debug-policy",
+      "level": "P1",
+      "notes": "Latest local artifact report records diagnostic telemetry, runtime playtest automation, and visual-review route strings as not detected; release smoke proves the playtest query creates no globals and no query-driven movement.",
+      "status": "Proven"
+    },
+    {
+      "acceptance": "User-facing and operator-facing release notes exist and are approved.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-release-notes-draft-2026-05-23.md"
+        }
+      ],
+      "id": "release-notes",
+      "level": "P1",
+      "notes": "Draft release notes exist; release-owner/product/legal approval is missing.",
+      "status": "Partial - owner approval required"
+    },
+    {
+      "acceptance": "Known issues, recovery steps, and triage paths exist.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-release-operations-runbook.md"
+        },
+        {
+          "exists": true,
+          "path": ".agent/runs/kart-racer-production-readiness/evidence/monitoring-support-001-20260524T025102Z/"
+        }
+      ],
+      "id": "support-runbook",
+      "level": "P1",
+      "notes": "Runbook structure is proven; owner/support/monitoring decisions are missing.",
+      "status": "Partial - owner policy required"
+    },
+    {
+      "acceptance": "Monitoring window and report template exist, then completed launch report is recorded.",
+      "evidence": [
+        {
+          "exists": true,
+          "path": "docs/race-post-launch-report-template.md"
+        }
+      ],
+      "id": "post-launch-review",
+      "level": "P1",
+      "notes": "Template exists; monitoring window and completed launch report are missing.",
+      "status": "Partial - production evidence or exception required"
+    }
+  ],
+  "p1Summary": {
+    "byStatus": {
+      "Partial - target-browser evidence or exception required": 3,
+      "Partial - physical device evidence or exception required": 1,
+      "Partial - production evidence or exception required": 2,
+      "Proven": 2,
+      "Partial - owner policy required": 3,
+      "Partial - deployed evidence required": 1,
+      "Partial - CI run or owner acceptance required": 1,
+      "Partial - owner approval required": 1
+    },
+    "proven": 2,
+    "total": 14
+  },
+  "requiredOwnerQuestions": [
+    "Supply owner/product/design/legal/release decisions now marked Not supplied, or record explicit dated release-owner exceptions where allowed.",
+    "Provide manual QA scores, mobile/desktop playthrough evidence, fresh-user result, and target-browser/device accessibility sign-off.",
+    "Provide preview and production URLs/deployment IDs, smoke results, deployed headers, Cloudflare rollback evidence, monitoring/support activation, and sign-offs.",
+    "Decide production scope for Cloudflare Functions, D1 sync/backups, FatSecret, barcode/camera, telemetry/privacy, source-map/debug/test-hook policy, and dependency-audit split."
+  ]
+}

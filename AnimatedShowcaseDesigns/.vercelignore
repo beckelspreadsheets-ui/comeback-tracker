@@ -1,0 +1,10 @@
+.DS_Store
+.gitignore
+*.md
+verify-*.mjs
+serve-local.mjs
+verification/
+dist/
+deploy-artifacts/
+img/*-mobile.png
+og-image.svg

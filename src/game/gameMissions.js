@@ -67,18 +67,10 @@ export const buildGameMissions = (state, profile) => {
   const calibrationComplete = profile.filledRMs >= calibrationTarget;
   const metricProgress = summarizeMetricProgress(state);
   const recoveryComplete = profile.recoveryShield >= 90;
+  const raceCredits = profile.race?.credits || 0;
+  const raceRewardAvailable = raceCredits > 0;
 
   return [
-    {
-      key: 'calibration',
-      destinationKey: 'lab',
-      title: calibrationComplete ? 'Targets unlocked' : 'Unlock target weights',
-      summary: `${Math.min(profile.filledRMs, calibrationTarget)}/${calibrationTarget} lifts calibrated`,
-      progressPct: calibrationProgress,
-      complete: calibrationComplete,
-      priority: 10,
-      reward: '+40 XP/lift',
-    },
     {
       key: 'course',
       destinationKey: 'gym',
@@ -88,7 +80,7 @@ export const buildGameMissions = (state, profile) => {
         : `${dayProgress.loggedSets}/${dayProgress.prescribedSets} sets logged`,
       progressPct: weekComplete ? 100 : dayProgress.progressPct,
       complete: weekComplete || dayProgress.complete,
-      priority: 20,
+      priority: 10,
       reward: '+35 XP/set',
     },
     {
@@ -98,18 +90,18 @@ export const buildGameMissions = (state, profile) => {
       summary: `${Math.round(todayTotals.p)}/${targets.protein}g protein today`,
       progressPct: fuelComplete ? 100 : fuelProgress,
       complete: fuelComplete,
-      priority: 30,
+      priority: 20,
       reward: '+120 XP/day',
     },
     {
-      key: 'metrics',
-      destinationKey: 'home',
-      title: metricProgress.complete ? 'Body check-in logged' : 'Log weekly body check',
-      summary: `${metricProgress.fieldsLogged}/${metricFields.length} body fields this week`,
-      progressPct: metricProgress.complete ? 100 : metricProgress.progressPct,
-      complete: metricProgress.complete,
-      priority: 40,
-      reward: '+160 XP/week',
+      key: 'calibration',
+      destinationKey: 'lab',
+      title: calibrationComplete ? 'Targets unlocked' : 'Unlock target weights',
+      summary: `${Math.min(profile.filledRMs, calibrationTarget)}/${calibrationTarget} lifts calibrated`,
+      progressPct: calibrationProgress,
+      complete: calibrationComplete,
+      priority: 30,
+      reward: '+40 XP/lift',
     },
     {
       key: 'recovery',
@@ -118,8 +110,28 @@ export const buildGameMissions = (state, profile) => {
       summary: `${profile.recoveryShield}/100 shield`,
       progressPct: profile.recoveryShield,
       complete: recoveryComplete,
-      priority: 50,
+      priority: 40,
       reward: 'Keeps combo safe',
+    },
+    {
+      key: 'metrics',
+      destinationKey: 'home',
+      title: metricProgress.complete ? 'Body check-in logged' : 'Log weekly body check',
+      summary: `${metricProgress.fieldsLogged}/${metricFields.length} body fields this week`,
+      progressPct: metricProgress.complete ? 100 : metricProgress.progressPct,
+      complete: metricProgress.complete,
+      priority: 50,
+      reward: '+160 XP/week',
+    },
+    {
+      key: 'race-reward',
+      destinationKey: 'raceway',
+      title: raceRewardAvailable ? 'Race credits ready' : 'No race payout ready',
+      summary: `${raceCredits} credits available`,
+      progressPct: raceRewardAvailable ? 100 : 0,
+      complete: !raceRewardAvailable,
+      priority: 60,
+      reward: 'Race or upgrade',
     },
   ].sort((a, b) => missionSort(a) - missionSort(b));
 };

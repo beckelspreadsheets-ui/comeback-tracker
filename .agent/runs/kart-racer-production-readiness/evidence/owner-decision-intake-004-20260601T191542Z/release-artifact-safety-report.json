@@ -1,0 +1,74 @@
+{
+  "artifactDir": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/owner-decision-intake-004-20260601T191542Z",
+  "capturedAt": "2026-06-01T19:25:30.435Z",
+  "distDir": "/Users/andrewferguson/Downloads/comeback-tracker/dist",
+  "fileCount": 40,
+  "gateStatus": "technical-artifacts-pass",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c26bcdec19e8175f63a09e490f5400231aa",
+    "dirty": true
+  },
+  "note": "This proves local built dist artifact safety checks only. Standard production dist has no scanned source maps, sourceMappingURL references, standalone playtest/debug files, scanned secret-name leaks, runtime playtest automation strings, diagnostic telemetry globals, or visual review route strings.",
+  "diagnosticTelemetry": {
+    "matches": [],
+    "status": "not-detected"
+  },
+  "playtestRuntimeHooks": {
+    "matches": [],
+    "status": "not-detected"
+  },
+  "runtimePlaytestAutomation": {
+    "matches": [],
+    "status": "not-detected"
+  },
+  "visualReviewRouteStrings": {
+    "matches": [],
+    "status": "not-detected"
+  },
+  "checks": {
+    "noSecretNameOrKnownSecretValueLeaks": true,
+    "noSourceMapFiles": true,
+    "noSourceMappingUrlReferences": true,
+    "noStandalonePlaytestOrDebugFiles": true
+  },
+  "failures": [],
+  "scans": {
+    "diagnosticTelemetryPatterns": [
+      "race visual telemetry global",
+      "race visual telemetry samples global"
+    ],
+    "runtimePlaytestAutomationPatterns": [
+      "race autoplay query flag",
+      "race no-finish query flag",
+      "race visual scenario query flag",
+      "race playtest globals"
+    ],
+    "secretLeakPatterns": [
+      "FatSecret client secret env name",
+      "Cloudflare Access audience env name",
+      "sync user registry env name",
+      "known test FatSecret secret value",
+      "Cloudflare API token env name",
+      "Wrangler API token env name",
+      "private key marker"
+    ],
+    "textFileExtensions": [
+      ".css",
+      ".html",
+      ".js",
+      ".json",
+      ".mjs",
+      ".svg",
+      ".txt",
+      ".webmanifest",
+      ".xml"
+    ],
+    "visualReviewRoutePatterns": [
+      "visual kart route or mode string"
+    ]
+  },
+  "sourceMapFiles": [],
+  "sourceMappingUrlMatches": [],
+  "standaloneDebugFiles": []
+}

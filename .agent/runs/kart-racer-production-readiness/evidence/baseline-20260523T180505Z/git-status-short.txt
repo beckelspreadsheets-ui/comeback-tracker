@@ -1,0 +1,73 @@
+ M .gitignore
+ M README.md
+ M package.json
+ M scripts/race-browser-playtest.mjs
+ M scripts/race-content-playtest.mjs
+ M scripts/setup-cloudflare.sh
+ M scripts/visual-reference-checks.mjs
+ M src/App.jsx
+ M src/assets/game/asset-manifest.json
+ M src/components/FoodEntrySheet.jsx
+ M src/components/primitives.jsx
+ M src/game/ArcadeRace3D.jsx
+ M src/game/HudOverlay.jsx
+ M src/game/RacePlaytestHarness.jsx
+ M src/game/RaceScreen.jsx
+ M src/game/WorldMode.jsx
+ M src/game/WorldScene.jsx
+ M src/game/comebackCityVisuals.css
+ M src/game/comebackCityVisuals.jsx
+ M src/game/gameMissions.js
+ M src/game/raceHazards.js
+ M src/game/raceItems.js
+ M src/game/raceTracks.js
+ M src/hooks/usePersistedState.js
+ M src/index.css
+ M src/lib/foodApi.js
+ M src/lib/foodHelpers.js
+ M src/lib/program.js
+ M src/main.jsx
+ M src/screens/DayScreen.jsx
+ M src/screens/FoodScreen.jsx
+ M src/screens/HomeScreen.jsx
+ M src/screens/MetricsScreen.jsx
+ M src/screens/SettingsScreen.jsx
+ M vite.config.js
+?? .agent/
+?? AnimatedShowcaseDesigns/
+?? CLAUDE.md
+?? docs/CODEBASE_MAP.md
+?? docs/comeback-city-kart-racer-prd.md
+?? docs/comeback-city-kart-racer-production-readiness-plan.md
+?? docs/comeback-city-kart-racer-v1-blocker-resolution-prd.md
+?? docs/comeback-city-playable-plaza-prd.md
+?? docs/food-upgrade/
+?? docs/race-first-30-seconds-vertical-slice-plan.md
+?? docs/race-immediate-ticket-breakdown.md
+?? docs/race-implementation-planning-completeness-audit.md
+?? docs/race-ip-provenance-audit.md
+?? docs/race-kart-v1-acceptance-audit.md
+?? docs/race-kart-v1-implementation-plan.md
+?? docs/race-kart-v1-planning-index.md
+?? docs/race-manual-qa-rubric.md
+?? docs/race-owner-review-packet.md
+?? docs/race-performance-next-pass-plan.md
+?? docs/race-performance-triage-plan.md
+?? docs/race-pr-evidence-template.md
+?? docs/race-v1-blocker-backlog.md
+?? docs/race-v1-definition-of-done-checklist.md
+?? docs/race-visual-target-brief.md
+?? functions/
+?? migrations/
+?? scripts/hub-smoke-test.mjs
+?? src/assets/game/generated/
+?? src/assets/game/plaza-reference-spec.json
+?? src/assets/game/plaza-scene-shapes.json
+?? src/components/TemplateSaveModal.jsx
+?? src/game/ComebackCityScene3D.jsx
+?? src/game/city3dAssets.js
+?? src/game/race/
+?? src/lib/foodParse.js
+?? src/lib/portionChips.js
+?? src/lib/restaurantApi.js
+?? tmp/

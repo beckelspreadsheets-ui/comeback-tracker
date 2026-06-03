@@ -1,0 +1,209 @@
+{
+  "apiProbes": {
+    "fatSecretShortQuery": {
+      "bodySnippet": "<!doctype html>\n<html lang=\"en\" class=\"dark\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no\" />\n    <meta name=\"theme-color\" content=\"#0b0b0e\" />\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\" />\n    <meta name=\"apple-mobile-web-app-title\" content=\"Comeback\" />\n    <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n\n    <title>Comeback · 181 → 238</title>\n    <meta name=\"description\" content=\"The Comeback — 7-day arms/hams specialization tracker\" />\n    <script type=\"module\" crossorigin src=\"/assets/index-DZmPlj6L.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Dzyue0qK.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/recharts-CR5iyUw2.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-BXoqPyit.css\">\n  <link rel=\"manifest\" href=\"/manifest.webmanifest\"></head>\n  <body class=\"bg-ink\">\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
+      "headers": {
+        "cache-control": "no-cache",
+        "content-type": "text/html",
+        "etag": "W/\"5f1-z62RxdpGU0FMP8DvxTfhbBIGlhQ\""
+      },
+      "json": null,
+      "label": "fatsecret short query",
+      "ok": true,
+      "status": 200,
+      "url": "http://127.0.0.1:5202/api/fatsecret/search?q=a"
+    },
+    "syncMe": {
+      "bodySnippet": "<!doctype html>\n<html lang=\"en\" class=\"dark\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no\" />\n    <meta name=\"theme-color\" content=\"#0b0b0e\" />\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\" />\n    <meta name=\"apple-mobile-web-app-title\" content=\"Comeback\" />\n    <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n\n    <title>Comeback · 181 → 238</title>\n    <meta name=\"description\" content=\"The Comeback — 7-day arms/hams specialization tracker\" />\n    <script type=\"module\" crossorigin src=\"/assets/index-DZmPlj6L.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Dzyue0qK.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/recharts-CR5iyUw2.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-BXoqPyit.css\">\n  <link rel=\"manifest\" href=\"/manifest.webmanifest\"></head>\n  <body class=\"bg-ink\">\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
+      "headers": {
+        "cache-control": "no-cache",
+        "content-type": "text/html",
+        "etag": "W/\"5f1-z62RxdpGU0FMP8DvxTfhbBIGlhQ\""
+      },
+      "json": null,
+      "label": "sync me",
+      "ok": true,
+      "status": 200,
+      "url": "http://127.0.0.1:5202/api/sync/me"
+    }
+  },
+  "apiProbeStatus": "local-vite-fallback-only-not-functions-evidence",
+  "artifactFiles": [
+    "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test/release-smoke-home.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test/release-smoke-race-desktop.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test/release-smoke-race-mobile.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test/release-smoke-summary.json"
+  ],
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test",
+  "baseUrl": "http://127.0.0.1:5202",
+  "browser": {
+    "coreTracker": {
+      "finalState": {
+        "hash": "",
+        "text": "金\nComeback\nLOCAL ONLY\nWORLD\nBASIC\nThe Comeback · 181 → 238\n181\n→\n238\nLB\n\n57 pounds to go — arms and hamstrings specialization.\n\n181 · START\n238 · TARGET\nWEEK\n1\nPHASE\nCALIBRATION\nDELOAD\nNo\nRead this first\n\nYou've filled 0 of 24 1RMs. Target weights show calibrate until Settings are filled. Run weeks 1–2 calibration first.\n\nGO TO CALIBRATION\nToday\nWEEK 1 · 7 DAYS\nDAY\n1\nHeavy Squat Day\nHEAVY · 9 EX\n·\nDAY\n2\nHeavy Horizontal Press\nHEAVY · 8 EX\n·\nDAY\n3\nHeavy Hinge Day\nHEAVY · 8 EX\n·\nDAY\n4\nActive Recov",
+        "title": "Comeback · 181 → 238"
+      },
+      "navigation": [
+        "home",
+        "food",
+        "settings",
+        "home"
+      ],
+      "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test/release-smoke-home.png",
+      "status": "pass"
+    },
+    "playtestHooks": {
+      "route": "/?raceAutoplay=1&raceMode=visual-kart&raceVisualScenario=acceleration&raceNoFinish=1#race",
+      "state": {
+        "hash": "#race",
+        "hasPlaytestEvents": false,
+        "hasPlaytestResult": false,
+        "hasTelemetry": false,
+        "hasTelemetrySamples": false,
+        "normalizedSpeed": 0,
+        "playtestEventsLength": 0,
+        "playtestResult": null,
+        "telemetrySampleLength": 0,
+        "telemetryTrack": null
+      },
+      "status": "pass"
+    },
+    "raceDesktop": {
+      "afterExit": {
+        "hash": "",
+        "raceScreenCount": 0,
+        "titleSeen": true,
+        "worldHomeVisible": false
+      },
+      "afterInput": {
+        "canvasDataUrlLength": 15090,
+        "hash": "#race",
+        "race": {
+          "audioMuted": "false",
+          "lap": 1,
+          "normalizedSpeed": 0.443,
+          "place": 4,
+          "reducedMotion": "false",
+          "time": 1.06,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl",
+        "telemetry": null
+      },
+      "beforeInput": {
+        "canvasDataUrlLength": 15090,
+        "hash": "#race",
+        "race": {
+          "audioMuted": "false",
+          "lap": 1,
+          "normalizedSpeed": 0,
+          "place": 4,
+          "reducedMotion": "false",
+          "time": 0.23,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl",
+        "telemetry": null
+      },
+      "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test/release-smoke-race-desktop.png",
+      "status": "pass"
+    },
+    "raceMobile": {
+      "afterInput": {
+        "canvasDataUrlLength": 9682,
+        "hash": "#race",
+        "race": {
+          "audioMuted": "false",
+          "lap": 1,
+          "normalizedSpeed": 0.548,
+          "place": 4,
+          "reducedMotion": "false",
+          "time": 1.78,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl",
+        "telemetry": null
+      },
+      "beforeInput": {
+        "canvasDataUrlLength": 9682,
+        "hash": "#race",
+        "race": {
+          "audioMuted": "false",
+          "lap": 1,
+          "normalizedSpeed": 0,
+          "place": 4,
+          "reducedMotion": "false",
+          "time": 0.53,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl",
+        "telemetry": null
+      },
+      "goButtonBox": {
+        "x": 276,
+        "y": 749,
+        "width": 82,
+        "height": 74
+      },
+      "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test/release-smoke-race-mobile.png",
+      "status": "pass"
+    },
+    "sync": {
+      "desktop": {
+        "mode": "mock-unauthenticated-sync"
+      },
+      "mobile": {
+        "mode": "mock-unauthenticated-sync"
+      }
+    }
+  },
+  "capturedAt": "2026-05-24T17:48:04.738Z",
+  "deployedHeaders": {
+    "status": "local-preview-skipped",
+    "note": "Vite preview does not apply Cloudflare Pages _headers; deployed header evidence still requires RELEASE_SMOKE_URL."
+  },
+  "gateStatus": "local-smoke-script-proven-not-deploy-evidence",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c2",
+    "dirty": true
+  },
+  "manifestProbe": {
+    "display": "standalone",
+    "iconCount": 3,
+    "name": "Comeback Tracker",
+    "ok": true,
+    "shortName": "Comeback",
+    "status": 200,
+    "url": "http://127.0.0.1:5202/manifest.webmanifest"
+  },
+  "rootProbe": {
+    "assetPath": "/assets/index-DZmPlj6L.js",
+    "headers": {
+      "cache-control": "no-cache",
+      "content-type": "text/html",
+      "etag": "W/\"5f1-z62RxdpGU0FMP8DvxTfhbBIGlhQ\""
+    },
+    "ok": true,
+    "status": 200,
+    "url": "http://127.0.0.1:5202/"
+  },
+  "serviceWorkerProbe": {
+    "headers": {
+      "cache-control": "no-cache",
+      "content-type": "text/javascript",
+      "etag": "W/\"3598-1779644872265\"",
+      "last-modified": "Sun, 24 May 2026 17:47:52 GMT"
+    },
+    "ok": true,
+    "status": 200,
+    "url": "http://127.0.0.1:5202/sw.js"
+  },
+  "target": "local-built-preview",
+  "unresolvedReleaseDecisions": [
+    "Preview deployment URL, deployment ID, and release-owner sign-off",
+    "Production deployment URL, deployment ID, and release-owner sign-off",
+    "Authenticated D1 sync, backups, and FatSecret production binding evidence if those routes ship",
+    "Rollback target/drill evidence and monitoring/support owner decision"
+  ]
+}

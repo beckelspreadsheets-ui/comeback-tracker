@@ -1,0 +1,17 @@
+{
+  "releaseDecisionGate": "owner-release-decisions-missing-r3-blocked",
+  "missingDecisionCount": 1,
+  "releaseNotSuppliedRows": 27,
+  "productionGate": "r3-blocked-gates-remain",
+  "p0Proven": 3,
+  "p0Total": 21,
+  "p1Proven": 5,
+  "p1Total": 14,
+  "dodNonProvenRows": 11,
+  "manualQaFailingRows": 10,
+  "productionNotSuppliedRows": 27,
+  "evidenceLinkFailures": 0,
+  "securityGate": "full-dependency-audit-pass",
+  "bundleGate": "bundle-budget-pass",
+  "artifactGate": "technical-artifacts-pass"
+}

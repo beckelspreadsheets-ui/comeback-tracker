@@ -1,0 +1,44 @@
+{
+  "checkpoint": "bundle-budget-001",
+  "capturedAt": "2026-05-23T22:29:34.103Z",
+  "status": "recorded-not-accepted",
+  "decision": "Keep npm run test:bundle as a local built-artifact size recorder. Do not close the P1 bundle/asset budget gate until release-owner budget targets or a dated exception are supplied.",
+  "evidenceDir": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z",
+  "command": "BUNDLE_BUDGET_ARTIFACT_DIR=.agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z npm run test:bundle",
+  "reportPath": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z/bundle-asset-budget-report.json",
+  "build": "pass with existing large-chunk warning",
+  "report": {
+    "gateStatus": "recorded-not-accepted",
+    "totalSizeMiB": 7.455,
+    "totalGzipKiB": 4043.13,
+    "javascriptFileCount": 8,
+    "javascriptTotalKiB": 4700.79,
+    "cssFileCount": 1,
+    "cssTotalKiB": 87.29,
+    "largestFile": {
+      "brotliBytes": 655801,
+      "brotliKiB": 640.43,
+      "category": "javascript",
+      "gzipBytes": 942513,
+      "gzipKiB": 920.42,
+      "path": "assets/index-COrftTm9.js",
+      "sizeBytes": 3826302,
+      "sizeKiB": 3736.62
+    },
+    "dirty": true
+  },
+  "caveats": [
+    "Local dist artifact only; no production deployed response or target-device Web Vitals evidence.",
+    "No release-owner budget thresholds or acceptance are supplied, so the P1 bundle/asset budget gate remains partial.",
+    "Build still emits the existing large-chunk warning."
+  ],
+  "validation": {
+    "build": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z/npm-run-build.log",
+    "nodeCheck": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z/node-check-bundle-asset-budget-report.log",
+    "testBundle": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z/npm-run-test-bundle.log",
+    "bundleSummaryJsonCheck": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z/bundle-summary-json-check.log",
+    "gitDiffCheck": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z/git-diff-check.log",
+    "implementationNotesProgressEventsCheck": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z/implementation-notes-progress-events-check.log",
+    "packageJsonCheck": ".agent/runs/kart-racer-production-readiness/evidence/bundle-budget-001-20260523T222825Z/package-json-check.log"
+  }
+}

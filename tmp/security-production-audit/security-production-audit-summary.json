@@ -1,0 +1,56 @@
+{
+  "artifactFiles": [
+    "/Users/andrewferguson/Downloads/comeback-tracker/tmp/security-production-audit/npm-audit-production.json",
+    "/Users/andrewferguson/Downloads/comeback-tracker/tmp/security-production-audit/npm-audit-full.json",
+    "/Users/andrewferguson/Downloads/comeback-tracker/tmp/security-production-audit/security-production-audit-summary.json"
+  ],
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/security-production-audit",
+  "capturedAt": "2026-06-01T19:14:40.471Z",
+  "fullAudit": {
+    "dependencyCounts": {
+      "prod": 48,
+      "dev": 461,
+      "optional": 64,
+      "peer": 6,
+      "peerOptional": 0,
+      "total": 511
+    },
+    "exitCode": 0,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "vulnerabilityDetails": []
+  },
+  "gateStatus": "full-dependency-audit-pass",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c2",
+    "dirty": true
+  },
+  "note": "Production and full dependency audits pass with zero reported vulnerabilities.",
+  "productionAudit": {
+    "dependencyCounts": {
+      "prod": 48,
+      "dev": 461,
+      "optional": 64,
+      "peer": 6,
+      "peerOptional": 0,
+      "total": 511
+    },
+    "exitCode": 0,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "unresolvedReleaseDecisions": []
+}

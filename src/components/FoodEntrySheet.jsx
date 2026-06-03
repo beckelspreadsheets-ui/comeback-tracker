@@ -1,13 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Search, Camera, Pencil, BookMarked, Loader2, WifiOff } from 'lucide-react';
+import {
+  X,
+  Search,
+  Camera,
+  Pencil,
+  BookMarked,
+  Loader2,
+  WifiOff,
+  Sparkles,
+  Utensils,
+} from 'lucide-react';
 import { BarcodeScanner } from './BarcodeScanner.jsx';
 import { searchFoods, lookupBarcode, isOnline, hasUsdaKey } from '../lib/foodApi.js';
+import {
+  hasRestaurantKey,
+  searchRestaurants,
+  fetchItemDetails,
+} from '../lib/restaurantApi.js';
+import { PORTION_CHIPS, CHIP_CATEGORIES } from '../lib/portionChips.js';
 import { makeEntryId, MEAL_BUCKETS } from '../lib/foodHelpers.js';
+import { parseAiMacros, AI_PROMPT } from '../lib/foodParse.js';
 
 const TABS = [
   { key: 'library', label: 'Library', icon: BookMarked },
   { key: 'search', label: 'Search', icon: Search },
   { key: 'scan', label: 'Scan', icon: Camera },
+  { key: 'rest', label: 'Rest.', icon: Utensils },
   { key: 'manual', label: 'Manual', icon: Pencil },
 ];
 
@@ -18,7 +36,12 @@ const emptyManual = {
   c: '',
   f: '',
   servingDesc: '1 serving',
+  unit: 'serving',
 };
+
+const DEFAULT_AMOUNT = { serving: 1, gram: 100 };
+const STEP = { serving: 0.25, gram: 5 };
+const MIN_AMOUNT = { serving: 0.25, gram: 0 };
 
 // Bottom sheet modal for adding food to a meal bucket.
 export const FoodEntrySheet = ({
@@ -37,16 +60,55 @@ export const FoodEntrySheet = ({
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchErr, setSearchErr] = useState('');
+  const [restQuery, setRestQuery] = useState('');
+  const [restResults, setRestResults] = useState([]);
+  const [restSearching, setRestSearching] = useState(false);
+  const [restErr, setRestErr] = useState('');
+  const [restPickingId, setRestPickingId] = useState('');
 
   const [draft, setDraft] = useState(null); // food being edited
-  const [servings, setServings] = useState(1);
+  const [amount, setAmount] = useState(1);
   const [saveToLib, setSaveToLib] = useState(false);
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanLookup, setScanLookup] = useState(false);
   const [manual, setManual] = useState(emptyManual);
 
+  const [pasteText, setPasteText] = useState('');
+  const [parseErr, setParseErr] = useState('');
+  const [promptCopied, setPromptCopied] = useState(false);
+  const pasteDetailsRef = useRef(null);
+
   const abortRef = useRef(null);
+  const restaurantEnabled = hasRestaurantKey();
+  const visibleTabs = restaurantEnabled ? TABS : TABS.filter((tabDef) => tabDef.key !== 'rest');
+  const tabGridClass = restaurantEnabled ? 'grid-cols-5' : 'grid-cols-4';
+
+  const getRestaurantError = (err, fallback = 'Restaurant search failed. Try again.') => {
+    const message = err?.message;
+    if (message === 'no-key') {
+      console.warn('Restaurant search attempted without the FatSecret provider enabled.');
+      return fallback;
+    }
+    if (message === 'offline') return 'offline';
+    if (message === 'fatsecret-429' || message === 'fatsecret-api-429') {
+      return 'Rate limited — try again later.';
+    }
+    if (message === 'fatsecret-api-14') {
+      return 'FatSecret scope missing. Check API account access.';
+    }
+    if (message === 'fatsecret-api-21') {
+      return 'FatSecret rejected this caller IP. Update the API IP allowlist or use a static-egress proxy.';
+    }
+    return fallback;
+  };
+
+  const cancelInFlight = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+  };
 
   // Reset state whenever the sheet opens.
   useEffect(() => {
@@ -58,34 +120,50 @@ export const FoodEntrySheet = ({
       setResults([]);
       setSearching(false);
       setSearchErr('');
+      setRestQuery('');
+      setRestResults([]);
+      setRestSearching(false);
+      setRestErr('');
+      setRestPickingId('');
       setDraft(null);
-      setServings(1);
+      setAmount(1);
       setSaveToLib(false);
       setScannerOpen(false);
       setScanLookup(false);
       setManual(emptyManual);
+      setPasteText('');
+      setParseErr('');
+      setPromptCopied(false);
     }
     return () => {
-      if (abortRef.current) abortRef.current.abort();
+      cancelInFlight();
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!restaurantEnabled && tab === 'rest') setTab('library');
+  }, [restaurantEnabled, tab]);
 
   // Debounced OFF search
   useEffect(() => {
     if (tab !== 'search' || mode !== 'browse') return;
     if (!query.trim() || query.trim().length < 2) {
+      cancelInFlight();
       setResults([]);
+      setSearching(false);
       setSearchErr('');
       return;
     }
     if (!isOnline()) {
+      cancelInFlight();
       setResults([]);
+      setSearching(false);
       setSearchErr('offline');
       return;
     }
     setSearching(true);
     setSearchErr('');
-    if (abortRef.current) abortRef.current.abort();
+    cancelInFlight();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const t = setTimeout(async () => {
@@ -101,8 +179,47 @@ export const FoodEntrySheet = ({
     return () => {
       clearTimeout(t);
       ctrl.abort();
+      if (abortRef.current === ctrl) abortRef.current = null;
     };
   }, [query, tab, mode]);
+
+  useEffect(() => {
+    if (tab !== 'rest' || mode !== 'browse') return;
+    if (!restQuery.trim() || restQuery.trim().length < 2) {
+      cancelInFlight();
+      setRestResults([]);
+      setRestSearching(false);
+      setRestErr('');
+      return;
+    }
+    if (!isOnline()) {
+      cancelInFlight();
+      setRestResults([]);
+      setRestSearching(false);
+      setRestErr('offline');
+      return;
+    }
+    setRestSearching(true);
+    setRestErr('');
+    cancelInFlight();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const t = setTimeout(async () => {
+      try {
+        const r = await searchRestaurants(restQuery, { signal: ctrl.signal });
+        setRestResults(r);
+      } catch (err) {
+        if (err.name !== 'AbortError') setRestErr(getRestaurantError(err));
+      } finally {
+        setRestSearching(false);
+      }
+    }, 500);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+      if (abortRef.current === ctrl) abortRef.current = null;
+    };
+  }, [restQuery, tab, mode]);
 
   const libraryFiltered = useMemo(() => {
     const q = libQuery.trim().toLowerCase();
@@ -112,18 +229,20 @@ export const FoodEntrySheet = ({
   }, [library, libQuery]);
 
   const pickFood = (food) => {
+    const unit = food.unit === 'gram' ? 'gram' : 'serving';
     setDraft({
       name: food.name,
       cal: Number(food.cal) || 0,
       p: Number(food.p) || 0,
       c: Number(food.c) || 0,
       f: Number(food.f) || 0,
-      servingDesc: food.servingDesc || '1 serving',
+      unit,
+      servingDesc: food.servingDesc || (unit === 'gram' ? '1 g' : '1 serving'),
       barcode: food.barcode || '',
       itemId: food.id || undefined,
       source: food.source || 'library',
     });
-    setServings(1);
+    setAmount(DEFAULT_AMOUNT[unit]);
     setSaveToLib(food.source !== 'library' && !food.id);
     setMode('edit');
   };
@@ -140,7 +259,8 @@ export const FoodEntrySheet = ({
       p: Number(draft.p) || 0,
       c: Number(draft.c) || 0,
       f: Number(draft.f) || 0,
-      servings: Number(servings) || 1,
+      amount: Number(amount) || 0,
+      unit: draft.unit,
       servingDesc: draft.servingDesc,
       at: Date.now(),
     };
@@ -152,6 +272,7 @@ export const FoodEntrySheet = ({
         p: entry.p,
         c: entry.c,
         f: entry.f,
+        unit: draft.unit,
         servingDesc: draft.servingDesc,
         barcode: draft.barcode,
       });
@@ -161,17 +282,63 @@ export const FoodEntrySheet = ({
 
   const handleManualSubmit = () => {
     if (!manual.name.trim() || !manual.cal) return;
+    const unit = manual.unit === 'gram' ? 'gram' : 'serving';
     const food = {
       name: manual.name.trim(),
       cal: Number(manual.cal) || 0,
       p: Number(manual.p) || 0,
       c: Number(manual.c) || 0,
       f: Number(manual.f) || 0,
-      servingDesc: manual.servingDesc || '1 serving',
+      unit,
+      servingDesc: unit === 'gram' ? '1 g' : manual.servingDesc || '1 serving',
       source: 'manual',
     };
     setSaveToLib(true); // default to saving manual entries
     pickFood(food);
+  };
+
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(AI_PROMPT);
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 1500);
+    } catch {
+      // Clipboard unavailable (non-secure context). Fall back: stuff the prompt into
+      // the paste textarea so the user can at least select/copy from there.
+      setPasteText(AI_PROMPT);
+    }
+  };
+
+  const handleParsePaste = () => {
+    setParseErr('');
+    const parsed = parseAiMacros(pasteText);
+    if (!parsed) {
+      setParseErr("Couldn't parse. Expected: NAME — 850 cal | 65g P | 45g C | 42g F");
+      return;
+    }
+    setManual({
+      name: parsed.name,
+      cal: String(parsed.cal),
+      p: String(parsed.p),
+      c: String(parsed.c),
+      f: String(parsed.f),
+      servingDesc: parsed.servingDesc,
+      unit: 'serving',
+    });
+    setPasteText('');
+    if (pasteDetailsRef.current) pasteDetailsRef.current.open = false;
+  };
+
+  const applyChip = (chip) => {
+    setManual({
+      name: chip.name,
+      cal: String(chip.cal),
+      p: String(chip.p),
+      c: String(chip.c),
+      f: String(chip.f),
+      servingDesc: chip.servingDesc,
+      unit: 'serving',
+    });
   };
 
   const handleBarcodeDetected = async (code) => {
@@ -191,6 +358,38 @@ export const FoodEntrySheet = ({
       alert('Barcode lookup failed. Check your connection.');
     } finally {
       setScanLookup(false);
+    }
+  };
+
+  const handleTabSelect = (nextTab) => {
+    cancelInFlight();
+    setTab(nextTab);
+    if (nextTab === 'scan') setScannerOpen(true);
+    if (nextTab !== 'rest') setRestPickingId('');
+  };
+
+  const handleRestaurantPick = async (item) => {
+    const restaurantItemId = item?.restaurantItemId;
+    if (!restaurantItemId) return;
+    cancelInFlight();
+    setRestErr('');
+    setRestPickingId(restaurantItemId);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      const food = await fetchItemDetails(restaurantItemId, { signal: ctrl.signal });
+      if (!food) {
+        setRestErr('Restaurant search failed. Try again.');
+        return;
+      }
+      pickFood(food);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setRestErr(getRestaurantError(err));
+      }
+    } finally {
+      if (abortRef.current === ctrl) abortRef.current = null;
+      setRestPickingId((current) => (current === restaurantItemId ? '' : current));
     }
   };
 
@@ -229,25 +428,36 @@ export const FoodEntrySheet = ({
 
             <div>
               <label className="text-[10px] font-mono uppercase tracking-[0.22em] text-stone block mb-2">
-                Servings
+                {draft.unit === 'gram' ? 'Grams' : 'Servings'}
               </label>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setServings((s) => Math.max(0.25, Number((s - 0.25).toFixed(2))))}
+                  onClick={() => {
+                    const step = STEP[draft.unit];
+                    const min = MIN_AMOUNT[draft.unit];
+                    setAmount((a) => {
+                      const next = Number((Number(a) - step).toFixed(2));
+                      return Math.max(min, next);
+                    });
+                  }}
                   className="w-11 h-11 border border-bone/10 text-bone font-mono active:scale-95"
                 >
                   −
                 </button>
                 <input
                   type="number"
-                  inputMode="decimal"
-                  step="0.25"
-                  value={servings}
-                  onChange={(e) => setServings(Number(e.target.value) || 0)}
-                  className="flex-1 text-center bg-ink/60 border border-bone/[0.08] px-4 py-3 text-bone text-base font-mono tabular-nums focus:border-gold/60 focus:outline-none"
+                  inputMode={draft.unit === 'gram' ? 'numeric' : 'decimal'}
+                  step={STEP[draft.unit]}
+                  value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value) || 0)}
+                  placeholder={draft.unit === 'gram' ? '100' : '1'}
+                  className="flex-1 text-center bg-ink/60 border border-bone/[0.08] px-4 py-3 text-bone text-base font-mono tabular-nums focus:border-gold/60 focus:outline-none placeholder:text-stone"
                 />
                 <button
-                  onClick={() => setServings((s) => Number((s + 0.25).toFixed(2)))}
+                  onClick={() => {
+                    const step = STEP[draft.unit];
+                    setAmount((a) => Number((Number(a) + step).toFixed(2)));
+                  }}
                   className="w-11 h-11 border border-bone/10 text-bone font-mono active:scale-95"
                 >
                   +
@@ -257,10 +467,10 @@ export const FoodEntrySheet = ({
 
             <div className="grid grid-cols-4 gap-1 border border-bone/[0.06]">
               {[
-                { label: 'Cal', v: Math.round(draft.cal * servings) },
-                { label: 'P', v: Math.round(draft.p * servings) + 'g' },
-                { label: 'C', v: Math.round(draft.c * servings) + 'g' },
-                { label: 'F', v: Math.round(draft.f * servings) + 'g' },
+                { label: 'Cal', v: Math.round(draft.cal * amount) },
+                { label: 'P', v: Math.round(draft.p * amount) + 'g' },
+                { label: 'C', v: Math.round(draft.c * amount) + 'g' },
+                { label: 'F', v: Math.round(draft.f * amount) + 'g' },
               ].map((m) => (
                 <div key={m.label} className="p-3 text-center border-r border-bone/[0.06] last:border-0">
                   <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-stone">
@@ -307,17 +517,14 @@ export const FoodEntrySheet = ({
         {mode === 'browse' && (
           <>
             {/* Tabs */}
-            <div className="grid grid-cols-4 border-b border-bone/[0.06] shrink-0">
-              {TABS.map((t) => {
+            <div className={`grid ${tabGridClass} border-b border-bone/[0.06] shrink-0`}>
+              {visibleTabs.map((t) => {
                 const Icon = t.icon;
                 const active = tab === t.key;
                 return (
                   <button
                     key={t.key}
-                    onClick={() => {
-                      setTab(t.key);
-                      if (t.key === 'scan') setScannerOpen(true);
-                    }}
+                    onClick={() => handleTabSelect(t.key)}
                     className={`flex flex-col items-center justify-center gap-1 py-3 min-h-[56px] transition-colors relative ${
                       active ? 'text-gold' : 'text-stone hover:text-bone/70'
                     }`}
@@ -360,13 +567,19 @@ export const FoodEntrySheet = ({
                             {it.name}
                           </div>
                           <div className="font-mono text-xs text-gold tabular-nums shrink-0">
-                            {Math.round(it.cal)} kcal
+                            {it.unit === 'gram'
+                              ? `${it.cal.toFixed(2)} kcal/g`
+                              : `${Math.round(it.cal)} kcal`}
                           </div>
                         </div>
                         <div className="flex items-baseline justify-between mt-1">
-                          <div className="text-[10px] font-mono text-stone">{it.servingDesc}</div>
+                          <div className="text-[10px] font-mono text-stone">
+                            {it.unit === 'gram' ? 'per g' : it.servingDesc}
+                          </div>
                           <div className="text-[10px] font-mono text-stone tabular-nums">
-                            P {Math.round(it.p)} · C {Math.round(it.c)} · F {Math.round(it.f)}
+                            {it.unit === 'gram'
+                              ? `P ${Number(it.p).toFixed(2)} · C ${Number(it.c).toFixed(2)} · F ${Number(it.f).toFixed(2)}`
+                              : `P ${Math.round(it.p)} · C ${Math.round(it.c)} · F ${Math.round(it.f)}`}
                           </div>
                         </div>
                       </button>
@@ -407,7 +620,9 @@ export const FoodEntrySheet = ({
                       <Loader2 size={12} className="animate-spin" /> Searching…
                     </div>
                   )}
-                  {searchErr && <div className="text-xs text-vermillion">{searchErr}</div>}
+                  {searchErr && searchErr !== 'offline' && (
+                    <div className="text-xs text-vermillion">{searchErr}</div>
+                  )}
                   <div className="divide-y divide-bone/[0.06]">
                     {results.map((r, i) => (
                       <button
@@ -440,6 +655,97 @@ export const FoodEntrySheet = ({
                 </div>
               )}
 
+              {/* RESTAURANT TAB */}
+              {tab === 'rest' && restaurantEnabled && (
+                <div className="p-4 space-y-3">
+                  <div className="relative">
+                    <Utensils
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-stone pointer-events-none"
+                    />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={restQuery}
+                      onChange={(e) => setRestQuery(e.target.value)}
+                      placeholder="Search chain menu items…"
+                      className="w-full bg-ink/60 border border-bone/[0.08] pl-9 pr-4 py-3 text-bone text-base focus:border-gold/60 focus:outline-none placeholder:text-bone/20"
+                    />
+                  </div>
+                  {!isOnline() && (
+                    <div className="flex items-center gap-2 text-xs text-vermillion">
+                      <WifiOff size={12} /> Offline — use library or manual entry.
+                    </div>
+                  )}
+                  {restSearching && (
+                    <div className="flex items-center gap-2 text-xs text-stone">
+                      <Loader2 size={12} className="animate-spin" /> Searching…
+                    </div>
+                  )}
+                  {restErr && restErr !== 'offline' && (
+                    <div className="text-xs text-vermillion">{restErr}</div>
+                  )}
+                  <div className="divide-y divide-bone/[0.06]">
+                    {restResults.map((item) => {
+                      const selecting = restPickingId === item.restaurantItemId;
+                      return (
+                        <button
+                          key={item.restaurantItemId}
+                          onClick={() => handleRestaurantPick(item)}
+                          disabled={!!restPickingId}
+                          className="w-full text-left py-3 px-1 active:bg-bone/[0.02] min-h-[56px] disabled:opacity-70"
+                        >
+                          <div className="flex items-center gap-3">
+                            {item.photo ? (
+                              <img
+                                src={item.photo}
+                                alt=""
+                                className="w-10 h-10 shrink-0 object-cover border border-bone/10 bg-bone/[0.02]"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 shrink-0 border border-bone/10 bg-bone/[0.02]" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="font-display text-base text-bone leading-tight truncate">
+                                    {item.name}
+                                  </div>
+                                  <div className="text-[10px] font-mono text-stone mt-1 truncate">
+                                    {item.brand || '—'} · {item.servingDesc}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <div className="font-mono text-xs text-gold tabular-nums">
+                                    {Math.round(item.cal)} kcal
+                                  </div>
+                                  <div className="text-[10px] font-mono text-stone mt-1">
+                                    {selecting ? (
+                                      <span className="inline-flex items-center gap-1">
+                                        <Loader2 size={10} className="animate-spin" />
+                                        Loading…
+                                      </span>
+                                    ) : (
+                                      'Select →'
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {!restSearching &&
+                      restQuery.trim().length >= 2 &&
+                      restResults.length === 0 &&
+                      !restErr && (
+                        <div className="text-xs text-stone text-center py-8">No results.</div>
+                      )}
+                  </div>
+                </div>
+              )}
+
               {/* SCAN TAB — the actual camera lives in an overlay */}
               {tab === 'scan' && (
                 <div className="p-6 text-center space-y-4">
@@ -467,6 +773,94 @@ export const FoodEntrySheet = ({
               {/* MANUAL TAB */}
               {tab === 'manual' && (
                 <div className="p-4 space-y-3">
+                  <details
+                    ref={pasteDetailsRef}
+                    className="border border-bone/[0.06]"
+                  >
+                    <summary className="px-4 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-gold cursor-pointer select-none flex items-center justify-between min-h-[44px]">
+                      <span>Paste from AI</span>
+                      <Sparkles size={12} />
+                    </summary>
+                    <div className="p-4 space-y-3 border-t border-bone/[0.06]">
+                      <button
+                        onClick={handleCopyPrompt}
+                        className="w-full py-2.5 border border-bone/10 text-bone/80 text-[11px] font-mono uppercase tracking-[0.22em] active:scale-[0.99] min-h-[44px]"
+                      >
+                        {promptCopied ? 'Copied ✓' : 'Copy prompt for ChatGPT / Claude'}
+                      </button>
+                      <textarea
+                        value={pasteText}
+                        onChange={(e) => setPasteText(e.target.value)}
+                        placeholder={`Paste the one-line response here, e.g.\nChicken parm — 850 cal | 65g protein | 45g carbs | 42g fat`}
+                        rows={3}
+                        className="w-full bg-ink/60 border border-bone/[0.08] px-4 py-3 text-bone text-sm font-mono focus:border-gold/60 focus:outline-none placeholder:text-bone/20 resize-none"
+                      />
+                      {parseErr && (
+                        <div className="text-[11px] text-vermillion font-mono">{parseErr}</div>
+                      )}
+                      <button
+                        onClick={handleParsePaste}
+                        disabled={!pasteText.trim()}
+                        className="w-full py-2.5 bg-gold text-ink text-[11px] font-mono uppercase tracking-[0.22em] disabled:opacity-40 active:scale-[0.99] min-h-[44px]"
+                      >
+                        Parse → fill form
+                      </button>
+                    </div>
+                  </details>
+                  <div className="border border-bone/[0.06]">
+                    <div className="px-4 py-2.5 text-[10px] font-mono uppercase tracking-[0.22em] text-gold border-b border-bone/[0.06]">
+                      Quick portions
+                    </div>
+                    <div className="p-3 space-y-3">
+                      {CHIP_CATEGORIES.map((cat) => {
+                        const chips = PORTION_CHIPS.filter((chip) => chip.category === cat.key);
+                        return (
+                          <div key={cat.key}>
+                            <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-stone mb-1.5">
+                              {cat.label}
+                            </div>
+                            <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 scrollbar-none">
+                              {chips.map((chip) => (
+                                <button
+                                  key={chip.id}
+                                  onClick={() => applyChip(chip)}
+                                  className="shrink-0 px-3 py-2 border border-bone/10 text-bone/80 text-[11px] font-mono whitespace-nowrap hover:border-gold/40 active:scale-[0.97]"
+                                  title={chip.example}
+                                >
+                                  {chip.label}
+                                  <span className="ml-1.5 text-gold tabular-nums">{chip.cal}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono uppercase tracking-[0.22em] text-stone block mb-1.5">
+                      Unit
+                    </label>
+                    <div className="grid grid-cols-2 border border-bone/[0.08]">
+                      {[
+                        { k: 'serving', label: 'Per serving' },
+                        { k: 'gram', label: 'Per gram' },
+                      ].map((opt) => {
+                        const active = manual.unit === opt.k;
+                        return (
+                          <button
+                            key={opt.k}
+                            onClick={() => setManual((m) => ({ ...m, unit: opt.k }))}
+                            className={`py-3 text-[10px] font-mono uppercase tracking-[0.22em] transition-colors min-h-[44px] ${
+                              active ? 'bg-gold text-ink' : 'text-stone hover:text-bone'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div>
                     <label className="text-[10px] font-mono uppercase tracking-[0.22em] text-stone block mb-1.5">
                       Name
@@ -479,18 +873,25 @@ export const FoodEntrySheet = ({
                       placeholder="e.g. Chicken breast"
                     />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-mono uppercase tracking-[0.22em] text-stone block mb-1.5">
-                      Serving
-                    </label>
-                    <input
-                      type="text"
-                      value={manual.servingDesc}
-                      onChange={(e) => setManual((m) => ({ ...m, servingDesc: e.target.value }))}
-                      className="w-full bg-ink/60 border border-bone/[0.08] px-4 py-3 text-bone text-base focus:border-gold/60 focus:outline-none placeholder:text-bone/20"
-                      placeholder="e.g. 4oz or 1 cup"
-                    />
-                  </div>
+                  {manual.unit !== 'gram' && (
+                    <div>
+                      <label className="text-[10px] font-mono uppercase tracking-[0.22em] text-stone block mb-1.5">
+                        Serving
+                      </label>
+                      <input
+                        type="text"
+                        value={manual.servingDesc}
+                        onChange={(e) => setManual((m) => ({ ...m, servingDesc: e.target.value }))}
+                        className="w-full bg-ink/60 border border-bone/[0.08] px-4 py-3 text-bone text-base focus:border-gold/60 focus:outline-none placeholder:text-bone/20"
+                        placeholder="e.g. 4oz or 1 cup"
+                      />
+                    </div>
+                  )}
+                  {manual.unit === 'gram' && (
+                    <div className="text-[10px] font-mono text-stone/70 leading-relaxed">
+                      Enter per-gram values (e.g. chicken breast: 1.65 cal/g, 0.31 P/g).
+                    </div>
+                  )}
                   <div className="grid grid-cols-4 gap-2">
                     {[
                       { k: 'cal', label: 'Cal' },
@@ -505,10 +906,11 @@ export const FoodEntrySheet = ({
                         <input
                           type="number"
                           inputMode="decimal"
+                          step={manual.unit === 'gram' ? '0.01' : '1'}
                           value={manual[f.k]}
                           onChange={(e) => setManual((m) => ({ ...m, [f.k]: e.target.value }))}
                           className="w-full bg-ink/60 border border-bone/[0.08] px-2 py-3 text-bone text-base font-mono tabular-nums focus:border-gold/60 focus:outline-none placeholder:text-bone/20"
-                          placeholder="0"
+                          placeholder={manual.unit === 'gram' && f.k === 'cal' ? '1.65' : '0'}
                         />
                       </div>
                     ))}

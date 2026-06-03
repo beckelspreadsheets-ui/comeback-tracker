@@ -37,15 +37,17 @@ export const emptyDayLog = () => ({ breakfast: [], lunch: [], dinner: [], snacks
 
 export const getDayLog = (foodLog, dateKey) => foodLog?.[dateKey] || emptyDayLog();
 
-// Sum cal + macros for a list of entries (each is {cal,p,c,f,servings}).
+// Sum cal + macros for a list of entries (each is {cal,p,c,f,amount,unit}).
+// cal/p/c/f are per-unit (serving or gram), amount is the quantity in that unit.
+// Falls back to `servings` for any pre-migration entries that slipped through.
 export const sumEntries = (entries = []) =>
   entries.reduce(
     (acc, e) => {
-      const s = Number(e.servings) || 1;
-      acc.cal += (Number(e.cal) || 0) * s;
-      acc.p += (Number(e.p) || 0) * s;
-      acc.c += (Number(e.c) || 0) * s;
-      acc.f += (Number(e.f) || 0) * s;
+      const a = Number(e.amount ?? e.servings) || 1;
+      acc.cal += (Number(e.cal) || 0) * a;
+      acc.p += (Number(e.p) || 0) * a;
+      acc.c += (Number(e.c) || 0) * a;
+      acc.f += (Number(e.f) || 0) * a;
       return acc;
     },
     { cal: 0, p: 0, c: 0, f: 0 }

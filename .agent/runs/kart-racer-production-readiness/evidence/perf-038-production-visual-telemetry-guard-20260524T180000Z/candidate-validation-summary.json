@@ -1,0 +1,58 @@
+{
+  "browser": {
+    "capturedAt": "2026-05-24T17:47:46.856Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "sustainedActualFps": 17.89
+  },
+  "releaseSmoke": {
+    "capturedAt": "2026-05-24T17:48:04.738Z",
+    "gateStatus": "local-smoke-script-proven-not-deploy-evidence",
+    "playtestHookProbe": {
+      "hash": "#race",
+      "hasPlaytestEvents": false,
+      "hasPlaytestResult": false,
+      "hasTelemetry": false,
+      "hasTelemetrySamples": false,
+      "normalizedSpeed": 0,
+      "playtestEventsLength": 0,
+      "playtestResult": null,
+      "telemetrySampleLength": 0,
+      "telemetryTrack": null
+    },
+    "desktopTelemetryGlobal": null,
+    "mobileTelemetryGlobal": null,
+    "desktopRaceState": {
+      "audioMuted": "false",
+      "lap": 1,
+      "normalizedSpeed": 0.443,
+      "place": 4,
+      "reducedMotion": "false",
+      "time": 1.06,
+      "trackKey": "comeback-city"
+    },
+    "mobileRaceState": {
+      "audioMuted": "false",
+      "lap": 1,
+      "normalizedSpeed": 0.548,
+      "place": 4,
+      "reducedMotion": "false",
+      "time": 1.78,
+      "trackKey": "comeback-city"
+    }
+  },
+  "artifacts": {
+    "capturedAt": "2026-05-24T17:48:51.390Z",
+    "gateStatus": "technical-artifacts-pass",
+    "failures": 0,
+    "diagnosticTelemetry": "not-detected",
+    "runtimePlaytestAutomation": "not-detected",
+    "visualReviewRouteStrings": "not-detected",
+    "checks": {
+      "noSecretNameOrKnownSecretValueLeaks": true,
+      "noSourceMapFiles": true,
+      "noSourceMappingUrlReferences": true,
+      "noStandalonePlaytestOrDebugFiles": true
+    }
+  }
+}

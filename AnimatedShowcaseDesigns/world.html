@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Showcase Designs Studio Gallery</title>
+    <meta name="description" content="An interactive 3D companion gallery for Showcase Designs client websites.">
+    <meta name="robots" content="noindex,follow">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta property="og:title" content="Showcase Designs Studio Gallery">
+    <meta property="og:description" content="Explore client websites inside a restrained interactive studio gallery.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://showcase-designs.com/world">
+    <meta property="og:image" content="https://showcase-designs.com/og-image.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Showcase Designs interactive studio gallery">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Showcase Designs Studio Gallery">
+    <meta name="twitter:description" content="Explore client websites inside a restrained interactive studio gallery.">
+    <meta name="twitter:image" content="https://showcase-designs.com/og-image.png">
+    <meta name="twitter:image:alt" content="Showcase Designs interactive studio gallery">
+    <link rel="canonical" href="https://showcase-designs.com/">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link href="https://fonts.googleapis.com/css2?family=Prata&family=Manrope:wght@300;400;500;600;700;800&display=optional" rel="stylesheet">
+    <link rel="stylesheet" href="world.css?v=photo-match-plate-20260511-1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" async></script>
+</head>
+<body>
+    <a class="skip-link" href="#stationControls">Skip to station controls</a>
+
+    <div class="world-shell">
+        <canvas id="studioCanvas" aria-hidden="true"></canvas>
+        <div class="photo-match-plate" id="photoMatchPlate" aria-hidden="true"></div>
+        <div class="grain" aria-hidden="true"></div>
+
+        <header class="world-topbar" aria-label="Studio navigation">
+            <a class="brand" href="/?lite=1" data-static-link>SHOWCASE <span>DESIGNS</span></a>
+            <div class="topbar-actions">
+                <span class="quality-pill" id="qualityPill">Studio view</span>
+                <button class="fullscreen-action" id="fullscreenButton" type="button">Full screen</button>
+                <a class="fast-link" href="/?lite=1" data-static-link>Fast view &larr;</a>
+            </div>
+        </header>
+
+        <main class="world-ui" id="stationControls">
+            <p class="sr-only" aria-live="polite">Interactive 3D studio view loaded. A fully accessible standard version of this content is available on the main Showcase Designs page.</p>
+
+            <section class="station-panel is-compact" aria-label="Client website stations">
+                <div class="station-panel-head">
+                    <div class="panel-kicker">Studio Gallery</div>
+                    <button class="panel-toggle" id="panelToggleButton" type="button" aria-controls="stationPanelBody" aria-expanded="false" aria-label="Expand station panel">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                </div>
+                <div class="station-panel-body" id="stationPanelBody">
+                    <h1 id="stationTitle">Client website stations</h1>
+                    <p id="stationDescription">Choose a station to focus the studio camera, open the live client site, or jump to the matching static case-study section.</p>
+                    <section class="growth-spot" aria-label="Google growth highlights">
+                        <div class="growth-spot-head">
+                            <span>Google Growth Wall</span>
+                            <strong>2 live projects</strong>
+                        </div>
+                        <div class="growth-list" id="growthList"></div>
+                    </section>
+                    <div class="station-list" id="stationList"></div>
+                    <div class="station-actions">
+                        <button class="primary-action" id="openLiveButton" type="button">Open live site</button>
+                        <button class="secondary-action" id="caseStudyButton" type="button">Case study</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div class="mobile-move-controls" id="mobileMoveControls" aria-label="Walk controls">
+            <div class="mobile-move-pad" id="mobileMovePad" role="button" tabindex="0" aria-label="Drag to walk through the gallery">
+                <span class="mobile-move-stick" id="mobileMoveStick" aria-hidden="true"></span>
+            </div>
+        </div>
+
+        <button class="inspect-hint" id="inspectHint" type="button" hidden>Inspect</button>
+
+        <section class="screen-viewer" id="screenViewer" aria-label="Website exhibit preview" hidden>
+            <div class="screen-viewer-toolbar">
+                <div>
+                    <div class="panel-kicker">Inspecting</div>
+                    <h2 id="screenViewerTitle">Client website</h2>
+                </div>
+                <div class="screen-viewer-actions">
+                    <button class="secondary-action" id="screenViewerClose" type="button">Done</button>
+                    <button class="secondary-action screen-scroll-action" id="screenViewerScrollUp" type="button">Up</button>
+                    <button class="secondary-action screen-scroll-action" id="screenViewerScrollDown" type="button">Down</button>
+                    <button class="secondary-action" id="screenViewerFullscreen" type="button">Full screen</button>
+                    <button class="primary-action" id="screenViewerLive" type="button">Open live site</button>
+                </div>
+            </div>
+            <div class="screen-viewer-scroll" id="screenViewerScroll" tabindex="0" aria-label="Scroll website exhibit preview">
+                <img id="screenViewerImage" alt="">
+            </div>
+        </section>
+
+        <section class="fallback" id="fallback" hidden>
+            <div class="fallback-box">
+                <div class="panel-kicker">Studio Gallery</div>
+                <h1>Standard view recommended</h1>
+                <p id="fallbackMessage">The studio view is optimized for devices that support interactive 3D.</p>
+                <div class="fallback-actions">
+                    <a class="primary-action" href="/?lite=1" data-static-link>View standard site</a>
+                    <button class="secondary-action" id="tryAnywayButton" type="button" hidden>Try anyway</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <noscript>
+        <section class="fallback no-script">
+            <div class="fallback-box">
+                <div class="panel-kicker">Studio Gallery</div>
+                <h1>Standard view recommended</h1>
+                <p>The studio view requires JavaScript. The standard site has the same project and contact information.</p>
+                <a class="primary-action" href="/">View standard site</a>
+            </div>
+        </section>
+    </noscript>
+
+    <script type="module" src="world.js?v=studio-quality-hero-wall-20260509-1"></script>
+</body>
+</html>

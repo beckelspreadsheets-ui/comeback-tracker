@@ -1,0 +1,105 @@
+{
+  "candidateName": "race-camera-fog-far-range-580",
+  "decision": "keep",
+  "reason": "The candidate reduced only the race camera/fog far range from 620 to 580, preserved the existing fog near distance, passed syntax, npm run test:race, two npm run test:race:browser passes, npm run build, npm run test:visual, exact source checks, and git diff --check. Both candidate browser runs completed with 24 races and 28 visual/control/fallback checks. The two-run candidate average improved desktop focused actual FPS by 0.81, desktop all-scenario actual FPS by 1.16, and sustained actual FPS by 0.29 versus the fresh before baseline while lowering focused render calls by 7.29 and triangles by 463.42. The performance gate remains open because the kept evidence is still below the local 45 FPS floor and PRD 55 target.",
+  "before": {
+    "capturedAt": "2026-05-24T07:26:41.375Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedAverageActualFps": 35.91,
+    "desktopAllAverageActualFps": 33.75,
+    "sustainedAverageActualFps": 17.5,
+    "sustainedSampleCount": 53,
+    "focusedStates": {
+      "idle": 41.7,
+      "driving": 42.3,
+      "drift": 37.7,
+      "boost": 24,
+      "item-pickup": 39.7,
+      "rival-cluster": 42.4,
+      "finish-line": 23.6
+    },
+    "desktopFocusedRenderCallsAverage": 688.29,
+    "desktopFocusedRenderTrianglesAverage": 70971.71
+  },
+  "candidateRuns": [
+    {
+      "capturedAt": "2026-05-24T07:30:54.952Z",
+      "raceCount": 24,
+      "visualCheckCount": 28,
+      "desktopFocusedAverageActualFps": 36.44,
+      "desktopAllAverageActualFps": 35.45,
+      "sustainedAverageActualFps": 17.73,
+      "sustainedSampleCount": 53,
+      "focusedStates": {
+        "idle": 44.8,
+        "driving": 37.3,
+        "drift": 37.7,
+        "boost": 37.3,
+        "item-pickup": 37.4,
+        "rival-cluster": 37.5,
+        "finish-line": 23.1
+      },
+      "desktopFocusedRenderCallsAverage": 680.86,
+      "desktopFocusedRenderTrianglesAverage": 70482.29
+    },
+    {
+      "capturedAt": "2026-05-24T07:34:53.456Z",
+      "raceCount": 24,
+      "visualCheckCount": 28,
+      "desktopFocusedAverageActualFps": 37,
+      "desktopAllAverageActualFps": 34.37,
+      "sustainedAverageActualFps": 17.84,
+      "sustainedSampleCount": 54,
+      "focusedStates": {
+        "idle": 39.2,
+        "driving": 37.4,
+        "drift": 37.7,
+        "boost": 37.2,
+        "item-pickup": 37.4,
+        "rival-cluster": 37.4,
+        "finish-line": 32.7
+      },
+      "desktopFocusedRenderCallsAverage": 681.14,
+      "desktopFocusedRenderTrianglesAverage": 70534.29
+    }
+  ],
+  "averageCandidate": {
+    "desktopFocusedAverageActualFps": 36.72,
+    "desktopAllAverageActualFps": 34.91,
+    "sustainedAverageActualFps": 17.79,
+    "desktopFocusedRenderCallsAverage": 681,
+    "desktopFocusedRenderTrianglesAverage": 70508.29
+  },
+  "deltaAverage": {
+    "desktopFocusedAverageActualFps": 0.81,
+    "desktopAllAverageActualFps": 1.16,
+    "sustainedAverageActualFps": 0.29,
+    "desktopFocusedRenderCallsAverage": -7.29,
+    "desktopFocusedRenderTrianglesAverage": -463.42
+  },
+  "validations": {
+    "baselineBrowser": ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/npm-run-test-race-browser-before.log",
+    "candidateSyntax": [
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/node-check-create-race-scene.log",
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/node-check-race-content-playtest.log"
+    ],
+    "candidateUnit": ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/npm-run-test-race.log",
+    "candidateBrowser": [
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/npm-run-test-race-browser.log",
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/npm-run-test-race-browser-repeat.log"
+    ],
+    "candidateBrowserSummary": [
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/race-browser-playtest-summary.json",
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/race-browser-playtest-summary-repeat.json"
+    ],
+    "candidateBuild": ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/npm-run-build.log",
+    "candidateVisual": ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/npm-run-test-visual.log",
+    "exactSourceCheck": ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/far-range-candidate-identifiers.log",
+    "diffWhitespace": ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/git-diff-check.log",
+    "focusedSourceDiffs": [
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/source-diff-candidate-createRaceScene.patch",
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/source-diff-candidate-race-content-playtest.patch"
+    ]
+  }
+}

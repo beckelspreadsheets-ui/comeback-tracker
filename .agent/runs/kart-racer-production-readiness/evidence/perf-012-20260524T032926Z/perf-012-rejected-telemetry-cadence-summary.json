@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-05-24T03:36:34.011Z",
+  "candidate": {
+    "file": "src/game/race/raceTelemetryRuntime.js",
+    "reverted": true,
+    "testedChange": "DEFAULT_RACE_TELEMETRY_INTERVAL_MS 140 -> 220"
+  },
+  "gateStatus": "rejected-browser-gate-timeout-restored",
+  "reason": "The 220ms default telemetry cadence candidate passed syntax and npm run test:race, but the default npm run test:race:browser gate exited nonzero with page.waitForFunction timeout before producing a browser summary. The candidate was reverted to the 140ms default cadence.",
+  "candidateEvidence": {
+    "browserLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-012-20260524T032926Z/npm-run-test-race-browser.log",
+    "contentLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-012-20260524T032926Z/npm-run-test-race.log",
+    "syntaxLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-012-20260524T032926Z/node-check-race-telemetry-runtime.log"
+  },
+  "restoredEvidence": {
+    "buildLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-012-20260524T032926Z/npm-run-build-after-revert.log",
+    "browserLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-012-20260524T032926Z/npm-run-test-race-browser-after-revert.log",
+    "contentLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-012-20260524T032926Z/npm-run-test-race-after-revert.log",
+    "summary": ".agent/runs/kart-racer-production-readiness/evidence/perf-012-20260524T032926Z/race-browser-playtest-summary-after-revert.json",
+    "syntaxLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-012-20260524T032926Z/node-check-race-telemetry-runtime-after-revert.log"
+  },
+  "restoredBrowserSummary": {
+    "capturedAt": "2026-05-24T03:35:43.350Z",
+    "desktopAverageActualFps": 36.21,
+    "focusedProductAverageActualFps": 40.49,
+    "raceCount": 24,
+    "sustainedActualFps": {
+      "average": 17.75,
+      "max": 30.4,
+      "min": 15.2,
+      "sampleCount": 53
+    },
+    "telemetryIntervals": [
+      140
+    ],
+    "visualCheckCount": 28
+  }
+}

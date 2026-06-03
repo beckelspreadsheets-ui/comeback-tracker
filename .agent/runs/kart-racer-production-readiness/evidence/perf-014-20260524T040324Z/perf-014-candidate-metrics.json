@@ -1,0 +1,49 @@
+{
+  "candidate": "race-renderer-stencil-false",
+  "before": {
+    "capturedAt": "2026-05-24T03:55:49.438Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAverageActualFps": 36.7,
+    "focusedProductAverageActualFps": 42.63,
+    "focusedProductMinActualFps": 37.5,
+    "focusedProductFrameWorkMs": 16.94,
+    "focusedProductRenderMs": 13.47,
+    "focusedProductRenderCalls": 699.57,
+    "focusedProductTriangles": 71807.71,
+    "sustainedAverageActualFps": 17.56,
+    "sustainedFrameWorkMs": 2.18,
+    "sustainedRenderMs": 0.84,
+    "telemetryIntervals": [
+      140
+    ]
+  },
+  "candidateMetrics": {
+    "capturedAt": "2026-05-24T04:07:05.093Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAverageActualFps": 35.32,
+    "focusedProductAverageActualFps": 37.93,
+    "focusedProductMinActualFps": 21.8,
+    "focusedProductFrameWorkMs": 16.32,
+    "focusedProductRenderMs": 12.77,
+    "focusedProductRenderCalls": 689.86,
+    "focusedProductTriangles": 71060.57,
+    "sustainedAverageActualFps": 17.82,
+    "sustainedFrameWorkMs": 2.07,
+    "sustainedRenderMs": 0.9,
+    "telemetryIntervals": [
+      140
+    ]
+  },
+  "delta": {
+    "desktopAverageActualFps": -1.38,
+    "focusedProductAverageActualFps": -4.7,
+    "focusedProductMinActualFps": -15.7,
+    "sustainedAverageActualFps": 0.26,
+    "focusedProductFrameWorkMs": -0.62,
+    "focusedProductRenderMs": -0.7,
+    "focusedProductRenderCalls": -9.71,
+    "focusedProductTriangles": -747.14
+  }
+}

@@ -1,0 +1,4 @@
+# Cloudflare Pages serves /world from world.html and /thanks from thanks.html
+# through its built-in extensionless HTML routing.
+# Do not add /world -> /world.html or /thanks -> /thanks.html rewrites here;
+# those rules loop with Cloudflare's .html-to-extensionless redirect.

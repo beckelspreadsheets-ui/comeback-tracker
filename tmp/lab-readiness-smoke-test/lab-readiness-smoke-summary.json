@@ -1,0 +1,246 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/lab-readiness-smoke-test",
+  "baseUrl": "http://lab-readiness.localhost:5199",
+  "baseline": {
+    "checks": [
+      {
+        "actual": 276,
+        "label": "home first contentful paint",
+        "limit": 2000,
+        "route": "home",
+        "unit": "ms",
+        "status": "pass"
+      },
+      {
+        "actual": 288,
+        "label": "home largest contentful paint",
+        "limit": 2500,
+        "route": "home",
+        "unit": "ms",
+        "status": "pass"
+      },
+      {
+        "actual": 0.0016,
+        "label": "home cumulative layout shift",
+        "limit": 0.1,
+        "route": "home",
+        "unit": "score",
+        "status": "pass"
+      },
+      {
+        "actual": 0,
+        "label": "home total blocking time proxy",
+        "limit": 300,
+        "route": "home",
+        "unit": "ms",
+        "status": "pass"
+      },
+      {
+        "actual": 52,
+        "label": "race first contentful paint",
+        "limit": 2000,
+        "route": "race",
+        "unit": "ms",
+        "status": "pass"
+      },
+      {
+        "actual": 964,
+        "label": "race largest contentful paint",
+        "limit": 2500,
+        "route": "race",
+        "unit": "ms",
+        "status": "pass"
+      },
+      {
+        "actual": 0.0001,
+        "label": "race cumulative layout shift",
+        "limit": 0.1,
+        "route": "race",
+        "unit": "score",
+        "status": "pass"
+      },
+      {
+        "actual": 1870,
+        "label": "race total blocking time proxy",
+        "limit": 2500,
+        "route": "race",
+        "unit": "ms",
+        "status": "pass"
+      },
+      {
+        "actual": 813,
+        "label": "race max long task",
+        "limit": 1000,
+        "route": "race",
+        "unit": "ms",
+        "status": "pass"
+      }
+    ],
+    "failures": [],
+    "note": "Owner delegated a conservative V1 lab baseline on 2026-06-01. It uses Web Vitals-style paint and layout thresholds, plus wider WebGL race startup long-task guardrails until deployed Lighthouse/Web Vitals evidence is available.",
+    "thresholds": {
+      "homeCls": 0.1,
+      "homeFcpMs": 2000,
+      "homeLcpMs": 2500,
+      "homeTotalBlockingTimeProxyMs": 300,
+      "raceCls": 0.1,
+      "raceFcpMs": 2000,
+      "raceLcpMs": 2500,
+      "raceMaxLongTaskMs": 1000,
+      "raceTotalBlockingTimeProxyMs": 2500
+    }
+  },
+  "capturedAt": "2026-06-01T19:15:35.869Z",
+  "gateStatus": "lab-baseline-pass",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c2",
+    "dirty": true
+  },
+  "note": "This is a local Playwright lab-readiness equivalent for Lighthouse/Web Vitals evidence. It records metrics and basic signals only; production acceptance still requires deployed preview and production evidence against the owner-approved baseline.",
+  "pwa": {
+    "isSecureContext": true,
+    "manifest": {
+      "display": "standalone",
+      "iconCount": 3,
+      "name": "Comeback Tracker",
+      "scope": "/",
+      "shortName": "Comeback",
+      "startUrl": "/"
+    },
+    "manifestFetch": {
+      "href": "/manifest.webmanifest",
+      "ok": true,
+      "status": 200
+    },
+    "serviceWorker": {
+      "controller": true,
+      "registrationCount": 1,
+      "registrations": [
+        {
+          "activeScriptURL": "http://lab-readiness.localhost:5199/sw.js",
+          "activeState": "activated",
+          "scope": "http://lab-readiness.localhost:5199/"
+        }
+      ],
+      "scriptURL": "http://lab-readiness.localhost:5199/sw.js",
+      "state": "activated"
+    },
+    "serviceWorkerSupported": true
+  },
+  "routes": {
+    "home": {
+      "accessibilitySignals": {
+        "duplicateIds": [],
+        "headingCount": 0,
+        "headings": [],
+        "htmlLang": "en",
+        "interactiveCount": 21,
+        "title": "Comeback · 181 → 238",
+        "unlabeledInteractive": [],
+        "viewportMeta": "width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no",
+        "visibleImagesWithoutAlt": []
+      },
+      "bestPracticeSignals": {
+        "documentVisibilityState": "visible",
+        "responseStatuses": [
+          {
+            "name": "http://lab-readiness.localhost:5199/api/sync/me",
+            "responseStatus": 401
+          }
+        ],
+        "consoleErrors": [],
+        "httpErrors": [],
+        "pageErrors": [],
+        "requestFailures": []
+      },
+      "navigation": {
+        "domContentLoadedMs": 223,
+        "loadEventMs": 224,
+        "requestStartMs": 2,
+        "responseStartMs": 4,
+        "transferSizeBytes": 94379
+      },
+      "vitals": {
+        "cumulativeLayoutShift": 0.0016,
+        "firstContentfulPaint": 276,
+        "largestContentfulPaint": 288,
+        "layoutShiftCount": 4,
+        "longTaskCount": 0,
+        "maxEventDurationMs": 0,
+        "maxLongTaskMs": 0,
+        "observedTypes": {
+          "paint": true,
+          "largest-contentful-paint": true,
+          "layout-shift": true,
+          "longtask": true,
+          "event": true
+        },
+        "totalBlockingTimeProxyMs": 0,
+        "totalLongTaskMs": 0
+      },
+      "artifact": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/lab-readiness-smoke-test/home.png",
+      "label": "home",
+      "route": "/"
+    },
+    "race": {
+      "accessibilitySignals": {
+        "duplicateIds": [],
+        "headingCount": 0,
+        "headings": [],
+        "htmlLang": "en",
+        "interactiveCount": 12,
+        "title": "Comeback · 181 → 238",
+        "unlabeledInteractive": [],
+        "viewportMeta": "width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no",
+        "visibleImagesWithoutAlt": []
+      },
+      "bestPracticeSignals": {
+        "documentVisibilityState": "visible",
+        "responseStatuses": [
+          {
+            "name": "http://lab-readiness.localhost:5199/api/sync/me",
+            "responseStatus": 401
+          }
+        ],
+        "consoleErrors": [],
+        "httpErrors": [],
+        "pageErrors": [],
+        "requestFailures": []
+      },
+      "navigation": {
+        "domContentLoadedMs": 11,
+        "loadEventMs": 11,
+        "requestStartMs": 0,
+        "responseStartMs": 1,
+        "transferSizeBytes": 329
+      },
+      "vitals": {
+        "cumulativeLayoutShift": 0.0001,
+        "firstContentfulPaint": 52,
+        "largestContentfulPaint": 964,
+        "layoutShiftCount": 1,
+        "longTaskCount": 43,
+        "maxEventDurationMs": 0,
+        "maxLongTaskMs": 813,
+        "observedTypes": {
+          "paint": true,
+          "largest-contentful-paint": true,
+          "layout-shift": true,
+          "longtask": true,
+          "event": true
+        },
+        "totalBlockingTimeProxyMs": 1870,
+        "totalLongTaskMs": 4020
+      },
+      "artifact": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/lab-readiness-smoke-test/race.png",
+      "label": "race",
+      "route": "/#race"
+    }
+  },
+  "unresolvedReleaseDecisions": [
+    "Production deployed URL and response-header evidence",
+    "Target browser/device matrix",
+    "Monitoring provider or explicit no-monitoring risk acceptance"
+  ]
+}

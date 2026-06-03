@@ -1,0 +1,139 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/deployed-headers-001-20260524T123726Z",
+  "baseUrl": "http://127.0.0.1:5231",
+  "capturedAt": "2026-05-24T12:39:00.329Z",
+  "gateStatus": "local-cloudflare-header-simulation-pass-not-deployed-evidence",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c2",
+    "dirty": true
+  },
+  "mode": "local-cloudflare-header-simulation",
+  "note": "This proves header policy and smoke harness behavior with a local Cloudflare-style _headers simulation. It is not preview or production deployed evidence.",
+  "responseHeaders": {
+    "asset": {
+      "bodySnippet": "const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=[\"assets/HomeScreen-B9delSpq.js\",\"assets/icons-Dzyue0qK.js\",\"assets/primitives-CJ_wS6Tm.js\",\"assets/recharts-CR5iyUw2.js\",\"assets/SettingsScreen-Bh4Rv13Y.js\",\"assets/CalibrationScreen-MMMHrIQN.js\",\"assets/DayScreen-CR9Lwnxy.js\",\"assets/MetricsScreen-CBWVQFlb.js\",\"assets/gameMissions-By2MCn9G.js\",\"assets/foodHelpers-CvQFuEoD.js\",\"assets/FoodScreen-Uv9qCsDS.js\",\"assets/JointScreen-D-081aBP.js\",\"assets/WorldMode-C6ywWhyN.js\",\"assets/comebackCityVisuals-BEt_h-N8.js\",\"assets/comebackCityVisuals-BdAwlr6n.css\",\"assets/RaceScreen-CveECBxq.js\"])))=>i.map(i=>d[i]);\nimport{r as l,P as Ce,X as Ae,D as Ie,C as Le,S as Pe,A as Te,a as Ne,T as Oe,b as De,d as je,U as _e,e as se,f as ge,W as Be,R as Me}from\"./icons-Dzyue0qK.js\";import{r as Ve}from\"./recharts-CR5iyUw2.js\";(function(){const t=document.createElement(\"link\").relList;if(t&&t.supports&&t.supports(\"modulepreload\"))return;for(const n of document.querySelectorAll('link[rel=\"modulepreload\"]'))a(n);new MutationObserver(n=>{for(const i of n)if(i.type===\"childList\")for(const p of i.addedNodes)p.tagName===\"LINK\"&&p.rel===\"modulepreload\"&&a(p)}).observe(document,{childList:!0,subtree:!0});function r(n){const i={};return n.integrity&&(i.integrity=n.integrity),n.referrerPolicy&&(i.referrerPolicy=n.referrerPolicy),n.crossOrigin===\"use-credentials\"?i.credentials=\"include\":n.crossOrigin===\"anonymous\"?i.credentials=\"omit\":i.credentials=\"same-origin\",i}function a(n){if(n.ep)return;n.ep=!0;const i=r(n);fetch(n.href,i)}})();var ye={exports:{}},J={};/**\n * @license React\n * react-jsx-runtime.production.min.js\n *\n * Copyright (c) Facebook, Inc. and its affiliates.\n *\n * This source code is licensed under the MIT license found in the\n * LICENSE file in the root directory of this source tree.\n */var Fe=l,Ue=Symbol.for(\"react.element\"),He=Symbol.for(\"react.fragment\"),Ge=Object.prototype.hasOwnProperty,We=Fe.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner,ze={key:!0,ref:!0,__self:!0,__source:!0};function be(e,t,r){var a,n={},i=null,p=null;r!==void 0&&(i=\"\"+r),t.key!==void 0&&(i=\"\"+t.key),t.ref!==void 0&&(p=t.ref);for(a in t)Ge.call(t,a)&&!ze.hasOwnProperty(a)&&(n[a]=t[a]);if(e&&e.defaultProps)for(a in t=e.defaultProps,t)n[a]===void 0&&(n[a]=t[a]);return{$$typeof:Ue,type:e,key:i,ref:p,props:n,_owner:We.current}}J.Fragment=He;J.jsx=be;J.jsxs=be;ye.exports=J;var s=ye.exports,ee={},ie=Ve;ee.createRoot=ie.createRoot,ee.hydrateRoot=ie.hydrateRoot;const Ke=\"modulepreload\",$e=function(e){return\"/\"+e},le={},P=function(t,r,a){let n=Promise.resolve();if(r&&r.length>0){document.getElementsByTagName(\"link\");const p=document.querySelector(\"meta[property=csp-nonce]\"),c=p?.nonce||p?.getAttribute(\"nonce\");n=Promise.allSettled(r.map(d=>{if(d=$e(d),d in le)return;le[d]=!0;const y=d.endsWith(\".css\"),x=y?'[rel=\"stylesheet\"]':\"\";if(document.querySelector(`link[href=\"${d}\"]${x}`))return;const u=document.createElement(\"link\");if(u.rel=y?\"stylesheet\":Ke,y||(u.as=\"script\"),u.crossOrigin=\"\",u.href=d,c&&u.setAttribute(\"nonce\",c),document.head.appendChild(u),y)return new Promise((g,w)=>{u.addEventListener(\"load\",g),u.addEventListener(\"error\",()=>w(new Error(`Unable to preload CSS for ${d}`)))})}))}function i(p){const c=new Event(\"vite:preloadError\",{cancelable:!0});if(c.payload=p,window.dispatchEvent(c),!c.defaultPrevented)throw p}return n.then(p=>{for(const c of p||[])c.status===\"rejected\"&&i(c.reason);return t().catch(i)})},qe={},Je={andrew:{settings:{currentBW:186,targetBW:186,height:69.5,age:38,activity:1.55},food:{phase:\"cut\",proteinPerLb:1}},alexander:{settings:{currentBW:181,targetBW:238,height:72,age:38,activity:1.55},food:{phase:\"maintain\",proteinPerLb:1}}},Ye=qe?.VITE_USER_PRESET,te=Je[Ye],Ze=te?.settings??{currentBW:181,targetBW:238,height:72,age:38,activity:1.55},z={targets:{phase:te?.food?.phase??\"maintain\",offsets:{cut:-500,maintain:0,bulk:250},proteinPerLb:te?.food?.proteinPerLb??1,fatGPerLb:.4},library:[],log:{},templates:[]},Xe=[{key:\"backSquat\",name:\"Back Squat\"},{key:\"hackSquat\",name:\"Hack Squat\"},{key:\"frontSquat\",name:\"Front Squat\"},{key:\"trapBar\",name:\"Trap Bar Deadlift\"},{key:\"rdl\",name:\"Romanian Deadlift\"},{key:\"sldl\",name:\"Stiff-Leg Deadlift\"},{key:\"dbBench\",name:\"Dumbbell Bench (per DB)\"},{key:\"inclineDB\",name:\"Incline DB Press (per DB)\"},{key:\"landmine\",name:\"Landmine Press\"},{key:\"seatedDB\",name:\"Seated DB Press (per DB)\"},{key:\"pullup\",name:\"Weighted Pull-up (BW + added)\"},{key:\"latPulldown\",name:\"Lat Pulldown\"},{key:\"row\",name:\"Seal / Chest-Supp Row\"},{key:\"hipThrust\",name:\"Hip Thrust\"},{key:\"bss\",name:\"Bulgarian Split Squat (per DB)\"},{key:\"legPress\",name:\"Leg Press\"},{key:\"bbCurl\",name:\"Barbell Curl\"},{key:\"dbCurl\",name:\"Dumbbell Curl (per DB)\"},{key:\"preacher\",name:\"Preacher Curl\"},{key:\"cgBench\",name:\"Close-Grip Bench Press\"},{key:\"skullCrusher\",name:\"Skull Crusher / EZ Ext.\"},{key:\"ohTri\",name:\"Overhead Triceps Ext.\"},{key:\"lyingLegCurl\",name:\"Lying Leg Curl\"},{key:\"seatedLegCurl\",name:\"Seated Leg Curl\"}",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+        "content-type": "text/javascript; charset=utf-8",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN"
+      },
+      "label": "hashed asset headers",
+      "status": 200,
+      "url": "http://127.0.0.1:5231/assets/index-B2gvYz_I.js"
+    },
+    "checks": [
+      {
+        "actual": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+        "expected": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+        "label": "root content-security-policy"
+      },
+      {
+        "actual": "camera=(), microphone=(), geolocation=()",
+        "expected": "camera=(), microphone=(), geolocation=()",
+        "label": "root permissions-policy"
+      },
+      {
+        "actual": "strict-origin-when-cross-origin",
+        "expected": "strict-origin-when-cross-origin",
+        "label": "root referrer-policy"
+      },
+      {
+        "actual": "nosniff",
+        "expected": "nosniff",
+        "label": "root x-content-type-options"
+      },
+      {
+        "actual": "SAMEORIGIN",
+        "expected": "SAMEORIGIN",
+        "label": "root x-frame-options"
+      },
+      {
+        "actual": "public, max-age=3600",
+        "expected": "public, max-age=3600",
+        "label": "manifest cache-control"
+      },
+      {
+        "actual": "no-cache, no-store, must-revalidate",
+        "expected": "no-cache, no-store, must-revalidate",
+        "label": "service worker cache-control"
+      },
+      {
+        "actual": "no-cache, no-store, must-revalidate",
+        "expected": "no-cache, no-store, must-revalidate",
+        "label": "register service worker cache-control"
+      },
+      {
+        "actual": "public, max-age=31536000, immutable",
+        "expected": "public, max-age=31536000, immutable",
+        "label": "asset cache-control"
+      }
+    ],
+    "manifest": {
+      "bodySnippet": "{\"name\":\"Comeback Tracker\",\"short_name\":\"Comeback\",\"start_url\":\"/\",\"display\":\"standalone\",\"background_color\":\"#000000\",\"lang\":\"en\",\"scope\":\"/\",\"description\":\"The Comeback: 181 → 238 lbs — 7-Day Arms/Hams Specialization Tracker\",\"theme_color\":\"#0a0a0a\",\"orientation\":\"portrait\",\"icons\":[{\"src\":\"/icon-192.png\",\"sizes\":\"192x192\",\"type\":\"image/png\",\"purpose\":\"any\"},{\"src\":\"/icon-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\",\"purpose\":\"any\"},{\"src\":\"/icon-maskable-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\",\"purpose\":\"maskable\"}],\"categories\":[\"health\",\"fitness\",\"lifestyle\"]}\n",
+      "headers": {
+        "cache-control": "public, max-age=3600",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+        "content-type": "application/manifest+json; charset=utf-8",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN"
+      },
+      "label": "manifest headers",
+      "status": 200,
+      "url": "http://127.0.0.1:5231/manifest.webmanifest"
+    },
+    "registerWorker": {
+      "bodySnippet": "<!doctype html>\n<html lang=\"en\" class=\"dark\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no\" />\n    <meta name=\"theme-color\" content=\"#0b0b0e\" />\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\" />\n    <meta name=\"apple-mobile-web-app-title\" content=\"Comeback\" />\n    <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n\n    <title>Comeback · 181 → 238</title>\n    <meta name=\"description\" content=\"The Comeback — 7-day arms/hams specialization tracker\" />\n    <script type=\"module\" crossorigin src=\"/assets/index-B2gvYz_I.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Dzyue0qK.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/recharts-CR5iyUw2.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-BXoqPyit.css\">\n  <link rel=\"manifest\" href=\"/manifest.webmanifest\"></head>\n  <body class=\"bg-ink\">\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+        "content-type": "text/html; charset=utf-8",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN"
+      },
+      "label": "register service worker headers",
+      "status": 200,
+      "url": "http://127.0.0.1:5231/registerSW.js"
+    },
+    "root": {
+      "bodySnippet": "<!doctype html>\n<html lang=\"en\" class=\"dark\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no\" />\n    <meta name=\"theme-color\" content=\"#0b0b0e\" />\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\" />\n    <meta name=\"apple-mobile-web-app-title\" content=\"Comeback\" />\n    <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n\n    <title>Comeback · 181 → 238</title>\n    <meta name=\"description\" content=\"The Comeback — 7-day arms/hams specialization tracker\" />\n    <script type=\"module\" crossorigin src=\"/assets/index-B2gvYz_I.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Dzyue0qK.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/recharts-CR5iyUw2.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-BXoqPyit.css\">\n  <link rel=\"manifest\" href=\"/manifest.webmanifest\"></head>\n  <body class=\"bg-ink\">\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
+      "headers": {
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+        "content-type": "text/html; charset=utf-8",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN"
+      },
+      "label": "root headers",
+      "status": 200,
+      "url": "http://127.0.0.1:5231/"
+    },
+    "serviceWorker": {
+      "bodySnippet": "if(!self.define){let s,e={};const i=(i,n)=>(i=new URL(i+\".js\",n).href,e[i]||new Promise(e=>{if(\"document\"in self){const s=document.createElement(\"script\");s.src=i,s.onload=e,document.head.appendChild(s)}else s=i,importScripts(i),e()}).then(()=>{let s=e[i];if(!s)throw new Error(`Module ${i} didn’t register its module`);return s}));self.define=(n,r)=>{const l=s||(\"document\"in self?document.currentScript.src:\"\")||location.href;if(e[l])return;let a={};const o=s=>i(s,l),t={module:{uri:l},exports:a,require:o};e[l]=Promise.all(n.map(s=>t[s]||o(s))).then(s=>(r(...s),a))}}define([\"./workbox-835c8c05\"],function(s){\"use strict\";self.skipWaiting(),s.clientsClaim(),s.precacheAndRoute([{url:\"index.html\",revision:\"5189cf650a99cb389e9e16a6877e0ac4\"},{url:\"icon-maskable-512.png\",revision:\"0664180f8959fcf5f8fedacfdf7508f6\"},{url:\"icon-512.png\",revision:\"0a7d975ead2890c86d1b1b0d6aca8727\"},{url:\"icon-192.png\",revision:\"82360338bb68c706d3ef8aaf093374a4\"},{url:\"favicon.svg\",revision:\"2099285f91ca96348a7e71ff1492b948\"},{url:\"apple-touch-icon.png\",revision:\"298ffe5c7a8346203acf10e094988933\"},{url:\"assets/workbox-window.prod.es5-BqEJf4Xk.js\",revision:null},{url:\"assets/recharts-CR5iyUw2.js\",revision:null},{url:\"assets/react-vendor-DgKcYmHs.js\",revision:null},{url:\"assets/primitives-CJ_wS6Tm.js\",revision:null},{url:\"assets/index-mBsSk2OY.js\",revision:null},{url:\"assets/index-BXoqPyit.css\",revision:null},{url:\"assets/index-B2gvYz_I.js\",revision:null},{url:\"assets/icons-Dzyue0qK.js\",revision:null},{url:\"assets/gameMissions-By2MCn9G.js\",revision:null},{url:\"assets/foodHelpers-CvQFuEoD.js\",revision:null},{url:\"assets/district-facade-lab-ChajcXtg.png\",revision:null},{url:\"assets/district-facade-gym-Bp7krZEW.png\",revision:null},{url:\"assets/district-facade-garage-CKe13JSx.png\",revision:null},{url:\"assets/district-facade-food-DrqGQUaR.png\",revision:null},{url:\"assets/district-facade-clinic-DA16fqB5.png\",revision:null},{url:\"assets/comebackCityVisuals-BdAwlr6n.css\",revision:null},{url:\"assets/comebackCityVisuals-BEt_h-N8.js\",revision:null},{url:\"assets/comeback-city-race-backdrop-v2-C3Ix5jxi.png\",revision:null},{url:\"assets/WorldMode-C6ywWhyN.js\",revision:null},{url:\"assets/SettingsScreen-Bh4Rv13Y.js\",revision:null},{url:\"assets/RaceScreen-CveECBxq.js\",revision:null},{url:\"assets/MetricsScreen-CBWVQFlb.js\",revision:null},{url:\"assets/JointScreen-D-081aBP.js\",revision:null},{url:\"assets/HomeScreen-B9delSpq.js\",revision:null},{url:\"assets/FoodScreen-Uv9qCsDS.js\",revision:null},{url:\"assets/DayScreen-CR9Lwnxy.js\",revision:null},{url:\"assets/CalibrationScreen-MMMHrIQN.js\",revision:null},{url:\"apple-touch-icon.png\",revision:\"298ffe5c7a8346203acf10e094988933\"},{url:\"favicon.svg\",revision:\"2099285f91ca96348a7e71ff1492b948\"},{url:\"icon-192.png\",revision:\"82360338bb68c706d3ef8aaf093374a4\"},{url:\"icon-512.png\",revision:\"0a7d975ead2890c86d1b1b0d6aca8727\"},{url:\"icon-maskable-512.png\",revision:\"0664180f8959fcf5f8fedacfdf7508f6\"},{url:\"manifest.webmanifest\",revision:\"31444e44e85444042f40a415628ebb85\"}],{}),s.cleanupOutdatedCaches(),s.registerRoute(new s.NavigationRoute(s.createHandlerBoundToURL(\"index.html\"))),s.registerRoute(/^https:\\/\\/fonts\\.googleapis\\.com\\/.*/i,new s.CacheFirst({cacheName:\"google-fonts-cache\",plugins:[new s.ExpirationPlugin({maxEntries:10,maxAgeSeconds:31536e3}),new s.CacheableResponsePlugin({statuses:[0,200]})]}),\"GET\"),s.registerRoute(/^https:\\/\\/fonts\\.gstatic\\.com\\/.*/i,new s.CacheFirst({cacheName:\"gstatic-fonts-cache\",plugins:[new s.ExpirationPlugin({maxEntries:10,maxAgeSeconds:31536e3}),new s.CacheableResponsePlugin({statuses:[0,200]})]}),\"GET\")});\n",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.openfoodfacts.org; connect-src 'self' https://world.openfoodfacts.org https://api.nal.usda.gov; manifest-src 'self'; media-src 'self' blob: data:",
+        "content-type": "text/javascript; charset=utf-8",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN"
+      },
+      "label": "service worker headers",
+      "status": 200,
+      "url": "http://127.0.0.1:5231/sw.js"
+    }
+  },
+  "unresolved": [
+    "Preview or production URL deployed response-header evidence is still required."
+  ]
+}

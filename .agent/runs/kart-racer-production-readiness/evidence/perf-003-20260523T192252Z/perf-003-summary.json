@@ -1,0 +1,410 @@
+{
+  "capturedAt": "2026-05-23T19:27:29.195Z",
+  "command": "npm run test:race:browser",
+  "change": "Instanced repeated street/plaza lamps and removed boost-only full-canvas CSS filter",
+  "raceCount": 24,
+  "visualCheckCount": 28,
+  "baselineSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-002-20260523T190500Z/perf-002-summary.json",
+  "lampCheckpointSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-002c-20260523T191341Z/perf-002c-summary.json",
+  "sustainedRouteUrl": "http://127.0.0.1:5187/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=free-switch&raceIndex=901&raceNoFinish=1",
+  "sustainedNormalPlay": {
+    "actualFps": {
+      "average": 17.7,
+      "max": 29,
+      "min": 15.8,
+      "sampleCount": 52
+    },
+    "budgetMissCount": 138,
+    "captureWindowSeconds": 8.938,
+    "firstSampleAt": 2.082,
+    "frameElapsedMs": {
+      "average": 65.94,
+      "max": 107.9,
+      "min": 39.6,
+      "sampleCount": 52
+    },
+    "frameWorkMs": {
+      "average": 2.22,
+      "max": 9.55,
+      "min": 1.4,
+      "sampleCount": 52
+    },
+    "latest": {
+      "activeSurface": "asphalt",
+      "audioMuted": false,
+      "boostActive": false,
+      "boostSource": null,
+      "cameraAvoidanceCount": 4,
+      "cameraClipCount": 0,
+      "collisionSpeedLossRatio": null,
+      "driftActive": false,
+      "driftTier": 0,
+      "driftTierSeen": 0,
+      "actualFps": 16.2,
+      "fps": 16.2,
+      "frameBudgetMissCount": 164,
+      "frameDtMs": 46.8,
+      "frameElapsedMs": 46.8,
+      "framePhaseMaxMs": {
+        "clock": 0.1,
+        "fitRenderer": 1.1,
+        "commands": 0.1,
+        "visualPrime": 0.1,
+        "player": 104.5,
+        "world": 0.7,
+        "syncMeshes": 0.5,
+        "camera": 0.7,
+        "render": 45.7,
+        "telemetry": 3.7,
+        "finish": 0
+      },
+      "framePhaseMs": {
+        "clock": 0.06,
+        "fitRenderer": 0.06,
+        "commands": 0.06,
+        "visualPrime": 0.06,
+        "player": 0.06,
+        "world": 0.06,
+        "syncMeshes": 0.06,
+        "camera": 0.06,
+        "render": 0.88,
+        "telemetry": 0.4,
+        "finish": 0
+      },
+      "telemetryIntervalMs": 140,
+      "telemetryPublishCount": 64,
+      "telemetrySkipCount": 101,
+      "frameWorkMaxMs": 108.1,
+      "frameWorkMs": 1.48,
+      "heldItemKey": "shield",
+      "horizonYRatio": 0.501,
+      "itemBoxPickupDelay": 0,
+      "kartHeightRatio": 0.066,
+      "lap": 2,
+      "normalizedSpeed": 0.667,
+      "offroadSlowdown": 1,
+      "offroadSpeedLossRatio": null,
+      "playerProgress": 0.371,
+      "reducedMotion": false,
+      "renderCalls": 254,
+      "renderGeometries": 669,
+      "renderPrograms": 7,
+      "renderTextures": 16,
+      "renderTriangles": 37796,
+      "roadAheadCoverage": 0.778,
+      "routeLookaheadSeconds": 1.333,
+      "sceneBudget": {
+        "categories": {
+          "pickups": {
+            "geometries": 60,
+            "groups": 30,
+            "instancedMeshes": 0,
+            "lights": 0,
+            "materials": 20,
+            "meshes": 60,
+            "objects": 90,
+            "rootCount": 36,
+            "triangles": 8384
+          },
+          "rivalsAndPlayer": {
+            "geometries": 130,
+            "groups": 38,
+            "instancedMeshes": 0,
+            "lights": 0,
+            "materials": 48,
+            "meshes": 130,
+            "objects": 168,
+            "rootCount": 4,
+            "triangles": 5496
+          },
+          "scenery": {
+            "geometries": 243,
+            "groups": 25,
+            "instancedMeshes": 28,
+            "lights": 0,
+            "materials": 122,
+            "meshes": 271,
+            "objects": 311,
+            "rootCount": 88,
+            "triangles": 29534
+          },
+          "track": {
+            "geometries": 271,
+            "groups": 0,
+            "instancedMeshes": 104,
+            "lights": 0,
+            "materials": 12,
+            "meshes": 374,
+            "objects": 374,
+            "rootCount": 374,
+            "triangles": 39480,
+            "instancedTrackMeshCount": 104,
+            "visualSegmentCount": 114
+          },
+          "vfx": {
+            "geometries": 17,
+            "groups": 5,
+            "instancedMeshes": 0,
+            "lights": 0,
+            "materials": 14,
+            "meshes": 17,
+            "objects": 22,
+            "rootCount": 6,
+            "triangles": 1012
+          }
+        },
+        "scene": {
+          "geometries": 704,
+          "groups": 94,
+          "instancedMeshes": 132,
+          "lights": 3,
+          "materials": 201,
+          "meshes": 835,
+          "objects": 948,
+          "rootCount": 1,
+          "triangles": 82894
+        }
+      },
+      "reverseSpeedCapRatio": 0.25,
+      "reverseSpeedRatio": 0,
+      "reverseTuningRatio": 0.25,
+      "steeringTurn90Time": null,
+      "stuckRecoveryCount": 0,
+      "timeFromTopSpeedTo25": null,
+      "timeToSpeed80": null,
+      "timeToSpeed98": null,
+      "visibleRivals": 2,
+      "visibleRivalsSeen": 3
+    },
+    "latestSampleAt": 11.02,
+    "metricSampleCount": 52,
+    "renderer": {
+      "calls": 254,
+      "frame": 165,
+      "geometries": 669,
+      "lines": 0,
+      "points": 0,
+      "programs": 7,
+      "textures": 16,
+      "triangles": 37796
+    },
+    "renderPhaseMaxMs": {
+      "average": 45.7,
+      "max": 45.7,
+      "min": 45.7,
+      "sampleCount": 52
+    },
+    "renderPhaseMs": {
+      "average": 0.88,
+      "max": 0.88,
+      "min": 0.88,
+      "sampleCount": 52
+    },
+    "sceneBudget": {
+      "categories": {
+        "pickups": {
+          "geometries": 60,
+          "groups": 30,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 20,
+          "meshes": 60,
+          "objects": 90,
+          "rootCount": 36,
+          "triangles": 8384
+        },
+        "rivalsAndPlayer": {
+          "geometries": 130,
+          "groups": 38,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 48,
+          "meshes": 130,
+          "objects": 168,
+          "rootCount": 4,
+          "triangles": 5496
+        },
+        "scenery": {
+          "geometries": 243,
+          "groups": 25,
+          "instancedMeshes": 28,
+          "lights": 0,
+          "materials": 122,
+          "meshes": 271,
+          "objects": 311,
+          "rootCount": 88,
+          "triangles": 29534
+        },
+        "track": {
+          "geometries": 271,
+          "groups": 0,
+          "instancedMeshes": 104,
+          "lights": 0,
+          "materials": 12,
+          "meshes": 374,
+          "objects": 374,
+          "rootCount": 374,
+          "triangles": 39480,
+          "instancedTrackMeshCount": 104,
+          "visualSegmentCount": 114
+        },
+        "vfx": {
+          "geometries": 17,
+          "groups": 5,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 14,
+          "meshes": 17,
+          "objects": 22,
+          "rootCount": 6,
+          "triangles": 1012
+        }
+      },
+      "scene": {
+        "geometries": 704,
+        "groups": 94,
+        "instancedMeshes": 132,
+        "lights": 3,
+        "materials": 201,
+        "meshes": 835,
+        "objects": 948,
+        "rootCount": 1,
+        "triangles": 82894
+      }
+    },
+    "smoothedActualFps": {
+      "average": 17.7,
+      "max": 29,
+      "min": 15.8,
+      "sampleCount": 52
+    }
+  },
+  "desktopFocused": [
+    {
+      "name": "comeback-city-desktop-idle",
+      "actualFps": 41.8,
+      "frameWorkMs": 17.16,
+      "renderMs": 13.39,
+      "renderCalls": 747,
+      "renderTriangles": 76618,
+      "cameraClipCount": 0,
+      "roadAheadCoverage": 1,
+      "visibleRivalsSeen": 3
+    },
+    {
+      "name": "comeback-city-desktop-driving",
+      "actualFps": 42.2,
+      "frameWorkMs": 17.09,
+      "renderMs": 13.35,
+      "renderCalls": 657,
+      "renderTriangles": 68320,
+      "cameraClipCount": 0,
+      "roadAheadCoverage": 1,
+      "visibleRivalsSeen": 3
+    },
+    {
+      "name": "comeback-city-desktop-drift",
+      "actualFps": 37.7,
+      "frameWorkMs": 14.97,
+      "renderMs": 11.66,
+      "renderCalls": 689,
+      "renderTriangles": 70686,
+      "cameraClipCount": 0,
+      "roadAheadCoverage": 1,
+      "visibleRivalsSeen": 3
+    },
+    {
+      "name": "comeback-city-desktop-boost",
+      "actualFps": 42.2,
+      "frameWorkMs": 17.09,
+      "renderMs": 13.32,
+      "renderCalls": 687,
+      "renderTriangles": 70650,
+      "cameraClipCount": 0,
+      "roadAheadCoverage": 1,
+      "visibleRivalsSeen": 3
+    },
+    {
+      "name": "comeback-city-desktop-item-pickup",
+      "actualFps": 42.4,
+      "frameWorkMs": 17.17,
+      "renderMs": 13.46,
+      "renderCalls": 687,
+      "renderTriangles": 70810,
+      "cameraClipCount": 0,
+      "roadAheadCoverage": 1,
+      "visibleRivalsSeen": 3
+    },
+    {
+      "name": "comeback-city-desktop-rival-cluster",
+      "actualFps": 42.3,
+      "frameWorkMs": 17.33,
+      "renderMs": 13.67,
+      "renderCalls": 687,
+      "renderTriangles": 70810,
+      "cameraClipCount": 0,
+      "roadAheadCoverage": 1,
+      "visibleRivalsSeen": 3
+    },
+    {
+      "name": "comeback-city-desktop-finish-line",
+      "actualFps": 42.2,
+      "frameWorkMs": 17.19,
+      "renderMs": 13.37,
+      "renderCalls": 686,
+      "renderTriangles": 70698,
+      "cameraClipCount": 0,
+      "roadAheadCoverage": 1,
+      "visibleRivalsSeen": 3
+    }
+  ],
+  "desktopFocusedAverages": {
+    "actualFps": 41.54,
+    "frameWorkMs": 16.86,
+    "renderMs": 13.17,
+    "renderCalls": 691.43,
+    "renderTriangles": 71227.43
+  },
+  "deltaFromPerf002AB": {
+    "desktopFocusedAverages": {
+      "actualFps": 7.85,
+      "frameWorkMs": 0.24,
+      "renderMs": 0.34,
+      "renderCalls": -22,
+      "renderTriangles": 2062.29
+    },
+    "sustainedNormalPlay": {
+      "actualFpsAverage": 0.12,
+      "frameElapsedMsAverage": -1.48,
+      "frameWorkMsAverage": 0.11,
+      "renderPhaseMsAverage": -0.03,
+      "budgetMissCount": -1,
+      "sceneObjects": -39,
+      "sceneMeshes": -39,
+      "sceneInstancedMeshes": 5,
+      "sceneryMeshes": -39,
+      "sceneryInstancedMeshes": 5
+    }
+  },
+  "deltaFromLampCheckpoint": {
+    "desktopFocusedAverages": {
+      "actualFps": 2.08,
+      "frameWorkMs": -0.2,
+      "renderMs": -0.51,
+      "renderCalls": -0.57,
+      "renderTriangles": -8
+    },
+    "sustainedNormalPlay": {
+      "actualFpsAverage": -0.29,
+      "frameElapsedMsAverage": 0.38,
+      "frameWorkMsAverage": -0.01,
+      "renderPhaseMsAverage": 0.02,
+      "budgetMissCount": 0,
+      "sceneObjects": 0,
+      "sceneMeshes": 0,
+      "sceneInstancedMeshes": 0,
+      "sceneryMeshes": 0,
+      "sceneryInstancedMeshes": 0
+    }
+  }
+}

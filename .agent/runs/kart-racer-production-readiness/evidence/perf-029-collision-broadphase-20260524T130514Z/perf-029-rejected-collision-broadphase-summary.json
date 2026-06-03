@@ -1,0 +1,81 @@
+{
+  "candidateName": "world-collision-circle-distance-broadphase",
+  "decision": "reject-and-revert",
+  "reason": "The candidate skipped nearest-road collision work for world collision circles whose center distance exceeded circle radius plus racer radius, and updated the existing content assertion for the broadphase skip. Syntax checks and npm run test:race passed, but the required browser harness failed the hard visual telemetry gate with camera clip count 1 is not zero in comeback-city-desktop-opening-sequence. The candidate was reverted to the pre-candidate source. Post-revert syntax, npm run test:race, npm run test:race:browser, npm run build, npm run test:visual, and exact source diff checks passed.",
+  "baseline": {
+    "capturedAt": "2026-05-24T13:08:47.455Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedAverageActualFps": 38.36,
+    "desktopAllAverageActualFps": 35.36,
+    "sustainedAverageActualFps": 17.34,
+    "sustainedSampleCount": 52,
+    "focusedStates": {
+      "idle": 39.1,
+      "driving": 37.5,
+      "drift": 42.5,
+      "boost": 37.4,
+      "item-pickup": 37.5,
+      "rival-cluster": 37.3,
+      "finish-line": 37.2
+    },
+    "desktopFocusedFrameWorkAverage": 15.43,
+    "desktopFocusedRenderAverage": 12.04,
+    "desktopFocusedRenderCallsAverage": 683.14,
+    "desktopFocusedRenderTrianglesAverage": 70660
+  },
+  "candidateFailure": {
+    "log": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/candidate-race-browser.log",
+    "reason": "Race visual telemetry thresholds failed: camera clip count 1 is not zero.",
+    "failedScenario": "comeback-city-desktop-opening-sequence"
+  },
+  "postRevert": {
+    "capturedAt": "2026-05-24T13:16:35.921Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedAverageActualFps": 38.73,
+    "desktopAllAverageActualFps": 35.11,
+    "sustainedAverageActualFps": 18.01,
+    "sustainedSampleCount": 53,
+    "focusedStates": {
+      "idle": 38.7,
+      "driving": 37.4,
+      "drift": 37.8,
+      "boost": 44.8,
+      "item-pickup": 37.5,
+      "rival-cluster": 37.5,
+      "finish-line": 37.4
+    },
+    "desktopFocusedFrameWorkAverage": 15.59,
+    "desktopFocusedRenderAverage": 11.98,
+    "desktopFocusedRenderCallsAverage": 687.43,
+    "desktopFocusedRenderTrianglesAverage": 71072.29
+  },
+  "validations": {
+    "baselineBrowser": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/baseline-race-browser.log",
+    "baselineBrowserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/baseline-race-browser-playtest-summary.json",
+    "candidateSyntax": [
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/node-check-kart-physics.log",
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/node-check-race-content-playtest.log"
+    ],
+    "candidateUnit": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/npm-run-test-race.log",
+    "candidateBrowser": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/candidate-race-browser.log",
+    "postRevertSyntax": [
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-node-check-kart-physics.log",
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-node-check-race-content-playtest.log"
+    ],
+    "postRevertUnit": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-npm-run-test-race.log",
+    "postRevertBrowser": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-race-browser.log",
+    "postRevertBrowserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-race-browser-playtest-summary.json",
+    "postRevertBuild": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-npm-run-build.log",
+    "postRevertVisual": ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-npm-run-test-visual.log",
+    "exactSourceChecks": [
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-kart-physics-diff.log",
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/post-revert-race-content-playtest-diff.log"
+    ],
+    "sourceDiffs": [
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/source-diff-candidate-kartPhysics.patch",
+      ".agent/runs/kart-racer-production-readiness/evidence/perf-029-collision-broadphase-20260524T130514Z/source-diff-candidate-race-content-playtest.patch"
+    ]
+  }
+}

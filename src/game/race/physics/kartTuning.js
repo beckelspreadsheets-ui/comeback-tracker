@@ -1,0 +1,106 @@
+export const DRIFT_TUNING = {
+  hover: {
+    boostDuration: [0.48, 0.78, 1.04],
+    boostStrength: [7.5, 11.5, 16],
+    grip: 2.8,
+    slideAngle: 0.18,
+    slideForce: 12.2,
+    sparkChargeTime: [0.58, 1.18, 1.95],
+    turnAssist: 1.22,
+  },
+  kart: {
+    boostDuration: [0.35, 0.75, 1.1],
+    boostStrength: [9.5, 14.5, 20],
+    grip: 4.05,
+    slideAngle: 0.28,
+    slideForce: 10.8,
+    sparkChargeTime: [0.55, 1.3, 2.15],
+    turnAssist: 1.7,
+  },
+  plane: {
+    boostDuration: [0.42, 0.68, 0.92],
+    boostStrength: [6, 9.5, 13],
+    grip: 2.25,
+    slideAngle: 0.1,
+    slideForce: 5.8,
+    sparkChargeTime: [0.62, 1.3, 2.1],
+    turnAssist: 1.08,
+  },
+};
+
+export const VEHICLES = {
+  kart: {
+    label: 'Kart',
+    acceleration: 46,
+    // Full launch through mid speed, then taper so non-boost telemetry reaches 80% quickly but near-top speed in 2.2-3.0s.
+    accelerationMinMultiplier: 0.1,
+    accelerationTaperStart: 0.5,
+    brake: 74,
+    boostMax: 92,
+    cameraDistance: 42,
+    cameraHeight: 9.2,
+    driftCharge: 1.38,
+    driftGrip: DRIFT_TUNING.kart.grip,
+    driftSlip: 15.4,
+    driftTurn: 2.12,
+    driftVisualAngle: DRIFT_TUNING.kart.slideAngle,
+    grip: 15.8,
+    hover: 0,
+    maxSpeed: 72,
+    offroad: 0.58,
+    reverse: 18,
+    steer: 3.05,
+  },
+  hover: {
+    label: 'Hover',
+    acceleration: 39,
+    brake: 42,
+    boostMax: 64,
+    cameraDistance: 40,
+    cameraHeight: 12.5,
+    driftCharge: 0.94,
+    driftGrip: DRIFT_TUNING.hover.grip,
+    driftSlip: DRIFT_TUNING.hover.slideForce,
+    driftTurn: DRIFT_TUNING.hover.turnAssist,
+    driftVisualAngle: DRIFT_TUNING.hover.slideAngle,
+    grip: 6.8,
+    hover: 1.25,
+    maxSpeed: 47,
+    offroad: 0.68,
+    reverse: 18,
+    steer: 1.95,
+  },
+  plane: {
+    label: 'Plane',
+    acceleration: 39,
+    brake: 34,
+    boostMax: 78,
+    cameraDistance: 58,
+    cameraHeight: 11.5,
+    driftCharge: 0.78,
+    driftGrip: DRIFT_TUNING.plane.grip,
+    driftSlip: DRIFT_TUNING.plane.slideForce,
+    driftTurn: DRIFT_TUNING.plane.turnAssist,
+    driftVisualAngle: DRIFT_TUNING.plane.slideAngle,
+    grip: 4.8,
+    hover: 0,
+    maxSpeed: 62,
+    offroad: 1,
+    reverse: 10,
+    steer: 1.52,
+  },
+};
+
+export const DEFAULT_VEHICLE_BY_STYLE = {
+  chaotic: 'hover',
+  puzzle: 'plane',
+  technical: 'kart',
+};
+
+export const VEHICLE_ORDER = ['kart', 'hover', 'plane'];
+
+export const FLIGHT_ALTITUDE_LIMITS = {
+  cruise: 17,
+  max: 34,
+  min: 7.5,
+};

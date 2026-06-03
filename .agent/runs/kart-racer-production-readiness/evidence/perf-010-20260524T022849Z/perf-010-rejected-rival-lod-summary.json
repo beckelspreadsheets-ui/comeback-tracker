@@ -1,0 +1,136 @@
+{
+  "capturedAt": "2026-05-24T02:41:34.266Z",
+  "candidate": "Reduce rival kart model detail below the existing lightweight rival LOD.",
+  "decision": "rejected-and-reverted",
+  "reason": "The candidate did not produce complete default browser evidence: npm run test:race:browser timed out on page.waitForFunction after partial artifacts, so it failed the required browser gate and no performance result was promoted.",
+  "sourceRestoredFrom": ".agent/runs/kart-racer-production-readiness/evidence/rollback-local-001-20260524T021335Z/served-versions/known-good/assets/RaceScreen-DkSgurpv.js (minified Qr rival model)",
+  "failedCandidateEvidence": {
+    "syntaxCheck": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/node-check-create-race-vehicles.log",
+    "raceContract": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/npm-run-test-race.log",
+    "browserLog": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/npm-run-test-race-browser.log",
+    "browserFailure": "page.waitForFunction timeout after partial artifacts",
+    "partialArtifacts": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/partial-browser-artifacts"
+  },
+  "postRevertEvidence": {
+    "syntaxCheck": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/node-check-create-race-vehicles-after-revert.log",
+    "raceContract": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/npm-run-test-race-after-revert.log",
+    "browser": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/npm-run-test-race-browser-after-revert.log",
+    "browserSummary": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/race-browser-playtest-summary-after-revert.json",
+    "build": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/npm-run-build-after-revert.log",
+    "diffCheck": ".agent/runs/kart-racer-production-readiness/evidence/perf-010-20260524T022849Z/git-diff-check-after-revert.log",
+    "raceCount": 24,
+    "visualCheckCount": 28
+  },
+  "postRevertMetrics": {
+    "capturedAt": "2026-05-24T02:40:23.152Z",
+    "sustainedNormalPlay": {
+      "actualFps": {
+        "average": 17.65,
+        "max": 25.7,
+        "min": 15.5,
+        "sampleCount": 53
+      },
+      "frameWorkMs": {
+        "average": 2.07,
+        "max": 7.79,
+        "min": 1.34,
+        "sampleCount": 53
+      },
+      "renderMs": {
+        "average": 0.94,
+        "max": 0.94,
+        "min": 0.94,
+        "sampleCount": 53
+      },
+      "budgetMissCount": 141
+    },
+    "focusedDesktopAverage": {
+      "sampleCount": 7,
+      "actualFps": 40.36,
+      "frameWorkMs": 17.61,
+      "renderMs": 13.59,
+      "renderCalls": 699.14,
+      "renderTriangles": 71769.71
+    },
+    "focusedSamples": [
+      {
+        "name": "comeback-city-desktop-idle",
+        "actualFps": 41.9,
+        "frameWorkMs": 17.06,
+        "renderMs": 13.43,
+        "renderCalls": 747,
+        "renderTriangles": 76618,
+        "visibleRivalsSeen": 3,
+        "cameraClipCount": 0,
+        "roadAheadCoverage": 1
+      },
+      {
+        "name": "comeback-city-desktop-driving",
+        "actualFps": 42.4,
+        "frameWorkMs": 17.23,
+        "renderMs": 13.51,
+        "renderCalls": 687,
+        "renderTriangles": 70810,
+        "visibleRivalsSeen": 3,
+        "cameraClipCount": 0,
+        "roadAheadCoverage": 1
+      },
+      {
+        "name": "comeback-city-desktop-drift",
+        "actualFps": 45.5,
+        "frameWorkMs": 18.74,
+        "renderMs": 13.64,
+        "renderCalls": 710,
+        "renderTriangles": 71994,
+        "visibleRivalsSeen": 3,
+        "cameraClipCount": 0,
+        "roadAheadCoverage": 1
+      },
+      {
+        "name": "comeback-city-desktop-boost",
+        "actualFps": 25.7,
+        "frameWorkMs": 19.8,
+        "renderMs": 14.33,
+        "renderCalls": 691,
+        "renderTriangles": 70720,
+        "visibleRivalsSeen": 3,
+        "cameraClipCount": 0,
+        "roadAheadCoverage": 1
+      },
+      {
+        "name": "comeback-city-desktop-item-pickup",
+        "actualFps": 42.4,
+        "frameWorkMs": 17.17,
+        "renderMs": 13.38,
+        "renderCalls": 687,
+        "renderTriangles": 70810,
+        "visibleRivalsSeen": 3,
+        "cameraClipCount": 0,
+        "roadAheadCoverage": 1
+      },
+      {
+        "name": "comeback-city-desktop-rival-cluster",
+        "actualFps": 42.2,
+        "frameWorkMs": 16.24,
+        "renderMs": 13.5,
+        "renderCalls": 685,
+        "renderTriangles": 70626,
+        "visibleRivalsSeen": 3,
+        "cameraClipCount": 0,
+        "roadAheadCoverage": 1
+      },
+      {
+        "name": "comeback-city-desktop-finish-line",
+        "actualFps": 42.4,
+        "frameWorkMs": 17,
+        "renderMs": 13.31,
+        "renderCalls": 687,
+        "renderTriangles": 70810,
+        "visibleRivalsSeen": 3,
+        "cameraClipCount": 0,
+        "roadAheadCoverage": 1
+      }
+    ]
+  },
+  "status": "perf-003 remains the latest kept performance checkpoint; desktop FPS blocker remains open."
+}

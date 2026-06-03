@@ -1,0 +1,24 @@
+{
+  "releaseDecisionGate": "owner-release-decisions-missing-r3-blocked",
+  "missingDecisionCount": 1,
+  "releaseNotSuppliedRows": 27,
+  "releaseNotSuppliedRowsByFile": {
+    "docs/race-v1-definition-of-done-checklist.md": 0,
+    "docs/race-manual-qa-rubric.md": 0,
+    "docs/race-owner-review-packet.md": 3,
+    "docs/comeback-city-kart-racer-production-readiness-plan.md": 0,
+    "docs/race-release-operations-runbook.md": 24
+  },
+  "productionGate": "r3-blocked-gates-remain",
+  "p0Proven": 3,
+  "p0Total": 21,
+  "p1Proven": 5,
+  "p1Total": 14,
+  "dodNonProvenRows": 11,
+  "manualQaFailingRows": 10,
+  "productionNotSuppliedRows": 27,
+  "evidenceLinkFailures": 0,
+  "securityGate": "full-dependency-audit-pass",
+  "bundleGate": "bundle-budget-pass",
+  "artifactGate": "technical-artifacts-pass"
+}

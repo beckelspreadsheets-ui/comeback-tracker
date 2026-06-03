@@ -1,5 +1,53 @@
 [
   {
+    "filePath": "src/assets/game/plaza-scene-shapes.json",
+    "source": "Hand-traced object geometry authored in-repo from the measured desktop plaza reference",
+    "license": "Project-owned trace data; no reference bitmap payload is bundled or used as a runtime background",
+    "role": "Object-level foreground road, bridge, water, marking, landmark, skyline, and instanced measured facet geometry layers for the desktop plaza reconstruction",
+    "sizeBudget": "Large compact JSON measurement file, currently about 2.6 MB; no binary image payload, but includes tens of thousands of measured Three.js color/geometry patches",
+    "fallback": "Procedural measured plaza layers remain renderable without traced shape data"
+  },
+  {
+    "filePath": "src/assets/game/plaza-reference-spec.json",
+    "source": "Measured pixel-space spec authored in-repo from the user-provided Comeback City panel reference",
+    "license": "Project-owned measurement data; source image is not bundled or used as a runtime background",
+    "role": "Desktop plaza geometry, landmark, road, skyline, bridge, water, and annotation targets for visual verification",
+    "sizeBudget": "Small JSON measurement file; no binary image payload",
+    "fallback": "Visual checks fall back to broad telemetry bands if the measured spec is absent"
+  },
+  {
+    "filePath": "src/assets/game/reference/comeback-city-original-reference.png",
+    "source": "Owner-supplied original ChatGPT Image Gen 2 Comeback City reference screenshot copied from the owner-provided Messages attachment on 2026-06-01",
+    "license": "Project-owned generated reference for composition, QA, and visual verification only",
+    "role": "Approved visual target reference for desktop plaza, mobile race, district closeup, kart design sheet, and HUD mood-board checks; not a runtime background for /#race",
+    "sizeBudget": "Reference PNG only, 1536x1024, about 2.4 MB",
+    "fallback": "Visual verification can run broad telemetry checks, but production visual sign-off requires this owner-approved reference"
+  },
+  {
+    "filePath": "src/assets/game/generated/district-facade-*.png",
+    "source": "Generated with the built-in image generation tool from an original text prompt for five stylized Comeback City district facade decal textures; edited to remove the flat magenta key background before use",
+    "license": "Project-owned generated asset",
+    "role": "Optional transparent facade decals applied to measured Three.js district planes in the desktop plaza reconstruction",
+    "sizeBudget": "Five transparent PNG textures, approximately 830 KB total",
+    "fallback": "Code-generated measured district canvas textures and geometry remain renderable without these decals"
+  },
+  {
+    "filePath": "src/game/city3dAssets.js",
+    "source": "Procedural Three.js geometry authored in-repo",
+    "license": "Project-owned",
+    "role": "Shared KartModelV2, district landmark modules, objective beacon, trees, and billboard decal canvases used by race and reference panels",
+    "sizeBudget": "Runtime geometry and canvas textures only; no external binary asset",
+    "fallback": "Flat-shaded primitive meshes with generated canvas signs"
+  },
+  {
+    "filePath": "src/game/ComebackCityScene3D.jsx",
+    "source": "Procedural Three.js scene composition authored in-repo",
+    "license": "Project-owned",
+    "role": "Desktop plaza, district closeups, and kart design sheet verification scenes using shared 3D assets",
+    "sizeBudget": "Runtime geometry only; no external binary asset",
+    "fallback": "Shared city3dAssets.js primitives remain renderable without external images"
+  },
+  {
     "filePath": "src/game/ArcadeRace3D.jsx",
     "source": "Procedural Three.js geometry authored in-repo",
     "license": "Project-owned",

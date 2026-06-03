@@ -1,0 +1,294 @@
+{
+  "capturedAt": "2026-05-24T19:01:05.285Z",
+  "result": {
+    "bestLap": 0.32,
+    "place": 1,
+    "time": 2.6591999999999993,
+    "trackKey": "magnet-mine-descent",
+    "playtest": {
+      "bananaMax": 16,
+      "hazardsEncountered": 2.33,
+      "itemBoxesCollected": 10,
+      "itemUses": 3,
+      "layers": [
+        "ground",
+        "air",
+        "hybrid"
+      ],
+      "locks": 9,
+      "mode": "vehicle-restricted",
+      "raceIndex": 1,
+      "signatureUsed": true,
+      "switchPads": 20,
+      "upgrades": 3,
+      "vehicles": [
+        "kart",
+        "plane",
+        "hover"
+      ],
+      "zones": 14
+    },
+    "harness": {
+      "mode": "vehicle-restricted",
+      "raceIndex": 1,
+      "trackKey": "magnet-mine-descent"
+    }
+  },
+  "routeUrl": "http://127.0.0.1:5187/race-playtest.html?raceAutoplay=1&raceTrack=magnet-mine-descent&raceMode=vehicle-restricted&raceIndex=1",
+  "screenshotVisualStats": {
+    "colorBucketCount": 431,
+    "luminanceRange": 240.17,
+    "sampleCount": 7416
+  },
+  "telemetry": {
+    "activeSurface": "asphalt",
+    "assetLoadState": {
+      "externalAssets": 0,
+      "manifestPath": "/src/assets/game/asset-manifest.json",
+      "missing": [],
+      "state": "procedural-ready"
+    },
+    "boostSeen": true,
+    "boostTimer": 0,
+    "branchVisibleSeen": true,
+    "cameraAvoidanceCount": 4,
+    "cameraClipCount": 0,
+    "driftTier": 0,
+    "driftTierSeen": 0,
+    "actualFps": 21.7,
+    "fps": 21.7,
+    "frameBudgetMissCount": 33,
+    "frameDtMs": 61,
+    "frameElapsedMs": 61,
+    "framePhaseMaxMs": {
+      "clock": 0.1,
+      "fitRenderer": 1.1,
+      "commands": 0.1,
+      "visualPrime": 0.1,
+      "player": 2.9,
+      "world": 0.6,
+      "syncMeshes": 0.6,
+      "camera": 1.5,
+      "render": 40.8,
+      "telemetry": 1.4,
+      "finish": 0.2
+    },
+    "framePhaseMs": {
+      "clock": 0.06,
+      "fitRenderer": 0.12,
+      "commands": 0.06,
+      "visualPrime": 0.06,
+      "player": 0.11,
+      "world": 0.06,
+      "syncMeshes": 0.13,
+      "camera": 0.15,
+      "render": 3.63,
+      "telemetry": 0.19,
+      "finish": 0.03
+    },
+    "lifecycle": {
+      "audioResumeCount": 0,
+      "audioSuspendCount": 0,
+      "inputClearCount": 0,
+      "lastEvent": null,
+      "lastFrameResetAt": null,
+      "pageHidePersistedCount": 0,
+      "pageShowPersistedCount": 0,
+      "pauseCount": 0,
+      "resumeCount": 0
+    },
+    "telemetry": {
+      "intervalMs": 140,
+      "publishCount": 16,
+      "skipCount": 19
+    },
+    "frameWorkMaxMs": 46.9,
+    "frameWorkMs": 5.17,
+    "kartOnly": false,
+    "kartScreenCoverage": {
+      "bottomYRatio": 0.633,
+      "centerXRatio": 0.194,
+      "centerYRatio": 0.566,
+      "framingBandFromBottom": 0.434,
+      "heightRatio": 0.133,
+      "leftXRatio": 0.092,
+      "rightXRatio": 0.296,
+      "widthRatio": 0.203
+    },
+    "nearestCollisionDistance": 114.37,
+    "normalizedSpeed": 0.667,
+    "offroadSlowdown": 1,
+    "offroadSlowdownSeen": false,
+    "reducedMotion": false,
+    "renderer": {
+      "calls": 437,
+      "frame": 35,
+      "geometries": 1438,
+      "lines": 0,
+      "points": 0,
+      "programs": 6,
+      "textures": 13,
+      "triangles": 43968
+    },
+    "roadAheadCoverage": {
+      "samples": 18,
+      "value": 0.389
+    },
+    "sceneBudget": {
+      "categories": {
+        "pickups": {
+          "geometries": 136,
+          "groups": 38,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 72,
+          "meshes": 136,
+          "objects": 174,
+          "rootCount": 46,
+          "triangles": 15466
+        },
+        "rivalsAndPlayer": {
+          "geometries": 130,
+          "groups": 38,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 48,
+          "meshes": 130,
+          "objects": 168,
+          "rootCount": 4,
+          "triangles": 5496
+        },
+        "scenery": {
+          "geometries": 275,
+          "groups": 25,
+          "instancedMeshes": 28,
+          "lights": 0,
+          "materials": 114,
+          "meshes": 303,
+          "objects": 340,
+          "rootCount": 88,
+          "triangles": 39122
+        },
+        "track": {
+          "geometries": 930,
+          "groups": 0,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 15,
+          "meshes": 930,
+          "objects": 930,
+          "rootCount": 930,
+          "triangles": 16872,
+          "instancedTrackMeshCount": 0,
+          "visualSegmentCount": 17
+        },
+        "vfx": {
+          "geometries": 17,
+          "groups": 5,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 14,
+          "meshes": 17,
+          "objects": 22,
+          "rootCount": 6,
+          "triangles": 1012
+        }
+      },
+      "scene": {
+        "geometries": 1471,
+        "groups": 102,
+        "instancedMeshes": 28,
+        "lights": 3,
+        "materials": 247,
+        "meshes": 1499,
+        "objects": 1617,
+        "rootCount": 1,
+        "triangles": 76956
+      }
+    },
+    "trackKey": "magnet-mine-descent",
+    "visibleBranchCount": 0,
+    "player": {
+      "audioMuted": false,
+      "boostActive": false,
+      "boostPadActivationDelay": null,
+      "boostPadActivationTime": null,
+      "boostPadSpeedAfter": null,
+      "boostPadSpeedBefore": null,
+      "boostSource": null,
+      "collisionCount": 0,
+      "collisionImpactTime": null,
+      "collisionSpeedAfter": null,
+      "collisionSpeedBefore": null,
+      "collisionSpeedLossRatio": null,
+      "driftActive": false,
+      "driftHopActive": false,
+      "driftHopDuration": null,
+      "driftHopStartCount": 0,
+      "driftHopStartTime": null,
+      "driftStartCount": 0,
+      "driftTier": 0,
+      "driftTierSeen": 0,
+      "grounded": true,
+      "hopTimer": 0,
+      "itemBoxPickupDelay": 0,
+      "itemBoxPickupKey": "ghostReplay",
+      "itemBoxPickupTime": 0,
+      "itemBoxSourceType": "red",
+      "kartScreenCoverage": {
+        "bottomYRatio": 0.633,
+        "centerXRatio": 0.194,
+        "centerYRatio": 0.566,
+        "framingBandFromBottom": 0.434,
+        "heightRatio": 0.133,
+        "leftXRatio": 0.092,
+        "rightXRatio": 0.296,
+        "widthRatio": 0.203
+      },
+      "normalizedSpeed": 0.667,
+      "offroadSpeedAfter": null,
+      "offroadSpeedBefore": null,
+      "offroadSpeedLossRatio": null,
+      "progress": 0.988,
+      "reducedMotion": false,
+      "reverseSpeedCapRatio": 0.25,
+      "reverseSpeedRatio": 0,
+      "reverseTuningRatio": 0.25,
+      "speedRatio": 0.667,
+      "steering": -0.22,
+      "steeringTurnDegrees": 0,
+      "steeringTurn90Time": null,
+      "stuckRecoveryCount": 0,
+      "stuckRecoveryCooldown": 0,
+      "stuckTimer": 0,
+      "timeFromTopSpeedTo25": null,
+      "timeToSpeed80": 0.688,
+      "timeToSpeed98": 1.327,
+      "vehicleMode": "kart"
+    },
+    "camera": {
+      "avoidanceCount": 4,
+      "clipCount": 0,
+      "distance": 87.454,
+      "fov": 67.9,
+      "height": 10.88,
+      "horizonYRatio": 0.483,
+      "roadAheadCoverage": 0.389,
+      "routeLookaheadCurvature": -1.824,
+      "routeLookaheadDistance": 64,
+      "routeLookaheadSeconds": 1.333,
+      "routeLookaheadUsed": true
+    },
+    "race": {
+      "heldItemKey": "polaritySwap",
+      "lap": 3,
+      "place": 1,
+      "visibleRivals": 2,
+      "visibleRivalsSeen": 3
+    }
+  },
+  "viewport": {
+    "height": 900,
+    "width": 1440
+  }
+}

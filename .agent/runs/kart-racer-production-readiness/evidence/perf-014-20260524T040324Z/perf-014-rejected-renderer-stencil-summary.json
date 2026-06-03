@@ -1,0 +1,110 @@
+{
+  "candidate": "race-renderer-stencil-false",
+  "gateStatus": "rejected-focused-product-fps-regression-restored-on-repeat",
+  "decision": "reverted",
+  "reason": "Default browser suite passed, but focused product desktop actual FPS regressed versus the before baseline. A first post-revert browser run timed out on readiness; a repeat post-revert browser run passed and is the preservation summary.",
+  "before": {
+    "capturedAt": "2026-05-24T03:55:49.438Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAverageActualFps": 36.7,
+    "focusedProductAverageActualFps": 42.63,
+    "focusedProductMinActualFps": 37.5,
+    "focusedProductFrameWorkMs": 16.94,
+    "focusedProductRenderMs": 13.47,
+    "focusedProductRenderCalls": 699.57,
+    "focusedProductTriangles": 71807.71,
+    "sustainedAverageActualFps": 17.56,
+    "sustainedFrameWorkMs": 2.18,
+    "sustainedRenderMs": 0.84,
+    "telemetryIntervals": [
+      140
+    ]
+  },
+  "candidateMetrics": {
+    "capturedAt": "2026-05-24T04:07:05.093Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAverageActualFps": 35.32,
+    "focusedProductAverageActualFps": 37.93,
+    "focusedProductMinActualFps": 21.8,
+    "focusedProductFrameWorkMs": 16.32,
+    "focusedProductRenderMs": 12.77,
+    "focusedProductRenderCalls": 689.86,
+    "focusedProductTriangles": 71060.57,
+    "sustainedAverageActualFps": 17.82,
+    "sustainedFrameWorkMs": 2.07,
+    "sustainedRenderMs": 0.9,
+    "telemetryIntervals": [
+      140
+    ]
+  },
+  "restoredAfterRevert": {
+    "capturedAt": "2026-05-24T04:13:44.982Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopAverageActualFps": 35.99,
+    "focusedProductAverageActualFps": 36.86,
+    "focusedProductMinActualFps": 23.4,
+    "focusedProductFrameWorkMs": 16.83,
+    "focusedProductRenderMs": 13.01,
+    "focusedProductRenderCalls": 692.29,
+    "focusedProductTriangles": 71220.86,
+    "sustainedAverageActualFps": 17.75,
+    "sustainedFrameWorkMs": 2.29,
+    "sustainedRenderMs": 0.84,
+    "telemetryIntervals": [
+      140
+    ]
+  },
+  "candidateDeltaFromBefore": {
+    "desktopAverageActualFps": -1.38,
+    "focusedProductAverageActualFps": -4.7,
+    "focusedProductMinActualFps": -15.7,
+    "sustainedAverageActualFps": 0.26,
+    "focusedProductFrameWorkMs": -0.62,
+    "focusedProductRenderMs": -0.7,
+    "focusedProductRenderCalls": -9.71,
+    "focusedProductTriangles": -747.14
+  },
+  "restoredDeltaFromBefore": {
+    "desktopAverageActualFps": -0.71,
+    "focusedProductAverageActualFps": -5.77,
+    "focusedProductMinActualFps": -14.1,
+    "sustainedAverageActualFps": 0.19,
+    "focusedProductFrameWorkMs": -0.11,
+    "focusedProductRenderMs": -0.46,
+    "focusedProductRenderCalls": -7.28,
+    "focusedProductTriangles": -586.85
+  },
+  "validation": {
+    "candidate": [
+      "node --check src/game/race/render/createRaceScene.js",
+      "npm run test:race",
+      "npm run test:race:browser",
+      "npm run build"
+    ],
+    "afterRevert": [
+      "node --check src/game/race/render/createRaceScene.js",
+      "npm run test:race",
+      "npm run test:race:browser (first attempt timed out)",
+      "npm run test:race:browser (repeat pass)",
+      "npm run build"
+    ]
+  },
+  "evidence": [
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/race-browser-playtest-summary-before.json",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/race-browser-playtest-summary.json",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/race-browser-playtest-summary-after-revert.json",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/perf-014-candidate-metrics.json",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/npm-run-test-race.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/npm-run-test-race-browser.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/npm-run-build.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/node-check-create-race-scene.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/npm-run-test-race-after-revert.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/npm-run-test-race-browser-after-revert.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/npm-run-test-race-browser-after-revert-repeat.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/npm-run-build-after-revert.log",
+    ".agent/runs/kart-racer-production-readiness/evidence/perf-014-20260524T040324Z/node-check-create-race-scene-after-revert.log"
+  ]
+}

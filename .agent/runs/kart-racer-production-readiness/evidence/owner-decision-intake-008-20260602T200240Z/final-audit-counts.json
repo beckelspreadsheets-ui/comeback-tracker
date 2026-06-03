@@ -1,0 +1,50 @@
+{
+  "release": {
+    "gateStatus": "tracked-decisions-not-currently-marked-not-supplied",
+    "missingDecisionCount": 0,
+    "notSuppliedRows": 19,
+    "notSuppliedRowsByFile": {
+      "docs/race-v1-definition-of-done-checklist.md": 0,
+      "docs/race-manual-qa-rubric.md": 0,
+      "docs/race-owner-review-packet.md": 0,
+      "docs/comeback-city-kart-racer-production-readiness-plan.md": 0,
+      "docs/race-release-operations-runbook.md": 19
+    }
+  },
+  "production": {
+    "gateStatus": "r3-blocked-gates-remain",
+    "p0": {
+      "byStatus": {
+        "Proven": 7,
+        "Blocked - DoD rows not Proven": 1,
+        "Failing - below performance target": 1,
+        "Missing - manual QA required": 2,
+        "Missing - fresh-user result required": 1,
+        "Blocked - owner input required": 1,
+        "Partial - production scope/evidence required": 3,
+        "Missing - deployed evidence required": 2,
+        "Partial - owner policy required": 2,
+        "Partial - manual sign-off required": 1
+      },
+      "proven": 7,
+      "total": 21
+    },
+    "p1": {
+      "byStatus": {
+        "Partial - target-browser evidence or exception required": 3,
+        "Partial - physical device evidence or exception required": 1,
+        "Partial - production evidence or exception required": 2,
+        "Proven": 5,
+        "Partial - deployed evidence required": 1,
+        "Partial - CI run or owner acceptance required": 1,
+        "Partial - owner approval required": 1
+      },
+      "proven": 5,
+      "total": 14
+    },
+    "dodNonProven": 10,
+    "manualQaFailing": 10,
+    "notSuppliedRows": 19,
+    "evidenceLinkFailures": 0
+  }
+}

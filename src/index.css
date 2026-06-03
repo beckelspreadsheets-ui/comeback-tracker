@@ -373,8 +373,11 @@
     width: 82px;
     height: 82px;
     border-radius: 999px;
-    background: #ffd34f;
-    color: #10151d;
+    border: 2px solid rgba(255, 255, 255, 0.78);
+    background:
+      radial-gradient(circle at 50% 42%, rgba(35, 111, 211, 0.56), rgba(6, 21, 34, 0.96) 68%),
+      #061522;
+    color: #f7fbff;
     font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 12px;
     font-weight: 900;
@@ -382,9 +385,16 @@
     line-height: 1;
     text-transform: uppercase;
     box-shadow:
-      inset 0 -6px 0 rgba(16, 21, 29, 0.22),
+      inset 0 0 0 5px rgba(6, 21, 34, 0.82),
+      inset 0 0 0 8px rgba(70, 217, 239, 0.25),
       0 18px 44px rgba(0, 0, 0, 0.42),
-      0 0 0 2px rgba(255, 255, 255, 0.48);
+      0 0 0 2px rgba(70, 217, 239, 0.38);
+  }
+
+  .arcade-go-button svg {
+    color: #ffd34f;
+    fill: #ffd34f;
+    filter: drop-shadow(0 0 9px rgba(255, 211, 79, 0.45));
   }
 
   .arcade-touch-button:active,
@@ -412,7 +422,6 @@
     .arcade-touch-controls,
     .race-touch-controls,
     .world-touch-controls {
-      bottom: calc(env(safe-area-inset-bottom) + 80px);
       padding-left: 10px;
       padding-right: 10px;
     }
@@ -434,6 +443,35 @@
       min-width: 78px;
       padding: 0 10px;
       font-size: 9px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .grain-overlay,
+    .quest-avatar,
+    .quest-spark,
+    .quest-hit,
+    .world-objective-pulse span {
+      animation: none !important;
+    }
+
+    .world-destination-button,
+    .world-map-dot span,
+    .world-portal-cta,
+    .world-touch-button,
+    .world-touch-enter,
+    .race-touch-button,
+    .arcade-touch-button,
+    .arcade-go-button {
+      transition-duration: 0.01ms !important;
+    }
+
+    .world-touch-button:active,
+    .world-touch-enter:active,
+    .race-touch-button:active,
+    .arcade-touch-button:active,
+    .arcade-go-button:active {
+      transform: none;
     }
   }
 }

@@ -1,0 +1,24 @@
+--- .agent/runs/kart-racer-production-readiness/evidence/perf-034-player-frame-vector-scratch-20260524T154421Z/racePlayerFrame-before.js	2026-05-24 08:44:21
++++ src/game/race/racePlayerFrame.js	2026-05-24 08:47:55
+@@ -46,6 +46,8 @@
+ 
+ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+ const defaultDistance2D = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
++const playerFrameForward = new THREE.Vector3();
++const playerFrameRight = new THREE.Vector3();
+ 
+ export const updateRacePlayerForFrame = ({
+   addBoost = () => {},
+@@ -79,8 +81,10 @@
+   updateLapProgress(player, nearest);
+   player.steerInput += (controls.steer - player.steerInput) * clamp(dt * 11, 0, 1);
+ 
+-  const forward = new THREE.Vector3(Math.sin(player.heading), 0, Math.cos(player.heading));
+-  const right = new THREE.Vector3(forward.z, 0, -forward.x);
++  const headingSin = Math.sin(player.heading);
++  const headingCos = Math.cos(player.heading);
++  const forward = playerFrameForward.set(headingSin, 0, headingCos);
++  const right = playerFrameRight.set(headingCos, 0, -headingSin);
+   const speed = player.velocity.length();
+   const signedForwardSpeed = player.velocity.dot(forward);
+   const activeRoadWidth = nearest.roadWidth || compiled.roadWidth;

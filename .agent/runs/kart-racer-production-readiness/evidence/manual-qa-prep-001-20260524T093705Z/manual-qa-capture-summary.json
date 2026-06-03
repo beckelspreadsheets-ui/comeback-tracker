@@ -1,0 +1,367 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z",
+  "automatedContext": {
+    "capturedAt": "2026-05-24T09:06:29.250Z",
+    "path": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/perf-026-20260524T085441Z/race-browser-playtest-summary-after-revert.json",
+    "raceCount": 24,
+    "representativeVisuals": [
+      {
+        "actualFps": 39.2,
+        "boostSource": null,
+        "cameraClipCount": 0,
+        "driftTier": 0,
+        "kartHeightRatio": 0.194,
+        "name": "comeback-city-desktop-idle",
+        "roadAheadCoverage": 1,
+        "scenario": "idle",
+        "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-desktop-idle.png",
+        "visibleRivalsSeen": 3
+      },
+      {
+        "actualFps": 37.4,
+        "boostSource": null,
+        "cameraClipCount": 0,
+        "driftTier": 0,
+        "kartHeightRatio": 0.15,
+        "name": "comeback-city-desktop-driving",
+        "roadAheadCoverage": 1,
+        "scenario": "driving",
+        "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-desktop-driving.png",
+        "visibleRivalsSeen": 3
+      },
+      {
+        "actualFps": 37.7,
+        "boostSource": null,
+        "cameraClipCount": 0,
+        "driftTier": 2,
+        "kartHeightRatio": 0.148,
+        "name": "comeback-city-desktop-drift",
+        "roadAheadCoverage": 1,
+        "scenario": "drift",
+        "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-desktop-drift.png",
+        "visibleRivalsSeen": 3
+      },
+      {
+        "actualFps": 37.4,
+        "boostSource": "pad",
+        "cameraClipCount": 0,
+        "driftTier": 0,
+        "kartHeightRatio": 0.151,
+        "name": "comeback-city-desktop-boost",
+        "roadAheadCoverage": 1,
+        "scenario": "boost",
+        "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-desktop-boost.png",
+        "visibleRivalsSeen": 3
+      },
+      {
+        "actualFps": 37.8,
+        "boostSource": "pad",
+        "cameraClipCount": 0,
+        "driftTier": 0,
+        "kartHeightRatio": 0.171,
+        "name": "comeback-city-desktop-boost-pad-mechanics",
+        "roadAheadCoverage": 1,
+        "scenario": "boost-pad-mechanics",
+        "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-desktop-boost-pad-mechanics.png",
+        "visibleRivalsSeen": 2
+      },
+      {
+        "actualFps": 23.3,
+        "boostSource": "drift",
+        "cameraClipCount": 0,
+        "driftTier": 0,
+        "kartHeightRatio": 0.165,
+        "name": "comeback-city-desktop-drift-release",
+        "roadAheadCoverage": 1,
+        "scenario": "drift-release",
+        "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-desktop-drift-release.png",
+        "visibleRivalsSeen": 3
+      },
+      {
+        "actualFps": 42.4,
+        "boostSource": null,
+        "cameraClipCount": 0,
+        "driftTier": 0,
+        "kartHeightRatio": 0.15,
+        "name": "comeback-city-desktop-rival-cluster",
+        "roadAheadCoverage": 1,
+        "scenario": "rival-cluster",
+        "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-desktop-rival-cluster.png",
+        "visibleRivalsSeen": 3
+      },
+      {
+        "actualFps": 27.4,
+        "boostSource": null,
+        "cameraClipCount": 0,
+        "driftTier": 0,
+        "kartHeightRatio": 0.238,
+        "name": "comeback-city-mobile-driving",
+        "roadAheadCoverage": 1,
+        "scenario": "driving",
+        "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-mobile-driving.png",
+        "visibleRivalsSeen": 3
+      }
+    ],
+    "status": "read",
+    "sustainedNormalPlay": {
+      "actualFps": {
+        "average": 17.52,
+        "max": 28,
+        "min": 15.4,
+        "sampleCount": 54
+      },
+      "cameraClipCount": 0,
+      "captureWindowSeconds": 9.045,
+      "kartHeightRatio": 0.058,
+      "roadAheadCoverage": 0.722,
+      "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/sustained-normal-play-comeback-city.png",
+      "visibleRivalsSeen": 3
+    },
+    "visualCheckCount": 28
+  },
+  "baseUrl": "http://127.0.0.1:5221",
+  "capturedAt": "2026-05-24T09:37:38.449Z",
+  "captures": {
+    "desktop": {
+      "clipDurationTargetMs": 10500,
+      "clipPath": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/videos/page@1288918cdaf1878bad56889f2a20abfd.webm",
+      "inputMethod": "keyboard: ArrowUp, ArrowLeft, Space",
+      "routeUrl": "http://127.0.0.1:5221/#race",
+      "screenshots": {
+        "drift": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-desktop-drift.png",
+        "idle": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-desktop-idle.png",
+        "speed": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-desktop-speed.png"
+      },
+      "states": {
+        "drift": {
+          "canvasDataUrlLength": 15090,
+          "hash": "#race",
+          "renderer": "webgl",
+          "telemetry": {
+            "actualFps": 17.5,
+            "boostActive": false,
+            "boostSource": null,
+            "cameraClipCount": 0,
+            "driftActive": true,
+            "driftTier": 2,
+            "driftTierSeen": 2,
+            "frameElapsedMs": 67.8,
+            "heldItemKey": null,
+            "kartHeightRatio": 0.462,
+            "lap": 1,
+            "normalizedSpeed": 0.443,
+            "playerProgress": 0.034,
+            "rendererCalls": 406,
+            "rendererTriangles": 48828,
+            "roadAheadCoverage": 0.889,
+            "routeLookaheadSeconds": 2.006,
+            "trackKey": "comeback-city",
+            "vehicleMode": "kart",
+            "visibleRivals": 3,
+            "visibleRivalsSeen": 3
+          },
+          "title": "Comeback · 181 → 238",
+          "url": "http://127.0.0.1:5221/#race",
+          "viewport": {
+            "devicePixelRatio": 1,
+            "height": 900,
+            "width": 1440
+          }
+        },
+        "idle": {
+          "canvasDataUrlLength": 15090,
+          "hash": "#race",
+          "renderer": "webgl",
+          "telemetry": {
+            "actualFps": 107.1,
+            "boostActive": false,
+            "boostSource": null,
+            "cameraClipCount": 0,
+            "driftActive": false,
+            "driftTier": 0,
+            "driftTierSeen": 0,
+            "frameElapsedMs": 86.6,
+            "heldItemKey": null,
+            "kartHeightRatio": 0.223,
+            "lap": 1,
+            "normalizedSpeed": 0,
+            "playerProgress": 0.012,
+            "rendererCalls": 606,
+            "rendererTriangles": 64752,
+            "roadAheadCoverage": 1,
+            "routeLookaheadSeconds": null,
+            "trackKey": "comeback-city",
+            "vehicleMode": "kart",
+            "visibleRivals": 3,
+            "visibleRivalsSeen": 3
+          },
+          "title": "Comeback · 181 → 238",
+          "url": "http://127.0.0.1:5221/#race",
+          "viewport": {
+            "devicePixelRatio": 1,
+            "height": 900,
+            "width": 1440
+          }
+        },
+        "speed": {
+          "canvasDataUrlLength": 15090,
+          "hash": "#race",
+          "renderer": "webgl",
+          "telemetry": {
+            "actualFps": 22.5,
+            "boostActive": false,
+            "boostSource": null,
+            "cameraClipCount": 0,
+            "driftActive": false,
+            "driftTier": 0,
+            "driftTierSeen": 0,
+            "frameElapsedMs": 64.5,
+            "heldItemKey": null,
+            "kartHeightRatio": 0.204,
+            "lap": 1,
+            "normalizedSpeed": 0.485,
+            "playerProgress": 0.017,
+            "rendererCalls": 599,
+            "rendererTriangles": 64168,
+            "roadAheadCoverage": 1,
+            "routeLookaheadSeconds": 1.854,
+            "trackKey": "comeback-city",
+            "vehicleMode": "kart",
+            "visibleRivals": 3,
+            "visibleRivalsSeen": 3
+          },
+          "title": "Comeback · 181 → 238",
+          "url": "http://127.0.0.1:5221/#race",
+          "viewport": {
+            "devicePixelRatio": 1,
+            "height": 900,
+            "width": 1440
+          }
+        }
+      },
+      "status": "captured-not-human-scored",
+      "sync": {
+        "mode": "mock-unauthenticated-sync"
+      },
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    "mobile": {
+      "goButtonBox": {
+        "x": 276,
+        "y": 749,
+        "width": 82,
+        "height": 74
+      },
+      "inputMethod": "touch: race-go-button pointer events",
+      "routeUrl": "http://127.0.0.1:5221/#race",
+      "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-mobile-driving.png",
+      "states": {
+        "beforeInput": {
+          "canvasDataUrlLength": 9682,
+          "hash": "#race",
+          "renderer": "webgl",
+          "telemetry": {
+            "actualFps": 63.5,
+            "boostActive": false,
+            "boostSource": null,
+            "cameraClipCount": 0,
+            "driftActive": false,
+            "driftTier": 0,
+            "driftTierSeen": 0,
+            "frameElapsedMs": 38,
+            "heldItemKey": null,
+            "kartHeightRatio": 0.223,
+            "lap": 1,
+            "normalizedSpeed": 0,
+            "playerProgress": 0.012,
+            "rendererCalls": 512,
+            "rendererTriangles": 57208,
+            "roadAheadCoverage": 1,
+            "routeLookaheadSeconds": null,
+            "trackKey": "comeback-city",
+            "vehicleMode": "kart",
+            "visibleRivals": 3,
+            "visibleRivalsSeen": 3
+          },
+          "title": "Comeback · 181 → 238",
+          "url": "http://127.0.0.1:5221/#race",
+          "viewport": {
+            "devicePixelRatio": 1,
+            "height": 844,
+            "width": 390
+          }
+        },
+        "driving": {
+          "canvasDataUrlLength": 9682,
+          "hash": "#race",
+          "renderer": "webgl",
+          "telemetry": {
+            "actualFps": 24.8,
+            "boostActive": false,
+            "boostSource": null,
+            "cameraClipCount": 0,
+            "driftActive": false,
+            "driftTier": 0,
+            "driftTierSeen": 0,
+            "frameElapsedMs": 54.5,
+            "heldItemKey": null,
+            "kartHeightRatio": 0.197,
+            "lap": 1,
+            "normalizedSpeed": 0.647,
+            "playerProgress": 0.022,
+            "rendererCalls": 490,
+            "rendererTriangles": 55588,
+            "roadAheadCoverage": 1,
+            "routeLookaheadSeconds": 1.452,
+            "trackKey": "comeback-city",
+            "vehicleMode": "kart",
+            "visibleRivals": 3,
+            "visibleRivalsSeen": 3
+          },
+          "title": "Comeback · 181 → 238",
+          "url": "http://127.0.0.1:5221/#race",
+          "viewport": {
+            "devicePixelRatio": 1,
+            "height": 844,
+            "width": 390
+          }
+        }
+      },
+      "status": "captured-not-human-scored",
+      "sync": {
+        "mode": "mock-unauthenticated-sync"
+      },
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    }
+  },
+  "caveats": [
+    "This capture proves only reproducible evidence collection for manual QA.",
+    "It does not score RACE-009 and must not be used as a substitute for human desktop, mobile, or fresh-user review.",
+    "Preview/prod URL smoke, Cloudflare rollback, monitoring/support activation, and release sign-offs remain separate gates."
+  ],
+  "gateStatus": "manual-qa-evidence-prepared-human-scoring-required",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c26bcdec19e8175f63a09e490f5400231aa",
+    "dirty": true
+  },
+  "routeUrl": "http://127.0.0.1:5221/#race",
+  "serverLog": "\n> comeback-tracker@1.0.0 preview\n> vite preview --host 127.0.0.1 --port 5221 --strictPort\n\n  ➜  Local:   http://127.0.0.1:5221/\n",
+  "target": "local-built-preview",
+  "qaPrepTemplatePath": "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-prep-result-template.md",
+  "artifactFiles": [
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-desktop-idle.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-desktop-speed.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-desktop-drift.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/videos/page@1288918cdaf1878bad56889f2a20abfd.webm",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-mobile-driving.png",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-prep-result-template.md",
+    "/Users/andrewferguson/Downloads/comeback-tracker/.agent/runs/kart-racer-production-readiness/evidence/manual-qa-prep-001-20260524T093705Z/manual-qa-capture-summary.json"
+  ]
+}

@@ -1,0 +1,9 @@
+.DS_Store
+*.swp
+*.bak
+node_modules/
+.vscode/
+.idea/
+verification/
+dist/
+deploy-artifacts/

@@ -1,0 +1,72 @@
+{
+  "id": "perf-036-controls-allocation",
+  "decision": "reject-and-revert",
+  "evidenceDirectory": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z",
+  "candidate": {
+    "change": "Avoid cloning the player-frame controls object unless controlFlipTimer is active.",
+    "sourceDiff": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/source-diff-candidate-vs-before.patch"
+  },
+  "baseline": {
+    "capturedAt": "2026-05-24T16:45:51.864Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedActualFps": 36.84285714285714,
+    "desktopAllActualFps": 34.28695652173913,
+    "sustainedActualFps": 17.71
+  },
+  "failure": {
+    "command": "npm run test:race:browser",
+    "log": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/candidate-race-browser.log",
+    "reason": "Candidate failed the required browser visual gate in comeback-city-desktop-opening-sequence: camera clip count 1 is not zero.",
+    "promoted": false
+  },
+  "postRevert": {
+    "capturedAt": "2026-05-24T16:54:57.316Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedActualFps": 38.58571428571428,
+    "desktopAllActualFps": 35.134782608695645,
+    "sustainedActualFps": 17.84
+  },
+  "validation": [
+    {
+      "command": "diff -u racePlayerFrame-before.js src/game/race/racePlayerFrame.js",
+      "result": "pass-empty",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/post-revert-racePlayerFrame-diff.log"
+    },
+    {
+      "command": "node --check src/game/race/racePlayerFrame.js",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/node-check-racePlayerFrame-post-revert.log"
+    },
+    {
+      "command": "npm run test:race",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/npm-run-test-race-post-revert.log"
+    },
+    {
+      "command": "npm run test:race:browser",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/post-revert-race-browser.log"
+    },
+    {
+      "command": "npm run build",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/npm-run-build-post-revert.log"
+    },
+    {
+      "command": "npm run test:visual",
+      "result": "pass",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/npm-run-test-visual-post-revert.log"
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass-empty",
+      "evidence": ".agent/runs/kart-racer-production-readiness/evidence/perf-036-controls-allocation-20260524T164100Z/git-diff-check-post-revert.log"
+    }
+  ],
+  "sourceDiffBytes": {
+    "racePlayerFrame": 0,
+    "gitDiffRacePlayerFrame": 0
+  }
+}

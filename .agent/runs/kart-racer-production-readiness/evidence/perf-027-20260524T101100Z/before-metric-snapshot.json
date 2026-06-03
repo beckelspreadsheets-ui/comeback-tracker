@@ -1,0 +1,59 @@
+{
+  "source": ".agent/runs/kart-racer-production-readiness/evidence/perf-027-20260524T101100Z/race-browser-playtest-summary-before.json",
+  "capturedAt": "2026-05-24T10:10:48.812Z",
+  "raceCount": 24,
+  "visualCheckCount": 28,
+  "sustainedNormalPlay": {
+    "actualFps": 16.85,
+    "renderPhase": null
+  },
+  "desktopFocused": {
+    "count": 7,
+    "actualFpsAverage": 35.47,
+    "renderCallsAverage": 677,
+    "renderTrianglesAverage": 70163.14,
+    "states": {
+      "idle": {
+        "actualFps": 39.3,
+        "renderCalls": 745,
+        "renderTriangles": 76594
+      },
+      "driving": {
+        "actualFps": 37.3,
+        "renderCalls": 671,
+        "renderTriangles": 69694
+      },
+      "drift": {
+        "actualFps": 37.7,
+        "renderCalls": 687,
+        "renderTriangles": 70662
+      },
+      "boost": {
+        "actualFps": 37.4,
+        "renderCalls": 674,
+        "renderTriangles": 69730
+      },
+      "item-pickup": {
+        "actualFps": 37.4,
+        "renderCalls": 646,
+        "renderTriangles": 67432
+      },
+      "rival-cluster": {
+        "actualFps": 37.3,
+        "renderCalls": 671,
+        "renderTriangles": 69694
+      },
+      "finish-line": {
+        "actualFps": 21.9,
+        "renderCalls": 645,
+        "renderTriangles": 67336
+      }
+    }
+  },
+  "desktopAll": {
+    "count": 23,
+    "actualFpsAverage": 33.98,
+    "renderCallsAverage": 611.39,
+    "renderTrianglesAverage": 65275.83
+  }
+}

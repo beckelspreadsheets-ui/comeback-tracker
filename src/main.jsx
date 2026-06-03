@@ -4,15 +4,19 @@ import App from './App.jsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
 
-// Auto-update service worker
-registerSW({
-  onNeedRefresh() {
-    // Could show a toast here if we want to prompt manual refresh
-  },
-  onOfflineReady() {
-    console.log('Comeback Tracker — ready to train offline');
-  },
-});
+const isLocalPreview = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+
+if (!isLocalPreview) {
+  const updateSW = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      updateSW(true);
+    },
+    onOfflineReady() {
+      console.log('Comeback Tracker — ready to train offline');
+    },
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

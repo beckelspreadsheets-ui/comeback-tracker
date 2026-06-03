@@ -1,0 +1,43 @@
+{
+  "baseline": {
+    "capturedAt": "2026-05-24T15:14:43.920Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedActualFps": 37.5455,
+    "desktopAllActualFps": 34.5913,
+    "sustainedActualFps": 17.69,
+    "desktopFocusedFrameWorkMs": 22.3318,
+    "desktopFocusedRenderMs": 11.9655,
+    "desktopFocusedRenderCalls": 661.5455,
+    "desktopFocusedRenderTriangles": 68847.6364,
+    "sustainedFrameWorkMs": 2.13,
+    "sustainedRenderMs": 0.85
+  },
+  "candidate": {
+    "capturedAt": "2026-05-24T15:21:08.218Z",
+    "raceCount": 24,
+    "visualCheckCount": 28,
+    "desktopFocusedActualFps": 38.0545,
+    "desktopAllActualFps": 36.7696,
+    "sustainedActualFps": 17.31,
+    "desktopFocusedFrameWorkMs": 22.9591,
+    "desktopFocusedRenderMs": 11.9027,
+    "desktopFocusedRenderCalls": 657.1818,
+    "desktopFocusedRenderTriangles": 68524.9091,
+    "sustainedFrameWorkMs": 2.18,
+    "sustainedRenderMs": 0.93
+  },
+  "delta": {
+    "raceCount": 0,
+    "visualCheckCount": 0,
+    "desktopFocusedActualFps": 0.509,
+    "desktopAllActualFps": 2.1783,
+    "sustainedActualFps": -0.38,
+    "desktopFocusedFrameWorkMs": 0.6273,
+    "desktopFocusedRenderMs": -0.0628,
+    "desktopFocusedRenderCalls": -4.3637,
+    "desktopFocusedRenderTriangles": -322.7273,
+    "sustainedFrameWorkMs": 0.05,
+    "sustainedRenderMs": 0.08
+  }
+}

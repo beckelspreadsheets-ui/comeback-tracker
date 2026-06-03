@@ -1,0 +1,141 @@
+{
+  "baseline": {
+    "capturedAt": "2026-05-24T18:48:08.508Z",
+    "raceCount": 24,
+    "visualChecks": 28,
+    "desktopAll": {
+      "actualFps": 36.13,
+      "frameWorkMs": 26.69,
+      "renderMs": 10.94,
+      "worldMs": 0.14,
+      "renderCalls": 616.61,
+      "renderTriangles": 65718.09
+    },
+    "desktopFocused": {
+      "actualFps": 36.46,
+      "frameWorkMs": 15.4,
+      "renderMs": 12.01,
+      "worldMs": 0.15,
+      "renderCalls": 683.14,
+      "renderTriangles": 70717.71
+    },
+    "selected": {
+      "comeback-city-desktop-driving": {
+        "actualFps": 37.2,
+        "frameWorkMs": 14.77,
+        "worldMs": 0.18,
+        "renderMs": 11.49,
+        "telemetryMs": 1.38,
+        "cameraClipCount": 0,
+        "visibleRivalsSeen": 3
+      },
+      "comeback-city-desktop-opening-sequence": {
+        "actualFps": 11.4,
+        "frameWorkMs": 1.61,
+        "worldMs": 0.06,
+        "renderMs": 0.94,
+        "telemetryMs": 0.52,
+        "cameraClipCount": 0,
+        "visibleRivalsSeen": 3
+      },
+      "comeback-city-desktop-rival-cluster": {
+        "actualFps": 37.4,
+        "frameWorkMs": 15.33,
+        "worldMs": 0.12,
+        "renderMs": 11.95,
+        "telemetryMs": 1.41,
+        "cameraClipCount": 0,
+        "visibleRivalsSeen": 3
+      },
+      "comeback-city-mobile-driving": {
+        "actualFps": 32.4,
+        "frameWorkMs": 6.15,
+        "worldMs": 0.06,
+        "renderMs": 4.28,
+        "telemetryMs": 0.52,
+        "cameraClipCount": 0,
+        "visibleRivalsSeen": 3
+      }
+    }
+  },
+  "candidate": {
+    "capturedAt": "2026-05-24T18:54:04.220Z",
+    "raceCount": 24,
+    "visualChecks": 28,
+    "desktopAll": {
+      "actualFps": 36.11,
+      "frameWorkMs": 26.55,
+      "renderMs": 10.79,
+      "worldMs": 0.14,
+      "renderCalls": 618.83,
+      "renderTriangles": 65917.57
+    },
+    "desktopFocused": {
+      "actualFps": 38.4,
+      "frameWorkMs": 15.17,
+      "renderMs": 11.56,
+      "worldMs": 0.15,
+      "renderCalls": 687.86,
+      "renderTriangles": 71057.43
+    },
+    "selected": {
+      "comeback-city-desktop-driving": {
+        "actualFps": 37.4,
+        "frameWorkMs": 14.87,
+        "worldMs": 0.14,
+        "renderMs": 11.03,
+        "telemetryMs": 1.31,
+        "cameraClipCount": 0,
+        "visibleRivalsSeen": 3
+      },
+      "comeback-city-desktop-opening-sequence": {
+        "actualFps": 11.6,
+        "frameWorkMs": 1.52,
+        "worldMs": 0.06,
+        "renderMs": 0.86,
+        "telemetryMs": 0.56,
+        "cameraClipCount": 0,
+        "visibleRivalsSeen": 3
+      },
+      "comeback-city-desktop-rival-cluster": {
+        "actualFps": 37.3,
+        "frameWorkMs": 14.87,
+        "worldMs": 0.11,
+        "renderMs": 10.87,
+        "telemetryMs": 1.36,
+        "cameraClipCount": 0,
+        "visibleRivalsSeen": 3
+      },
+      "comeback-city-mobile-driving": {
+        "actualFps": 32.2,
+        "frameWorkMs": 6.13,
+        "worldMs": 0.1,
+        "renderMs": 4.2,
+        "telemetryMs": 0.55,
+        "cameraClipCount": 0,
+        "visibleRivalsSeen": 3
+      }
+    }
+  },
+  "delta": {
+    "desktopAll": {
+      "actualFps": -0.02,
+      "frameWorkMs": -0.14,
+      "renderMs": -0.15,
+      "worldMs": 0,
+      "renderCalls": 2.22,
+      "renderTriangles": 199.48
+    },
+    "desktopFocused": {
+      "actualFps": 1.94,
+      "frameWorkMs": -0.23,
+      "renderMs": -0.45,
+      "worldMs": 0,
+      "renderCalls": 4.72,
+      "renderTriangles": 339.72
+    },
+    "desktopDrivingActualFps": 0.2,
+    "desktopOpeningActualFps": 0.2,
+    "focusedWorldMs": 0
+  }
+}

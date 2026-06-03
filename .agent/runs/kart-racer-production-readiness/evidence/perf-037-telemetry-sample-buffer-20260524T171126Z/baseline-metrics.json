@@ -1,0 +1,18 @@
+{
+  "capturedAt": "2026-05-24T17:14:44.126Z",
+  "raceCount": 24,
+  "visualCheckCount": 28,
+  "desktopFocusedActualFps": 32.99565217391305,
+  "desktopAllActualFps": 32.99565217391305,
+  "sustainedActualFps": 17.62,
+  "desktopFocusedFrameWorkMs": 24.770434782608696,
+  "desktopFocusedRenderMs": 10.662173913043478,
+  "desktopFocusedTelemetryMs": 1.2456521739130437,
+  "desktopFocusedFrameElapsedMs": 103.23913043478261,
+  "desktopFocusedRenderCalls": 609.4782608695652,
+  "desktopFocusedRenderTriangles": 65168.52173913043,
+  "sustainedFrameWorkMs": 2.15,
+  "sustainedFrameElapsedMs": 67.55,
+  "sustainedRenderMs": 0.85,
+  "sustainedTelemetryMs": 0.39
+}

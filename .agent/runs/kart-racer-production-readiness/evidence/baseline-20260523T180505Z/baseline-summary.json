@@ -1,0 +1,320 @@
+{
+  "runDir": ".agent/runs/kart-racer-production-readiness/evidence/baseline-20260523T180505Z",
+  "capturedAt": "2026-05-23T18:11:53.567Z",
+  "git": {
+    "branch": "main",
+    "commit": "9fb87c2"
+  },
+  "raceCount": 24,
+  "visualCheckCount": 28,
+  "normalDesktopAverageActualFps": 44,
+  "normalDesktopBelow45": [
+    {
+      "name": "comeback-city-desktop-driving",
+      "actualFps": 42.3,
+      "renderCalls": 716,
+      "renderTriangles": 69610,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-drift",
+      "actualFps": 42.6,
+      "renderCalls": 731,
+      "renderTriangles": 70334,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-boost",
+      "actualFps": 42.2,
+      "renderCalls": 716,
+      "renderTriangles": 69450,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-item-pickup",
+      "actualFps": 42.4,
+      "renderCalls": 716,
+      "renderTriangles": 69610,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-finish-line",
+      "actualFps": 42.4,
+      "renderCalls": 716,
+      "renderTriangles": 69610,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    }
+  ],
+  "allDesktopBelow45Count": 21,
+  "desktopFps": [
+    {
+      "name": "comeback-city-desktop-idle",
+      "actualFps": 47.9,
+      "renderCalls": 782,
+      "renderTriangles": 76138,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-driving",
+      "actualFps": 42.3,
+      "renderCalls": 716,
+      "renderTriangles": 69610,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-acceleration",
+      "actualFps": 21.8,
+      "renderCalls": 618,
+      "renderTriangles": 60490,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-braking",
+      "actualFps": 41.8,
+      "renderCalls": 754,
+      "renderTriangles": 72910,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-reverse",
+      "actualFps": 37.9,
+      "renderCalls": 805,
+      "renderTriangles": 78152,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-steering-low-speed",
+      "actualFps": 39.7,
+      "renderCalls": 715,
+      "renderTriangles": 69642,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-steering-high-speed",
+      "actualFps": 40.2,
+      "renderCalls": 728,
+      "renderTriangles": 70490,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-turn-approach",
+      "actualFps": 34.7,
+      "renderCalls": 365,
+      "renderTriangles": 42902,
+      "cameraClipCount": 0,
+      "visibleRivals": 0,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-branch-decision",
+      "actualFps": 31.4,
+      "renderCalls": 233,
+      "renderTriangles": 33186,
+      "cameraClipCount": 0,
+      "visibleRivals": 0,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-opening-sequence",
+      "actualFps": 11.7,
+      "renderCalls": 293,
+      "renderTriangles": 35782,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-collision-mechanics",
+      "actualFps": 39.8,
+      "renderCalls": 722,
+      "renderTriangles": 70214,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-offroad-slowdown",
+      "actualFps": 22.2,
+      "renderCalls": 481,
+      "renderTriangles": 51602,
+      "cameraClipCount": 0,
+      "visibleRivals": 1,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-drift",
+      "actualFps": 42.6,
+      "renderCalls": 731,
+      "renderTriangles": 70334,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-drift-tier-1",
+      "actualFps": 37.7,
+      "renderCalls": 715,
+      "renderTriangles": 69166,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-drift-mechanics",
+      "actualFps": 35.4,
+      "renderCalls": 673,
+      "renderTriangles": 65388,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-boost",
+      "actualFps": 42.2,
+      "renderCalls": 716,
+      "renderTriangles": 69450,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-boost-pad-mechanics",
+      "actualFps": 33.1,
+      "renderCalls": 523,
+      "renderTriangles": 53190,
+      "cameraClipCount": 0,
+      "visibleRivals": 2,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-drift-release",
+      "actualFps": 37.6,
+      "renderCalls": 707,
+      "renderTriangles": 68854,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-item-pickup",
+      "actualFps": 42.4,
+      "renderCalls": 716,
+      "renderTriangles": 69610,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-item-box-mechanics",
+      "actualFps": 37.3,
+      "renderCalls": 577,
+      "renderTriangles": 57646,
+      "cameraClipCount": 0,
+      "visibleRivals": 2,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-rival-cluster",
+      "actualFps": 48.4,
+      "renderCalls": 737,
+      "renderTriangles": 71002,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-finish-line",
+      "actualFps": 42.4,
+      "renderCalls": 716,
+      "renderTriangles": 69610,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-desktop-stuck-recovery",
+      "actualFps": 32.2,
+      "renderCalls": 778,
+      "renderTriangles": 74706,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    }
+  ],
+  "mobileAverageActualFps": 33.7,
+  "mobileFps": [
+    {
+      "name": "comeback-city-mobile-driving",
+      "actualFps": 33.6,
+      "renderCalls": 467,
+      "renderTriangles": 48402,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    },
+    {
+      "name": "comeback-city-mobile-idle",
+      "actualFps": 33.7,
+      "renderCalls": 536,
+      "renderTriangles": 54334,
+      "cameraClipCount": 0,
+      "visibleRivals": 3,
+      "roadAheadCoverage": 1
+    }
+  ],
+  "cameraClipChecksWithClips": [],
+  "normalDrivingVisibleRivals": 3,
+  "reducedMotion": {
+    "canvasReducedMotion": "true",
+    "normalizedSpeed": 0.991,
+    "reducedMotion": true,
+    "shellReducedMotion": "true",
+    "speedLineCount": 0,
+    "telemetryPlayerReducedMotion": true,
+    "screenshotVisualStats": {
+      "colorBucketCount": 292,
+      "luminanceRange": 241,
+      "sampleCount": 7416
+    }
+  },
+  "webglFallback": {
+    "canvasDataUrlLength": 363986,
+    "renderer": "canvas2d-fallback"
+  },
+  "audioMuteControl": {
+    "afterLabel": "Unmute race audio",
+    "afterPressed": "true",
+    "beforeLabel": "Mute race audio",
+    "beforePressed": "false",
+    "screenshotVisualStats": {
+      "colorBucketCount": 252,
+      "luminanceRange": 242.42,
+      "sampleCount": 7416
+    },
+    "telemetryAudioMuted": true
+  }
+}

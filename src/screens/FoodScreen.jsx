@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronUp,
   Plus,
+  Bookmark,
   Trash2,
 } from 'lucide-react';
 import {
@@ -18,6 +19,7 @@ import {
 } from 'recharts';
 import { Card, SectionTitle } from '../components/primitives.jsx';
 import { FoodEntrySheet } from '../components/FoodEntrySheet.jsx';
+import { TemplateSaveModal } from '../components/TemplateSaveModal.jsx';
 import { calcTargets, PHASES } from '../lib/nutrition.js';
 import {
   MEAL_BUCKETS,
@@ -75,8 +77,11 @@ export const FoodScreen = ({ state, setState }) => {
   const [targetsOpen, setTargetsOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [activeMeal, setActiveMeal] = useState('breakfast');
+  const [saveTemplateMeal, setSaveTemplateMeal] = useState(null);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const food = state.food;
+  const templates = food.templates || [];
   const targets = useMemo(
     () => calcTargets(state.settings, food.targets),
     [state.settings, food.targets]
@@ -86,6 +91,10 @@ export const FoodScreen = ({ state, setState }) => {
   const day = useMemo(() => sumDay(dayLog), [dayLog]);
   const week = useMemo(() => weekSeries(food.log, targets), [food.log, targets]);
   const compliance = useMemo(() => weekCompliance(food.log, targets), [food.log, targets]);
+  const sortedTemplates = useMemo(
+    () => [...templates].sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0)),
+    [templates]
+  );
   const isToday = date === todayKey();
 
   // --- mutators ---
@@ -141,7 +150,10 @@ export const FoodScreen = ({ state, setState }) => {
   const saveToLibrary = (item) =>
     updateFood((f) => {
       const existing = f.library.find(
-        (i) => i.name.toLowerCase() === item.name.toLowerCase() && i.servingDesc === item.servingDesc
+        (i) =>
+          i.name.toLowerCase() === item.name.toLowerCase() &&
+          i.servingDesc === item.servingDesc &&
+          (i.unit || 'serving') === (item.unit || 'serving')
       );
       const now = Date.now();
       if (existing) {
@@ -186,6 +198,83 @@ export const FoodScreen = ({ state, setState }) => {
         ),
       }));
     }
+  };
+
+  const saveTemplate = (name, meal, entries) => {
+    const now = Date.now();
+    updateFood((f) => ({
+      ...f,
+      templates: [
+        ...(f.templates || []),
+        {
+          id: `t_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+          name,
+          defaultMeal: meal,
+          items: entries.map((e) => ({
+            itemId: e.itemId,
+            name: e.name,
+            cal: e.cal,
+            p: e.p,
+            c: e.c,
+            f: e.f,
+            amount: Number(e.amount ?? e.servings ?? 1) || 1,
+            unit: e.unit || 'serving',
+            servingDesc: e.servingDesc,
+            barcode: e.barcode,
+          })),
+          createdAt: now,
+          lastUsedAt: now,
+          usageCount: 0,
+        },
+      ],
+    }));
+    setSaveTemplateMeal(null);
+    setTemplatesOpen(true);
+  };
+
+  const logTemplate = (tpl) => {
+    const now = Date.now();
+    updateFood((f) => {
+      const existing = getDayLog(f.log, date);
+      const meal = tpl.defaultMeal;
+      const newEntries = tpl.items.map((item, index) => ({
+        id: makeEntryId(),
+        itemId: item.itemId,
+        name: item.name,
+        cal: item.cal,
+        p: item.p,
+        c: item.c,
+        f: item.f,
+        amount: item.amount,
+        unit: item.unit,
+        servingDesc: item.servingDesc,
+        at: now + index,
+        barcode: item.barcode,
+      }));
+      return {
+        ...f,
+        templates: (f.templates || []).map((template) =>
+          template.id === tpl.id
+            ? { ...template, lastUsedAt: now, usageCount: (template.usageCount || 0) + 1 }
+            : template
+        ),
+        log: {
+          ...f.log,
+          [date]: {
+            ...existing,
+            [meal]: [...(existing[meal] || []), ...newEntries],
+          },
+        },
+      };
+    });
+  };
+
+  const deleteTemplate = (id) => {
+    if (!confirm('Delete this template? Cannot be undone.')) return;
+    updateFood((f) => ({
+      ...f,
+      templates: (f.templates || []).filter((template) => template.id !== id),
+    }));
   };
 
   return (
@@ -353,6 +442,58 @@ export const FoodScreen = ({ state, setState }) => {
         <ProgressRow label="Fat" value={day.total.f} target={targets.fat} unit="g" />
       </div>
 
+      {templates.length > 0 && (
+        <Card className="p-0 overflow-hidden">
+          <button
+            onClick={() => setTemplatesOpen((open) => !open)}
+            className="w-full flex items-baseline justify-between px-4 py-3 active:bg-bone/[0.02]"
+          >
+            <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-gold">
+              Templates · {templates.length}
+            </div>
+            {templatesOpen ? (
+              <ChevronUp size={14} className="text-stone" />
+            ) : (
+              <ChevronDown size={14} className="text-stone" />
+            )}
+          </button>
+          {templatesOpen && (
+            <div className="divide-y divide-bone/[0.04] border-t border-bone/[0.06]">
+              {sortedTemplates.map((tpl) => {
+                const totals = sumEntries(tpl.items);
+                return (
+                  <div key={tpl.id} className="flex items-stretch">
+                    <button
+                      onClick={() => logTemplate(tpl)}
+                      className="flex-1 text-left px-4 py-3 active:bg-bone/[0.02]"
+                    >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="font-display text-base text-bone leading-tight truncate">
+                          {tpl.name}
+                        </div>
+                        <div className="font-mono text-xs text-gold tabular-nums shrink-0">
+                          {Math.round(totals.cal)} kcal
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-mono text-stone mt-0.5">
+                        {tpl.items.length} items · → {tpl.defaultMeal}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => deleteTemplate(tpl.id)}
+                      className="w-10 flex items-center justify-center text-stone/60 hover:text-vermillion active:scale-90"
+                      aria-label="Delete template"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* Meal buckets */}
       <div className="space-y-3">
         {MEAL_BUCKETS.map((bucket) => {
@@ -372,7 +513,14 @@ export const FoodScreen = ({ state, setState }) => {
               {entries.length > 0 && (
                 <div className="divide-y divide-bone/[0.04]">
                   {entries.map((e) => {
-                    const s = Number(e.servings) || 1;
+                    const a = Number(e.amount ?? e.servings) || 1;
+                    const unit = e.unit || 'serving';
+                    const label =
+                      unit === 'gram'
+                        ? `${Math.round(a)}g`
+                        : a === 1
+                        ? e.servingDesc
+                        : `${a} × ${e.servingDesc}`;
                     return (
                       <div
                         key={e.id}
@@ -381,14 +529,13 @@ export const FoodScreen = ({ state, setState }) => {
                         <div className="min-w-0 flex-1">
                           <div className="text-sm text-bone truncate">{e.name}</div>
                           <div className="text-[10px] font-mono text-stone mt-0.5">
-                            {s === 1 ? e.servingDesc : `${s} × ${e.servingDesc}`} · P{' '}
-                            {Math.round(e.p * s)} · C {Math.round(e.c * s)} · F{' '}
-                            {Math.round(e.f * s)}
+                            {label} · P {Math.round(e.p * a)} · C {Math.round(e.c * a)} · F{' '}
+                            {Math.round(e.f * a)}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-xs font-mono text-gold tabular-nums">
-                            {Math.round(e.cal * s)}
+                            {Math.round(e.cal * a)}
                           </div>
                           <button
                             onClick={() => removeEntry(bucket.key, e.id)}
@@ -403,12 +550,24 @@ export const FoodScreen = ({ state, setState }) => {
                   })}
                 </div>
               )}
-              <button
-                onClick={() => openSheet(bucket.key)}
-                className="w-full py-3 border-t border-bone/[0.04] text-[10px] font-mono uppercase tracking-[0.22em] text-stone hover:text-gold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-colors min-h-[44px]"
-              >
-                <Plus size={12} /> Add food
-              </button>
+              <div className="flex border-t border-bone/[0.04]">
+                <button
+                  onClick={() => openSheet(bucket.key)}
+                  className="flex-1 py-3 text-[10px] font-mono uppercase tracking-[0.22em] text-stone hover:text-gold flex items-center justify-center gap-1.5 active:scale-[0.99] transition-colors min-h-[44px]"
+                >
+                  <Plus size={12} /> Add food
+                </button>
+                {entries.length > 0 && (
+                  <button
+                    onClick={() => setSaveTemplateMeal(bucket.key)}
+                    className="px-4 py-3 border-l border-bone/[0.04] text-[10px] font-mono uppercase tracking-[0.22em] text-stone hover:text-gold active:scale-[0.99] transition-colors min-h-[44px]"
+                    title="Save this bucket as a template"
+                    aria-label={`Save ${bucket.label} as template`}
+                  >
+                    <Bookmark size={12} />
+                  </button>
+                )}
+              </div>
             </Card>
           );
         })}
@@ -492,6 +651,13 @@ export const FoodScreen = ({ state, setState }) => {
         onAdd={handleAdd}
         onSaveToLibrary={saveToLibrary}
         onClose={() => setSheetOpen(false)}
+      />
+      <TemplateSaveModal
+        isOpen={!!saveTemplateMeal}
+        meal={saveTemplateMeal}
+        entries={saveTemplateMeal ? dayLog[saveTemplateMeal] || [] : []}
+        onSave={saveTemplate}
+        onClose={() => setSaveTemplateMeal(null)}
       />
     </div>
   );
