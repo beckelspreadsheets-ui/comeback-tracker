@@ -1,0 +1,224 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test",
+  "baseUrl": "http://127.0.0.1:5223",
+  "capturedAt": "2026-06-03T16:15:56.223Z",
+  "coverage": {
+    "actualChrome": "pass",
+    "actualEdge": "unavailable",
+    "actualSafari": "not-automated",
+    "playwrightChromium": "pass",
+    "playwrightFirefox": "pass",
+    "playwrightWebKit": "pass-engine-proxy-not-actual-safari-signoff"
+  },
+  "gateStatus": "local-cross-browser-smoke-partial-not-target-signoff",
+  "git": {
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25",
+    "dirty": true
+  },
+  "note": "This local smoke proves installed engine behavior only. It does not infer actual Safari, unavailable Edge, human device coverage, or release-owner sign-off.",
+  "targets": [
+    {
+      "afterExit": {
+        "hash": "",
+        "homeVisible": false,
+        "raceScreenCount": 0,
+        "textSeen": true
+      },
+      "afterInput": {
+        "canvasDataUrlLength": 15090,
+        "hash": "#race",
+        "race": {
+          "lap": 1,
+          "normalizedSpeed": 0.422,
+          "place": 4,
+          "time": 1.95,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl"
+      },
+      "beforeInput": {
+        "canvasDataUrlLength": 15090,
+        "hash": "#race",
+        "race": {
+          "lap": 1,
+          "normalizedSpeed": 0,
+          "place": 4,
+          "time": 1.22,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl"
+      },
+      "finishedAt": "2026-06-03T16:15:26.018Z",
+      "homeScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test/chromium-home.png",
+      "homeState": {
+        "hash": "",
+        "homeVisible": false,
+        "textSeen": true,
+        "title": "Comeback · 181 → 238"
+      },
+      "id": "chromium",
+      "label": "Playwright Chromium",
+      "notes": "Bundled Playwright Chromium engine.",
+      "raceScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test/chromium-race.png",
+      "required": true,
+      "startedAt": "2026-06-03T16:15:17.914Z",
+      "status": "pass"
+    },
+    {
+      "afterExit": {
+        "hash": "",
+        "homeVisible": false,
+        "raceScreenCount": 0,
+        "textSeen": true
+      },
+      "afterInput": {
+        "canvasDataUrlLength": 12470,
+        "hash": "#race",
+        "race": {
+          "lap": 1,
+          "normalizedSpeed": 0.799,
+          "place": 4,
+          "time": 4.63,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl"
+      },
+      "beforeInput": {
+        "canvasDataUrlLength": 12470,
+        "hash": "#race",
+        "race": {
+          "lap": 1,
+          "normalizedSpeed": 0,
+          "place": 4,
+          "time": 3.09,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl"
+      },
+      "finishedAt": "2026-06-03T16:15:34.808Z",
+      "homeScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test/firefox-home.png",
+      "homeState": {
+        "hash": "",
+        "homeVisible": false,
+        "textSeen": true,
+        "title": "Comeback · 181 → 238"
+      },
+      "id": "firefox",
+      "label": "Playwright Firefox",
+      "notes": "Bundled Playwright Firefox engine.",
+      "raceScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test/firefox-race.png",
+      "required": true,
+      "startedAt": "2026-06-03T16:15:26.042Z",
+      "status": "pass"
+    },
+    {
+      "afterExit": {
+        "hash": "",
+        "homeVisible": false,
+        "raceScreenCount": 0,
+        "textSeen": true
+      },
+      "afterInput": {
+        "canvasDataUrlLength": 10158,
+        "hash": "#race",
+        "race": {
+          "lap": 1,
+          "normalizedSpeed": 0.78,
+          "place": 4,
+          "time": 4.43,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl"
+      },
+      "beforeInput": {
+        "canvasDataUrlLength": 10158,
+        "hash": "#race",
+        "race": {
+          "lap": 1,
+          "normalizedSpeed": 0,
+          "place": 4,
+          "time": 2.91,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl"
+      },
+      "finishedAt": "2026-06-03T16:15:44.084Z",
+      "homeScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test/webkit-home.png",
+      "homeState": {
+        "hash": "",
+        "homeVisible": false,
+        "textSeen": true,
+        "title": "Comeback · 181 → 238"
+      },
+      "id": "webkit",
+      "label": "Playwright WebKit",
+      "notes": "WebKit engine proxy only; this is not actual Safari sign-off.",
+      "raceScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test/webkit-race.png",
+      "required": true,
+      "startedAt": "2026-06-03T16:15:35.243Z",
+      "status": "pass"
+    },
+    {
+      "afterExit": {
+        "hash": "",
+        "homeVisible": false,
+        "raceScreenCount": 0,
+        "textSeen": true
+      },
+      "afterInput": {
+        "canvasDataUrlLength": 15090,
+        "hash": "#race",
+        "race": {
+          "lap": 1,
+          "normalizedSpeed": 0.807,
+          "place": 4,
+          "time": 4.52,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl"
+      },
+      "beforeInput": {
+        "canvasDataUrlLength": 15090,
+        "hash": "#race",
+        "race": {
+          "lap": 1,
+          "normalizedSpeed": 0,
+          "place": 4,
+          "time": 3.03,
+          "trackKey": "comeback-city"
+        },
+        "renderer": "webgl"
+      },
+      "finishedAt": "2026-06-03T16:15:56.156Z",
+      "homeScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test/chrome-home.png",
+      "homeState": {
+        "hash": "",
+        "homeVisible": false,
+        "textSeen": true,
+        "title": "Comeback · 181 → 238"
+      },
+      "id": "chrome",
+      "label": "Google Chrome channel",
+      "notes": "Installed local Chrome channel when available.",
+      "raceScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/cross-browser-smoke-test/chrome-race.png",
+      "required": false,
+      "startedAt": "2026-06-03T16:15:44.105Z",
+      "status": "pass"
+    },
+    {
+      "id": "edge",
+      "label": "Microsoft Edge channel",
+      "notes": "Installed local Edge channel when available.",
+      "required": false,
+      "startedAt": "2026-06-03T16:15:56.222Z",
+      "status": "unavailable",
+      "unavailableReason": "browserType.launch: Chromium distribution 'msedge' is not found at /Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+    }
+  ],
+  "unresolved": [
+    "Actual Safari desktop is not automated by this local harness; Playwright WebKit is recorded only as an engine proxy.",
+    "Human target-browser/device sign-off remains required before the P1 cross-browser matrix can close.",
+    "Microsoft Edge was not proven by this local harness."
+  ]
+}

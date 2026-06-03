@@ -1,0 +1,97 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/device-matrix-smoke-test",
+  "baseUrl": "http://127.0.0.1:5227",
+  "capturedAt": "2026-06-03T16:16:07.401Z",
+  "coverage": {
+    "emulatedPhoneViewport": "pass",
+    "humanDesktopPlaythrough": "not-run",
+    "humanPhonePlaythrough": "not-run",
+    "localDesktopViewport": "pass",
+    "physicalLaptop": "not-run",
+    "physicalPhone": "not-run"
+  },
+  "desktop": {
+    "afterInput": {
+      "canvasDataUrlLength": 15090,
+      "hash": "#race",
+      "race": {
+        "lap": 1,
+        "normalizedSpeed": 0.379,
+        "place": 4,
+        "time": 1.02,
+        "trackKey": "comeback-city"
+      },
+      "renderer": "webgl"
+    },
+    "beforeInput": {
+      "canvasDataUrlLength": 15090,
+      "hash": "#race",
+      "race": {
+        "lap": 1,
+        "normalizedSpeed": 0,
+        "place": 4,
+        "time": 0.36,
+        "trackKey": "comeback-city"
+      },
+      "renderer": "webgl"
+    },
+    "homeScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/device-matrix-smoke-test/desktop-home.png",
+    "raceScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/device-matrix-smoke-test/desktop-race.png",
+    "status": "pass",
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    }
+  },
+  "emulatedPhone": {
+    "afterInput": {
+      "canvasDataUrlLength": 9682,
+      "hash": "#race",
+      "race": {
+        "lap": 1,
+        "normalizedSpeed": 0.443,
+        "place": 4,
+        "time": 1.32,
+        "trackKey": "comeback-city"
+      },
+      "renderer": "webgl"
+    },
+    "beforeInput": {
+      "canvasDataUrlLength": 9682,
+      "hash": "#race",
+      "race": {
+        "lap": 1,
+        "normalizedSpeed": 0,
+        "place": 4,
+        "time": 0.5,
+        "trackKey": "comeback-city"
+      },
+      "renderer": "webgl"
+    },
+    "goButtonBox": {
+      "x": 276,
+      "y": 749,
+      "width": 82,
+      "height": 74
+    },
+    "homeScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/device-matrix-smoke-test/emulated-phone-home.png",
+    "raceScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/device-matrix-smoke-test/emulated-phone-race.png",
+    "status": "pass",
+    "viewport": {
+      "height": 844,
+      "width": 390
+    }
+  },
+  "gateStatus": "local-device-matrix-smoke-partial-not-physical-device-signoff",
+  "git": {
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25",
+    "dirty": true
+  },
+  "note": "This smoke records local desktop viewport and emulated phone viewport behavior only. It does not replace the required physical laptop, physical phone, human playthrough, or release-owner sign-off.",
+  "unresolved": [
+    "No physical laptop manual playthrough is recorded.",
+    "No physical modern phone manual playthrough is recorded.",
+    "No release-owner device matrix acceptance or dated exception is recorded."
+  ]
+}

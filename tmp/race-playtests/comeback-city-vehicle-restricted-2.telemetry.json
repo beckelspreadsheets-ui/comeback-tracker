@@ -1,13 +1,13 @@
 {
-  "capturedAt": "2026-05-24T19:00:07.393Z",
+  "capturedAt": "2026-06-03T16:06:12.692Z",
   "result": {
-    "bestLap": 1.1585999999999999,
+    "bestLap": 1.1181999999999994,
     "place": 1,
-    "time": 3.5311999999999997,
+    "time": 3.5983,
     "trackKey": "comeback-city",
     "playtest": {
       "bananaMax": 16,
-      "hazardsEncountered": 2.53,
+      "hazardsEncountered": 2.93,
       "itemBoxesCollected": 8,
       "itemUses": 3,
       "layers": [
@@ -32,8 +32,8 @@
   },
   "routeUrl": "http://127.0.0.1:5187/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=vehicle-restricted&raceIndex=2",
   "screenshotVisualStats": {
-    "colorBucketCount": 104,
-    "luminanceRange": 193.42,
+    "colorBucketCount": 163,
+    "luminanceRange": 235.7,
     "sampleCount": 7416
   },
   "telemetry": {
@@ -47,39 +47,39 @@
     "boostSeen": true,
     "boostTimer": 0,
     "branchVisibleSeen": true,
-    "cameraAvoidanceCount": 1,
+    "cameraAvoidanceCount": 2,
     "cameraClipCount": 0,
     "driftTier": 0,
     "driftTierSeen": 0,
-    "actualFps": 19,
-    "fps": 19,
-    "frameBudgetMissCount": 51,
-    "frameDtMs": 65.9,
-    "frameElapsedMs": 65.9,
+    "actualFps": 16,
+    "fps": 16,
+    "frameBudgetMissCount": 39,
+    "frameDtMs": 131.9,
+    "frameElapsedMs": 131.9,
     "framePhaseMaxMs": {
-      "clock": 0.1,
-      "fitRenderer": 1,
-      "commands": 0.2,
-      "visualPrime": 0.1,
-      "player": 2.7,
-      "world": 0.9,
-      "syncMeshes": 0.6,
+      "clock": 0.2,
+      "fitRenderer": 1.3,
+      "commands": 0.1,
+      "visualPrime": 0.2,
+      "player": 2.9,
+      "world": 1,
+      "syncMeshes": 0.7,
       "camera": 0.9,
-      "render": 41.3,
-      "telemetry": 3.5,
-      "finish": 0.1
+      "render": 45.5,
+      "telemetry": 4.3,
+      "finish": 0.2
     },
     "framePhaseMs": {
       "clock": 0.06,
-      "fitRenderer": 0.06,
-      "commands": 0.06,
+      "fitRenderer": 0.14,
+      "commands": 0.04,
       "visualPrime": 0.06,
-      "player": 0.06,
+      "player": 0.08,
       "world": 0.06,
-      "syncMeshes": 0.06,
+      "syncMeshes": 0.07,
       "camera": 0.06,
-      "render": 1.47,
-      "telemetry": 0.39,
+      "render": 2.9,
+      "telemetry": 0.78,
       "finish": 0.02
     },
     "lifecycle": {
@@ -95,40 +95,40 @@
     },
     "telemetry": {
       "intervalMs": 140,
-      "publishCount": 21,
-      "skipCount": 31
+      "publishCount": 20,
+      "skipCount": 20
     },
-    "frameWorkMaxMs": 48.2,
-    "frameWorkMs": 2.26,
+    "frameWorkMaxMs": 54.3,
+    "frameWorkMs": 4.38,
     "kartOnly": true,
     "kartScreenCoverage": {
-      "bottomYRatio": 0.546,
-      "centerXRatio": 0.345,
-      "centerYRatio": 0.519,
-      "framingBandFromBottom": 0.481,
-      "heightRatio": 0.053,
-      "leftXRatio": 0.313,
-      "rightXRatio": 0.377,
-      "widthRatio": 0.063
+      "bottomYRatio": 0.624,
+      "centerXRatio": 0.428,
+      "centerYRatio": 0.567,
+      "framingBandFromBottom": 0.433,
+      "heightRatio": 0.114,
+      "leftXRatio": 0.36,
+      "rightXRatio": 0.495,
+      "widthRatio": 0.135
     },
-    "nearestCollisionDistance": 119.24,
+    "nearestCollisionDistance": 51.13,
     "normalizedSpeed": 0.667,
     "offroadSlowdown": 1,
     "offroadSlowdownSeen": false,
     "reducedMotion": false,
     "renderer": {
-      "calls": 258,
-      "frame": 52,
-      "geometries": 667,
+      "calls": 510,
+      "frame": 40,
+      "geometries": 664,
       "lines": 0,
       "points": 0,
       "programs": 6,
       "textures": 16,
-      "triangles": 39872
+      "triangles": 55284
     },
     "roadAheadCoverage": {
       "samples": 18,
-      "value": 0.444
+      "value": 1
     },
     "sceneBudget": {
       "categories": {
@@ -203,7 +203,7 @@
       }
     },
     "trackKey": "comeback-city",
-    "visibleBranchCount": 0,
+    "visibleBranchCount": 1,
     "player": {
       "audioMuted": false,
       "boostActive": false,
@@ -232,26 +232,26 @@
       "itemBoxPickupTime": 0,
       "itemBoxSourceType": "red",
       "kartScreenCoverage": {
-        "bottomYRatio": 0.546,
-        "centerXRatio": 0.345,
-        "centerYRatio": 0.519,
-        "framingBandFromBottom": 0.481,
-        "heightRatio": 0.053,
-        "leftXRatio": 0.313,
-        "rightXRatio": 0.377,
-        "widthRatio": 0.063
+        "bottomYRatio": 0.624,
+        "centerXRatio": 0.428,
+        "centerYRatio": 0.567,
+        "framingBandFromBottom": 0.433,
+        "heightRatio": 0.114,
+        "leftXRatio": 0.36,
+        "rightXRatio": 0.495,
+        "widthRatio": 0.135
       },
       "normalizedSpeed": 0.667,
       "offroadSpeedAfter": null,
       "offroadSpeedBefore": null,
       "offroadSpeedLossRatio": null,
-      "progress": 0.995,
+      "progress": 0.107,
       "reducedMotion": false,
       "reverseSpeedCapRatio": 0.25,
       "reverseSpeedRatio": 0,
       "reverseTuningRatio": 0.25,
       "speedRatio": 0.667,
-      "steering": -0.009,
+      "steering": 0.042,
       "steeringTurnDegrees": 0,
       "steeringTurn90Time": null,
       "stuckRecoveryCount": 0,
@@ -263,23 +263,23 @@
       "vehicleMode": "kart"
     },
     "camera": {
-      "avoidanceCount": 1,
+      "avoidanceCount": 2,
       "clipCount": 0,
-      "distance": 165.067,
+      "distance": 81.843,
       "fov": 66,
-      "height": 10.695,
-      "horizonYRatio": 0.496,
-      "roadAheadCoverage": 0.444,
-      "routeLookaheadCurvature": -1.592,
+      "height": 10.7,
+      "horizonYRatio": 0.497,
+      "roadAheadCoverage": 1,
+      "routeLookaheadCurvature": 0.109,
       "routeLookaheadDistance": 64,
       "routeLookaheadSeconds": 1.333,
       "routeLookaheadUsed": true
     },
     "race": {
-      "heldItemKey": "boost",
+      "heldItemKey": "decoyCrate",
       "lap": 3,
       "place": 1,
-      "visibleRivals": 0,
+      "visibleRivals": 3,
       "visibleRivalsSeen": 3
     }
   },

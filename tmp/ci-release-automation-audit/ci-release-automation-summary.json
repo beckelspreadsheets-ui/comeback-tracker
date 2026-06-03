@@ -1,0 +1,80 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/ci-release-automation-audit",
+  "capturedAt": "2026-06-03T16:14:36.191Z",
+  "failures": [],
+  "gateStatus": "ci-release-workflow-structured-not-run-or-owner-approved",
+  "git": {
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25",
+    "dirty": true
+  },
+  "note": "This audit proves the workflow file contains the expected local release-gate commands. It does not prove a GitHub Actions run has executed or that release owner accepted CI/manual gate policy.",
+  "requiredRuns": [
+    "npm ci",
+    "npx playwright install --with-deps chromium firefox webkit",
+    "npm run build",
+    "npm run test:race",
+    "npm run test:race:browser",
+    "npm run test:race:disable",
+    "npm run test:core",
+    "npm run test:hub",
+    "npm run test:visual",
+    "npm run test:api:data",
+    "npm run test:pwa",
+    "npm run test:pwa:update",
+    "npm run test:lifecycle",
+    "npm run test:webgl",
+    "npm run test:release:smoke",
+    "npm run test:release:rollback",
+    "npm run test:release:artifacts",
+    "npm run test:accessibility",
+    "npm run test:cross-browser",
+    "npm run test:device:matrix",
+    "npm run test:headers:deployed",
+    "npm run test:bundle",
+    "npm run test:lab",
+    "npm run test:qa:capture",
+    "npm run test:monitoring:support",
+    "npm run test:security:prod",
+    "npm run test:release:decisions",
+    "npm run test:production:gates",
+    "npm run test:ci:release"
+  ],
+  "setupChecks": [
+    {
+      "label": "checkout action",
+      "ok": true
+    },
+    {
+      "label": "setup-node action",
+      "ok": true
+    },
+    {
+      "label": "node 20",
+      "ok": true
+    },
+    {
+      "label": "npm cache",
+      "ok": true
+    }
+  ],
+  "triggerChecks": [
+    {
+      "label": "pull_request trigger",
+      "ok": true
+    },
+    {
+      "label": "main push trigger",
+      "ok": true
+    },
+    {
+      "label": "workflow_dispatch trigger",
+      "ok": true
+    }
+  ],
+  "unresolved": [
+    "No GitHub Actions run URL is recorded.",
+    "Release-owner CI/manual gate policy and dirty-worktree deploy policy are not supplied."
+  ],
+  "workflowPath": ".github/workflows/race-production-gates.yml"
+}

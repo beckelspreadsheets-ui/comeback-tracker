@@ -1,20 +1,20 @@
 {
-  "capturedAt": "2026-05-24T19:02:56.576Z",
+  "capturedAt": "2026-06-03T16:09:36.371Z",
   "detail": {
     "afterLabel": "Unmute race audio",
     "afterPressed": "true",
     "beforeLabel": "Mute race audio",
     "beforePressed": "false",
     "screenshotVisualStats": {
-      "colorBucketCount": 242,
+      "colorBucketCount": 238,
       "luminanceRange": 242.42,
       "sampleCount": 7416
     },
     "telemetryAudioMuted": true
   },
   "git": {
-    "branch": "main",
-    "commit": "9fb87c2"
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25"
   },
   "ignoredConsoleErrors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)",
@@ -24,7 +24,7 @@
   "scenario": "audio-mute-control",
   "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/race-playtests/visual-comeback-city-audio-mute-control.png",
   "screenshotVisualStats": {
-    "colorBucketCount": 242,
+    "colorBucketCount": 238,
     "luminanceRange": 242.42,
     "sampleCount": 7416
   },
@@ -43,22 +43,22 @@
     "cameraClipCount": 0,
     "driftTier": 0,
     "driftTierSeen": 0,
-    "actualFps": 27.1,
-    "fps": 45.7,
-    "frameBudgetMissCount": 23,
+    "actualFps": 23.2,
+    "fps": 43.3,
+    "frameBudgetMissCount": 25,
     "frameDtMs": 33,
-    "frameElapsedMs": 103.7,
+    "frameElapsedMs": 159.8,
     "framePhaseMaxMs": {
-      "clock": 0.2,
-      "fitRenderer": 1,
+      "clock": 0.1,
+      "fitRenderer": 1.3,
       "commands": 0.1,
-      "visualPrime": 0.1,
-      "player": 9.8,
-      "world": 0.4,
-      "syncMeshes": 0.4,
+      "visualPrime": 0.2,
+      "player": 9.5,
+      "world": 0.6,
+      "syncMeshes": 0.3,
       "camera": 0.5,
-      "render": 44.3,
-      "telemetry": 1.9,
+      "render": 51.2,
+      "telemetry": 2.3,
       "finish": 0
     },
     "framePhaseMs": {
@@ -66,12 +66,12 @@
       "fitRenderer": 0.21,
       "commands": 0.06,
       "visualPrime": 0.06,
-      "player": 2.32,
-      "world": 0.11,
-      "syncMeshes": 0.11,
-      "camera": 0.11,
-      "render": 7.96,
-      "telemetry": 0.79,
+      "player": 2.03,
+      "world": 0.1,
+      "syncMeshes": 0.1,
+      "camera": 0.1,
+      "render": 7.53,
+      "telemetry": 0.77,
       "finish": 0
     },
     "lifecycle": {
@@ -87,11 +87,11 @@
     },
     "telemetry": {
       "intervalMs": 140,
-      "publishCount": 13,
+      "publishCount": 15,
       "skipCount": 11
     },
-    "frameWorkMaxMs": 58.7,
-    "frameWorkMs": 12.37,
+    "frameWorkMaxMs": 66.2,
+    "frameWorkMs": 12.26,
     "kartOnly": true,
     "kartScreenCoverage": {
       "bottomYRatio": 0.709,
@@ -110,7 +110,7 @@
     "reducedMotion": false,
     "renderer": {
       "calls": 745,
-      "frame": 24,
+      "frame": 26,
       "geometries": 598,
       "lines": 0,
       "points": 0,

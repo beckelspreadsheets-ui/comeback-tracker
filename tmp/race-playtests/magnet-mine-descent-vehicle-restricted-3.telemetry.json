@@ -1,13 +1,13 @@
 {
-  "capturedAt": "2026-05-24T19:01:12.220Z",
+  "capturedAt": "2026-06-03T16:07:27.698Z",
   "result": {
     "bestLap": 0.32,
     "place": 1,
-    "time": 2.6497999999999995,
+    "time": 2.611999999999999,
     "trackKey": "magnet-mine-descent",
     "playtest": {
       "bananaMax": 16,
-      "hazardsEncountered": 2.34,
+      "hazardsEncountered": 2.37,
       "itemBoxesCollected": 10,
       "itemUses": 3,
       "layers": [
@@ -15,18 +15,18 @@
         "air",
         "hybrid"
       ],
-      "locks": 9,
+      "locks": 8,
       "mode": "vehicle-restricted",
       "raceIndex": 3,
       "signatureUsed": true,
-      "switchPads": 20,
+      "switchPads": 19,
       "upgrades": 3,
       "vehicles": [
         "kart",
         "plane",
         "hover"
       ],
-      "zones": 17
+      "zones": 14
     },
     "harness": {
       "mode": "vehicle-restricted",
@@ -36,8 +36,8 @@
   },
   "routeUrl": "http://127.0.0.1:5187/race-playtest.html?raceAutoplay=1&raceTrack=magnet-mine-descent&raceMode=vehicle-restricted&raceIndex=3",
   "screenshotVisualStats": {
-    "colorBucketCount": 411,
-    "luminanceRange": 242.13,
+    "colorBucketCount": 366,
+    "luminanceRange": 230.62,
     "sampleCount": 7416
   },
   "telemetry": {
@@ -49,42 +49,42 @@
       "state": "procedural-ready"
     },
     "boostSeen": true,
-    "boostTimer": 0.145,
+    "boostTimer": 0.2,
     "branchVisibleSeen": true,
     "cameraAvoidanceCount": 4,
     "cameraClipCount": 0,
     "driftTier": 0,
     "driftTierSeen": 0,
-    "actualFps": 21.4,
-    "fps": 21.5,
-    "frameBudgetMissCount": 34,
-    "frameDtMs": 49,
-    "frameElapsedMs": 49,
+    "actualFps": 22.3,
+    "fps": 22.3,
+    "frameBudgetMissCount": 30,
+    "frameDtMs": 62.6,
+    "frameElapsedMs": 62.6,
     "framePhaseMaxMs": {
-      "clock": 0.2,
-      "fitRenderer": 1,
+      "clock": 0.1,
+      "fitRenderer": 1.4,
       "commands": 0.1,
       "visualPrime": 0.1,
-      "player": 3,
-      "world": 0.7,
-      "syncMeshes": 0.6,
-      "camera": 1.3,
-      "render": 42.5,
-      "telemetry": 1.4,
-      "finish": 0.1
+      "player": 3.4,
+      "world": 0.5,
+      "syncMeshes": 0.7,
+      "camera": 1.6,
+      "render": 48.1,
+      "telemetry": 1.8,
+      "finish": 0.2
     },
     "framePhaseMs": {
       "clock": 0.06,
-      "fitRenderer": 0.13,
+      "fitRenderer": 0.21,
       "commands": 0.06,
       "visualPrime": 0.06,
-      "player": 0.12,
+      "player": 0.18,
       "world": 0.08,
-      "syncMeshes": 0.1,
-      "camera": 0.15,
-      "render": 3.93,
-      "telemetry": 0.17,
-      "finish": 0.01
+      "syncMeshes": 0.14,
+      "camera": 0.23,
+      "render": 5.88,
+      "telemetry": 0.28,
+      "finish": 0.03
     },
     "lifecycle": {
       "audioResumeCount": 0,
@@ -100,39 +100,39 @@
     "telemetry": {
       "intervalMs": 140,
       "publishCount": 17,
-      "skipCount": 18
+      "skipCount": 14
     },
-    "frameWorkMaxMs": 48.4,
-    "frameWorkMs": 5.23,
+    "frameWorkMaxMs": 55.1,
+    "frameWorkMs": 7.4,
     "kartOnly": false,
     "kartScreenCoverage": {
-      "bottomYRatio": 0.64,
-      "centerXRatio": 0.254,
-      "centerYRatio": 0.538,
-      "framingBandFromBottom": 0.462,
-      "heightRatio": 0.203,
-      "leftXRatio": 0.114,
-      "rightXRatio": 0.394,
-      "widthRatio": 0.28
+      "bottomYRatio": 0.684,
+      "centerXRatio": 0.404,
+      "centerYRatio": 0.571,
+      "framingBandFromBottom": 0.429,
+      "heightRatio": 0.226,
+      "leftXRatio": 0.29,
+      "rightXRatio": 0.518,
+      "widthRatio": 0.227
     },
-    "nearestCollisionDistance": 141.7,
+    "nearestCollisionDistance": 114.05,
     "normalizedSpeed": 0.903,
     "offroadSlowdown": 1,
     "offroadSlowdownSeen": false,
     "reducedMotion": false,
     "renderer": {
-      "calls": 398,
-      "frame": 35,
-      "geometries": 1441,
+      "calls": 735,
+      "frame": 31,
+      "geometries": 1438,
       "lines": 0,
       "points": 0,
       "programs": 6,
       "textures": 13,
-      "triangles": 43004
+      "triangles": 50296
     },
     "roadAheadCoverage": {
       "samples": 18,
-      "value": 0.444
+      "value": 0.611
     },
     "sceneBudget": {
       "categories": {
@@ -236,20 +236,20 @@
       "itemBoxPickupTime": 0,
       "itemBoxSourceType": "red",
       "kartScreenCoverage": {
-        "bottomYRatio": 0.64,
-        "centerXRatio": 0.254,
-        "centerYRatio": 0.538,
-        "framingBandFromBottom": 0.462,
-        "heightRatio": 0.203,
-        "leftXRatio": 0.114,
-        "rightXRatio": 0.394,
-        "widthRatio": 0.28
+        "bottomYRatio": 0.684,
+        "centerXRatio": 0.404,
+        "centerYRatio": 0.571,
+        "framingBandFromBottom": 0.429,
+        "heightRatio": 0.226,
+        "leftXRatio": 0.29,
+        "rightXRatio": 0.518,
+        "widthRatio": 0.227
       },
       "normalizedSpeed": 0.903,
       "offroadSpeedAfter": null,
       "offroadSpeedBefore": null,
       "offroadSpeedLossRatio": null,
-      "progress": 0.039,
+      "progress": 0.006,
       "reducedMotion": false,
       "reverseSpeedCapRatio": 0.161,
       "reverseSpeedRatio": 0,
@@ -262,28 +262,28 @@
       "stuckRecoveryCooldown": 0,
       "stuckTimer": 0,
       "timeFromTopSpeedTo25": null,
-      "timeToSpeed80": 0.812,
-      "timeToSpeed98": 1.333,
+      "timeToSpeed80": 0.674,
+      "timeToSpeed98": 1.209,
       "vehicleMode": "plane"
     },
     "camera": {
       "avoidanceCount": 4,
       "clipCount": 0,
-      "distance": 53.442,
-      "fov": 68.7,
-      "height": 22.755,
-      "horizonYRatio": 0.508,
-      "roadAheadCoverage": 0.444,
+      "distance": 51.658,
+      "fov": 69.7,
+      "height": 25.484,
+      "horizonYRatio": 0.478,
+      "roadAheadCoverage": 0.611,
       "routeLookaheadCurvature": null,
       "routeLookaheadDistance": null,
       "routeLookaheadSeconds": null,
       "routeLookaheadUsed": false
     },
     "race": {
-      "heldItemKey": "polaritySwap",
+      "heldItemKey": "ghostReplay",
       "lap": 3,
       "place": 1,
-      "visibleRivals": 0,
+      "visibleRivals": 2,
       "visibleRivalsSeen": 3
     }
   },

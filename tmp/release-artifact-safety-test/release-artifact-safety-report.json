@@ -1,12 +1,12 @@
 {
   "artifactDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-artifact-safety-test",
-  "capturedAt": "2026-06-01T19:24:00.930Z",
+  "capturedAt": "2026-06-03T16:14:35.994Z",
   "distDir": "/Users/andrewferguson/Downloads/comeback-tracker/dist",
   "fileCount": 40,
   "gateStatus": "technical-artifacts-pass",
   "git": {
-    "branch": "main",
-    "commit": "9fb87c26bcdec19e8175f63a09e490f5400231aa",
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25a6813927ce2e54ad4582ca39a9937157f",
     "dirty": true
   },
   "note": "This proves local built dist artifact safety checks only. Standard production dist has no scanned source maps, sourceMappingURL references, standalone playtest/debug files, scanned secret-name leaks, runtime playtest automation strings, diagnostic telemetry globals, or visual review route strings.",

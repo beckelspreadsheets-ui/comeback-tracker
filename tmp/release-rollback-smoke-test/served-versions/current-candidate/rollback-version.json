@@ -1,11 +1,11 @@
 {
   "git": {
-    "branch": "main",
-    "commit": "9fb87c2",
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25",
     "dirty": true
   },
   "label": "current-candidate",
   "marker": "release-rollback-smoke-current-candidate",
-  "preparedAt": "2026-05-24T11:14:09.536Z",
+  "preparedAt": "2026-06-03T16:14:31.883Z",
   "role": "pre-rollback-current"
 }

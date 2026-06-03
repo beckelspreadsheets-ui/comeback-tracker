@@ -170,11 +170,24 @@ const assertNoBlockingBrowserErrors = (label, errors) => {
 };
 
 const waitForRaceReady = async (page) => {
-  await page.waitForSelector('[data-testid="race-screen"]', { timeout: 15000 });
+  await page.waitForSelector('[data-testid="race-screen"][data-race-track="comeback-city"]', { timeout: 15000 });
+  await page.waitForSelector('[data-testid="arcade-race-shell"][data-race-track="comeback-city"]', {
+    timeout: 15000,
+  });
   await page.waitForFunction(
-    () =>
-      window.__raceVisualTelemetry?.trackKey === 'comeback-city' &&
-      Number.isFinite(window.__raceVisualTelemetry?.actualFps),
+    () => {
+      const screen = document.querySelector('[data-testid="race-screen"]');
+      const shell = document.querySelector('[data-testid="arcade-race-shell"]');
+      const diagnosticReady =
+        window.__raceVisualTelemetry?.trackKey === 'comeback-city' &&
+        Number.isFinite(window.__raceVisualTelemetry?.actualFps);
+      const shellSpeed = Number(shell?.dataset?.raceSpeedRatio);
+      return (
+        screen?.dataset?.raceTrack === 'comeback-city' &&
+        shell?.dataset?.raceTrack === 'comeback-city' &&
+        (diagnosticReady || Number.isFinite(shellSpeed))
+      );
+    },
     null,
     { timeout: 15000 }
   );
@@ -207,6 +220,7 @@ const summarizeTelemetry = (telemetry) => ({
 const raceState = async (page) =>
   page.evaluate(() => {
     const screen = document.querySelector('[data-testid="race-screen"]');
+    const shell = document.querySelector('[data-testid="arcade-race-shell"]');
     const visualCanvas = document.querySelector('canvas[data-visual-canvas="race"]');
     const fallbackCanvas = document.querySelector('[data-testid="race-fallback-canvas"]');
     const canvas = visualCanvas || fallbackCanvas;
@@ -216,11 +230,30 @@ const raceState = async (page) =>
     } catch {
       canvasDataUrlLength = -1;
     }
+    const raceSpeedRatio = Number(shell?.dataset?.raceSpeedRatio);
+    const domTelemetry = {
+      actualFps: null,
+      player: {
+        audioMuted: shell?.dataset?.raceAudioMuted === 'true',
+        normalizedSpeed: Number.isFinite(raceSpeedRatio) ? raceSpeedRatio : 0,
+      },
+      race: {
+        lap: Number(shell?.dataset?.raceLap) || null,
+        place: Number(shell?.dataset?.racePlace) || null,
+        time: Number(shell?.dataset?.raceTime) || null,
+      },
+      renderer: {
+        calls: null,
+        triangles: null,
+      },
+      source: 'production-dom',
+      trackKey: screen?.dataset?.raceTrack || shell?.dataset?.raceTrack || null,
+    };
     return {
       canvasDataUrlLength,
       hash: window.location.hash,
       renderer: screen?.getAttribute('data-race-renderer') || null,
-      telemetry: window.__raceVisualTelemetry || null,
+      telemetry: window.__raceVisualTelemetry || domTelemetry,
       title: document.title,
       url: window.location.href,
       viewport: {
@@ -338,9 +371,21 @@ const captureMobile = async (browser) => {
   if (!box) fail('Mobile Go touch control did not render a clickable box');
   await dispatchTouch(goButton, 'pointerdown');
   await page.waitForTimeout(1400);
-  await page.waitForFunction(() => (window.__raceVisualTelemetry?.player?.normalizedSpeed || 0) > 0.05, null, {
-    timeout: 8000,
-  });
+  await page.waitForFunction(
+    () => {
+      const diagnosticSpeed = Number(window.__raceVisualTelemetry?.player?.normalizedSpeed);
+      const shellSpeed = Number(
+        document.querySelector('[data-testid="arcade-race-shell"]')?.dataset?.raceSpeedRatio
+      );
+      const normalizedSpeed = Math.max(
+        Number.isFinite(diagnosticSpeed) ? diagnosticSpeed : 0,
+        Number.isFinite(shellSpeed) ? shellSpeed : 0
+      );
+      return normalizedSpeed > 0.05;
+    },
+    null,
+    { timeout: 8000 }
+  );
   const afterInput = await raceState(page);
   await page.screenshot({ fullPage: false, path: screenshotPath });
   await dispatchTouch(goButton, 'pointerup');

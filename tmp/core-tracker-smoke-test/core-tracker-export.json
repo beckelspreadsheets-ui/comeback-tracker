@@ -62,7 +62,7 @@
     },
     "library": [
       {
-        "id": "e_mpiy6ozz_artily",
+        "id": "e_mpy9nome_ko8768",
         "name": "Core smoke tofu bowl",
         "cal": 520,
         "p": 42,
@@ -71,15 +71,15 @@
         "unit": "serving",
         "servingDesc": "1 bowl",
         "barcode": "",
-        "lastUsedAt": 1779576978959,
+        "lastUsedAt": 1780503240038,
         "usageCount": 1
       }
     ],
     "log": {
-      "2026-05-23": {
+      "2026-06-03": {
         "breakfast": [
           {
-            "id": "e_mpiy6ozy_donxlg",
+            "id": "e_mpy9nomd_r9sbg6",
             "name": "Core smoke tofu bowl",
             "cal": 520,
             "p": 42,
@@ -88,7 +88,7 @@
             "amount": 1,
             "unit": "serving",
             "servingDesc": "1 bowl",
-            "at": 1779576978958
+            "at": 1780503240037
           }
         ],
         "lunch": [],

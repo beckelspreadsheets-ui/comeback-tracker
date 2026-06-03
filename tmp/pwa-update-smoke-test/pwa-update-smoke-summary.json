@@ -1,0 +1,91 @@
+{
+  "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/pwa-update-smoke-test",
+  "browser": {
+    "afterUpdate": {
+      "cacheKeys": [
+        "workbox-precache-v2-http://pwa-update.localhost:5198/"
+      ],
+      "controllerScriptURL": "http://pwa-update.localhost:5198/sw.js",
+      "controllerState": "activated",
+      "registrations": [
+        {
+          "activeScriptURL": "http://pwa-update.localhost:5198/sw.js",
+          "activeState": "activated",
+          "installingState": null,
+          "scope": "http://pwa-update.localhost:5198/",
+          "waitingState": null
+        }
+      ],
+      "supported": true,
+      "waitingScriptURL": null
+    },
+    "beforeUpdate": {
+      "cacheKeys": [
+        "workbox-precache-v2-http://pwa-update.localhost:5198/"
+      ],
+      "controllerScriptURL": "http://pwa-update.localhost:5198/sw.js",
+      "controllerState": "activated",
+      "registrations": [
+        {
+          "activeScriptURL": "http://pwa-update.localhost:5198/sw.js",
+          "activeState": "activated",
+          "installingState": null,
+          "scope": "http://pwa-update.localhost:5198/",
+          "waitingState": null
+        }
+      ],
+      "supported": true,
+      "waitingScriptURL": null
+    },
+    "markers": {
+      "offline": "pwa-update-smoke-v2",
+      "versionOne": "pwa-update-smoke-v1",
+      "versionOneBeforeReload": "pwa-update-smoke-v1",
+      "versionTwo": "pwa-update-smoke-v2"
+    },
+    "toleratedRequestFailures": [
+      {
+        "errorText": "net::ERR_FAILED",
+        "url": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      },
+      {
+        "errorText": "net::ERR_ABORTED",
+        "url": "http://pwa-update.localhost:5198/"
+      },
+      {
+        "errorText": "net::ERR_FAILED",
+        "url": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      },
+      {
+        "errorText": "net::ERR_FAILED",
+        "url": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      }
+    ],
+    "updateResult": {
+      "activeScriptURL": "http://pwa-update.localhost:5198/sw.js",
+      "controllerScriptURL": "http://pwa-update.localhost:5198/sw.js",
+      "events": [
+        "updatefound",
+        "controllerchange"
+      ],
+      "waitingScriptURL": null
+    }
+  },
+  "gateStatus": "local-installed-pwa-update-proven-not-target-browser-or-production-evidence",
+  "status": "ok",
+  "unresolvedReleaseDecisions": [
+    "Production URL installed-app update behavior is not proven until deployed preview/production targets are supplied.",
+    "Target browser/device installed-app update matrix remains missing.",
+    "Release-owner PWA support and rollback policy remains missing."
+  ],
+  "versions": {
+    "versionOne": {
+      "marker": "pwa-update-smoke-v1",
+      "swRevision": "8f0b09f29606dc69df1c78e9e3c18a95"
+    },
+    "versionTwo": {
+      "marker": "pwa-update-smoke-v2",
+      "swRevision": "62868e5ff599ad18c16cd1ebca2236b5"
+    }
+  }
+}

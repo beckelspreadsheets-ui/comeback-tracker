@@ -7,11 +7,11 @@
   ],
   "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/accessibility-smoke-test",
   "baseUrl": "http://127.0.0.1:5211",
-  "capturedAt": "2026-05-24T11:13:54.229Z",
+  "capturedAt": "2026-06-03T16:05:40.626Z",
   "gateStatus": "local-accessibility-smoke-proven-not-manual-signoff",
   "git": {
-    "branch": "main",
-    "commit": "9fb87c2",
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25",
     "dirty": true
   },
   "home": {
@@ -69,7 +69,7 @@
           "hasVisibleIndicator": true,
           "id": null,
           "name": "Export JSON backup",
-          "outlineColor": "rgb(74, 118, 168)",
+          "outlineColor": "rgb(70, 117, 170)",
           "outlineStyle": "auto",
           "outlineWidth": "1px",
           "rect": {
@@ -129,9 +129,9 @@
           "hasVisibleIndicator": true,
           "id": null,
           "name": "Previous week",
-          "outlineColor": "rgb(137, 138, 137)",
+          "outlineColor": "rgb(70, 117, 170)",
           "outlineStyle": "auto",
-          "outlineWidth": "2px",
+          "outlineWidth": "1px",
           "rect": {
             "height": 20,
             "width": 20,
@@ -149,7 +149,7 @@
           "hasVisibleIndicator": true,
           "id": null,
           "name": "Next week",
-          "outlineColor": "rgb(66, 116, 171)",
+          "outlineColor": "rgb(70, 117, 170)",
           "outlineStyle": "auto",
           "outlineWidth": "1px",
           "rect": {
@@ -683,7 +683,7 @@
   },
   "raceMobile": {
     "afterInput": {
-      "normalizedSpeed": 0.565
+      "normalizedSpeed": 0.527
     },
     "beforeInput": {
       "normalizedSpeed": 0
@@ -775,7 +775,7 @@
         "ratio": 17.73,
         "selector": ".race-status-stack strong",
         "status": "pass",
-        "text": "236"
+        "text": "220"
       }
     ],
     "focus": {

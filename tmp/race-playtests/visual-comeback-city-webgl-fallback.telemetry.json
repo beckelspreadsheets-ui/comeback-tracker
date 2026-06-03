@@ -1,13 +1,13 @@
 {
-  "capturedAt": "2026-05-24T19:03:01.470Z",
+  "capturedAt": "2026-06-03T16:09:42.415Z",
   "detail": {
-    "canvasDataUrlLength": 366218,
+    "canvasDataUrlLength": 376682,
     "renderer": "canvas2d-fallback",
-    "text": "TODAY\nLAP\n1/3\nPLACE\n3rd\nSPEED\n0\nTIME\n0:00.19\nDRIFT\nITEM --\nBOOST --\nGRIP --\nPHASE --\nDRAFT --\nJUMP --"
+    "text": "TODAY\nLAP\n1/3\nPLACE\n3rd\nSPEED\n0\nTIME\n0:00.45\nDRIFT\nITEM --\nBOOST --\nGRIP --\nPHASE --\nDRAFT 0.1\nJUMP --"
   },
   "git": {
-    "branch": "main",
-    "commit": "9fb87c2"
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25"
   },
   "ignoredConsoleErrors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)",

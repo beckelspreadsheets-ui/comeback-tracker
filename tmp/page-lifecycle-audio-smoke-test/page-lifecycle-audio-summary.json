@@ -13,7 +13,7 @@
     "audioSuspendCount": 3,
     "inputClearCount": 1,
     "lastEvent": "focus",
-    "lastFrameResetAt": 7.133,
+    "lastFrameResetAt": 6.598,
     "pageHidePersistedCount": 1,
     "pageShowPersistedCount": 1,
     "pauseCount": 3,
@@ -21,7 +21,7 @@
   },
   "timing": {
     "frameDtMs": 33,
-    "frameElapsedMs": 135.2
+    "frameElapsedMs": 111.2
   },
   "toggle": {
     "ariaLabel": "Mute race audio",

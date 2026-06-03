@@ -1,17 +1,17 @@
 {
   "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-rollback-smoke-test",
   "baseUrl": "http://127.0.0.1:5202",
-  "capturedAt": "2026-05-24T11:14:11.909Z",
+  "capturedAt": "2026-06-03T16:14:35.728Z",
   "currentCandidate": {
     "marker": {
       "git": {
-        "branch": "main",
-        "commit": "9fb87c2",
+        "branch": "codex/release-v1-comebacktracker-kart-racer",
+        "commit": "937bd25",
         "dirty": true
       },
       "label": "current-candidate",
       "marker": "release-rollback-smoke-current-candidate",
-      "preparedAt": "2026-05-24T11:14:09.536Z",
+      "preparedAt": "2026-06-03T16:14:31.883Z",
       "role": "pre-rollback-current"
     },
     "smoke": {
@@ -31,20 +31,20 @@
   },
   "gateStatus": "local-rollback-drill-proven-not-production-rollback-signoff",
   "git": {
-    "branch": "main",
-    "commit": "9fb87c2",
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25",
     "dirty": true
   },
   "knownGoodRollbackTarget": {
     "marker": {
       "git": {
-        "branch": "main",
-        "commit": "9fb87c2",
+        "branch": "codex/release-v1-comebacktracker-kart-racer",
+        "commit": "937bd25",
         "dirty": true
       },
       "label": "known-good",
       "marker": "release-rollback-smoke-known-good",
-      "preparedAt": "2026-05-24T11:14:09.508Z",
+      "preparedAt": "2026-06-03T16:14:31.794Z",
       "role": "rollback-target"
     },
     "smoke": {
@@ -65,24 +65,24 @@
   "rollbackSwitch": {
     "after": {
       "git": {
-        "branch": "main",
-        "commit": "9fb87c2",
+        "branch": "codex/release-v1-comebacktracker-kart-racer",
+        "commit": "937bd25",
         "dirty": true
       },
       "label": "known-good",
       "marker": "release-rollback-smoke-known-good",
-      "preparedAt": "2026-05-24T11:14:09.508Z",
+      "preparedAt": "2026-06-03T16:14:31.794Z",
       "role": "rollback-target"
     },
     "before": {
       "git": {
-        "branch": "main",
-        "commit": "9fb87c2",
+        "branch": "codex/release-v1-comebacktracker-kart-racer",
+        "commit": "937bd25",
         "dirty": true
       },
       "label": "current-candidate",
       "marker": "release-rollback-smoke-current-candidate",
-      "preparedAt": "2026-05-24T11:14:09.536Z",
+      "preparedAt": "2026-06-03T16:14:31.883Z",
       "role": "pre-rollback-current"
     },
     "status": "pass"
@@ -95,24 +95,24 @@
   "versions": {
     "currentCandidate": {
       "git": {
-        "branch": "main",
-        "commit": "9fb87c2",
+        "branch": "codex/release-v1-comebacktracker-kart-racer",
+        "commit": "937bd25",
         "dirty": true
       },
       "label": "current-candidate",
       "marker": "release-rollback-smoke-current-candidate",
-      "preparedAt": "2026-05-24T11:14:09.536Z",
+      "preparedAt": "2026-06-03T16:14:31.883Z",
       "role": "pre-rollback-current"
     },
     "knownGood": {
       "git": {
-        "branch": "main",
-        "commit": "9fb87c2",
+        "branch": "codex/release-v1-comebacktracker-kart-racer",
+        "commit": "937bd25",
         "dirty": true
       },
       "label": "known-good",
       "marker": "release-rollback-smoke-known-good",
-      "preparedAt": "2026-05-24T11:14:09.508Z",
+      "preparedAt": "2026-06-03T16:14:31.794Z",
       "role": "rollback-target"
     }
   }

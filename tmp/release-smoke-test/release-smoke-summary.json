@@ -1,30 +1,30 @@
 {
   "apiProbes": {
     "fatSecretShortQuery": {
-      "bodySnippet": "<!doctype html>\n<html lang=\"en\" class=\"dark\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no\" />\n    <meta name=\"theme-color\" content=\"#0b0b0e\" />\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\" />\n    <meta name=\"apple-mobile-web-app-title\" content=\"Comeback\" />\n    <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n\n    <title>Comeback · 181 → 238</title>\n    <meta name=\"description\" content=\"The Comeback — 7-day arms/hams specialization tracker\" />\n    <script type=\"module\" crossorigin src=\"/assets/index-DZmPlj6L.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Dzyue0qK.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/recharts-CR5iyUw2.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-BXoqPyit.css\">\n  <link rel=\"manifest\" href=\"/manifest.webmanifest\"></head>\n  <body class=\"bg-ink\">\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
+      "bodySnippet": "<!doctype html>\n<html lang=\"en\" class=\"dark\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no\" />\n    <meta name=\"theme-color\" content=\"#0b0b0e\" />\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\" />\n    <meta name=\"apple-mobile-web-app-title\" content=\"Comeback\" />\n    <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n\n    <title>Comeback · 181 → 238</title>\n    <meta name=\"description\" content=\"The Comeback — 7-day arms/hams specialization tracker\" />\n    <script type=\"module\" crossorigin src=\"/assets/index-DhYwCjyt.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/rolldown-runtime-QTnfLwEv.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-D32R7mtB.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-vendor-BvPqe1Y1.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/program-D-rMlWES.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-rfB9CRrS.css\">\n  <link rel=\"manifest\" href=\"/manifest.webmanifest\"></head>\n  <body class=\"bg-ink\">\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
       "headers": {
         "cache-control": "no-cache",
         "content-type": "text/html",
-        "etag": "W/\"5f1-z62RxdpGU0FMP8DvxTfhbBIGlhQ\""
+        "etag": "W/\"69a-VdPF0t8D6xate21NX5t1eVLBg+Q\""
       },
       "json": null,
       "label": "fatsecret short query",
       "ok": true,
       "status": 200,
-      "url": "http://127.0.0.1:5202/api/fatsecret/search?q=a"
+      "url": "http://127.0.0.1:5201/api/fatsecret/search?q=a"
     },
     "syncMe": {
-      "bodySnippet": "<!doctype html>\n<html lang=\"en\" class=\"dark\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no\" />\n    <meta name=\"theme-color\" content=\"#0b0b0e\" />\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\" />\n    <meta name=\"apple-mobile-web-app-title\" content=\"Comeback\" />\n    <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n\n    <title>Comeback · 181 → 238</title>\n    <meta name=\"description\" content=\"The Comeback — 7-day arms/hams specialization tracker\" />\n    <script type=\"module\" crossorigin src=\"/assets/index-DZmPlj6L.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-Dzyue0qK.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/recharts-CR5iyUw2.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-BXoqPyit.css\">\n  <link rel=\"manifest\" href=\"/manifest.webmanifest\"></head>\n  <body class=\"bg-ink\">\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
+      "bodySnippet": "<!doctype html>\n<html lang=\"en\" class=\"dark\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no\" />\n    <meta name=\"theme-color\" content=\"#0b0b0e\" />\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\" />\n    <meta name=\"apple-mobile-web-app-title\" content=\"Comeback\" />\n    <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\" />\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin />\n    <link\n      href=\"https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap\"\n      rel=\"stylesheet\"\n    />\n\n    <title>Comeback · 181 → 238</title>\n    <meta name=\"description\" content=\"The Comeback — 7-day arms/hams specialization tracker\" />\n    <script type=\"module\" crossorigin src=\"/assets/index-DhYwCjyt.js\"></script>\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/rolldown-runtime-QTnfLwEv.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/icons-D32R7mtB.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/react-vendor-BvPqe1Y1.js\">\n    <link rel=\"modulepreload\" crossorigin href=\"/assets/program-D-rMlWES.js\">\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-rfB9CRrS.css\">\n  <link rel=\"manifest\" href=\"/manifest.webmanifest\"></head>\n  <body class=\"bg-ink\">\n    <div id=\"root\"></div>\n  </body>\n</html>\n",
       "headers": {
         "cache-control": "no-cache",
         "content-type": "text/html",
-        "etag": "W/\"5f1-z62RxdpGU0FMP8DvxTfhbBIGlhQ\""
+        "etag": "W/\"69a-VdPF0t8D6xate21NX5t1eVLBg+Q\""
       },
       "json": null,
       "label": "sync me",
       "ok": true,
       "status": 200,
-      "url": "http://127.0.0.1:5202/api/sync/me"
+      "url": "http://127.0.0.1:5201/api/sync/me"
     }
   },
   "apiProbeStatus": "local-vite-fallback-only-not-functions-evidence",
@@ -35,7 +35,7 @@
     "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test/release-smoke-summary.json"
   ],
   "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-smoke-test",
-  "baseUrl": "http://127.0.0.1:5202",
+  "baseUrl": "http://127.0.0.1:5201",
   "browser": {
     "coreTracker": {
       "finalState": {
@@ -81,10 +81,10 @@
         "race": {
           "audioMuted": "false",
           "lap": 1,
-          "normalizedSpeed": 0.443,
+          "normalizedSpeed": 0.348,
           "place": 4,
           "reducedMotion": "false",
-          "time": 1.06,
+          "time": 1.02,
           "trackKey": "comeback-city"
         },
         "renderer": "webgl",
@@ -99,7 +99,7 @@
           "normalizedSpeed": 0,
           "place": 4,
           "reducedMotion": "false",
-          "time": 0.23,
+          "time": 0.36,
           "trackKey": "comeback-city"
         },
         "renderer": "webgl",
@@ -115,10 +115,10 @@
         "race": {
           "audioMuted": "false",
           "lap": 1,
-          "normalizedSpeed": 0.548,
+          "normalizedSpeed": 0.409,
           "place": 4,
           "reducedMotion": "false",
-          "time": 1.78,
+          "time": 1.48,
           "trackKey": "comeback-city"
         },
         "renderer": "webgl",
@@ -133,7 +133,7 @@
           "normalizedSpeed": 0,
           "place": 4,
           "reducedMotion": "false",
-          "time": 0.53,
+          "time": 0.5,
           "trackKey": "comeback-city"
         },
         "renderer": "webgl",
@@ -157,15 +157,15 @@
       }
     }
   },
-  "capturedAt": "2026-05-24T17:48:04.738Z",
+  "capturedAt": "2026-06-03T16:14:31.297Z",
   "deployedHeaders": {
     "status": "local-preview-skipped",
     "note": "Vite preview does not apply Cloudflare Pages _headers; deployed header evidence still requires RELEASE_SMOKE_URL."
   },
   "gateStatus": "local-smoke-script-proven-not-deploy-evidence",
   "git": {
-    "branch": "main",
-    "commit": "9fb87c2",
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "937bd25",
     "dirty": true
   },
   "manifestProbe": {
@@ -175,29 +175,29 @@
     "ok": true,
     "shortName": "Comeback",
     "status": 200,
-    "url": "http://127.0.0.1:5202/manifest.webmanifest"
+    "url": "http://127.0.0.1:5201/manifest.webmanifest"
   },
   "rootProbe": {
-    "assetPath": "/assets/index-DZmPlj6L.js",
+    "assetPath": "/assets/index-DhYwCjyt.js",
     "headers": {
       "cache-control": "no-cache",
       "content-type": "text/html",
-      "etag": "W/\"5f1-z62RxdpGU0FMP8DvxTfhbBIGlhQ\""
+      "etag": "W/\"69a-VdPF0t8D6xate21NX5t1eVLBg+Q\""
     },
     "ok": true,
     "status": 200,
-    "url": "http://127.0.0.1:5202/"
+    "url": "http://127.0.0.1:5201/"
   },
   "serviceWorkerProbe": {
     "headers": {
       "cache-control": "no-cache",
       "content-type": "text/javascript",
-      "etag": "W/\"3598-1779644872265\"",
-      "last-modified": "Sun, 24 May 2026 17:47:52 GMT"
+      "etag": "W/\"3703-1780502722701\"",
+      "last-modified": "Wed, 03 Jun 2026 16:05:22 GMT"
     },
     "ok": true,
     "status": 200,
-    "url": "http://127.0.0.1:5202/sw.js"
+    "url": "http://127.0.0.1:5201/sw.js"
   },
   "target": "local-built-preview",
   "unresolvedReleaseDecisions": [
