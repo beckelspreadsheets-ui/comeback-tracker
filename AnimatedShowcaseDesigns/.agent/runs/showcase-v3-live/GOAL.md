@@ -23,6 +23,7 @@ When creating or updating the matching `/goal`, include this ledger pointer in t
 - [done] Local validation gates are run, including `node verify-world.mjs`, `node verify-outbound.mjs`, `node prepare-cloudflare-deploy.mjs`, and a local dry run of `node verify-production.mjs` against the generated package where possible.
 - [done] Client acquisition system artifacts are created for the launch cycle, including UTM conventions, business-card funnel, outreach scripts, compliance rules, manual follow-up cadence, and a 100-lead tracker template.
 - [done] Static site conversion tracking hooks cover form submit, phone click, email click, pricing CTA click, business-card QR visit, live project click, and `/world` entry through `dataLayer` / `gtag` when available.
+- [done] Current Cloudflare direct-upload package is generated, hash-recorded, and cross-referenced in launch docs.
 - [blocked] GA4 or equivalent production analytics install remains operator-controlled until a measurement ID or analytics account details are provided.
 - [blocked] Production-only and operator-only launch gates are recorded explicitly instead of guessed, including Cloudflare project details, approved client/project list, public contact details, Search Console, business-card QR, and real production deploy verification.
 - [done] Keep `implementation-notes.html` current with status, decisions, tradeoffs, changes, validation, blockers, and next exact action.

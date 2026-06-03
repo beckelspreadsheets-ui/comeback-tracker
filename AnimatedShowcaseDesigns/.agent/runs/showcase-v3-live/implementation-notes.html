@@ -91,13 +91,13 @@
 
   <h2>Resume Here</h2>
   <ul>
-    <li><strong>Status:</strong> [doing] Pricing research, trust-safe copy, acquisition system, conversion tracking hooks, local deploy package, and local verification are complete. Production launch is not complete.</li>
+    <li><strong>Status:</strong> [doing] Pricing research, trust-safe copy, acquisition system, conversion tracking hooks, current direct-upload package, and local verification are complete. Production launch is not complete.</li>
     <li><strong>Current phase:</strong> Launch readiness, waiting on operator-controlled production inputs and live-domain deployment.</li>
-    <li><strong>Completed work:</strong> Created goal ledger; checked pricing against current web design/local SEO market sources; updated `index.html` and `v3-preview.html` pricing/trust copy; added launch acquisition runbook; added blank 100-lead tracker; wired static conversion tracking and UTM form capture; regenerated `dist/`; ran local verification gates.</li>
+    <li><strong>Completed work:</strong> Created goal ledger; checked pricing against current web design/local SEO market sources; updated `index.html` and `v3-preview.html` pricing/trust copy; added launch acquisition runbook; added blank 100-lead tracker; wired static conversion tracking and UTM form capture; generated the current direct-upload artifact; updated Cloudflare, production audit, operator input, and launch checklist docs; ran local verification gates.</li>
     <li><strong>Active work:</strong> Keep public prices at `$149/mo + $1,500 setup` and `$399/mo + $3,500 setup`, with Growth scope capped and no ranking guarantees.</li>
-    <li><strong>Blockers:</strong> Cloudflare project/branch, live production deploy, GA4/equivalent measurement ID, Google Search Console/Bing setup, final public contact details, approved client/project list, approved business-card QR target, compliant mailing address/PO box, and real production verification are not proven locally.</li>
-    <li><strong>Next exact action:</strong> Get Andrew's operator confirmations from `SHOWCASE_V3_LIVE_PRD.md` section 11, then deploy the generated Cloudflare `dist/` package and run `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs`.</li>
-    <li><strong>Last validation:</strong> `node verify-world.mjs` passed 367 checks; `node verify-outbound.mjs` passed 9 checks; CSV validation confirmed 32 columns and 100 lead rows; `node prepare-cloudflare-deploy.mjs` ran inside the full verifier and prepared the Cloudflare `dist/` package; local production verifier passed against `dist/` inside the full verifier.</li>
+    <li><strong>Blockers:</strong> Cloudflare production project/branch, live production deploy, GA4/equivalent measurement ID, Google Search Console/Bing setup, final public contact details, approved client/project list, approved business-card QR target, compliant mailing address/PO box, and real production verification are not proven locally.</li>
+    <li><strong>Next exact action:</strong> Get Andrew's Cloudflare production project/branch and launch approval, deploy `deploy-artifacts/showcase-designs-dist-20260603-103616.zip` or rebuild `dist/` through the approved Cloudflare workflow, then run `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs`.</li>
+    <li><strong>Last validation:</strong> `node verify-world.mjs` passed 367 checks; `node verify-photo-match.mjs` passed 10 checks; `node verify-outbound.mjs` passed 9 checks; current artifact SHA256 is `5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92`; production `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs` failed 54 checks because the live domain still serves stale Vercel content.</li>
     <li><strong>Protected paths:</strong> Existing parent-level dirty work under `/Users/andrewferguson/Downloads/comeback-tracker` is user-owned and was not modified.</li>
   </ul>
 
@@ -127,12 +127,16 @@
     <li>[done] `OUTREACH_TRACKER.csv` now provides a blank 100-lead CRM template with status, contact, website, GBP, issue, UTM, follow-up, and outcome columns.</li>
     <li>[done] The contact form now captures UTM fields, landing page, and referrer in hidden fields for FormSubmit leads.</li>
     <li>[done] Static conversion hooks now track form submits, phone clicks, email clicks, pricing CTA clicks, business-card QR visits, live project clicks, and `/world` entry.</li>
+    <li>[done] Current direct-upload artifact is `deploy-artifacts/showcase-designs-dist-20260603-103616.zip` with SHA256 `5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92`.</li>
+    <li>[done] Production audit now records the 2026-06-03 live-domain state: old Vercel page, old Autopilot/Pro/Elite pricing, unapproved `40+`, `100%`, and `48hr` claims, and missing `/world` plus `/thanks` routes.</li>
   </ul>
 
   <h2>Validation</h2>
   <ul>
     <li>[done] `node verify-world.mjs` passed 367 checks.</li>
+    <li>[done] `node verify-photo-match.mjs` passed 10 checks.</li>
     <li>[done] `node verify-outbound.mjs` passed 9 checks.</li>
+    <li>[done] `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs` failed 54 checks, proving production is still stale and not launch-ready.</li>
     <li>[done] CSV validation confirmed `OUTREACH_TRACKER.csv` has 32 columns and 100 lead rows.</li>
     <li>[done] `node prepare-cloudflare-deploy.mjs` prepared `dist/` with 21 files.</li>
     <li>[done] `SHOWCASE_ORIGIN=http://127.0.0.1:8876 node verify-production.mjs` passed 63 checks against the generated `dist/` package.</li>
@@ -146,6 +150,8 @@
     <li><a href="evidence/pricing-research-20260603.md">Pricing research check, 2026-06-03</a></li>
     <li><a href="../../../../LAUNCH_ACQUISITION_SYSTEM.md">Launch acquisition system runbook</a></li>
     <li><a href="../../../../OUTREACH_TRACKER.csv">Blank 100-lead outreach tracker</a></li>
+    <li><a href="../../../../CLOUDFLARE_DEPLOY.md">Cloudflare deploy handoff with current artifact hash</a></li>
+    <li><a href="../../../../PRODUCTION_AUDIT.md">Production audit with 2026-06-03 live-domain failure evidence</a></li>
   </ul>
 
   <h2>Next Goal Candidates</h2>
@@ -198,6 +204,20 @@
         phase: "local-validation",
         actor: "agent",
         summary: "Validated acquisition and tracking pass: verify-world passed 367 checks, verify-outbound passed 9 checks, and CSV validation confirmed 32 columns with 100 lead rows."
+      },
+      {
+        ts: "2026-06-03T17:47:09Z",
+        status: "done",
+        phase: "deploy-package",
+        actor: "agent",
+        summary: "Generated current direct-upload artifact deploy-artifacts/showcase-designs-dist-20260603-103616.zip and updated Cloudflare deploy, operator inputs, production audit, and launch checklist docs with its SHA256 hash."
+      },
+      {
+        ts: "2026-06-03T17:47:09Z",
+        status: "validated",
+        phase: "production-check",
+        actor: "agent",
+        summary: "Checked showcase-designs.com directly: production verifier failed 54 checks because the domain still serves the stale Vercel site with old pricing/claims and missing /world plus /thanks routes."
       }
     ];
 
