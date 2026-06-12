@@ -1,8 +1,8 @@
 {
   "controlVisual": {
     "driftDiff": {
-      "average": 46.41,
-      "changedRatio": 0.714,
+      "average": 50.44,
+      "changedRatio": 0.779,
       "crop": {
         "h": 476,
         "w": 983,
@@ -12,8 +12,8 @@
       "samples": 13120
     },
     "throttleDiff": {
-      "average": 38.17,
-      "changedRatio": 0.522,
+      "average": 42.44,
+      "changedRatio": 0.547,
       "crop": {
         "h": 476,
         "w": 983,
@@ -24,8 +24,8 @@
     }
   },
   "desktopAutoplay": {
-    "average": 49.63,
-    "changedRatio": 0.67,
+    "average": 76.81,
+    "changedRatio": 0.971,
     "crop": {
       "h": 476,
       "w": 983,
@@ -35,8 +35,8 @@
     "samples": 13120
   },
   "mobileAutoplay": {
-    "average": 43.5,
-    "changedRatio": 0.594,
+    "average": 64.41,
+    "changedRatio": 0.986,
     "crop": {
       "h": 473,
       "w": 351,

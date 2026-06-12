@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Flag, Gauge, RotateCcw, Sparkles, Zap } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Banana, Flag, Gauge, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -9,17 +9,57 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import racerModelUrl from '../assets/game/models/toy-car-kit/vehicle-drag-racer.glb?url';
 import itemBoxModelUrl from '../assets/game/models/toy-car-kit/item-box.glb?url';
+import bananaModelUrl from '../assets/game/models/toy-car-kit/item-banana.glb?url';
 import kartColormapUrl from '../assets/game/models/toy-car-kit/colormap.png';
 import crrtBunnyModelUrl from '../assets/game/models/avatars/crrt-bunny.glb?url';
 import crrtPenguinModelUrl from '../assets/game/models/avatars/crrt-penguin.glb?url';
 import sethPenguinModelUrl from '../assets/game/models/avatars/seth-penguin.glb?url';
 import heroKartTripoUrl from '../assets/game/models/tripo/hero-kart-tripo.glb?url';
+import iceSledUrl from '../assets/game/models/tripo/ice-sled.glb?url';
+import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
 import clinicFacadeUrl from '../assets/game/generated/district-facade-clinic.png';
 import foodFacadeUrl from '../assets/game/generated/district-facade-food.png';
 import garageFacadeUrl from '../assets/game/generated/district-facade-garage.png';
 import gymFacadeUrl from '../assets/game/generated/district-facade-gym.png';
 import labFacadeUrl from '../assets/game/generated/district-facade-lab.png';
 import { COMEBACK_CITY_COURSE_V2 } from './courseV2.js';
+import {
+  DRIFT_FEEL,
+  createDriftState,
+  driftLaneRate,
+  hopHeightFor,
+  updateDriftFeel,
+} from './race/driftFeel.js';
+import {
+  createRivalRacers,
+  playerPositionOf,
+  rivalPositionsOf,
+  updateRivalRacers,
+} from './race/rivalRacers.js';
+import {
+  ageBananas,
+  bananaHitFor,
+  dropBanana,
+  ITEM_FEEL,
+  itemForPickup,
+  projectileHitFor,
+  throwSnowball,
+  updateProjectiles,
+} from './race/heldItems.js';
+import {
+  airPitchFor,
+  createAirState,
+  createShortcutState,
+  launchAir,
+  launchShortcut,
+  RAMPS,
+  SHORTCUT,
+  shortcutArcHeight,
+  shortcutPitchFor,
+  TRICK_FEEL,
+  updateAir,
+  updateShortcut,
+} from './race/airTricks.js';
 import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import './comebackCityThreeKartRace.css';
@@ -43,11 +83,15 @@ const ROAD_WIDTH = COMEBACK_CITY_COURSE_V2.mainRoadWidth || 50;
 const TRACK_SAMPLES = 112;
 const MAX_SPEED = 228;
 const BOOST_SPEED = 284;
+// One scale for every kart — mixed sizes read as a bug (owner feedback).
+// Trimmed 1.24 -> 1.12 -> 1.01 across owner feel-checks ("10% more = perfect").
+const KART_SCALE = 1.01;
 const RIVALS = [
-  { accent: '#38d7ff', color: '#7e35f4', lane: -0.46, name: 'Purple Lab', phase: 0.055, suit: '#2c2440' },
-  { accent: '#9fe7ff', color: '#2378ff', lane: 0.04, name: 'Blue Speed', phase: 0.095, suit: '#1c2c4a' },
-  { accent: '#ffd34f', color: '#f28b2e', lane: 0.52, name: 'Orange Muscle', phase: 0.14, suit: '#3c2a1a' },
+  { accent: '#38d7ff', color: '#7e35f4', lane: -0.46, name: 'Purple Lab', suit: '#2c2440' },
+  { accent: '#9fe7ff', color: '#2378ff', lane: 0.04, name: 'Blue Speed', suit: '#1c2c4a' },
+  { accent: '#ffd34f', color: '#f28b2e', lane: 0.52, name: 'Orange Muscle', suit: '#3c2a1a' },
 ];
+const ordinal = (position) => ['1st', '2nd', '3rd', '4th'][position - 1] || `${position}th`;
 const PROP_COUNT = 36;
 const VISUAL_ASSET_SET = 'comeback-city-v2-three-runtime';
 const DISTRICT_FACADE_URLS = {
@@ -63,35 +107,52 @@ const DISTRICT_FACADE_URLS = {
 const START_PROGRESS = wrap01((COMEBACK_CITY_COURSE_V2.startProgress || 0) + 0.03);
 
 const createInitialRace = () => ({
+  airState: createAirState(),
+  bananas: [],
   boostHits: 0,
+  projectiles: [],
   boostTimer: 0,
+  bumpCooldown: 0,
   countdown: 2.2,
   drift: false,
   driftCharge: 0,
-  driftReleaseTimer: 0,
+  driftState: createDriftState(),
+  driftTier: 0,
   finished: false,
+  heldItem: null,
+  itemFireCooldown: 0,
   itemPickups: 0,
+  landSquashTimer: 0,
   lap: 1,
   lane: 0,
+  position: 1 + RIVALS.length,
   previousProgress: START_PROGRESS,
   progress: START_PROGRESS,
   raceTime: 0,
+  // Independent rival sim (Phase 2) — player starts at the back of the grid.
+  rivals: createRivalRacers(RIVALS, { gridProgress: START_PROGRESS }),
+  shortcut: createShortcutState(),
   speed: 0,
+  spinOuts: 0,
+  spinTimer: 0,
+  squash: 1,
   steer: 0,
+  shieldActive: false,
+  tricksLanded: 0,
+  wallContact: false,
 });
 
-// Bridge band peaks at progress 0.635 where the route crosses over itself
-// (lower deck passes at ~0.19); peak must clear kart visual height (~12).
-const BRIDGE_BAND = { from: 0.52, peak: 16, to: 0.75 };
+// Bridge band peaks at progress ~0.467 where the climb crosses over the
+// dive (which passes under at ~0.191); peak must clear kart visual height.
+// Measured from the generated centerline's self-intersection.
+const BRIDGE_BAND = { from: 0.4, peak: 21, to: 0.534 };
+// Crest of the bridge — crossing it at speed is a free launch window.
+const CREST_PROGRESS = (BRIDGE_BAND.from + BRIDGE_BAND.to) / 2;
 const getElevation = (progress) => {
   const p = wrap01(progress);
   if (p > BRIDGE_BAND.from && p < BRIDGE_BAND.to) {
     const t = (p - BRIDGE_BAND.from) / (BRIDGE_BAND.to - BRIDGE_BAND.from);
     return Math.sin(t * Math.PI) * BRIDGE_BAND.peak;
-  }
-  if (p > 0.83 && p < 0.93) {
-    const t = (p - 0.83) / 0.1;
-    return Math.sin(t * Math.PI) * 4.2;
   }
   return 0;
 };
@@ -103,8 +164,36 @@ const makeTrackCurve = () => {
   return new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.38);
 };
 
+// Smoothed road-width table from the authored ribbons — wide carousels,
+// narrow skill sections, soft transitions (~35 world units).
+const makeWidthTable = () => {
+  const N = 224;
+  const ribbons = COMEBACK_CITY_COURSE_V2.roadRibbons;
+  const table = new Float32Array(N);
+  for (let index = 0; index < N; index += 1) {
+    const p = index / N;
+    const ribbon =
+      ribbons.find((entry) => p >= entry.startProgress && p < entry.endProgress) || ribbons[ribbons.length - 1];
+    table[index] = ribbon.width;
+  }
+  for (let pass = 0; pass < 14; pass += 1) {
+    const copy = Float32Array.from(table);
+    for (let index = 0; index < N; index += 1) {
+      table[index] = (copy[(index + N - 1) % N] + copy[index] * 2 + copy[(index + 1) % N]) / 4;
+    }
+  }
+  return table;
+};
+
 const makeSampler = (curve) => {
   const length = curve.getLength();
+  const widthTable = makeWidthTable();
+  const widthAt = (progress) => {
+    const scaled = wrap01(progress) * widthTable.length;
+    const low = Math.floor(scaled) % widthTable.length;
+    const high = (low + 1) % widthTable.length;
+    return lerp(widthTable[low], widthTable[high], scaled - Math.floor(scaled));
+  };
   return {
     curve,
     length,
@@ -116,9 +205,10 @@ const makeSampler = (curve) => {
       tangent.y = 0;
       tangent.normalize();
       const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
-      const point = center.clone().addScaledVector(normal, lane * ROAD_WIDTH * 0.44);
+      const point = center.clone().addScaledVector(normal, lane * widthAt(p) * 0.44);
       return { center, normal, point, tangent };
     },
+    widthAt,
   };
 };
 
@@ -548,14 +638,22 @@ const loadKartAssets = () => {
       gltfLoader.loadAsync(crrtPenguinModelUrl).catch(() => null),
       gltfLoader.loadAsync(sethPenguinModelUrl).catch(() => null),
       gltfLoader.loadAsync(heroKartTripoUrl).catch(() => null),
-    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, penguinGltf, sethGltf, tripoKartGltf]) => ({
+      gltfLoader.loadAsync(bananaModelUrl).catch(() => null),
+      gltfLoader.loadAsync(mizzleModelUrl).catch(() => null),
+      gltfLoader.loadAsync(iceSledUrl).catch(() => null),
+    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, penguinGltf, sethGltf, tripoKartGltf, bananaGltf, mizzleGltf, iceSledGltf]) => ({
+      bananaScene: bananaGltf?.scene || null,
       colormapImage,
       driverScene: bunnyGltf?.scene || null,
       itemBoxScene: itemBoxGltf.scene,
       racerScene: racerGltf.scene,
       rivalDriverScenes: {
         'Blue Speed': penguinGltf?.scene || null,
+        'Orange Muscle': mizzleGltf?.scene || null,
         'Purple Lab': sethGltf?.scene || null,
+      },
+      rivalKartScenes: {
+        'Blue Speed': iceSledGltf?.scene || null,
       },
       tripoKartScene: tripoKartGltf?.scene || null,
     }));
@@ -597,9 +695,23 @@ const makeKartPaletteTexture = (colormapImage, bodyHex = null) => {
 
 const KENNEY_WHEEL_NODES = ['wheel-fl', 'wheel-fr', 'wheel-bl', 'wheel-br'];
 
+// Rig facing is authored per asset and verified against the orientation lab
+// (orientation-lab.html → scripts/orientation-lab-capture.mjs), which renders
+// every GLB at 4 yaws facing a known camera — never inferred from bboxes or
+// gameplay shots (both guessed wrong). Lab ground truth 2026-06-12: ALL
+// Tripo rigs (kart + seated avatars) natively face +X → yaw -π/2; the
+// Kenney drag racer faces -Z → yaw π.
+const DRIVER_YAW = {
+  'Blue Speed': -Math.PI / 2,
+  'Orange Muscle': -Math.PI / 2, // mizzle (lab-verified 2026-06-12)
+  'Purple Lab': -Math.PI / 2,
+  player: -Math.PI / 2,
+};
+const KENNEY_BODY_YAW = Math.PI;
+
 // Seat the avatar on the kart's driver mount: toon-shaded with its baked
 // texture, normalized so the seated character reads MK-style oversized.
-const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height = 5.7 } = {}) => {
+const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height = 5.7, yaw = 0 } = {}) => {
   const rig = driverScene.clone(true);
   rig.traverse((node) => {
     if (node.isMesh) {
@@ -612,9 +724,7 @@ const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height 
   });
   const bounds = new THREE.Box3().setFromObject(rig);
   const size = bounds.getSize(new THREE.Vector3());
-  // Tripo seated characters can arrive facing ±X (legs extend along the long
-  // horizontal axis); our karts drive along +Z. Rotate so they hold the wheel.
-  if (size.x > size.z * 1.1) rig.rotation.y = -Math.PI / 2;
+  rig.rotation.y = yaw;
   const fit = height / Math.max(0.0001, size.y);
   rig.scale.setScalar(fit);
   rig.updateMatrixWorld(true);
@@ -643,21 +753,23 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow) => {
   });
   const bounds = new THREE.Box3().setFromObject(rig);
   const size = bounds.getSize(new THREE.Vector3());
-  // Tripo normalizes vehicles with the long (forward) axis on X; our karts
-  // drive along +Z. Rotate when the footprint is wider than it is long.
-  if (size.x > size.z) rig.rotation.y = Math.PI / 2;
+  // The Tripo hero kart arrives facing +X (long axis); -π/2 brings its nose
+  // onto +Z, our driving direction. The old +π/2 guess had it driving
+  // backward — owner-reported, probe-confirmed.
+  rig.rotation.y = -Math.PI / 2;
   const fit = 15.6 / Math.max(size.x, size.z);
   rig.scale.setScalar(fit);
   rig.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(rig);
   rig.position.y -= fitted.min.y;
   // This body is taller and cowled — seat the driver higher and further back
-  // than the Kenney cockpit default.
+  // than the Kenney cockpit default. Nose is on +Z (lab-verified), so the
+  // cockpit sits in the rear half at -z.
   kartModel.driverMount.position.set(0, (fitted.max.y - fitted.min.y) * 0.58, -1.9);
   kartModel.replaceBody(rig);
 };
 
-const attachAuthoredKartBody = (kartModel, racerScene, texture, castsShadow) => {
+const attachAuthoredKartBody = (kartModel, racerScene, texture, castsShadow, fitLength = 15.6) => {
   const rig = racerScene.clone(true);
   const material = new THREE.MeshToonMaterial({ gradientMap: getToonGradient(), map: texture });
   rig.traverse((node) => {
@@ -668,7 +780,10 @@ const attachAuthoredKartBody = (kartModel, racerScene, texture, castsShadow) => 
   });
   const bounds = new THREE.Box3().setFromObject(rig);
   const size = bounds.getSize(new THREE.Vector3());
-  const fit = 15.6 / Math.max(size.x, size.z);
+  // Lab-verified: the Kenney drag racer natively faces -Z; π puts its nose
+  // on +Z, our driving direction (rivals drove tail-first until 2026-06-12).
+  rig.rotation.y = KENNEY_BODY_YAW;
+  const fit = fitLength / Math.max(size.x, size.z);
   rig.scale.setScalar(fit);
   rig.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(rig);
@@ -751,7 +866,7 @@ const addTrack = (world, sampler) => {
     ],
   });
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(820, 780, 18, 18),
+    new THREE.PlaneGeometry(1120, 1060, 18, 18),
     new THREE.MeshStandardMaterial({ color: '#ffffff', map: grassTexture, roughness: 0.92 })
   );
   ground.rotation.x = -Math.PI / 2;
@@ -765,8 +880,8 @@ const addTrack = (world, sampler) => {
     checkerEvery = 1,
     colorA = CURB_RED,
     colorB = CURB_WHITE,
-    innerOffset,
-    outerOffset,
+    innerMul,
+    outerMul,
     side,
     unlit = false,
     yBottom = 0.3,
@@ -779,8 +894,9 @@ const addTrack = (world, sampler) => {
     for (let index = 0; index <= TRACK_SAMPLES; index += 1) {
       const progress = index / TRACK_SAMPLES;
       const { normal, point, tangent } = sampler.pointAt(progress);
-      const inner = point.clone().addScaledVector(normal, side * innerOffset);
-      const outer = point.clone().addScaledVector(normal, side * outerOffset);
+      const width = sampler.widthAt(progress);
+      const inner = point.clone().addScaledVector(normal, side * innerMul * width);
+      const outer = point.clone().addScaledVector(normal, side * outerMul * width);
       inner.y += yBottom;
       outer.y += yTop;
       samples.push({ inner, outer, tangent });
@@ -821,8 +937,8 @@ const addTrack = (world, sampler) => {
 
   [-1, 1].forEach((side) => {
     const curb = buildCheckerRibbon({
-      innerOffset: ROAD_WIDTH * 0.5,
-      outerOffset: ROAD_WIDTH * 0.56,
+      innerMul: 0.5,
+      outerMul: 0.56,
       side,
       unlit: true,
       yBottom: 0.32,
@@ -834,8 +950,8 @@ const addTrack = (world, sampler) => {
       checkerEvery: 2,
       colorA: new THREE.Color('#e94d3f'),
       colorB: new THREE.Color('#f8fbff'),
-      innerOffset: ROAD_WIDTH * 0.62,
-      outerOffset: ROAD_WIDTH * 0.62,
+      innerMul: 0.62,
+      outerMul: 0.62,
       side,
       yBottom: 0.02,
       yTop: 2.6,
@@ -848,8 +964,8 @@ const addTrack = (world, sampler) => {
       checkerEvery: TRACK_SAMPLES * 2,
       colorA: new THREE.Color('#36e2ff').multiplyScalar(1.7),
       colorB: new THREE.Color('#36e2ff').multiplyScalar(1.7),
-      innerOffset: ROAD_WIDTH * 0.605,
-      outerOffset: ROAD_WIDTH * 0.635,
+      innerMul: 0.605,
+      outerMul: 0.635,
       side,
       unlit: true,
       yBottom: 2.6,
@@ -869,7 +985,42 @@ const addTrack = (world, sampler) => {
     mark.rotation.y = Math.atan2(tangent.x, tangent.z);
     world.add(setFlatTransform(mark));
   }
-  const pillarMat = createBasicMaterial('#33404f');
+  // ---- Bridge structure (owner feedback: the climb must read as a real
+  // bridge, not a floating road). Deck skirts hang below both road edges
+  // with a neon underline; chunky pillar pairs with cross-beams carry it.
+  const skirtMat = createBasicMaterial('#1a2438', { emissive: '#1a2438', emissiveIntensity: 0.15 });
+  const skirtGlowMat = createBasicMaterial('#36e2ff', { emissive: '#36e2ff', emissiveIntensity: 1.1 });
+  const SKIRT_STEPS = 26;
+  [-1, 1].forEach((side) => {
+    [
+      { depth: 6.2, material: skirtMat, top: 0.26 },
+      { depth: 6.9, material: skirtGlowMat, top: -6.2 },
+    ].forEach(({ depth, material, top }) => {
+      const positions = [];
+      const indices = [];
+      for (let step = 0; step <= SKIRT_STEPS; step += 1) {
+        const p = BRIDGE_BAND.from - 0.008 + (BRIDGE_BAND.to - BRIDGE_BAND.from + 0.016) * (step / SKIRT_STEPS);
+        const { point } = sampler.pointAt(p, side);
+        positions.push(point.x, point.y + top, point.z, point.x, Math.max(0.05, point.y - depth), point.z);
+        if (step < SKIRT_STEPS) {
+          const a = step * 2;
+          if (side > 0) indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+          else indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+        }
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+      const skirt = new THREE.Mesh(geometry, material);
+      skirt.material.side = THREE.DoubleSide;
+      skirt.userData.kind = 'bridge-skirt';
+      world.add(skirt);
+    });
+  });
+
+  const pillarMat = createBasicMaterial('#3a4a63', { emissive: '#22304a', emissiveIntensity: 0.3 });
+  const beamMat = createBasicMaterial('#2a3852');
   // A pillar position that lands on the lower road (the routes share ground at
   // the crossing) would stand in the racing line — skip those.
   const onLowerRoad = (x, z) => {
@@ -879,16 +1030,27 @@ const addTrack = (world, sampler) => {
     }
     return false;
   };
-  for (let p = BRIDGE_BAND.from + 0.025; p < BRIDGE_BAND.to - 0.02; p += 0.034) {
+  for (let p = BRIDGE_BAND.from + 0.012; p < BRIDGE_BAND.to - 0.01; p += 0.018) {
     const deckHeight = getElevation(p);
-    if (deckHeight < 3.4) continue;
-    [-0.34, 0.34].forEach((lane) => {
+    if (deckHeight < 3.2) continue;
+    const { point: beamPoint, tangent } = sampler.pointAt(p, 0);
+    let pairClear = true;
+    [-0.36, 0.36].forEach((lane) => {
       const { point } = sampler.pointAt(p, lane);
-      if (onLowerRoad(point.x, point.z)) return;
-      const pillar = new THREE.Mesh(new THREE.BoxGeometry(2.8, deckHeight, 2.8), pillarMat);
+      if (onLowerRoad(point.x, point.z)) {
+        pairClear = false;
+        return;
+      }
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(4.2, deckHeight, 4.2), pillarMat);
       pillar.position.set(point.x, deckHeight / 2 - 0.3, point.z);
       world.add(setFlatTransform(pillar));
     });
+    if (pairClear && deckHeight > 6) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(sampler.widthAt(p) * 0.36, 1.6, 2.4), beamMat);
+      beam.position.set(beamPoint.x, deckHeight - 4.6, beamPoint.z);
+      beam.rotation.y = Math.atan2(tangent.x, tangent.z);
+      world.add(setFlatTransform(beam));
+    }
   }
 
   const arrowMat = new THREE.MeshBasicMaterial({ color: '#2cc4e8' });
@@ -992,7 +1154,98 @@ const addItemBox = (world, sampler, box, index, questionTexture) => {
   return group;
 };
 
+// Bold upward chevrons on a dark face — the ramp's "drive at me" billboard.
+const makeRampFaceTexture = (base, chevron) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, 128, 256);
+  ctx.strokeStyle = chevron;
+  ctx.lineWidth = 22;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  [196, 124, 52].forEach((y) => {
+    ctx.beginPath();
+    ctx.moveTo(22, y + 26);
+    ctx.lineTo(64, y - 14);
+    ctx.lineTo(106, y + 26);
+    ctx.stroke();
+  });
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+};
+
+// Trick ramp: a true wedge (triangular prism) whose sloped face is a glowing
+// chevron billboard pointing up the launch, with a bright lip bar and corner
+// pylons. The dare variant (carousel shortcut) is bigger, purple and gold —
+// a visibly different decision.
+const addRamp = (world, sampler, ramp, { dare = false } = {}) => {
+  const accent = dare ? '#c879ff' : '#38d7ff';
+  const scale = dare ? 1.4 : 1;
+  const W = 15 * scale;
+  const L = 19 * scale;
+  const H = 5.2 * scale;
+  const { point, tangent } = sampler.pointAt(ramp.progress, ramp.side);
+  const group = new THREE.Group();
+  group.position.copy(point);
+  group.rotation.y = Math.atan2(tangent.x, tangent.z);
+  group.userData.kind = dare ? 'dare-ramp' : 'trick-ramp';
+
+  // Prism: ground back edge -> raised lip edge at +z (direction of travel).
+  const half = W / 2;
+  const positions = [
+    -half, 0.12, -L / 2, half, 0.12, -L / 2, half, H, L / 2, -half, H, L / 2,
+    -half, H, L / 2, half, H, L / 2, half, 0, L / 2, -half, 0, L / 2,
+    -half, 0.12, -L / 2, -half, H, L / 2, -half, 0, L / 2,
+    half, 0.12, -L / 2, half, 0, L / 2, half, H, L / 2,
+  ];
+  const uvs = [0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1];
+  const indices = [0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 8, 9, 10, 11, 12, 13];
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const wedge = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({
+      map: makeRampFaceTexture(dare ? '#241640' : '#13233f', dare ? '#ffd34f' : '#7ff4ff'),
+    })
+  );
+  group.add(wedge);
+
+  // Glowing lip bar on the launch edge.
+  const lip = new THREE.Mesh(
+    new THREE.BoxGeometry(W + 0.6, 0.7, 1.1),
+    createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 1.35 })
+  );
+  lip.position.set(0, H + 0.2, L / 2 - 0.4);
+  group.add(lip);
+  // Pylons with bright tips at the lip corners read from a long way out.
+  [-1, 1].forEach((side) => {
+    const pylon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 0.62, H + 4.4, 6),
+      createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.9 })
+    );
+    pylon.position.set(side * (half + 1.2), (H + 4.4) / 2, L / 2 - 0.4);
+    group.add(pylon);
+    const tip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.95, 8, 6),
+      createBasicMaterial('#f7fbff', { emissive: '#f7fbff', emissiveIntensity: 1.2 })
+    );
+    tip.position.set(side * (half + 1.2), H + 4.6, L / 2 - 0.4);
+    group.add(tip);
+  });
+  addGlowSprite(group, accent, 16 * scale, 0.45, H + 1);
+  world.add(group);
+  return group;
+};
+
 const addFinishGate = (world, sampler) => {
+  const gateWidth = sampler.widthAt(0);
   const group = new THREE.Group();
   const { point, tangent } = sampler.pointAt(0);
   group.position.copy(point);
@@ -1002,10 +1255,10 @@ const addFinishGate = (world, sampler) => {
   const boardMat = createBasicMaterial('#16213e', { emissive: '#38d7ff', emissiveIntensity: 0.4 });
   [-1, 1].forEach((side) => {
     const post = new THREE.Mesh(new RoundedBoxGeometry(2.2, 30, 2.2, 1, 0.5), postMat);
-    post.position.set(side * ROAD_WIDTH * 0.58, 15, 0);
+    post.position.set(side * gateWidth * 0.58, 15, 0);
     group.add(post);
   });
-  const board = new THREE.Mesh(new RoundedBoxGeometry(ROAD_WIDTH * 1.25, 8.2, 3.2, 1, 0.9), boardMat);
+  const board = new THREE.Mesh(new RoundedBoxGeometry(gateWidth * 1.25, 8.2, 3.2, 1, 0.9), boardMat);
   // Keep the board above the chase camera's max height so the camera never
   // clips through it when crossing the line.
   board.position.set(0, 32, 0);
@@ -1021,11 +1274,11 @@ const addFinishGate = (world, sampler) => {
   for (let row = 0; row < 2; row += 1) {
     for (let column = 0; column < 10; column += 1) {
       const stripe = new THREE.Mesh(
-        new THREE.BoxGeometry(ROAD_WIDTH * 0.1, 0.06, 2.2),
+        new THREE.BoxGeometry(gateWidth * 0.1, 0.06, 2.2),
         createBasicMaterial((column + row) % 2 === 0 ? '#f8fbff' : '#10151d')
       );
       stripe.position.set(
-        -ROAD_WIDTH * 0.45 + column * ROAD_WIDTH * 0.1,
+        -gateWidth * 0.45 + column * gateWidth * 0.1,
         0.14,
         row === 0 ? -1.15 : 1.15
       );
@@ -1047,29 +1300,40 @@ const OPENING_FACADES = [
 // Buildings are anchored relative to one road point, but the route curves
 // back on itself — a setback that clears its own road section can still sit
 // on another one. Push outward along the anchor normal until the position
-// clears the whole centerline.
-const clearBuildingPlacement = (sampler, basePoint, normal, side, startOffset, clearance = 52) => {
-  const position = basePoint.clone();
-  let offset = startOffset;
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    position.copy(basePoint).addScaledVector(normal, side * offset);
-    let minDistance = Infinity;
-    for (let index = 0; index < TRACK_SAMPLES; index += 1) {
-      const { center } = sampler.pointAt(index / TRACK_SAMPLES);
-      const distance = Math.hypot(center.x - position.x, center.z - position.z);
-      if (distance < minDistance) minDistance = distance;
-    }
-    if (minDistance >= clearance) break;
-    offset += clearance - minDistance + 4;
+// clears the whole centerline; returns null when no clear spot exists (the
+// caller must SKIP — a missing building beats one on the racing line, which
+// is exactly what happened at the carousel entry, owner-reported 2026-06-12).
+// Clearance covers road half (28) + building half (~27) + margin.
+const minCenterlineDistance = (sampler, x, z) => {
+  let minDistance = Infinity;
+  for (let index = 0; index < TRACK_SAMPLES; index += 1) {
+    const { center } = sampler.pointAt(index / TRACK_SAMPLES);
+    const distance = Math.hypot(center.x - x, center.z - z);
+    if (distance < minDistance) minDistance = distance;
   }
-  return position;
+  return minDistance;
 };
 
-const addOpeningFacadeRun = (world, sampler, loader) => {
+const clearBuildingPlacement = (sampler, basePoint, normal, side, startOffset, clearance = 68) => {
+  const position = basePoint.clone();
+  let offset = startOffset;
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    position.copy(basePoint).addScaledVector(normal, side * offset);
+    const minDistance = minCenterlineDistance(sampler, position.x, position.z);
+    if (minDistance >= clearance) return position;
+    offset += clearance - minDistance + 4;
+  }
+  return null;
+};
+
+const addOpeningFacadeRun = (world, sampler, loader, buildingSwaps) => {
   OPENING_FACADES.forEach((entry) => {
     const { normal, point, tangent } = sampler.pointAt(entry.progress);
+    const placement = clearBuildingPlacement(sampler, point, normal, entry.side, 64);
+    if (!placement) return;
     const group = new THREE.Group();
-    group.position.copy(clearBuildingPlacement(sampler, point, normal, entry.side, 64));
+    buildingSwaps.push({ footprint: 50 * entry.scale, group, rotate: 0 });
+    group.position.copy(placement);
     group.position.y += 1.5;
     group.rotation.y = Math.atan2(tangent.x, tangent.z) + (entry.side > 0 ? -Math.PI / 2 : Math.PI / 2);
     const baseMat = createBasicMaterial(entry.base, { emissive: entry.base, emissiveIntensity: 0.06 });
@@ -1079,6 +1343,7 @@ const addOpeningFacadeRun = (world, sampler, loader) => {
       baseMat,
       2.2
     );
+    body.userData.kind = 'procedural-building';
     group.add(setFlatTransform(body));
     const roof = makeRoundedBox(
       { x: 54 * entry.scale, y: 3.4, z: 17 },
@@ -1086,12 +1351,14 @@ const addOpeningFacadeRun = (world, sampler, loader) => {
       createBasicMaterial('#141d29'),
       1.1
     );
+    roof.userData.kind = 'procedural-building';
     group.add(setFlatTransform(roof));
     const sign = makeBox(
       { x: 16 * entry.scale, y: 2.2, z: 1.2 },
       { y: 53.4 * entry.scale, z: 7.6 },
       createBasicMaterial(entry.accent, { emissive: entry.accent, emissiveIntensity: 0.7 })
     );
+    sign.userData.kind = 'procedural-building';
     group.add(setFlatTransform(sign));
     const facade = createAssetPlane(loader, DISTRICT_FACADE_URLS[entry.key], 58 * entry.scale, 58 * entry.scale, {
       colorKeyMagenta: true,
@@ -1106,7 +1373,7 @@ const addOpeningFacadeRun = (world, sampler, loader) => {
   });
 };
 
-const addDistrictsAndProps = (world, sampler, loader) => {
+const addDistrictsAndProps = (world, sampler, loader, buildingSwaps) => {
   const propMat = {
     cone: createBasicMaterial('#ff8b21', { emissive: '#ff8b21', emissiveIntensity: 0.18 }),
     lamp: createBasicMaterial('#9feeff', { emissive: '#56e2ff', emissiveIntensity: 1.3 }),
@@ -1116,22 +1383,28 @@ const addDistrictsAndProps = (world, sampler, loader) => {
     tire: createBasicMaterial('#151923'),
   };
   let propCount = 0;
-  addOpeningFacadeRun(world, sampler, loader);
+  addOpeningFacadeRun(world, sampler, loader, buildingSwaps);
 
   COMEBACK_CITY_COURSE_V2.districtAnchors.forEach((district) => {
     const { normal, point, tangent } = sampler.pointAt(district.progress);
+    const placement = clearBuildingPlacement(sampler, point, normal, district.side, district.setback * 0.82);
+    if (!placement) return;
     const group = new THREE.Group();
-    group.position.copy(
-      clearBuildingPlacement(sampler, point, normal, district.side, district.setback * 0.82)
-    );
+    group.position.copy(placement);
     group.rotation.y = Math.atan2(tangent.x, tangent.z) + (district.side > 0 ? -Math.PI / 2 : Math.PI / 2);
     group.userData.kind = `district-${district.key}`;
     const base = createBasicMaterial(district.base, { emissive: district.base, emissiveIntensity: 0.08 });
     const dark = createBasicMaterial(district.dark);
     const accent = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 1.25 });
-    group.add(makeRoundedBox({ x: 34, y: 24, z: 18 }, { y: 12 }, base, 1.6));
-    group.add(makeRoundedBox({ x: 39, y: 4, z: 21 }, { y: 26 }, createBasicMaterial(district.roof), 1.2));
-    group.add(makeRoundedBox({ x: 18, y: 14, z: 1.4 }, { y: 10, z: -9.8 }, dark, 0.4));
+    buildingSwaps.push({ footprint: 36, group, rotate: Math.PI });
+    [
+      makeRoundedBox({ x: 34, y: 24, z: 18 }, { y: 12 }, base, 1.6),
+      makeRoundedBox({ x: 39, y: 4, z: 21 }, { y: 26 }, createBasicMaterial(district.roof), 1.2),
+      makeRoundedBox({ x: 18, y: 14, z: 1.4 }, { y: 10, z: -9.8 }, dark, 0.4),
+    ].forEach((mesh) => {
+      mesh.userData.kind = 'procedural-building';
+      group.add(mesh);
+    });
     // Standing neon arch doorway, like the portal modules on the district card
     const portal = new THREE.Mesh(new THREE.TorusGeometry(7.8, 1.05, 8, 22, Math.PI), accent);
     portal.position.set(0, 8.2, -10.9);
@@ -1175,7 +1448,10 @@ const addDistrictsAndProps = (world, sampler, loader) => {
     const side = index % 2 === 0 ? -1 : 1;
     const { normal, point, tangent } = sampler.pointAt(progress);
     const group = new THREE.Group();
-    group.position.copy(point).addScaledVector(normal, side * (ROAD_WIDTH * 0.82 + (index % 3) * 9));
+    group.position.copy(point).addScaledVector(normal, side * (sampler.widthAt(progress) * 0.82 + (index % 3) * 9));
+    // The anchor's own road section is cleared by construction, but the
+    // route folds back on itself — skip props that land on another section.
+    if (minCenterlineDistance(sampler, group.position.x, group.position.z) < ROAD_WIDTH * 0.62) continue;
     group.rotation.y = Math.atan2(tangent.x, tangent.z);
     if (index % 4 === 0) {
       group.add(makeBox({ x: 2, y: 7, z: 2 }, { y: 3.5 }, propMat.trunk));
@@ -1208,7 +1484,8 @@ const addDistrictsAndProps = (world, sampler, loader) => {
     const side = index % 2 === 0 ? -1 : 1;
     const { normal, point } = sampler.pointAt(progress);
     const stack = new THREE.Group();
-    stack.position.copy(point).addScaledVector(normal, side * ROAD_WIDTH * 0.74);
+    stack.position.copy(point).addScaledVector(normal, side * sampler.widthAt(progress) * 0.74);
+    if (minCenterlineDistance(sampler, stack.position.x, stack.position.z) < ROAD_WIDTH * 0.62) continue;
     for (let tier = 0; tier < 3; tier += 1) {
       const tire = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.72, 6, 14), propMat.tire);
       tire.position.y = 1 + tier * 1.1;
@@ -1297,22 +1574,117 @@ const createScene = ({ canvas, onUnavailable }) => {
   const itemBoxes = COMEBACK_CITY_COURSE_V2.itemBoxes.map((box, index) =>
     addItemBox(world, sampler, box, index, questionTexture)
   );
+  RAMPS.forEach((ramp) => addRamp(world, sampler, ramp));
+  addRamp(world, sampler, { progress: SHORTCUT.launchProgress, side: SHORTCUT.side }, { dare: true });
+  // Banana pool — meshes recycled to mirror the live banana list each frame.
+  // Procedural fallback until the authored GLB swaps in.
+  const bananaPool = [];
+  for (let index = 0; index < 8; index += 1) {
+    const holder = new THREE.Group();
+    holder.visible = false;
+    const fallback = new THREE.Mesh(
+      new THREE.SphereGeometry(2.2, 8, 6),
+      createToonMaterial('#ffd34f', { emissive: '#caa53d', emissiveIntensity: 0.25 })
+    );
+    fallback.scale.set(1, 0.6, 1.3);
+    fallback.position.y = 1.4;
+    fallback.userData.kind = 'banana-fallback';
+    holder.add(fallback);
+    addGlowSprite(holder, '#ffd34f', 7, 0.3, 1.2);
+    world.add(holder);
+    bananaPool.push(holder);
+  }
+  // Snowball pool — bright spheres with a cool glow.
+  const snowballPool = [];
+  for (let index = 0; index < 6; index += 1) {
+    const holder = new THREE.Group();
+    holder.visible = false;
+    const ball = new THREE.Mesh(
+      new THREE.SphereGeometry(1.7, 10, 8),
+      createBasicMaterial('#f4fbff', { emissive: '#bfeaff', emissiveIntensity: 0.7 })
+    );
+    ball.position.y = 1.7;
+    holder.add(ball);
+    addGlowSprite(holder, '#9fdcff', 7, 0.4, 1.7);
+    world.add(holder);
+    snowballPool.push(holder);
+  }
+  // Visible crest kicker — the bridge-top launch was firing invisibly
+  // (owner-reported); now a glowing lip strip marks exactly where and why.
+  {
+    const crest = wrap01((BRIDGE_BAND.from + BRIDGE_BAND.to) / 2);
+    const { point, tangent } = sampler.pointAt(crest);
+    const kicker = new THREE.Group();
+    kicker.position.copy(point);
+    kicker.rotation.y = Math.atan2(tangent.x, tangent.z);
+    kicker.userData.kind = 'crest-kicker';
+    const crestWidth = sampler.widthAt(crest) * 0.92;
+    const strip = new THREE.Mesh(
+      new THREE.BoxGeometry(crestWidth, 0.5, 5.4),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#bfeaff').multiplyScalar(1.5) })
+    );
+    strip.position.y = 0.32;
+    kicker.add(strip);
+    [-2.0, 0, 2.0].forEach((z, order) => {
+      const arrow = new THREE.Mesh(
+        new THREE.ConeGeometry(2.4, 2.8, 3),
+        new THREE.MeshBasicMaterial({ color: '#ecfeff', transparent: true, opacity: 0.85 - order * 0.18 })
+      );
+      arrow.position.set(0, 0.62, z - 0.4);
+      arrow.rotation.set(Math.PI / 2, 0, Math.PI);
+      arrow.scale.set(2.2, 1, 0.3);
+      kicker.add(arrow);
+    });
+    [-1, 1].forEach((side) => {
+      const pylon = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5, 0.6, 7.5, 6),
+        createBasicMaterial('#9fdcff', { emissive: '#9fdcff', emissiveIntensity: 1.0 })
+      );
+      pylon.position.set(side * (crestWidth / 2 + 1.6), 3.75, 0);
+      kicker.add(pylon);
+    });
+    addGlowSprite(kicker, '#bfeaff', 18, 0.4, 2);
+    world.add(kicker);
+  }
   addFinishGate(world, sampler);
-  const propCount = addDistrictsAndProps(world, sampler, loader);
+  const buildingSwaps = [];
+  const propCount = addDistrictsAndProps(world, sampler, loader, buildingSwaps);
 
+  // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({
     accent: '#46d9ef',
     color: '#e8261d',
-    scale: 1.55,
+    scale: KART_SCALE,
   });
   const player = playerModel.group;
   player.userData.kind = 'hero-red-kart';
+  // One-hit shield bubble (Phase 3) — params mined from the legacy shield.
+  const shieldBubble = new THREE.Group();
+  shieldBubble.visible = false;
+  const shieldShell = new THREE.Mesh(
+    new THREE.SphereGeometry(7.4 * KART_SCALE, 16, 8),
+    new THREE.MeshBasicMaterial({ color: '#49d9ff', depthWrite: false, opacity: 0.3, transparent: true })
+  );
+  shieldShell.scale.set(1.12, 0.7, 1.3);
+  shieldShell.position.y = 3.4;
+  shieldBubble.add(shieldShell);
+  const shieldRing = new THREE.Mesh(
+    new THREE.TorusGeometry(7.2 * KART_SCALE, 0.3, 6, 24),
+    new THREE.MeshBasicMaterial({ color: '#f7fbff', depthWrite: false, opacity: 0.8, transparent: true })
+  );
+  shieldRing.rotation.x = Math.PI / 2;
+  shieldRing.position.y = 3.2;
+  shieldBubble.add(shieldRing);
+  shieldBubble.traverse((node) => {
+    node.castShadow = false;
+  });
+  player.add(shieldBubble);
   world.add(player);
   const rivalModels = RIVALS.map((rival) => {
     const model = createGroundedKartModel({
       accent: rival.accent,
       color: rival.color,
-      scale: 1.3,
+      scale: KART_SCALE,
     });
     model.group.userData.kind = 'grounded-rival-kart';
     // Rivals keep only blob shadows — their cast shadows read as nothing at
@@ -1325,8 +1697,11 @@ const createScene = ({ canvas, onUnavailable }) => {
   });
 
   return {
+    bananaPool,
     bloomPass,
+    snowballPool,
     boostPads,
+    buildingSwaps,
     camera,
     composer,
     itemBoxes,
@@ -1336,21 +1711,47 @@ const createScene = ({ canvas, onUnavailable }) => {
     rivalModels,
     sampler,
     scene,
+    shieldBubble,
     sun,
     world,
   };
 };
 
-const readInput = (input, autoplay, race) => {
+// Signed curvature of the track toward +lane at progress (1/world units).
+// Drives the centrifugal understeer push — corners are no longer free.
+const trackCurvatureAt = (sampler, progress) => {
+  const deltaUnits = 3;
+  const a = sampler.pointAt(progress);
+  const b = sampler.pointAt(progress + deltaUnits / sampler.length);
+  return (
+    ((b.tangent.x - a.tangent.x) * a.normal.x + (b.tangent.z - a.tangent.z) * a.normal.z) /
+    deltaUnits
+  );
+};
+
+// Lane-units/s the corner shoves the kart toward the outside wall. Lateral
+// demand grows with speed² (real centripetal physics) so carrying speed into
+// a corner costs road where crawling doesn't — that's the slow/steer/drift
+// decision. κ^0.7 compresses the spread between bends and the seam hairpin.
+// Calibration (κ^0.7 · v² · 0.00052 vs steer 0.72 / drift 1.15): gentle
+// bends need active steering at top speed, the p90 corners are full-speed
+// only in a drift, the hairpin caps a full drift near ~150.
+const cornerPushFor = (kappa, speed) =>
+  -Math.sign(kappa) * Math.min(4, Math.pow(Math.abs(kappa), 0.7) * speed * speed * 0.00052);
+
+const readInput = (input, autoplay, race, cornerPush = 0) => {
   if (!autoplay) return input.current;
-  const t = race.raceTime;
-  const wave = Math.sin(t * 1.55);
+  // Steer against the centrifugal push (into the corner) plus a pull back
+  // toward road center; drift the demanding bends, brake for the hairpin,
+  // trick when airborne, fire held items on straights. Deterministic.
+  const desired = clamp(-cornerPush * 1.4 - race.lane * 0.9, -1, 1);
   return {
-    brake: false,
-    drift: Math.abs(wave) > 0.42,
-    left: wave < -0.22,
+    brake: Math.abs(cornerPush) > 1.5,
+    drift: (Math.abs(cornerPush) > 0.55 && race.speed > 80) || race.airState.airborne,
+    item: Boolean(race.heldItem) && Math.abs(cornerPush) < 0.3,
+    left: desired < -0.12,
     restart: false,
-    right: wave > 0.22,
+    right: desired > 0.12,
     throttle: true,
   };
 };
@@ -1358,22 +1759,34 @@ const readInput = (input, autoplay, race) => {
 const publishTelemetry = (race, fpsEstimate, propCount, mode) => {
   if (typeof window === 'undefined') return;
   window.__comebackCityKartTelemetry = {
+    airborne: race.airState.airborne,
+    bananasOnTrack: race.bananas.length,
     boostHits: race.boostHits,
     countdown: Number(race.countdown.toFixed(2)),
     drift: race.drift,
+    driftCharge: Number(race.driftCharge.toFixed(2)),
+    driftTier: race.driftTier,
     finished: race.finished,
+    heldItem: race.heldItem,
     fpsEstimate: Math.round(fpsEstimate),
     itemPickups: race.itemPickups,
     lap: race.lap,
+    miniTurbo: Number(race.driftState.miniTurboTimer.toFixed(2)),
+    miniTurboTier: race.driftState.miniTurboTier,
+    position: race.position,
     propCount,
     raceTime: Number(race.raceTime.toFixed(2)),
     renderer: 'three-kart',
     rivalCount: RIVALS.length,
+    rivalPositions: rivalPositionsOf((race.finished ? TOTAL_LAPS : race.lap - 1) + race.progress, race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
     routeProgress: Number(race.progress.toFixed(3)),
     speed: Math.round(race.speed),
+    spinOuts: race.spinOuts,
     steer: Number(race.steer.toFixed(2)),
+    tricksLanded: race.tricksLanded,
     visualAssetSet: VISUAL_ASSET_SET,
+    wallContact: Boolean(race.wallContact),
   };
 };
 
@@ -1386,7 +1799,7 @@ export const ComebackCityThreeKartRace = ({
 }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
-  const inputRef = useRef({ brake: false, drift: false, left: false, restart: false, right: false, throttle: false });
+  const inputRef = useRef({ brake: false, drift: false, item: false, left: false, restart: false, right: false, throttle: false });
   const finishReportedRef = useRef(false);
   const [snapshot, setSnapshot] = useState(createInitialRace);
   const [webglError, setWebglError] = useState(null);
@@ -1422,11 +1835,14 @@ export const ComebackCityThreeKartRace = ({
       ArrowLeft: 'left',
       ArrowRight: 'right',
       ArrowUp: 'throttle',
+      Enter: 'item',
       KeyA: 'left',
       KeyD: 'right',
       KeyR: 'restart',
       KeyS: 'brake',
       KeyW: 'throttle',
+      ShiftLeft: 'item',
+      ShiftRight: 'item',
       Space: 'drift',
     };
     const handleKeyDown = (event) => {
@@ -1461,7 +1877,7 @@ export const ComebackCityThreeKartRace = ({
     // Swap procedural fallback bodies for the authored Kenney models (CC0),
     // recolored per kart to the approved V2 palette.
     loadKartAssets()
-      .then(({ colormapImage, driverScene, itemBoxScene, racerScene, rivalDriverScenes, tripoKartScene }) => {
+      .then(({ bananaScene, colormapImage, driverScene, itemBoxScene, racerScene, rivalDriverScenes, rivalKartScenes, tripoKartScene }) => {
         if (disposed || engineRef.current !== engine) return;
         // Owner-approved (2026-06-12): the Tripo hero-card kart is the player
         // body. ?kenneyKart=1 keeps the old body reachable for comparison,
@@ -1479,17 +1895,33 @@ export const ComebackCityThreeKartRace = ({
             true
           );
         }
-        if (driverScene) mountDriverAvatar(engine.playerModel, driverScene, { castsShadow: false });
+        if (driverScene) {
+          mountDriverAvatar(engine.playerModel, driverScene, { castsShadow: false, yaw: DRIVER_YAW.player });
+        }
         engine.rivalModels.forEach((rival) => {
-          attachAuthoredKartBody(
-            rival.model,
-            racerScene,
-            makeKartPaletteTexture(colormapImage, rival.color),
-            false
-          );
+          // Owner-rendered karts (Tripo) take the seat when present;
+          // recolored Kenney bodies remain the default. The drag-racer
+          // silhouette is long and slim — fit it larger than the hero body
+          // so rivals read the same mass.
+          const rivalKartScene = rivalKartScenes?.[rival.name];
+          if (rivalKartScene) {
+            attachTripoKartBody(rival.model, rivalKartScene, false);
+          } else {
+            attachAuthoredKartBody(
+              rival.model,
+              racerScene,
+              makeKartPaletteTexture(colormapImage, rival.color),
+              false,
+              18.2
+            );
+          }
           const rivalDriverScene = rivalDriverScenes[rival.name];
           if (rivalDriverScene) {
-            mountDriverAvatar(rival.model, rivalDriverScene, { castsShadow: false });
+            mountDriverAvatar(rival.model, rivalDriverScene, {
+              castsShadow: false,
+              height: 6.4,
+              yaw: DRIVER_YAW[rival.name] || 0,
+            });
           }
         });
         const itemMaterial = new THREE.MeshToonMaterial({
@@ -1522,10 +1954,99 @@ export const ComebackCityThreeKartRace = ({
           rig.position.sub(fitted.getCenter(new THREE.Vector3()));
           box.add(rig);
         });
+        // Swap banana fallbacks for the authored Kenney banana.
+        if (bananaScene) {
+          engine.bananaPool.forEach((holder) => {
+            const fallback = holder.children.find((child) => child.userData.kind === 'banana-fallback');
+            if (fallback) {
+              fallback.geometry?.dispose?.();
+              fallback.material?.dispose?.();
+              holder.remove(fallback);
+            }
+            const rig = bananaScene.clone(true);
+            rig.traverse((node) => {
+              if (node.isMesh) {
+                node.material = itemMaterial;
+                node.castShadow = false;
+              }
+            });
+            const bounds = new THREE.Box3().setFromObject(rig);
+            const size = bounds.getSize(new THREE.Vector3());
+            rig.scale.setScalar(4.6 / Math.max(size.x, size.y, size.z));
+            rig.updateMatrixWorld(true);
+            const fitted = new THREE.Box3().setFromObject(rig);
+            rig.position.y -= fitted.min.y;
+            holder.add(rig);
+          });
+        }
       })
       .catch(() => {
         // Procedural fallback bodies stay in place.
       });
+
+    // Blender bake spike (A/B): ?bakedSpike=1 overlays the offline-baked
+    // gym-sweeper shell (public/baked-spike.glb) on the procedural road.
+    // Rendered unlit — all lighting is in the baked texture.
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('bakedSpike') === '1') {
+      new GLTFLoader().load('/baked-spike.glb', (gltf) => {
+        if (disposed || engineRef.current !== engine) return;
+        const shell = gltf.scene;
+        shell.traverse((node) => {
+          if (node.isMesh) {
+            node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
+            node.castShadow = false;
+            node.receiveShadow = false;
+          }
+        });
+        shell.position.y = 0.12;
+        shell.userData.kind = 'baked-spike-shell';
+        engine.world.add(shell);
+      });
+    }
+
+    // Baked building family (Blender, owner-approved direction): swap the
+    // procedural district/facade boxes for clean lightmapped buildings.
+    // Procedural boxes remain the fallback if the GLB is missing.
+    new GLTFLoader().load(
+      '/baked-buildings.glb',
+      (gltf) => {
+        if (disposed || engineRef.current !== engine) return;
+        const variants = ['bldg-tower', 'bldg-block', 'bldg-arcade']
+          .map((name) => gltf.scene.getObjectByName(name))
+          .filter(Boolean);
+        if (!variants.length) return;
+        engine.buildingSwaps.forEach((swap, index) => {
+          const rig = variants[index % variants.length].clone(true);
+          rig.traverse((node) => {
+            if (node.isMesh) {
+              node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
+              node.castShadow = false;
+              node.receiveShadow = false;
+            }
+          });
+          rig.rotation.y = swap.rotate || 0;
+          const bounds = new THREE.Box3().setFromObject(rig);
+          const size = bounds.getSize(new THREE.Vector3());
+          rig.scale.setScalar(swap.footprint / Math.max(size.x, size.z));
+          rig.updateMatrixWorld(true);
+          const fitted = new THREE.Box3().setFromObject(rig);
+          const center = fitted.getCenter(new THREE.Vector3());
+          rig.position.x -= center.x;
+          rig.position.z -= center.z;
+          rig.position.y -= fitted.min.y;
+          swap.group.children
+            .filter((child) => child.userData.kind === 'procedural-building')
+            .forEach((child) => {
+              child.geometry?.dispose?.();
+              child.material?.dispose?.();
+              swap.group.remove(child);
+            });
+          swap.group.add(rig);
+        });
+      },
+      undefined,
+      () => {}
+    );
 
     const restartRace = () => {
       Object.assign(race, createInitialRace());
@@ -1533,13 +2054,21 @@ export const ComebackCityThreeKartRace = ({
       onRestart?.();
     };
 
-    const updateVehiclePose = (group, sample, steer = 0, drift = false) => {
+    const updateVehiclePose = (group, sample, steer = 0, drift = false, pose = null) => {
       group.position.copy(sample.point);
-      group.position.y += 0.05;
-      group.rotation.y = Math.atan2(sample.tangent.x, sample.tangent.z) - steer * (drift ? 0.32 : 0.16);
-      group.rotation.z = -steer * 0.12;
-      group.rotation.x = Math.sin(race.raceTime * 12) * clamp(race.speed / MAX_SPEED, 0, 1) * 0.025;
+      group.position.y += 0.05 + (pose?.hop || 0);
+      // Player pose carries the smoothed drift slide yaw (kart visibly points
+      // off its velocity direction); rivals keep the simple steer-based yaw.
+      // extraYaw carries trick spins and spin-outs for either.
+      const yawOffset = pose ? pose.slideYaw + steer * (drift ? 0 : 0.16) : steer * (drift ? 0.32 : 0.16);
+      group.rotation.y = Math.atan2(sample.tangent.x, sample.tangent.z) - yawOffset + (pose?.extraYaw || 0);
+      group.rotation.z = pose ? -(pose.slideYaw * 0.3 + steer * 0.1) : -steer * 0.12;
+      group.rotation.x =
+        Math.sin(race.raceTime * 12) * clamp(race.speed / MAX_SPEED, 0, 1) * 0.025 - (pose?.pitch || 0);
+      if (pose) group.scale.y = pose.squash;
     };
+    const spinOutYaw = (spinTimer) =>
+      spinTimer > 0 ? (1 - spinTimer / ITEM_FEEL.spinDuration) * Math.PI * 2 : 0;
 
     const frame = () => {
       if (disposed) return;
@@ -1551,7 +2080,8 @@ export const ComebackCityThreeKartRace = ({
       while (frameTimes.length > 40) frameTimes.shift();
       const elapsedWindow = frameTimes.length > 1 ? (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000 : 1;
       const fpsEstimate = frameTimes.length > 1 ? (frameTimes.length - 1) / Math.max(0.001, elapsedWindow) : 60;
-      const input = readInput(inputRef, autoplay, race);
+      const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
+      const input = readInput(inputRef, autoplay, race, cornerPush);
       if (input.restart) {
         inputRef.current.restart = false;
         restartRace();
@@ -1560,25 +2090,132 @@ export const ComebackCityThreeKartRace = ({
         race.countdown = Math.max(0, race.countdown - dt);
         if (race.countdown <= 0) {
           race.raceTime += dt;
+          if (race.shortcut.active) {
+            // Shortcut flight: the kart soars over the carousel infield —
+            // ground physics, pads, boxes and bananas are all skipped.
+            if (input.drift && !race.shortcut.styled) race.shortcut.styled = true;
+            const flight = updateShortcut(race.shortcut, dt);
+            const landTarget = race.shortcut.failed ? SHORTCUT.failLandProgress : SHORTCUT.landProgress;
+            race.previousProgress = race.progress;
+            race.progress = lerp(race.shortcut.fromProgress, landTarget, race.shortcut.t);
+            if (!race.shortcut.failed) race.lane = lerp(race.shortcut.fromLane, -0.1, race.shortcut.t);
+            if (flight.landed) {
+              race.landSquashTimer = 0.18;
+              if (flight.failed) {
+                race.spinTimer = SHORTCUT.failSpin;
+                race.spinOuts += 1;
+                race.speed = SHORTCUT.failSpeed;
+              } else if (race.shortcut.styled) {
+                race.driftState.miniTurboTier = 2;
+                race.driftState.miniTurboTimer = DRIFT_FEEL.boostDurations[1];
+                race.driftState.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
+              }
+            }
+          } else {
           const throttle = input.throttle ? 1 : 0;
           const brake = input.brake ? 1 : 0;
           const targetSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
           race.steer = lerp(race.steer, targetSteer, 1 - Math.pow(0.001, dt));
-          race.drift = Boolean(input.drift && Math.abs(race.steer) > 0.2 && race.speed > 62);
-          race.driftCharge = race.drift ? clamp(race.driftCharge + dt, 0, 2.2) : Math.max(0, race.driftCharge - dt * 1.4);
-          if (!race.drift && race.driftCharge > 0.7 && race.driftReleaseTimer <= 0) {
-            race.driftReleaseTimer = 0.72;
-            race.boostTimer = Math.max(race.boostTimer, 0.45);
+          const driftState = race.driftState;
+          const airState = race.airState;
+          const spinning = race.spinTimer > 0;
+          race.spinTimer = Math.max(0, race.spinTimer - dt);
+          // While airborne or spun out, the drift machine sees no input —
+          // launching a ramp ends a drift, spinning cancels one.
+          const driftEvents = updateDriftFeel(driftState, {
+            dt,
+            held: Boolean(input.drift) && !airState.airborne && !spinning,
+            speed: race.speed,
+            steer: race.steer,
+          });
+          race.drift = driftState.active;
+          race.driftCharge = driftState.charge;
+          race.driftTier = driftState.tier;
+          if (driftEvents.landed) race.landSquashTimer = 0.14;
+          race.landSquashTimer = Math.max(0, race.landSquashTimer - dt);
+          if (driftEvents.released > 0) {
+            race.speed = clamp(race.speed + DRIFT_FEEL.boostKick[driftEvents.released - 1], 0, BOOST_SPEED);
           }
-          race.driftReleaseTimer = Math.max(0, race.driftReleaseTimer - dt);
+          // Ramps and the bridge crest launch the kart; the drift button
+          // doubles as the trick button mid-air (MK-style).
+          if (!airState.airborne && !spinning) {
+            RAMPS.forEach((ramp) => {
+              if (
+                shortProgressDelta(race.progress, ramp.progress) * engine.sampler.length <
+                  TRICK_FEEL.rampHitProgress &&
+                Math.abs(race.lane - ramp.side) < TRICK_FEEL.rampHitLane
+              ) {
+                launchAir(airState, race.speed);
+              }
+            });
+            if (race.previousProgress < CREST_PROGRESS && race.progress >= CREST_PROGRESS) {
+              launchAir(airState, race.speed, { big: true });
+            }
+            // The dare ramp: commit with boost speed or eat a long spin-out.
+            if (
+              shortProgressDelta(race.progress, SHORTCUT.launchProgress) * engine.sampler.length <
+                TRICK_FEEL.rampHitProgress &&
+              Math.abs(race.lane - SHORTCUT.side) < TRICK_FEEL.rampHitLane &&
+              race.speed > 120
+            ) {
+              launchShortcut(race.shortcut, race.speed, race.progress, race.lane);
+            }
+          }
+          const airEvents = updateAir(airState, { actionHeld: Boolean(input.drift), dt });
+          if (airEvents.landed) race.landSquashTimer = 0.16;
+          if (airEvents.trickTier > 0) {
+            race.tricksLanded += 1;
+            driftState.miniTurboTier = airEvents.trickTier;
+            driftState.miniTurboTimer = DRIFT_FEEL.boostDurations[airEvents.trickTier - 1];
+            driftState.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
+            race.speed = clamp(race.speed + DRIFT_FEEL.boostKick[airEvents.trickTier - 1] * 0.8, 0, BOOST_SPEED);
+          }
+          // Held item fire: boost bolt, shield bubble, or banana behind.
+          race.itemFireCooldown = Math.max(0, race.itemFireCooldown - dt);
+          if (input.item && race.heldItem && race.itemFireCooldown <= 0) {
+            if (race.heldItem === 'boost') {
+              driftState.miniTurboTier = 2;
+              driftState.miniTurboTimer = DRIFT_FEEL.boostDurations[1];
+              driftState.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
+              race.speed = clamp(race.speed + DRIFT_FEEL.boostKick[1], 0, BOOST_SPEED);
+            } else if (race.heldItem === 'shield') {
+              race.shieldActive = true;
+            } else if (race.heldItem === 'banana') {
+              dropBanana(race.bananas, 'player', race.progress, race.lane, engine.sampler.length);
+            } else if (race.heldItem === 'snowball') {
+              throwSnowball(race.projectiles, 'player', race.progress, race.lane, race.speed);
+            }
+            race.heldItem = null;
+            race.itemFireCooldown = 0.35;
+          }
           race.boostTimer = Math.max(0, race.boostTimer - dt);
-          const maxSpeed = race.boostTimer > 0 ? BOOST_SPEED : MAX_SPEED;
-          const accel = throttle ? 118 : -48;
+          const maxSpeed = race.boostTimer > 0 || driftState.miniTurboTimer > 0 ? BOOST_SPEED : MAX_SPEED;
+          const accel = throttle && !spinning ? 118 : spinning ? -150 : -48;
+          const miniTurboAccel = driftState.miniTurboTimer > 0 ? 150 : 0;
           const brakeDrag = brake ? -180 : 0;
           const steeringDrag = Math.abs(race.steer) * (race.drift ? -8 : -22);
-          race.speed = clamp(race.speed + (accel + brakeDrag + steeringDrag) * dt, 0, maxSpeed);
+          race.speed = clamp(race.speed + (accel + miniTurboAccel + brakeDrag + steeringDrag) * dt, 0, maxSpeed);
           if (!throttle && !brake) race.speed = Math.max(0, race.speed - 38 * dt);
-          race.lane = clamp(race.lane + race.steer * dt * (race.drift ? 0.72 : 0.54), -0.66, 0.66);
+          if (spinning) race.speed = Math.max(46, race.speed);
+          // While drifting the slide owns the lane: direction is locked,
+          // steering tightens/widens the arc instead of switching sides.
+          // The corner push shoves toward the outside wall — the player must
+          // steer or drift through bends, they are no longer automatic.
+          // Airborne karts fly straight (no lane control, no corner push);
+          // spun-out karts barely steer.
+          if (!airState.airborne) {
+            const steerAuthority = spinning ? 0.12 : 1;
+            const laneRate =
+              (race.drift ? driftLaneRate(driftState, race.steer) * 1.15 : race.steer * 0.72) * steerAuthority;
+            race.lane = clamp(race.lane + (laneRate + cornerPush) * dt, -0.95, 0.95);
+            race.wallContact =
+              (race.lane >= 0.95 && laneRate + cornerPush > 0) ||
+              (race.lane <= -0.95 && laneRate + cornerPush < 0);
+            // Wall scrape bleeds speed until the corner becomes holdable.
+            if (race.wallContact) race.speed = Math.max(70, race.speed - 200 * dt);
+          } else {
+            race.wallContact = false;
+          }
           race.previousProgress = race.progress;
           race.progress = wrap01(race.progress + (race.speed / engine.sampler.length) * dt);
           if (race.previousProgress > 0.86 && race.progress < 0.18) {
@@ -1607,18 +2244,149 @@ export const ComebackCityThreeKartRace = ({
               if (!race[key]) {
                 race[key] = true;
                 race.itemPickups += 1;
+                if (!race.heldItem) race.heldItem = itemForPickup(index, race.lap, race.position);
               }
             } else if (shortProgressDelta(race.progress, box.progress) > 0.05) {
               race[key] = false;
             }
           });
+          // Bananas: age drop-immunity, then check the player (airborne karts
+          // fly over them; a shield eats the hit instead of spinning out).
+          ageBananas(race.bananas, dt);
+          updateProjectiles(race.projectiles, dt, engine.sampler.length);
+          if (!airState.airborne && !spinning && race.spinTimer <= 0) {
+            const struck = projectileHitFor(race.projectiles, 'player', race.progress, race.lane, engine.sampler.length);
+            if (struck) {
+              if (race.shieldActive) {
+                race.shieldActive = false;
+              } else {
+                race.spinTimer = ITEM_FEEL.spinDuration;
+                race.spinOuts += 1;
+                race.speed *= 0.5;
+              }
+            }
+          }
+          if (!airState.airborne && !spinning) {
+            const bananaHit = bananaHitFor(race.bananas, 'player', race.progress, race.lane, engine.sampler.length);
+            if (bananaHit) {
+              if (race.shieldActive) {
+                race.shieldActive = false;
+              } else {
+                race.spinTimer = ITEM_FEEL.spinDuration;
+                race.spinOuts += 1;
+                race.speed *= 0.5;
+                driftState.active = false;
+                driftState.charge = 0;
+                driftState.tier = 0;
+              }
+            }
+          }
+          }
+          // Rivals run their own race; bumps knock both karts.
+          race.bumpCooldown = Math.max(0, race.bumpCooldown - dt);
+          const playerTotal = (race.finished ? TOTAL_LAPS : race.lap - 1) + race.progress;
+          const { playerBump } = updateRivalRacers(race.rivals, {
+            bananas: race.bananas,
+            boostPads: COMEBACK_CITY_COURSE_V2.boostPads,
+            boostSpeed: BOOST_SPEED,
+            cornerPushFor,
+            crestProgress: CREST_PROGRESS,
+            curvatureAt: (progress) => trackCurvatureAt(engine.sampler, progress),
+            dt,
+            finalLap: race.lap === TOTAL_LAPS,
+            laneScale: engine.sampler.widthAt(race.progress) * 0.44,
+            maxSpeed: MAX_SPEED,
+            ramps: RAMPS,
+            projectiles: race.projectiles,
+            player: {
+              bumpCooldown: race.bumpCooldown,
+              lane: race.lane,
+              progress: race.progress,
+              speed: race.speed,
+              total: playerTotal,
+            },
+            raceTime: race.raceTime,
+            trackLength: engine.sampler.length,
+            wallLane: 0.95,
+          });
+          if (playerBump) {
+            race.bumpCooldown = playerBump.cooldown;
+            race.lane = clamp(race.lane + playerBump.lanePush, -0.95, 0.95);
+            race.speed *= playerBump.speedScale;
+          }
+          race.position = playerPositionOf(playerTotal, race.rivals);
         }
       }
 
+      const driftState = race.driftState;
+      // Hop squash & stretch: slight stretch while airborne, quick squash on
+      // landing, eased back to neutral.
+      const squashTarget = driftState.hopTimer > 0 ? 1.07 : race.landSquashTimer > 0 ? 0.86 : 1;
+      race.squash = lerp(race.squash, squashTarget, 1 - Math.pow(0.000001, dt));
       const playerSample = engine.sampler.pointAt(race.progress, race.lane);
-      updateVehiclePose(engine.playerModel.group, playerSample, race.steer, race.drift);
-      engine.playerModel.boostFlame.visible = race.boostTimer > 0 || race.driftReleaseTimer > 0;
-      engine.playerModel.driftSparkGroup.visible = race.drift || race.driftReleaseTimer > 0;
+      updateVehiclePose(engine.playerModel.group, playerSample, race.steer, race.drift, {
+        extraYaw:
+          race.airState.spin +
+          spinOutYaw(race.spinTimer) +
+          (race.shortcut.active && race.shortcut.styled ? race.shortcut.t * Math.PI * 2 : 0),
+        hop:
+          hopHeightFor(driftState.hopTimer) +
+          race.airState.height +
+          (race.shortcut.active ? shortcutArcHeight(race.shortcut) : 0),
+        pitch: airPitchFor(race.airState) + shortcutPitchFor(race.shortcut),
+        slideYaw: driftState.slideYaw,
+        squash: race.squash,
+      });
+      engine.shieldBubble.visible = race.shieldActive;
+      if (race.shieldActive) {
+        engine.shieldBubble.rotation.y += dt * 1.6;
+      }
+      engine.snowballPool.forEach((holder, index) => {
+        const ball = race.projectiles[index];
+        holder.visible = Boolean(ball);
+        if (ball) {
+          const sample = engine.sampler.pointAt(ball.progress, ball.lane);
+          holder.position.copy(sample.point);
+          holder.position.y += 0.3;
+        }
+      });
+      // Mirror the live banana list onto the pooled meshes.
+      engine.bananaPool.forEach((holder, index) => {
+        const banana = race.bananas[index];
+        holder.visible = Boolean(banana);
+        if (banana) {
+          const sample = engine.sampler.pointAt(banana.progress, banana.lane);
+          holder.position.copy(sample.point);
+          holder.position.y += 0.2;
+          holder.rotation.y += dt * 2.2;
+        }
+      });
+      const miniTurboActive = driftState.miniTurboTimer > 0;
+      engine.playerModel.boostFlame.visible = race.boostTimer > 0 || miniTurboActive;
+      engine.playerModel.boostFlame.children.forEach((flame) => {
+        flame.scale.setScalar(miniTurboActive ? 1 + driftState.miniTurboTier * 0.22 : 1);
+      });
+      // Drift sparks escalate through the tier colors while charging and
+      // flash big in the banked tier's color on release.
+      const releaseFlash = !race.drift && driftState.releaseFlashTimer > 0;
+      engine.playerModel.driftSparkGroup.visible = race.drift || releaseFlash;
+      if (engine.playerModel.driftSparkGroup.visible) {
+        const sparkTier = releaseFlash ? driftState.miniTurboTier : driftState.tier;
+        const sparkColor = DRIFT_FEEL.sparkColors[sparkTier] || DRIFT_FEEL.sparkColors[0];
+        engine.playerModel.driftSparkGroup.children.forEach((spark, sparkIndex) => {
+          spark.material.color.set(sparkColor);
+          spark.material.emissive?.set(sparkColor);
+          if (spark.material.emissiveIntensity !== undefined) {
+            spark.material.emissiveIntensity = 0.9 + sparkTier * 0.25;
+          }
+          spark.scale.setScalar(
+            0.7 +
+              sparkTier * 0.3 +
+              Math.sin(race.raceTime * 22 + sparkIndex * 1.7) * 0.18 +
+              (releaseFlash ? 0.9 : 0)
+          );
+        });
+      }
       engine.playerModel.wheels.forEach((wheel) => {
         wheel.rotation.x -= dt * race.speed * 0.12;
         if (wheel.userData.front) wheel.rotation.y = race.steer * 0.38;
@@ -1645,23 +2413,30 @@ export const ComebackCityThreeKartRace = ({
         });
       });
       engine.rivalModels.forEach((rival, index) => {
-        const rivalProgress = wrap01(race.progress + rival.phase + race.raceTime * (0.0035 + index * 0.0008));
-        const rivalLane = rival.lane + Math.sin(race.raceTime * 1.2 + index) * 0.05;
-        const sample = engine.sampler.pointAt(rivalProgress, rivalLane);
-        updateVehiclePose(rival.model.group, sample, Math.sin(race.raceTime + index) * 0.28, false);
-        rival.model.boostFlame.visible = Math.sin(race.raceTime * 2.2 + index) > 0.72;
+        const racer = race.rivals[index];
+        const sample = engine.sampler.pointAt(racer.progress, racer.lane);
+        updateVehiclePose(rival.model.group, sample, clamp(racer.laneVel * 0.6, -1, 1), false, {
+          extraYaw: spinOutYaw(racer.spinTimer),
+          hop: racer.air.height,
+          pitch: airPitchFor(racer.air),
+          slideYaw: 0,
+          squash: 1,
+        });
+        rival.model.boostFlame.visible = racer.boostTimer > 0;
         rival.model.idleFlames.forEach((flame, flameIndex) => {
+          flame.visible = racer.speed > 16;
           flame.scale.setScalar(0.75 + Math.sin(race.raceTime * 24 + index * 3 + flameIndex * 2.1) * 0.16);
         });
         rival.model.wheels.forEach((wheel) => {
-          wheel.rotation.x -= dt * (race.speed + 90) * 0.08;
+          wheel.rotation.x -= dt * racer.speed * 0.12;
+          if (wheel.userData.front) wheel.rotation.y = clamp(racer.laneVel * 0.5, -0.5, 0.5);
         });
       });
 
       // Mario-Kart-style chase camera: low, close, and locked to the track
       // path behind the kart — the camera rides the road, so corners can
       // never put it inside walls or buildings. Slight duck under the bridge.
-      const underpass = race.progress > 0.14 && race.progress < 0.24;
+      const underpass = race.progress > 0.15 && race.progress < 0.24;
       // After the finish, pull up slightly for a results tableau centered on
       // the kart (staying short of the gate behind it).
       const cameraBackUnits = race.finished ? 30 : viewport.mobile ? 43 : 38;
@@ -1684,7 +2459,11 @@ export const ComebackCityThreeKartRace = ({
             .addScaledVector(playerSample.tangent, viewport.mobile ? 26 : 30)
             .add(new THREE.Vector3(0, viewport.mobile ? 5.5 : 4.5, 0));
       engine.camera.lookAt(lookAt);
-      const targetFov = (viewport.mobile ? 68 : 70) + clamp(race.speed / MAX_SPEED, 0, 1.15) * 7;
+      // Mini-turbo gets a small extra FOV kick on top of the speed widening.
+      const targetFov =
+        (viewport.mobile ? 68 : 70) +
+        clamp(race.speed / MAX_SPEED, 0, 1.15) * 7 +
+        (miniTurboActive ? 3.5 : 0);
       if (Math.abs(engine.camera.fov - targetFov) > 0.1) {
         engine.camera.fov = lerp(engine.camera.fov, targetFov, 1 - Math.pow(0.001, dt));
         engine.camera.updateProjectionMatrix();
@@ -1703,10 +2482,13 @@ export const ComebackCityThreeKartRace = ({
           countdown: race.countdown,
           drift: race.drift,
           finished: race.finished,
+          heldItem: race.heldItem,
           itemPickups: race.itemPickups,
           lap: race.lap,
+          position: race.position,
           progress: race.progress,
           raceTime: race.raceTime,
+          shieldActive: race.shieldActive,
           speed: race.speed,
           steer: race.steer,
         });
@@ -1715,7 +2497,7 @@ export const ComebackCityThreeKartRace = ({
         finishReportedRef.current = true;
         onFinish?.({
           bestLap: null,
-          place: 1,
+          place: race.position,
           time: race.raceTime,
           trackKey: 'comeback-city',
         });
@@ -1769,6 +2551,10 @@ export const ComebackCityThreeKartRace = ({
         </div>
       ) : null}
       <div className="three-kart-race__hud" aria-live="polite">
+        <div className="three-kart-race__badge" data-testid="race-position-badge">
+          <Trophy size={15} />
+          <span>{ordinal(snapshot.position)}</span>
+        </div>
         <div className="three-kart-race__badge">
           <Gauge size={15} />
           <span>{Math.round(snapshot.speed)}</span>
@@ -1785,6 +2571,18 @@ export const ComebackCityThreeKartRace = ({
           <Sparkles size={15} />
           <span>{snapshot.itemPickups}</span>
         </div>
+        <div className="three-kart-race__badge" data-testid="race-held-item" data-held-item={snapshot.heldItem || 'none'}>
+          {snapshot.heldItem === 'banana' ? (
+            <Banana size={15} />
+          ) : snapshot.heldItem === 'snowball' ? (
+            <Snowflake size={15} />
+          ) : snapshot.heldItem === 'shield' || snapshot.shieldActive ? (
+            <Shield size={15} />
+          ) : (
+            <Zap size={15} />
+          )}
+          <span>{snapshot.heldItem ? snapshot.heldItem.toUpperCase() : snapshot.shieldActive ? 'ON' : '—'}</span>
+        </div>
       </div>
       {snapshot.countdown > 0 ? (
         <div className="three-kart-race__countdown">{Math.ceil(snapshot.countdown)}</div>
@@ -1792,7 +2590,7 @@ export const ComebackCityThreeKartRace = ({
       {snapshot.finished ? (
         <div className="three-kart-race__results">
           <div>
-            <span>Finish</span>
+            <span>Finish · {ordinal(snapshot.position)}</span>
             <strong>{formatTime(snapshot.raceTime)}</strong>
           </div>
           <button type="button" onClick={restart}>
@@ -1841,6 +2639,15 @@ export const ComebackCityThreeKartRace = ({
           onPointerUp={() => setTouch('drift', false)}
         >
           <Sparkles size={18} />
+        </button>
+        <button
+          type="button"
+          aria-label="Fire held item"
+          onPointerDown={() => setTouch('item', true)}
+          onPointerLeave={() => setTouch('item', false)}
+          onPointerUp={() => setTouch('item', false)}
+        >
+          <Banana size={18} />
         </button>
       </div>
     </div>

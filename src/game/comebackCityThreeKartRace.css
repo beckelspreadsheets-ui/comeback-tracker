@@ -155,10 +155,22 @@
     top: 64px;
   }
 
+  /* Six badges must fit one row on phones: compact, icon-led, no wrap. */
+  .three-kart-race__hud {
+    flex-wrap: nowrap;
+    gap: 5px;
+  }
+
   .three-kart-race__badge {
-    min-height: 32px;
-    min-width: 54px;
-    padding: 0 8px;
+    font-size: 10px;
+    gap: 4px;
+    min-height: 28px;
+    min-width: 0;
+    padding: 0 6px;
+  }
+
+  .three-kart-race__badge[data-testid='race-held-item'] span {
+    display: none;
   }
 
   .three-kart-race__countdown {

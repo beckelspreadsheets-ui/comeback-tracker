@@ -43,8 +43,8 @@
     <span class="pill">build ✓</span>
     <span class="pill">kart-proof ✓</span>
     <span class="pill">kart-playable ✓</span>
-    <span class="pill">kart-3d-spike ✓</span>
-    <span class="pill">FPS 38–46 (floor 34)</span>
+    <span class="pill">test:race ✓</span>
+    <span class="pill">kart-3d-spike: blocked by machine load this run (Brave at 200% CPU, game itself fine) — passed 38/39/72 on the Phase-2 build; rerun when idle</span>
 
     <h2>1 · Approved V2 reference cards</h2>
     <p class="note">The design-lock targets. The runtime below should read as this world (silhouettes, colors, materials, camera) — not match pixel-for-pixel.</p>
@@ -118,6 +118,214 @@
       <figure class="tall"><img src="camera-probe-tripo/mobile-p0_55.png" alt="Tripo kart" /><figcaption><strong>B — Tripo body</strong> from your hero card</figcaption></figure>
       <figure class="wide"><img src="camera-probe-tripo/desktop-p0_45.png" alt="Tripo kart desktop" /><figcaption><strong>B on desktop</strong> — mid straight</figcaption></figure>
     </div>
+
+    <h2 id="round-6">ROUND 6 — new roster members, snowballs &amp; comeback items, visible crest launch</h2>
+    <p class="note">
+      <strong>Roster:</strong> your two new renders are in — <strong>Mizzle</strong> (voxel bomber-jacket penguin)
+      now drives Orange Muscle's kart, and the <strong>ice sled</strong> is Blue Speed's ride (lab-verified
+      orientation, optimized 16MB → 3.3MB). The cowboy penguin sheet has no GLB yet — send it when ready.
+      <strong>Comeback items:</strong> item odds now depend on your live position — leaders pull defense
+      (shield/banana), tailenders pull <strong style="color:#9fdcff">snowballs</strong> and boosts. The snowball
+      throws forward, outruns the field, and spins out the first kart it catches; rivals chasing <em>you</em>
+      throw them too. <strong>Crest launch fixed:</strong> the bridge-top jump was firing invisibly — a glowing
+      kicker strip with chevrons and pylons now marks exactly where and why you go airborne.
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="camera-probe/desktop-p0_1.png" alt="Ice sled racing" /><figcaption><strong>Ice sled</strong> — Blue Speed's new ride on the start straight</figcaption></figure>
+      <figure class="tall"><img src="camera-probe/mobile-p0_45.png" alt="Crest kicker" /><figcaption><strong>Crest kicker</strong> — the launch reads now</figcaption></figure>
+    </div>
+
+    <h2 id="round-5">ROUND 5 — baked buildings, variable width, readable ramps, start screen</h2>
+    <p class="note">
+      <strong>Buildings:</strong> the procedural boxes are gone — a baked Blender family (tower / block / arcade,
+      lit window bands, neon edges, dusk lighting baked in) now lines the districts and the opening run, rendered
+      unlit at zero lighting cost. If you want different shapes, say the word or send Tripo renders — the
+      swap pipeline takes any GLB now.
+      <strong>Track width is a weapon:</strong> the drift carousels open up to full width while the dive, climb
+      and straights pinch narrow — skill sections vs. drift sections, exactly as you called it.
+      <strong>Karts:</strong> player −10% again; rivals' dragster bodies fitted larger so everyone reads the same
+      mass. <strong>Ramps redesigned:</strong> true wedge with a bold glowing chevron face, bright lip bar and
+      pylon beacons — readable from a straight away (dare ramp: purple/gold). <strong>Start screen:</strong>
+      first-time players get a controls + items explainer before their first race (skipped for returning players
+      and QA automation).
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="camera-probe/desktop-p0_1.png" alt="Baked buildings on the narrow start straight" /><figcaption><strong>Baked buildings</strong> — lit window bands on the narrow start straight</figcaption></figure>
+      <figure class="wide"><img src="camera-probe/desktop-p0_68.png" alt="Redesigned ramp on the top straight" /><figcaption><strong>New ramp read</strong> — glowing lip, pylon beacons, chevron face</figcaption></figure>
+    </div>
+
+    <h2 id="round-4">ROUND 4 — jumps that feel like jumps, a bridge you can see</h2>
+    <p class="note">
+      <strong>Launch feel:</strong> the kart now pops off the ramp lip (not the asphalt), pitches nose-up on the
+      rise and nose-down into the landing — rivals too. The shortcut arc pitches through its whole flight.
+      <strong>The bridge is a structure now:</strong> dark deck skirts hang below both road edges with a cyan neon
+      underline, carried by chunky pillar pairs with cross-beams — the climb reads as a real overpass from every
+      angle instead of a floating road.
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="camera-probe/desktop-p0_19.png" alt="Bridge structure from below" /><figcaption><strong>Under the bridge</strong> — deck, neon underline, structure overhead (shield active)</figcaption></figure>
+      <figure class="wide"><img src="camera-probe/desktop-p0_45.png" alt="On the deck mid-pack" /><figcaption><strong>On the deck</strong> — glowing skirt edges line the climb, pack racing over the crossing</figcaption></figure>
+    </div>
+
+    <h2 id="dare-ramp">THE DARE RAMP — jump the whole carousel (new — feel-check this)</h2>
+    <p class="note">
+      Your shortcut idea, built with teeth: a <strong style="color:#c879ff">purple dare ramp</strong> sits on the
+      inside line at the carousel entry. Hit it <strong>above natural top speed</strong> — you must arrive carrying
+      a boost, mini-turbo, or trick boost; flat-out isn't enough — and you soar over the entire infield and land at
+      the carousel exit (~2–3s gained; tap drift mid-flight for style and a landing mini-turbo). Case it too slow
+      and you crash-land mid-corner with a long spin-out at crawl speed (~4–5s lost — "super behind", as ordered).
+      Both cosmetic fixes are in too: ramps now wear boost-pad-style chevrons, neon rails, and entry pylons
+      (the dare ramp is bigger and purple so it reads as a different decision), and the mobile HUD fits one row
+      with an icon-only item slot.
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="camera-probe/desktop-p0_22.png" alt="Dare ramp at carousel entry" /><figcaption><strong>Dare ramp</strong> — purple, inside line, deliberately out of the racing line</figcaption></figure>
+      <figure class="tall"><img src="camera-probe/mobile-p0_68.png" alt="Shield bubble in pack battle, single-row HUD" /><figcaption><strong>Shield live + one-row mobile HUD</strong> — bubble eats the next banana</figcaption></figure>
+    </div>
+
+    <h2 id="phase-3">PHASE 3 + 3.5 — ITEMS &amp; TRICKS (new — feel-check this)</h2>
+    <p class="note">
+      <strong>Items:</strong> item boxes now grant a held item (HUD slot, bottom badge):
+      <strong>boost bolt</strong> (instant tier-2 mini-turbo), <strong>shield</strong> (bubble that eats one hit),
+      <strong>banana</strong> (drops behind you; anyone who runs it over spins out — including you, once yours
+      "settles"). Fire with <code>Shift</code>/<code>Enter</code> on desktop or the banana button on mobile.
+      Rivals drop bananas and pop boosts at deterministic points each lap, so the track gets hazardous as the race
+      goes on. Spin-outs are a real state: 360° twirl, speed gutted, steering numb for a beat.
+      <strong>Tricks:</strong> two glowing ramps sit off-center on the straights, and the bridge crest is a free
+      launch at speed — tap the drift button mid-air to throw a trick and land with a mini-turbo (bigger off the
+      bridge). Airborne karts fly over bananas. In the QA autoplay race the bot landed 4 tricks, held and threw a
+      banana, and got spun out once — the full MK loop is running.
+    </p>
+    <div class="row">
+      <figure class="tall"><img src="camera-probe/mobile-p0_45.png" alt="Airborne over the bridge crest" /><figcaption><strong>Crest launch</strong> — airborne in 1st at boost speed, lower road visible below</figcaption></figure>
+      <figure class="wide"><img src="camera-probe/desktop-p0_68.png" alt="Trick ramp on the top straight" /><figcaption><strong>Top-straight ramp</strong> — deliberate line choice, trick for a mini-turbo</figcaption></figure>
+      <figure class="wide">
+        <video src="kart-playable-proof-test/desktop-10s.webm" controls muted loop playsinline></video>
+        <figcaption><strong>Desktop 10s</strong> — items, bananas, and tricks in the live loop</figcaption>
+      </figure>
+    </div>
+
+    <h2 id="round-3">ROUND 3 FIXES — building off the racing line, smaller karts, taller bridge</h2>
+    <p class="note">
+      <strong>1) The drive-through building is fixed at the root.</strong> The placement solver gave up after 8
+      attempts and dropped the gym building wherever it stood — 32 units from the centerline, straddling the road.
+      It now searches harder, demands real clearance (building edge fully off the asphalt), and if no clear spot
+      exists it skips the building entirely — a missing building beats one on the racing line. All 10
+      buildings now verify ≥69 units clear, and roadside props/tire stacks get the same guard.
+      <strong>2) Karts −10% again</strong> (1.24 → 1.12) per your note.
+      <strong>3) Bridge deck raised</strong> so driving under it reads as a proper overpass moment instead of a
+      ceiling scraping the camera. Nicer-looking buildings are queued for the visual pass once you lock this
+      layout — same for the higher-fidelity rendering you mentioned.
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="camera-probe/desktop-p0_16.png" alt="Gym building off the road" /><figcaption><strong>Carousel approach</strong> — gym building now beside the track, not on it</figcaption></figure>
+      <figure class="tall"><img src="camera-probe/mobile-p0_19.png" alt="Underpass moment" /><figcaption><strong>Underpass</strong> — raised deck overhead, smaller kart</figcaption></figure>
+    </div>
+
+    <h2 id="round-2">ROUND 2 FIXES — orientation (for real), uniform karts, drift-first track</h2>
+    <p class="note">
+      <strong>1) Orientation — root-caused and verified.</strong> I built an "orientation lab"
+      (<code>orientation-lab.html</code>) that renders every model at 4 yaws facing a known camera — no more
+      guessing from gameplay shots. Ground truth: every Tripo rig (kart + all three avatars) natively faces +X,
+      and the Kenney rival body natively faces <em>backward</em> (−Z) — meaning <strong>all three rival karts had
+      been driving tail-first since the body shipped</strong>. All five rigs now have lab-verified yaws, and the
+      in-game probe confirms: you see everyone's tail, drivers' backs to the camera.
+      <strong>2) Kart sizes unified</strong> — player and rivals were genuinely different scales (1.24 vs 1.04);
+      one shared constant now.
+      <strong>3) The track is rebuilt for drifting.</strong> The new lap is generated from exact arc geometry
+      instead of hand-placed kinks: three long sustained carousels (radii tuned so full speed is only holdable
+      <em>in a drift</em> — hold one through a whole carousel and you'll bank tier 2–3), a dive under the new
+      bridge, a climb that boosts you over it, and two real overtaking straights. Validated numerically
+      (curvature profile, single clean crossing) and by full race simulation before it ever rendered a frame.
+    </p>
+    <div class="row">
+      <figure class="tall"><img src="orientation-lab/lab.png" alt="Orientation lab grid" /><figcaption><strong>Orientation lab</strong> — every model at 4 yaws; the facing column is the authored truth</figcaption></figure>
+      <figure class="tall"><img src="camera-probe/mobile-p0_3.png" alt="Mid-drift, correct facings" /><figcaption><strong>In-game proof</strong> — mid-drift slide, player and rival both tail-on, uniform kart sizes</figcaption></figure>
+      <figure class="wide"><img src="kart-playable-proof-test/desktop-start.png" alt="New sweeper track" /><figcaption><strong>New lap</strong> — long curb-lined sweeper into the carousel</figcaption></figure>
+    </div>
+
+    <h2 id="phase-2">PHASE 2 — Real rivals &amp; positions (new — feel-check this)</h2>
+    <p class="note">
+      The rivals now run their own race. Each has an independent speed/lane/cornering sim with a personality from
+      the avatar sheets: <strong>Blue Speed</strong> (CRRT Penguin) is the clean front-runner — he paces just above
+      your raw top speed, so beating him takes mini-turbos and boost pads; <strong>Purple Lab</strong> (Seth) brakes
+      late and overcooks corners; <strong>Orange Muscle</strong> hunts your lane to bump you. Rubber-banding keeps
+      the pack in touch (never &gt;~4s behind / ~3s ahead) and loosens on the final lap so a win is earned.
+      Kart-vs-kart contact knocks both karts apart with a speed penalty (rear kart eats more).
+      You start <strong>P4 on a staggered grid</strong>; a live position badge sits in the HUD and the results
+      panel shows your real finishing place. In the deterministic QA race the autoplay fights from P4 to finish
+      <strong>2nd</strong>, 0.7s behind Blue Speed — overtakes happen in both directions.
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="kart-playable-proof-test/desktop-mid.png" alt="Pack racing mid-race" /><figcaption><strong>Pack racing</strong> — chasing the field with the position badge live</figcaption></figure>
+      <figure class="wide">
+        <video src="kart-playable-proof-test/desktop-10s.webm" controls muted loop playsinline></video>
+        <figcaption><strong>Desktop 10s</strong> — grid start, P4 → climbing through the field</figcaption>
+      </figure>
+    </div>
+
+    <h2 id="bake-spike">BLENDER BAKE SPIKE — the A/B you asked for</h2>
+    <p class="note">
+      Proof of the "MK8 pipeline" end-to-end before committing to the full visual pass: the exact gameplay
+      centerline was exported to Blender (headless, scripted), rebuilt as a <strong>banked</strong> road deck with
+      beveled red/white striped curbs and a lightmapped building, lit with a neon-dusk sun + cyan rim in Cycles,
+      baked to a single texture, and loaded into the live scene as <strong>one unlit mesh</strong> —
+      zero runtime lighting cost (1.6&nbsp;MB GLB). Same camera beat, same frame:
+      look at the curbs (dimensional, lit) and the deck tilting into the sweeper.
+      The gameplay spline stays the source of truth, so this scales to the whole track after the layout locks.
+      Try it live with <code>?bakedSpike=1</code> on <code>/#race</code>.
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="baked-spike/ab-current.png" alt="Current procedural look" /><figcaption><strong>A — current</strong> procedural road + curb ribbons</figcaption></figure>
+      <figure class="wide"><img src="baked-spike/ab-baked.png" alt="Baked Blender shell" /><figcaption><strong>B — baked shell</strong> banked deck, beveled lit curbs, baked dusk lighting</figcaption></figure>
+    </div>
+
+    <h2 id="feedback-round">YOUR FEEDBACK ROUND — facing, scale, track, real cornering (re-check this)</h2>
+    <p class="note">
+      All four notes from your drift feel-check are in:
+      <strong>1) Facing fixed for real</strong> — the bbox guessing is gone; every Tripo rig now has an authored
+      yaw (the hero kart was mounted 180° backward, which is why you kept seeing its headlights and the bunny's
+      face in the chase cam). Probe-verified: you now see the kart's tail and the back of the bunny's head.
+      Please eyeball the two penguin rivals during your drive — their yaws follow the same convention but I
+      couldn't frame them close-up.
+      <strong>2) Karts −20%</strong> (player 1.55 → 1.24, rivals proportional).
+      <strong>3) Track scaled 1.35×</strong> with the road widened to the authored max — the lap is now ~3150 units
+      (was ~2350), corners have real radii, and the road fits 4–5 karts abreast for the multi-racer future.
+      Lap time ~13s, full race ~40s.
+      <strong>4) No more auto-turn</strong> — corners now shove you toward the outside wall with real v² physics:
+      gentle bends need active steering, the big corners are full-speed only in a drift, and the start/finish
+      hairpin demands drift + braking. Scraping the wall bleeds speed. Drifting is now <em>the</em> cornering tool,
+      not a cosmetic.
+    </p>
+    <div class="row">
+      <figure class="tall"><img src="camera-probe/mobile-p0_55.png" alt="Kart rear view, correct facing" /><figcaption><strong>Facing fixed</strong> — tail and back of the bunny's head, smaller kart, wider road</figcaption></figure>
+      <figure class="wide"><img src="camera-probe/desktop-p0_1.png" alt="Wider track at facade run" /><figcaption><strong>1.35× track</strong> — opening facade run with MK-scale room</figcaption></figure>
+      <figure class="wide"><img src="kart-playable-proof-test/desktop-finish.png" alt="Finish tableau" /><figcaption><strong>Finish</strong> — autoplay run, 0:39.80 race</figcaption></figure>
+    </div>
+
+    <h2 id="phase-1">PHASE 1 — Drift &amp; mini-turbo (feel-check this)</h2>
+    <p class="note">
+      The central mechanic landed. Tap <strong>Space / the sparkle button</strong> → small hop (squash &amp; stretch on
+      landing) → if you're steering when you land, the kart commits to a drift on that side: it visibly slides
+      (~18–30° off its velocity direction), and steering now tightens or widens the arc instead of flipping sides —
+      counter-steer to hold a long drift. Sparks charge through three tiers —
+      <strong style="color:#46d9ef">blue (0.55s)</strong> → <strong style="color:#ff9a2e">orange (1.3s)</strong> →
+      <strong style="color:#c879ff">purple (2.15s)</strong> — and releasing banks a mini-turbo scaled to the tier
+      (0.5s / 0.9s / 1.4s) with a speed kick, exhaust flare, spark burst, and a small FOV punch.
+      Dropping too slow mid-drift cancels it without a boost. Telemetry now reports
+      <code>driftTier</code> and <code>miniTurbo</code>. Art, camera, and lighting untouched (locked).
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="kart-playable-proof-test/desktop-manual-controls.png" alt="Drift slide angle with tier sparks" /><figcaption><strong>Committed drift</strong> — kart slides off its velocity line, tier sparks charging</figcaption></figure>
+      <figure class="wide">
+        <video src="kart-playable-proof-test/desktop-10s.webm" controls muted loop playsinline></video>
+        <figcaption><strong>Desktop 10s</strong> — drift → tier-up → release boost rhythm in motion</figcaption>
+      </figure>
+    </div>
+    <p class="note">
+      <strong>To feel it yourself:</strong> <code>npm run dev</code> → <code>/#race</code> → hold ↑, steer into the
+      first sweeper, tap Space, hold it, counter-steer to stay on the road, release when the sparks turn orange.
+    </p>
 
     <h2>7 · Camera probe — the new framing at every track beat</h2>
     <p class="note">Deterministic captures at fixed track positions (tmp/camera-probe/ has all 24).</p>

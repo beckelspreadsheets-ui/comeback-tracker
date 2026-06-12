@@ -270,8 +270,10 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
   await page.screenshot({ path: path.join(outputDir, `${mode}-end.png`), fullPage: false });
   let finish = null;
   if (mode === 'desktop') {
+    // The 2026-06-12 track upscale (1.35×, owner-requested) makes a full
+    // 3-lap race ~47s with cornering slowdowns — budget accordingly.
     await page.waitForFunction(() => window.__comebackCityKartTelemetry?.finished === true, null, {
-      timeout: 20000,
+      timeout: 45000,
     });
     finish = await readTelemetry(page, `${mode} autoplay finish`);
     await page.screenshot({ path: path.join(outputDir, `${mode}-finish.png`), fullPage: false });
@@ -286,7 +288,9 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
   const stableVideoPath = path.join(outputDir, `${mode}-10s.webm`);
   await copyFile(videoPath, stableVideoPath);
 
-  if (!(end.speed >= 170 && (end.lap > start.lap || end.routeProgress > start.routeProgress))) {
+  // Corners now bleed speed (centrifugal understeer + wall scrape), so a
+  // mid-corner sample can legitimately read below the old 170 floor.
+  if (!(end.speed >= 140 && (end.lap > start.lap || end.routeProgress > start.routeProgress))) {
     fail(`${mode} autoplay did not sustain race speed and route progress`, { end, start });
   }
   if (!(mid.itemPickups >= 1 || end.itemPickups >= 1)) fail(`${mode} autoplay did not collect an item box`, { end, mid });

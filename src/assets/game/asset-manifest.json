@@ -134,5 +134,21 @@
     "role": "Seth Penguin driver avatar on the Purple Lab rival kart (third roster character)",
     "sizeBudget": "About 495 KB GLB, ~13k triangles",
     "fallback": "Rival kart renders driverless if the avatar GLB fails to load"
+  },
+  {
+    "filePath": "src/assets/game/models/avatars/mizzle.glb",
+    "source": "Owner-generated in Tripo from 3d generations:character sheets/mizzlesitting.png (2026-06-12); optimized in-repo via gltf-transform weld/simplify/resize-512",
+    "license": "Owner-created asset",
+    "role": "Mizzle seated driver avatar \u2014 Orange Muscle's seat (voxel penguin, bomber jacket)",
+    "sizeBudget": "<4MB optimized from 16MB Tripo export",
+    "fallback": "Seat stays empty if the GLB fails to load"
+  },
+  {
+    "filePath": "src/assets/game/models/tripo/ice-sled.glb",
+    "source": "Owner-generated in Tripo from 3d generations:character sheets/glidercart.png (2026-06-12); optimized in-repo via gltf-transform weld/simplify/resize-512",
+    "license": "Owner-created asset",
+    "role": "Ice sled kart body for Blue Speed (replaces recolored Kenney drag-racer when loaded)",
+    "sizeBudget": "<4MB optimized from 16.5MB Tripo export",
+    "fallback": "Recolored Kenney drag-racer body"
   }
 ]

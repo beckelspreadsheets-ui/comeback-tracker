@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  Banana,
+  Snowflake,
   Car,
   Flag,
   Gauge,
@@ -1689,11 +1691,89 @@ const TrackIntel = ({ track }) => (
   </Card>
 );
 
+
+// First-time start screen: controls, drift/trick school, and the item table.
+// QA automation (navigator.webdriver / autoplay params) skips it.
+const KartIntroScreen = ({ onStart }) => (
+  <div
+    className="absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
+    data-testid="race-intro-screen"
+  >
+    <div className="w-full max-w-3xl space-y-5 py-6">
+      <div className="text-center">
+        <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City</div>
+        <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Grand Prix — How to Race</h2>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="border border-white/12 bg-white/[0.03] p-4">
+          <div className="mb-2 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd34f]">Drive</div>
+          <ul className="space-y-1.5 text-[13px] leading-snug text-white/80">
+            <li><span className="text-white">↑ / W</span> — accelerate</li>
+            <li><span className="text-white">← → / A D</span> — steer</li>
+            <li><span className="text-white">↓ / S</span> — brake</li>
+            <li><span className="text-white">SHIFT / ENTER</span> — fire item</li>
+            <li>On mobile, the buttons mirror these.</li>
+          </ul>
+        </div>
+        <div className="border border-white/12 bg-white/[0.03] p-4">
+          <div className="mb-2 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd34f]">Drift &amp; Tricks</div>
+          <ul className="space-y-1.5 text-[13px] leading-snug text-white/80">
+            <li><span className="text-white">SPACE</span> in a corner — hop into a drift; hold it.</li>
+            <li>Sparks charge <span className="text-[#46d9ef]">blue</span> → <span className="text-[#ff9a2e]">orange</span> → <span className="text-[#c879ff]">purple</span>; release for a bigger boost.</li>
+            <li>Tap <span className="text-white">SPACE</span> mid-air off any ramp — land a trick for a boost.</li>
+            <li>The <span className="text-[#c879ff]">purple dare ramp</span> jumps the whole corner — only with boost speed. Miss it and you crawl.</li>
+          </ul>
+        </div>
+        <div className="border border-white/12 bg-white/[0.03] p-4">
+          <div className="mb-2 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd34f]">Items</div>
+          <ul className="space-y-2 text-[13px] leading-snug text-white/80">
+            <li className="flex items-start gap-2"><Zap size={15} className="mt-0.5 shrink-0 text-[#ffd34f]" /> <span><span className="text-white">Boost bolt</span> — instant mini-turbo.</span></li>
+            <li className="flex items-start gap-2"><Shield size={15} className="mt-0.5 shrink-0 text-[#49d9ff]" /> <span><span className="text-white">Shield</span> — eats the next hit.</span></li>
+            <li className="flex items-start gap-2"><Banana size={15} className="mt-0.5 shrink-0 text-[#ffd34f]" /> <span><span className="text-white">Banana</span> — drops behind you; spins out whoever hits it.</span></li>
+            <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#9fdcff]" /> <span><span className="text-white">Snowball</span> — throws forward; first kart it catches spins out. You get these when you're behind.</span></li>
+            <li>Question boxes hand you one — watch the slot in the HUD.</li>
+          </ul>
+        </div>
+      </div>
+      <div className="text-center">
+        <button
+          type="button"
+          className="border border-[#ffd34f]/60 bg-[#ffd34f]/10 px-8 py-3 font-mono text-sm font-black uppercase tracking-[0.2em] text-[#ffd34f] transition-colors hover:bg-[#ffd34f]/20"
+          data-testid="race-intro-start"
+          onClick={onStart}
+        >
+          Start Race
+        </button>
+        <div className="mt-2 text-[11px] text-white/40">Beat Blue Speed for the win — he's fast, but he can't drift like you.</div>
+      </div>
+    </div>
+  </div>
+);
+
 export const RaceScreen = ({ onExit = null, readOnly = false, setState, state }) => {
   const profile = useMemo(() => deriveGameProfile(state), [state]);
   const raceStageRef = useRef(null);
   const [trackKey, setTrackKey] = useState(RACE_TRACKS[0].key);
   const [runId, setRunId] = useState(1);
+  const [introSeen, setIntroSeen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    if (window.navigator?.webdriver) return true; // QA harness skips the intro
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('playableAutoplay') === '1' || params.get('raceAutoplay') === '1') return true;
+    try {
+      return window.localStorage?.getItem('cc-kart-intro-seen') === '1';
+    } catch {
+      return true;
+    }
+  });
+  const dismissIntro = useCallback(() => {
+    try {
+      window.localStorage?.setItem('cc-kart-intro-seen', '1');
+    } catch {
+      // localStorage unavailable — show it again next time, no harm.
+    }
+    setIntroSeen(true);
+  }, []);
   const [raceProfile, setRaceProfile] = useState(null);
   const [command, setCommand] = useState(null);
   const [lastResult, setLastResult] = useState(null);
@@ -1853,12 +1933,16 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
           Today
         </button>
       )}
-      <ComebackCityThreeKartRace
-        mode="race"
-        onFinish={handleFinish}
-        reducedMotion={Boolean(state.game?.hub?.reducedMotion)}
-        runId={runId}
-      />
+      {introSeen ? (
+        <ComebackCityThreeKartRace
+          mode="race"
+          onFinish={handleFinish}
+          reducedMotion={Boolean(state.game?.hub?.reducedMotion)}
+          runId={runId}
+        />
+      ) : (
+        <KartIntroScreen onStart={dismissIntro} />
+      )}
     </div>
   );
 

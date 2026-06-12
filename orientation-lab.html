@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- Orientation lab: renders each game GLB at yaw 0/90/180/270 facing the
+     camera (camera sits on +Z, the karts' driving direction). The column
+     where the model faces the camera is the correct authored yaw.
+     Served by vite dev/preview; captured by scripts/orientation-lab-capture.mjs -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Orientation Lab</title>
+    <style>
+      body { margin: 0; background: #10142a; }
+      canvas { display: block; }
+      #labels { position: fixed; left: 0; top: 0; color: #cfe3ff; font: 12px monospace; padding: 6px 10px; }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "/node_modules/three/build/three.module.js", "three/examples/jsm/": "/node_modules/three/examples/jsm/" } }
+    </script>
+  </head>
+  <body>
+    <div id="labels">columns: yaw 0 | 90 | 180 | 270 — rows: tripo-kart, kenney-racer, bunny, crrt-penguin, seth-penguin, mizzle, ice-sled · camera looks along -Z (the FACING column points at you)</div>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+      const MODELS = [
+        '/src/assets/game/models/tripo/hero-kart-tripo.glb',
+        '/src/assets/game/models/toy-car-kit/vehicle-drag-racer.glb',
+        '/src/assets/game/models/avatars/crrt-bunny.glb',
+        '/src/assets/game/models/avatars/crrt-penguin.glb',
+        '/src/assets/game/models/avatars/seth-penguin.glb',
+        '/src/assets/game/models/avatars/mizzle.glb',
+        '/src/assets/game/models/tripo/ice-sled.glb',
+      ];
+      const YAWS = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#10142a');
+      scene.add(new THREE.HemisphereLight('#cdd9ff', '#2a2440', 2.6));
+      const sun = new THREE.DirectionalLight('#ffffff', 2.4);
+      sun.position.set(30, 60, 80);
+      scene.add(sun);
+
+      const SPACING_X = 11;
+      const SPACING_Y = 9;
+      const loader = new GLTFLoader();
+      let loaded = 0;
+      MODELS.forEach((url, row) => {
+        loader.load(url, (gltf) => {
+          YAWS.forEach((yaw, col) => {
+            const rig = gltf.scene.clone(true);
+            const bounds = new THREE.Box3().setFromObject(rig);
+            const size = bounds.getSize(new THREE.Vector3());
+            const fit = 6.5 / Math.max(size.x, size.y, size.z);
+            rig.scale.setScalar(fit);
+            rig.rotation.y = yaw;
+            rig.updateMatrixWorld(true);
+            const fitted = new THREE.Box3().setFromObject(rig);
+            const center = fitted.getCenter(new THREE.Vector3());
+            rig.position.set(
+              (col - 1.5) * SPACING_X - center.x,
+              (3 - row) * SPACING_Y - fitted.min.y - 3.2,
+              -center.z
+            );
+            scene.add(rig);
+          });
+          loaded += 1;
+          window.__labLoaded = loaded;
+        });
+      });
+
+      // Camera on +Z looking down -Z: a rig "faces correct" (drives toward
+      // +Z in kart space) when it faces the camera.
+      const camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 400);
+      camera.position.set(0, 4, 102);
+      camera.lookAt(0, 0, 0);
+      const animate = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      };
+      animate();
+    </script>
+  </body>
+</html>
