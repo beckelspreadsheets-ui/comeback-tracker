@@ -41,6 +41,7 @@ const latestEvidence = {
     '.agent/runs/kart-racer-production-readiness/evidence/monitoring-support-001-20260524T025102Z/',
   perfKept:
     '.agent/runs/kart-racer-production-readiness/evidence/perf-023-20260524T072318Z/perf-023-kept-far-range-summary.json',
+  currentRaceBrowser: 'tmp/race-playtests/race-browser-playtest-summary.json',
   previewDeploy:
     '.agent/runs/kart-racer-production-readiness/evidence/preview-deploy-001-20260603T163200Z/preview-deploy-summary.md',
   previewDeployedHeaders:
@@ -166,6 +167,46 @@ const summarizeStatuses = (gates) => {
   };
 };
 
+const averageFinite = (values) => {
+  const finiteValues = values.filter(Number.isFinite);
+  if (!finiteValues.length) return null;
+  return Number((finiteValues.reduce((total, value) => total + value, 0) / finiteValues.length).toFixed(2));
+};
+
+const summarizeCurrentRacePerformance = async () => {
+  if (!(await pathExists(latestEvidence.currentRaceBrowser))) return null;
+  const summary = await readJson(latestEvidence.currentRaceBrowser);
+  const visualChecks = Array.isArray(summary.visualChecks) ? summary.visualChecks : [];
+  const desktopChecks = visualChecks.filter((check) => (check.viewport?.width || 0) >= 1000);
+  const focusedDesktopChecks = desktopChecks.filter((check) =>
+    [
+      'acceleration',
+      'braking',
+      'boost-pad-mechanics',
+      'drift',
+      'drift-mechanics',
+      'drift-release',
+      'driving',
+      'finish-line',
+      'item-box-mechanics',
+      'item-pickup',
+      'rival-cluster',
+      'steering-high-speed',
+      'steering-low-speed',
+      'turn-approach',
+    ].includes(check.scenario)
+  );
+  return {
+    capturedAt: summary.capturedAt || null,
+    desktopAllAverageActualFps: averageFinite(desktopChecks.map((check) => check.summary?.actualFps)),
+    desktopFocusedAverageActualFps: averageFinite(focusedDesktopChecks.map((check) => check.summary?.actualFps)),
+    raceCount: summary.raceCount ?? null,
+    sustainedAverageActualFps: summary.sustainedNormalPlay?.summary?.actualFps?.average ?? null,
+    sustainedDeliveredFps: summary.sustainedNormalPlay?.summary?.deliveredFps ?? null,
+    visualCheckCount: summary.visualCheckCount ?? null,
+  };
+};
+
 const run = async () => {
   if (shouldCleanArtifacts) await rm(artifactsDir, { force: true, recursive: true });
   await mkdir(artifactsDir, { recursive: true });
@@ -192,13 +233,24 @@ const run = async () => {
   }));
   const qaFailures = qaRows.filter((row) => !/^[4-5]$/.test(row.score));
   const perfSummary = await readJson(latestEvidence.perfKept);
+  const currentRacePerformance = await summarizeCurrentRacePerformance();
   const perf = {
-    desktopAllAverageActualFps: perfSummary.averageCandidate?.desktopAllAverageActualFps ?? null,
-    desktopFocusedAverageActualFps: perfSummary.averageCandidate?.desktopFocusedAverageActualFps ?? null,
+    currentCapturedAt: currentRacePerformance?.capturedAt ?? null,
+    desktopAllAverageActualFps:
+      currentRacePerformance?.desktopAllAverageActualFps ?? perfSummary.averageCandidate?.desktopAllAverageActualFps ?? null,
+    desktopFocusedAverageActualFps:
+      currentRacePerformance?.desktopFocusedAverageActualFps ??
+      perfSummary.averageCandidate?.desktopFocusedAverageActualFps ??
+      null,
     localFloorFps: 45,
     prdTargetFps: 55,
-    sustainedAverageActualFps: perfSummary.averageCandidate?.sustainedAverageActualFps ?? null,
+    sustainedAverageActualFps:
+      currentRacePerformance?.sustainedAverageActualFps ?? perfSummary.averageCandidate?.sustainedAverageActualFps ?? null,
+    sustainedDeliveredFps: currentRacePerformance?.sustainedDeliveredFps ?? null,
   };
+  const performanceMeetsLocalFloor =
+    (perf.desktopFocusedAverageActualFps || 0) >= perf.localFloorFps &&
+    (perf.sustainedAverageActualFps || 0) >= perf.localFloorFps;
   const missingPlanGateLabels = [
     'Owner target locked',
     'V1 DoD proven',
@@ -228,11 +280,13 @@ const run = async () => {
     }),
     await gate({
       acceptance: 'Agreed desktop target is met in sustained and focused race evidence.',
-      evidence: [latestEvidence.perfKept],
+      evidence: [latestEvidence.currentRaceBrowser, latestEvidence.perfKept],
       id: 'desktop-performance',
       level: 'P0',
-      notes: `Latest kept evidence reports ${perf.desktopFocusedAverageActualFps} focused desktop actual FPS and ${perf.sustainedAverageActualFps} sustained actual FPS, below local ${perf.localFloorFps} and PRD ${perf.prdTargetFps} targets.`,
-      status: 'Failing - below performance target',
+      notes: currentRacePerformance
+        ? `Current race-browser evidence from ${perf.currentCapturedAt} reports ${perf.desktopFocusedAverageActualFps} focused desktop actual FPS and ${perf.sustainedAverageActualFps} sustained actual FPS (${perf.sustainedDeliveredFps} delivered), below local ${perf.localFloorFps} and PRD ${perf.prdTargetFps} targets. Older kept perf evidence remains linked for history.`
+        : `Latest kept evidence reports ${perf.desktopFocusedAverageActualFps} focused desktop actual FPS and ${perf.sustainedAverageActualFps} sustained actual FPS, below local ${perf.localFloorFps} and PRD ${perf.prdTargetFps} targets.`,
+      status: performanceMeetsLocalFloor ? 'Proven' : 'Failing - below performance target',
     }),
     await gate({
       acceptance: 'Manual touch playthrough passes on agreed mobile target.',

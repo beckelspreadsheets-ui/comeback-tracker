@@ -1,0 +1,11 @@
+{
+  "canvasCssHeight": 720,
+  "canvasCssWidth": 1280,
+  "canvasPixelHeight": 266,
+  "canvasPixelWidth": 473,
+  "canvasVisible": true,
+  "raceScreenVisible": true,
+  "renderer": "webgl-canvas-present",
+  "title": "Comeback · 181 → 238",
+  "url": "http://127.0.0.1:5239/#race"
+}

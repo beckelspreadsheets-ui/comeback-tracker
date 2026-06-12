@@ -1,42 +1,45 @@
-# Pricing Research Check - 2026-06-03
+# Pricing Research Check - 2026-06-06
 
 ## Decision
 
-Keep the public prices from `SHOWCASE_V3_LIVE_PRD.md` for now:
+Owner-corrected public pricing model:
 
-- Starter: `$149/mo` plus one-time setup from `$1,500`.
-- Growth: `$399/mo` plus one-time setup from `$3,500`.
+- Starter subscription: `$150/mo`.
+- Growth subscription: `$400/mo`.
+- Own the finished site outright: starting at `$1,500`, scoped before work begins.
 - Custom: scoped after review.
 
-The prices are defensible only with the tighter public scope now reflected in `index.html` and `v3-preview.html`.
+Do not use the old `monthly + setup` framing. Public copy should say subscription or ownership, not setup.
 
 ## Source Comparison
 
-- Oui Digital 2026 small business website cost guide: professional small business websites commonly land around `$1,000-$5,000`, subscriptions around `$225-$499/mo`, freelancers around `$500-$5,000` one-time, agencies around `$3,000-$50,000+`, and SEO around `$500-$2,000/mo`.
-  - https://oui.digital/insights/website-cost-guide/
-- Circle Monkeys Arizona pricing: `$199/mo`, no setup, web design plus SEO positioning with unlimited updates.
-  - https://www.circlemonkeys.com/pricing
-- Flex Flow Phoenix pricing: subscription plans start at `$199`, `$399`, and `$799/mo`.
-  - https://www.flexflowweb.com/pricing
-- CitrusKiwi Phoenix pricing: low monthly website subscriptions listed at `$75`, `$89`, and `$130/mo`, billed every three months, with packaged web presence features.
-  - https://www.citruskiwi.com/phoenix-small-business-website-package-pricing
-- jVista Tucson pricing: managed hosting/support shown at `$119/mo`; SEO Performance shown at `$499-$699/mo`.
-  - https://www.jvista.net/pricing/
-- WebFX 2026 local SEO pricing: local SEO retainers average `$500-$3,000/mo`, one-time local SEO projects range `$500-$5,000`, and typical deliverables include Google Business Profile optimization, citations, review monitoring, keyword research, on-page optimization, and monthly reporting.
+- EzPz Sites lists a primary `$150/mo` 5-page custom website subscription with hosting and ongoing support.
+  - https://www.ezpzsites.com/
+- Pixelated Dreams lists `$150/mo` for a standard 5-page small business website subscription, plus an `$1,800` lump-sum option.
+  - https://pixelateddreamswebdesign.com/
+- Onyx Web Services lists `$150/mo` for a 5-page site, `$499/mo` for website + local SEO, and `$1,999` for a one-time build.
+  - https://onyxwebservices.com/
+- Hand-Coded Web lists one-time small business website builds at `$1,000`, `$1,499`, and `$1,999`, plus monthly hosting/email.
+  - https://handcodedweb.com/
+- Hunter Web Designs lists `$150/mo` monthly and `$3,000` one-time payment options.
+  - https://hunterwebdesigns.com/pricing/
+- WebFX 2026 local SEO pricing lists local SEO retainers at `$500-$3,000/mo`, one-time local SEO projects at `$500-$5,000`, and hourly consulting at `$75-$200+/hr`.
   - https://www.webfx.com/local-seo/pricing/
-- Arc4 2026 SEO pricing: small/local SEO typically `$500-$2,000/mo`; under `$500/mo` is described as basic checklist SEO, while entry-level local agency work is `$500-$1,500/mo`.
-  - https://arc4.com/resources/seo-pricing/
-- Google Business Profile local ranking documentation: local ranking is based on relevance, distance, and prominence. Complete business info, reviews/replies, photos/videos, and verified profiles matter; rankings cannot be bought or guaranteed.
+- Google Business Profile local ranking documentation says local results are based on relevance, distance, and prominence; complete business info, reviews/replies, photos/videos, and verified profiles matter; ranking cannot be bought or guaranteed.
   - https://support.google.com/business/answer/7091
+- Google Search Central SEO Starter Guide says there is no guarantee a site will be indexed or rank first, even when following best practices.
+  - https://developers.google.com/search/docs/fundamentals/seo-starter-guide
 
 ## Reasoning
 
-Starter first-year price is `$3,288` before add-ons (`$1,500 + 12 * $149`). That is not too low for an early founder-led custom website because it sits within professional small-business build ranges and below many agency builds, while the setup fee prevents the offer from looking like a cheap template subscription.
+`$150/mo` is a defensible entry subscription because several current productized custom-site competitors use the same anchor. It is not too low if scope is kept to a professional site, hosting/support, foundational SEO, analytics-ready events, and reasonable updates.
 
-Growth first-year price is `$8,288` before add-ons (`$3,500 + 12 * $399`). The setup fee supports the initial 10-15 page build and local SEO structure. The `$399/mo` retainer is below common full-service local SEO retainers, so the ongoing monthly promise must stay capped: reporting, Google Business Profile improvements, review/photo process support, and one priority content/update cycle.
+`$400/mo` is below common full-service local SEO retainers, so it should be sold as a capped Growth plan: reporting, Google Business Profile improvements, review/photo process support, one priority content/update cycle, and quarterly conversion review. Do not sell it as unlimited SEO, guaranteed rankings, link building, or full content production.
 
-Do not publish two blog posts per month at `$399/mo`. Do not imply guaranteed rankings. Do not imply Showcase Designs can overcome missing reviews, outdated photos, weak proof, or uncooperative clients by website work alone.
+`Starting at $1,500` to own the site outright is defensible for an early founder-led custom build. It is lower than many one-time custom web offers but not so low that it reads as a hobby price. Ongoing hosting, support, updates, and SEO should be quoted separately or moved to a subscription.
+
+Do not imply Showcase Designs can overcome missing reviews, outdated photos, weak proof, or uncooperative clients by website work alone.
 
 ## Future Price Move
 
-After the first 3-5 approved case-study clients or once a stronger SEO proof asset exists, moving Growth from `$399/mo` to `$499/mo` is supported by the market. Do not make that public change without Andrew's approval because the PRD currently recommends keeping `$399/mo`.
+Recommended launch goal: close 3-5 proof-friendly local business clients at the current public numbers, require reviews/photos/proof participation for Growth, then revisit pricing. The likely next public move is Starter `$200/mo` or Growth `$500-$600/mo`, but only after stronger proof, review flow, and delivery capacity are established.

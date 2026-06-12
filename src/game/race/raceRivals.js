@@ -10,6 +10,13 @@ export const RIVAL_ROUTE_LAYER_SCORE = {
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const wrap01 = (value) => ((value % 1) + 1) % 1;
 const distance2D = (a = {}, b = {}) => Math.hypot((a.x || 0) - (b.x || 0), (a.z || 0) - (b.z || 0));
+const vectorLength = (vector) => (typeof vector?.length === 'function' ? vector.length() : 0);
+const signedWrapDelta = (from = 0, to = 0) => {
+  let delta = wrap01(to) - wrap01(from);
+  if (delta > 0.5) delta -= 1;
+  if (delta < -0.5) delta += 1;
+  return delta;
+};
 
 export const chooseRaceRivalRouteLayer = ({
   aiRivals = [],
@@ -74,10 +81,12 @@ const updateVisualRivalCluster = ({
   compiled,
   race,
 } = {}) => {
+  const packProgressOffsets = [0.0025, 0.005, 0.008];
+  const packLanes = [-0.22, 0.14, 0.28];
   race.rivals.forEach((rival, index) => {
-    const sample = compiled.pointAt(race.player.progress + 0.018 * (index + 1));
+    const sample = compiled.pointAt(race.player.progress + (packProgressOffsets[index] ?? 0.018));
     const normalAtPoint = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x);
-    const lane = [-0.24, 0, 0.24][index % 3] * compiled.roadWidth;
+    const lane = packLanes[index % packLanes.length] * compiled.roadWidth;
     rival.finished = false;
     rival.vehicleMode = 'kart';
     rival.layer = 'ground';
@@ -89,6 +98,62 @@ const updateVisualRivalCluster = ({
   return {
     mode: 'visual-cluster',
     updatedCount: race.rivals.length,
+  };
+};
+
+export const rivalPressureForFrame = ({
+  ai = {},
+  compiled = {},
+  dt = 0,
+  index = 0,
+  playtest = {},
+  player = {},
+  profile = {},
+  rival = {},
+  rivalVehicle = {},
+  scoreGap = 0,
+} = {}) => {
+  const aggression = clamp(ai.aggression ?? 0.34, 0, 1);
+  const patience = clamp(ai.patience ?? 0.7, 0, 1);
+  const maxSpeed = rivalVehicle.maxSpeed || 0;
+  const playerSpeed = Math.max(vectorLength(player.velocity), player.speed || 0);
+  const baseMultiplier =
+    0.76 + index * 0.025 + (profile.level || 0) * 0.002 + aggression * 0.12 - patience * 0.025;
+  const rubberband = scoreGap >= 0 ? clamp(scoreGap * 0.72, 0, 0.34) : clamp(scoreGap * 0.9, -0.34, 0);
+  let desiredSpeed = maxSpeed * (baseMultiplier + rubberband);
+
+  if (scoreGap < -0.025 && playerSpeed > 0.1) {
+    desiredSpeed = Math.min(desiredSpeed, playerSpeed + 7 + index * 2 + aggression * 10);
+  }
+
+  if (scoreGap > 0.1) {
+    desiredSpeed = Math.max(desiredSpeed, maxSpeed * (1.02 + aggression * 0.18));
+  }
+
+  let progressCorrection = null;
+  const scriptedAutoplay = playtest?.enabled && playtest.mode !== 'visual-kart';
+  if (scriptedAutoplay && compiled.totalLength > 0) {
+    const scriptedRate = playtest.mode === 'vehicle-restricted' ? 0.86 : 0.94;
+    const scriptedSpeed = compiled.totalLength * scriptedRate;
+    const targetAhead = [0.018, 0.035, 0.052][index % 3];
+    const targetProgress = wrap01((player.progress || 0) + targetAhead);
+    const targetDelta = signedWrapDelta(rival.progress || 0, targetProgress);
+    desiredSpeed =
+      scoreGap > -0.08
+        ? Math.max(desiredSpeed, scriptedSpeed * (1 + index * 0.018))
+        : Math.min(desiredSpeed, scriptedSpeed * 0.92);
+    if (Math.abs(targetDelta) > 0.025) {
+      progressCorrection = {
+        blend: clamp(dt * 1.35, 0, 0.22),
+        targetProgress,
+      };
+    }
+  }
+
+  return {
+    desiredSpeed,
+    progressCorrection,
+    scoreGap,
   };
 };
 
@@ -148,12 +213,22 @@ export const updateRaceRivalsForFrame = ({
     if (layer?.vehiclePreference && (rival.switchLockedUntil || 0) <= race.time) {
       setVehicleMode(rival, layer.vehiclePreference, { force: true });
     }
-    const rubberband = clamp((scoreRacer(race.player) - scoreRacer(rival)) * 0.12, -0.06, 0.08);
     const rivalVehicle = vehicles[rival.vehicleMode || defaultVehicle] || vehicles[defaultVehicle] || vehicles.kart || {
       maxSpeed: 0,
     };
-    const desiredSpeed =
-      (rivalVehicle.maxSpeed * (0.82 + index * 0.035 + (profile.level || 0) * 0.002 + rubberband));
+    const pressure = rivalPressureForFrame({
+      ai: rival.ai || compiled.aiRivals?.[index],
+      compiled,
+      dt,
+      index,
+      playtest,
+      player: race.player,
+      profile,
+      rival,
+      rivalVehicle,
+      scoreGap: scoreRacer(race.player) - scoreRacer(rival),
+    });
+    const desiredSpeed = pressure.desiredSpeed;
     if (rival.hitTimer > 0) {
       rival.hitTimer = Math.max(0, rival.hitTimer - dt);
       rival.speed *= Math.max(0, 1 - dt * 1.5);
@@ -162,6 +237,11 @@ export const updateRaceRivalsForFrame = ({
     }
     const previousProgress = rival.progress;
     rival.progress = wrap01(previousProgress + (rival.speed * dt) / compiled.totalLength);
+    if (pressure.progressCorrection) {
+      rival.progress = wrap01(
+        rival.progress + signedWrapDelta(rival.progress, pressure.progressCorrection.targetProgress) * pressure.progressCorrection.blend
+      );
+    }
     const sample = compiled.pointAt(rival.progress);
     const normalAtPoint = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x);
     rival.wobble += dt * (1.1 + index * 0.2);
@@ -174,9 +254,14 @@ export const updateRaceRivalsForFrame = ({
     if (previousProgress > 0.82 && rival.progress < 0.18) {
       rival.lap += 1;
       if (rival.lap > compiled.laps) {
-        rival.finished = true;
-        rival.finishTime = race.time;
-        finishedCount += 1;
+        if (playtest?.noFinish) {
+          rival.lap = 1;
+          rival.finishTime = null;
+        } else {
+          rival.finished = true;
+          rival.finishTime = race.time;
+          finishedCount += 1;
+        }
       }
     }
     updatedCount += 1;

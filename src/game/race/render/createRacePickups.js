@@ -25,17 +25,15 @@ export const createTrackBananaMesh = ({ banana, material, world } = {}) => {
 export const createItemBoxMesh = ({ balloon, world } = {}) => {
   const group = new THREE.Group();
   group.position.copy(balloon.position);
-  group.position.y = 3.5;
+  group.position.y = 3.25;
   const mat = createBasicMaterial(balloon.type.color, {
     emissive: balloon.type.color,
-    emissiveIntensity: 0.5,
+    emissiveIntensity: 0.92,
   });
-  const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.45, 18, 14), mat);
-  sphere.scale.y = 1.15;
-  const knot = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.75, 5), mat);
-  knot.position.y = -1.55;
-  knot.rotation.x = Math.PI;
-  group.add(sphere, knot);
+  const cube = new THREE.Mesh(new THREE.BoxGeometry(2.7, 2.7, 2.7), mat);
+  cube.rotation.set(0.55, 0.72, 0.2);
+  cube.castShadow = true;
+  group.add(cube);
   world.add(group);
   return group;
 };
@@ -141,7 +139,7 @@ export const createRacePickupMeshes = ({
   return {
     balloonMeshes: race.balloons.map((balloon) => createItemBoxMesh({ balloon, world })),
     bananaMeshes: race.bananas.map((banana) => createTrackBananaMesh({ banana, material: bananaMat, world })),
-    flightGateMeshes: race.flightGates.map((gate, index) =>
+    flightGateMeshes: (cleanCityCourse ? [] : race.flightGates).map((gate, index) =>
       createFlightGateMesh({
         cleanCityCourse,
         compiled,

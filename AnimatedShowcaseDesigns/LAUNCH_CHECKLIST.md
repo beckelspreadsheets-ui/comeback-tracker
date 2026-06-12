@@ -9,15 +9,15 @@ As of 2026-06-03, local launch-readiness validation passes, but production still
 Current direct-upload package:
 
 ```text
-deploy-artifacts/showcase-designs-dist-20260603-103616.zip
-SHA256 5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92
+deploy-artifacts/showcase-designs-dist-20260606-142403.zip
+SHA256 1547ccd54ae80b06d49337bb6cce4758b86f730fd0bae13d606a428ecf84cd15
 ```
 
 Latest production check:
 
 ```text
 SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs
-Result: 54 production checks failed
+Result: 54 production checks failed on 2026-06-03 at 20:30 UTC
 Reason: showcase-designs.com still serves the old Vercel build; /world and /thanks return 404.
 ```
 
@@ -144,6 +144,20 @@ CLS:
 Result: PASS / FAIL
 ```
 
+## Search And Local SEO Gate
+
+Use `SEARCH_LOCAL_SEO_LAUNCH_SETUP.md` only after production serves the current v3 build.
+
+Pass criteria:
+
+- Google Search Console property is verified.
+- `https://showcase-designs.com/sitemap.xml` is submitted.
+- URL Inspection is run for `https://showcase-designs.com/`.
+- Bing Webmaster Tools is verified or scheduled with an owner-approved reason.
+- GA4 or equivalent analytics is installed with an approved Measurement ID.
+- Showcase Designs Google Business Profile eligibility is decided.
+- If GBP is eligible, phone, website, service areas, photos/screenshots, and review ask process are recorded.
+
 ## Operator Approval
 
 Before launch, confirm:
@@ -174,4 +188,5 @@ Launch only when all of these pass:
 - Production smoke test
 - Outbound link gate
 - Core Web Vitals gate
+- Search and local SEO gate
 - Operator approval

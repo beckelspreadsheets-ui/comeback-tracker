@@ -101,12 +101,20 @@ export const createBillboardText = (text, color = CITY3D_PALETTE.light, options 
   return sprite;
 };
 
+const freezeStaticTransform = (object) => {
+  object.updateMatrix();
+  object.matrixAutoUpdate = false;
+  return object;
+};
+
 const addBox = (group, size, position, material, options = {}) => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), material);
   mesh.position.set(position.x || 0, position.y || 0, position.z || 0);
   mesh.rotation.set(position.rx || 0, position.ry || 0, position.rz || 0);
   mesh.castShadow = options.castShadow ?? true;
   mesh.receiveShadow = options.receiveShadow ?? true;
+  if (options.kind) mesh.userData.kind = options.kind;
+  freezeStaticTransform(mesh);
   group.add(mesh);
   return mesh;
 };
@@ -120,6 +128,8 @@ const addCylinder = (group, radius, depth, position, material, options = {}) => 
   mesh.rotation.set(position.rx || 0, position.ry || 0, position.rz || 0);
   mesh.castShadow = options.castShadow ?? true;
   mesh.receiveShadow = options.receiveShadow ?? true;
+  if (options.kind) mesh.userData.kind = options.kind;
+  freezeStaticTransform(mesh);
   group.add(mesh);
   return mesh;
 };
@@ -184,7 +194,25 @@ export const createKartModelV2 = ({
   seat.position.set(0, 4.0, -2.35);
   seat.rotation.x = -0.15;
   seat.castShadow = true;
+  freezeStaticTransform(seat);
   group.add(seat);
+
+  addBox(
+    group,
+    { x: 2.36, y: 0.72, z: 0.18 },
+    { y: 2.72, z: -5.48, rx: -0.08 },
+    trimMat,
+    { kind: 'player-rear-number-plate' }
+  );
+  [-0.42, 0.42].forEach((x) => {
+    addBox(
+      group,
+      { x: 0.24, y: 0.56, z: 0.22 },
+      { x: x * 0.78, y: 2.74, z: -5.34, rx: -0.08 },
+      darkMat,
+      { kind: 'player-rear-number-stroke' }
+    );
+  });
 
   const driver = new THREE.Group();
   const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 1.12, 1.65, 7), suitMat);
@@ -194,6 +222,9 @@ export const createKartModelV2 = ({
   const visor = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.34, 0.18), darkMat);
   visor.position.set(0, 5.82, 0.98);
   driver.position.z = -1.85;
+  freezeStaticTransform(torso);
+  freezeStaticTransform(helmet);
+  freezeStaticTransform(visor);
   driver.add(torso, helmet, visor);
   group.add(driver);
 
@@ -277,6 +308,37 @@ export const createKartModelV2 = ({
     flame.rotation.x = -Math.PI / 2;
     boostFlame.add(flame);
   });
+  const boostBurstMaterial = new THREE.MeshBasicMaterial({
+    color: CITY3D_PALETTE.cyan,
+    opacity: 0.72,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  [-1, 1].forEach((side) => {
+    const streak = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.28, 8.8), boostBurstMaterial.clone());
+    streak.userData.kind = 'boost-burst-streak';
+    streak.userData.side = side;
+    streak.position.set(side * 5.7, 2.22, 0.6);
+    streak.rotation.y = side * 0.1;
+    streak.renderOrder = 40;
+    boostFlame.add(streak);
+  });
+  const boostHalo = new THREE.Mesh(
+    new THREE.TorusGeometry(3.2, 0.18, 6, 28),
+    new THREE.MeshBasicMaterial({
+      color: CITY3D_PALETTE.roadLine,
+      opacity: 0.82,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    })
+  );
+  boostHalo.userData.kind = 'boost-burst-halo';
+  boostHalo.position.set(0, 2.18, 1.1);
+  boostHalo.rotation.x = Math.PI / 2;
+  boostHalo.renderOrder = 41;
+  boostFlame.add(boostHalo);
   group.add(boostFlame);
 
   const driftSparkGroup = new THREE.Group();
@@ -293,8 +355,82 @@ export const createKartModelV2 = ({
       spark.userData.phase = index * 0.62;
       driftSparkGroup.add(spark);
     }
+    const trail = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.08, 7.4),
+      new THREE.MeshBasicMaterial({
+        color: CITY3D_PALETTE.cyan,
+        opacity: 0.46,
+        transparent: true,
+        depthWrite: false,
+      })
+    );
+    trail.position.set(side * 2.65, 0.22, -6.35);
+    trail.visible = false;
+    trail.userData.kind = 'drift-trail-visual';
+    trail.userData.side = side;
+    trail.userData.trailIndex = side > 0 ? 1 : 0;
+    driftSparkGroup.add(trail);
   });
   group.add(driftSparkGroup);
+
+  const shieldGroup = new THREE.Group();
+  shieldGroup.visible = false;
+  shieldGroup.name = 'player-shield-visual';
+  shieldGroup.userData.kind = 'shield-visual';
+  const shieldShell = new THREE.Mesh(
+    new THREE.SphereGeometry(7.35, 16, 8),
+    new THREE.MeshBasicMaterial({
+      color: CITY3D_PALETTE.cyan,
+      opacity: 0.36,
+      transparent: true,
+      depthWrite: false,
+    })
+  );
+  shieldShell.scale.set(1.12, 0.64, 1.26);
+  shieldShell.position.y = 3.08;
+  const shieldRing = new THREE.Mesh(
+    new THREE.TorusGeometry(7.15, 0.32, 6, 24),
+    new THREE.MeshBasicMaterial({
+      color: CITY3D_PALETTE.light,
+      opacity: 0.88,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    })
+  );
+  shieldRing.position.y = 3.0;
+  const shieldBurstGroup = new THREE.Group();
+  shieldBurstGroup.userData.kind = 'shield-burst-crown';
+  shieldBurstGroup.position.y = 8.95;
+  const shieldBurstMaterial = new THREE.MeshBasicMaterial({
+    color: CITY3D_PALETTE.roadLine,
+    opacity: 0.96,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const shieldBurstHalo = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.24, 6, 28), shieldBurstMaterial.clone());
+  shieldBurstHalo.userData.kind = 'shield-burst-halo';
+  shieldBurstHalo.rotation.x = Math.PI / 2;
+  shieldBurstGroup.add(shieldBurstHalo);
+  [-2.8, -1.4, 0, 1.4, 2.8].forEach((x, index) => {
+    const burst = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(index === 2 ? 1.08 : 0.76, 0),
+      shieldBurstMaterial.clone()
+    );
+    burst.userData.kind = 'shield-burst-spark';
+    burst.position.set(x, 0.42 + (index === 2 ? 0.58 : 0), -0.35 + Math.abs(x) * 0.16);
+    shieldBurstGroup.add(burst);
+  });
+  [-0.72, 0.72].forEach((rotationZ) => {
+    const flash = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.42, 0.22), shieldBurstMaterial.clone());
+    flash.userData.kind = 'shield-burst-flash';
+    flash.position.set(0, 0.92, -0.2);
+    flash.rotation.z = rotationZ;
+    shieldBurstGroup.add(flash);
+  });
+  shieldGroup.add(shieldShell, shieldRing, shieldBurstGroup);
+  group.add(shieldGroup);
 
   const setMode = (mode) => {
     wheelGroup.visible = mode !== 'plane';
@@ -303,7 +439,7 @@ export const createKartModelV2 = ({
     yellowMat.emissiveIntensity = mode === 'kart' ? 0.2 : 0.45;
   };
 
-  return { boostFlame, driftSparkGroup, group, setMode, wheels };
+  return { boostFlame, driftSparkGroup, group, setMode, shieldGroup, wheels };
 };
 
 const addDistrictIcon = (group, district, y, z, size = 1) => {

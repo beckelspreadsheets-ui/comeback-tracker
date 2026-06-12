@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3.5in" height="2in" viewBox="0 0 1050 600" role="img" aria-labelledby="title desc">
+  <title id="title">Showcase Designs business card front</title>
+  <desc id="desc">Front card offer for Showcase Designs.</desc>
+  <rect width="1050" height="600" fill="#0a0a0a"/>
+  <rect x="28" y="28" width="994" height="544" fill="none" stroke="rgba(201,162,39,0.32)" stroke-width="2"/>
+  <text x="72" y="96" fill="#f5f0e8" font-family="Manrope, Arial, sans-serif" font-size="25" font-weight="800" letter-spacing="8">SHOWCASE <tspan fill="#c9a227">DESIGNS</tspan></text>
+  <line x1="72" y1="146" x2="182" y2="146" stroke="#c9a227" stroke-width="2"/>
+  <text x="72" y="196" fill="#c9a227" font-family="Manrope, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="5">WEBSITES + LOCAL SEO</text>
+  <text x="72" y="312" fill="#f5f0e8" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-weight="700">Free Website</text>
+  <text x="72" y="390" fill="#c9a227" font-family="Georgia, 'Times New Roman', serif" font-size="72" font-style="italic" font-weight="700">Review</text>
+  <text x="72" y="470" fill="#8a8578" font-family="Manrope, Arial, sans-serif" font-size="27">For local businesses ready for better leads.</text>
+  <text x="72" y="522" fill="#f5f0e8" font-family="Manrope, Arial, sans-serif" font-size="24" font-weight="700">Built by Andrew Ferguson</text>
+</svg>

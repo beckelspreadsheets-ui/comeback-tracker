@@ -8,8 +8,8 @@ export const RACE_RENDERER_OPTIONS = Object.freeze({
 });
 
 export const RACE_RENDER_SCALE = Object.freeze({
-  desktop: 0.92,
-  mobile: 0.86,
+  desktop: 0.58,
+  mobile: 0.6,
 });
 
 export const RACE_FOG_NEAR = 210;
@@ -57,7 +57,7 @@ export const fitRaceRendererToCanvas = ({
   raceViewport.mobile = raceViewport.width / raceViewport.height < 0.74;
   const rawDpr = Math.min(windowRef?.devicePixelRatio || 1, 2);
   const renderScale = raceViewport.mobile ? RACE_RENDER_SCALE.mobile : RACE_RENDER_SCALE.desktop;
-  const dpr = Math.max(0.75, rawDpr * renderScale);
+  const dpr = Math.max(0.355, rawDpr * renderScale);
   const width = Math.max(1, Math.floor(rect.width * dpr));
   const height = Math.max(1, Math.floor(rect.height * dpr));
   const previousDpr = raceViewport.dpr;

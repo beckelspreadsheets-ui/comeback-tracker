@@ -91,13 +91,13 @@
 
   <h2>Resume Here</h2>
   <ul>
-    <li><strong>Status:</strong> [doing] Pricing research, trust-safe copy, acquisition system, conversion tracking hooks, current direct-upload package, and local verification are complete. Production launch is not complete.</li>
-    <li><strong>Current phase:</strong> Launch readiness, waiting on operator-controlled production inputs and live-domain deployment.</li>
-    <li><strong>Completed work:</strong> Created goal ledger; checked pricing against current web design/local SEO market sources; updated `index.html` and `v3-preview.html` pricing/trust copy; added launch acquisition runbook; added blank 100-lead tracker; wired static conversion tracking and UTM form capture; generated the current direct-upload artifact; updated Cloudflare, production audit, operator input, and launch checklist docs; ran local verification gates.</li>
-    <li><strong>Active work:</strong> Keep public prices at `$149/mo + $1,500 setup` and `$399/mo + $3,500 setup`, with Growth scope capped and no ranking guarantees.</li>
-    <li><strong>Blockers:</strong> Cloudflare production project/branch, live production deploy, GA4/equivalent measurement ID, Google Search Console/Bing setup, final public contact details, approved client/project list, approved business-card QR target, compliant mailing address/PO box, and real production verification are not proven locally.</li>
-    <li><strong>Next exact action:</strong> Get Andrew's Cloudflare production project/branch and launch approval, deploy `deploy-artifacts/showcase-designs-dist-20260603-103616.zip` or rebuild `dist/` through the approved Cloudflare workflow, then run `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs`.</li>
-    <li><strong>Last validation:</strong> `node verify-world.mjs` passed 367 checks; `node verify-photo-match.mjs` passed 10 checks; `node verify-outbound.mjs` passed 9 checks; current artifact SHA256 is `5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92`; production `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs` failed 54 checks because the live domain still serves stale Vercel content.</li>
+    <li><strong>Status:</strong> [preview-ready] Owner-answer pass is implemented, locally verified, packaged, deployed to the approved preview project, and verified on stable plus immutable preview URLs. Production launch is not complete.</li>
+    <li><strong>Current phase:</strong> Await Andrew preview review before any production cutover.</li>
+    <li><strong>Completed work:</strong> Created goal ledger; checked pricing against current web design/local SEO market sources; updated `index.html` and `v3-preview.html` pricing/trust copy; replaced unverified numeric stat claims with trust-safe founder-led positioning; added launch acquisition runbook; added free website review delivery template; added client onboarding requirements for reviews/photos/proof/GBP expectations; added search/local launch setup for Search Console, Bing, analytics, GBP, reviews, and photos; added live PRD audit; added blank 100-lead tracker; generated review-only business-card SVG assets with QR tracking; wired static conversion tracking and UTM form capture; added visible email/phone fallback below the public contact form; generated the current direct-upload artifact; deployed the latest preview-readiness build to the approved preview project; updated Cloudflare, production audit, operator input, outbound, completion, and launch checklist docs; ran local, preview, outbound, and production-style preview verification gates.</li>
+    <li><strong>Active work:</strong> Public pricing is `$150/mo` Starter, `$400/mo` Growth, or one-time ownership from `$1,500`; Growth scope is capped and no rankings are guaranteed.</li>
+    <li><strong>Blockers:</strong> Production approval is not granted; Cloudflare project list previously showed the authenticated account has `showcase-designs-preview` but no visible Pages project/domain for `showcase-designs.com`; exact production workflow/approval, live production deploy, GA4 Measurement ID or approved alternate analytics, Google Search Console/Bing/GBP setup evidence, compliant mailing address/PO box for scaled outreach, and real production verification are not proven locally.</li>
+    <li><strong>Next exact action:</strong> Andrew reviews `https://showcase-designs-preview.pages.dev` or immutable preview `https://7b30c5f6.showcase-designs-preview.pages.dev`. If approved for production later, confirm the exact Cloudflare production workflow, deploy `deploy-artifacts/showcase-designs-dist-20260606-142403.zip` or rebuild `dist/`, then run `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs`.</li>
+    <li><strong>Last validation:</strong> `node verify-world.mjs` passed 403 checks; `node verify-outbound.mjs` passed 9 checks, including FormSubmit endpoint response for `andrew@showcase-designs.com`; `SHOWCASE_ORIGIN=https://showcase-designs-preview.pages.dev node verify-production.mjs` and `SHOWCASE_ORIGIN=https://7b30c5f6.showcase-designs-preview.pages.dev node verify-production.mjs` each passed 63 production checks; both preview URLs passed 10 photo-match checks; direct source checks confirmed Local Businesses title, `$150/mo`, `$400/mo`, and `andrew@showcase-designs.com`; current artifact SHA256 is `1547ccd54ae80b06d49337bb6cce4758b86f730fd0bae13d606a428ecf84cd15`.</li>
     <li><strong>Protected paths:</strong> Existing parent-level dirty work under `/Users/andrewferguson/Downloads/comeback-tracker` is user-owned and was not modified.</li>
   </ul>
 
@@ -107,10 +107,11 @@
 
   <h2>Decisions Outside The Spec</h2>
   <ul>
-    <li>[done] Treat `SHOWCASE_V3_LIVE_PRD.md` pricing as a hypothesis until checked against current sources. The checked decision is to keep the prices but tighten the ongoing Growth promise.</li>
+    <li>[done] Treat `SHOWCASE_V3_LIVE_PRD.md` pricing as a hypothesis until checked against current sources. The checked 2026-06-06 decision is `$150/mo`, `$400/mo`, or one-time ownership from `$1,500`; do not use monthly-plus-setup framing.</li>
     <li>[done] Replace the public `Google Analytics` bullet with `Analytics-ready event tracking` because the source has `dataLayer`/`gtag` hooks but no confirmed GA4 measurement ID.</li>
     <li>[done] Keep first-preview messaging only as a target after scope/content are clear, not as a blanket turnaround guarantee.</li>
     <li>[done] Add public copy that local SEO results require reviews, fresh photos, accurate business details, and proof from the client. This directly addresses weak or hard-to-update client-side local signals.</li>
+    <li>[done] Add a pre-proposal onboarding checklist so Growth/local SEO scope is not sold when the client will not provide Google Business Profile access, reviews, photos, accurate services/service areas, and proof.</li>
     <li>[done] Use a manual low-volume outreach cadence only. Automated bulk cold email remains out of scope until compliance, mailing address, deliverability, and tracking are intentionally set up.</li>
     <li>[done] Track conversion events through `dataLayer` and optional `gtag` hooks rather than installing a guessed GA4 measurement ID.</li>
   </ul>
@@ -122,36 +123,58 @@
     <li>[done] Custom no longer says `Dedicated project manager`; it now says direct founder-led project management.</li>
     <li>[done] Starter domain language now says hosting is included and domain setup is handled, avoiding confusion about domain ownership and renewals.</li>
     <li>[done] Pricing section now states rankings are not guaranteed and that local SEO depends on client participation.</li>
-    <li>[done] The checked market suggests Growth can move to `$499/mo` after 3-5 stronger proof clients, but that public change needs Andrew's approval because the PRD currently says keep `$399/mo`.</li>
+    <li>[done] The checked market suggests Growth can move above `$400/mo` after 3-5 stronger proof clients, but Andrew's owner answer is to decide later.</li>
     <li>[done] `LAUNCH_ACQUISITION_SYSTEM.md` now documents the free-review output, UTM conventions, business-card QR URL, scripts, compliance rules, and operator confirmations before scaling.</li>
     <li>[done] `OUTREACH_TRACKER.csv` now provides a blank 100-lead CRM template with status, contact, website, GBP, issue, UTM, follow-up, and outcome columns.</li>
     <li>[done] The contact form now captures UTM fields, landing page, and referrer in hidden fields for FormSubmit leads.</li>
+    <li>[done] The contact form now shows a fallback path: email `andrew@showcase-designs.com` or call `(520) 367-2769` if the form fails.</li>
     <li>[done] Static conversion hooks now track form submits, phone clicks, email clicks, pricing CTA clicks, business-card QR visits, live project clicks, and `/world` entry.</li>
-    <li>[done] Current direct-upload artifact is `deploy-artifacts/showcase-designs-dist-20260603-103616.zip` with SHA256 `5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92`.</li>
+    <li>[done] Current direct-upload artifact is `deploy-artifacts/showcase-designs-dist-20260606-142403.zip` with SHA256 `1547ccd54ae80b06d49337bb6cce4758b86f730fd0bae13d606a428ecf84cd15`.</li>
     <li>[done] Production audit now records the 2026-06-03 live-domain state: old Vercel page, old Autopilot/Pro/Elite pricing, unapproved `40+`, `100%`, and `48hr` claims, and missing `/world` plus `/thanks` routes.</li>
+    <li>[done] `business-card/` now contains review-only SVG assets: front, back, and standalone QR. The assets use `https://showcase-designs.com/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch` and remain blocked from printing until production passes.</li>
+    <li>[done] `generate-business-card-assets.mjs` regenerates the SVG assets from the approved QR URL and contact copy.</li>
+    <li>[done] `CLIENT_ONBOARDING_REQUIREMENTS.md` now defines quote guardrails, first-30-day responsibilities, a sales script, and a client signoff checklist for no ranking guarantees, reviews, fresh photos, accurate business details, service areas, and proof of completed work.</li>
+    <li>[done] `FREE_WEBSITE_REVIEW_TEMPLATE.md` now gives Andrew a consistent free-review delivery format: 3 trust/conversion issues, 3 local SEO opportunities, 1 recommended next step, package fit only if asked, no ranking guarantees, and tracker update fields.</li>
+    <li>[done] Pricing evidence was corrected after live re-check: Circle Monkeys now shows `$299/mo`, replacing the older `$199/mo` note from the PRD snapshot.</li>
+    <li>[done] `SEARCH_LOCAL_SEO_LAUNCH_SETUP.md` now converts the PRD's Search Console, Bing, analytics, Google Business Profile, photo, review, and first-30-day monitoring gates into a post-deploy worksheet.</li>
+    <li>[done] `OUTBOUND_LINK_AUDIT.md` and `COMPLETION_AUDIT.md` now reflect the current FormSubmit pass instead of the old HTTP 522 failure.</li>
+    <li>[done] The public stat band no longer uses unverified numeric claims such as `15 Projects Built`, `48hr First Preview`, or `Same-Day Replies`; it now uses `Founder-Led`, `Scope-First`, `Direct`, and `Client-Owned` positioning.</li>
+    <li>[done] `SHOWCASE_V3_LIVE_PRD_AUDIT.md` now maps each live PRD launch requirement to local evidence, production blockers, and owner-input gates.</li>
+    <li>[done] Latest preview-readiness `dist/` build was deployed to `showcase-designs-preview` on branch `main`; Cloudflare returned immutable preview `https://7b30c5f6.showcase-designs-preview.pages.dev`.</li>
+    <li>[done] `npx wrangler pages project list` succeeded and showed no visible Pages project/domain entry for `showcase-designs.com`; production cutover still requires Andrew's exact workflow and approval.</li>
   </ul>
 
   <h2>Validation</h2>
   <ul>
-    <li>[done] `node verify-world.mjs` passed 367 checks.</li>
+    <li>[done] `node verify-world.mjs` passed 400 checks.</li>
     <li>[done] `node verify-photo-match.mjs` passed 10 checks.</li>
     <li>[done] `node verify-outbound.mjs` passed 9 checks.</li>
-    <li>[done] `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs` failed 54 checks, proving production is still stale and not launch-ready.</li>
+    <li>[done] `SHOWCASE_ORIGIN=https://showcase-designs-preview.pages.dev node verify-production.mjs` passed 63 checks.</li>
+    <li>[done] `SHOWCASE_ORIGIN=https://7b30c5f6.showcase-designs-preview.pages.dev node verify-production.mjs` passed 63 checks.</li>
+    <li>[done] `SHOWCASE_ORIGIN=https://showcase-designs-preview.pages.dev node verify-photo-match.mjs` passed 10 checks.</li>
+    <li>[done] `SHOWCASE_ORIGIN=https://7b30c5f6.showcase-designs-preview.pages.dev node verify-photo-match.mjs` passed 10 checks.</li>
+    <li>[done] `SHOWCASE_ORIGIN=https://showcase-designs.com node verify-production.mjs` failed 54 checks at 2026-06-03T20:30:30Z, proving production is still stale and not launch-ready.</li>
     <li>[done] CSV validation confirmed `OUTREACH_TRACKER.csv` has 32 columns and 100 lead rows.</li>
     <li>[done] `node prepare-cloudflare-deploy.mjs` prepared `dist/` with 21 files.</li>
     <li>[done] `SHOWCASE_ORIGIN=http://127.0.0.1:8876 node verify-production.mjs` passed 63 checks against the generated `dist/` package.</li>
     <li>[done] In-app browser desktop pricing check at 1280x720 found 3 pricing cards, visible pricing note, and no horizontal overflow.</li>
     <li>[done] In-app browser mobile pricing check at 390x844 found visible pricing note, 3 pricing cards, and no horizontal overflow.</li>
-    <li>[blocked] Live `https://showcase-designs.com` verification was not run because production deployment and Cloudflare project details are operator-controlled.</li>
+    <li>[done] Headless Chrome rendered `business-card/showcase-business-card-front.svg` and `business-card/showcase-business-card-back.svg` to 1050x600 PNG screenshots without errors.</li>
+    <li>[blocked] Live `https://showcase-designs.com` verification was run and cannot pass until the operator-controlled production deployment serves this workspace build.</li>
   </ul>
 
   <h2>Evidence</h2>
   <ul>
     <li><a href="evidence/pricing-research-20260603.md">Pricing research check, 2026-06-03</a></li>
     <li><a href="../../../../LAUNCH_ACQUISITION_SYSTEM.md">Launch acquisition system runbook</a></li>
+    <li><a href="../../../../FREE_WEBSITE_REVIEW_TEMPLATE.md">Free website review delivery template</a></li>
+    <li><a href="../../../../CLIENT_ONBOARDING_REQUIREMENTS.md">Client onboarding requirements and local SEO signal checklist</a></li>
+    <li><a href="../../../../SEARCH_LOCAL_SEO_LAUNCH_SETUP.md">Search and local SEO launch setup worksheet</a></li>
+    <li><a href="../../../../SHOWCASE_V3_LIVE_PRD_AUDIT.md">Live PRD requirement audit</a></li>
     <li><a href="../../../../OUTREACH_TRACKER.csv">Blank 100-lead outreach tracker</a></li>
     <li><a href="../../../../CLOUDFLARE_DEPLOY.md">Cloudflare deploy handoff with current artifact hash</a></li>
     <li><a href="../../../../PRODUCTION_AUDIT.md">Production audit with 2026-06-03 live-domain failure evidence</a></li>
+    <li><a href="../../../../business-card/README.md">Business card review assets and print hold</a></li>
   </ul>
 
   <h2>Next Goal Candidates</h2>
@@ -218,6 +241,195 @@
         phase: "production-check",
         actor: "agent",
         summary: "Checked showcase-designs.com directly: production verifier failed 54 checks because the domain still serves the stale Vercel site with old pricing/claims and missing /world plus /thanks routes."
+      },
+      {
+        ts: "2026-06-03T17:59:52Z",
+        status: "done",
+        phase: "business-card-assets",
+        actor: "agent",
+        summary: "Generated review-only business-card front/back SVGs and standalone QR SVG using the business_card offline v3_launch UTM URL, plus a generator script and print-hold README."
+      },
+      {
+        ts: "2026-06-03T17:59:52Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Validated business-card assets: verify-world passed 378 checks, verify-outbound passed 9 checks, and headless Chrome rendered front/back SVGs to 1050x600 PNGs."
+      },
+      {
+        ts: "2026-06-03T18:13:34Z",
+        status: "done",
+        phase: "client-onboarding",
+        actor: "agent",
+        summary: "Added CLIENT_ONBOARDING_REQUIREMENTS.md and wired it into the launch runbook, README, and verifier so Growth/local SEO quotes require clear review, photo, GBP, service-area, proof, and no-ranking-guarantee expectations."
+      },
+      {
+        ts: "2026-06-03T18:13:34Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Validated onboarding and pricing evidence pass: verify-world passed 382 checks, verify-outbound passed 9 checks, and production verification still failed 54 checks because showcase-designs.com serves stale Vercel content."
+      },
+      {
+        ts: "2026-06-03T18:23:57Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Reran verify-world after verifier-covered doc updates; 382 checks passed again."
+      },
+      {
+        ts: "2026-06-03T18:37:42Z",
+        status: "done",
+        phase: "search-local-setup",
+        actor: "agent",
+        summary: "Added SEARCH_LOCAL_SEO_LAUNCH_SETUP.md with post-deploy Search Console, Bing, analytics, GBP eligibility, photos, review ask, and first-30-day monitoring evidence fields."
+      },
+      {
+        ts: "2026-06-03T18:37:42Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Validated search/local setup and outbound audit cleanup: verify-world passed 388 checks, verify-outbound passed 9 checks including FormSubmit HTTP 200, and production still failed 54 checks on showcase-designs.com."
+      },
+      {
+        ts: "2026-06-03T18:47:26Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Reran verify-world after ledger-adjacent production audit updates; 388 checks passed again."
+      },
+      {
+        ts: "2026-06-03T18:58:12Z",
+        status: "done",
+        phase: "free-review-template",
+        actor: "agent",
+        summary: "Added FREE_WEBSITE_REVIEW_TEMPLATE.md and wired it into the launch runbook, README, and verifier so the launch offer can be delivered consistently."
+      },
+      {
+        ts: "2026-06-03T18:58:12Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Validated the free-review template pass: verify-world passed 392 checks, verify-outbound passed 9 checks including FormSubmit, and production still failed 54 checks on showcase-designs.com."
+      },
+      {
+        ts: "2026-06-03T19:07:29Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Reran verify-world after production-audit timestamp updates; 392 checks passed again."
+      },
+      {
+        ts: "2026-06-03T19:17:36Z",
+        status: "done",
+        phase: "contact-fallback",
+        actor: "agent",
+        summary: "Added a visible email/phone fallback below the public contact form so visitors still have a direct path if FormSubmit fails."
+      },
+      {
+        ts: "2026-06-03T19:17:36Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Validated the contact fallback pass: verify-world passed 393 checks, verify-outbound passed 9 checks including FormSubmit, and production still failed 54 checks on showcase-designs.com."
+      },
+      {
+        ts: "2026-06-03T19:27:33Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Reran verify-world after verifier-covered audit timestamp updates; 393 checks passed again."
+      },
+      {
+        ts: "2026-06-03T19:45:16Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Reran the full local gate after current-artifact verification was added; verify-world passed 394 checks, including the Cloudflare zip matching current index.html and the desktop/portrait world scene pixel checks."
+      },
+      {
+        ts: "2026-06-03T19:45:16Z",
+        status: "validated",
+        phase: "production-check",
+        actor: "agent",
+        summary: "Rechecked showcase-designs.com directly; verify-production still failed 54 checks because production serves stale Vercel content, missing /world, /thanks, favicon, Open Graph image, world runtime assets, and security headers."
+      },
+      {
+        ts: "2026-06-03T20:08:09Z",
+        status: "done",
+        phase: "trust-copy",
+        actor: "agent",
+        summary: "Removed unverified numeric stat claims from the public v3 page and preview, replacing them with founder-led, scope-first, direct, and client-owned positioning."
+      },
+      {
+        ts: "2026-06-03T20:08:09Z",
+        status: "done",
+        phase: "launch-audit",
+        actor: "agent",
+        summary: "Added SHOWCASE_V3_LIVE_PRD_AUDIT.md and an exact PRD open-question checklist in OPERATOR_INPUTS.md so launch readiness is traceable requirement by requirement."
+      },
+      {
+        ts: "2026-06-03T20:08:09Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Generated deploy-artifacts/showcase-designs-dist-20260603-195814.zip with SHA256 7c220ea592d03de57f511607dbf410f67145770c162f60a76fdfcfe3b0b212ed; verify-world passed 398 checks and verify-outbound passed 9 checks."
+      },
+      {
+        ts: "2026-06-03T20:08:09Z",
+        status: "validated",
+        phase: "production-check",
+        actor: "agent",
+        summary: "Rechecked showcase-designs.com directly after the local package update; verify-production still failed 54 checks because the live domain has not been cut over to this workspace build."
+      },
+      {
+        ts: "2026-06-03T20:30:30Z",
+        status: "done",
+        phase: "preview-deploy",
+        actor: "agent",
+        summary: "Deployed the current launch-readiness dist package to the approved Cloudflare Pages preview project showcase-designs-preview on branch main; Cloudflare returned https://0aa55ac2.showcase-designs-preview.pages.dev."
+      },
+      {
+        ts: "2026-06-03T20:30:30Z",
+        status: "validated",
+        phase: "preview-validation",
+        actor: "agent",
+        summary: "Verified stable and immutable preview URLs: verify-production passed 63 checks on both, verify-photo-match passed 10 checks on both, and direct source checks showed trust-safe stat copy served."
+      },
+      {
+        ts: "2026-06-03T20:30:30Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Reran verify-world after preview-evidence doc updates; 400 checks passed. verify-outbound passed 9 checks."
+      },
+      {
+        ts: "2026-06-03T20:30:30Z",
+        status: "blocked",
+        phase: "production-cutover",
+        actor: "agent",
+        summary: "Production remains blocked: showcase-designs.com still fails 54 verifier checks, and Cloudflare project listing shows no visible Pages project/domain for showcase-designs.com in the authenticated account. Exact production workflow and owner approval are required."
+      },
+      {
+        ts: "2026-06-06T14:35:50Z",
+        status: "done",
+        phase: "owner-answer-pass",
+        actor: "agent",
+        summary: "Applied Andrew's preview-first answers: corrected pricing to $150/mo, $400/mo, or ownership from $1,500; switched public email to andrew@showcase-designs.com; broadened positioning and business-card targeting to local businesses; kept no-ranking-guarantee local SEO guardrails."
+      },
+      {
+        ts: "2026-06-06T14:35:50Z",
+        status: "validated",
+        phase: "local-validation",
+        actor: "agent",
+        summary: "Generated deploy-artifacts/showcase-designs-dist-20260606-142403.zip with SHA256 1547ccd54ae80b06d49337bb6cce4758b86f730fd0bae13d606a428ecf84cd15; node verify-world.mjs passed 403 checks and node verify-outbound.mjs passed 9 checks."
+      },
+      {
+        ts: "2026-06-06T14:35:50Z",
+        status: "validated",
+        phase: "preview-deploy",
+        actor: "agent",
+        summary: "Deployed the verified dist package to Cloudflare Pages project showcase-designs-preview on branch main; Cloudflare returned https://7b30c5f6.showcase-designs-preview.pages.dev. Stable and immutable preview production verifiers each passed 63 checks, photo-match verifiers each passed 10 checks, and direct source checks confirmed the corrected pricing/contact copy."
       }
     ];
 

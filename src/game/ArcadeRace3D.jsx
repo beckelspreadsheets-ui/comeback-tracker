@@ -97,6 +97,7 @@ export const ArcadeRace3D = ({
   const localCommandRef = useRef(null);
   const touchRef = useRef(defaultRaceTouchControls());
   const [audioMuted, setAudioMutedState] = useState(false);
+  const [hideMinimap, setHideMinimap] = useState(false);
   const [telemetry, setTelemetry] = useState({
     altitude: 0,
     audioMuted: false,
@@ -174,6 +175,7 @@ export const ArcadeRace3D = ({
       ]);
       if (disposed) return;
       const playtest = playtestRuntime.createRacePlaytestState(window.location.search);
+      setHideMinimap(Boolean(playtest.hideMinimap));
       const {
         compiled,
         defaultVehicle,
@@ -381,6 +383,7 @@ export const ArcadeRace3D = ({
       });
       const raceTelemetry = createRaceTelemetryRuntime({
         camera,
+        boostPadMeshes: zipperMeshes,
         brakingTelemetryActiveFor: playtestRuntime.isVisualBrakingScenario,
         collisionCircles,
         compiled,
@@ -632,6 +635,7 @@ export const ArcadeRace3D = ({
         canvas.removeEventListener('webglcontextrestored', handleWebGLContextRestored);
         raceAudio.dispose();
         telemetryDiagnostics.reset({ trackKey: compiled.key });
+        setHideMinimap(false);
         raceMotion.dispose();
         renderer.dispose();
         if (raceAudioRef.current === raceAudio) raceAudioRef.current = null;
@@ -661,6 +665,7 @@ export const ArcadeRace3D = ({
     <RaceHud
       audioMuted={audioMuted}
       canvasRef={canvasRef}
+      hideMinimap={hideMinimap}
       onAudioMutedChange={setAudioMuted}
       onCommand={queueLocalCommand}
       onPress={press}

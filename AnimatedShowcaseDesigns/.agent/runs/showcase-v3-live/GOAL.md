@@ -22,10 +22,19 @@ When creating or updating the matching `/goal`, include this ledger pointer in t
 - [done] Pricing, trust, and founder-led copy changes from `SHOWCASE_V3_LIVE_PRD.md` are applied to `index.html` and matching preview surfaces.
 - [done] Local validation gates are run, including `node verify-world.mjs`, `node verify-outbound.mjs`, `node prepare-cloudflare-deploy.mjs`, and a local dry run of `node verify-production.mjs` against the generated package where possible.
 - [done] Client acquisition system artifacts are created for the launch cycle, including UTM conventions, business-card funnel, outreach scripts, compliance rules, manual follow-up cadence, and a 100-lead tracker template.
+- [done] Free Website Review delivery template is documented so the launch offer can be fulfilled consistently with 3 trust/conversion issues, 3 local SEO opportunities, 1 next step, and no quote unless requested.
+- [done] Client onboarding requirements are documented so Growth/local SEO quotes require clear expectations around reviews, photos, Google Business Profile access, accurate business details, service areas, proof, and no ranking guarantees.
+- [done] Search/local launch setup is documented for Search Console, Bing, analytics, Google Business Profile eligibility, photos, reviews, and first-30-day monitoring.
+- [done] Business-card review assets are generated with the approved QR tracking URL and explicit print hold.
 - [done] Static site conversion tracking hooks cover form submit, phone click, email click, pricing CTA click, business-card QR visit, live project click, and `/world` entry through `dataLayer` / `gtag` when available.
+- [done] Public contact form now includes a visible fallback contact path for email and phone if the form fails.
+- [done] Public trust stats avoid unverified numeric project count, turnaround, satisfaction, or response-time claims.
+- [done] `SHOWCASE_V3_LIVE_PRD_AUDIT.md` maps the live PRD requirements to current evidence, production blockers, and owner-input gates.
 - [done] Current Cloudflare direct-upload package is generated, hash-recorded, and cross-referenced in launch docs.
+- [done] Latest launch-readiness build is deployed to the approved preview project and verified on stable plus immutable preview URLs.
+- [done] 2026-06-06 owner-answer pass is deployed to the approved preview project as `https://7b30c5f6.showcase-designs-preview.pages.dev` and verified on stable plus immutable preview URLs.
 - [blocked] GA4 or equivalent production analytics install remains operator-controlled until a measurement ID or analytics account details are provided.
-- [blocked] Production-only and operator-only launch gates are recorded explicitly instead of guessed, including Cloudflare project details, approved client/project list, public contact details, Search Console, business-card QR, and real production deploy verification.
+- [blocked] Production-only and operator-only launch gates are recorded explicitly instead of guessed, including Cloudflare project details, approved client/project list, public contact details, Search Console/Bing/analytics/GBP evidence, business-card QR, and real production deploy verification.
 - [done] Keep `implementation-notes.html` current with status, decisions, tradeoffs, changes, validation, blockers, and next exact action.
 - [done] Link large proof artifacts from `evidence/` when they are too bulky for the HTML notes.
 

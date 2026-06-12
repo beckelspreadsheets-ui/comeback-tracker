@@ -19,7 +19,8 @@ export const createRacePlaytestRuntime = () => ({
   applyVisualKartScenarioFrame,
   createRacePlaytestState,
   isVisualBrakingScenario: (playtest) => visualKartScenarioMatches(playtest, 'braking'),
-  isVisualRivalCluster: (playtest) => visualKartScenarioMatches(playtest, 'rival-cluster'),
+  isVisualRivalCluster: (playtest) =>
+    visualKartScenarioMatches(playtest, 'rival-cluster') || visualKartScenarioMatches(playtest, 'turn-approach'),
   manualVisualScenarioIsActive,
   manualVisualScenarioIsPrimed,
   primeVisualKartScenario,

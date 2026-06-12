@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 260">
+  <defs>
+    <linearGradient id="body" x1="42" y1="26" x2="178" y2="218" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6b58"/>
+      <stop offset="0.46" stop-color="#ef4334"/>
+      <stop offset="1" stop-color="#9f1f25"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="66" y1="55" x2="154" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1b5664"/>
+      <stop offset="1" stop-color="#0a2531"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-25%" width="160%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="9" flood-color="#02060d" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+  <ellipse cx="110" cy="226" rx="86" ry="22" fill="#02060d" opacity=".38"/>
+  <g filter="url(#shadow)">
+    <rect x="18" y="84" width="38" height="116" rx="19" fill="#070b13"/>
+    <rect x="164" y="84" width="38" height="116" rx="19" fill="#070b13"/>
+    <rect x="30" y="98" width="24" height="84" rx="12" fill="#182332"/>
+    <rect x="166" y="98" width="24" height="84" rx="12" fill="#182332"/>
+    <path d="M48 84c7-38 24-60 62-60s55 22 62 60l12 92c3 25-13 44-38 44H74c-25 0-41-19-38-44L48 84z" fill="url(#body)"/>
+    <path d="M60 71c9-28 25-42 50-42s41 14 50 42H60z" fill="#ff8a72" opacity=".9"/>
+    <path d="M101 29h18v184h-18z" fill="#f7fbff"/>
+    <path d="M64 96c5-31 20-47 46-47s41 16 46 47l-17 48H81L64 96z" fill="url(#glass)"/>
+    <path d="M79 111h62v45c0 15-11 26-26 26H105c-15 0-26-11-26-26v-45z" fill="#123747"/>
+    <rect x="58" y="159" width="36" height="26" rx="8" fill="#40e7ff"/>
+    <rect x="126" y="159" width="36" height="26" rx="8" fill="#40e7ff"/>
+    <rect x="40" y="148" width="28" height="46" rx="12" fill="#c9322e"/>
+    <rect x="152" y="148" width="28" height="46" rx="12" fill="#c9322e"/>
+    <circle cx="74" cy="215" r="15" fill="#ffb13f"/>
+    <circle cx="146" cy="215" r="15" fill="#ffb13f"/>
+    <rect x="84" y="206" width="52" height="24" rx="12" fill="#07101a"/>
+    <path d="M56 87c11-40 32-60 54-60s43 20 54 60" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="5"/>
+  </g>
+</svg>

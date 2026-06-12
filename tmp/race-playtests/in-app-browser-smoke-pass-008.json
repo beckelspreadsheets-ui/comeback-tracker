@@ -1,0 +1,12 @@
+{
+  "canvas": {
+    "cssHeight": 720,
+    "cssWidth": 1280,
+    "pixelHeight": 280,
+    "pixelWidth": 499
+  },
+  "renderer": "canvas-present",
+  "telemetry": null,
+  "title": "Comeback \u00b7 181 \u2192 238",
+  "url": "http://127.0.0.1:5243/#race"
+}

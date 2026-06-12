@@ -27,7 +27,12 @@ export const createVehicleModel = ({
 
   const chassis = color || palette.redKart;
   const glow = accent || palette.cyan;
-  const bodyMat = createBasicMaterial(chassis, { emissive: chassis, emissiveIntensity: 0.1 });
+  const bodyMat = createBasicMaterial(chassis, {
+    emissive: chassis,
+    emissiveIntensity: 0.08,
+    metalness: 0.1,
+    roughness: 0.32,
+  });
   const accentMat = createBasicMaterial(glow, { emissive: glow, emissiveIntensity: 0.48 });
   const darkMat = createBasicMaterial(palette.tire);
   const cockpitMat = createBasicMaterial('#202837');
@@ -74,8 +79,8 @@ export const createVehicleModel = ({
   const driver = new THREE.Group();
   const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 1.12, 1.65, 7), suitMat);
   torso.position.y = 4.15;
-  const helmet = new THREE.Mesh(new THREE.DodecahedronGeometry(1.14, 0), accentMat);
-  helmet.position.y = 5.38;
+  const helmet = new THREE.Mesh(new THREE.DodecahedronGeometry(1.42, 0), accentMat);
+  helmet.position.y = 5.52;
   driver.position.z = -1.9;
   driver.add(torso, helmet);
   group.add(driver);
@@ -145,13 +150,44 @@ export const createVehicleModel = ({
   boostFlame.visible = false;
   [-1.1, 1.1].forEach((x) => {
     const flame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.55, 3.2, 6),
+      new THREE.ConeGeometry(0.82, 4.6, 7),
       createBasicMaterial('#ffd34f', { emissive: '#ffd34f', emissiveIntensity: 0.9 })
     );
-    flame.position.set(x, 1.2, -5.2);
+    flame.position.set(x, 1.2, -5.8);
     flame.rotation.x = -Math.PI / 2;
     boostFlame.add(flame);
   });
+  const boostBurstMaterial = new THREE.MeshBasicMaterial({
+    color: '#46d9ef',
+    opacity: 0.72,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  [-1, 1].forEach((side) => {
+    const streak = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.28, 8.8), boostBurstMaterial.clone());
+    streak.userData.kind = 'boost-burst-streak';
+    streak.userData.side = side;
+    streak.position.set(side * 5.7, 2.22, 0.6);
+    streak.rotation.y = side * 0.1;
+    streak.renderOrder = 40;
+    boostFlame.add(streak);
+  });
+  const boostHalo = new THREE.Mesh(
+    new THREE.TorusGeometry(3.2, 0.18, 6, 28),
+    new THREE.MeshBasicMaterial({
+      color: '#ffd34f',
+      opacity: 0.82,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    })
+  );
+  boostHalo.userData.kind = 'boost-burst-halo';
+  boostHalo.position.set(0, 2.18, 1.1);
+  boostHalo.rotation.x = Math.PI / 2;
+  boostHalo.renderOrder = 41;
+  boostFlame.add(boostHalo);
   group.add(boostFlame);
 
   const driftSparkGroup = new THREE.Group();
@@ -162,14 +198,85 @@ export const createVehicleModel = ({
   });
   [-1, 1].forEach((side) => {
     for (let index = 0; index < 4; index += 1) {
-      const spark = new THREE.Mesh(new THREE.DodecahedronGeometry(0.34 + index * 0.08, 0), driftSparkMaterial.clone());
-      spark.position.set(side * (3.85 + index * 0.22), 0.92 + index * 0.2, -3.6 - index * 0.78);
+      const spark = new THREE.Mesh(new THREE.DodecahedronGeometry(0.42 + index * 0.07, 0), driftSparkMaterial.clone());
+      spark.position.set(side * (3.95 + index * 0.24), 0.82 + index * 0.17, -3.2 - index * 0.68);
       spark.userData.side = side;
       spark.userData.phase = index * 0.62;
       driftSparkGroup.add(spark);
     }
+    const trail = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.08, 7.4),
+      new THREE.MeshBasicMaterial({
+        color: '#49d9ff',
+        opacity: 0.46,
+        transparent: true,
+        depthWrite: false,
+      })
+    );
+    trail.position.set(side * 2.65, 0.22, -6.35);
+    trail.visible = false;
+    trail.userData.kind = 'drift-trail-visual';
+    trail.userData.side = side;
+    trail.userData.trailIndex = side > 0 ? 1 : 0;
+    driftSparkGroup.add(trail);
   });
   group.add(driftSparkGroup);
+
+  const shieldGroup = new THREE.Group();
+  shieldGroup.visible = false;
+  shieldGroup.name = 'player-shield-visual';
+  shieldGroup.userData.kind = 'shield-visual';
+  const shieldMaterial = new THREE.MeshBasicMaterial({
+    color: '#49d9ff',
+    opacity: 0.36,
+    transparent: true,
+    depthWrite: false,
+  });
+  const shieldShell = new THREE.Mesh(new THREE.SphereGeometry(7.35, 16, 8), shieldMaterial);
+  shieldShell.scale.set(1.12, 0.64, 1.26);
+  shieldShell.position.y = 2.95;
+  const shieldRingMaterial = new THREE.MeshBasicMaterial({
+    color: '#f7fbff',
+    opacity: 0.88,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const shieldRing = new THREE.Mesh(new THREE.TorusGeometry(7.15, 0.32, 6, 24), shieldRingMaterial);
+  shieldRing.position.y = 2.88;
+  shieldRing.userData.kind = 'shield-ring';
+  const shieldBurstGroup = new THREE.Group();
+  shieldBurstGroup.userData.kind = 'shield-burst-crown';
+  shieldBurstGroup.position.y = 8.85;
+  const shieldBurstMaterial = new THREE.MeshBasicMaterial({
+    color: '#ffd34f',
+    opacity: 0.96,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const shieldBurstHalo = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.24, 6, 28), shieldBurstMaterial.clone());
+  shieldBurstHalo.userData.kind = 'shield-burst-halo';
+  shieldBurstHalo.rotation.x = Math.PI / 2;
+  shieldBurstGroup.add(shieldBurstHalo);
+  [-2.8, -1.4, 0, 1.4, 2.8].forEach((x, index) => {
+    const burst = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(index === 2 ? 1.08 : 0.76, 0),
+      shieldBurstMaterial.clone()
+    );
+    burst.userData.kind = 'shield-burst-spark';
+    burst.position.set(x, 0.42 + (index === 2 ? 0.58 : 0), -0.35 + Math.abs(x) * 0.16);
+    shieldBurstGroup.add(burst);
+  });
+  [-0.72, 0.72].forEach((rotationZ) => {
+    const flash = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.42, 0.22), shieldBurstMaterial.clone());
+    flash.userData.kind = 'shield-burst-flash';
+    flash.position.set(0, 0.92, -0.2);
+    flash.rotation.z = rotationZ;
+    shieldBurstGroup.add(flash);
+  });
+  shieldGroup.add(shieldShell, shieldRing, shieldBurstGroup);
+  group.add(shieldGroup);
 
   const setMode = (mode) => {
     wheelGroup.visible = mode !== 'plane';
@@ -177,5 +284,5 @@ export const createVehicleModel = ({
     planeGroup.visible = mode === 'plane';
   };
 
-  return { boostFlame, driftSparkGroup, group, setMode, wheels };
+  return { boostFlame, driftSparkGroup, group, setMode, shieldGroup, wheels };
 };

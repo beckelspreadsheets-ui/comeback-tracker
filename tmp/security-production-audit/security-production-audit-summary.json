@@ -5,7 +5,7 @@
     "/Users/andrewferguson/Downloads/comeback-tracker/tmp/security-production-audit/security-production-audit-summary.json"
   ],
   "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/security-production-audit",
-  "capturedAt": "2026-06-03T16:14:55.479Z",
+  "capturedAt": "2026-06-07T23:38:15.104Z",
   "fullAudit": {
     "dependencyCounts": {
       "prod": 48,
@@ -29,7 +29,7 @@
   "gateStatus": "full-dependency-audit-pass",
   "git": {
     "branch": "codex/release-v1-comebacktracker-kart-racer",
-    "commit": "937bd25",
+    "commit": "614d5a6",
     "dirty": true
   },
   "note": "Production and full dependency audits pass with zero reported vulnerabilities.",

@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-06-06T00:28:34.835Z",
+  "status": "rendered-screenshot-timeout",
+  "canvasCount": 6,
+  "canvasSize": {
+    "height": 720,
+    "width": 1280
+  },
+  "hasHud": false,
+  "renderer": null,
+  "routeUrl": "http://127.0.0.1:5222/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=visual-kart&raceVisualScenario=turn-approach&raceIndex=in-app-browser-pass-028",
+  "screenshotStatus": "timed-out-in-in-app-browser-surface",
+  "telemetry": null,
+  "title": "Comeback · 181 → 238"
+}

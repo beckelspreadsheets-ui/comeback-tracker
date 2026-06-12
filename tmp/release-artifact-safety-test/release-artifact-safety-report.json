@@ -1,30 +1,42 @@
 {
   "artifactDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/release-artifact-safety-test",
-  "capturedAt": "2026-06-03T16:14:35.994Z",
+  "capturedAt": "2026-06-07T23:38:10.037Z",
   "distDir": "/Users/andrewferguson/Downloads/comeback-tracker/dist",
-  "fileCount": 40,
-  "gateStatus": "technical-artifacts-pass",
+  "fileCount": 42,
+  "gateStatus": "technical-artifacts-pass-policy-needed",
   "git": {
     "branch": "codex/release-v1-comebacktracker-kart-racer",
-    "commit": "937bd25a6813927ce2e54ad4582ca39a9937157f",
+    "commit": "614d5a63753b5d8a03e7c090c57cbe7068897921",
     "dirty": true
   },
-  "note": "This proves local built dist artifact safety checks only. Standard production dist has no scanned source maps, sourceMappingURL references, standalone playtest/debug files, scanned secret-name leaks, runtime playtest automation strings, diagnostic telemetry globals, or visual review route strings.",
+  "note": "This proves local built dist artifact safety checks only. Release owner still must decide production source-map/debug/test-hook policy, diagnostic telemetry privacy posture, and whether visual review route strings are acceptable in shipped chunks.",
   "diagnosticTelemetry": {
     "matches": [],
     "status": "not-detected"
   },
   "playtestRuntimeHooks": {
-    "matches": [],
-    "status": "not-detected"
+    "matches": [
+      {
+        "count": 1,
+        "label": "visual kart route or mode string",
+        "path": "assets/RaceScreen-BPCmQHmy.js"
+      }
+    ],
+    "status": "present-needs-release-owner-policy"
   },
   "runtimePlaytestAutomation": {
     "matches": [],
     "status": "not-detected"
   },
   "visualReviewRouteStrings": {
-    "matches": [],
-    "status": "not-detected"
+    "matches": [
+      {
+        "count": 1,
+        "label": "visual kart route or mode string",
+        "path": "assets/RaceScreen-BPCmQHmy.js"
+      }
+    ],
+    "status": "present-needs-release-owner-scope-policy"
   },
   "checks": {
     "noSecretNameOrKnownSecretValueLeaks": true,

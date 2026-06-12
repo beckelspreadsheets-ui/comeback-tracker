@@ -1,10 +1,12 @@
 # Showcase Designs Launch Acquisition System
 
-Status: launch-ready template; do not scale outreach until the operator confirmations below are complete.
+Status: preview-ready template; do not scale outreach until the operator confirmations below are complete.
 
 ## Primary Offer
 
 Free Website Review
+
+Use `FREE_WEBSITE_REVIEW_TEMPLATE.md` to deliver the review.
 
 The review output is:
 
@@ -48,6 +50,8 @@ Required weekly metrics:
 - Replies.
 - Free reviews requested.
 - Free reviews delivered.
+- Review-to-call conversion.
+- Review-to-proposal conversion.
 - Calls booked.
 - Proposals sent.
 - Clients closed.
@@ -55,16 +59,24 @@ Required weekly metrics:
 
 ## Business Card Funnel
 
+Review assets live in `business-card/`:
+
+- `showcase-business-card-front.svg`
+- `showcase-business-card-back.svg`
+- `showcase-business-card-qr.svg`
+
+These are review-ready only. Do not send them to print until the production gates below pass.
+
 Front:
 
 - Showcase Designs
-- Websites + Local SEO for Contractors
+- Websites + Local SEO for Local Businesses
 - Free Website Review
 
 Back:
 
 - QR code to `https://showcase-designs.com/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch`
-- `hello@showcase-designs.com`
+- `andrew@showcase-designs.com`
 - `(520) 367-2769` only if confirmed
 - Built by Andrew Ferguson
 
@@ -79,7 +91,7 @@ Do not print cards until:
 Handout targets:
 
 - Existing friendly business owners.
-- Contractor supply houses where appropriate.
+- Local business counters, community boards, and in-person referral moments where appropriate.
 - Local networking events.
 - Friends/family who can refer business owners.
 - Current client handoffs after completed wins.
@@ -88,11 +100,25 @@ Handout targets:
 
 Initial focus:
 
-- Contractors and home-service businesses.
-- Roofing, HVAC, plumbing, electrical, landscaping, fencing, concrete, cleaning, pest control, pool service, auto detail, vending, fitness/training.
+- Local businesses and service companies.
+- Roofing, HVAC, plumbing, electrical, landscaping, fencing, concrete, cleaning, pest control, pool service, auto detail, vending, fitness/training, real estate, restaurants, and local shops.
 - Businesses with outdated websites, weak mobile layouts, no clear service-area pages, poor forms, no visible reviews, or inconsistent Google Business Profile details.
 
-Do not start broad with every industry. The first launch cycle should stay specific.
+Start broad enough for local business referrals, but stay selective: prioritize businesses with visible website, trust, mobile, form, review, photo, or Google Business Profile gaps.
+
+## Client Signal Guardrail
+
+Use `CLIENT_ONBOARDING_REQUIREMENTS.md` before quoting Growth or any local SEO-heavy scope.
+
+Do not sell Growth as an ongoing SEO promise if the business will not participate in:
+
+- Google Business Profile access and accurate services/service areas.
+- Real customer review requests.
+- Fresh photos and completed-work proof.
+- Public claim approval.
+- Lead tracking and follow-up ownership.
+
+Be direct in sales calls: Showcase Designs can improve the website, conversion structure, technical SEO, GBP alignment, and trust presentation. Rankings are not guaranteed, and local SEO results depend on client-side signals including reviews, photos, accurate business details, proof, relevance, distance, and competition.
 
 ## Manual Outreach Cadence
 
@@ -117,9 +143,11 @@ Hi [Name],
 
 I am Andrew from Showcase Designs in Tucson. I was looking at [Business Name] and noticed one thing that may be costing calls: [specific issue].
 
-I build websites and local SEO systems for contractors and home-service businesses. I am offering a free website review while launching the new Showcase Designs site.
+I build websites and local SEO systems for local businesses. I am offering a free website review while launching the new Showcase Designs site.
 
 If useful, I can send over 3 quick fixes I would make to improve trust, mobile clarity, and local search visibility.
+
+I do not guarantee rankings. Local SEO depends on the website foundation plus client-side signals like reviews, fresh photos, accurate business details, service-area proof, and real completed-work proof.
 
 Either way, I hope this helps.
 
@@ -134,7 +162,7 @@ To opt out of future notes from me, reply "no thanks."
 Referral text:
 
 ```text
-I just launched the new Showcase Designs site. I am looking for a few more contractor/home-service businesses to do free website reviews for. If you know someone whose site looks outdated or is not getting calls, can you send them this link?
+I just launched the new Showcase Designs site. I am looking for a few more local businesses to do free website reviews for. If you know someone whose site looks outdated or is not getting calls, can you send them this link?
 
 https://showcase-designs.com/?utm_source=referral&utm_medium=text&utm_campaign=v3_launch
 ```
@@ -162,5 +190,5 @@ I build websites and local SEO systems for local service businesses. I am offeri
 - Final public phone number.
 - Final public email address.
 - Compliant physical mailing address or PO box for commercial outreach.
-- Whether business cards target only contractors/home services or all local businesses.
-- Whether private founding-client slots are approved and how many.
+- Business cards target all local businesses.
+- Private founding-client flexibility is approved only for friends or people Andrew meets personally; do not publish it as a public discount.

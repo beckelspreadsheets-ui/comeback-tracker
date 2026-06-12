@@ -27,9 +27,15 @@ export const updateRaceFrameStats = ({
   const elapsedMs = elapsed * 1000;
   stats.fps = lerp(stats.fps || 0, 1 / Math.max(dt, 0.001), fpsLerp);
   stats.actualFps = lerp(stats.actualFps ?? stats.fps ?? 0, 1 / Math.max(elapsed, 0.001), fpsLerp);
+  stats.frameCount = (stats.frameCount || 0) + 1;
   stats.frameDtMs = dt * 1000;
   stats.frameElapsedMs = elapsedMs;
+  stats.frameElapsedTotalMs = (stats.frameElapsedTotalMs || 0) + elapsedMs;
   if (elapsed > 1 / 45) stats.frameBudgetMissCount = (stats.frameBudgetMissCount || 0) + 1;
+  stats.deliveredFps =
+    stats.frameElapsedTotalMs > 0 ? stats.frameCount / (stats.frameElapsedTotalMs / 1000) : stats.actualFps;
+  stats.frameBudgetMissRatio =
+    stats.frameCount > 0 ? (stats.frameBudgetMissCount || 0) / stats.frameCount : 0;
   return stats.fps;
 };
 

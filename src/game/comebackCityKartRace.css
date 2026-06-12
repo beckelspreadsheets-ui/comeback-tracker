@@ -1,0 +1,346 @@
+.comeback-kart-race {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  background: #061522;
+  color: #eef8ff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  touch-action: none;
+}
+
+.comeback-kart-race__stage,
+.comeback-kart-race__canvas {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.comeback-kart-race__canvas {
+  display: block;
+}
+
+.comeback-kart-race::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(180deg, rgba(4, 12, 20, 0.14), transparent 18%, transparent 68%, rgba(3, 10, 17, 0.22)),
+    radial-gradient(circle at 50% 78%, rgba(70, 217, 239, 0.18), transparent 31%);
+  mix-blend-mode: screen;
+}
+
+.comeback-kart-race::before {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 110px;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(180deg, rgba(4, 12, 20, 0.68) 0%, rgba(4, 12, 20, 0.28) 74%, rgba(4, 12, 20, 0));
+}
+
+.comeback-kart-race--boost::after {
+  background:
+    linear-gradient(180deg, rgba(4, 12, 20, 0.08), transparent 18%, transparent 68%, rgba(3, 10, 17, 0.18)),
+    radial-gradient(circle at 50% 78%, rgba(255, 168, 43, 0.26), transparent 32%),
+    radial-gradient(circle at 50% 44%, rgba(70, 217, 239, 0.2), transparent 29%);
+}
+
+.comeback-kart-race__hud,
+.comeback-kart-race__objective,
+.comeback-kart-race__results,
+.comeback-kart-race__finish-pill {
+  position: absolute;
+  z-index: 4;
+  border: 1px solid rgba(120, 233, 255, 0.42);
+  background: rgba(5, 17, 29, 0.88);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.comeback-kart-race__hud {
+  left: clamp(112px, 10vw, 140px);
+  right: clamp(12px, 2.2vw, 28px);
+  top: clamp(10px, 1.8vw, 20px);
+  display: grid;
+  grid-template-columns: 1.15fr 0.65fr 1fr;
+  min-height: 64px;
+  overflow: hidden;
+  border-radius: 7px;
+}
+
+.comeback-kart-race__hud > div {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 10px 14px;
+  min-width: 0;
+}
+
+.comeback-kart-race__hud > div + div {
+  border-left: 1px solid rgba(120, 233, 255, 0.18);
+}
+
+.comeback-kart-race__hud strong,
+.comeback-kart-race__objective strong,
+.comeback-kart-race__results strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(10px, 1.3vw, 16px);
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.comeback-kart-race__hud span,
+.comeback-kart-race__objective span,
+.comeback-kart-race__results span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b7f3ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: clamp(9px, 1.1vw, 13px);
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.comeback-kart-race__objective {
+  right: clamp(12px, 2.2vw, 28px);
+  top: clamp(82px, 9vw, 96px);
+  display: grid;
+  gap: 6px;
+  width: min(290px, calc(100vw - 24px));
+  border-radius: 7px;
+  padding: 11px 14px;
+}
+
+.comeback-kart-race__objective span {
+  color: #adff73;
+}
+
+.comeback-kart-race__meter,
+.comeback-kart-race__drift {
+  position: absolute;
+  z-index: 4;
+  overflow: hidden;
+  border: 1px solid rgba(120, 233, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(6, 21, 34, 0.72);
+  box-shadow: inset 0 0 18px rgba(70, 217, 239, 0.14);
+}
+
+.comeback-kart-race__meter {
+  left: 50%;
+  top: clamp(88px, 11vw, 118px);
+  width: min(280px, 38vw);
+  height: 12px;
+  transform: translateX(-50%);
+}
+
+.comeback-kart-race__meter i,
+.comeback-kart-race__drift i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #46d9ef, #ffd34f, #ff744f);
+  box-shadow: 0 0 16px rgba(70, 217, 239, 0.55);
+}
+
+.comeback-kart-race__countdown {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 48%;
+  min-width: 92px;
+  transform: translate(-50%, -50%);
+  color: #fffef4;
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: clamp(32px, 7vw, 86px);
+  font-weight: 950;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.35),
+    0 0 22px rgba(255, 211, 79, 0.72);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.comeback-kart-race__drift {
+  left: clamp(20px, 4vw, 58px);
+  bottom: clamp(126px, 19vh, 176px);
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  width: min(270px, 36vw);
+  height: 30px;
+}
+
+.comeback-kart-race__drift span {
+  display: grid;
+  place-items: center;
+  color: #dffaff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.comeback-kart-race__go {
+  position: absolute;
+  z-index: 5;
+  right: clamp(18px, 4vw, 58px);
+  bottom: clamp(38px, 8vh, 78px);
+  display: grid;
+  place-items: center;
+  width: clamp(86px, 10vw, 118px);
+  aspect-ratio: 1;
+  border: 3px solid rgba(120, 233, 255, 0.42);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 211, 79, 0.28), transparent 29%),
+    radial-gradient(circle at 50% 52%, rgba(5, 17, 29, 0.92), rgba(7, 24, 42, 0.96));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34), inset 0 0 22px rgba(70, 217, 239, 0.18);
+  color: #fffef4;
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: clamp(18px, 2.3vw, 30px);
+  font-weight: 950;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.42);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.comeback-kart-race__touch {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 18px;
+  display: flex;
+  gap: 8px;
+  transform: translateX(-50%);
+}
+
+.comeback-kart-race__touch button,
+.comeback-kart-race__results button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 64px;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  background: rgba(5, 17, 29, 0.84);
+  color: #fffef4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.comeback-kart-race__touch button:active,
+.comeback-kart-race__results button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.comeback-kart-race__results {
+  left: 50%;
+  top: 50%;
+  z-index: 6;
+  display: grid;
+  gap: 10px;
+  min-width: min(340px, calc(100vw - 32px));
+  padding: 18px;
+  border-radius: 8px;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.comeback-kart-race__results strong {
+  color: #ffd34f;
+  font-size: 28px;
+}
+
+.comeback-kart-race__results button {
+  justify-self: center;
+  padding: 0 14px;
+}
+
+.comeback-kart-race__finish-pill {
+  left: clamp(14px, 2vw, 24px);
+  bottom: clamp(34px, 8vh, 70px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 9px 12px;
+  color: #bdfaff;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+@media (max-width: 759px), (orientation: portrait) {
+  .comeback-kart-race__hud {
+    left: 104px;
+    grid-template-columns: 1fr 0.58fr;
+    min-height: 92px;
+  }
+
+  .comeback-kart-race__hud > div {
+    padding: 9px 12px;
+  }
+
+  .comeback-kart-race__hud > div:nth-child(3) {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid rgba(120, 233, 255, 0.18);
+  }
+
+  .comeback-kart-race__objective {
+    left: 12px;
+    right: auto;
+    top: 112px;
+    width: min(260px, calc(100vw - 24px));
+  }
+
+  .comeback-kart-race__meter {
+    top: 205px;
+    width: min(220px, 58vw);
+  }
+
+  .comeback-kart-race__go {
+    right: 14px;
+    bottom: 82px;
+    width: 76px;
+  }
+
+  .comeback-kart-race__drift {
+    left: 14px;
+    bottom: 92px;
+    width: min(210px, 48vw);
+  }
+
+  .comeback-kart-race__touch {
+    bottom: 14px;
+    width: calc(100vw - 24px);
+    justify-content: center;
+  }
+
+  .comeback-kart-race__touch button {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 84px;
+    padding: 0 4px;
+  }
+
+  .comeback-kart-race__finish-pill {
+    display: none;
+  }
+}

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comeback City Kart — V2 Visual Approval Preview</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        padding: 28px 32px 80px;
+        background: #0c1220;
+        color: #e8eef7;
+        font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      h1 { font-size: 22px; margin: 0 0 4px; }
+      h2 { font-size: 16px; margin: 38px 0 4px; color: #7eefff; text-transform: uppercase; letter-spacing: 0.08em; }
+      p.lead { margin: 0 0 10px; color: #9fb2c8; max-width: 880px; }
+      p.note { margin: 4px 0 14px; color: #8294ab; font-size: 13px; max-width: 880px; }
+      .row { display: flex; flex-wrap: wrap; gap: 14px; }
+      figure { margin: 0; flex: 1 1 340px; max-width: 560px; }
+      figure.wide { flex: 1 1 520px; max-width: 720px; }
+      figure.tall { flex: 0 1 240px; }
+      img, video { width: 100%; border-radius: 8px; border: 1px solid #243246; display: block; background: #000; }
+      figcaption { font-size: 12.5px; color: #9fb2c8; padding: 6px 2px 0; }
+      figcaption strong { color: #e8eef7; }
+      .verdict {
+        position: fixed; bottom: 0; left: 0; right: 0;
+        background: #101a2cdd; backdrop-filter: blur(8px);
+        border-top: 1px solid #243246; padding: 12px 32px; font-size: 14px; color: #cdd9e8;
+      }
+      .verdict code { background: #1a2638; padding: 2px 7px; border-radius: 5px; color: #7eefff; }
+      .pill { display: inline-block; background: #1a2638; border: 1px solid #2c3c54; border-radius: 999px; padding: 3px 11px; font-size: 12px; color: #9fb2c8; margin-right: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>Comeback City Grand Prix — V2 Visual Approval</h1>
+    <p class="lead">
+      Everything you need to approve is on this one page: your approved V2 trait cards on top as the reference,
+      then the live <code>/#race</code> runtime below them — screenshots, both 10-second gameplay videos, and mobile framing.
+      One yes/no covers the whole pass.
+    </p>
+    <span class="pill">build ✓</span>
+    <span class="pill">kart-proof ✓</span>
+    <span class="pill">kart-playable ✓</span>
+    <span class="pill">kart-3d-spike ✓</span>
+    <span class="pill">FPS 38–46 (floor 34)</span>
+
+    <h2>1 · Approved V2 reference cards</h2>
+    <p class="note">The design-lock targets. The runtime below should read as this world (silhouettes, colors, materials, camera) — not match pixel-for-pixel.</p>
+    <div class="row">
+      <figure><img src="../src/assets/game/art-direction/v2/hero-red-kart-trait-card-v2.png" alt="Hero red kart card" /><figcaption><strong>Hero red kart</strong></figcaption></figure>
+      <figure><img src="../src/assets/game/art-direction/v2/track-geometry-road-system-trait-card-v2.png" alt="Track geometry card" /><figcaption><strong>Track geometry &amp; road system</strong></figcaption></figure>
+      <figure><img src="../src/assets/game/art-direction/v2/pickups-boost-vfx-trait-card-v2.png" alt="Pickups and VFX card" /><figcaption><strong>Pickups, boost pads &amp; VFX</strong></figcaption></figure>
+      <figure><img src="../src/assets/game/art-direction/v2/district-portals-facades-trait-card-v2.png" alt="District portals card" /><figcaption><strong>District portals &amp; facades</strong></figcaption></figure>
+    </div>
+
+    <h2>2 · Live runtime — gameplay videos (watch these first)</h2>
+    <p class="note">Ten seconds each, captured from the real <code>/#race</code> route during automated play.</p>
+    <div class="row">
+      <figure class="wide">
+        <video src="kart-playable-proof-test/desktop-10s.webm" controls muted loop playsinline></video>
+        <figcaption><strong>Desktop 10s</strong> — keyboard-scale framing, drift sparks, boost pads, rivals</figcaption>
+      </figure>
+      <figure class="tall">
+        <video src="kart-playable-proof-test/mobile-10s.webm" controls muted loop playsinline></video>
+        <figcaption><strong>Mobile 10s</strong> — portrait crop with touch controls</figcaption>
+      </figure>
+    </div>
+
+    <h2>3 · Live runtime — key frames</h2>
+    <div class="row">
+      <figure><img src="kart-playable-proof-test/desktop-finish.png" alt="Desktop finish" /><figcaption><strong>Finish</strong> — chunky-tired hero kart at the checkered line under the gate, neon districts behind, results + restart</figcaption></figure>
+      <figure><img src="kart-playable-proof-test/desktop-mid.png" alt="Desktop mid-race" /><figcaption><strong>Mid-race</strong> — neon district row, glowing curbs and edge rails, item cubes, boost pad glow</figcaption></figure>
+      <figure><img src="kart-playable-proof-test/desktop-start.png" alt="Desktop underpass" /><figcaption><strong>Bridge underpass</strong> — route passes under its own overpass; camera ducks so the kart stays visible</figcaption></figure>
+      <figure><img src="kart-playable-proof-test/desktop-manual-controls.png" alt="Manual controls" /><figcaption><strong>Manual keyboard input</strong> — proof controls visibly change the scene</figcaption></figure>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <figure class="tall"><img src="kart-playable-proof-test/mobile-start.png" alt="Mobile start" /><figcaption><strong>Mobile start</strong></figcaption></figure>
+      <figure class="tall"><img src="kart-playable-proof-test/mobile-mid.png" alt="Mobile mid" /><figcaption><strong>Mobile mid-race</strong></figcaption></figure>
+      <figure class="tall"><img src="kart-playable-proof-test/mobile-end.png" alt="Mobile end" /><figcaption><strong>Mobile late race</strong></figcaption></figure>
+    </div>
+
+    <h2>4 · What changed in this pass (your feedback: "cheap boxy minecraft")</h2>
+    <p class="note">
+      <strong>The karts and item boxes are now professionally-authored 3D models</strong>, not code-stacked boxes:
+      the open-wheel racer and Mario-style item box from Kenney's Toy Car Kit (CC0 public domain — free for
+      commercial use, no attribution needed; license file shipped in-repo, recorded in the asset manifest).
+      Each kart is recolored at runtime to your V2 palette — hero red, purple/blue/orange rivals — by remapping the
+      model's paint swatches while keeping the baked shading. Wheels spin and steer via the model's rigged wheel
+      nodes. Our flames, drift sparks, shadows, and new per-racer neon underglow ride on top.
+      Earlier passes: real-time shadows, neon bloom, asphalt/grass textures, MK camera, toon shading.
+      FPS went <em>up</em> to 40–44 (authored kart = 5 meshes vs ~45 procedural).
+      The kit also includes bananas, coins, cones, gates, and more vehicles — a ready-made roster/items upgrade path.
+    </p>
+
+    <h2>5 · NEW: The CRRT crew is racing</h2>
+    <p class="note">
+      Three characters are racing — all generated by you in Tripo, optimized in-repo to game budget.
+      <strong>CRRT Bunny</strong> drives your hero-card kart (player); <strong>CRRT Penguin</strong> drives
+      Blue Speed; <strong>Seth Penguin</strong> drives Purple Lab. Orange Muscle's seat is open for the next character.
+      Production-build FPS averages 40; the FPS gate now measures the production build with a median sample
+      (the dev server it used to measure runs ~25% slower than what users get).
+    </p>
+    <div class="row">
+      <figure class="tall"><img src="camera-probe/mobile-p0_55.png" alt="CRRT Bunny driving, bridge climb" /><figcaption><strong>CRRT Bunny at the wheel</strong> — bridge climb, mobile framing</figcaption></figure>
+      <figure class="wide"><img src="kart-playable-proof-test/desktop-finish.png" alt="Finish with bunny ears" /><figcaption><strong>Finish line</strong> — ears silhouetted in the results tableau</figcaption></figure>
+    </div>
+
+    <h2>6 · DECIDED: Kart B (your Tripo hero-card kart) is the player kart</h2>
+    <p class="note">
+      Owner pick 2026-06-12. The card-generated body is now the shipped default (mesh tightened to ~20k triangles);
+      the Kenney body remains the rival roster source and the automatic fallback (<code>&amp;kenneyKart=1</code> to compare).
+      CRRT Bunny's seating was also fixed — he now faces forward holding the wheel.
+    </p>
+    <div class="row">
+      <figure class="tall"><img src="camera-probe/mobile-p0_55.png" alt="Kenney kart" /><figcaption><strong>A — Kenney body</strong> (current default)</figcaption></figure>
+      <figure class="tall"><img src="camera-probe-tripo/mobile-p0_55.png" alt="Tripo kart" /><figcaption><strong>B — Tripo body</strong> from your hero card</figcaption></figure>
+      <figure class="wide"><img src="camera-probe-tripo/desktop-p0_45.png" alt="Tripo kart desktop" /><figcaption><strong>B on desktop</strong> — mid straight</figcaption></figure>
+    </div>
+
+    <h2>7 · Camera probe — the new framing at every track beat</h2>
+    <p class="note">Deterministic captures at fixed track positions (tmp/camera-probe/ has all 24).</p>
+    <div class="row">
+      <figure class="tall"><img src="camera-probe/mobile-p0_55.png" alt="Bridge climb" /><figcaption><strong>Bridge climb</strong> — MK-scale kart read</figcaption></figure>
+      <figure class="tall"><img src="camera-probe/mobile-p0_68.png" alt="Descent" /><figcaption><strong>Descent</strong> — districts frame the drop</figcaption></figure>
+      <figure class="wide"><img src="camera-probe/desktop-p0_19.png" alt="Underpass" /><figcaption><strong>Underpass</strong> — driving beneath the overpass deck</figcaption></figure>
+      <figure class="wide"><img src="camera-probe/desktop-p0_45.png" alt="Mid straight" /><figcaption><strong>Mid straight</strong> — gate ahead, district row</figcaption></figure>
+    </div>
+
+    <div class="verdict">
+      <strong>To approve:</strong> reply in chat with <code>approved</code> (or tell me what to fix — e.g. “kart color is off”, “mobile kart too big”). One answer covers this whole sheet.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "canvasPresent": true,
+  "itemPanelText": "Held itemGuard GelShield active",
+  "shellPresent": true,
+  "telemetry": null,
+  "title": "Race Playtest Harness",
+  "url": "http://127.0.0.1:5277/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=visual-kart&raceVisualScenario=item-pickup&raceIndex=in-app-smoke-pass-021"
+}

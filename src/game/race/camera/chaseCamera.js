@@ -61,9 +61,13 @@ export const cameraCollisionCandidatesFor = ({
 export const resolveChaseCameraProfile = ({
   altitude = 0,
   boostActive = false,
+  driftActive = false,
+  finalStretchActive = false,
+  headingCameraActive = false,
   isPlane = false,
   mobile = false,
   mobilePreset,
+  offroadActive = false,
   reducedMotion = false,
   speed = 0,
   vehicle,
@@ -72,8 +76,15 @@ export const resolveChaseCameraProfile = ({
   const speedRatio = clamp(speed / maxSpeed, 0, 1);
   const chaseBaseDistance = mobile ? mobilePreset?.distance ?? vehicle?.cameraDistance ?? 0 : vehicle?.cameraDistance ?? 0;
   const chaseBaseHeight = mobile ? mobilePreset?.height ?? vehicle?.cameraHeight ?? 0 : vehicle?.cameraHeight ?? 0;
-  const mobileLookAhead = mobilePreset?.lookAhead ?? 52;
-  const mobileFov = mobilePreset?.fov ?? 66;
+  const driftFramingDistance = !mobile && !isPlane && driftActive ? 14 : 0;
+  const finalStretchFramingDistance = !mobile && !isPlane && finalStretchActive ? 24 : 0;
+  const headingFramingDistance =
+    !mobile && !isPlane && headingCameraActive ? (speedRatio >= 0.75 ? 3 : 8) : 0;
+  const offroadFramingDistance = !mobile && !isPlane && offroadActive ? 10 : 0;
+  const lowSpeedFramingDistance = mobile || isPlane || speedRatio >= 0.5 ? 0 : (0.5 - speedRatio) * 32;
+  const lowSpeedHeightLift = mobile || isPlane || speedRatio >= 0.5 ? 0 : (0.5 - speedRatio) * -4;
+  const mobileLookAhead = mobilePreset?.lookAhead ?? 42;
+  const mobileFov = mobilePreset?.fov ?? 64;
 
   if (isPlane) {
     return {
@@ -90,14 +101,21 @@ export const resolveChaseCameraProfile = ({
   }
 
   return {
-    chaseDistance: chaseBaseDistance + speedRatio * (mobile ? 0.8 : 12),
-    chaseHeight: chaseBaseHeight + speedRatio * (mobile ? 1.5 : 2.2) + altitude * 0.18,
+    chaseDistance:
+      chaseBaseDistance +
+      driftFramingDistance +
+      finalStretchFramingDistance +
+      headingFramingDistance +
+      offroadFramingDistance +
+      lowSpeedFramingDistance +
+      speedRatio * (mobile ? 1.2 : 4.5),
+    chaseHeight: chaseBaseHeight + lowSpeedHeightLift + speedRatio * (mobile ? 1.2 : 1.1) + altitude * 0.18,
     collisionLift: mobile ? 6.6 : 8.4,
-    fov: boostActive && !reducedMotion ? (mobile ? 68 : 70) : mobile ? mobileFov : 66,
-    lookAhead: (mobile ? mobileLookAhead + 4 : 52) + speedRatio * 18,
-    lookHeight: (mobile ? 4.9 : 6.6) + altitude * 0.12,
+    fov: boostActive && !reducedMotion ? (mobile ? 66 : 64) : mobile ? mobileFov : 62,
+    lookAhead: (mobile ? mobileLookAhead + 2 : 42) + speedRatio * 12,
+    lookHeight: (mobile ? 4.5 : 5.1) + altitude * 0.12,
     rollScale: 0.045,
-    sideOffsetScale: 1.8,
+    sideOffsetScale: 1.35,
     speedRatio,
   };
 };
@@ -163,9 +181,9 @@ export const applyCameraCollisionAvoidance = ({
   collisionLift = 8.4,
   collisionObjects = [],
   desired,
-  hitBackoff = 2.6,
-  liftPadding = 2.2,
-  maxResolveAttempts = 4,
+  hitBackoff = 3.4,
+  liftPadding = 2.8,
+  maxResolveAttempts = 6,
   minimumCameraDistance = 7.5,
   minimumHitDistance = 5.2,
   raycaster,
@@ -245,12 +263,29 @@ export const updateChaseCameraFrame = ({
   const right = new THREE.Vector3(forward.z, 0, -forward.x);
   const altitude = isPlane ? player.flightAltitude : player.jumpHeight;
   const playerSpeed = player.velocity.length();
+  const nearestRoad = !isPlane && compiled?.nearest ? compiled.nearest(player.position) : null;
+  const activeRoadWidth = nearestRoad?.roadWidth || compiled?.roadWidth || 0;
+  const offroadActive =
+    !isPlane &&
+    player.jumpHeight <= 0.05 &&
+    Number.isFinite(nearestRoad?.distance) &&
+    nearestRoad.distance > activeRoadWidth * 0.52;
+  const finalStretchActive =
+    !isPlane &&
+    Number.isFinite(player.lap) &&
+    Number.isFinite(compiled?.laps) &&
+    player.lap >= compiled.laps &&
+    (player.progress <= 0.06 || player.progress >= 0.92);
   const profile = resolveChaseCameraProfile({
     altitude,
     boostActive: player.boostTimer > 0,
+    driftActive: player.driftActive,
+    finalStretchActive,
+    headingCameraActive: useHeadingCamera,
     isPlane,
     mobile,
     mobilePreset,
+    offroadActive,
     reducedMotion,
     speed: playerSpeed,
     vehicle,

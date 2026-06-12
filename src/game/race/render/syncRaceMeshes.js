@@ -6,6 +6,7 @@ import {
 import {
   applyDriftSparkGroupFrame,
   applyBoostFlameGroupFrame,
+  applyShieldGroupFrame,
   boostPadPresentationFrameFor,
   droppedBananaPresentationFrameFor,
   flightGatePresentationFrameFor,
@@ -47,7 +48,8 @@ export const syncRaceMeshes = ({
   playerVehicle.group.rotation.y = playerFrame.rotationY;
   playerVehicle.group.rotation.z = playerFrame.rotationZ;
   playerVehicle.group.rotation.x = playerFrame.rotationX;
-  applyBoostFlameGroupFrame({ group: playerVehicle.boostFlame, visible: playerFrame.boostFlameVisible });
+  applyBoostFlameGroupFrame({ group: playerVehicle.boostFlame, now, visible: playerFrame.boostFlameVisible });
+  applyShieldGroupFrame({ group: playerVehicle.shieldGroup, now, shieldTimer: player.shieldTimer });
 
   const switchRingFrame = switchRingFrameFor({ dt, transformTimer: player.transformTimer });
   switchRing.visible = switchRingFrame.visible;
@@ -86,7 +88,7 @@ export const syncRaceMeshes = ({
     model.group.position.y = rivalFrame.y;
     model.group.rotation.y = rivalFrame.rotationY;
     model.group.rotation.z = rivalFrame.rotationZ;
-    applyBoostFlameGroupFrame({ group: model.boostFlame, visible: rivalFrame.boostFlameVisible });
+    applyBoostFlameGroupFrame({ group: model.boostFlame, now, visible: rivalFrame.boostFlameVisible });
     model.wheels.forEach((wheel) => {
       wheel.rotation.x += rivalFrame.wheelRotationXDelta;
     });
@@ -112,10 +114,29 @@ export const syncRaceMeshes = ({
     const mesh = zipperMeshes[index];
     const frame = boostPadPresentationFrameFor({ index, now, zipper });
     mesh.visible = frame.visible;
+    mesh.userData.visualActive = Boolean(frame.visualActive);
+    mesh.children.forEach((child) => {
+      if (child.userData?.kind === 'boost-pad-chevron') {
+        child.visible = frame.visualActive;
+        child.scale.y = frame.chevronScaleY;
+        child.updateMatrix?.();
+        if (child.material) {
+          child.material.transparent = true;
+          child.material.opacity = frame.chevronOpacity;
+        }
+      } else if (child.userData?.kind === 'boost-pad-center-stripe') {
+        child.visible = frame.visualActive;
+        if (child.material) {
+          child.material.transparent = true;
+          child.material.opacity = frame.centerStripeOpacity;
+        }
+      }
+    });
   });
 
   race.flightGates.forEach((gate, index) => {
     const mesh = flightGateMeshes[index];
+    if (!mesh) return;
     const active = player.vehicleMode === 'plane';
     const frame = flightGatePresentationFrameFor({ active, gate, index, now });
     mesh.group.visible = frame.groupVisible;

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comeback City V2 3D Kart Runtime - Implementation Notes</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #10151d;
+        --panel: #171f2a;
+        --panel-2: #1e2835;
+        --text: #f4f0e8;
+        --muted: #b6aa98;
+        --line: rgba(244, 240, 232, 0.14);
+        --gold: #ffd34f;
+        --cyan: #38d7ff;
+        --red: #ff5d4f;
+        --green: #7ee06b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 32px 0 48px;
+      }
+      h1, h2, h3 { line-height: 1.1; margin: 0; }
+      h1 { font-size: clamp(30px, 5vw, 56px); }
+      h2 { color: var(--gold); font-size: 19px; margin-bottom: 12px; text-transform: uppercase; }
+      h3 { color: var(--cyan); font-size: 15px; margin-top: 18px; }
+      p { margin: 8px 0 0; color: var(--muted); }
+      a { color: var(--cyan); }
+      code { color: var(--gold); }
+      ul { margin: 8px 0 0; padding-left: 20px; color: var(--muted); }
+      li { margin: 4px 0; }
+      section {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        margin-top: 16px;
+        padding: 18px;
+      }
+      .hero {
+        border-left: 5px solid var(--gold);
+        padding-left: 18px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+        font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.08em;
+        margin: 8px 8px 0 0;
+        padding: 7px 9px;
+        text-transform: uppercase;
+      }
+      .done { color: var(--green); }
+      .doing { color: var(--gold); }
+      .blocked, .incomplete { color: var(--red); }
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+      .event {
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        padding: 12px;
+      }
+      .event strong { color: var(--text); }
+      .event time {
+        color: var(--muted);
+        display: block;
+        font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="hero">
+        <h1>Comeback City V2 3D Kart Runtime</h1>
+        <p>Canonical live state for the fresh V2 Three.js kart runtime goal.</p>
+        <span class="pill done">Status: [done]</span>
+        <span class="pill">Ledger: .agent/runs/comeback-city-v2-3d-kart-runtime</span>
+      </div>
+
+      <section id="resume-here">
+        <h2>Resume Here</h2>
+        <ul>
+          <li><strong>Status:</strong> [review] Second visual repair pass complete: billboard-sprite karts replaced with grounded low-poly 3D kart meshes (hero + 3 rivals via <code>createVehicleModel</code>), 3D item cubes with billboarded "?", 3D chevron boost pads, continuous vertex-colored curb/barrier ribbons, bridge elevation re-centered on the route self-crossing (peak 16 at progress 0.635) with support pillars and an underpass camera duck, finish gate aligned with the lap line at progress 0 plus a checkered road strip. Awaiting owner visual approval.</li>
+          <li><strong>Current phase:</strong> Game PRD Phase 4 (V2 art integration) done pending owner read; Phase 5 promotion verified live at <code>/#race</code>; Phase 6 evidence regenerated.</li>
+          <li><strong>Completed work:</strong> Added isolated <code>/#race-3d-spike</code>; promoted <code>/#race</code> to the new Three.js runtime; implemented real 3D curved/elevated track geometry, grounded hero kart and three rivals, boost pads, item boxes, finish gate, 36 V2-inspired props, chase camera, controls, drift sparks, boost/item/lap/finish/restart loop, and required telemetry. 2026-06-11: removed all kart/pickup PNG billboards from the scene per PRD Pillar 2.</li>
+          <li><strong>Active work:</strong> None; next step is owner playtest and visual sign-off.</li>
+          <li><strong>Blockers:</strong> Owner manual QA scores and playthrough still outstanding. Known gap: <code>npm run test:race:browser</code> (legacy 24-scenario harness) expects the old RaceScreen UI (audio toggle, vehicle switching) that the promoted minimal runtime no longer renders; it needs migration to the V2 runtime and is not part of the game PRD Phase 6 gate list.</li>
+          <li><strong>Next exact action:</strong> Owner reviews tmp/kart-playable-proof-test desktop/mobile screenshots + 10s videos against the V2 trait cards and scores the manual QA rubric.</li>
+          <li><strong>Last validation:</strong> <code>npm run build</code>, <code>npm run test:kart-proof</code>, <code>npm run test:kart-playable</code>, <code>npm run test:kart-3d-spike</code>, and <code>npm run test:race</code> passed on 2026-06-11 (second pass); FPS estimates 38-46 desktop captures, above the 34 floor.</li>
+          <li><strong>Protected paths:</strong> Existing dirty worktree changes, prior tmp evidence, and previous goal ledgers are user-owned unless proven otherwise.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Approved Trait Cards</h2>
+        <p>Use these as design-lock references, not static runtime backgrounds.</p>
+        <ul>
+          <li><code>src/assets/game/art-direction/v2/approval-sheet.html</code></li>
+          <li><code>src/assets/game/art-direction/v2/PROMPTS.md</code></li>
+          <li><code>src/assets/game/art-direction/v2/hero-red-kart-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/purple-tech-rival-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/blue-speed-rival-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/orange-muscle-rival-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/green-utility-rival-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/black-gold-elite-rival-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/white-red-support-rival-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/track-geometry-road-system-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/district-portals-facades-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/roadside-props-barriers-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/pickups-boost-vfx-trait-card-v2.png</code></li>
+          <li><code>src/assets/game/art-direction/v2/material-lighting-camera-trait-card-v2.png</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Validation Gates</h2>
+        <ul>
+          <li>[done] Gate 1: desktop/mobile screenshots and 10-second desktop videos captured for <code>/#race-3d-spike</code>.</li>
+          <li>[done] Gate 2: acceleration, braking, steering, drift, boost pad, item pickup, rivals, lap progress, finish, and restart are visible and validated by playable proof.</li>
+          <li>[done] Gate 3: screenshots show one grounded 3D scene with V2-inspired kart, track, pickups, props, and district facades.</li>
+          <li>[done] Gate 4: <code>/#race</code> is promoted to the Three.js runtime; Pixi is not mounted on the default cart route.</li>
+          <li>[done] Gate 5: <code>npm run build</code>, <code>npm run test:kart-proof</code>, <code>npm run test:kart-playable</code>, <code>npm run test:kart-3d-spike</code>, and browser smoke for <code>/#race</code> passed.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Current Visual Failure Modes</h2>
+        <ul>
+          <li>The current cart route is a Pixi projected-road implementation with a screenshot-like city backdrop and screen-space sprites.</li>
+          <li>The PRD rejects flat road image/ramp overlays and static screenshot backgrounds as the gameplay world.</li>
+          <li>The previous <code>ArcadeRace3D</code> path exists but must not be revived as the default cart route.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Decisions And Tradeoffs</h2>
+        <ul>
+          <li>Because the helper script is absent, the ledger was created manually using the required layout and single canonical HTML state file.</li>
+          <li>The worktree contains many pre-existing race and evidence changes; this goal will preserve them and layer new scoped changes on top.</li>
+          <li>The new runtime models V2 cards procedurally in Three.js instead of importing the trait-card PNGs as gameplay backgrounds. This preserves the PRD constraint against static screenshot worlds.</li>
+          <li>The old Pixi component still exists in the repo for legacy/debug reference, but <code>/#race</code> and <code>/#race-3d-spike</code> mount the new Three.js runtime and tests assert no Pixi canvas is mounted.</li>
+          <li>The in-app browser smoke confirmed DOM/canvas mounting; direct Playwright validation was used for telemetry reads because the in-app browser read-only evaluate scope did not surface the page global consistently.</li>
+          <li>After validation, track segment density was reduced from 168 to 112 samples and curb/rail/line marker intervals were widened to improve video-proof FPS headroom while preserving the same route shape and 36-prop V2 scene composition.</li>
+          <li>Owner rejected the initial live 3D route on visual grounds. The first repair pass swaps in generated V2 kart/facade/pickup/boost PNGs as in-scene sprites, removes the flat skyline wall, moves the finish gate out of the spawn camera, and adds an opening facade row.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Evidence</h2>
+        <ul>
+          <li><a href="evidence/v2-3d-runtime-contact-sheet.html">Final V2 3D runtime contact sheet</a></li>
+          <li><code>tmp/kart-3d-spike-test/kart-3d-spike-report.json</code></li>
+          <li><code>tmp/kart-3d-spike-test/desktop-race-3d-spike-10s.webm</code></li>
+          <li><code>tmp/kart-3d-spike-test/desktop-race-10s.webm</code></li>
+          <li><code>tmp/kart-playable-proof-test/kart-playable-proof-report.json</code></li>
+          <li><code>tmp/kart-playable-proof-test/desktop-10s.webm</code></li>
+          <li><code>tmp/kart-playable-proof-test/mobile-10s.webm</code></li>
+          <li><code>tmp/kart-proof-static-guard/kart-proof-static-guard-report.json</code></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Progress Timeline</h2>
+        <div id="timeline" class="timeline"></div>
+      </section>
+    </main>
+    <script>
+      const progressEvents = [
+        {
+          ts: "2026-06-11T18:09:22Z",
+          status: "doing",
+          phase: "phase-0-ledger",
+          actor: "agent",
+          summary: "Created fresh goal ledger, recorded PRD gates, approved V2 art paths, protected worktree state, and next implementation action.",
+          evidence: []
+        },
+        {
+          ts: "2026-06-11T18:20:38Z",
+          status: "done",
+          phase: "final-validation",
+          actor: "agent",
+          summary: "Implemented and promoted the V2 Three.js kart runtime; build, static proof, playable proof, and 3D spike tests passed with final evidence linked.",
+          evidence: [
+            "evidence/v2-3d-runtime-contact-sheet.html",
+            "../../../../tmp/kart-3d-spike-test/kart-3d-spike-report.json",
+            "../../../../tmp/kart-playable-proof-test/kart-playable-proof-report.json",
+            "../../../../tmp/kart-proof-static-guard/kart-proof-static-guard-report.json"
+          ]
+        },
+        {
+          ts: "2026-06-11T18:29:57Z",
+          status: "done",
+          phase: "performance-rerun",
+          actor: "agent",
+          summary: "Reduced static track mesh density for FPS headroom, then reran build, 3D spike, playable, and static proof validations successfully.",
+          evidence: [
+            "../../../../tmp/kart-3d-spike-test/kart-3d-spike-report.json",
+            "../../../../tmp/kart-playable-proof-test/kart-playable-proof-report.json",
+            "../../../../tmp/kart-proof-static-guard/kart-proof-static-guard-report.json"
+          ]
+        },
+        {
+          ts: "2026-06-11T18:45:36Z",
+          status: "doing",
+          phase: "owner-visual-rejection",
+          actor: "user",
+          summary: "Owner rejected the first live route as visually unacceptable and not like the approved screenshots; visual repair pass started.",
+          evidence: [
+            "../../../../tmp/v2-visual-repair-pass-4.png"
+          ]
+        },
+        {
+          ts: "2026-06-12T18:30:00Z",
+          status: "done",
+          phase: "art-arc-concluded",
+          actor: "user+agent",
+          summary: "Owner approved the Tripo hero-card kart as the shipped player body (kart B), fixed driver facing (Tripo ±X axis auto-rotation for avatars), and locked a 3-character roster: CRRT Bunny (player), CRRT Penguin (Blue Speed), Seth Penguin (Purple Lab). Visual/art arc concluded; next arc is the owner-approved 5-phase gameplay feel plan at docs/GAMEPLAY_FEEL_PLAN.md (drift, rivals, items, audio, juice).",
+          evidence: [
+            "../../../../docs/GAMEPLAY_FEEL_PLAN.md",
+            "../../../../tmp/v2-approval-preview.html"
+          ]
+        },
+        {
+          ts: "2026-06-12T06:40:00Z",
+          status: "review",
+          phase: "second-avatar-and-fps-gate",
+          actor: "agent",
+          summary: "CRRT Penguin (owner-generated via Tripo) mounted as the Blue Speed rival driver (optimized 502k→11k tris). FPS gate hardened: kart-3d-spike now measures the production build (vite preview) with a median-of-7 FPS sample instead of a single dev-server instant — threshold unchanged at 34; production averages 40. All gates pass 3/3 runs.",
+          evidence: [
+            "../../../../tmp/v2-approval-preview.html"
+          ]
+        },
+        {
+          ts: "2026-06-12T05:30:00Z",
+          status: "review",
+          phase: "first-avatar-driver",
+          actor: "agent",
+          summary: "CRRT Bunny (owner-generated via Tripo from owner-authored seated renders) mounted as the player kart driver: optimized 489k→18k tris in-repo, toon-shaded, non-shadow-casting, on a driver mount that survives kart body swaps. All kart gates + test:race pass at FPS 35-37.",
+          evidence: [
+            "../../../../tmp/camera-probe/mobile-p0_55.png",
+            "../../../../tmp/kart-playable-proof-test/desktop-finish.png"
+          ]
+        },
+        {
+          ts: "2026-06-12T04:10:00Z",
+          status: "review",
+          phase: "authored-models-pass",
+          actor: "agent",
+          summary: "Replaced procedural kart/item-box geometry with authored CC0 models (Kenney Toy Car Kit v1.2, vehicle-drag-racer + item-box) recolored at runtime to V2 palette via colormap swatch remap; wheel nodes drive spin/steer; flames/sparks/underglow preserved. Assets + License.txt committed under src/assets/game/models/toy-car-kit with manifest entry. FPS improved to 40-44; all kart gates + test:race pass.",
+          evidence: [
+            "../../../../tmp/v2-approval-preview.html",
+            "../../../../tmp/kart-playable-proof-test/desktop-finish.png"
+          ]
+        },
+        {
+          ts: "2026-06-12T02:30:00Z",
+          status: "review",
+          phase: "premium-pipeline-pass",
+          actor: "agent",
+          summary: "Owner-driven quality passes: neon dusk relight, card-proportion toon-shaded karts, MK-style track-locked camera, alpha-tested facades, rounded geometry, then full rendering pipeline upgrade (kart-following shadow map, UnrealBloom on HDR neon, generated asphalt/grass textures). Fixed building/pillar placements intruding on the racing line. All kart gates + test:race pass at FPS 34-37.",
+          evidence: [
+            "../../../../tmp/v2-approval-preview.html",
+            "../../../../tmp/kart-playable-proof-test/desktop-mid.png",
+            "../../../../tmp/camera-probe/mobile-p0_55.png"
+          ]
+        },
+        {
+          ts: "2026-06-11T23:30:00Z",
+          status: "review",
+          phase: "grounded-3d-repair-pass",
+          actor: "agent",
+          summary: "Replaced billboard-sprite karts/pickups/pads with grounded low-poly 3D meshes, added continuous curb/barrier ribbons, fixed bridge crossing elevation + underpass camera, aligned finish gate with the lap line; build + kart-proof + kart-playable + kart-3d-spike + race content tests pass, FPS 38-46.",
+          evidence: [
+            "../../../../tmp/kart-playable-proof-test/desktop-mid.png",
+            "../../../../tmp/kart-playable-proof-test/desktop-finish.png",
+            "../../../../tmp/kart-playable-proof-test/mobile-mid.png",
+            "../../../../tmp/kart-playable-proof-test/desktop-10s.webm",
+            "../../../../tmp/kart-playable-proof-test/mobile-10s.webm",
+            "../../../../tmp/kart-playable-proof-test/kart-visual-approval-sheet.html"
+          ]
+        }
+      ];
+
+      const timeline = document.getElementById("timeline");
+      progressEvents.forEach((event) => {
+        const node = document.createElement("article");
+        node.className = "event";
+        node.innerHTML = `<time>${event.ts} - ${event.phase}</time><strong>[${event.status}] ${event.summary}</strong>`;
+        timeline.appendChild(node);
+      });
+    </script>
+  </body>
+</html>

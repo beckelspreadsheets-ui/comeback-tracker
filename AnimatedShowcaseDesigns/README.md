@@ -26,9 +26,15 @@ Source for Showcase Designs v3: a static marketing page plus an opt-in 3D studio
 - `DEVICE_QA_QUICK_START.md` — short real-phone QA handoff for iOS Safari and Android Chrome
 - `LOCAL_BROWSER_AUDIT.md` — local Lighthouse evidence for `/` and `/world.html?try=1`
 - `PRODUCTION_AUDIT.md` — current production route and source audit
+- `SHOWCASE_V3_LIVE_PRD_AUDIT.md` — requirement-by-requirement audit for the live v3 launch PRD
 - `OUTBOUND_LINK_AUDIT.md` — current external live-site URL audit
 - `LAUNCH_ACQUISITION_SYSTEM.md` — business-card, UTM, outreach, compliance, and weekly tracking runbook
+- `FREE_WEBSITE_REVIEW_TEMPLATE.md` — delivery template for the free review offer: 3 trust issues, 3 local SEO opportunities, 1 next step, and no quote unless asked
+- `CLIENT_ONBOARDING_REQUIREMENTS.md` — sales and onboarding guardrail for reviews, photos, proof, GBP access, and no ranking guarantees
+- `SEARCH_LOCAL_SEO_LAUNCH_SETUP.md` — post-deploy Search Console, Bing, analytics, GBP, review, and photo launch worksheet
 - `OUTREACH_TRACKER.csv` — blank 100-lead launch CRM tracker template
+- `business-card/` — review-only business card SVG assets and QR code; do not print until production passes
+- `generate-business-card-assets.mjs` — regenerates the business card SVG assets from the approved QR URL and contact copy
 - `privacy.html`, `terms.html` — linked from the footer
 - `img/` — mobile screenshots used by the approved launch case-study grid
 - `img/world/` — optimized gallery textures used by `/world`
@@ -72,6 +78,9 @@ Use `PRODUCTION_AUDIT.md` for the latest checked production route status.
 Use `CLOUDFLARE_DEPLOY.md` for the clean Cloudflare Pages deploy package and settings.
 Use `LOCAL_BROWSER_AUDIT.md` for local Lighthouse performance, accessibility, best-practices, and SEO evidence.
 Use `OUTBOUND_LINK_AUDIT.md` for the current external live-site URL status.
+Use `FREE_WEBSITE_REVIEW_TEMPLATE.md` to deliver the launch offer consistently after a lead requests a review.
+Use `CLIENT_ONBOARDING_REQUIREMENTS.md` before quoting Growth or any local SEO-heavy scope.
+Use `SEARCH_LOCAL_SEO_LAUNCH_SETUP.md` after production deploy to record Search Console, Bing, analytics, GBP, review, and photo evidence.
 
 Run the local verification gate before deploying:
 

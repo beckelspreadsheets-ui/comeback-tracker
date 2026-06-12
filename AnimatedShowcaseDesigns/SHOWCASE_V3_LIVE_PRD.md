@@ -35,13 +35,13 @@ Key files:
 - `verify-world.mjs`, `verify-production.mjs`, `verify-outbound.mjs`: launch gates
 - `CLOUDFLARE_DEPLOY.md`, `LAUNCH_CHECKLIST.md`, `PRODUCTION_AUDIT.md`: deploy and validation records
 
-Current v3 public pricing in `index.html`:
+Current v3 public pricing in `index.html` after owner correction on 2026-06-06:
 
-| Tier | Public Price | Setup | Current Listed Scope |
-| --- | ---: | ---: | --- |
-| Starter | `$149/mo` | from `$1,500` | 5-8 page responsive website, mobile-first design, basic SEO, contact form, analytics, 1 revision round, hosting + domain |
-| Growth | `$399/mo` | from `$3,500` | Starter plus 10-15+ pages, local SEO strategy, GBP optimization, city/service area pages, reporting, 2 blog posts/month, review acquisition, quarterly conversion improvements |
-| Custom | Custom | Scoped after review | Multi-location support, voice agents, CRM integration, advanced analytics, dedicated project manager |
+| Tier | Public Price | Ownership Option | Current Listed Scope |
+| --- | ---: | --- | --- |
+| Starter | `$150/mo` subscription | One-time ownership builds start at `$1,500` | 5-8 page responsive website, mobile-first design, basic SEO, contact form, analytics-ready event tracking, 1 revision round, hosting included, domain setup handled |
+| Growth | `$400/mo` subscription | Ownership quoted after review | Starter plus 10-15+ pages, local SEO strategy, GBP improvements, city/service area pages, reporting, one priority monthly content/update cycle, review/photo checklist, quarterly conversion improvements |
+| Custom | Custom | Scoped after review | Multi-location support, voice agents, CRM integration, advanced analytics, direct founder-led project management |
 
 ### 2.2 Production Domain
 
@@ -67,24 +67,25 @@ This PRD uses the current worktree plus current public market references. Pricin
 
 | Source | Relevant Finding | PRD Use |
 | --- | --- | --- |
-| FactoryJet 2026 small business website cost guide | Lists freelancer projects around `$1,500-$5,000` upfront plus `$50-$150/mo`; US agency projects around `$8,000-$25,000` upfront plus `$150-$400/mo` | v3 Starter setup and monthly are inside freelancer/custom range; Growth setup is below agency range |
-| Circle Monkeys Arizona pricing | Offers a flat `$199/mo` website + SEO subscription with no setup fee | v3 needs to justify why it has setup fees: custom founder-led work, real strategy, quality floor |
+| EzPz Sites / Pixelated Dreams / Onyx Web Services / Hunter Web Designs | Current productized small business website offers commonly use `$150/mo` as a monthly subscription anchor | v3 Starter `$150/mo` is not too low if scope is controlled and the work is founder-led/custom |
+| Hand-Coded Web / Onyx Web Services / Hunter Web Designs | One-time small business website builds commonly appear around `$1,000-$3,000+` depending on page count and support | v3 ownership from `$1,500` is defensible for an early founder-led custom build |
 | CitrusKiwi Phoenix package pricing | Positions low monthly packages as affordable all-in-one web presence | v3 should not compete only on lowest price |
-| jVista Tucson pricing search result | Starter custom WordPress site starts around `$2,500`; SEO performance package shown around `$499-$699/mo` in search result | v3 Starter `$1,500` setup is low-to-mid local market; Growth `$399/mo` is below many SEO retainers |
-| Arc4 2026 SEO pricing guide | Single-location local SEO with established agencies often falls around `$800-$1,500/mo`; typical work includes GBP, citations, content, reporting | v3 Growth `$399/mo` is affordable but must cap deliverables or be positioned as founding-client pricing |
-| Google Business Profile help | Local ranking factors are relevance, distance, and prominence; profile completeness, reviews, and links matter | v3 service offering should focus on GBP completeness, service relevance, reviews, and local proof |
-| Google Search Central SEO Starter Guide | Clear page titles, concise descriptions, readable URL structure, image optimization, and useful page content matter | v3 launch should keep technical SEO clean and add pages only when they are genuinely useful |
+| WebFX local SEO pricing | Local SEO retainers commonly run `$500-$3,000/mo`; one-time local SEO projects commonly run `$500-$5,000` | v3 Growth `$400/mo` is affordable and must stay capped; do not sell it as full-service SEO |
+| Google Business Profile help | Local ranking factors are relevance, distance, and prominence; profile completeness, reviews, photos, and links matter | v3 service offering should focus on GBP completeness, service relevance, reviews, and local proof |
+| Google Search Central SEO Starter Guide | There is no guarantee a site will be indexed or rank first, even when best practices are followed | v3 launch should keep technical SEO clean and avoid ranking guarantees |
 | Google sitemap docs | Submit absolute canonical URLs that should appear in search; sitemap submission is a hint, not a guarantee | v3 sitemap should include only approved canonical pages |
 | SBA local marketing article | Referral programs can be as simple as giving satisfied customers extra business cards; local partnerships can expand reach | Business cards and referral asks should be part of the launch system |
 | FTC CAN-SPAM guide | Commercial outreach must avoid misleading headers/subjects, identify advertising where required, include a physical postal address, provide opt-out, and honor opt-outs within 10 business days | Cold email must be low-volume, compliant, and tracked |
 
 Source URLs:
 
-- https://factoryjet.com/blog/website-cost-small-business-usa-2026
-- https://www.circlemonkeys.com/pricing
+- https://www.ezpzsites.com/
+- https://pixelateddreamswebdesign.com/
+- https://onyxwebservices.com/
+- https://handcodedweb.com/
+- https://hunterwebdesigns.com/pricing/
 - https://www.citruskiwi.com/phoenix-small-business-website-package-pricing
-- https://www.jvista.net/pricing/
-- https://arc4.com/resources/seo-pricing/
+- https://www.webfx.com/local-seo/pricing/
 - https://support.google.com/business/answer/7091/improve-your-local-ranking-on-google
 - https://developers.google.com/search/docs/fundamentals/seo-starter-guide
 - https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
@@ -95,19 +96,20 @@ Source URLs:
 
 ### 4.1 Recommendation
 
-Keep the public v3 pricing structure, but tighten the promise.
+Use the owner-corrected subscription-or-ownership pricing structure, and tighten the promise.
 
 Recommended public pricing:
 
 | Tier | Keep / Change | Reason |
 | --- | --- | --- |
-| Starter: `$149/mo` + setup from `$1,500` | Keep | Defensible for a custom 5-8 page founder-led site. Low enough for early trust stage, not so low that it looks like template churn. |
-| Growth: `$399/mo` + setup from `$3,500` | Keep price, tighten monthly scope | Strong acquisition-friendly price, but current scope can overcommit Andrew if every client gets 2 full posts/month, city pages, reporting, GBP, and conversion work forever. |
+| Starter: `$150/mo` subscription | Keep | Defensible for a custom 5-8 page founder-led site. Low enough for early trust stage, not so low that it looks like template churn. |
+| Growth: `$400/mo` subscription | Keep, tighten monthly scope | Strong acquisition-friendly price, but current scope can overcommit Andrew if every client gets full content production, city pages, reporting, GBP, and conversion work forever. |
+| Own outright: starting at `$1,500` | Keep | Defensible early custom-build ownership anchor. Ongoing hosting, support, updates, and SEO should be quoted separately or moved to subscription. |
 | Custom: scoped | Keep, revise claims | Keep as a consultative tier, but remove or soften "dedicated project manager" unless it means Andrew directly manages the project. Do not imply a larger agency team. |
 
 ### 4.2 Growth Scope Adjustment
 
-Current Growth copy says `2 blog posts per month`. That is risky at `$399/mo` with local SEO reporting, GBP work, review strategy, and conversion improvements.
+Current Growth copy says one priority monthly content/update cycle. Do not expand this into full-service SEO or unlimited content at `$400/mo`.
 
 Recommended replacement:
 
@@ -128,10 +130,10 @@ Do not publish broad "founding member" discounts on the site. Public discounts c
 Use private founding-client flexibility instead:
 
 - Offer 3-5 early businesses a private "founding case-study slot."
-- Keep public price anchored at `$1,500 setup + $149/mo` or `$3,500 setup + $399/mo`.
+- Keep public price anchored at `$150/mo`, `$400/mo`, or one-time ownership from `$1,500`.
 - Privately allow one of these concessions:
-  - split setup across 2-3 payments,
-  - reduce setup in exchange for a testimonial, case-study approval, and 90-day minimum,
+  - split one-time ownership across 2-3 payments,
+  - reduce the ownership build price in exchange for a testimonial, case-study approval, and 90-day minimum support commitment,
   - include one extra service page after launch,
   - include business-card QR tracking or call tracking setup.
 - Never discount the monthly below a level that makes support unprofitable.
@@ -141,6 +143,8 @@ Use private founding-client flexibility instead:
 The pricing section should communicate:
 
 - "Every engagement starts with a free website review."
+- "Starter and Growth are monthly subscription options."
+- "One-time ownership builds start at $1,500 and are scoped before work begins."
 - "Pricing depends on site scope, content needs, competition, and timeline."
 - "No ranking guarantees."
 - "Starter is for getting a professional, search-ready foundation live."
@@ -368,11 +372,11 @@ This lets Andrew start conversations without pretending to have a large agency p
 
 Initial focus:
 
-- Contractors and home-service businesses.
-- Local businesses with visible buying intent: roofing, HVAC, plumbing, electrical, landscaping, fencing, concrete, cleaning, pest control, pool service, auto detail, vending, fitness/training.
+- Local businesses and service companies with visible buying intent.
+- Examples: roofing, HVAC, plumbing, electrical, landscaping, fencing, concrete, cleaning, pest control, pool service, auto detail, vending, fitness/training, real estate, restaurants, and local shops.
 - Businesses with outdated websites, weak mobile layouts, no clear service-area pages, poor forms, no visible reviews, or inconsistent Google Business Profile details.
 
-Do not start broad with every industry. Focus outreach where a better website and local SEO can clearly lead to phone calls.
+Stay selective. Focus outreach where a better website and local SEO can clearly lead to calls, bookings, review requests, or quote requests.
 
 ### 7.2 Lead List Criteria
 
@@ -419,13 +423,13 @@ Priority order:
 Card front:
 
 - Showcase Designs
-- Websites + Local SEO for Contractors
+- Websites + Local SEO for Local Businesses
 - Free Website Review
 
 Card back:
 
 - QR code to `https://showcase-designs.com/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch`
-- `hello@showcase-designs.com`
+- `andrew@showcase-designs.com`
 - `(520) 367-2769` if confirmed
 - "Built by Andrew Ferguson"
 
@@ -439,7 +443,7 @@ Handout targets:
 
 Referral ask:
 
-> If you know a contractor or local business whose website is costing them calls, send them here for a free review.
+> If you know a local business whose website is costing them calls, send them here for a free review.
 
 ### 7.5 Outreach Scripts
 
@@ -452,7 +456,7 @@ Hi [Name],
 
 I am Andrew from Showcase Designs in Tucson. I was looking at [Business Name] and noticed one thing that may be costing calls: [specific issue].
 
-I build websites and local SEO systems for contractors and home-service businesses. I am offering a free website review while launching the new Showcase Designs site.
+I build websites and local SEO systems for local businesses. I am offering a free website review while launching the new Showcase Designs site.
 
 If useful, I can send over 3 quick fixes I would make to improve trust, mobile clarity, and local search visibility.
 
@@ -469,7 +473,7 @@ To opt out of future notes from me, reply "no thanks."
 Referral text:
 
 ```text
-I just launched the new Showcase Designs site. I am looking for a few more contractor/home-service businesses to do free website reviews for. If you know someone whose site looks outdated or is not getting calls, can you send them this link?
+I just launched the new Showcase Designs site. I am looking for a few more local businesses to do free website reviews for. If you know someone whose site looks outdated or is not getting calls, can you send them this link?
 
 https://showcase-designs.com/?utm_source=referral&utm_medium=text&utm_campaign=v3_launch
 ```
@@ -647,7 +651,7 @@ These are activity targets, not guarantees.
 | --- | --- | --- |
 | Production keeps serving stale site | Confuses prospects and hurts trust | Treat production cutover as P0; verify live domain before printing cards |
 | Pricing feels too expensive without proof | Prospects hesitate | Use free review, founder-led positioning, and private founding slots |
-| Pricing feels too cheap | Prospects assume template work | Keep setup fees public; avoid public fire-sale discounts |
+| Pricing feels too cheap | Prospects assume template work | Keep subscription and ownership options clear; avoid public fire-sale discounts |
 | Growth tier overcommits Andrew | Delivery quality drops | Cap monthly content/update cycle and quote extra content separately |
 | Unverified claims remain | Trust damage | Remove numeric claims and unapproved projects before launch |
 | FormSubmit fails | Leads lost | Test form before launch; use fallback email/phone; replace provider if needed |
@@ -666,8 +670,8 @@ These must be confirmed before production launch or before scaling outreach:
 6. Whether Andrew has a compliant physical mailing address or PO box for commercial outreach.
 7. Cloudflare production project name and production branch.
 8. Whether the private founding-client offer is approved, and how many slots are allowed.
-9. Whether Growth should stay `$399/mo` or move to `$499/mo` after the first 3-5 clients.
-10. Whether business cards should target only contractors/home services or all local businesses.
+9. Whether Growth should stay `$400/mo` or move higher after the first 3-5 clients. Owner answer on 2026-06-06: decide later.
+10. Whether business cards should target only contractors/home services or all local businesses. Owner answer on 2026-06-06: all local businesses.
 
 ## 12. Release Criteria
 

@@ -2,7 +2,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { makeDefaultState, normalizeState, STORAGE_KEY, SYNC_META_KEY } from '../src/hooks/usePersistedState.js';
 
@@ -20,15 +20,7 @@ const videoDir = path.join(artifactsDir, 'videos');
 const distIndexPath = path.join(root, 'dist', 'index.html');
 const latestBrowserSummaryPath = process.env.MANUAL_QA_BROWSER_SUMMARY
   ? path.resolve(root, process.env.MANUAL_QA_BROWSER_SUMMARY)
-  : path.join(
-      root,
-      '.agent',
-      'runs',
-      'kart-racer-production-readiness',
-      'evidence',
-      'perf-026-20260524T085441Z',
-      'race-browser-playtest-summary-after-revert.json'
-    );
+  : path.join(root, 'tmp', 'race-playtests', 'race-browser-playtest-summary.json');
 
 const fail = (message, detail = {}) => {
   const error = new Error(message);
@@ -424,6 +416,7 @@ const captureMobile = async (browser) => {
 const readLatestBrowserContext = async () => {
   try {
     const summary = JSON.parse(await readFile(latestBrowserSummaryPath, 'utf8'));
+    const visualByName = new Map((summary.visualChecks || []).map((entry) => [entry.name, entry]));
     const representativeVisuals = (summary.visualChecks || [])
       .filter((entry) =>
         ['idle', 'driving', 'drift', 'drift-release', 'boost', 'boost-pad-mechanics', 'rival-cluster'].includes(
@@ -443,17 +436,34 @@ const readLatestBrowserContext = async () => {
         screenshotPath: entry.screenshotPath,
         visibleRivalsSeen: entry.summary?.visibleRivalsSeen ?? null,
       }));
+    const requiredScreenshots = {
+      boostPad: visualByName.get('comeback-city-desktop-boost-pad-mechanics')?.screenshotPath || null,
+      finishGate: visualByName.get('comeback-city-desktop-finish-line')?.screenshotPath || null,
+      firstTurnDrift: visualByName.get('comeback-city-desktop-turn-approach')?.screenshotPath || null,
+      itemPickupUse: visualByName.get('comeback-city-desktop-item-pickup')?.screenshotPath || null,
+      mobileDriving: visualByName.get('comeback-city-mobile-driving')?.screenshotPath || null,
+      rivalCluster: visualByName.get('comeback-city-desktop-rival-cluster')?.screenshotPath || null,
+      startGrid: visualByName.get('comeback-city-desktop-idle')?.screenshotPath || null,
+    };
     return {
       capturedAt: summary.capturedAt || null,
+      coreKartLoopEvidence: summary.coreKartLoopEvidence || null,
+      noMinimapLapReadability: summary.noMinimapLapReadability?.summary || null,
       path: latestBrowserSummaryPath,
       raceCount: summary.raceCount ?? null,
       representativeVisuals,
+      requiredScreenshots,
       status: 'read',
       sustainedNormalPlay: summary.sustainedNormalPlay
         ? {
             actualFps: summary.sustainedNormalPlay.summary?.actualFps ?? null,
+            budgetMissCount: summary.sustainedNormalPlay.summary?.budgetMissCount ?? null,
+            budgetMissRatio: summary.sustainedNormalPlay.summary?.budgetMissRatio ?? null,
             cameraClipCount: summary.sustainedNormalPlay.summary?.latest?.cameraClipCount ?? null,
             captureWindowSeconds: summary.sustainedNormalPlay.summary?.captureWindowSeconds ?? null,
+            deliveredElapsedMs: summary.sustainedNormalPlay.summary?.deliveredElapsedMs ?? null,
+            deliveredFps: summary.sustainedNormalPlay.summary?.deliveredFps ?? null,
+            deliveredFrameCount: summary.sustainedNormalPlay.summary?.deliveredFrameCount ?? null,
             kartHeightRatio: summary.sustainedNormalPlay.summary?.latest?.kartHeightRatio ?? null,
             roadAheadCoverage: summary.sustainedNormalPlay.summary?.latest?.roadAheadCoverage ?? null,
             screenshotPath: summary.sustainedNormalPlay.screenshotPath || null,
@@ -473,6 +483,11 @@ const readLatestBrowserContext = async () => {
 
 const writeQaPrepTemplate = async (summary) => {
   const templatePath = path.join(artifactsDir, 'manual-qa-prep-result-template.md');
+  const automated = summary.automatedContext || {};
+  const sustained = automated.sustainedNormalPlay || {};
+  const noMinimap = automated.noMinimapLapReadability || {};
+  const screenshots = automated.requiredScreenshots || {};
+  const coreLoop = automated.coreKartLoopEvidence || {};
   const lines = [
     '# Race Manual QA Prep Capture',
     '',
@@ -495,6 +510,31 @@ const writeQaPrepTemplate = async (summary) => {
     `| Mobile viewport | \`${summary.captures.mobile.viewport.width}x${summary.captures.mobile.viewport.height}\` |`,
     `| Browser telemetry context | \`${summary.automatedContext.path}\` |`,
     '',
+    '## Required Screenshot Set',
+    '',
+    '| PRD screenshot | Prepared artifact |',
+    '| --- | --- |',
+    `| Start grid | \`${screenshots.startGrid || 'Not prepared'}\` |`,
+    `| First turn/drift | \`${screenshots.firstTurnDrift || 'Not prepared'}\` |`,
+    `| Boost pad | \`${screenshots.boostPad || 'Not prepared'}\` |`,
+    `| Item pickup/use | \`${screenshots.itemPickupUse || 'Not prepared'}\` |`,
+    `| Rival cluster | \`${screenshots.rivalCluster || 'Not prepared'}\` |`,
+    `| Finish gate | \`${screenshots.finishGate || 'Not prepared'}\` |`,
+    `| Mobile driving | \`${screenshots.mobileDriving || 'Not prepared'}\` |`,
+    '',
+    '## Automated Support Evidence',
+    '',
+    '| Check | Prepared value |',
+    '| --- | --- |',
+    `| Core kart loop gate | \`${coreLoop.passed === true ? 'passed' : 'not proven'}\` |`,
+    `| Sustained delivered FPS | \`${sustained.deliveredFps ?? 'Not captured'}\` |`,
+    `| Sustained frame window | \`${sustained.deliveredFrameCount ?? 'Not captured'} frames / ${sustained.deliveredElapsedMs ?? 'Not captured'} ms\` |`,
+    `| Frame-budget miss ratio | \`${sustained.budgetMissRatio ?? 'Not captured'}\` |`,
+    `| Camera clip count | \`${sustained.cameraClipCount ?? 'Not captured'}\` |`,
+    `| Road-ahead coverage | \`${sustained.roadAheadCoverage ?? 'Not captured'}\` |`,
+    `| No-minimap lap events | \`${noMinimap.lapEvents ?? 'Not captured'}\` |`,
+    `| No-minimap road-ahead min | \`${noMinimap.roadAheadCoverageMin ?? 'Not captured'}\` |`,
+    '',
     '## Human Fields Still Required',
     '',
     '| Field | Value |',
@@ -502,14 +542,215 @@ const writeQaPrepTemplate = async (summary) => {
     '| QA run status | Not run |',
     '| Tester | Not run |',
     '| Date/time | Not run |',
+    '| 10-second clip reads as a kart race, not a tech demo | Not run |',
+    '| One full lap completed without minimap | Not run |',
     '| Desktop manual route result | Not run |',
     '| Mobile manual route result | Not run |',
     '| Fresh-user reviewer and answer | Not run |',
-    '| Manual QA category scores | Not run |',
+    '| Visual appeal score, target 4+ | Not run |',
+    '| Track readability score, target 4+ | Not run |',
+    '| Drift feel score, target 4+ | Not run |',
+    '| Camera score, target 4+ | Not run |',
+    '| Race drama score, target 4+ | Not run |',
+    '| Mobile playability score, target 4+ | Not run |',
     '| Release-owner acceptance | Not run |',
   ];
   await writeFile(templatePath, `${lines.join('\n')}\n`);
   return templatePath;
+};
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+
+const fileHref = (filePath) => (filePath ? pathToFileURL(filePath).href : '');
+
+const writeOwnerReviewHtml = async (summary) => {
+  const htmlPath = path.join(artifactsDir, 'owner-review.html');
+  const automated = summary.automatedContext || {};
+  const sustained = automated.sustainedNormalPlay || {};
+  const noMinimap = automated.noMinimapLapReadability || {};
+  const screenshots = automated.requiredScreenshots || {};
+  const coreLoop = automated.coreKartLoopEvidence || {};
+  const screenshotRows = [
+    ['Start grid', screenshots.startGrid],
+    ['First turn/drift', screenshots.firstTurnDrift],
+    ['Boost pad', screenshots.boostPad],
+    ['Item pickup/use', screenshots.itemPickupUse],
+    ['Rival cluster', screenshots.rivalCluster],
+    ['Finish gate', screenshots.finishGate],
+    ['Mobile driving', screenshots.mobileDriving],
+  ];
+  const scoreRows = [
+    'Visual appeal',
+    'Track readability',
+    'Drift feel',
+    'Camera',
+    'Race drama',
+    'Mobile playability',
+  ];
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comeback City Owner Review Packet</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --ink: #17202a;
+      --muted: #5c6672;
+      --line: #d8e0e8;
+      --panel: #ffffff;
+      --accent: #0f6b9f;
+      --ok: #16704a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+
+    h1 { margin: 0 0 6px; font-size: 30px; }
+    h2 { margin: 28px 0 12px; font-size: 20px; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .metric {
+      color: var(--ink);
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .ok { color: var(--ok); font-weight: 700; }
+
+    video,
+    img {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #111;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #eef3f7; }
+    tr:last-child td { border-bottom: 0; }
+    .score-cell { width: 110px; }
+    .notes-cell { min-width: 260px; color: var(--muted); }
+    .path { word-break: break-all; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Comeback City Owner Review Packet</h1>
+    <p>Evidence prep only. Human scores remain Not run until owner review is completed.</p>
+
+    <section class="grid" aria-label="review metrics">
+      <div class="panel"><div class="metric">${escapeHtml(sustained.deliveredFps ?? 'Not captured')}</div><p>Sustained delivered FPS</p></div>
+      <div class="panel"><div class="metric">${escapeHtml(sustained.budgetMissRatio ?? 'Not captured')}</div><p>Frame-budget miss ratio</p></div>
+      <div class="panel"><div class="metric">${escapeHtml(noMinimap.lapEvents ?? 'Not captured')}</div><p>No-minimap lap events</p></div>
+      <div class="panel"><div class="metric ${coreLoop.passed ? 'ok' : ''}">${coreLoop.passed ? 'Passed' : 'Not proven'}</div><p>Core kart loop gate</p></div>
+    </section>
+
+    <section>
+      <h2>10-Second Clip</h2>
+      <video controls src="${escapeHtml(fileHref(summary.captures.desktop.clipPath))}"></video>
+      <p class="path">${escapeHtml(summary.captures.desktop.clipPath)}</p>
+    </section>
+
+    <section>
+      <h2>Required Screenshots</h2>
+      <div class="grid">
+        ${screenshotRows
+          .map(
+            ([label, filePath]) => `<figure class="panel">
+          <img src="${escapeHtml(fileHref(filePath))}" alt="${escapeHtml(label)}">
+          <figcaption><strong>${escapeHtml(label)}</strong><br><span class="path">${escapeHtml(filePath || 'Not prepared')}</span></figcaption>
+        </figure>`
+          )
+          .join('\n        ')}
+      </div>
+    </section>
+
+    <section>
+      <h2>Automated Support</h2>
+      <table>
+        <tbody>
+          <tr><th>Browser telemetry context</th><td class="path">${escapeHtml(automated.path || 'Not captured')}</td></tr>
+          <tr><th>Sustained frame window</th><td>${escapeHtml(sustained.deliveredFrameCount ?? 'Not captured')} frames / ${escapeHtml(sustained.deliveredElapsedMs ?? 'Not captured')} ms</td></tr>
+          <tr><th>Camera clip count</th><td>${escapeHtml(sustained.cameraClipCount ?? 'Not captured')}</td></tr>
+          <tr><th>Road-ahead coverage</th><td>${escapeHtml(sustained.roadAheadCoverage ?? 'Not captured')}</td></tr>
+          <tr><th>No-minimap road-ahead min</th><td>${escapeHtml(noMinimap.roadAheadCoverageMin ?? 'Not captured')}</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Owner Scoring</h2>
+      <table>
+        <thead>
+          <tr><th>Category</th><th class="score-cell">Score</th><th class="notes-cell">Notes</th></tr>
+        </thead>
+        <tbody>
+          ${scoreRows
+            .map((label) => `<tr><td>${escapeHtml(label)} score, target 4+</td><td>Not run</td><td class="notes-cell">Not run</td></tr>`)
+            .join('\n          ')}
+          <tr><td>10-second clip reads as a kart race, not a tech demo</td><td>Not run</td><td class="notes-cell">Not run</td></tr>
+          <tr><td>One full lap completed without minimap</td><td>Not run</td><td class="notes-cell">Not run</td></tr>
+          <tr><td>Owner acceptance</td><td>Not run</td><td class="notes-cell">Not run</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
+`;
+  await writeFile(htmlPath, html);
+  return htmlPath;
 };
 
 const runBrowserCapture = async () => {
@@ -571,6 +812,7 @@ const run = async () => {
       target: suppliedUrl ? 'external-url' : 'local-built-preview',
     };
     summary.qaPrepTemplatePath = await writeQaPrepTemplate(summary);
+    summary.ownerReviewHtmlPath = await writeOwnerReviewHtml(summary);
     summary.artifactFiles = [
       captures.desktop.screenshots.idle,
       captures.desktop.screenshots.speed,
@@ -578,6 +820,7 @@ const run = async () => {
       captures.desktop.clipPath,
       captures.mobile.screenshotPath,
       summary.qaPrepTemplatePath,
+      summary.ownerReviewHtmlPath,
       path.join(artifactsDir, 'manual-qa-capture-summary.json'),
     ].filter(Boolean);
     await writeFile(path.join(artifactsDir, 'manual-qa-capture-summary.json'), JSON.stringify(summary, null, 2));

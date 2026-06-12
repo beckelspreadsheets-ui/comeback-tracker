@@ -4,6 +4,7 @@ import {
   ChevronsRight,
   Flag,
   RotateCcw,
+  Sparkles,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -68,6 +69,7 @@ const formatTime = (seconds = 0) => {
 export const RaceHud = ({
   audioMuted = false,
   canvasRef,
+  hideMinimap = false,
   onAudioMutedChange,
   onCommand,
   onPress,
@@ -82,15 +84,28 @@ export const RaceHud = ({
   const heldItemLabel = heldItem ? heldItem.label || itemLabel(heldItemKey) || 'Item' : 'Empty';
   const driftPct = clamp((telemetry.drift / 2.8) * 100, 0, 100);
   const boostPct = clamp((telemetry.boost / 1.2) * 100, 0, 100);
+  const shieldActive = (telemetry.shield || 0) > 0;
   const motionReduced = Boolean(reducedMotion || telemetry.reducedMotion);
   const speedRatio = Number.isFinite(telemetry.speedRatio) ? telemetry.speedRatio : 0;
   const raceTime = Number.isFinite(telemetry.time) ? telemetry.time : 0;
+  const visibleRivals = clamp(Math.round(telemetry.visibleRivals || 0), 0, 3);
+  const visibleRivalsSeen = clamp(Math.round(telemetry.visibleRivalsSeen || 0), 0, 3);
+  const finalLapActive = Number(telemetry.lap || 1) >= Number(track.laps || 1);
+  const pressureLabel =
+    visibleRivals >= 3
+      ? 'Pack fight'
+      : visibleRivals > 0
+        ? `${visibleRivals} in view`
+        : visibleRivalsSeen > 0
+          ? 'Chase line'
+          : 'Build speed';
 
   return (
     <div
       className="arcade-race-shell relative h-[100svh] min-h-[620px] w-full overflow-hidden bg-[#10151d]"
       data-race-audio-muted={audioMuted ? 'true' : 'false'}
       data-race-lap={telemetry.lap}
+      data-race-minimap-visible={hideMinimap ? 'false' : 'true'}
       data-race-place={telemetry.place}
       data-race-speed-ratio={speedRatio.toFixed(3)}
       data-race-time={raceTime.toFixed(2)}
@@ -121,6 +136,19 @@ export const RaceHud = ({
           className="pointer-events-none absolute inset-0 bg-white mix-blend-screen"
           style={{ opacity: clamp(telemetry.cameraFlash / 0.18, 0, motionReduced ? 0.12 : 0.34) }}
         />
+      )}
+
+      {finalLapActive && (
+        <div
+          className="arcade-hud-panel pointer-events-none absolute left-1/2 top-[66px] z-20 hidden -translate-x-1/2 items-center gap-3 border border-[#ffd34f]/45 bg-[#10151d]/[0.82] px-4 py-2 text-white shadow-[0_14px_34px_rgba(0,0,0,0.3)] backdrop-blur-md sm:flex"
+          data-testid="race-finish-sprint"
+        >
+          <span className="grid h-8 w-8 place-items-center border border-[#ffd34f]/70 bg-[#ffd34f]/16 text-[#ffd34f]">
+            <Flag size={16} strokeWidth={2.8} />
+          </span>
+          <span className="font-mono text-[8px] font-black uppercase tracking-[0.16em] text-white/52">Final lap</span>
+          <strong className="font-mono text-sm font-black uppercase leading-none text-[#ffd34f]">Finish sprint</strong>
+        </div>
       )}
 
       <div className="objective-card race-objective-card" aria-label="Race objective">
@@ -164,7 +192,7 @@ export const RaceHud = ({
       </button>
 
       <div
-        className="arcade-hud-panel pointer-events-none absolute left-3 top-3 z-20 hidden w-[min(72vw,318px)] border border-white/18 bg-[#10151d]/[0.84] p-3 text-white shadow-[0_18px_44px_rgba(0,0,0,0.34)] backdrop-blur-md sm:left-5 sm:top-5 sm:block sm:w-[360px]"
+        className="arcade-hud-panel pointer-events-none absolute left-3 top-3 z-20 hidden w-[min(58vw,270px)] border border-white/14 bg-[#10151d]/[0.68] p-2.5 text-white shadow-[0_12px_28px_rgba(0,0,0,0.22)] backdrop-blur-sm sm:left-4 sm:top-4 sm:block sm:w-[292px]"
         data-testid="race-live-hud"
       >
         <div className="flex items-start justify-between gap-3">
@@ -172,26 +200,26 @@ export const RaceHud = ({
             <div className="font-mono text-[8px] font-black uppercase leading-none tracking-[0.18em] text-[#ffd34f]">
               {track.discipline || 'Kart'} GP
             </div>
-            <div className="mt-1 truncate font-mono text-base font-black uppercase leading-none sm:text-xl">
+            <div className="mt-1 truncate font-mono text-sm font-black uppercase leading-none sm:text-base">
               {track.name}
             </div>
           </div>
-          <div className="grid h-10 w-12 shrink-0 place-items-center border border-[#ffd34f]/60 bg-[#ffd34f]/14 font-mono text-sm font-black text-[#ffd34f]">
+          <div className="grid h-8 w-10 shrink-0 place-items-center border border-[#ffd34f]/55 bg-[#ffd34f]/12 font-mono text-xs font-black text-[#ffd34f]">
             {ordinal(telemetry.place)}
           </div>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 font-mono text-[9px] uppercase tracking-[0.12em] text-white/58">
+        <div className="mt-2.5 grid grid-cols-3 gap-2 font-mono text-[8px] uppercase tracking-[0.1em] text-white/54">
           <div>
             <div>Lap</div>
-            <div className="mt-1 text-sm font-black text-white">{telemetry.lap}/{track.laps}</div>
+            <div className="mt-1 text-xs font-black text-white">{telemetry.lap}/{track.laps}</div>
           </div>
           <div>
             <div>Speed</div>
-            <div className="mt-1 text-sm font-black text-white">{telemetry.speed}</div>
+            <div className="mt-1 text-xs font-black text-white">{telemetry.speed}</div>
           </div>
           <div>
             <div>Time</div>
-            <div className="mt-1 text-sm font-black text-white">{formatTime(telemetry.time)}</div>
+            <div className="mt-1 text-xs font-black text-white">{formatTime(telemetry.time)}</div>
           </div>
         </div>
         <div className="mt-3 grid gap-1.5">
@@ -209,14 +237,7 @@ export const RaceHud = ({
       </div>
 
       <div
-        className="arcade-hud-panel pointer-events-none absolute left-1/2 top-5 z-20 hidden -translate-x-1/2 border border-white/18 bg-[#10151d]/[0.78] px-4 py-2 font-mono text-[9px] font-black uppercase tracking-[0.14em] text-white/72 shadow-[0_14px_34px_rgba(0,0,0,0.3)] backdrop-blur-md lg:block"
-        data-testid="race-control-hint"
-      >
-        WASD / Arrows drive · Space hop + drift · F item · Q/E/R bank
-      </div>
-
-      <div
-        className="arcade-hud-panel pointer-events-auto absolute right-3 top-[72px] z-20 hidden min-w-[190px] border border-white/18 bg-[#10151d]/[0.82] p-3 text-white shadow-[0_14px_34px_rgba(0,0,0,0.3)] backdrop-blur-md sm:right-5 sm:top-[76px] sm:block"
+        className="arcade-hud-panel pointer-events-auto absolute right-3 top-[72px] z-20 hidden min-w-[142px] border border-white/12 bg-[#10151d]/[0.52] p-2 text-white shadow-[0_8px_20px_rgba(0,0,0,0.18)] backdrop-blur-sm sm:right-4 sm:top-[72px] sm:block"
         data-testid="race-item-panel"
       >
         <div className="font-mono text-[8px] font-black uppercase tracking-[0.16em] text-white/52">Held item</div>
@@ -227,13 +248,38 @@ export const RaceHud = ({
           type="button"
           onClick={() => onCommand('item')}
           disabled={!telemetry.heldBalloon}
-          className="mt-3 flex min-h-[36px] w-full items-center justify-center gap-2 rounded-md border border-[#ffd34f]/40 px-3 py-2 font-mono text-[9px] font-black uppercase tracking-[0.14em] text-[#ffd34f] transition-colors hover:bg-[#ffd34f]/10 disabled:cursor-not-allowed disabled:opacity-45"
+          className={`mt-2 flex min-h-[32px] w-full items-center justify-center gap-2 rounded-md border px-2 py-1.5 font-mono text-[8px] font-black uppercase tracking-[0.12em] transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+            shieldActive
+              ? 'border-[#49d9ff]/60 bg-[#49d9ff]/12 text-[#49d9ff]'
+              : 'border-[#ffd34f]/40 text-[#ffd34f] hover:bg-[#ffd34f]/10'
+          }`}
         >
-          <ArrowUp size={12} />
-          Use item
+          {shieldActive ? <Sparkles size={12} /> : <ArrowUp size={12} />}
+          {shieldActive ? 'Shield active' : 'Use item'}
         </button>
       </div>
 
+      <div
+        className="arcade-hud-panel pointer-events-none absolute right-3 top-[176px] z-20 hidden min-w-[142px] border border-white/12 bg-[#10151d]/[0.48] p-2 text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)] backdrop-blur-sm sm:right-4 sm:top-[176px] sm:block"
+        data-testid="race-rival-pressure"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="font-mono text-[8px] font-black uppercase tracking-[0.16em] text-white/52">Rival pressure</div>
+            <div className="mt-1 font-mono text-sm font-black uppercase leading-none text-white">{pressureLabel}</div>
+          </div>
+          <div className="flex gap-1.5" aria-hidden="true">
+            {[0, 1, 2].map((index) => (
+              <span
+                key={index}
+                className={`h-2.5 w-5 border ${index < visibleRivals ? 'border-[#ff4f7b] bg-[#ff4f7b]' : index < visibleRivalsSeen ? 'border-[#ffd34f] bg-[#ffd34f]/45' : 'border-white/22 bg-white/8'}`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {!hideMinimap && (
       <div className="race-minimap" data-testid="race-minimap">
         <span className="race-minimap__north">N</span>
         {minimap ? (
@@ -253,6 +299,7 @@ export const RaceHud = ({
         )}
         <span className="race-minimap__arrow" />
       </div>
+      )}
 
       <button
         type="button"

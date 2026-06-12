@@ -24,6 +24,8 @@ import {
   upgradeCost,
 } from './raceProgression.js';
 import { ArcadeRace3D } from './ArcadeRace3D.jsx';
+import { ComebackCityKartRace } from './ComebackCityKartRace.jsx';
+import { ComebackCityThreeKartRace } from './ComebackCityThreeKartRace.jsx';
 import { BANKED_ITEMS, COMMON_BOX_ITEMS, ITEM_META } from './raceItems.js';
 import { RACE_TRACKS } from './raceTracks.js';
 
@@ -1659,7 +1661,7 @@ const TrackIntel = ({ track }) => (
       <IntelBlock title="Layout">
         <p>{track.layout.shape}</p>
         <p className="mt-2">{track.layout.philosophy}</p>
-        <p className="mt-2">{track.layout.branches[0]}</p>
+        {track.layout.branches?.[0] ? <p className="mt-2">{track.layout.branches[0]}</p> : null}
       </IntelBlock>
       <IntelBlock title="Shortcut">
         <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-bone">
@@ -1836,7 +1838,7 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
     <div
       ref={raceStageRef}
       className="relative min-h-[100svh] overflow-hidden bg-[#10151d]"
-      data-race-renderer={webGLAvailable ? 'webgl' : 'canvas2d-fallback'}
+      data-race-renderer="three-kart"
       data-race-track={track.key}
       data-testid="race-screen"
     >
@@ -1851,29 +1853,12 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
           Today
         </button>
       )}
-      {webGLAvailable ? (
-        <ArcadeRace3D
-          command={command}
-          inventory={garage.inventory}
-          onFinish={handleFinish}
-          onInventoryUse={consumeInventory}
-          onWebGLUnavailable={() => setWebGLAvailable(false)}
-          profile={raceProfile || profile}
-          reducedMotion={Boolean(state.game?.hub?.reducedMotion)}
-          runId={runId}
-          track={track}
-        />
-      ) : (
-        <RaceCanvasFallback
-          command={command}
-          inventory={garage.inventory}
-          onFinish={handleFinish}
-          onInventoryUse={consumeInventory}
-          profile={raceProfile || profile}
-          runId={runId}
-          track={track}
-        />
-      )}
+      <ComebackCityThreeKartRace
+        mode="race"
+        onFinish={handleFinish}
+        reducedMotion={Boolean(state.game?.hub?.reducedMotion)}
+        runId={runId}
+      />
     </div>
   );
 

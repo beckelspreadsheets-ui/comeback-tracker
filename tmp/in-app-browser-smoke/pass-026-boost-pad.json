@@ -1,0 +1,15 @@
+{
+  "passed": false,
+  "canvasPath": null,
+  "screenshotError": "CDP Page.captureScreenshot timed out in this Browser surface; canvas PNG captured instead.",
+  "telemetry": {
+    "bodyText": "KART ARCADE CIRCUIT GP\nCOMEBACK CITY GRAND PRIX\n4th\nLAP\n1/3\nSPEED\n359\nTIME\n1:21.87\nDRIFT READY\nKART\nWASD / ARROWS DRIVE · SPACE HOP + DRIFT · F ITEM · Q/E/R BANK\nHELD ITEM\nEMPTY\nUSE ITEM\nRIVAL PRESSURE\nPACK FIGHT\nN",
+    "canvasHeight": 259,
+    "canvasWidth": 460,
+    "clientHeight": 720,
+    "clientWidth": 1280,
+    "hasBoostScenarioHud": true,
+    "telemetryExposed": false
+  },
+  "url": "http://127.0.0.1:5295/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=visual-kart&raceVisualScenario=boost-pad-mechanics&raceIndex=in-app-pass-026-boost-pad"
+}

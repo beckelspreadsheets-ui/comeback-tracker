@@ -48,6 +48,9 @@ export const createRaceScenery = ({
   const worldWindowGeometry = new THREE.BoxGeometry(0.9, 1.25, 0.08);
   const worldWindowMatrices = [];
   const instanceObject = new THREE.Object3D();
+  const staticBatchLocalObject = new THREE.Object3D();
+  const staticBatchWorldMatrix = new THREE.Matrix4();
+  const staticDecorationBatches = new Map();
   const animatedTransformObjects = new Set();
   const sceneryGap = compiled.roadWidth * 0.5 + 78;
   const left = bounds.minX - sceneryGap;
@@ -102,6 +105,50 @@ export const createRaceScenery = ({
     freezeStaticTransform(mesh);
     parent.add(mesh);
     return mesh;
+  };
+
+  const queueStaticDecorationInstance = ({
+    geometry,
+    kind,
+    material,
+    parent,
+    position,
+    rotation = null,
+    scale = null,
+  }) => {
+    const key = `${kind}:${geometry.uuid}:${material.uuid}`;
+    let batch = staticDecorationBatches.get(key);
+    if (!batch) {
+      batch = { geometry, kind, material, matrices: [] };
+      staticDecorationBatches.set(key, batch);
+    }
+
+    parent.updateMatrix();
+    staticBatchLocalObject.position.copy(position);
+    if (rotation) staticBatchLocalObject.rotation.set(rotation.x, rotation.y, rotation.z);
+    else staticBatchLocalObject.rotation.set(0, 0, 0);
+    if (scale) staticBatchLocalObject.scale.set(scale.x, scale.y, scale.z);
+    else staticBatchLocalObject.scale.set(1, 1, 1);
+    staticBatchLocalObject.updateMatrix();
+    staticBatchWorldMatrix.multiplyMatrices(parent.matrix, staticBatchLocalObject.matrix);
+    batch.matrices.push(staticBatchWorldMatrix.clone());
+  };
+
+  const flushStaticDecorationBatches = () => {
+    staticDecorationBatches.forEach(({ geometry, kind, material, matrices }) => {
+      const mesh = createInstancedMesh({
+        geometry,
+        material,
+        matrices,
+        parent: world,
+        receiveShadow: true,
+      });
+      if (!mesh) return;
+      mesh.userData.kind = kind;
+      mesh.userData.instanceCount = matrices.length;
+      mesh.userData.sourceKind = 'opening-static-decoration';
+    });
+    staticDecorationBatches.clear();
   };
 
   const addWindows = (x, z, w, d, h) => {
@@ -363,7 +410,7 @@ export const createRaceScenery = ({
     parent: world,
   });
   createInstancedMesh({
-    geometry: new THREE.SphereGeometry(0.8, 12, 10),
+    geometry: new THREE.SphereGeometry(0.8, 8, 6),
     material: createBasicMaterial('#fff6da', { emissive: '#ffd34f', emissiveIntensity: 0.52 }),
     matrices: streetLampBulbMatrices,
     parent: world,
@@ -390,6 +437,16 @@ export const createRaceScenery = ({
       emissiveIntensity: 0.18,
     }),
   };
+  const openingStorefrontWindowGeometry = new THREE.BoxGeometry(4.2, 3.2, 0.24);
+  const openingStorefrontAwningGeometry = new THREE.BoxGeometry(4.9, 0.76, 2.8);
+  const openingPennantPostGeometry = new THREE.BoxGeometry(0.55, 13.8, 0.55);
+  const openingPennantCordGeometry = new THREE.BoxGeometry(0.32, 0.32, compiled.roadWidth + 15.6);
+  const openingPennantFlagGeometry = new THREE.ConeGeometry(1.15, 2.35, 3);
+  const openingPennantFlagMaterials = [
+    createBasicMaterial(VISUAL_PALETTE.roadLine),
+    createBasicMaterial(VISUAL_PALETTE.cyan),
+    createBasicMaterial('#ff5b68'),
+  ];
 
   const cityPoint = (forwardDistance, lateral = 0, y = 0) =>
     corridorOrigin
@@ -605,7 +662,7 @@ export const createRaceScenery = ({
 
     const portalY = Math.min(10, height * 0.44);
     const portal = new THREE.Mesh(
-      new THREE.CircleGeometry(5.3, 28),
+      new THREE.CircleGeometry(5.3, 18),
       new THREE.MeshBasicMaterial({
         color: district.accent,
         depthWrite: false,
@@ -617,11 +674,11 @@ export const createRaceScenery = ({
     portal.position.set(0, portalY, depth / 2 + 0.8);
     group.add(portal);
 
-    const portalRing = new THREE.Mesh(new THREE.TorusGeometry(5.6, 0.5, 8, 32), accentMat);
+    const portalRing = new THREE.Mesh(new THREE.TorusGeometry(5.6, 0.5, 5, 16), accentMat);
     portalRing.position.copy(portal.position);
     group.add(portalRing);
 
-    const innerRing = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.18, 5, 22), raceCityMaterials.light);
+    const innerRing = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.18, 4, 12), raceCityMaterials.light);
     innerRing.position.set(0, portalY, depth / 2 + 1.08);
     group.add(innerRing);
 
@@ -704,6 +761,205 @@ export const createRaceScenery = ({
   };
   raceCityDistricts.forEach(addRoadDistrictSign);
 
+  const addOpeningStorefront = ({
+    accent = VISUAL_PALETTE.roadLine,
+    body = '#2778d8',
+    label,
+    progress,
+    side = 1,
+  }) => {
+    const sample = compiled.pointAt(progress);
+    const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize().multiplyScalar(side);
+    const position = sample.point.clone().addScaledVector(normal, compiled.roadWidth / 2 + 24);
+    const group = new THREE.Group();
+    const bodyMat = createBasicMaterial(body, { emissive: body, emissiveIntensity: 0.1 });
+    const accentMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.44 });
+    const darkMat = raceCityMaterials.dark;
+
+    group.userData.kind = 'arcade-storefront-strip';
+    group.userData.label = label;
+    group.position.copy(position);
+    group.rotation.y = faceRoadYaw(position, sample.point);
+
+    const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(24, 0.32, 7.2), raceCityMaterials.asphalt);
+    sidewalk.userData.kind = 'arcade-storefront-sidewalk';
+    sidewalk.position.set(0, 0.22, 2.8);
+    sidewalk.receiveShadow = true;
+    group.add(sidewalk);
+
+    const facade = new THREE.Mesh(new THREE.BoxGeometry(22, 11.5, 3.4), bodyMat);
+    facade.userData.kind = 'arcade-storefront-facade';
+    facade.position.set(0, 6.1, 0);
+    facade.castShadow = true;
+    facade.receiveShadow = true;
+    group.add(facade);
+
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(23.2, 1.25, 4.3), darkMat);
+    roof.userData.kind = 'arcade-storefront-roof';
+    roof.position.set(0, 12.35, 0.1);
+    roof.castShadow = true;
+    group.add(roof);
+
+    const awningLightMat = createBasicMaterial('#fff6da', { emissive: accent, emissiveIntensity: 0.18 });
+    [-6.4, 0, 6.4].forEach((x, index) => {
+      queueStaticDecorationInstance({
+        geometry: openingStorefrontWindowGeometry,
+        kind: 'arcade-storefront-window',
+        material: raceCityMaterials.glass,
+        parent: group,
+        position: new THREE.Vector3(x, 6.4, 1.82),
+      });
+
+      queueStaticDecorationInstance({
+        geometry: openingStorefrontAwningGeometry,
+        kind: 'arcade-storefront-awning',
+        material: index % 2 ? awningLightMat : accentMat,
+        parent: group,
+        position: new THREE.Vector3(x, 8.6, 2.45),
+      });
+    });
+
+    const door = new THREE.Mesh(new THREE.BoxGeometry(3.2, 5.5, 0.28), darkMat);
+    door.userData.kind = 'arcade-storefront-door';
+    door.position.set(0, 3.1, 1.92);
+    group.add(door);
+
+    const sign = createBillboardText(label, accent, { documentRef });
+    sign.userData.kind = 'arcade-storefront-label';
+    sign.material.depthTest = false;
+    sign.position.set(0, 14.25, 2.45);
+    sign.scale.set(label.length > 9 ? 13.2 : 11.2, 3.0, 1);
+    group.add(sign);
+
+    freezeStaticTree(group);
+    world.add(group);
+  };
+
+  const addOpeningPennantRun = ({ label, progress }) => {
+    const sample = compiled.pointAt(progress);
+    const group = new THREE.Group();
+    const postOffset = compiled.roadWidth / 2 + 7.4;
+    const pennantOffsets = [-14.4, -9.6, -4.8, 0, 4.8, 9.6, 14.4];
+    const darkMat = raceCityMaterials.dark;
+
+    group.userData.kind = 'opening-pennant-run';
+    group.userData.label = label;
+    group.position.copy(sample.point);
+    group.rotation.y = -Math.atan2(sample.tangent.z, sample.tangent.x);
+
+    [-1, 1].forEach((side) => {
+      queueStaticDecorationInstance({
+        geometry: openingPennantPostGeometry,
+        kind: 'opening-pennant-post',
+        material: darkMat,
+        parent: group,
+        position: new THREE.Vector3(0, 6.9, side * postOffset),
+      });
+    });
+
+    queueStaticDecorationInstance({
+      geometry: openingPennantCordGeometry,
+      kind: 'opening-pennant-cord',
+      material: raceCityMaterials.light,
+      parent: group,
+      position: new THREE.Vector3(0, 13.6, 0),
+    });
+
+    pennantOffsets.forEach((z, index) => {
+      queueStaticDecorationInstance({
+        geometry: openingPennantFlagGeometry,
+        kind: 'opening-pennant-flag',
+        material: openingPennantFlagMaterials[index % openingPennantFlagMaterials.length],
+        parent: group,
+        position: new THREE.Vector3(0.15, 12.25, z),
+        rotation: new THREE.Vector3(0, 0, Math.PI),
+      });
+    });
+
+    const banner = createBillboardText(label, VISUAL_PALETTE.roadLine, { documentRef });
+    banner.userData.kind = 'opening-pennant-label';
+    banner.material.depthTest = false;
+    banner.position.set(0.28, 14.85, 0);
+    banner.scale.set(15.8, 3.4, 1);
+    group.add(banner);
+
+    freezeStaticTree(group);
+    world.add(group);
+  };
+
+  let openingTreeCount = 0;
+  const addOpeningTreeRows = () => {
+    const trunkMatrices = [];
+    const crownMatrices = [];
+    const highlightCrownMatrices = [];
+    const treeSpecs = [
+      [0.024, -1, 0],
+      [0.036, 1, 1],
+      [0.052, -1, 1],
+      [0.068, 1, 0],
+      [0.128, -1, 1],
+      [0.148, 1, 0],
+    ];
+    treeSpecs.forEach(([progress, side, variant], index) => {
+      const sample = compiled.pointAt(progress);
+      const normal = new THREE.Vector3(-sample.tangent.z, 0, sample.tangent.x).normalize().multiplyScalar(side);
+      const offset = compiled.roadWidth / 2 + 17.2 + variant * 5.8 + (index % 3) * 1.2;
+      const position = sample.point.clone().addScaledVector(normal, offset);
+      const scale = 0.92 + (index % 4) * 0.08;
+      addInstanceMatrix(trunkMatrices, {
+        position: new THREE.Vector3(position.x, 3.05 * scale, position.z),
+        rotationY: index * 0.37,
+        scale: new THREE.Vector3(scale, scale, scale),
+      });
+      addInstanceMatrix(index % 2 === 0 ? crownMatrices : highlightCrownMatrices, {
+        position: new THREE.Vector3(position.x, 7.6 * scale, position.z),
+        rotationY: index * 0.53,
+        scale: new THREE.Vector3(scale, scale, scale),
+      });
+      openingTreeCount += 1;
+    });
+
+    const trunkMesh = createInstancedMesh({
+      castShadow: true,
+      geometry: new THREE.CylinderGeometry(0.48, 0.68, 5.6, 6),
+      material: trunkMat,
+      matrices: trunkMatrices,
+      parent: world,
+    });
+    const crownMesh = createInstancedMesh({
+      castShadow: true,
+      geometry: new THREE.DodecahedronGeometry(3.45, 0),
+      material: createBasicMaterial('#4fc56a', { emissive: '#4fc56a', emissiveIntensity: 0.16 }),
+      matrices: crownMatrices,
+      parent: world,
+    });
+    const highlightCrownMesh = createInstancedMesh({
+      castShadow: true,
+      geometry: new THREE.DodecahedronGeometry(3.2, 0),
+      material: createBasicMaterial('#8fe36b', { emissive: '#8fe36b', emissiveIntensity: 0.18 }),
+      matrices: highlightCrownMatrices,
+      parent: world,
+    });
+    if (trunkMesh) trunkMesh.userData.kind = 'opening-tree-trunks';
+    if (crownMesh) crownMesh.userData.kind = 'opening-tree-crowns';
+    if (highlightCrownMesh) highlightCrownMesh.userData.kind = 'opening-tree-highlight-crowns';
+  };
+
+  if (cleanCityCourse) {
+    [
+      { accent: VISUAL_PALETTE.roadLine, body: VISUAL_PALETTE.food, label: 'TURBO MART', progress: 0.062, side: 0.55 },
+      { accent: VISUAL_PALETTE.cyan, body: VISUAL_PALETTE.garage, label: 'PIT SHOP', progress: 0.095, side: -1 },
+      { accent: VISUAL_PALETTE.food, body: VISUAL_PALETTE.lab, label: 'DRIFT CAFE', progress: 0.165, side: -1 },
+    ].forEach(addOpeningStorefront);
+    [
+      { label: 'COMEBACK CUP', progress: 0.038 },
+      { label: 'BOOST ROW', progress: 0.083 },
+      { label: 'DRIFT LANE', progress: 0.146 },
+    ].forEach(addOpeningPennantRun);
+    addOpeningTreeRows();
+    flushStaticDecorationBatches();
+  }
+
   const addBranchDecisionSign = (route, index) => {
     const signProgress = wrap01(route.decisionCueProgress ?? route.startProgress - 0.04);
     const sample = compiled.pointAt(signProgress);
@@ -765,7 +1021,7 @@ export const createRaceScenery = ({
     markerGroup.position.y = 0.5;
 
     const pad = new THREE.Mesh(
-      new THREE.CylinderGeometry(9.5, 11.5, 0.35, 32),
+      new THREE.CylinderGeometry(9.5, 11.5, 0.35, 16),
       new THREE.MeshBasicMaterial({
         color: VISUAL_PALETTE.cyan,
         opacity: 0.24,
@@ -775,13 +1031,13 @@ export const createRaceScenery = ({
     pad.position.y = 0.2;
     markerGroup.add(pad);
 
-    const padRing = new THREE.Mesh(new THREE.TorusGeometry(10, 0.32, 6, 32), raceCityMaterials.cyan);
+    const padRing = new THREE.Mesh(new THREE.TorusGeometry(10, 0.32, 4, 16), raceCityMaterials.cyan);
     padRing.rotation.x = Math.PI / 2;
     padRing.position.y = 0.45;
     markerGroup.add(padRing);
 
     const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.1, 3.4, 86, 10, 1, true),
+      new THREE.CylinderGeometry(1.1, 3.4, 86, 8, 1, true),
       new THREE.MeshBasicMaterial({
         color: VISUAL_PALETTE.cyan,
         depthWrite: false,
@@ -921,7 +1177,7 @@ export const createRaceScenery = ({
       emissive: '#ffd34f',
       emissiveIntensity: 0.16,
     });
-    const wheel = new THREE.Mesh(new THREE.TorusGeometry(17, 0.38, 6, 36), wheelMat);
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(17, 0.38, 4, 18), wheelMat);
     wheelGroup.add(wheel);
     for (let i = 0; i < 10; i += 1) {
       const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.34, 17, 0.34), wheelMat);
@@ -1037,21 +1293,21 @@ export const createRaceScenery = ({
 
   const addMountainsAndClouds = () => {
     [-128, -82, -38, 62, 116, 160].forEach((lateral, index) => {
-      const p = cityPoint(382 + (index % 2) * 18, lateral, 0);
+      const p = cityPoint(456 + (index % 2) * 22, lateral * 1.12, 0);
       const mountain = new THREE.Mesh(
-        new THREE.ConeGeometry(28 + (index % 3) * 7, 52 + (index % 2) * 18, 4),
+        new THREE.ConeGeometry(22 + (index % 3) * 5, 42 + (index % 2) * 12, 4),
         createBasicMaterial(index % 2 ? '#9bc2d3' : '#8eb3c8')
       );
-      mountain.position.set(p.x, 20, p.z);
+      mountain.position.set(p.x, 15.5, p.z);
       mountain.rotation.y = Math.PI / 4;
       freezeStaticTransform(mountain);
       world.add(mountain);
 
       const snow = new THREE.Mesh(
-        new THREE.ConeGeometry(10 + (index % 3) * 2, 16, 4),
+        new THREE.ConeGeometry(8 + (index % 3) * 1.6, 12, 4),
         raceCityMaterials.light
       );
-      snow.position.set(p.x, 52 + (index % 2) * 8, p.z);
+      snow.position.set(p.x, 39 + (index % 2) * 6, p.z);
       snow.rotation.y = Math.PI / 4;
       freezeStaticTransform(snow);
       world.add(snow);
@@ -1084,7 +1340,7 @@ export const createRaceScenery = ({
   const addWaterAndBridge = () => {
     const waterCenter = cityPoint(58, 76, 0);
     const water = new THREE.Mesh(
-      new THREE.PlaneGeometry(150, 92, 8, 8),
+      new THREE.PlaneGeometry(150, 92, 1, 1),
       new THREE.MeshBasicMaterial({
         color: '#0ea5c8',
         opacity: 0.64,
@@ -1152,13 +1408,13 @@ export const createRaceScenery = ({
     parent: world,
   });
   createInstancedMesh({
-    geometry: new THREE.SphereGeometry(0.72, 12, 10),
+    geometry: new THREE.SphereGeometry(0.72, 8, 6),
     material: raceCityMaterials.cyan,
     matrices: plazaLampCyanBulbMatrices,
     parent: world,
   });
   createInstancedMesh({
-    geometry: new THREE.SphereGeometry(0.72, 12, 10),
+    geometry: new THREE.SphereGeometry(0.72, 8, 6),
     material: raceCityMaterials.yellow,
     matrices: plazaLampYellowBulbMatrices,
     parent: world,
@@ -1195,6 +1451,7 @@ export const createRaceScenery = ({
   return {
     animationHooks: animatedCityDistricts,
     collisionCircleCount: collisionCircles.length,
+    openingTreeCount,
     worldChildCount: world.children.length,
   };
 };

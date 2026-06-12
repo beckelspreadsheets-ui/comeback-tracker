@@ -1,0 +1,108 @@
+{
+  "bodyText": "TODAY KART ARCADE CIRCUIT GP COMEBACK CITY GRAND PRIX 4th LAP 1/3 SPEED 0 TIME 0:00.09 DRIFT READY KART WASD / ARROWS DRIVE · SPACE HOP + DRIFT · F ITEM · Q/E/R BANK HELD ITEM EMPTY USE ITEM RIVAL PRESSURE PACK FIGHT N",
+  "buttonCount": 16,
+  "buttons": [
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Raceway"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Basic"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "City"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Today"
+    },
+    {
+      "ariaLabel": "Mute race audio",
+      "disabled": false,
+      "text": ""
+    },
+    {
+      "ariaLabel": null,
+      "disabled": true,
+      "text": "Use item"
+    },
+    {
+      "ariaLabel": "Go",
+      "disabled": false,
+      "text": "Go!"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Reset"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": true,
+      "text": "Use Item"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Gym"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Food Court"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Base"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Lab"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Clinic"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Garage"
+    },
+    {
+      "ariaLabel": null,
+      "disabled": false,
+      "text": "Race"
+    }
+  ],
+  "canvasCount": 1,
+  "canvases": [
+    {
+      "className": "arcade-race-canvas block h-full w-full touch-none",
+      "clientHeight": 720,
+      "clientWidth": 1280,
+      "height": 255,
+      "index": 0,
+      "visible": true,
+      "width": 454
+    }
+  ],
+  "hasRaceRootHint": true,
+  "title": "Comeback · 181 → 238",
+  "url": "http://127.0.0.1:5312/#race",
+  "viewport": {
+    "devicePixelRatio": 1,
+    "height": 720,
+    "width": 1280
+  },
+  "consoleErrors": [],
+  "passed": true
+}

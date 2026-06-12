@@ -238,6 +238,7 @@ export const primeVisualKartScenario = ({
     visualStats.boostSeen = false;
     visualStats.boostSource = null;
     visualStats.boostSourcesSeen = {};
+    playtest.boostPadCaptureProgress = ((zipper?.progress ?? 0.095) + 0.988) % 1;
     playtest.boostPadMechanicsPrimed = true;
     return VISUAL_KART_MANUAL_SCENARIOS.boostPadMechanics;
   }
@@ -428,9 +429,24 @@ export const applyVisualKartScenarioFrame = ({
 
   if (visualKartScenarioMatches(playtest, VISUAL_KART_MANUAL_SCENARIOS.boostPadMechanics)) {
     if (visualStats.boostPadActivationTime !== null) {
+      const zipper = race.zippers?.find((entry) => Number.isFinite(entry.progress)) || race.zippers?.[0];
+      const padProgress = zipper?.progress ?? 0.095;
+      const padSample = compiled.pointAt(padProgress);
+      const captureProgress =
+        Number.isFinite(playtest.boostPadCaptureProgress)
+          ? playtest.boostPadCaptureProgress
+          : (padProgress + 0.988) % 1;
+      const captureSample = compiled.pointAt(captureProgress);
+      const padTangent = (zipper?.tangent?.clone?.() || padSample.tangent.clone()).setY(0).normalize();
+      const padPosition = zipper?.position?.clone?.() || padSample.point.clone();
+      player.progress = captureSample.progress;
+      player.position.copy(padPosition).addScaledVector(padTangent, -7.2);
+      player.heading = Math.atan2(padTangent.x, padTangent.z);
+      player.steerInput = 0;
       player.boostTimer = Math.max(player.boostTimer, 0.55);
       player.boostSource = 'pad';
-      player.velocity.copy(forward()).multiplyScalar((vehicle.maxSpeed || 1) * 0.86);
+      player.velocity.copy(padTangent).multiplyScalar((vehicle.maxSpeed || 1) * 0.86);
+      if (zipper) zipper.cooldown = 0;
     }
     return VISUAL_KART_MANUAL_SCENARIOS.boostPadMechanics;
   }

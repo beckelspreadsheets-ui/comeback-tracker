@@ -1,0 +1,107 @@
+{
+  "baseUrl": "http://127.0.0.1:5298",
+  "outputDir": "tmp/kart-3d-spike-test",
+  "passed": true,
+  "promotedDesktop": {
+    "facts": {
+      "canvasCount": 1,
+      "oldArcadeCanvasCount": 0,
+      "pixiCanvasCount": 0,
+      "propCount": 36,
+      "raceRenderer": "three-kart"
+    },
+    "motion": {
+      "average": 43.48,
+      "changedRatio": 0.58,
+      "samples": 10579
+    },
+    "telemetry": {
+      "boostHits": 2,
+      "countdown": 0,
+      "drift": true,
+      "finished": false,
+      "fpsEstimate": 36,
+      "itemPickups": 2,
+      "lap": 1,
+      "propCount": 36,
+      "raceTime": 4.73,
+      "renderer": "three-kart",
+      "rivalCount": 3,
+      "route": "race",
+      "routeProgress": 0.433,
+      "speed": 228,
+      "steer": 0.97,
+      "visualAssetSet": "comeback-city-v2-three-runtime",
+      "fpsMedian": 36
+    },
+    "video": "tmp/kart-3d-spike-test/desktop-race-10s.webm"
+  },
+  "spikeDesktop": {
+    "facts": {
+      "canvasCount": 1,
+      "oldArcadeCanvasCount": 0,
+      "pixiCanvasCount": 0,
+      "propCount": 36,
+      "raceRenderer": "three-kart"
+    },
+    "motion": {
+      "average": 42.56,
+      "changedRatio": 0.574,
+      "samples": 10579
+    },
+    "telemetry": {
+      "boostHits": 2,
+      "countdown": 0,
+      "drift": true,
+      "finished": false,
+      "fpsEstimate": 37,
+      "itemPickups": 3,
+      "lap": 1,
+      "propCount": 36,
+      "raceTime": 4.83,
+      "renderer": "three-kart",
+      "rivalCount": 3,
+      "route": "race-3d-spike",
+      "routeProgress": 0.443,
+      "speed": 228,
+      "steer": 0.98,
+      "visualAssetSet": "comeback-city-v2-three-runtime",
+      "fpsMedian": 37
+    },
+    "video": "tmp/kart-3d-spike-test/desktop-race-3d-spike-10s.webm"
+  },
+  "spikeMobile": {
+    "facts": {
+      "canvasCount": 1,
+      "oldArcadeCanvasCount": 0,
+      "pixiCanvasCount": 0,
+      "propCount": 36,
+      "raceRenderer": "three-kart"
+    },
+    "motion": {
+      "average": 37.76,
+      "changedRatio": 0.476,
+      "samples": 3354
+    },
+    "telemetry": {
+      "boostHits": 2,
+      "countdown": 0,
+      "drift": true,
+      "finished": false,
+      "fpsEstimate": 93,
+      "itemPickups": 2,
+      "lap": 1,
+      "propCount": 36,
+      "raceTime": 4.5,
+      "renderer": "three-kart",
+      "rivalCount": 3,
+      "route": "race-3d-spike",
+      "routeProgress": 0.411,
+      "speed": 228,
+      "steer": 0.86,
+      "visualAssetSet": "comeback-city-v2-three-runtime",
+      "fpsMedian": 88
+    },
+    "video": null
+  }
+}

@@ -98,16 +98,19 @@ import {
 } from '../src/game/race/raceAudio.js';
 import {
   applyBoostFlameGroupFrame,
+  applyShieldGroupFrame,
   boostPadPresentationFrameFor,
   boostFlamePresentationFrameFor,
   droppedBananaPresentationFrameFor,
   driftSparkColorForTier,
   driftSparkFrameFor,
   driftSparkTierForCharge,
+  driftTrailFrameFor,
   flightGatePresentationFrameFor,
   itemBoxPresentationFrameFor,
   playerVehiclePresentationFrameFor,
   rivalVehiclePresentationFrameFor,
+  shieldPresentationFrameFor,
   switchRingFrameFor,
   switchPadPresentationFrameFor,
   trackBananaPresentationFrameFor,
@@ -213,11 +216,14 @@ import {
   recordRacePlaytestEvent,
   resetRacePlaytestGlobals,
 } from '../src/game/race/playtest/racePlaytestState.js';
+import { createRacePlaytestRuntime } from '../src/game/race/playtest/racePlaytestRuntime.js';
 import { updateRaceAutoplayPlayer } from '../src/game/race/playtest/raceAutoplay.js';
 import {
   activeSurfaceFor,
   createRaceTelemetryStats,
   normalizedSpeedFor,
+  playerBoostBurstVisualActive,
+  playerShieldBurstVisualActive,
   publishRaceTelemetryFrame,
   rendererInfoTelemetryFor,
 } from '../src/game/race/raceTelemetry.js';
@@ -234,6 +240,7 @@ import {
 import {
   chooseRaceRivalRouteLayer,
   maybeUseRivalSignature,
+  rivalPressureForFrame,
   updateRaceRivalsForFrame,
 } from '../src/game/race/raceRivals.js';
 import {
@@ -358,8 +365,7 @@ const validateComebackCityV2 = (track) => {
   const badMain = mainWidths.filter((width) => width < 42 || width > 56);
   if (badMain.length || mainWidths.length < 5) fail('Main V2 roads must be authored at 42-56 world units', { badMain, mainWidths });
   const branchWidths = (course.branches || []).map((branch) => branch.width);
-  const badBranches = branchWidths.filter((width) => width < 28 || width > 40);
-  if (badBranches.length || branchWidths.length < 4) fail('Branch V2 roads must be authored at 28-40 world units', { badBranches, branchWidths });
+  if (branchWidths.length) fail('Comeback City proof track must stay branchless until the main lap is approved', { branchWidths });
   const loopLength = courseDistance(course.centerline, true);
   const bounds = course.centerline.reduce(
     (acc, point) => ({
@@ -2650,13 +2656,12 @@ const validateKartPhysicsHelpers = () => {
     vehicleMode: 'kart',
   });
   if (
-    lowSpeedTurn <= highSpeedTurn ||
     lowSpeedTurn < 0.65 ||
     lowSpeedTurn > 0.68 ||
-    highSpeedTurn < 0.61 ||
-    highSpeedTurn > 0.64
+    highSpeedTurn < 0.9 ||
+    highSpeedTurn > 0.93
   ) {
-    fail('Kart steering turn-speed helper should preserve tuned low- and high-speed PRD response', {
+    fail('Kart steering turn-speed helper should preserve tuned low-speed control and high-speed arcade response', {
       highSpeedTurn,
       lowSpeedTurn,
     });
@@ -2678,8 +2683,8 @@ const validateKartPhysicsHelpers = () => {
     vehicle: kart,
     vehicleMode: 'kart',
   });
-  if (stoppedHeadingDelta !== 0 || movingHeadingDelta <= 0.029 || movingHeadingDelta >= 0.034) {
-    fail('Heading delta helper should preserve movement gate and tuned kart steering delta', {
+  if (stoppedHeadingDelta !== 0 || movingHeadingDelta <= 0.043 || movingHeadingDelta >= 0.047) {
+    fail('Heading delta helper should preserve movement gate and tuned arcade kart steering delta', {
       movingHeadingDelta,
       stoppedHeadingDelta,
     });
@@ -2907,33 +2912,98 @@ const validateKartPhysicsHelpers = () => {
     });
   }
   const sparkFrame = driftSparkFrameFor({ now: 0, phase: 0, side: -1, sparkIndex: 2, tier: 2 });
+  const trailFrame = driftTrailFrameFor({ now: 0, side: -1, tier: 2, trailIndex: 0 });
   if (
     sparkFrame.color !== '#ffd34f' ||
     Math.abs(sparkFrame.emissiveIntensity - 1.08) > 0.001 ||
     Math.abs(sparkFrame.scale - 1.14) > 0.001 ||
     sparkFrame.x >= -4.2 ||
-    sparkFrame.y <= 1.15
+    sparkFrame.y <= 1.15 ||
+    trailFrame.color !== '#49d9ff' ||
+    trailFrame.opacity < 0.46 ||
+    trailFrame.x >= -2.8 ||
+    trailFrame.z >= -6.6
   ) {
-    fail('Drift spark VFX frame helper should preserve existing spark animation values', { sparkFrame });
+    fail('Drift spark VFX frame helper should preserve spark animation and trail values', { sparkFrame, trailFrame });
   }
   const boostFlameFrame = boostFlamePresentationFrameFor({ boostTimer: 0.03 });
   const boostFlameOffFrame = boostFlamePresentationFrameFor({ boostTimer: 0.02 });
   const forcedBoostFlameFrame = boostFlamePresentationFrameFor({ boostTimer: 0, visible: true });
-  const boostFlameGroup = { visible: false };
-  const appliedBoostFlameFrame = applyBoostFlameGroupFrame({ boostTimer: 0.04, group: boostFlameGroup });
+  const boostFlameGroup = {
+    children: [
+      { material: { opacity: 0 }, scale: { z: 1 }, userData: { kind: 'boost-burst-streak' }, visible: false },
+      {
+        material: { opacity: 0 },
+        rotation: { z: 0 },
+        scale: { setScalar: (value) => { boostFlameGroup.haloScaleValue = value; } },
+        userData: { kind: 'boost-burst-halo' },
+        visible: false,
+      },
+    ],
+    visible: false,
+  };
+  const appliedBoostFlameFrame = applyBoostFlameGroupFrame({ boostTimer: 0.04, group: boostFlameGroup, now: 90 });
+  const shieldFrame = shieldPresentationFrameFor({ now: 130, shieldTimer: 1.1 });
+  const shieldOffFrame = shieldPresentationFrameFor({ shieldTimer: 0.01 });
+  const shieldGroup = {
+    children: [
+      { material: { opacity: 0 } },
+      { material: { opacity: 0 }, rotation: { y: 0 } },
+      {
+        children: [
+          { material: { opacity: 0 }, userData: { kind: 'shield-burst-halo' } },
+          { material: { opacity: 0 }, rotation: { y: 0 }, userData: { kind: 'shield-burst-spark' } },
+        ],
+        rotation: { y: 0 },
+        scale: { setScalar: (value) => { shieldGroup.burstScaleValue = value; } },
+        userData: { kind: 'shield-burst-crown' },
+        visible: false,
+      },
+    ],
+    scale: { setScalar: (value) => { shieldGroup.scaleValue = value; } },
+    visible: false,
+  };
+  const appliedShieldFrame = applyShieldGroupFrame({ group: shieldGroup, now: 130, shieldTimer: 1.1 });
   if (
     !boostFlameFrame.visible ||
     boostFlameOffFrame.visible ||
     !forcedBoostFlameFrame.visible ||
     !appliedBoostFlameFrame.visible ||
-    !boostFlameGroup.visible
+    !boostFlameGroup.visible ||
+    appliedBoostFlameFrame.burstStreakOpacity < 0.34 ||
+    !boostFlameGroup.children[0].visible ||
+    boostFlameGroup.children[0].material.opacity < 0.34 ||
+    boostFlameGroup.children[0].scale.z <= 1 ||
+    !boostFlameGroup.children[1].visible ||
+    boostFlameGroup.children[1].material.opacity < 0.42 ||
+    boostFlameGroup.children[1].rotation.z <= 0.08 ||
+    !shieldFrame.visible ||
+    shieldOffFrame.visible ||
+    !appliedShieldFrame.visible ||
+    !shieldGroup.visible ||
+    shieldFrame.opacity < 0.44 ||
+    shieldFrame.ringOpacity < 0.88 ||
+    shieldFrame.burstOpacity < 0.7 ||
+    shieldFrame.burstScale < 1 ||
+    shieldFrame.scale < 1.1 ||
+    shieldGroup.children[0].material.opacity < 0.44 ||
+    shieldGroup.children[1].material.opacity < 0.88 ||
+    shieldGroup.children[1].rotation.y <= 0.04 ||
+    !shieldGroup.children[2].visible ||
+    shieldGroup.children[2].rotation.y <= 0.07 ||
+    shieldGroup.burstScaleValue < 1 ||
+    shieldGroup.children[2].children.some((child) => child.material.opacity <= 0.4)
   ) {
-    fail('Boost flame VFX helpers should preserve timer threshold, explicit visibility override, and group mutation', {
+    fail('Boost flame and shield VFX helpers should preserve timer thresholds, explicit visibility, and group mutation', {
       appliedBoostFlameFrame,
+      appliedShieldFrame,
       boostFlameFrame,
       boostFlameGroup,
       boostFlameOffFrame,
       forcedBoostFlameFrame,
+      shieldFrame,
+      shieldGroup,
+      shieldOffFrame,
     });
   }
   const playerVehicleFrame = playerVehiclePresentationFrameFor({
@@ -3028,9 +3098,9 @@ const validateKartPhysicsHelpers = () => {
   });
   const visibleBoostPadFrame = boostPadPresentationFrameFor({
     now: 0,
-    zipper: { cooldown: 0.8 },
+    zipper: { cooldown: 0 },
   });
-  const hiddenBoostPadFrame = boostPadPresentationFrameFor({
+  const coolingBoostPadFrame = boostPadPresentationFrameFor({
     now: 70,
     zipper: { cooldown: 0.8 },
   });
@@ -3088,7 +3158,11 @@ const validateKartPhysicsHelpers = () => {
     Math.abs(itemBoxFrame.rotationYDelta - 0.09) > 0.001 ||
     Math.abs(itemBoxFrame.y - (3.5 + Math.sin(2) * 0.22)) > 0.001 ||
     !visibleBoostPadFrame.visible ||
-    hiddenBoostPadFrame.visible ||
+    !visibleBoostPadFrame.visualActive ||
+    visibleBoostPadFrame.chevronOpacity <= coolingBoostPadFrame.chevronOpacity ||
+    !coolingBoostPadFrame.visible ||
+    !coolingBoostPadFrame.visualActive ||
+    coolingBoostPadFrame.centerStripeOpacity !== 0.48 ||
     !activeFlightGateFrame.groupVisible ||
     activeFlightGateFrame.scale !== 1.12 ||
     activeFlightGateFrame.ringOpacity !== 0.28 ||
@@ -3118,10 +3192,10 @@ const validateKartPhysicsHelpers = () => {
       activeFlightGateFrame,
       activeHazardFrame,
       coolingSwitchPadFrame,
+      coolingBoostPadFrame,
       coolingTrackBananaFrame,
       droppedBananaFrame,
       expiredTrapFrame,
-      hiddenBoostPadFrame,
       inactiveFlightGateFrame,
       itemBoxFrame,
       readySwitchPadFrame,
@@ -3143,6 +3217,14 @@ const validateKartPhysicsHelpers = () => {
   vehicleModel.setMode('kart');
   const kartWheelParentVisible = vehicleModel.wheels[0].parent.visible;
   const frontWheelCount = vehicleModel.wheels.filter((wheel) => wheel.userData.front).length;
+  const vehicleBoostBurstHalo = vehicleModel.boostFlame.children.find((child) => child.userData?.kind === 'boost-burst-halo');
+  const vehicleBoostBurstStreaks = vehicleModel.boostFlame.children.filter((child) => child.userData?.kind === 'boost-burst-streak');
+  const vehicleShieldShell = vehicleModel.shieldGroup.children[0];
+  const vehicleShieldRing = vehicleModel.shieldGroup.children[1];
+  const vehicleShieldBurst = vehicleModel.shieldGroup.children[2];
+  const vehicleShieldBurstHalo = vehicleShieldBurst?.children.find((child) => child.userData?.kind === 'shield-burst-halo');
+  const vehicleShieldBurstSparks = vehicleShieldBurst?.children.filter((child) => child.userData?.kind === 'shield-burst-spark') || [];
+  const vehicleShieldBurstFlashes = vehicleShieldBurst?.children.filter((child) => child.userData?.kind === 'shield-burst-flash') || [];
   if (
     basicRaceMaterial.color.getHexString() !== '123456' ||
     !basicRaceMaterial.flatShading ||
@@ -3152,14 +3234,39 @@ const validateKartPhysicsHelpers = () => {
     vehicleModel.wheels.length !== 4 ||
     frontWheelCount !== 2 ||
     vehicleModel.wheels.some((wheel) => wheel.children.length !== 3) ||
-    vehicleModel.boostFlame.children.length !== 2 ||
-    vehicleModel.driftSparkGroup.children.length !== 8 ||
+    vehicleModel.boostFlame.children.length !== 5 ||
+    vehicleBoostBurstStreaks.length !== 2 ||
+    vehicleBoostBurstStreaks.some((streak) => streak.material.depthTest || streak.geometry.parameters.depth !== 8.8) ||
+    vehicleBoostBurstHalo?.geometry?.parameters?.radius !== 3.2 ||
+    vehicleBoostBurstHalo?.material?.depthTest ||
+    vehicleModel.driftSparkGroup.children.length !== 10 ||
+    vehicleModel.driftSparkGroup.children.filter((child) => child.userData.kind === 'drift-trail-visual').length !== 2 ||
+    vehicleModel.shieldGroup.children.length !== 3 ||
+    vehicleModel.shieldGroup.userData.kind !== 'shield-visual' ||
+    vehicleShieldShell.geometry.parameters.radius !== 7.35 ||
+    vehicleShieldShell.material.opacity !== 0.36 ||
+    Math.abs(vehicleShieldShell.scale.x - 1.12) > 0.001 ||
+    Math.abs(vehicleShieldShell.scale.y - 0.64) > 0.001 ||
+    Math.abs(vehicleShieldShell.scale.z - 1.26) > 0.001 ||
+    vehicleShieldRing.geometry.parameters.radius !== 7.15 ||
+    vehicleShieldRing.geometry.parameters.tube !== 0.32 ||
+    vehicleShieldRing.material.opacity !== 0.88 ||
+    vehicleShieldRing.material.depthTest ||
+    vehicleShieldRing.rotation.x !== 0 ||
+    vehicleShieldBurst?.userData?.kind !== 'shield-burst-crown' ||
+    vehicleShieldBurstHalo?.geometry?.parameters?.radius !== 4.2 ||
+    vehicleShieldBurstHalo?.material?.depthTest ||
+    vehicleShieldBurstSparks.length !== 5 ||
+    vehicleShieldBurstSparks.some((spark) => spark.material.depthTest || spark.geometry.parameters.radius < 0.7) ||
+    vehicleShieldBurstFlashes.length !== 2 ||
+    vehicleShieldBurstFlashes.some((flash) => flash.material.depthTest || flash.geometry.parameters.width !== 5.2) ||
     planeWheelParentVisible ||
     !kartWheelParentVisible ||
     vehicleModel.boostFlame.visible ||
-    vehicleModel.driftSparkGroup.visible
+    vehicleModel.driftSparkGroup.visible ||
+    vehicleModel.shieldGroup.visible
   ) {
-    fail('Extracted race vehicle model helper should preserve material defaults, wheel groups, mode toggles, boost flame, and drift spark structure', {
+    fail('Extracted race vehicle model helper should preserve material defaults, wheel groups, mode toggles, boost flame, drift spark, and shield structure', {
       basicRaceMaterial: {
         color: basicRaceMaterial.color.getHexString(),
         flatShading: basicRaceMaterial.flatShading,
@@ -3171,7 +3278,25 @@ const validateKartPhysicsHelpers = () => {
       planeWheelParentVisible,
       vehicleModel: {
         boostFlames: vehicleModel.boostFlame.children.length,
+        boostBurstHaloDepthTest: vehicleBoostBurstHalo?.material?.depthTest,
+        boostBurstHaloRadius: vehicleBoostBurstHalo?.geometry?.parameters?.radius,
+        boostBurstStreaks: vehicleBoostBurstStreaks.length,
         driftSparks: vehicleModel.driftSparkGroup.children.length,
+        driftTrails: vehicleModel.driftSparkGroup.children.filter((child) => child.userData.kind === 'drift-trail-visual').length,
+        shieldBurstChildren: vehicleShieldBurst?.children.length,
+        shieldBurstHaloDepthTest: vehicleShieldBurstHalo?.material?.depthTest,
+        shieldBurstHaloRadius: vehicleShieldBurstHalo?.geometry?.parameters?.radius,
+        shieldBurstFlashes: vehicleShieldBurstFlashes.length,
+        shieldBurstSparks: vehicleShieldBurstSparks.length,
+        shieldChildren: vehicleModel.shieldGroup.children.length,
+        shieldRingDepthTest: vehicleShieldRing.material.depthTest,
+        shieldRingOpacity: vehicleShieldRing.material.opacity,
+        shieldRingRadius: vehicleShieldRing.geometry.parameters.radius,
+        shieldRingTube: vehicleShieldRing.geometry.parameters.tube,
+        shieldRingRotationX: vehicleShieldRing.rotation.x,
+        shieldShellOpacity: vehicleShieldShell.material.opacity,
+        shieldShellRadius: vehicleShieldShell.geometry.parameters.radius,
+        shieldShellScale: vehicleShieldShell.scale,
         scale: vehicleModel.group.scale.x,
         wheels: vehicleModel.wheels.length,
       },
@@ -3195,6 +3320,12 @@ const validateKartPhysicsHelpers = () => {
   const playerWheelParentVisible = vehicleMeshes.playerVehicle.wheels[0].parent.visible;
   const playerHoverGroup = vehicleMeshes.playerVehicle.group.children.find(
     (child) => child.type === 'Group' && child.visible && child.children.some((entry) => entry.geometry?.type === 'TorusGeometry')
+  );
+  const playerRearNumberPlate = vehicleMeshes.playerVehicle.group.children.find(
+    (child) => child.userData?.kind === 'player-rear-number-plate'
+  );
+  const playerRearNumberStrokes = vehicleMeshes.playerVehicle.group.children.filter(
+    (child) => child.userData?.kind === 'player-rear-number-stroke'
   );
   const rivalWheelParentVisible = vehicleMeshes.rivalModels[0].wheels[0].parent.visible;
   const lightweightRival = createRivalKartModel({ accent: '#00ff00', color: '#ff0000', scale: 0.48 });
@@ -3222,13 +3353,29 @@ const validateKartPhysicsHelpers = () => {
     switchRingMesh.rotation.x !== Math.PI / 2 ||
     switchRingMesh.visible ||
     vehicleMeshes.playerVehicle.group.parent !== vehicleWorld ||
-    Math.abs(vehicleMeshes.playerVehicle.group.scale.x - 0.84) > 0.001 ||
+    Math.abs(vehicleMeshes.playerVehicle.group.scale.x - 0.96) > 0.001 ||
     !playerWheelParentVisible ||
     !playerHoverGroup ||
+    !playerRearNumberPlate ||
+    playerRearNumberPlate.matrixAutoUpdate ||
+    playerRearNumberPlate.geometry.parameters.width !== 2.36 ||
+    playerRearNumberStrokes.length !== 2 ||
+    playerRearNumberStrokes.some((stroke) => stroke.matrixAutoUpdate || stroke.geometry.parameters.width !== 0.24) ||
+    vehicleMeshes.playerVehicle.shieldGroup.children.length !== 3 ||
+    vehicleMeshes.playerVehicle.shieldGroup.userData.kind !== 'shield-visual' ||
+    vehicleMeshes.playerVehicle.shieldGroup.children[0].geometry.parameters.radius !== 7.35 ||
+    vehicleMeshes.playerVehicle.shieldGroup.children[1].geometry.parameters.radius !== 7.15 ||
+    vehicleMeshes.playerVehicle.shieldGroup.children[1].geometry.parameters.tube !== 0.32 ||
+    vehicleMeshes.playerVehicle.shieldGroup.children[1].material.depthTest ||
+    vehicleMeshes.playerVehicle.shieldGroup.children[1].rotation.x !== 0 ||
+    vehicleMeshes.playerVehicle.shieldGroup.children[2].userData.kind !== 'shield-burst-crown' ||
+    vehicleMeshes.playerVehicle.shieldGroup.children[2].children.filter((child) => child.userData?.kind === 'shield-burst-spark').length !== 5 ||
+    vehicleMeshes.playerVehicle.shieldGroup.children[2].children.filter((child) => child.userData?.kind === 'shield-burst-flash').length !== 2 ||
+    vehicleMeshes.playerVehicle.shieldGroup.visible ||
     vehicleMeshes.switchRing.parent !== vehicleMeshes.playerVehicle.group ||
     vehicleMeshes.rivalModels.length !== 2 ||
     vehicleMeshes.rivalModels.some((model) => model.group.parent !== vehicleWorld) ||
-    Math.abs(vehicleMeshes.rivalModels[0].group.scale.x - 0.48) > 0.001 ||
+    Math.abs(vehicleMeshes.rivalModels[0].group.scale.x - 0.58) > 0.001 ||
     rivalWheelParentVisible ||
     lightweightRival.wheels.length !== 4 ||
     lightweightRival.boostFlame.children.length !== 2 ||
@@ -3238,7 +3385,7 @@ const validateKartPhysicsHelpers = () => {
     !lightweightRivalKartWheelsVisible ||
     vehicleWorld.children.length !== 3
   ) {
-    fail('Extracted race vehicle mesh helper should preserve player/rival vehicle creation, switch ring, mode setup, and world parenting', {
+    fail('Extracted race vehicle mesh helper should preserve player/rival vehicle creation, shield mesh, switch ring, mode setup, and world parenting', {
       lightweightRival: {
         boostFlames: lightweightRival.boostFlame.children.length,
         kartWheelsVisible: lightweightRivalKartWheelsVisible,
@@ -3248,6 +3395,8 @@ const validateKartPhysicsHelpers = () => {
         wheels: lightweightRival.wheels.length,
       },
       playerHoverGroup,
+      playerRearNumberPlate,
+      playerRearNumberStrokes,
       playerWheelParentVisible,
       rivalWheelParentVisible,
       switchRingMesh,
@@ -3281,6 +3430,12 @@ const validateKartPhysicsHelpers = () => {
   const syncBananaMesh = new THREE.Object3D();
   const syncBalloonMesh = new THREE.Object3D();
   const syncZipperMesh = new THREE.Object3D();
+  syncZipperMesh.userData.kind = 'boost-pad-visual';
+  const syncZipperChevron = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+  syncZipperChevron.userData.kind = 'boost-pad-chevron';
+  const syncZipperStripe = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+  syncZipperStripe.userData.kind = 'boost-pad-center-stripe';
+  syncZipperMesh.add(syncZipperChevron, syncZipperStripe);
   const syncFlightGateMesh = {
     glow: { material: { opacity: 0 } },
     group: new THREE.Group(),
@@ -3328,6 +3483,7 @@ const validateKartPhysicsHelpers = () => {
         heading: 0.4,
         jumpHeight: 0,
         position: new THREE.Vector3(1, 0, 2),
+        shieldTimer: 1.1,
         speed: 30,
         steerInput: 0.5,
         transformTimer: 0.4,
@@ -3360,8 +3516,12 @@ const validateKartPhysicsHelpers = () => {
     syncPlayerVehicle.group.position.x !== 1 ||
     syncPlayerVehicle.group.position.z !== 2 ||
     !syncPlayerVehicle.boostFlame.visible ||
+    syncPlayerVehicle.boostFlame.children.filter((child) => child.userData?.kind === 'boost-burst-streak' && child.visible).length !== 2 ||
     Math.abs(syncPlayerVehicle.wheels.find((wheel) => wheel.userData.front).rotation.y - 0.18) > 0.001 ||
     !syncPlayerVehicle.driftSparkGroup.visible ||
+    syncPlayerVehicle.driftSparkGroup.children.filter((child) => child.userData.kind === 'drift-trail-visual' && child.visible).length !== 2 ||
+    !syncPlayerVehicle.shieldGroup.visible ||
+    !syncPlayerVehicle.shieldGroup.children.find((child) => child.userData?.kind === 'shield-burst-crown')?.visible ||
     !syncSwitchRing.visible ||
     Math.abs(syncSwitchRing.material.opacity - 0.8) > 0.001 ||
     Math.abs(syncSwitchRing.scale.x - 1.08) > 0.001 ||
@@ -3374,6 +3534,13 @@ const validateKartPhysicsHelpers = () => {
     !syncBalloonMesh.visible ||
     syncBalloonMesh.position.y <= 3.4 ||
     !syncZipperMesh.visible ||
+    !syncZipperMesh.userData.visualActive ||
+    !syncZipperChevron.visible ||
+    syncZipperChevron.material.opacity <= 0.8 ||
+    !syncZipperChevron.material.transparent ||
+    !syncZipperStripe.visible ||
+    syncZipperStripe.material.opacity !== 0.72 ||
+    !syncZipperStripe.material.transparent ||
     !syncFlightGateMesh.group.visible ||
     syncFlightGateMesh.group.position.y <= 11.5 ||
     Math.abs(syncFlightGateMesh.ring.material.opacity - 0.32) > 0.001 ||
@@ -3437,16 +3604,28 @@ const validateKartPhysicsHelpers = () => {
       },
     }),
   };
-  const billboardSprite = createBillboardText('Food Court', '#ffac32', {
-    documentRef: {
-      createElement: (tagName) => {
-        if (tagName !== 'canvas') fail('Billboard helper should only create a canvas', { tagName });
-        return billboardCanvas;
-      },
+  const billboardDocumentRef = {
+    createElement: (tagName) => {
+      if (tagName !== 'canvas') fail('Billboard helper should only create a canvas', { tagName });
+      return billboardCanvas;
     },
-  });
+  };
+  const billboardSprite = createBillboardText('Food Court', '#ffac32', { documentRef: billboardDocumentRef });
+  const cachedBillboardSprite = createBillboardText('Food Court', '#ffac32', { documentRef: billboardDocumentRef });
   const billboardFillText = billboardDrawCalls.find((entry) => entry.type === 'fillText');
   const billboardStrokeRect = billboardDrawCalls.find((entry) => entry.type === 'strokeRect');
+  const billboardAccentBars = billboardDrawCalls.filter(
+    (entry) =>
+      entry.type === 'fillRect' &&
+      entry.args[2] === BILLBOARD_TEXT_STYLE.canvasWidth &&
+      entry.args[3] === BILLBOARD_TEXT_STYLE.accentBarHeight
+  );
+  const billboardInnerPanel = billboardDrawCalls.find(
+    (entry) =>
+      entry.type === 'fillRect' &&
+      entry.args[2] === BILLBOARD_TEXT_STYLE.canvasWidth - 28 &&
+      entry.args[3] === BILLBOARD_TEXT_STYLE.canvasHeight - 36
+  );
   if (
     billboardCanvas.width !== BILLBOARD_TEXT_STYLE.canvasWidth ||
     billboardCanvas.height !== BILLBOARD_TEXT_STYLE.canvasHeight ||
@@ -3454,13 +3633,22 @@ const validateKartPhysicsHelpers = () => {
     billboardSprite.scale.y !== BILLBOARD_TEXT_STYLE.scale.y ||
     billboardSprite.scale.z !== BILLBOARD_TEXT_STYLE.scale.z ||
     billboardSprite.material.opacity !== BILLBOARD_TEXT_STYLE.opacity ||
+    billboardSprite.material.depthTest ||
     billboardSprite.material.depthWrite ||
     !billboardSprite.material.transparent ||
     billboardSprite.material.map.image !== billboardCanvas ||
     billboardSprite.material.map.colorSpace !== THREE.SRGBColorSpace ||
+    billboardSprite.material.map.generateMipmaps ||
+    billboardSprite.material.map.magFilter !== THREE.LinearFilter ||
+    billboardSprite.material.map.minFilter !== THREE.LinearFilter ||
+    cachedBillboardSprite.material.map !== billboardSprite.material.map ||
+    cachedBillboardSprite.material !== billboardSprite.material ||
     !billboardDrawCalls.some((entry) => entry.type === 'fillStyle' && entry.value === BILLBOARD_TEXT_STYLE.background) ||
+    !billboardDrawCalls.some((entry) => entry.type === 'fillStyle' && entry.value === BILLBOARD_TEXT_STYLE.innerBackground) ||
     !billboardDrawCalls.some((entry) => entry.type === 'strokeStyle' && entry.value === '#ffac32') ||
     !billboardDrawCalls.some((entry) => entry.type === 'font' && entry.value === BILLBOARD_TEXT_STYLE.font) ||
+    billboardAccentBars.length !== 2 ||
+    !billboardInnerPanel ||
     !billboardFillText ||
     billboardFillText.args[0] !== 'FOOD COURT' ||
     billboardFillText.args[1] !== BILLBOARD_TEXT_STYLE.canvasWidth / 2 ||
@@ -3876,11 +4064,96 @@ const validateKartPhysicsHelpers = () => {
     key: 'comeback-city',
     startProgress: 0,
   };
+  const trackMeshLabelDrawCalls = [];
+  const trackMeshDocumentRef = {
+    createElement: (tagName) => {
+      if (tagName !== 'canvas') fail('Track mesh helper should only create canvas labels', { tagName });
+      return {
+        getContext: () => ({
+          fillRect: (...args) => trackMeshLabelDrawCalls.push({ args, type: 'fillRect' }),
+          fillText: (...args) => trackMeshLabelDrawCalls.push({ args, type: 'fillText' }),
+          strokeRect: (...args) => trackMeshLabelDrawCalls.push({ args, type: 'strokeRect' }),
+          set fillStyle(value) {
+            trackMeshLabelDrawCalls.push({ type: 'fillStyle', value });
+          },
+          set font(value) {
+            trackMeshLabelDrawCalls.push({ type: 'font', value });
+          },
+          set lineWidth(value) {
+            trackMeshLabelDrawCalls.push({ type: 'lineWidth', value });
+          },
+          set strokeStyle(value) {
+            trackMeshLabelDrawCalls.push({ type: 'strokeStyle', value });
+          },
+          set textAlign(value) {
+            trackMeshLabelDrawCalls.push({ type: 'textAlign', value });
+          },
+          set textBaseline(value) {
+            trackMeshLabelDrawCalls.push({ type: 'textBaseline', value });
+          },
+        }),
+      };
+    },
+  };
   const trackMesh = createTrackMesh({
     compiled: trackMeshCompiled,
+    documentRef: trackMeshDocumentRef,
     theme: { ground: '#355c42' },
     world: trackMeshWorld,
   });
+  const startFinishGate = trackMesh.startTiles[0]?.parent;
+  const startFinishBanner = startFinishGate?.children.find(
+    (child) => child.userData?.kind === 'start-finish-gate-banner'
+  );
+  const startFinishSideFlags =
+    startFinishGate?.children.filter((child) => child.userData?.kind === 'start-finish-gate-side-flag') || [];
+  const finishCelebrationRoadDecals = [];
+  const finishCelebrationRoadDecalPlanes = [];
+  const cornerCoachingSigns = [];
+  trackMeshWorld.traverse((object) => {
+    if (object.userData?.kind === 'finish-celebration-road-decal') finishCelebrationRoadDecals.push(object);
+    if (object.userData?.kind === 'finish-celebration-road-decal-plane') finishCelebrationRoadDecalPlanes.push(object);
+    if (object.userData?.kind === 'corner-coaching-sign') cornerCoachingSigns.push(object);
+  });
+  const cornerCoachingLabels = cornerCoachingSigns
+    .map((group) => group.children.find((child) => child.userData?.kind === 'corner-coaching-sign-label'))
+    .filter(Boolean);
+  const cornerCoachingMarkers = cornerCoachingSigns
+    .map((group) => group.children.find((child) => child.userData?.kind === 'corner-coaching-sign-marker'))
+    .filter(Boolean);
+  const openingLaunchPaintGroups = [];
+  const openingLaunchPaintStripes = [];
+  const openingLaunchPaintChevrons = [];
+  const openingLaunchDecals = [];
+  const openingLaunchDecalPlanes = [];
+  const openingSweeperDriftPaintStripes = [];
+  const openingSweeperDriftPaintChevrons = [];
+  trackMeshWorld.traverse((object) => {
+    if (object.userData?.kind === 'opening-launch-paint') openingLaunchPaintGroups.push(object);
+    if (object.userData?.kind === 'opening-launch-paint-stripe') openingLaunchPaintStripes.push(object);
+    if (object.userData?.kind === 'opening-launch-paint-chevron') openingLaunchPaintChevrons.push(object);
+    if (object.userData?.kind === 'opening-launch-road-decal') openingLaunchDecals.push(object);
+    if (object.userData?.kind === 'opening-launch-road-decal-plane') openingLaunchDecalPlanes.push(object);
+    if (object.userData?.kind === 'opening-sweeper-drift-paint-stripe') openingSweeperDriftPaintStripes.push(object);
+    if (object.userData?.kind === 'opening-sweeper-drift-paint-chevron') openingSweeperDriftPaintChevrons.push(object);
+  });
+  const openingLaunchPaintBatches = [...openingLaunchPaintStripes, ...openingLaunchPaintChevrons];
+  const openingLaunchPaintInstanceCount = openingLaunchPaintBatches.reduce(
+    (total, mesh) => total + (mesh.count || 0),
+    0
+  );
+  const openingSweeperDriftPaintBatches = [
+    ...openingSweeperDriftPaintStripes,
+    ...openingSweeperDriftPaintChevrons,
+  ];
+  const openingSweeperDriftPaintInstanceCount = openingSweeperDriftPaintBatches.reduce(
+    (total, mesh) => total + (mesh.count || 0),
+    0
+  );
+  const openingLaunchDecalLabels = openingLaunchDecals.map((decal) => decal.userData.label);
+  const roadPaintAccentBars = trackMeshLabelDrawCalls.filter(
+    (entry) => entry.type === 'fillRect' && entry.args[2] >= 360 && entry.args[3] === 9
+  );
   const visualTrackSegments = createCleanCourseVisualSegments(trackMeshCompiled.segments);
   const visualSegmentSourceTotal = visualTrackSegments.reduce((total, segment) => total + segment.sourceCount, 0);
   const syntheticVisualSegments = createCleanCourseVisualSegments([
@@ -3970,7 +4243,12 @@ const validateKartPhysicsHelpers = () => {
     },
   });
   const boostPadBase = boostPadMesh.children[0];
-  const boostPadStripe = boostPadMesh.children[1];
+  const boostPadChevrons = boostPadMesh.children.filter((child) => child.userData?.kind === 'boost-pad-chevron');
+  const boostPadCenterStripe = boostPadMesh.children.find((child) => child.userData?.kind === 'boost-pad-center-stripe');
+  const boostPadGantryPosts = boostPadMesh.children.filter((child) => child.userData?.kind === 'boost-pad-gantry-post');
+  const boostPadGantryBoard = boostPadMesh.children.find((child) => child.userData?.kind === 'boost-pad-gantry-board');
+  const boostPadGantryTop = boostPadMesh.children.find((child) => child.userData?.kind === 'boost-pad-gantry-top');
+  const boostPadGantryChevrons = boostPadMesh.children.filter((child) => child.userData?.kind === 'boost-pad-gantry-chevron');
   if (
     trackRenderMaterials.asphaltMat.color.getHexString() !== '223344' ||
     trackRenderMaterials.asphaltMat.roughness !== 0.76 ||
@@ -3998,14 +4276,100 @@ const validateKartPhysicsHelpers = () => {
     cappedVisualSegments[1].sourceCount !== 1 ||
     trackMesh.visualSegmentCount !== expectedCleanVisualSegmentCount ||
     trackMesh.instancedTrackMeshCount <= 0 ||
+    trackMesh.openingApexCurbCount !== 16 ||
     trackMeshWorld.children.length >= sourceVisualSegmentCount * 5 ||
     nonCleanTrackMesh.visualSegmentCount !== sourceVisualSegmentCount ||
     nonCleanTrackMesh.instancedTrackMeshCount !== 0 ||
-    trackMesh.startTiles.length !== 5 ||
+    startFinishGate?.userData?.kind !== 'start-finish-gate' ||
+    !startFinishGate.children.some((child) => child.userData?.kind === 'start-finish-gate-beam') ||
+    !startFinishBanner ||
+    startFinishBanner.scale.x !== 25.5 ||
+    startFinishBanner.scale.y !== 6.4 ||
+    startFinishBanner.material.depthTest ||
+    !trackMeshLabelDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'START / FINISH') ||
+    startFinishSideFlags.length !== 4 ||
+    startFinishSideFlags.some((flag) => flag.geometry.parameters.height !== 2.45 || flag.matrixAutoUpdate) ||
+    trackMesh.finishCelebrationCueCount !== 1 ||
+    finishCelebrationRoadDecals.length !== 1 ||
+    finishCelebrationRoadDecalPlanes.length !== 1 ||
+    finishCelebrationRoadDecalPlanes.some(
+      (plane) =>
+        plane.geometry.parameters.width !== 25.5 ||
+        plane.geometry.parameters.height !== 8.8 ||
+        plane.material.transparent ||
+        plane.material.map.generateMipmaps ||
+        plane.material.map.magFilter !== THREE.LinearFilter ||
+        plane.material.map.minFilter !== THREE.LinearFilter ||
+        plane.rotation.x !== -Math.PI / 2 ||
+        plane.matrixAutoUpdate
+    ) ||
+    !trackMeshLabelDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'FINISH!') ||
+    cornerCoachingSigns.length !== 2 ||
+    cornerCoachingLabels.length !== 2 ||
+    cornerCoachingLabels.some(
+      (label) => label.scale.x !== 13.8 || label.scale.y !== 3.6 || label.material.depthTest
+    ) ||
+    cornerCoachingMarkers.length !== 2 ||
+    cornerCoachingMarkers.some((marker) => marker.geometry.parameters.depth !== 7.4 || marker.matrixAutoUpdate) ||
+    !trackMeshLabelDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'DRIFT BOOST') ||
+    !trackMeshLabelDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'GO!') ||
+    !trackMeshLabelDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'BOOST') ||
+    trackMesh.openingLaunchDecalCount !== 2 ||
+    openingLaunchDecals.length !== 2 ||
+    !openingLaunchDecalLabels.includes('GO!') ||
+    !openingLaunchDecalLabels.includes('BOOST') ||
+    openingLaunchDecals.some((group) => group.matrixAutoUpdate) ||
+    openingLaunchDecalPlanes.length !== 2 ||
+    openingLaunchDecalPlanes.some(
+      (plane) =>
+        plane.geometry.parameters.width !== 22 ||
+        plane.geometry.parameters.height !== 8 ||
+        plane.material.transparent ||
+        plane.material.map.generateMipmaps ||
+        plane.material.map.magFilter !== THREE.LinearFilter ||
+        plane.material.map.minFilter !== THREE.LinearFilter ||
+        plane.rotation.x !== -Math.PI / 2 ||
+        plane.matrixAutoUpdate
+    ) ||
+    roadPaintAccentBars.length < 4 ||
+    trackMesh.openingLaunchPaintCount !== 24 ||
+    openingLaunchPaintGroups.length !== 0 ||
+    openingLaunchPaintStripes.length !== 6 ||
+    openingLaunchPaintChevrons.length !== 3 ||
+    openingLaunchPaintBatches.some(
+      (mesh) =>
+        !mesh.isInstancedMesh ||
+        mesh.matrixAutoUpdate ||
+        mesh.userData?.sourceKind !== 'opening-launch-paint' ||
+        mesh.userData?.instanceCount !== mesh.count
+    ) ||
+    openingLaunchPaintInstanceCount !== 24 ||
+    openingLaunchPaintStripes.some((stripe) => stripe.geometry.parameters.width !== 13.6) ||
+    openingLaunchPaintChevrons.some(
+      (chevron) => chevron.geometry.parameters.width !== 8.6 || chevron.geometry.parameters.depth !== 1.08
+    ) ||
+    trackMesh.openingSweeperDriftPaintCount !== 16 ||
+    openingSweeperDriftPaintStripes.length !== 1 ||
+    openingSweeperDriftPaintChevrons.length !== 1 ||
+    openingSweeperDriftPaintBatches.some(
+      (mesh) =>
+        !mesh.isInstancedMesh ||
+        mesh.matrixAutoUpdate ||
+        mesh.userData?.sourceKind !== 'opening-sweeper-drift-paint' ||
+        mesh.userData?.instanceCount !== mesh.count
+    ) ||
+    openingSweeperDriftPaintInstanceCount !== 16 ||
+    openingSweeperDriftPaintStripes.some(
+      (stripe) => stripe.geometry.parameters.width !== 15.8 || stripe.geometry.parameters.depth !== 0.86
+    ) ||
+    openingSweeperDriftPaintChevrons.some(
+      (chevron) => chevron.geometry.parameters.width !== 10.4 || chevron.geometry.parameters.depth !== 1.22
+    ) ||
+    trackMesh.startTiles.length !== 24 ||
     !trackMesh.startTiles.every(
       (tile) =>
-        tile.parent === trackMeshWorld &&
-        tile.geometry.parameters.depth === trackMeshCompiled.roadWidth / 5 &&
+        tile.parent?.parent === trackMeshWorld &&
+        tile.geometry.parameters.depth === trackMeshCompiled.roadWidth / 6 - 0.18 &&
         !tile.matrixAutoUpdate
     ) ||
     boostPadMesh.parent !== trackMeshWorld ||
@@ -4014,28 +4378,71 @@ const validateKartPhysicsHelpers = () => {
     boostPadMesh.position.y !== 0.42 ||
     boostPadMesh.position.z !== 6 ||
     Math.abs(boostPadMesh.rotation.y + Math.PI / 2) > 0.001 ||
-    boostPadMesh.children.length !== 5 ||
-    boostPadBase.geometry.parameters.width !== 10.6 ||
-    boostPadBase.geometry.parameters.depth !== trackMeshCompiled.roadWidth * 0.38 ||
+    boostPadMesh.userData.kind !== 'boost-pad-visual' ||
+    boostPadMesh.children.length !== 14 ||
+    boostPadBase.geometry.parameters.width !== 18.4 ||
+    boostPadBase.geometry.parameters.depth !== trackMeshCompiled.roadWidth * 0.58 ||
     boostPadBase.matrixAutoUpdate ||
-    boostPadStripe.material !== trackMesh.materials.lineMat ||
-    boostPadStripe.matrixAutoUpdate ||
-    boostPadStripe.position.x !== -3 ||
-    boostPadStripe.rotation.z !== 0.55
+    boostPadChevrons.length !== 3 ||
+    boostPadChevrons.some(
+      (chevron, index) =>
+        chevron.material === trackMesh.materials.lineMat ||
+        chevron.matrixAutoUpdate ||
+        Math.abs(chevron.position.x - [-5.6, 0, 5.6][index]) > 0.001 ||
+        Math.abs(chevron.position.y - 0.68) > 0.001 ||
+        chevron.geometry.parameters.radius !== 3.15 ||
+        chevron.geometry.parameters.height !== 7.6
+    ) ||
+    !boostPadCenterStripe ||
+    boostPadCenterStripe.geometry.parameters.width !== 16.6 ||
+    boostPadCenterStripe.geometry.parameters.depth !== 0.42 ||
+    boostPadCenterStripe.matrixAutoUpdate ||
+    boostPadGantryPosts.length !== 2 ||
+    boostPadGantryPosts.some((post) => post.geometry.parameters.height !== 3.1 || post.matrixAutoUpdate) ||
+    !boostPadGantryBoard ||
+    boostPadGantryBoard.geometry.parameters.height !== 1.58 ||
+    boostPadGantryBoard.matrixAutoUpdate ||
+    !boostPadGantryTop ||
+    boostPadGantryTop.geometry.parameters.height !== 0.28 ||
+    boostPadGantryTop.matrixAutoUpdate ||
+    boostPadGantryChevrons.length !== 3 ||
+    boostPadGantryChevrons.some((chevron) => chevron.geometry.parameters.depth !== 1.25 || chevron.matrixAutoUpdate)
   ) {
-    fail('Extracted track mesh helper should preserve road materials, ground sizing, start tiles, and boost pad geometry', {
+    fail('Extracted track mesh helper should preserve road materials, ground sizing, arcade start grid, and boost pad geometry', {
       boostPad: {
         base: boostPadBase?.geometry?.parameters,
         children: boostPadMesh.children.length,
         position: boostPadMesh.position,
         rotation: boostPadMesh.rotation,
-        stripe: boostPadStripe?.geometry?.parameters,
+        chevrons: boostPadChevrons.map((chevron) => chevron.geometry?.parameters),
+        centerStripe: boostPadCenterStripe?.geometry?.parameters,
+        gantryBoard: boostPadGantryBoard?.geometry?.parameters,
+        gantryChevrons: boostPadGantryChevrons.map((chevron) => chevron.geometry?.parameters),
+        gantryPosts: boostPadGantryPosts.map((post) => post.geometry?.parameters),
+        gantryTop: boostPadGantryTop?.geometry?.parameters,
       },
       trackMesh: {
         cleanCityCourse: trackMesh.cleanCityCourse,
         dimensions: trackMesh.dimensions,
         ground: trackMesh.ground.geometry.parameters,
         instancedTrackMeshCount: trackMesh.instancedTrackMeshCount,
+        finishCelebrationCueCount: trackMesh.finishCelebrationCueCount,
+        finishCelebrationRoadDecals: finishCelebrationRoadDecals.length,
+        finishCelebrationRoadDecalPlanes: finishCelebrationRoadDecalPlanes.map((plane) => plane.geometry?.parameters),
+        openingLaunchDecalCount: trackMesh.openingLaunchDecalCount,
+        openingLaunchDecalLabels,
+        openingLaunchDecalPlanes: openingLaunchDecalPlanes.map((plane) => plane.geometry?.parameters),
+        openingLaunchPaintCount: trackMesh.openingLaunchPaintCount,
+        openingLaunchPaintBatches: openingLaunchPaintBatches.length,
+        openingLaunchPaintChevrons: openingLaunchPaintChevrons.length,
+        openingLaunchPaintGroups: openingLaunchPaintGroups.length,
+        openingLaunchPaintInstanceCount,
+        openingLaunchPaintStripes: openingLaunchPaintStripes.length,
+        openingSweeperDriftPaintBatches: openingSweeperDriftPaintBatches.length,
+        openingSweeperDriftPaintChevrons: openingSweeperDriftPaintChevrons.length,
+        openingSweeperDriftPaintCount: trackMesh.openingSweeperDriftPaintCount,
+        openingSweeperDriftPaintInstanceCount,
+        openingSweeperDriftPaintStripes: openingSweeperDriftPaintStripes.length,
         startTiles: trackMesh.startTiles.length,
         visualSegmentCount: trackMesh.visualSegmentCount,
         worldChildren: trackMeshWorld.children.length,
@@ -4180,6 +4587,176 @@ const validateKartPhysicsHelpers = () => {
     });
   }
 
+  const cleanStorefrontWorld = new THREE.Group();
+  const cleanStorefrontDrawCalls = [];
+  const cleanStorefrontDocumentRef = {
+    createElement: (tagName) => {
+      if (tagName !== 'canvas') fail('Clean storefront helper should only create canvas labels', { tagName });
+      return {
+        getContext: () => ({
+          beginPath: () => cleanStorefrontDrawCalls.push({ type: 'beginPath' }),
+          closePath: () => cleanStorefrontDrawCalls.push({ type: 'closePath' }),
+          fill: () => cleanStorefrontDrawCalls.push({ type: 'fill' }),
+          fillRect: (...args) => cleanStorefrontDrawCalls.push({ args, type: 'fillRect' }),
+          fillText: (...args) => cleanStorefrontDrawCalls.push({ args, type: 'fillText' }),
+          lineTo: (...args) => cleanStorefrontDrawCalls.push({ args, type: 'lineTo' }),
+          moveTo: (...args) => cleanStorefrontDrawCalls.push({ args, type: 'moveTo' }),
+          stroke: () => cleanStorefrontDrawCalls.push({ type: 'stroke' }),
+          strokeRect: (...args) => cleanStorefrontDrawCalls.push({ args, type: 'strokeRect' }),
+          translate: (...args) => cleanStorefrontDrawCalls.push({ args, type: 'translate' }),
+          set fillStyle(value) {
+            cleanStorefrontDrawCalls.push({ type: 'fillStyle', value });
+          },
+          set font(value) {
+            cleanStorefrontDrawCalls.push({ type: 'font', value });
+          },
+          set lineWidth(value) {
+            cleanStorefrontDrawCalls.push({ type: 'lineWidth', value });
+          },
+          set strokeStyle(value) {
+            cleanStorefrontDrawCalls.push({ type: 'strokeStyle', value });
+          },
+          set textAlign(value) {
+            cleanStorefrontDrawCalls.push({ type: 'textAlign', value });
+          },
+          set textBaseline(value) {
+            cleanStorefrontDrawCalls.push({ type: 'textBaseline', value });
+          },
+        }),
+      };
+    },
+  };
+  const cleanStorefrontSceneryResult = createRaceScenery({
+    asphaltMat: trackMesh.materials.asphaltMat,
+    bounds: trackMesh.dimensions.bounds,
+    cleanCityCourse: true,
+    collisionCircles: [],
+    compiled: sceneryCompiled,
+    documentRef: cleanStorefrontDocumentRef,
+    railPostMat: trackMesh.materials.railPostMat,
+    registerCameraCollider: (object) => object,
+    trackCenterX: trackMesh.dimensions.trackCenterX,
+    trackCenterZ: trackMesh.dimensions.trackCenterZ,
+    trackSpanX: trackMesh.dimensions.trackSpanX,
+    trackSpanZ: trackMesh.dimensions.trackSpanZ,
+    visualPalette: { cyan: '#46d9ef', food: '#ffac32', garage: '#2cc8ff', lab: '#d45cff', roadLine: '#ffd34f' },
+    world: cleanStorefrontWorld,
+  });
+  const openingStorefronts = [];
+  const openingStorefrontLabels = [];
+  const openingStorefrontWindows = [];
+  const openingStorefrontAwnings = [];
+  const openingPennantRuns = [];
+  const openingPennantLabels = [];
+  const openingPennantFlags = [];
+  const openingPennantPosts = [];
+  const openingPennantCords = [];
+  const openingTreeInstancedMeshes = [];
+  cleanStorefrontWorld.traverse((object) => {
+    if (object.userData?.kind === 'arcade-storefront-strip') openingStorefronts.push(object);
+    if (object.userData?.kind === 'arcade-storefront-label') openingStorefrontLabels.push(object);
+    if (object.userData?.kind === 'arcade-storefront-window') openingStorefrontWindows.push(object);
+    if (object.userData?.kind === 'arcade-storefront-awning') openingStorefrontAwnings.push(object);
+    if (object.userData?.kind === 'opening-pennant-run') openingPennantRuns.push(object);
+    if (object.userData?.kind === 'opening-pennant-label') openingPennantLabels.push(object);
+    if (object.userData?.kind === 'opening-pennant-flag') openingPennantFlags.push(object);
+    if (object.userData?.kind === 'opening-pennant-post') openingPennantPosts.push(object);
+    if (object.userData?.kind === 'opening-pennant-cord') openingPennantCords.push(object);
+    if (object.userData?.kind?.startsWith('opening-tree-')) openingTreeInstancedMeshes.push(object);
+  });
+  const openingStorefrontWindowInstanceCount = openingStorefrontWindows.reduce(
+    (total, mesh) => total + (mesh.userData?.instanceCount || mesh.count || 0),
+    0
+  );
+  const openingStorefrontAwningInstanceCount = openingStorefrontAwnings.reduce(
+    (total, mesh) => total + (mesh.userData?.instanceCount || mesh.count || 0),
+    0
+  );
+  const openingPennantFlagInstanceCount = openingPennantFlags.reduce(
+    (total, mesh) => total + (mesh.userData?.instanceCount || mesh.count || 0),
+    0
+  );
+  const openingPennantPostInstanceCount = openingPennantPosts.reduce(
+    (total, mesh) => total + (mesh.userData?.instanceCount || mesh.count || 0),
+    0
+  );
+  const openingPennantCordInstanceCount = openingPennantCords.reduce(
+    (total, mesh) => total + (mesh.userData?.instanceCount || mesh.count || 0),
+    0
+  );
+  if (
+    cleanStorefrontSceneryResult.openingTreeCount !== 6 ||
+    openingStorefronts.length !== 3 ||
+    openingStorefrontLabels.length !== 3 ||
+    openingStorefrontWindows.length !== 1 ||
+    openingStorefrontWindowInstanceCount !== 9 ||
+    openingStorefrontWindows.some(
+      (mesh) => !mesh.isInstancedMesh || mesh.matrixAutoUpdate || mesh.userData.sourceKind !== 'opening-static-decoration'
+    ) ||
+    openingStorefrontAwnings.length !== 6 ||
+    openingStorefrontAwningInstanceCount !== 9 ||
+    openingStorefrontAwnings.some(
+      (mesh) => !mesh.isInstancedMesh || mesh.matrixAutoUpdate || mesh.userData.sourceKind !== 'opening-static-decoration'
+    ) ||
+    openingPennantRuns.length !== 3 ||
+    openingPennantLabels.length !== 3 ||
+    openingPennantFlags.length !== 3 ||
+    openingPennantFlagInstanceCount !== 21 ||
+    openingPennantFlags.some(
+      (mesh) => !mesh.isInstancedMesh || mesh.matrixAutoUpdate || mesh.userData.sourceKind !== 'opening-static-decoration'
+    ) ||
+    openingPennantPosts.length !== 1 ||
+    openingPennantPostInstanceCount !== 6 ||
+    openingPennantPosts.some(
+      (mesh) => !mesh.isInstancedMesh || mesh.matrixAutoUpdate || mesh.userData.sourceKind !== 'opening-static-decoration'
+    ) ||
+    openingPennantCords.length !== 1 ||
+    openingPennantCordInstanceCount !== 3 ||
+    openingPennantCords.some(
+      (mesh) => !mesh.isInstancedMesh || mesh.matrixAutoUpdate || mesh.userData.sourceKind !== 'opening-static-decoration'
+    ) ||
+    openingTreeInstancedMeshes.length !== 3 ||
+    openingTreeInstancedMeshes.some((mesh) => !mesh.isInstancedMesh || mesh.matrixAutoUpdate) ||
+    openingTreeInstancedMeshes.reduce((total, mesh) => total + mesh.count, 0) !== 12 ||
+    !openingTreeInstancedMeshes.some(
+      (mesh) => mesh.userData.kind === 'opening-tree-trunks' && mesh.geometry.parameters.height === 5.6
+    ) ||
+    !openingTreeInstancedMeshes.some(
+      (mesh) => mesh.userData.kind === 'opening-tree-crowns' && mesh.geometry.parameters.radius === 3.45
+    ) ||
+    !openingTreeInstancedMeshes.some(
+      (mesh) => mesh.userData.kind === 'opening-tree-highlight-crowns' && mesh.geometry.parameters.radius === 3.2
+    ) ||
+    openingStorefronts.some((group) => group.matrixAutoUpdate || !group.userData.label) ||
+    openingPennantRuns.some((group) => group.matrixAutoUpdate || !group.userData.label) ||
+    openingStorefrontLabels.some((label) => label.scale.y !== 3 || label.material.depthTest) ||
+    openingPennantLabels.some((label) => label.scale.y !== 3.4 || label.material.depthTest) ||
+    !cleanStorefrontDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'TURBO MART') ||
+    !cleanStorefrontDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'PIT SHOP') ||
+    !cleanStorefrontDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'DRIFT CAFE') ||
+    !cleanStorefrontDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'COMEBACK CUP') ||
+    !cleanStorefrontDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'BOOST ROW') ||
+    !cleanStorefrontDrawCalls.some((entry) => entry.type === 'fillText' && entry.args[0] === 'DRIFT LANE')
+  ) {
+    fail('Clean Comeback City scenery should include low-cost arcade storefront strips, opening pennants, and readable labels', {
+      drawCalls: cleanStorefrontDrawCalls.filter((entry) => entry.type === 'fillText'),
+      labels: openingStorefrontLabels.map((label) => label.scale),
+      openingPennantCords: openingPennantCords.map((mesh) => mesh.userData),
+      openingPennantFlags: openingPennantFlags.map((mesh) => mesh.userData),
+      openingPennantPosts: openingPennantPosts.map((mesh) => mesh.userData),
+      openingStorefrontAwnings: openingStorefrontAwnings.map((mesh) => mesh.userData),
+      openingStorefrontWindows: openingStorefrontWindows.map((mesh) => mesh.userData),
+      openingTreeCount: cleanStorefrontSceneryResult.openingTreeCount,
+      openingTrees: openingTreeInstancedMeshes.map((mesh) => ({
+        count: mesh.count,
+        geometry: mesh.geometry?.parameters,
+        kind: mesh.userData.kind,
+      })),
+      pennants: openingPennantRuns.map((group) => group.userData),
+      storefronts: openingStorefronts.map((group) => group.userData),
+    });
+  }
+
   const pickupWorld = new THREE.Group();
   const trackBananaMaterial = createTrackBananaMaterial();
   const droppedBananaMaterial = createDroppedBananaMaterial();
@@ -4271,6 +4848,40 @@ const validateKartPhysicsHelpers = () => {
     },
     world: pickupBatchWorld,
   });
+  const cleanPickupBatchWorld = new THREE.Group();
+  const cleanPickupBatch = createRacePickupMeshes({
+    cleanCityCourse: true,
+    compiled: { accent: '#123456', roadWidth: 40 },
+    defaultVehicle: 'kart',
+    race: {
+      balloons: [{ position: new THREE.Vector3(), type: { color: '#ff0000' } }],
+      bananas: [{ position: new THREE.Vector3() }],
+      flightGates: [
+        {
+          altitude: 12,
+          position: new THREE.Vector3(),
+          tangent: new THREE.Vector3(0, 0, 1),
+        },
+      ],
+      switchPads: [
+        {
+          layer: 'ground',
+          position: new THREE.Vector3(),
+          tangent: new THREE.Vector3(0, 0, 1),
+          targetVehicle: 'kart',
+        },
+      ],
+      trackHazards: [
+        {
+          layer: 'ground',
+          position: new THREE.Vector3(),
+          radius: 8,
+          type: 'pulseZone',
+        },
+      ],
+    },
+    world: cleanPickupBatchWorld,
+  });
   if (
     trackBananaMaterial.color.getHexString() !== 'ffd34f' ||
     trackBananaMaterial.emissiveIntensity !== 0.16 ||
@@ -4280,12 +4891,11 @@ const validateKartPhysicsHelpers = () => {
     trackBananaMesh.position.y !== 1.25 ||
     trackBananaMesh.children.length !== 1 ||
     trackBananaMesh.children[0].geometry.parameters.radius !== 0.8 ||
-    itemBoxMesh.position.y !== 3.5 ||
-    itemBoxMesh.children.length !== 2 ||
-    itemBoxMesh.children[0].geometry.parameters.radius !== 1.45 ||
-    itemBoxMesh.children[0].scale.y !== 1.15 ||
-    itemBoxMesh.children[1].position.y !== -1.55 ||
+    itemBoxMesh.position.y !== 3.25 ||
+    itemBoxMesh.children.length !== 1 ||
+    itemBoxMesh.children[0].geometry.parameters.width !== 2.7 ||
     itemBoxMesh.children[0].material.color.getHexString() !== 'abcdef' ||
+    itemBoxMesh.children[0].material.emissiveIntensity !== 0.92 ||
     flightGateMesh.group.position.y !== 15 ||
     Math.abs(flightGateMesh.group.rotation.y - Math.PI / 2) > 0.001 ||
     flightGateMesh.group.visible ||
@@ -4311,9 +4921,17 @@ const validateKartPhysicsHelpers = () => {
     pickupBatch.flightGateMeshes.length !== 1 ||
     pickupBatch.switchPadMeshes.length !== 1 ||
     pickupBatch.trackHazardMeshes.length !== 1 ||
-    pickupBatchWorld.children.length !== 5
+    pickupBatchWorld.children.length !== 5 ||
+    cleanPickupBatch.bananaMeshes.length !== 1 ||
+    cleanPickupBatch.balloonMeshes.length !== 1 ||
+    cleanPickupBatch.flightGateMeshes.length !== 0 ||
+    cleanPickupBatch.switchPadMeshes.length !== 0 ||
+    cleanPickupBatch.trackHazardMeshes.length !== 1 ||
+    cleanPickupBatchWorld.children.length !== 3
   ) {
     fail('Extracted race pickup mesh helpers should preserve banana, item box, gate, switch pad, hazard, dropped banana, and trap geometry', {
+      cleanPickupBatch,
+      cleanPickupWorldChildren: cleanPickupBatchWorld.children.length,
       droppedBananaMesh,
       droppedTrapMesh,
       flightGate: flightGateMesh,
@@ -4625,6 +5243,7 @@ const validateKartPhysicsHelpers = () => {
     reversePrimer.visualStats.reverseSpeedCapRatio !== normalizedSpeedFor(VEHICLES.kart.reverse, VEHICLES.kart.maxSpeed) ||
     !boostPadPrimer.playtest.boostPadMechanicsPrimed ||
     boostPadPrimer.race.zippers[0].cooldown !== 0 ||
+    Math.abs(boostPadPrimer.playtest.boostPadCaptureProgress - 0.083) > 0.001 ||
     boostPadPrimer.visualStats.boostPadProbeStartTime !== boostPadPrimer.race.time ||
     Math.abs(boostPadPrimer.race.player.velocity.length() - VEHICLES.kart.maxSpeed * 0.52) > 0.001 ||
     !collisionPrimer.playtest.collisionMechanicsPrimed ||
@@ -4683,6 +5302,15 @@ const validateKartPhysicsHelpers = () => {
         ...options.player,
       },
       time: 8.25,
+      zippers: [
+        {
+          cooldown: 1.05,
+          position: new THREE.Vector3(9.5, 0, 3.8),
+          progress: 0.095,
+          tangent: new THREE.Vector3(0, 0, 1),
+        },
+      ],
+      ...options.race,
     };
     const visualStats = {
       ...makeVisualPrimerStats(),
@@ -4748,6 +5376,9 @@ const validateKartPhysicsHelpers = () => {
     boostPadFrame.scenarioResult !== VISUAL_KART_MANUAL_SCENARIOS.boostPadMechanics ||
     boostPadFrame.race.player.boostSource !== 'pad' ||
     boostPadFrame.race.player.boostTimer < 0.55 ||
+    boostPadFrame.race.zippers[0].cooldown !== 0 ||
+    Math.abs(boostPadFrame.race.player.progress - 0.083) > 0.001 ||
+    Math.abs(boostPadFrame.race.player.position.z + 3.4) > 0.001 ||
     Math.abs(boostPadFrame.race.player.velocity.length() - VEHICLES.kart.maxSpeed * 0.86) > 0.001 ||
     brakingFrame.scenarioResult !== VISUAL_KART_MANUAL_SCENARIOS.braking ||
     Math.abs(brakingFrame.race.player.velocity.length() - VEHICLES.kart.maxSpeed * 0.25) > 0.001 ||
@@ -5301,10 +5932,10 @@ const validateChaseCameraHelpers = () => {
   if (Math.abs(desktopKart.speedRatio - 0.667) > 0.002) {
     fail('Desktop kart camera speed ratio changed unexpectedly', { desktopKart });
   }
-  if (Math.abs(desktopKart.chaseDistance - 50) > 0.05) {
+  if (Math.abs(desktopKart.chaseDistance - 37) > 0.05) {
     fail('Desktop kart camera distance changed unexpectedly', { desktopKart });
   }
-  if (desktopKart.lookAhead < 63.9 || desktopKart.lookAhead > 64.1) {
+  if (desktopKart.lookAhead < 49.9 || desktopKart.lookAhead > 50.1 || desktopKart.chaseHeight < 8.3 || desktopKart.chaseHeight > 8.4) {
     fail('Desktop kart camera lookahead changed unexpectedly', { desktopKart });
   }
 
@@ -5316,7 +5947,7 @@ const validateChaseCameraHelpers = () => {
     speed: 48,
     vehicle: VEHICLES.kart,
   });
-  if (mobileKart.fov !== 68 || mobileKart.chaseDistance < 38.5 || mobileKart.chaseDistance > 38.6) {
+  if (mobileKart.fov !== 66 || mobileKart.chaseDistance < 38.7 || mobileKart.chaseDistance > 38.9) {
     fail('Mobile boosted kart camera profile changed unexpectedly', { mobileKart });
   }
   const reducedBoostKart = resolveChaseCameraProfile({
@@ -5328,7 +5959,7 @@ const validateChaseCameraHelpers = () => {
     speed: 48,
     vehicle: VEHICLES.kart,
   });
-  if (reducedBoostKart.fov !== 66) {
+  if (reducedBoostKart.fov !== 62) {
     fail('Reduced-motion camera profile should suppress boost FOV pulse', { reducedBoostKart });
   }
 
@@ -5540,11 +6171,11 @@ const validateChaseCameraHelpers = () => {
   if (
     !cameraFrame.cameraInitialized ||
     !cameraFrame.routeLookahead?.usedRoute ||
-    cameraFrame.routeLookahead.seconds !== 1.333 ||
-    Math.abs(frameCamera.position.x + 0.6) > 0.01 ||
-    Math.abs(frameCamera.position.y - 10.667) > 0.01 ||
-    Math.abs(frameCamera.position.z + 50) > 0.01 ||
-    frameCamera.fov !== 66 ||
+    cameraFrame.routeLookahead.seconds !== 1.25 ||
+    Math.abs(frameCamera.position.x + 0.45) > 0.01 ||
+    Math.abs(frameCamera.position.y - 8.333) > 0.01 ||
+    Math.abs(frameCamera.position.z + 51) > 0.01 ||
+    Math.abs(frameCamera.fov - 64.847) > 0.01 ||
     Math.abs(frameCamera.rotation.z) < 0.01
   ) {
     fail('Camera frame helper should preserve initial chase placement, route lookahead, FOV, and drift roll', {
@@ -5577,7 +6208,7 @@ const validateChaseCameraHelpers = () => {
   });
   if (
     !reducedMotionFrame.cameraInitialized ||
-    reducedMotionFrameCamera.fov !== 66
+    Math.abs(reducedMotionFrameCamera.fov - 64.847) > 0.01
   ) {
     fail('Reduced-motion camera frame should suppress shake and boost FOV pulse', {
       cameraRotation: reducedMotionFrameCamera.rotation,
@@ -5668,7 +6299,7 @@ const validateChaseCameraHelpers = () => {
     race: { cameraShakeTimer: 0 },
     vehicle: VEHICLES.kart,
   });
-  if (projectionUpdateCount !== 1 || projectionCamera.fov <= 66) {
+  if (projectionUpdateCount !== 2 || Math.abs(projectionCamera.fov - 64.603) > 0.01) {
     fail('Camera frame helper should skip stable projection updates and update projection when FOV changes', {
       fov: projectionCamera.fov,
       projectionUpdateCount,
@@ -5904,6 +6535,61 @@ const validateRaceRivalHelpers = () => {
     });
   }
 
+  const pressureVehicle = { maxSpeed: 72 };
+  const catchupPressure = rivalPressureForFrame({
+    ai: { aggression: 0.48, patience: 0.62 },
+    compiled: { totalLength: 640 },
+    dt: 0.1,
+    index: 0,
+    player: {
+      progress: 0.62,
+      velocity: new THREE.Vector3(0, 0, 48),
+    },
+    rival: { progress: 0.34 },
+    rivalVehicle: pressureVehicle,
+    scoreGap: 0.28,
+  });
+  const launchPressure = rivalPressureForFrame({
+    ai: { aggression: 0.3, patience: 0.74 },
+    compiled: { totalLength: 640 },
+    dt: 0.1,
+    index: 1,
+    player: {
+      progress: 0.02,
+      velocity: new THREE.Vector3(0, 0, 18),
+    },
+    rival: { progress: 0.08 },
+    rivalVehicle: pressureVehicle,
+    scoreGap: -0.06,
+  });
+  const autoplayPressure = rivalPressureForFrame({
+    ai: { aggression: 0.36, patience: 0.72 },
+    compiled: { totalLength: 640 },
+    dt: 0.16,
+    index: 2,
+    playtest: { enabled: true, mode: 'free-switch' },
+    player: {
+      progress: 0.52,
+      velocity: new THREE.Vector3(0, 0, 48),
+    },
+    rival: { progress: 0.1 },
+    rivalVehicle: pressureVehicle,
+    scoreGap: 0.42,
+  });
+  if (
+    catchupPressure.desiredSpeed < pressureVehicle.maxSpeed * 1.08 ||
+    launchPressure.desiredSpeed > 32 ||
+    !autoplayPressure.progressCorrection ||
+    autoplayPressure.progressCorrection.targetProgress < 0.56 ||
+    autoplayPressure.desiredSpeed < 640 * 0.94
+  ) {
+    fail('Rival pressure helper should tighten normal-play packs and pace scripted autoplay without changing visual clusters', {
+      autoplayPressure,
+      catchupPressure,
+      launchPressure,
+    });
+  }
+
   const compiled = {
     aiRivals,
     laps: 3,
@@ -6004,8 +6690,51 @@ const validateRaceRivalHelpers = () => {
     });
   }
 
+  const noFinishRace = {
+    player: {
+      position: new THREE.Vector3(0, 0, 0),
+      progress: 0.02,
+      velocity: new THREE.Vector3(0, 0, 48),
+    },
+    rivals: [
+      {
+        finished: false,
+        hitTimer: 0,
+        lane: 0,
+        lap: 3,
+        position: new THREE.Vector3(99, 0, 0),
+        progress: 0.99,
+        rank: 2,
+        speed: 80,
+        vehicleMode: 'kart',
+        wobble: 0,
+      },
+    ],
+    time: 18,
+  };
+  const noFinishFrame = updateRaceRivalsForFrame({
+    compiled,
+    defaultVehicle: 'kart',
+    dt: 0.1,
+    playtest: { enabled: true, mode: 'free-switch', noFinish: true },
+    race: noFinishRace,
+    scoreRacer: (racer) => (racer.lap || 1) - 1 + (racer.progress || 0),
+    vehicles: VEHICLES,
+  });
+  if (
+    noFinishFrame.finishedCount !== 0 ||
+    noFinishRace.rivals[0].finished ||
+    noFinishRace.rivals[0].lap !== 1 ||
+    noFinishRace.rivals[0].finishTime !== null
+  ) {
+    fail('Rival frame helper should loop rivals instead of finishing during no-finish scripted captures', {
+      noFinishFrame,
+      noFinishRace,
+    });
+  }
+
   const visualRace = {
-    player: { progress: 0.2 },
+    player: { position: compiled.pointAt(0.2).point, progress: 0.2 },
     rivals: [
       { finished: true, position: new THREE.Vector3(), speed: 0 },
       { finished: true, position: new THREE.Vector3(), speed: 0 },
@@ -6018,14 +6747,50 @@ const validateRaceRivalHelpers = () => {
     race: visualRace,
     useVisualRivalCluster: (playtest) => visualKartScenarioMatches(playtest, 'rival-cluster'),
   });
+  const visualRivalDistances = visualRace.rivals.map((rival) => rival.position.distanceTo(visualRace.player.position));
   if (
     visualFrame.mode !== 'visual-cluster' ||
     visualFrame.updatedCount !== 3 ||
-    visualRace.rivals.some((rival) => rival.finished || rival.vehicleMode !== 'kart' || rival.layer !== 'ground' || rival.speed !== 44)
+    visualRace.rivals.some((rival) => rival.finished || rival.vehicleMode !== 'kart' || rival.layer !== 'ground' || rival.speed !== 44) ||
+    Math.min(...visualRivalDistances) > 16 ||
+    Math.max(...visualRivalDistances) > 32
   ) {
     fail('Rival frame helper should preserve visual rival-cluster placement behavior', {
       visualFrame,
+      visualRivalDistances,
       visualRace,
+    });
+  }
+
+  const playtestRuntime = createRacePlaytestRuntime();
+  const visualTurnRace = {
+    player: { position: compiled.pointAt(0.185).point, progress: 0.185 },
+    rivals: [
+      { finished: true, position: new THREE.Vector3(), speed: 0 },
+      { finished: true, position: new THREE.Vector3(), speed: 0 },
+      { finished: true, position: new THREE.Vector3(), speed: 0 },
+    ],
+  };
+  const visualTurnFrame = updateRaceRivalsForFrame({
+    compiled,
+    playtest: { enabled: true, mode: 'visual-kart', visualScenario: 'turn-approach' },
+    race: visualTurnRace,
+    useVisualRivalCluster: playtestRuntime.isVisualRivalCluster,
+  });
+  const visualTurnRivalDistances = visualTurnRace.rivals.map((rival) =>
+    rival.position.distanceTo(visualTurnRace.player.position)
+  );
+  if (
+    visualTurnFrame.mode !== 'visual-cluster' ||
+    visualTurnFrame.updatedCount !== 3 ||
+    visualTurnRace.rivals.some((rival) => rival.finished || rival.vehicleMode !== 'kart' || rival.layer !== 'ground') ||
+    Math.min(...visualTurnRivalDistances) > 16 ||
+    Math.max(...visualTurnRivalDistances) > 32
+  ) {
+    fail('Rival frame helper should place a readable rival pack for the required turn-approach drift screenshot', {
+      visualTurnFrame,
+      visualTurnRace,
+      visualTurnRivalDistances,
     });
   }
 };
@@ -6358,8 +7123,12 @@ const validateRaceFrameClockHelpers = () => {
     playtestFrame.dt !== 0.16 ||
     Math.abs(nextFps - 31.6) > 0.001 ||
     Math.abs(stats.actualFps - 29.6) > 0.001 ||
+    stats.deliveredFps !== 25 ||
+    stats.frameBudgetMissRatio !== 1 ||
+    stats.frameCount !== 1 ||
     stats.frameDtMs !== 20 ||
     stats.frameElapsedMs !== 40 ||
+    stats.frameElapsedTotalMs !== 40 ||
     stats.frameBudgetMissCount !== 1 ||
     Math.abs(phaseStats.framePhaseMs.render - 10.8) > 0.001 ||
     phaseStats.framePhaseMs.player !== 4.2 ||
@@ -6382,7 +7151,11 @@ const validateRaceFrameClockHelpers = () => {
     clockRace.positionNotice?.life >= 0.2 ||
     clockStats.fps <= 0 ||
     clockStats.actualFps <= 0 ||
+    clockStats.deliveredFps !== 20 ||
+    clockStats.frameBudgetMissRatio !== 1 ||
+    clockStats.frameCount !== 1 ||
     clockStats.frameElapsedMs !== 50 ||
+    clockStats.frameElapsedTotalMs !== 50 ||
     clockStats.frameDtMs !== 33 ||
     clockStats.frameBudgetMissCount !== 1
   ) {
@@ -6711,6 +7484,22 @@ const validateRaceTelemetryHelpers = () => {
   camera.updateProjectionMatrix();
   const playerGroup = new THREE.Group();
   playerGroup.add(new THREE.Mesh(new THREE.BoxGeometry(4, 2, 6), new THREE.MeshBasicMaterial()));
+  const playerBoostBurstGroup = new THREE.Group();
+  playerBoostBurstGroup.userData.kind = 'boost-burst-streak';
+  playerBoostBurstGroup.visible = true;
+  playerGroup.add(playerBoostBurstGroup);
+  const playerShieldGroup = new THREE.Group();
+  playerShieldGroup.userData.kind = 'shield-visual';
+  playerShieldGroup.visible = true;
+  playerGroup.add(playerShieldGroup);
+  const playerShieldBurstGroup = new THREE.Group();
+  playerShieldBurstGroup.userData.kind = 'shield-burst-crown';
+  playerShieldBurstGroup.visible = true;
+  playerGroup.add(playerShieldBurstGroup);
+  const playerDriftTrailGroup = new THREE.Group();
+  playerDriftTrailGroup.userData.kind = 'drift-trail-visual';
+  playerDriftTrailGroup.visible = true;
+  playerGroup.add(playerDriftTrailGroup);
   playerGroup.position.set(0, 1, 0);
   playerGroup.updateMatrixWorld(true);
   const telemetryPlayer = {
@@ -6789,6 +7578,10 @@ const validateRaceTelemetryHelpers = () => {
     collisionSpeedAfter: 0.4,
     collisionSpeedBefore: 0.8,
     collisionSpeedLossRatio: 0.5,
+    deliveredFps: 48.4,
+    frameBudgetMissRatio: 0.18,
+    frameCount: 91,
+    frameElapsedTotalMs: 1880,
     framePhaseMaxMs: { render: 8.5 },
     framePhaseMs: { render: 4.5, syncMeshes: 2.25 },
     frameWorkMaxMs: 22.5,
@@ -6803,6 +7596,13 @@ const validateRaceTelemetryHelpers = () => {
     telemetrySkipCount: 9,
   };
   const telemetryWindow = {};
+  const telemetryBoostPad = new THREE.Group();
+  telemetryBoostPad.userData.kind = 'boost-pad-visual';
+  telemetryBoostPad.userData.visualActive = true;
+  const telemetryBoostPadChevron = new THREE.Object3D();
+  telemetryBoostPadChevron.userData.kind = 'boost-pad-chevron';
+  telemetryBoostPadChevron.visible = true;
+  telemetryBoostPad.add(telemetryBoostPadChevron);
   const telemetryRenderer = {
     info: {
       memory: {
@@ -6822,6 +7622,7 @@ const validateRaceTelemetryHelpers = () => {
   const rendererInfoTelemetry = rendererInfoTelemetryFor(telemetryRenderer);
   let hudTelemetry = null;
   const telemetryFrame = publishRaceTelemetryFrame({
+    boostPadMeshes: [telemetryBoostPad],
     brakingTelemetryActive: true,
     camera,
     cameraRouteLookahead: {
@@ -6862,14 +7663,23 @@ const validateRaceTelemetryHelpers = () => {
     telemetryWindow.__raceVisualTelemetrySamples.length !== 1 ||
     telemetryWindow.__raceVisualTelemetry.reducedMotion !== true ||
     telemetryWindow.__raceVisualTelemetry.player.audioMuted !== true ||
+    telemetryWindow.__raceVisualTelemetry.player.boostBurstVisualActive !== true ||
+    telemetryWindow.__raceVisualTelemetry.player.boostPadVisualActive !== true ||
     telemetryWindow.__raceVisualTelemetry.player.boostSource !== 'drift' ||
     telemetryWindow.__raceVisualTelemetry.player.driftTierSeen !== 2 ||
+    telemetryWindow.__raceVisualTelemetry.player.driftTrailVisualActive !== true ||
     telemetryWindow.__raceVisualTelemetry.player.reducedMotion !== true ||
+    telemetryWindow.__raceVisualTelemetry.player.shieldBurstVisualActive !== true ||
+    telemetryWindow.__raceVisualTelemetry.player.shieldVisualActive !== true ||
     telemetryWindow.__raceVisualTelemetry.camera.routeLookaheadUsed !== true ||
     telemetryWindow.__raceVisualTelemetry.renderer.calls !== 222 ||
     telemetryWindow.__raceVisualTelemetry.renderer.triangles !== 54321 ||
     telemetryWindow.__raceVisualTelemetry.renderer.geometries !== 321 ||
     telemetryWindow.__raceVisualTelemetry.renderer.programs !== 2 ||
+    telemetryWindow.__raceVisualTelemetry.deliveredFps !== 48.4 ||
+    telemetryWindow.__raceVisualTelemetry.frameBudgetMissRatio !== 0.18 ||
+    telemetryWindow.__raceVisualTelemetry.frameCount !== 91 ||
+    telemetryWindow.__raceVisualTelemetry.frameElapsedTotalMs !== 1880 ||
     telemetryWindow.__raceVisualTelemetry.framePhaseMs.render !== 4.5 ||
     telemetryWindow.__raceVisualTelemetry.framePhaseMs.syncMeshes !== 2.25 ||
     telemetryWindow.__raceVisualTelemetry.framePhaseMaxMs.render !== 8.5 ||
@@ -6896,6 +7706,16 @@ const validateRaceTelemetryHelpers = () => {
       telemetryWindow,
     });
   }
+  playerShieldBurstGroup.visible = false;
+  if (playerShieldBurstVisualActive(playerGroup)) {
+    fail('Shield burst telemetry helper should require a visible shield-burst-crown node');
+  }
+  playerShieldBurstGroup.visible = true;
+  playerBoostBurstGroup.visible = false;
+  if (playerBoostBurstVisualActive(playerGroup)) {
+    fail('Boost burst telemetry helper should require a visible boost-burst-streak node');
+  }
+  playerBoostBurstGroup.visible = true;
   const noVisualStats = createRaceTelemetryStats();
   let noVisualHudTelemetry = null;
   const noVisualFrame = publishRaceTelemetryFrame({
@@ -6970,6 +7790,7 @@ const validateRaceTelemetryHelpers = () => {
 
 const validateRaceTelemetryRuntimeHelpers = () => {
   const camera = { tag: 'camera' };
+  const boostPadMeshes = [{ tag: 'boost-pad' }];
   const collisionCircles = [{ tag: 'collision' }];
   const compiled = { key: 'telemetry-runtime-test' };
   const playerVehicleGroup = { tag: 'player-group' };
@@ -6984,6 +7805,7 @@ const validateRaceTelemetryRuntimeHelpers = () => {
   let routeLookahead = { seconds: 1.1 };
   const runtime = createRaceTelemetryRuntime({
     camera,
+    boostPadMeshes,
     collisionCircles,
     compiled,
     getCameraRouteLookahead: () => routeLookahead,
@@ -7035,6 +7857,7 @@ const validateRaceTelemetryRuntimeHelpers = () => {
     defaultStats.telemetrySkipCount !== 1 ||
     telemetryPayloads.length !== 2 ||
     telemetryPayloads[0].camera !== camera ||
+    telemetryPayloads[0].boostPadMeshes !== boostPadMeshes ||
     telemetryPayloads[0].cameraRouteLookahead.seconds !== 1.1 ||
     telemetryPayloads[0].collisionCircles !== collisionCircles ||
     telemetryPayloads[0].compiled !== compiled ||
@@ -8484,7 +9307,7 @@ const validateRaceRuntimeActionHelpers = () => {
 const validateRacePlaytestStateHelpers = () => {
   const defaultPlaytest = createRacePlaytestState('');
   const visualPlaytest = createRacePlaytestState(
-    '?raceAutoplay=1&raceMode=visual-kart&raceIndex=7&raceVisualScenario=drift-mechanics'
+    '?raceAutoplay=1&raceMode=visual-kart&raceIndex=7&raceVisualScenario=drift-mechanics&raceHideMinimap=1'
   );
   const productionQueryPlaytest = createRacePlaytestState(
     '?raceAutoplay=1&raceMode=visual-kart&raceIndex=7&raceVisualScenario=drift-mechanics&raceNoFinish=1',
@@ -8493,6 +9316,7 @@ const validateRacePlaytestStateHelpers = () => {
   if (
     defaultPlaytest.enabled ||
     defaultPlaytest.mode !== 'free-switch' ||
+    defaultPlaytest.hideMinimap ||
     defaultPlaytest.raceIndex !== 1 ||
     defaultPlaytest.visualScenario !== 'driving' ||
     defaultPlaytest.bananaMax !== 0 ||
@@ -8504,11 +9328,13 @@ const validateRacePlaytestStateHelpers = () => {
     visualPlaytest.mode !== 'visual-kart' ||
     visualPlaytest.raceIndex !== 7 ||
     visualPlaytest.visualScenario !== 'drift-mechanics' ||
+    !visualPlaytest.hideMinimap ||
     visualPlaytest.itemUses !== 0 ||
     visualPlaytest.switchPads !== 0 ||
     visualPlaytest.zones !== 0 ||
     productionQueryPlaytest.enabled ||
     productionQueryPlaytest.mode !== 'disabled' ||
+    productionQueryPlaytest.hideMinimap ||
     productionQueryPlaytest.noFinish ||
     productionQueryPlaytest.raceIndex !== 0 ||
     productionQueryPlaytest.visualScenario !== 'driving'

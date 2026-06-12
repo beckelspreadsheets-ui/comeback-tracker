@@ -32,6 +32,10 @@ const FoodScreen = lazyNamed(() => import('./screens/FoodScreen.jsx'), 'FoodScre
 const JointScreen = lazyNamed(() => import('./screens/JointScreen.jsx'), 'JointScreen');
 const WorldMode = lazyNamed(() => import('./game/WorldMode.jsx'), 'WorldMode');
 const RaceScreen = lazyNamed(() => import('./game/RaceScreen.jsx'), 'RaceScreen');
+const ComebackCityThreeKartRace = lazyNamed(
+  () => import('./game/ComebackCityThreeKartRace.jsx'),
+  'ComebackCityThreeKartRace'
+);
 const VISUAL_REFERENCE_ROUTE_FLAG = import.meta.env.VITE_VISUAL_REFERENCE_ROUTES;
 const VISUAL_REFERENCE_ROUTES_ENABLED =
   import.meta.env.DEV ||
@@ -52,6 +56,12 @@ const KartDesignSheet = VISUAL_REFERENCE_ROUTES_ENABLED
   : null;
 const HudMoodBoard = VISUAL_REFERENCE_ROUTES_ENABLED
   ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'HudMoodBoard')
+  : null;
+const ArcadeKartProofScene = VISUAL_REFERENCE_ROUTES_ENABLED
+  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'ArcadeKartProofScene')
+  : null;
+const PlayableKartProofScene = VISUAL_REFERENCE_ROUTES_ENABLED
+  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'PlayableKartProofScene')
   : null;
 
 const syncTone = {
@@ -172,8 +182,11 @@ const initialScreenFromHash = () => {
     if (hash === 'visual-districts') return 'visual-districts';
     if (hash === 'visual-kart') return 'visual-kart';
     if (hash === 'visual-hud') return 'visual-hud';
+    if (hash === 'visual-kart-proof') return 'visual-kart-proof';
+    if (hash === 'visual-kart-playable') return 'visual-kart-playable';
   }
   if (hash === 'race') return getRaceAvailability().disabled ? 'race-disabled' : 'race';
+  if (hash === 'race-3d-spike') return getRaceAvailability().disabled ? 'race-disabled' : 'race-3d-spike';
   return 'home';
 };
 
@@ -223,7 +236,10 @@ export default function App() {
   );
 
   const clearRaceHash = useCallback(() => {
-    if (typeof window !== 'undefined' && window.location.hash === '#race') {
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.hash === '#race' || window.location.hash === '#race-3d-spike')
+    ) {
       window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
     }
   }, []);
@@ -321,6 +337,18 @@ export default function App() {
         return <JointScreen />;
       case 'race':
         return <RaceScreen state={activeState} setState={activeSetState} onExit={returnHome} readOnly={readOnly} />;
+      case 'race-3d-spike':
+        return (
+          <div
+            className="relative min-h-[100svh] overflow-hidden bg-[#10151d]"
+            data-race-renderer="three-kart"
+            data-testid="race-screen"
+          >
+            <Suspense fallback={<RouteFallback fullScreen />}>
+              <ComebackCityThreeKartRace mode="spike" reducedMotion={Boolean(activeState.game?.hub?.reducedMotion)} />
+            </Suspense>
+          </div>
+        );
       case 'race-disabled':
         return <RaceDisabledScreen onBack={returnHome} reason={raceAvailability.reason} />;
       default:
@@ -398,6 +426,56 @@ export default function App() {
           <HudMoodBoard profile={visualProfile} />
         </VisualReferencePage>
       </Suspense>
+    );
+  }
+
+  if (VISUAL_REFERENCE_ROUTES_ENABLED && screen === 'visual-kart-proof') {
+    return (
+      <Suspense fallback={<RouteFallback fullScreen />}>
+        <VisualReferencePage type="kart-proof">
+          <ArcadeKartProofScene />
+        </VisualReferencePage>
+      </Suspense>
+    );
+  }
+
+  if (VISUAL_REFERENCE_ROUTES_ENABLED && screen === 'visual-kart-playable') {
+    return (
+      <Suspense fallback={<RouteFallback fullScreen />}>
+        <VisualReferencePage type="kart-proof">
+          <PlayableKartProofScene />
+        </VisualReferencePage>
+      </Suspense>
+    );
+  }
+
+  if (screen === 'race') {
+    return (
+      <Suspense fallback={<RouteFallback fullScreen />}>
+        <RaceScreen state={activeState} setState={activeSetState} onExit={returnHome} readOnly={readOnly} />
+      </Suspense>
+    );
+  }
+
+  if (screen === 'race-3d-spike') {
+    return (
+      <Suspense fallback={<RouteFallback fullScreen />}>
+        <div
+          className="relative min-h-[100svh] overflow-hidden bg-[#10151d]"
+          data-race-renderer="three-kart"
+          data-testid="race-screen"
+        >
+          <ComebackCityThreeKartRace mode="spike" reducedMotion={Boolean(activeState.game?.hub?.reducedMotion)} />
+        </div>
+      </Suspense>
+    );
+  }
+
+  if (screen === 'race-disabled') {
+    return (
+      <div className="min-h-screen bg-ink px-4 py-20 text-bone">
+        <RaceDisabledScreen onBack={returnHome} reason={raceAvailability.reason} />
+      </div>
     );
   }
 

@@ -158,7 +158,7 @@ export const createRaceVehicleMeshes = ({
   const playerVehicle = createKartModelV2({
     accent: '#46d9ef',
     color: '#ef4334',
-    scale: 0.84,
+    scale: 0.96,
     suit: profile.avatar?.suit || '#202837',
   });
   playerVehicle.setMode(race.player.vehicleMode);
@@ -171,7 +171,7 @@ export const createRaceVehicleMeshes = ({
     const model = createRivalKartModel({
       accent: rival.accent,
       color: rival.color,
-      scale: 0.48,
+      scale: 0.58,
     });
     model.setMode(defaultVehicle);
     world.add(model.group);

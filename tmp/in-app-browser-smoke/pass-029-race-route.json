@@ -1,0 +1,88 @@
+{
+  "capturedAt": "2026-06-06T00:44:43.443Z",
+  "url": "http://127.0.0.1:5310/#race",
+  "state": {
+    "bodyTextSample": "TODAY\nKART ARCADE CIRCUIT GP\nCOMEBACK CITY GRAND PRIX\n4th\nLAP\n1/3\nSPEED\n0\nTIME\n0:32.40\nDRIFT READY\nKART\nWASD / ARROWS DRIVE · SPACE HOP + DRIFT · F ITEM · Q/E/R BANK\nHELD ITEM\nEMPTY\nUSE ITEM\nRIVAL PRESSURE\nPACK FIGHT\nN",
+    "buttonCount": 16,
+    "buttons": [
+      {
+        "aria": "",
+        "text": "Raceway"
+      },
+      {
+        "aria": "",
+        "text": "Basic"
+      },
+      {
+        "aria": "",
+        "text": "City"
+      },
+      {
+        "aria": "",
+        "text": "Today"
+      },
+      {
+        "aria": "Mute race audio",
+        "text": ""
+      },
+      {
+        "aria": "",
+        "text": "Use item"
+      },
+      {
+        "aria": "Go",
+        "text": "Go!"
+      },
+      {
+        "aria": "",
+        "text": "Reset"
+      },
+      {
+        "aria": "",
+        "text": "Use Item"
+      },
+      {
+        "aria": "",
+        "text": "Gym"
+      },
+      {
+        "aria": "",
+        "text": "Food Court"
+      },
+      {
+        "aria": "",
+        "text": "Base"
+      },
+      {
+        "aria": "",
+        "text": "Lab"
+      },
+      {
+        "aria": "",
+        "text": "Clinic"
+      },
+      {
+        "aria": "",
+        "text": "Garage"
+      },
+      {
+        "aria": "",
+        "text": "Race"
+      }
+    ],
+    "canvas": {
+      "clientHeight": 720,
+      "clientWidth": 1280,
+      "height": 255,
+      "width": 454
+    },
+    "hasGoButton": true,
+    "hasLapHud": true,
+    "hasSpeedHud": true,
+    "hash": "#race",
+    "screenshotStatus": "timed-out",
+    "title": "Comeback · 181 → 238"
+  },
+  "caveat": "In-app Browser screenshot timed out on the WebGL race route; DOM/canvas/HUD state was captured.",
+  "screenshotPath": null
+}

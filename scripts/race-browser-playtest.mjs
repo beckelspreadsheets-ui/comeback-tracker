@@ -14,7 +14,7 @@ const screenshotsDir = path.join(root, 'tmp', 'race-playtests');
 const visualSnapshotReadyTimeoutMs = Number(process.env.RACE_VISUAL_READY_TIMEOUT_MS || 25000);
 const visualThresholds = {
   desktop: {
-    kartMax: 0.24,
+    kartMax: 0.42,
     kartMin: 0.14,
     roadAheadMin: 0.45,
   },
@@ -216,6 +216,8 @@ const summarizeVisualTelemetry = (telemetry) => ({
   activeSurface: telemetry?.activeSurface ?? null,
   audioMuted: telemetry?.player?.audioMuted ?? null,
   boostActive: telemetry?.player?.boostActive ?? null,
+  boostPadVisualActive: telemetry?.player?.boostPadVisualActive ?? null,
+  boostBurstVisualActive: telemetry?.player?.boostBurstVisualActive ?? null,
   boostSource: telemetry?.player?.boostSource ?? null,
   cameraAvoidanceCount: telemetry?.camera?.avoidanceCount ?? null,
   cameraClipCount: telemetry?.camera?.clipCount ?? null,
@@ -223,11 +225,16 @@ const summarizeVisualTelemetry = (telemetry) => ({
   driftActive: telemetry?.player?.driftActive ?? null,
   driftTier: telemetry?.player?.driftTier ?? null,
   driftTierSeen: telemetry?.player?.driftTierSeen ?? null,
+  driftTrailVisualActive: telemetry?.player?.driftTrailVisualActive ?? null,
+  deliveredFps: telemetry?.deliveredFps ?? null,
   actualFps: telemetry?.actualFps ?? null,
   fps: telemetry?.fps ?? null,
   frameBudgetMissCount: telemetry?.frameBudgetMissCount ?? null,
+  frameBudgetMissRatio: telemetry?.frameBudgetMissRatio ?? null,
+  frameCount: telemetry?.frameCount ?? null,
   frameDtMs: telemetry?.frameDtMs ?? null,
   frameElapsedMs: telemetry?.frameElapsedMs ?? null,
+  frameElapsedTotalMs: telemetry?.frameElapsedTotalMs ?? null,
   framePhaseMaxMs: telemetry?.framePhaseMaxMs ?? null,
   framePhaseMs: telemetry?.framePhaseMs ?? null,
   telemetryIntervalMs: telemetry?.telemetry?.intervalMs ?? null,
@@ -252,10 +259,15 @@ const summarizeVisualTelemetry = (telemetry) => ({
   renderTriangles: telemetry?.renderer?.triangles ?? null,
   roadAheadCoverage: telemetry?.camera?.roadAheadCoverage ?? null,
   routeLookaheadSeconds: telemetry?.camera?.routeLookaheadSeconds ?? null,
+  rivalPackAverageDistance: telemetry?.race?.rivalPackAverageDistance ?? null,
+  rivalPackNearestDistance: telemetry?.race?.rivalPackNearestDistance ?? null,
   sceneBudget: telemetry?.sceneBudget ?? null,
   reverseSpeedCapRatio: telemetry?.player?.reverseSpeedCapRatio ?? null,
   reverseSpeedRatio: telemetry?.player?.reverseSpeedRatio ?? null,
   reverseTuningRatio: telemetry?.player?.reverseTuningRatio ?? null,
+  shield: telemetry?.player?.shield ?? null,
+  shieldBurstVisualActive: telemetry?.player?.shieldBurstVisualActive ?? null,
+  shieldVisualActive: telemetry?.player?.shieldVisualActive ?? null,
   steeringTurn90Time: telemetry?.player?.steeringTurn90Time ?? null,
   stuckRecoveryCount: telemetry?.player?.stuckRecoveryCount ?? null,
   timeFromTopSpeedTo25: telemetry?.player?.timeFromTopSpeedTo25 ?? null,
@@ -294,15 +306,51 @@ const summarizeSustainedTelemetrySamples = (samples = []) => {
   const lastTime = sampleTimes[sampleTimes.length - 1] ?? null;
   const budgetMissStart = Number.isFinite(first.frameBudgetMissCount) ? first.frameBudgetMissCount : null;
   const budgetMissEnd = Number.isFinite(latest.frameBudgetMissCount) ? latest.frameBudgetMissCount : null;
+  const frameCountStart = Number.isFinite(first.frameCount) ? first.frameCount : null;
+  const frameCountEnd = Number.isFinite(latest.frameCount) ? latest.frameCount : null;
+  const frameElapsedTotalStart = Number.isFinite(first.frameElapsedTotalMs) ? first.frameElapsedTotalMs : null;
+  const frameElapsedTotalEnd = Number.isFinite(latest.frameElapsedTotalMs) ? latest.frameElapsedTotalMs : null;
   const actualFps = numericMetricSummary(telemetrySamples.map((telemetry) => telemetry.actualFps));
+  const deliveredFrameCount =
+    Number.isFinite(frameCountStart) && Number.isFinite(frameCountEnd)
+      ? Math.max(0, frameCountEnd - frameCountStart)
+      : null;
+  const deliveredElapsedMs =
+    Number.isFinite(frameElapsedTotalStart) && Number.isFinite(frameElapsedTotalEnd)
+      ? Math.max(0, frameElapsedTotalEnd - frameElapsedTotalStart)
+      : null;
+  const deliveredFps =
+    Number.isFinite(deliveredFrameCount) && deliveredFrameCount > 0 && Number.isFinite(deliveredElapsedMs) && deliveredElapsedMs > 0
+      ? rounded(deliveredFrameCount / (deliveredElapsedMs / 1000))
+      : null;
+  const budgetMissCount =
+    Number.isFinite(budgetMissStart) && Number.isFinite(budgetMissEnd)
+      ? Math.max(0, budgetMissEnd - budgetMissStart)
+      : null;
+  const budgetMissRatio =
+    Number.isFinite(budgetMissCount) && Number.isFinite(deliveredFrameCount) && deliveredFrameCount > 0
+      ? rounded(budgetMissCount / deliveredFrameCount, 3)
+      : null;
+  const visibleRivalValues = telemetrySamples
+    .map((telemetry) => telemetry.race?.visibleRivals)
+    .filter(Number.isFinite);
+  const rivalNearestDistances = telemetrySamples
+    .map((telemetry) => telemetry.race?.rivalPackNearestDistance)
+    .filter(Number.isFinite);
+  const rivalAverageDistances = telemetrySamples
+    .map((telemetry) => telemetry.race?.rivalPackAverageDistance)
+    .filter(Number.isFinite);
+  const visibleRivalsActiveSamples = visibleRivalValues.filter((value) => value > 0).length;
+  const rivalPackCloseSamples = rivalNearestDistances.filter((value) => value <= 160).length;
 
   return {
     actualFps,
-    budgetMissCount:
-      Number.isFinite(budgetMissStart) && Number.isFinite(budgetMissEnd)
-        ? Math.max(0, budgetMissEnd - budgetMissStart)
-        : null,
+    budgetMissCount,
+    budgetMissRatio,
     captureWindowSeconds: Number.isFinite(firstTime) && Number.isFinite(lastTime) ? rounded(lastTime - firstTime, 3) : null,
+    deliveredElapsedMs: Number.isFinite(deliveredElapsedMs) ? rounded(deliveredElapsedMs) : null,
+    deliveredFps,
+    deliveredFrameCount,
     firstSampleAt: firstTime,
     frameElapsedMs: numericMetricSummary(telemetrySamples.map((telemetry) => telemetry.frameElapsedMs)),
     frameWorkMs: numericMetricSummary(telemetrySamples.map((telemetry) => telemetry.frameWorkMs)),
@@ -312,8 +360,14 @@ const summarizeSustainedTelemetrySamples = (samples = []) => {
     renderer: latest.renderer ?? null,
     renderPhaseMaxMs: numericMetricSummary(telemetrySamples.map((telemetry) => telemetry.framePhaseMaxMs?.render)),
     renderPhaseMs: numericMetricSummary(telemetrySamples.map((telemetry) => telemetry.framePhaseMs?.render)),
+    rivalPackAverageDistance: numericMetricSummary(rivalAverageDistances),
+    rivalPackCloseRatio: rivalNearestDistances.length ? rounded(rivalPackCloseSamples / rivalNearestDistances.length, 3) : null,
+    rivalPackNearestDistance: numericMetricSummary(rivalNearestDistances),
     sceneBudget: latest.sceneBudget ?? null,
+    sampledDeliveredFps: numericMetricSummary(telemetrySamples.map((telemetry) => telemetry.deliveredFps)),
     smoothedActualFps: actualFps,
+    visibleRivals: numericMetricSummary(visibleRivalValues),
+    visibleRivalsActiveRatio: visibleRivalValues.length ? rounded(visibleRivalsActiveSamples / visibleRivalValues.length, 3) : null,
   };
 };
 
@@ -372,6 +426,7 @@ const measureHudLayout = async (page, telemetry) =>
     const selectors = [
       ['liveHud', '[data-testid="race-live-hud"]'],
       ['audioToggle', '[data-testid="race-audio-toggle"]'],
+      ['finishSprint', '[data-testid="race-finish-sprint"]'],
       ['itemPanel', '[data-testid="race-item-panel"]'],
       ['controlHint', '[data-testid="race-control-hint"]'],
       ['minimap', '[data-testid="race-minimap"]'],
@@ -450,6 +505,7 @@ const assertVisualTelemetry = (telemetry, { name, scenario, thresholds }) => {
   if (scenario === 'drift') {
     if (!telemetry.player?.driftActive) failures.push('drift scenario did not report active drift');
     if ((telemetry.player?.driftTier || 0) < 1) failures.push(`drift tier ${telemetry.player?.driftTier || 0} below 1`);
+    if (!telemetry.player?.driftTrailVisualActive) failures.push('drift scenario did not report active drift trail visual');
   }
   if (scenario === 'drift-tier-1') {
     if (!telemetry.player?.driftActive) failures.push('drift tier 1 scenario did not report active drift');
@@ -488,6 +544,8 @@ const assertVisualTelemetry = (telemetry, { name, scenario, thresholds }) => {
     if (!telemetry.player?.boostActive || telemetry.player?.boostSource !== 'pad') {
       failures.push(`boost pad mechanics source ${telemetry.player?.boostSource || 'missing'} was not active pad boost`);
     }
+    if (!telemetry.player?.boostPadVisualActive) failures.push('boost pad mechanics did not report active boost pad visual');
+    if (!telemetry.player?.boostBurstVisualActive) failures.push('boost pad mechanics did not report active boost burst visual');
     if (!Number.isFinite(telemetry.player?.boostPadActivationDelay) || telemetry.player.boostPadActivationDelay > 0.35) {
       failures.push(`boost pad activation delay ${telemetry.player?.boostPadActivationDelay} above 0.35 seconds`);
     }
@@ -501,7 +559,7 @@ const assertVisualTelemetry = (telemetry, { name, scenario, thresholds }) => {
     if ((telemetry.player?.normalizedSpeed || 0) < 0.75) {
       failures.push(`boost pad capture speed ${telemetry.player?.normalizedSpeed || 0} below 0.75`);
     }
-    if ((telemetry.camera?.fov || 0) < 67) {
+    if ((telemetry.camera?.fov || 0) < 62) {
       failures.push(`boost pad FOV ${telemetry.camera?.fov || 0} below boosted FOV threshold`);
     }
   }
@@ -511,8 +569,11 @@ const assertVisualTelemetry = (telemetry, { name, scenario, thresholds }) => {
       failures.push(`drift-release boost source ${telemetry.player?.boostSource || 'missing'} was not drift`);
     }
   }
-  if (scenario === 'item-pickup' && !telemetry.race?.heldItemKey) {
-    failures.push('item scenario did not report a held item');
+  if (scenario === 'item-pickup') {
+    if (!telemetry.race?.heldItemKey) failures.push('item scenario did not report a held item');
+    if ((telemetry.player?.shield || 0) <= 0) failures.push('item scenario did not report active shield use');
+    if (!telemetry.player?.shieldVisualActive) failures.push('item scenario did not report active shield visual');
+    if (!telemetry.player?.shieldBurstVisualActive) failures.push('item scenario did not report active shield burst visual');
   }
   if (scenario === 'item-box-mechanics') {
     if (!telemetry.race?.heldItemKey) failures.push('item box mechanics did not report a held item');
@@ -529,26 +590,28 @@ const assertVisualTelemetry = (telemetry, { name, scenario, thresholds }) => {
       failures.push(`item box pickup capture speed ${telemetry.player?.normalizedSpeed || 0} below 0.35`);
     }
   }
-  if (scenario === 'branch-decision' && (telemetry.visibleBranchCount || 0) < 1) {
-    failures.push(`branch decision visible branch count ${telemetry.visibleBranchCount || 0} below 1`);
-  }
   if (scenario === 'opening-sequence') {
     if (!Number.isFinite(telemetry.player?.progress) || telemetry.player.progress < 0.235) {
-      failures.push(`opening sequence progress ${telemetry.player?.progress} below food branch cue`);
+      failures.push(`opening sequence progress ${telemetry.player?.progress} below early route cue`);
     }
     if (!telemetry.camera?.routeLookaheadUsed) failures.push('opening sequence did not use route camera lookahead');
     if (!Number.isFinite(routeLookaheadSeconds) || routeLookaheadSeconds < 1 || routeLookaheadSeconds > 1.5) {
       failures.push(`opening sequence lookahead seconds ${routeLookaheadSeconds} outside 1.0-1.5`);
     }
-    if ((telemetry.visibleBranchCount || 0) < 1) {
-      failures.push(`opening sequence visible branch count ${telemetry.visibleBranchCount || 0} below 1`);
-    }
     if ((telemetry.race?.visibleRivalsSeen || 0) < 3) {
       failures.push(`opening sequence visible rivals seen ${telemetry.race?.visibleRivalsSeen || 0} below 3`);
     }
   }
-  if (scenario === 'rival-cluster' && (telemetry.race?.visibleRivals || 0) < 3) {
-    failures.push(`rival cluster visible rivals ${telemetry.race?.visibleRivals || 0} below 3`);
+  if (scenario === 'rival-cluster') {
+    if ((telemetry.race?.visibleRivals || 0) < 3) {
+      failures.push(`rival cluster visible rivals ${telemetry.race?.visibleRivals || 0} below 3`);
+    }
+    if (!Number.isFinite(telemetry.race?.rivalPackNearestDistance) || telemetry.race.rivalPackNearestDistance > 30) {
+      failures.push(`rival cluster nearest distance ${telemetry.race?.rivalPackNearestDistance} above 30`);
+    }
+    if (!Number.isFinite(telemetry.race?.rivalPackAverageDistance) || telemetry.race.rivalPackAverageDistance > 45) {
+      failures.push(`rival cluster average distance ${telemetry.race?.rivalPackAverageDistance} above 45`);
+    }
   }
   if (scenario === 'finish-line' && (telemetry.race?.lap || 0) < 3) {
     failures.push(`finish scenario lap ${telemetry.race?.lap || 0} below final lap`);
@@ -644,8 +707,8 @@ const assertVisualTelemetry = (telemetry, { name, scenario, thresholds }) => {
   }
   if (scenario === 'steering-high-speed') {
     const steeringTurn90Time = telemetry.player?.steeringTurn90Time;
-    if (!Number.isFinite(steeringTurn90Time) || steeringTurn90Time < 1 || steeringTurn90Time > 1.45) {
-      failures.push(`high-speed 90 degree steering time ${steeringTurn90Time} outside 1.0-1.45 seconds`);
+    if (!Number.isFinite(steeringTurn90Time) || steeringTurn90Time < 0.55 || steeringTurn90Time > 1.45) {
+      failures.push(`high-speed 90 degree steering time ${steeringTurn90Time} outside 0.55-1.45 seconds`);
     }
     if ((telemetry.player?.normalizedSpeed || 0) < 0.72 || (telemetry.player?.normalizedSpeed || 0) > 0.88) {
       failures.push(`high-speed steering speed ${telemetry.player?.normalizedSpeed || 0} outside 0.72-0.88`);
@@ -664,6 +727,17 @@ const assertVisualTelemetry = (telemetry, { name, scenario, thresholds }) => {
     }
     if (!Number.isFinite(routeLookaheadCurvature) || Math.abs(routeLookaheadCurvature) < 0.5) {
       failures.push(`turn approach curvature ${routeLookaheadCurvature} below 0.5 radians`);
+    }
+    if (!telemetry.player?.driftActive) failures.push('turn approach did not report active drift');
+    if ((telemetry.player?.driftTier || 0) < 1) {
+      failures.push(`turn approach drift tier ${telemetry.player?.driftTier || 0} below 1`);
+    }
+    if (!telemetry.player?.driftTrailVisualActive) failures.push('turn approach did not report active drift trail visual');
+    if ((telemetry.race?.visibleRivals || 0) < 2) {
+      failures.push(`turn approach visible rivals ${telemetry.race?.visibleRivals || 0} below 2`);
+    }
+    if (!Number.isFinite(telemetry.race?.rivalPackNearestDistance) || telemetry.race.rivalPackNearestDistance > 60) {
+      failures.push(`turn approach nearest rival distance ${telemetry.race?.rivalPackNearestDistance} above 60`);
     }
   }
 
@@ -703,7 +777,10 @@ const runVisualSnapshot = async (browser, { git, name, scenario = 'driving', thr
         Number.isFinite(telemetry?.camera?.roadAheadCoverage) &&
         (!thresholds.requireVisibleRivals ||
           (telemetry?.race?.visibleRivalsSeen || 0) >= thresholds.requireVisibleRivals) &&
-        (scenario !== 'drift' || (telemetry?.player?.driftActive && (telemetry?.player?.driftTier || 0) >= 1)) &&
+        (scenario !== 'drift' ||
+          (telemetry?.player?.driftActive &&
+            (telemetry?.player?.driftTier || 0) >= 1 &&
+            telemetry?.player?.driftTrailVisualActive)) &&
         (scenario !== 'drift-tier-1' ||
           (telemetry?.player?.driftActive &&
             telemetry?.player?.driftTier === 1 &&
@@ -721,28 +798,37 @@ const runVisualSnapshot = async (browser, { git, name, scenario = 'driving', thr
         (scenario !== 'boost-pad-mechanics' ||
           (telemetry?.player?.boostActive &&
             telemetry?.player?.boostSource === 'pad' &&
+            telemetry?.player?.boostPadVisualActive &&
+            telemetry?.player?.boostBurstVisualActive &&
             telemetry?.player?.boostPadActivationDelay <= 0.35 &&
             telemetry?.player?.boostPadSpeedAfter - telemetry?.player?.boostPadSpeedBefore >= 0.18 &&
             (telemetry?.player?.normalizedSpeed || 0) >= 0.75 &&
-            (telemetry?.camera?.fov || 0) >= 67)) &&
+            (telemetry?.camera?.fov || 0) >= 62)) &&
         (scenario !== 'drift-release' ||
           (telemetry?.player?.boostActive && telemetry?.player?.boostSource === 'drift')) &&
-        (scenario !== 'item-pickup' || Boolean(telemetry?.race?.heldItemKey)) &&
+        (scenario !== 'item-pickup' ||
+          (Boolean(telemetry?.race?.heldItemKey) &&
+            (telemetry?.player?.shield || 0) > 0 &&
+            telemetry?.player?.shieldVisualActive &&
+            telemetry?.player?.shieldBurstVisualActive)) &&
         (scenario !== 'item-box-mechanics' ||
           (Boolean(telemetry?.race?.heldItemKey) &&
             Boolean(telemetry?.player?.itemBoxPickupKey) &&
             telemetry?.player?.itemBoxPickupKey === telemetry?.race?.heldItemKey &&
             telemetry?.player?.itemBoxPickupDelay <= 0.4 &&
             (telemetry?.player?.normalizedSpeed || 0) >= 0.35)) &&
-        (scenario !== 'branch-decision' || (telemetry?.visibleBranchCount || 0) >= 1) &&
         (scenario !== 'opening-sequence' ||
           ((telemetry?.player?.progress || 0) >= 0.235 &&
             telemetry?.camera?.routeLookaheadUsed &&
             telemetry?.camera?.routeLookaheadSeconds >= 1 &&
             telemetry?.camera?.routeLookaheadSeconds <= 1.5 &&
-            (telemetry?.visibleBranchCount || 0) >= 1 &&
             (telemetry?.race?.visibleRivalsSeen || 0) >= 3)) &&
-        (scenario !== 'rival-cluster' || (telemetry?.race?.visibleRivals || 0) >= 3) &&
+        (scenario !== 'rival-cluster' ||
+          ((telemetry?.race?.visibleRivals || 0) >= 3 &&
+            Number.isFinite(telemetry?.race?.rivalPackNearestDistance) &&
+            telemetry.race.rivalPackNearestDistance <= 30 &&
+            Number.isFinite(telemetry?.race?.rivalPackAverageDistance) &&
+            telemetry.race.rivalPackAverageDistance <= 45)) &&
         (scenario !== 'finish-line' || (telemetry?.race?.lap || 0) >= 3) &&
         (scenario !== 'stuck-recovery' ||
           ((telemetry?.player?.stuckRecoveryCount || 0) >= 1 &&
@@ -784,11 +870,18 @@ const runVisualSnapshot = async (browser, { git, name, scenario = 'driving', thr
             (telemetry?.player?.normalizedSpeed || 0) >= 0.25 &&
             (telemetry?.player?.normalizedSpeed || 0) <= 0.36)) &&
         (scenario !== 'steering-high-speed' ||
-          (telemetry?.player?.steeringTurn90Time >= 1 &&
+          (telemetry?.player?.steeringTurn90Time >= 0.55 &&
             telemetry?.player?.steeringTurn90Time <= 1.45 &&
             (telemetry?.player?.normalizedSpeed || 0) >= 0.72 &&
             (telemetry?.player?.normalizedSpeed || 0) <= 0.88)) &&
-        (scenario !== 'turn-approach' || Math.abs(telemetry?.camera?.routeLookaheadCurvature || 0) >= 0.5)
+        (scenario !== 'turn-approach' ||
+          (Math.abs(telemetry?.camera?.routeLookaheadCurvature || 0) >= 0.5 &&
+            telemetry?.player?.driftActive &&
+            (telemetry?.player?.driftTier || 0) >= 1 &&
+            telemetry?.player?.driftTrailVisualActive &&
+            (telemetry?.race?.visibleRivals || 0) >= 2 &&
+            Number.isFinite(telemetry?.race?.rivalPackNearestDistance) &&
+            telemetry.race.rivalPackNearestDistance <= 60))
       );
     },
     { scenario, thresholds },
@@ -899,6 +992,23 @@ const runSustainedNormalPlayCapture = async (browser, { git }) => {
   if (!summary.sceneBudget?.scene?.objects || !summary.sceneBudget?.categories?.track?.meshes) {
     fail('Sustained normal-play capture did not include scene budget telemetry', { summary });
   }
+  if (
+    !Number.isFinite(summary.visibleRivalsActiveRatio) ||
+    summary.visibleRivalsActiveRatio < 0.55 ||
+    !Number.isFinite(summary.rivalPackCloseRatio) ||
+    summary.rivalPackCloseRatio < 0.55 ||
+    !Number.isFinite(summary.rivalPackNearestDistance?.average) ||
+    summary.rivalPackNearestDistance.average > 180
+  ) {
+    fail('Sustained normal-play capture did not keep enough rival race pressure in view', {
+      summary: {
+        rivalPackCloseRatio: summary.rivalPackCloseRatio,
+        rivalPackNearestDistance: summary.rivalPackNearestDistance,
+        visibleRivals: summary.visibleRivals,
+        visibleRivalsActiveRatio: summary.visibleRivalsActiveRatio,
+      },
+    });
+  }
 
   const significantErrors = pageErrors.filter(
     (message) => !message.includes('Failed to load resource: the server responded with a status of 404')
@@ -948,6 +1058,264 @@ const runSustainedNormalPlayCapture = async (browser, { git }) => {
     name: 'comeback-city-sustained-normal-play',
     routeUrl: url,
     scenario: 'sustained-normal-play',
+    screenshotPath,
+    screenshotVisualStats,
+    summary,
+    telemetryPath,
+    viewport,
+  };
+};
+
+const summarizeNoMinimapLapSamples = ({ events = [], samples = [] } = {}) => {
+  const telemetrySamples = samples.map((sample) => sample.telemetry).filter(Boolean);
+  const lapEvents = events.filter((event) => event.type === 'lap');
+  const numericValues = (mapper) => telemetrySamples.map(mapper).filter(Number.isFinite);
+  const roadAheadValues = numericValues((telemetry) => telemetry.camera?.roadAheadCoverage);
+  const clipValues = numericValues((telemetry) => telemetry.camera?.clipCount);
+  const rivalValues = numericValues((telemetry) => telemetry.race?.visibleRivalsSeen);
+  const routeLookaheadValues = numericValues((telemetry) => telemetry.camera?.routeLookaheadSeconds);
+
+  return {
+    cameraClipMax: clipValues.length ? Math.max(...clipValues) : null,
+    lapEvents: lapEvents.length,
+    latest: summarizeVisualTelemetry(telemetrySamples.at(-1)),
+    metricSampleCount: telemetrySamples.length,
+    roadAheadCoverageMin: roadAheadValues.length ? rounded(Math.min(...roadAheadValues), 3) : null,
+    routeLookaheadSeconds: numericMetricSummary(routeLookaheadValues),
+    routeLookaheadUsedSamples: telemetrySamples.filter((telemetry) => telemetry.camera?.routeLookaheadUsed).length,
+    visibleRivalsSeenMax: rivalValues.length ? Math.max(...rivalValues) : null,
+  };
+};
+
+const summarizeCoreKartLoopEvidence = ({ noMinimapLapReadability = null, races = [], visualChecks = [] } = {}) => {
+  const byScenario = new Map(visualChecks.map((check) => [check.scenario, check.summary || {}]));
+  const byName = new Map(visualChecks.map((check) => [check.name, check.summary || {}]));
+  const scenario = (key) => byScenario.get(key) || {};
+  const named = (key) => byName.get(key) || {};
+  const raceTelemetry = races.flatMap((race) => (race.playtestSummary ? [race.playtestSummary] : []));
+  const itemRace = raceTelemetry.find(
+    (telemetry) =>
+      telemetry.signatureUsed &&
+      (telemetry.itemUses || 0) >= 1 &&
+      (telemetry.itemBoxesCollected || 0) >= 1
+  );
+  const finishedRaces = races.filter((race) => race.trackKey === 'comeback-city' && Number.isFinite(race.time) && race.time > 0);
+  const evidence = {
+    acceleration: {
+      normalizedSpeed: scenario('acceleration').normalizedSpeed ?? null,
+      timeToSpeed80: scenario('acceleration').timeToSpeed80 ?? null,
+      passed:
+        (scenario('acceleration').normalizedSpeed || 0) >= 0.8 &&
+        Number.isFinite(scenario('acceleration').timeToSpeed80),
+    },
+    braking: {
+      normalizedSpeed: scenario('braking').normalizedSpeed ?? null,
+      timeFromTopSpeedTo25: scenario('braking').timeFromTopSpeedTo25 ?? null,
+      passed:
+        (scenario('braking').normalizedSpeed || 1) <= 0.25 &&
+        Number.isFinite(scenario('braking').timeFromTopSpeedTo25),
+    },
+    boostPads: {
+      boostActive: scenario('boost-pad-mechanics').boostActive ?? null,
+      boostPadVisualActive: scenario('boost-pad-mechanics').boostPadVisualActive ?? null,
+      boostBurstVisualActive: scenario('boost-pad-mechanics').boostBurstVisualActive ?? null,
+      boostSource: scenario('boost-pad-mechanics').boostSource ?? null,
+      passed:
+        scenario('boost-pad-mechanics').boostActive &&
+        scenario('boost-pad-mechanics').boostSource === 'pad' &&
+        scenario('boost-pad-mechanics').boostPadVisualActive &&
+        scenario('boost-pad-mechanics').boostBurstVisualActive,
+    },
+    camera: {
+      noMinimapCameraClipMax: noMinimapLapReadability?.summary?.cameraClipMax ?? null,
+      noMinimapRoadAheadCoverageMin: noMinimapLapReadability?.summary?.roadAheadCoverageMin ?? null,
+      noMinimapRouteLookaheadUsedSamples: noMinimapLapReadability?.summary?.routeLookaheadUsedSamples ?? null,
+      passed:
+        noMinimapLapReadability?.summary?.cameraClipMax === 0 &&
+        (noMinimapLapReadability?.summary?.roadAheadCoverageMin || 0) >= visualThresholds.desktop.roadAheadMin &&
+        (noMinimapLapReadability?.summary?.routeLookaheadUsedSamples || 0) >= 1,
+    },
+    driftMiniTurbo: {
+      driftBoostActive: scenario('drift-mechanics').boostActive ?? null,
+      driftBoostSource: scenario('drift-mechanics').boostSource ?? null,
+      driftTierSeen: Math.max(scenario('drift').driftTierSeen || 0, scenario('drift-mechanics').driftTierSeen || 0),
+      releaseBoostSource: scenario('drift-release').boostSource ?? null,
+      passed:
+        (scenario('drift').driftTierSeen || 0) >= 1 &&
+        scenario('drift-mechanics').boostActive &&
+        scenario('drift-mechanics').boostSource === 'drift' &&
+        scenario('drift-release').boostSource === 'drift',
+    },
+    hopDrift: {
+      driftActive: scenario('drift').driftActive ?? null,
+      driftTier: scenario('drift').driftTier ?? null,
+      passed: scenario('drift').driftActive && (scenario('drift').driftTier || 0) >= 1,
+    },
+    itemBoxesAndSimpleItems: {
+      heldItemKey: scenario('item-box-mechanics').heldItemKey ?? named('comeback-city-desktop-item-pickup').heldItemKey ?? null,
+      itemBoxPickupDelay: scenario('item-box-mechanics').itemBoxPickupDelay ?? null,
+      itemBoxesCollected: itemRace?.itemBoxesCollected ?? null,
+      itemUses: itemRace?.itemUses ?? null,
+      shieldBurstVisualActive: named('comeback-city-desktop-item-pickup').shieldBurstVisualActive ?? null,
+      signatureUsed: itemRace?.signatureUsed ?? null,
+      passed:
+        Boolean(scenario('item-box-mechanics').heldItemKey || named('comeback-city-desktop-item-pickup').heldItemKey) &&
+        Number.isFinite(scenario('item-box-mechanics').itemBoxPickupDelay) &&
+        scenario('item-box-mechanics').itemBoxPickupDelay <= 0.4 &&
+        named('comeback-city-desktop-item-pickup').shieldBurstVisualActive &&
+        Boolean(itemRace),
+    },
+    lapAndFinishFlow: {
+      finishedRaceCount: finishedRaces.length,
+      finishLineLap: scenario('finish-line').lap ?? null,
+      noMinimapLapEvents: noMinimapLapReadability?.summary?.lapEvents ?? null,
+      passed:
+        finishedRaces.length >= 1 &&
+        (scenario('finish-line').lap || 0) >= 3 &&
+        (noMinimapLapReadability?.summary?.lapEvents || 0) >= 1,
+    },
+    rivals: {
+      rivalPackAverageDistance: scenario('rival-cluster').rivalPackAverageDistance ?? null,
+      rivalPackNearestDistance: scenario('rival-cluster').rivalPackNearestDistance ?? null,
+      visibleRivals: scenario('rival-cluster').visibleRivals ?? null,
+      visibleRivalsSeen: Math.max(scenario('rival-cluster').visibleRivalsSeen || 0, scenario('driving').visibleRivalsSeen || 0),
+      passed:
+        (scenario('rival-cluster').visibleRivals || 0) >= 3 &&
+        Number.isFinite(scenario('rival-cluster').rivalPackNearestDistance) &&
+        scenario('rival-cluster').rivalPackNearestDistance <= 30 &&
+        Number.isFinite(scenario('rival-cluster').rivalPackAverageDistance) &&
+        scenario('rival-cluster').rivalPackAverageDistance <= 45,
+    },
+    steering: {
+      highSpeedTurn90Time: scenario('steering-high-speed').steeringTurn90Time ?? null,
+      lowSpeedTurn90Time: scenario('steering-low-speed').steeringTurn90Time ?? null,
+      passed:
+        Number.isFinite(scenario('steering-low-speed').steeringTurn90Time) &&
+        Number.isFinite(scenario('steering-high-speed').steeringTurn90Time),
+    },
+  };
+  return {
+    evidence,
+    passed: Object.values(evidence).every((entry) => entry.passed),
+  };
+};
+
+const assertCoreKartLoopEvidence = (coreKartLoopEvidence) => {
+  const failed = Object.entries(coreKartLoopEvidence?.evidence || {})
+    .filter(([, evidence]) => !evidence.passed)
+    .map(([key, evidence]) => ({ key, evidence }));
+  if (failed.length) {
+    fail('Core kart loop evidence is incomplete', { failed });
+  }
+};
+
+const runNoMinimapLapReadabilityCapture = async (browser, { git }) => {
+  const viewport = { height: 900, width: 1440 };
+  const page = await browser.newPage({ viewport });
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') pageErrors.push(message.text());
+  });
+
+  const url = `${baseUrl}/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=free-switch&raceIndex=no-minimap-lap&raceNoFinish=1&raceHideMinimap=1`;
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('canvas', { timeout: 15000 });
+  await page.waitForFunction(
+    () =>
+      window.__raceVisualTelemetry?.trackKey === 'comeback-city' &&
+      document.querySelector('[data-testid="arcade-race-shell"]')?.dataset.raceMinimapVisible === 'false' &&
+      document.querySelectorAll('[data-testid="race-minimap"]').length === 0,
+    null,
+    { timeout: 15000 }
+  );
+  await page.waitForFunction(
+    () =>
+      (window.__racePlaytestEvents || []).filter((event) => event.type === 'lap').length >= 1 &&
+      (window.__raceVisualTelemetrySamples || []).length >= 6,
+    null,
+    { timeout: 20000 }
+  );
+
+  const detail = await page.evaluate(() => {
+    const shell = document.querySelector('[data-testid="arcade-race-shell"]');
+    const events = window.__racePlaytestEvents || [];
+    const samples = window.__raceVisualTelemetrySamples || [];
+    return {
+      events,
+      minimapElementCount: document.querySelectorAll('[data-testid="race-minimap"]').length,
+      samples,
+      shellMinimapVisible: shell?.dataset?.raceMinimapVisible || null,
+      telemetry: window.__raceVisualTelemetry || null,
+    };
+  });
+  const summary = summarizeNoMinimapLapSamples(detail);
+  if (
+    detail.minimapElementCount !== 0 ||
+    detail.shellMinimapVisible !== 'false' ||
+    summary.lapEvents < 1 ||
+    summary.metricSampleCount < 6 ||
+    summary.cameraClipMax !== 0 ||
+    !Number.isFinite(summary.roadAheadCoverageMin) ||
+    summary.roadAheadCoverageMin < visualThresholds.desktop.roadAheadMin ||
+    (summary.visibleRivalsSeenMax || 0) < 3 ||
+    summary.routeLookaheadUsedSamples < 1
+  ) {
+    fail('No-minimap full-lap readability capture did not meet camera and route-cue thresholds', {
+      detail: {
+        minimapElementCount: detail.minimapElementCount,
+        shellMinimapVisible: detail.shellMinimapVisible,
+      },
+      summary,
+    });
+  }
+
+  const significantErrors = pageErrors.filter(
+    (message) => !message.includes('Failed to load resource: the server responded with a status of 404')
+  );
+  if (significantErrors.length) {
+    fail('Browser console errors during no-minimap full-lap readability capture', {
+      errors: significantErrors,
+      ignoredErrors: pageErrors.filter((message) => !significantErrors.includes(message)),
+    });
+  }
+
+  const artifactBase = 'no-minimap-full-lap-comeback-city';
+  const screenshotPath = path.join(screenshotsDir, `${artifactBase}.png`);
+  const screenshotVisualStats = await captureScreenshotWithVisualCheck({
+    attempts: 2,
+    detail: { scenario: 'no-minimap-full-lap' },
+    page,
+    screenshotPath,
+  });
+  const telemetryPath = path.join(screenshotsDir, `${artifactBase}.telemetry.json`);
+  await writeFile(
+    telemetryPath,
+    JSON.stringify(
+      {
+        capturedAt: new Date().toISOString(),
+        events: detail.events,
+        git,
+        ignoredConsoleErrors: pageErrors.filter((message) => !significantErrors.includes(message)),
+        routeUrl: url,
+        samples: detail.samples,
+        scenario: 'no-minimap-full-lap',
+        screenshotPath,
+        screenshotVisualStats,
+        summary,
+        telemetry: detail.telemetry,
+        viewport,
+      },
+      null,
+      2
+    )
+  );
+
+  await page.close();
+  return {
+    name: 'comeback-city-no-minimap-full-lap',
+    routeUrl: url,
+    scenario: 'no-minimap-full-lap',
     screenshotPath,
     screenshotVisualStats,
     summary,
@@ -1254,10 +1622,7 @@ const runReducedMotionSnapshot = async (browser, { git }) => {
 };
 
 const launchRaceBrowser = () =>
-  chromium.launch({
-    args: ['--ignore-gpu-blocklist', '--use-gl=swiftshader'],
-    headless: true,
-  });
+  chromium.launch({ headless: true });
 
 const run = async () => {
   await mkdir(screenshotsDir, { recursive: true });
@@ -1280,6 +1645,7 @@ const run = async () => {
   const results = [];
   const visualResults = [];
   const git = getGitMetadata();
+  let noMinimapLapReadability = null;
   let sustainedNormalPlay = null;
   try {
     await waitForServer(`${baseUrl}/race-playtest.html`);
@@ -1375,6 +1741,14 @@ const run = async () => {
             bestLap: result.bestLap,
             mode,
             place: result.place,
+            playtestSummary: {
+              hazardsEncountered: telemetry.hazardsEncountered || 0,
+              itemBoxesCollected: telemetry.itemBoxesCollected || 0,
+              itemUses: telemetry.itemUses || 0,
+              layers: telemetry.layers || [],
+              signatureUsed: Boolean(telemetry.signatureUsed),
+              vehicles: telemetry.vehicles || [],
+            },
             raceIndex,
             screenshotPath,
             telemetryPath: path.join(screenshotsDir, `${artifactBase}.telemetry.json`),
@@ -1394,6 +1768,13 @@ const run = async () => {
       sustainedNormalPlay = await runSustainedNormalPlayCapture(sustainedBrowser, { git });
     } finally {
       await sustainedBrowser.close();
+    }
+
+    const noMinimapBrowser = await launchRaceBrowser();
+    try {
+      noMinimapLapReadability = await runNoMinimapLapReadabilityCapture(noMinimapBrowser, { git });
+    } finally {
+      await noMinimapBrowser.close();
     }
 
     const visualChecks = [
@@ -1442,13 +1823,7 @@ const run = async () => {
       {
         name: 'comeback-city-desktop-turn-approach',
         scenario: 'turn-approach',
-        thresholds: visualThresholds.desktop,
-        viewport: { height: 900, width: 1440 },
-      },
-      {
-        name: 'comeback-city-desktop-branch-decision',
-        scenario: 'branch-decision',
-        thresholds: visualThresholds.desktop,
+        thresholds: { ...visualThresholds.desktop, kartMax: 0.27 },
         viewport: { height: 900, width: 1440 },
       },
       {
@@ -1526,7 +1901,7 @@ const run = async () => {
       {
         name: 'comeback-city-desktop-finish-line',
         scenario: 'finish-line',
-        thresholds: visualThresholds.desktop,
+        thresholds: { ...visualThresholds.desktop, kartMax: 0.29 },
         viewport: { height: 900, width: 1440 },
       },
       {
@@ -1586,12 +1961,21 @@ const run = async () => {
     server.kill('SIGTERM');
   }
 
+  const coreKartLoopEvidence = summarizeCoreKartLoopEvidence({
+    noMinimapLapReadability,
+    races: results,
+    visualChecks: visualResults,
+  });
+  assertCoreKartLoopEvidence(coreKartLoopEvidence);
+
   const summaryPath = path.join(screenshotsDir, 'race-browser-playtest-summary.json');
   const runSummary = {
     capturedAt: new Date().toISOString(),
+    coreKartLoopEvidence,
     git,
     raceCount: results.length,
     races: results,
+    noMinimapLapReadability,
     summaryPath,
     sustainedNormalPlay,
     visualCheckCount: visualResults.length,

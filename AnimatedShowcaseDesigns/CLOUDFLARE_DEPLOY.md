@@ -32,11 +32,11 @@ Production branch: the branch connected to showcase-designs.com
 Last verified upload package:
 
 ```text
-deploy-artifacts/showcase-designs-dist-20260603-103616.zip
-SHA256 5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92
+deploy-artifacts/showcase-designs-dist-20260606-142403.zip
+SHA256 1547ccd54ae80b06d49337bb6cce4758b86f730fd0bae13d606a428ecf84cd15
 ```
 
-This retained package is the current launch-readiness artifact generated on 2026-06-03. It includes the trust-safe pricing copy, capped Growth scope, UTM/contact-form attribution capture, static conversion tracking hooks, and the acquisition-launch copy updates. It has not been verified on `showcase-designs.com` yet because production still serves the stale Vercel site.
+This retained package is the current preview-readiness artifact generated on 2026-06-06. It includes the corrected `$150/mo`, `$400/mo`, and ownership-from-`$1,500` pricing model, capped Growth scope, trust-safe nonnumeric stat copy, UTM/contact-form attribution capture, static conversion tracking hooks, local-business acquisition copy, `andrew@showcase-designs.com`, and visible email/phone contact fallback under the public form. It has not been verified on `showcase-designs.com` yet because production still serves the stale Vercel site.
 
 Use this path when deploying manually with Wrangler:
 
@@ -63,6 +63,8 @@ Latest confirmed preview direct-upload values:
 ```text
 Cloudflare Pages project: showcase-designs-preview
 Production branch: main
+Latest preview-readiness deployment: https://7b30c5f6.showcase-designs-preview.pages.dev
+Previous launch-readiness deployment: https://0aa55ac2.showcase-designs-preview.pages.dev
 Earlier preview deployment: https://9db747ed.showcase-designs-preview.pages.dev
 Previous hero-wall deployment: https://0cc4d1b9.showcase-designs-preview.pages.dev
 Previous photo-match deployment: https://61e0e520.showcase-designs-preview.pages.dev
@@ -72,7 +74,7 @@ Current render/camera tuning deployment: https://d6444b74.showcase-designs-previ
 Stable preview: https://showcase-designs-preview.pages.dev
 ```
 
-The stable preview URLs above are older than the 2026-06-03 launch-readiness package unless a new preview deployment is recorded here after this note.
+The stable preview and immutable URL above were verified after the 2026-06-06 preview-readiness package deploy.
 
 Do not use the parent `../wrangler.toml` for this workspace. That file is for the separate `comeback-tracker` Pages project and is not evidence of the `showcase-designs.com` Cloudflare project.
 

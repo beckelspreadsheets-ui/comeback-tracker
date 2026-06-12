@@ -7,11 +7,11 @@
   ],
   "artifactsDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/accessibility-smoke-test",
   "baseUrl": "http://127.0.0.1:5211",
-  "capturedAt": "2026-06-03T16:05:40.626Z",
+  "capturedAt": "2026-06-07T23:37:50.240Z",
   "gateStatus": "local-accessibility-smoke-proven-not-manual-signoff",
   "git": {
     "branch": "codex/release-v1-comebacktracker-kart-racer",
-    "commit": "937bd25",
+    "commit": "614d5a6",
     "dirty": true
   },
   "home": {
@@ -366,7 +366,7 @@
           "g": 236,
           "r": 243
         },
-        "fontSize": "20px",
+        "fontSize": "16px",
         "fontWeight": "900",
         "label": "race live hud title",
         "minimum": 4.5,
@@ -388,7 +388,7 @@
           "g": 211,
           "r": 255
         },
-        "fontSize": "9px",
+        "fontSize": "8px",
         "fontWeight": "900",
         "label": "race item button",
         "minimum": 4.5,
@@ -598,10 +598,10 @@
       "label": "race item button",
       "name": "Use item",
       "rect": {
-        "height": 36,
-        "width": 164,
-        "x": 843,
-        "y": 212
+        "height": 32,
+        "width": 124,
+        "x": 891,
+        "y": 200
       },
       "selector": "[data-testid=\"race-item-panel\"] button",
       "status": "visible",
@@ -683,7 +683,7 @@
   },
   "raceMobile": {
     "afterInput": {
-      "normalizedSpeed": 0.527
+      "normalizedSpeed": 0.475
     },
     "beforeInput": {
       "normalizedSpeed": 0
@@ -775,7 +775,7 @@
         "ratio": 17.73,
         "selector": ".race-status-stack strong",
         "status": "pass",
-        "text": "220"
+        "text": "198"
       }
     ],
     "focus": {

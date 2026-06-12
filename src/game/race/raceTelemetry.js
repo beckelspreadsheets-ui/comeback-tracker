@@ -44,8 +44,11 @@ export const createRaceTelemetryStats = () => ({
   driftTierSeen: 0,
   fps: 60,
   frameBudgetMissCount: 0,
+  frameBudgetMissRatio: 0,
+  frameCount: 0,
   frameDtMs: 0,
   frameElapsedMs: 0,
+  frameElapsedTotalMs: 0,
   framePhaseMaxMs: {},
   framePhaseMs: {},
   frameWorkMaxMs: 0,
@@ -247,6 +250,61 @@ export const countVisibleRivals = ({ camera, rivals }) =>
     return count + (projected.visible ? 1 : 0);
   }, 0);
 
+export const summarizeRivalPackDistance = ({ player, rivals = [] } = {}) => {
+  const distances = rivals
+    .filter((rival) => rival && !rival.finished)
+    .map((rival) => distance2D(player.position, rival.position))
+    .filter(Number.isFinite);
+  if (!distances.length) {
+    return {
+      average: null,
+      nearest: null,
+    };
+  }
+  return {
+    average: rounded(distances.reduce((sum, distance) => sum + distance, 0) / distances.length, 2),
+    nearest: rounded(Math.min(...distances), 2),
+  };
+};
+
+export const playerShieldVisualActive = (playerVehicleGroup) => {
+  let active = false;
+  playerVehicleGroup?.traverse?.((child) => {
+    if (child?.userData?.kind === 'shield-visual' && child.visible) active = true;
+  });
+  return active;
+};
+
+export const playerShieldBurstVisualActive = (playerVehicleGroup) => {
+  let active = false;
+  playerVehicleGroup?.traverse?.((child) => {
+    if (child?.userData?.kind === 'shield-burst-crown' && child.visible) active = true;
+  });
+  return active;
+};
+
+export const playerDriftTrailVisualActive = (playerVehicleGroup) => {
+  let active = false;
+  playerVehicleGroup?.traverse?.((child) => {
+    if (child?.userData?.kind === 'drift-trail-visual' && child.visible) active = true;
+  });
+  return active;
+};
+
+export const boostPadVisualActive = (boostPadMeshes = []) =>
+  boostPadMeshes.some((mesh) => {
+    if (!mesh?.visible || mesh.userData?.kind !== 'boost-pad-visual' || !mesh.userData?.visualActive) return false;
+    return mesh.children?.some((child) => child?.userData?.kind === 'boost-pad-chevron' && child.visible);
+  });
+
+export const playerBoostBurstVisualActive = (playerVehicleGroup) => {
+  let active = false;
+  playerVehicleGroup?.traverse?.((child) => {
+    if (child?.userData?.kind === 'boost-burst-streak' && child.visible) active = true;
+  });
+  return active;
+};
+
 export const estimateHorizonYRatio = ({ camera, player }) => {
   const forward = new THREE.Vector3(Math.sin(player.heading), 0, Math.cos(player.heading));
   const projected = player.position.clone().addScaledVector(forward, 360).setY(0).project(camera);
@@ -296,6 +354,7 @@ export const rendererInfoTelemetryFor = (renderer) => {
 export const buildRaceVisualTelemetry = ({
   activeSurface,
   assetLoadState,
+  boostPadVisual = false,
   boostTimer,
   camera,
   driftTier,
@@ -306,9 +365,14 @@ export const buildRaceVisualTelemetry = ({
   normalizedSpeed,
   offroadSlowdown,
   player,
+  playerBoostBurstVisual = false,
+  playerDriftTrailVisual = false,
+  playerShieldBurstVisual = false,
+  playerShieldVisual = false,
   race,
   roadAheadCoverage,
   rendererInfo,
+  rivalPackDistance,
   sceneBudget,
   stats,
   trackKey,
@@ -330,11 +394,15 @@ export const buildRaceVisualTelemetry = ({
     cameraClipCount: stats.cameraClipCount,
     driftTier,
     driftTierSeen: stats.driftTierSeen,
+    deliveredFps: rounded(stats.deliveredFps, 1),
     actualFps: rounded(stats.actualFps, 1),
     fps: rounded(stats.fps, 1),
     frameBudgetMissCount: stats.frameBudgetMissCount || 0,
+    frameBudgetMissRatio: rounded(stats.frameBudgetMissRatio, 3),
+    frameCount: stats.frameCount || 0,
     frameDtMs: rounded(stats.frameDtMs, 2),
     frameElapsedMs: rounded(stats.frameElapsedMs, 2),
+    frameElapsedTotalMs: rounded(stats.frameElapsedTotalMs, 2),
     framePhaseMaxMs: stats.framePhaseMaxMs || {},
     framePhaseMs: stats.framePhaseMs || {},
     lifecycle: {
@@ -374,6 +442,8 @@ export const buildRaceVisualTelemetry = ({
       boostPadActivationTime: stats.boostPadActivationTime,
       boostPadSpeedAfter: stats.boostPadSpeedAfter,
       boostPadSpeedBefore: stats.boostPadSpeedBefore,
+      boostPadVisualActive: Boolean(boostPadVisual),
+      boostBurstVisualActive: Boolean(playerBoostBurstVisual),
       boostSource,
       collisionCount: stats.collisionCount,
       collisionImpactTime: stats.collisionImpactTime,
@@ -388,6 +458,7 @@ export const buildRaceVisualTelemetry = ({
       driftStartCount: stats.driftStartCount,
       driftTier,
       driftTierSeen: stats.driftTierSeen,
+      driftTrailVisualActive: Boolean(playerDriftTrailVisual),
       grounded: (player.jumpHeight || 0) <= 0.02,
       hopTimer: rounded(player.driftHopTimer || 0),
       itemBoxPickupDelay: stats.itemBoxPickupDelay,
@@ -405,6 +476,9 @@ export const buildRaceVisualTelemetry = ({
       reverseSpeedRatio: stats.reverseSpeedRatio,
       reverseTuningRatio: stats.reverseTuningRatio,
       speedRatio: normalizedSpeed,
+      shield: rounded(player.shieldTimer || 0),
+      shieldBurstVisualActive: Boolean(playerShieldBurstVisual),
+      shieldVisualActive: Boolean(playerShieldVisual),
       steering: rounded(player.steerInput || 0),
       steeringTurnDegrees: stats.steeringTurnDegrees,
       steeringTurn90Time: stats.steeringTurn90Time,
@@ -433,6 +507,8 @@ export const buildRaceVisualTelemetry = ({
       heldItemKey: heldItemKey || null,
       lap: race.lap,
       place: race.place,
+      rivalPackAverageDistance: rivalPackDistance?.average ?? null,
+      rivalPackNearestDistance: rivalPackDistance?.nearest ?? null,
       visibleRivals,
       visibleRivalsSeen: stats.visibleRivalsSeen,
     },
@@ -445,6 +521,8 @@ export const raceHudTelemetryForFrame = ({
   offroad = false,
   playerVehicleConfig = {},
   race,
+  visibleRivals = 0,
+  visibleRivalsSeen = 0,
 } = {}) => {
   const player = race.player;
   return {
@@ -476,10 +554,13 @@ export const raceHudTelemetryForFrame = ({
     time: race.time,
     upgradeAvailable: player.bananas >= 3 && Boolean(player.heldItem) && player.heldItem.level < 3,
     vehicleMode: player.vehicleMode,
+    visibleRivals,
+    visibleRivalsSeen,
   };
 };
 
 export const publishRaceTelemetryFrame = ({
+  boostPadMeshes = [],
   camera,
   brakingTelemetryActive = false,
   cameraRouteLookahead = null,
@@ -535,12 +616,13 @@ export const publishRaceTelemetryFrame = ({
     playerNearest.distance > playerRoadWidth * 0.52;
   if (offroad) stats.offroadSlowdownSeen = true;
   let visibleBranchCount = 0;
-  let visibleRivals = 0;
+  const cameraCanProject = Boolean(camera?.projectionMatrix?.elements && camera?.matrixWorldInverse?.elements);
+  const visibleRivals = cameraCanProject ? countVisibleRivals({ camera, rivals: race.rivals }) : 0;
+  const rivalPackDistance = summarizeRivalPackDistance({ player, rivals: race.rivals });
+  stats.visibleRivalsSeen = Math.max(stats.visibleRivalsSeen || 0, visibleRivals);
   if (includeVisualTelemetry) {
     visibleBranchCount = countVisibleBranches({ camera, compiled, player });
     if (visibleBranchCount > 0) stats.branchVisibleSeen = true;
-    visibleRivals = countVisibleRivals({ camera, rivals: race.rivals });
-    stats.visibleRivalsSeen = Math.max(stats.visibleRivalsSeen || 0, visibleRivals);
   }
   const heldItemKey =
     typeof player.heldBalloon === 'string'
@@ -562,6 +644,7 @@ export const publishRaceTelemetryFrame = ({
             state: 'procedural-ready',
           },
         boostTimer: player.boostTimer,
+        boostPadVisual: boostPadVisualActive(boostPadMeshes),
         camera: {
           distance: camera.position.distanceTo(player.position),
           fov: camera.fov,
@@ -581,6 +664,10 @@ export const publishRaceTelemetryFrame = ({
         normalizedSpeed,
         offroadSlowdown: offroad ? playerVehicleConfig.offroad : 1,
         player,
+        playerBoostBurstVisual: playerBoostBurstVisualActive(playerVehicleGroup),
+        playerDriftTrailVisual: playerDriftTrailVisualActive(playerVehicleGroup),
+        playerShieldBurstVisual: playerShieldBurstVisualActive(playerVehicleGroup),
+        playerShieldVisual: playerShieldVisualActive(playerVehicleGroup),
         race: {
           audioMuted: Boolean(race.audioMuted),
           lap: Math.min(player.lap, compiled.laps),
@@ -594,6 +681,7 @@ export const publishRaceTelemetryFrame = ({
         trackKey: compiled.key,
         visibleBranchCount,
         visibleRivals,
+        rivalPackDistance,
       })
     : null;
   const hudTelemetry = raceHudTelemetryForFrame({
@@ -602,6 +690,8 @@ export const publishRaceTelemetryFrame = ({
     offroad,
     playerVehicleConfig,
     race,
+    visibleRivals,
+    visibleRivalsSeen: stats.visibleRivalsSeen || 0,
   });
   setTelemetry(hudTelemetry);
 

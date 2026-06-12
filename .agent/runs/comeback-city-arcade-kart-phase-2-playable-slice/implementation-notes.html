@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comeback City Arcade Kart Phase 2 Playable Slice - Implementation Notes</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2733;
+      --muted: #5d6875;
+      --line: #d9e0e8;
+      --bg: #f7f9fb;
+      --panel: #ffffff;
+      --accent: #1768ac;
+      --done: #16704a;
+      --doing: #9a5b00;
+      --blocked: #a52828;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; line-height: 1.5; color: var(--ink); background: var(--bg); }
+    main { max-width: 1120px; margin: 0 auto; padding: 32px 20px 56px; }
+    h1, h2 { line-height: 1.2; }
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    h2 { margin: 32px 0 12px; font-size: 22px; }
+    p { margin: 0 0 12px; }
+    ul { margin: 8px 0 16px 22px; padding: 0; }
+    li { margin: 4px 0; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.95em; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin: 16px 0; }
+    .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 16px 0 20px; }
+    .meta div { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 10px 12px; }
+    .label { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+    .status-doing { color: var(--doing); font-weight: 700; }
+    .status-done { color: var(--done); font-weight: 700; }
+    .status-blocked { color: var(--blocked); font-weight: 700; }
+    .timeline { display: grid; gap: 10px; }
+    .event { background: var(--panel); border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 8px; padding: 12px 14px; }
+    .event time { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Comeback City Arcade Kart Phase 2 Playable Slice</h1>
+    <p>Canonical implementation state for the owner-approved visual direction becoming a playable slice.</p>
+
+    <section class="meta" aria-label="Goal metadata">
+      <div><span class="label">Status</span><span class="status-done">[done] pass 001 playable proof route validated</span></div>
+      <div><span class="label">Phase</span>Phase 2 playable slice</div>
+      <div><span class="label">Ledger</span><code>.agent/runs/comeback-city-arcade-kart-phase-2-playable-slice/</code></div>
+      <div><span class="label">Last Updated</span><time datetime="2026-06-07T22:30:39Z">2026-06-07T22:30:39Z</time></div>
+    </section>
+
+    <section class="panel" id="resume-here">
+      <h2>Resume Here</h2>
+      <ul>
+        <li><strong>Status:</strong> [done] Phase 2 playable proof route is implemented and validated.</li>
+        <li><strong>Current phase:</strong> Phase 2 complete. Phase 3 can begin in a later scoped goal if requested.</li>
+        <li><strong>Completed work:</strong> Added separate route <code>/#visual-kart-playable</code> using the approved bitmap-first art base. Implemented keyboard acceleration/braking/steering, touch controls, chase-camera motion, boost pad trigger feedback, three moving rivals, item box pickup placeholder, HUD/minimap/GO presentation, and autoplay evidence mode.</li>
+        <li><strong>Active work:</strong> None for Phase 2.</li>
+        <li><strong>Blockers:</strong> None currently.</li>
+        <li><strong>Next exact action:</strong> Start Phase 3 in a new scoped goal if requested: hop/drift, drift sparks, mini-turbo charge, boost burst, camera response, one clean lap route, finish gate, and lap flow.</li>
+        <li><strong>Last validation:</strong> 2026-06-07: <code>npm run test:kart-proof</code>, <code>npm run test:kart-playable</code>, <code>npm run build</code>, and asset manifest parse passed. Evidence is saved under <code>evidence/pass-001-playable-proof/</code>.</li>
+        <li><strong>Protected paths and user-owned work:</strong> Existing unrelated dirty files, especially under <code>AnimatedShowcaseDesigns/</code>, must not be modified or reverted.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Progress Timeline</h2>
+      <div class="timeline" id="timeline"></div>
+    </section>
+  </main>
+  <script>
+    const progressEvents = [
+      {
+        ts: "2026-06-07T22:18:20Z",
+        status: "doing",
+        phase: "pass-001-playable-proof-route",
+        actor: "agent",
+        summary: "Initialized the Phase 2 playable-slice ledger after Phase 1 owner approval.",
+        evidence: ["../comeback-city-arcade-kart-rebuild/evidence/pass-051-owner-approval/owner-approval.md"]
+      },
+      {
+        ts: "2026-06-07T22:30:39Z",
+        status: "done",
+        phase: "pass-001-playable-proof-route",
+        actor: "agent",
+        summary: "Implemented and validated the separate playable proof route with acceleration, braking, steering, chase camera motion, boost pad trigger, moving rivals, item pickup placeholder, desktop/mobile evidence, and a 10-second desktop clip.",
+        evidence: ["evidence/pass-001-playable-proof/contact-sheet.png", "evidence/pass-001-playable-proof/desktop-10s.webm", "evidence/pass-001-playable-proof/kart-playable-proof-report.json"]
+      }
+    ];
+
+    const timeline = document.getElementById('timeline');
+    timeline.innerHTML = progressEvents.map((event) => `
+      <article class="event">
+        <time datetime="${event.ts}">${event.ts}</time>
+        <p><strong>${event.status}</strong> / ${event.phase} / ${event.actor}</p>
+        <p>${event.summary}</p>
+        ${event.evidence?.length ? `<ul>${event.evidence.map((item) => `<li><code>${item}</code></li>`).join('')}</ul>` : ''}
+      </article>
+    `).join('');
+  </script>
+</body>
+</html>

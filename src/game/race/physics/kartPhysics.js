@@ -585,7 +585,10 @@ export const steeringTurnSpeedForState = ({
 }) => {
   const turnSpeedRatio = clamp(Math.abs(signedForwardSpeed) / Math.max(1, vehicle?.maxSpeed || 1), 0.28, 1.2);
   if (driftActive) return turnSpeedRatio;
-  if (vehicleMode === 'kart') return clamp(0.68 - turnSpeedRatio * 0.06, 0.61, 0.67);
+  if (vehicleMode === 'kart') {
+    if (turnSpeedRatio <= 0.45) return clamp(0.68 - turnSpeedRatio * 0.06, 0.61, 0.67);
+    return clamp(0.65 + (turnSpeedRatio - 0.45) * 0.78, 0.65, 0.93);
+  }
   return turnSpeedRatio;
 };
 

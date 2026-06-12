@@ -578,6 +578,7 @@ assert("Gustavo is removed from public launch surfaces", !/gustavo|Gustavo/.test
   "verify-photo-match.mjs",
   "verify-device-qa.mjs",
   "prepare-cloudflare-deploy.mjs",
+  "generate-business-card-assets.mjs",
   "vercel.json",
   ".vercelignore",
   "_headers",
@@ -596,9 +597,19 @@ assert("Gustavo is removed from public launch surfaces", !/gustavo|Gustavo/.test
   "OUTBOUND_LINK_AUDIT.md",
   "LOCAL_BROWSER_AUDIT.md",
   "COMPLETION_AUDIT.md",
+  "SHOWCASE_V3_LIVE_PRD_AUDIT.md",
   "PHOTO_MATCH_REVIEW.md",
   "LAUNCH_CHECKLIST.md",
   "PRODUCTION_AUDIT.md",
+  "LAUNCH_ACQUISITION_SYSTEM.md",
+  "FREE_WEBSITE_REVIEW_TEMPLATE.md",
+  "CLIENT_ONBOARDING_REQUIREMENTS.md",
+  "SEARCH_LOCAL_SEO_LAUNCH_SETUP.md",
+  "OUTREACH_TRACKER.csv",
+  "business-card/README.md",
+  "business-card/showcase-business-card-front.svg",
+  "business-card/showcase-business-card-back.svg",
+  "business-card/showcase-business-card-qr.svg",
   "img/world/hyperrealistic-gallery-target-right.png",
   "img/world/hyperrealistic-gallery-target.png",
   photoPlatePath,
@@ -622,27 +633,54 @@ const cloudflareDeploy = readText("CLOUDFLARE_DEPLOY.md");
 const operatorInputsForDeploy = readText("OPERATOR_INPUTS.md");
 const productionAuditForDeploy = readText("PRODUCTION_AUDIT.md");
 const deployArtifactMatch = cloudflareDeploy.match(/(deploy-artifacts\/showcase-designs-dist-[0-9-]+\.zip)\s+SHA256 ([a-f0-9]{64})/);
+const deployArtifactIndex = deployArtifactMatch ? run("unzip", ["-p", deployArtifactMatch[1], "index.html"]) : null;
 assert("Cloudflare redirects avoid clean-route loops", cloudflareRedirects.includes("built-in extensionless HTML routing") && cloudflareRedirects.includes("Do not add /world -> /world.html") && !cloudflareRedirects.includes("/world /world.html 200") && !cloudflareRedirects.includes("/thanks /thanks.html 200"));
 assert("Cloudflare headers set conservative security headers", cloudflareHeaders.includes("X-Content-Type-Options: nosniff") && cloudflareHeaders.includes("Referrer-Policy: strict-origin-when-cross-origin") && cloudflareHeaders.includes("Permissions-Policy: camera=(), microphone=(), geolocation=()") && cloudflareHeaders.includes("X-Frame-Options: DENY"));
 assert("Cloudflare deploy guide uses clean dist output", cloudflareDeploy.includes("Build command: node prepare-cloudflare-deploy.mjs") && cloudflareDeploy.includes("Build output directory: dist") && cloudflareDeploy.includes("Do not deploy the workspace root directly"));
 assert("Cloudflare deploy guide documents direct upload path", cloudflareDeploy.includes("npx wrangler pages deploy dist --project-name <cloudflare-pages-project> --branch <production-branch>") && cloudflareDeploy.includes("Do not guess either value"));
 assert("Cloudflare deploy guide rejects parent comeback tracker config", cloudflareDeploy.includes("Do not use the parent `../wrangler.toml`") && cloudflareDeploy.includes("comeback-tracker") && cloudflareDeploy.includes("is not evidence of the `showcase-designs.com` Cloudflare project"));
 assert("Cloudflare deploy artifact is present and hash-matched", deployArtifactMatch && fileExists(deployArtifactMatch[1]) && sha256File(deployArtifactMatch[1]) === deployArtifactMatch[2]);
+assert("Cloudflare deploy artifact contains current index", deployArtifactIndex?.status === 0 && deployArtifactIndex.stdout === index, deployArtifactIndex?.stderr || "index mismatch");
 assert("Cloudflare deploy artifact references agree across audits", deployArtifactMatch && operatorInputsForDeploy.includes(deployArtifactMatch[1]) && operatorInputsForDeploy.includes(deployArtifactMatch[2]) && productionAuditForDeploy.includes(deployArtifactMatch[1]) && productionAuditForDeploy.includes(deployArtifactMatch[2]));
+assert("preview deploy evidence documents current immutable build", ["https://7b30c5f6.showcase-designs-preview.pages.dev", "63 production checks passed", "10 photo-match checks passed", "Founder-Led", "No visible Cloudflare Pages project currently lists"].every((text) => operatorInputsForDeploy.includes(text) && productionAuditForDeploy.includes(text)) && operatorInputsForDeploy.includes("showcase-designs.com") && productionAuditForDeploy.includes("showcase-designs.com"));
+const acquisitionSystem = readText("LAUNCH_ACQUISITION_SYSTEM.md");
+const freeReviewTemplate = readText("FREE_WEBSITE_REVIEW_TEMPLATE.md");
+const clientOnboarding = readText("CLIENT_ONBOARDING_REQUIREMENTS.md");
+const searchLocalSetup = readText("SEARCH_LOCAL_SEO_LAUNCH_SETUP.md");
+const outreachTracker = readText("OUTREACH_TRACKER.csv");
+const cardReadme = readText("business-card/README.md");
+const cardFront = readText("business-card/showcase-business-card-front.svg");
+const cardBack = readText("business-card/showcase-business-card-back.svg");
+const cardQr = readText("business-card/showcase-business-card-qr.svg");
+const businessCardUrl = "https://showcase-designs.com/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch";
+const escapedBusinessCardUrl = businessCardUrl.replaceAll("&", "&amp;");
+assert("launch acquisition system documents business card funnel", acquisitionSystem.includes(businessCardUrl) && acquisitionSystem.includes("Do not print cards until") && acquisitionSystem.includes("Manual Outreach Cadence") && acquisitionSystem.includes("Compliance Rules"));
+assert("launch acquisition system links free review template", acquisitionSystem.includes("FREE_WEBSITE_REVIEW_TEMPLATE.md") && acquisitionSystem.includes("Review-to-call conversion") && acquisitionSystem.includes("I do not guarantee rankings"));
+assert("free website review template matches launch offer", ["3 trust or conversion issues", "3 local SEO opportunities", "1 recommended next step", "Do not include a quote unless the business asks", "No rankings are guaranteed", "OUTREACH_TRACKER.csv"].every((text) => freeReviewTemplate.includes(text)));
+assert("launch acquisition system documents client signal guardrail", acquisitionSystem.includes("CLIENT_ONBOARDING_REQUIREMENTS.md") && acquisitionSystem.includes("Do not sell Growth as an ongoing SEO promise") && acquisitionSystem.includes("reviews, photos, accurate business details, proof"));
+assert("client onboarding checklist documents local SEO signal requirements", ["No ranking guarantees", "Google Business Profile", "reviews", "fresh photos", "accurate business details", "service areas", "proof of completed work", "Do not sell Growth"].every((text) => clientOnboarding.includes(text)));
+assert("search local setup documents post-deploy SEO gates", ["Google Search Console", "sitemap.xml", "URL Inspection", "Bing Webmaster Tools", "Measurement ID", "Google Business Profile", "service-area business", "Review ask process"].every((text) => searchLocalSetup.includes(text)) && searchLocalSetup.includes("Do not install a guessed analytics tag"));
+assert("outreach tracker has 100 blank lead rows", outreachTracker.split("\n").filter((line) => /^SD-[0-9]{3},not_contacted/.test(line)).length === 100);
+assert("business card assets use approved QR URL and print hold", cardReadme.includes(businessCardUrl) && cardReadme.includes("Do not print until production passes") && cardQr.includes(escapedBusinessCardUrl) && cardBack.includes(escapedBusinessCardUrl));
+assert("business card assets use approved contact and local-business targeting", cardReadme.includes("andrew@showcase-designs.com") && cardReadme.includes("All local businesses") && cardFront.includes("For local businesses ready for better leads.") && cardBack.includes("andrew@showcase-designs.com"));
+assert("business card SVGs use standard card dimensions", cardFront.includes('width="3.5in" height="2in" viewBox="0 0 1050 600"') && cardBack.includes('width="3.5in" height="2in" viewBox="0 0 1050 600"'));
 assert("static page has complete social image metadata", index.includes('property="og:image" content="https://showcase-designs.com/og-image.png"') && index.includes('property="og:image:width" content="1200"') && index.includes('name="twitter:image" content="https://showcase-designs.com/og-image.png"'));
 assert("world page has complete social image metadata", world.includes('property="og:image" content="https://showcase-designs.com/og-image.png"') && world.includes('property="og:image:height" content="630"') && world.includes('name="twitter:image" content="https://showcase-designs.com/og-image.png"'));
 assert("static page keeps canonical home URL", index.includes('rel="canonical" href="https://showcase-designs.com/"') && index.includes('property="og:url" content="https://showcase-designs.com"') && !index.includes('content="noindex'));
-assert("static ProfessionalService schema is preserved", staticSchema["@context"] === "https://schema.org" && staticSchema["@type"] === "ProfessionalService" && staticSchema.name === "Showcase Designs" && staticSchema.url === "https://showcase-designs.com" && staticSchema.serviceType === "Web Design, Local SEO");
+assert("static ProfessionalService schema is preserved", staticSchema["@context"] === "https://schema.org" && staticSchema["@type"] === "ProfessionalService" && staticSchema.name === "Showcase Designs" && staticSchema.url === "https://showcase-designs.com" && staticSchema.email === "andrew@showcase-designs.com" && staticSchema.serviceType === "Web Design, Local SEO");
 assert("static schema offers remain complete", Array.isArray(staticSchema.offers) && staticSchema.offers.map((offer) => offer.name).join("|") === "Starter|Growth|Custom" && new Set(staticSchema.offers.map((offer) => offer.name)).size === 3);
+assert("static positioning targets local businesses", index.includes("<title>Websites & Local SEO for Local Businesses | Showcase Designs</title>") && index.includes("Built for local businesses") && index.includes("We build websites and local SEO systems for local businesses") && !index.includes("Websites & Local SEO for Contractors"));
 const robots = readText("robots.txt");
 const sitemap = readText("sitemap.xml");
 assert("robots file points at sitemap", robots.includes("User-agent: *") && robots.includes("Allow: /") && robots.includes("Sitemap: https://showcase-designs.com/sitemap.xml"));
 assert("sitemap includes canonical static route only", sitemap.includes("<loc>https://showcase-designs.com/</loc>") && !sitemap.includes("/world"));
-assert("contact form posts to FormSubmit", index.includes('class="contact-form" action="https://formsubmit.co/hello@showcase-designs.com" method="POST"'));
+assert("contact form posts to FormSubmit", index.includes('class="contact-form" action="https://formsubmit.co/andrew@showcase-designs.com" method="POST"'));
 assert("contact form hidden fields are configured", index.includes('name="_subject" value="New Showcase Designs inquiry"') && index.includes('name="_captcha" value="false"') && index.includes('name="_template" value="table"') && index.includes('name="_next" value="https://showcase-designs.com/thanks"'));
 assert("contact form captures attribution fields", ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "landing_page", "referrer"].every((name) => index.includes(`name="${name}" value=""`)));
 assert("contact form required fields are configured", index.includes('id="name" name="name" type="text" required') && index.includes('id="email" name="email" type="email" required') && index.includes('id="business" name="business" required') && index.includes('id="package" name="package" required'));
 assert("contact form includes privacy consent link", index.includes('By submitting, you agree to our') && index.includes('href="privacy.html"'));
+assert("contact form includes visible fallback contact path", index.includes('class="form-fallback"') && index.includes("If the form fails") && index.includes('href="mailto:andrew@showcase-designs.com"') && index.includes('href="tel:5203672769"'));
+assert("static pricing reflects owner-approved subscription and ownership model", index.includes('$150<span style="font-size: 0.4em; font-weight: 400;">/mo</span>') && index.includes('$400<span style="font-size: 0.4em; font-weight: 400;">/mo</span>') && index.includes("Starter and Growth are monthly subscription options") && index.includes("one-time ownership builds start at $1,500") && index.includes("Starter - $150/mo subscription") && index.includes("Growth - $400/mo subscription") && index.includes("Own the site outright - starting at $1,500") && !index.includes("$149") && !index.includes("$399") && !index.includes("One-time setup"));
 assert("thanks page is noindexed confirmation", thanks.includes("<title>Thanks | Showcase Designs</title>") && thanks.includes('content="noindex,follow"') && thanks.includes("Message received"));
 assert("404 page is noindexed fallback", notFound.includes("<title>Page Not Found | Showcase Designs</title>") && notFound.includes('content="noindex,follow"') && notFound.includes("That page is not in the Showcase Designs build"));
 assert("static fonts use optional display", index.includes("display=optional") && !index.includes("display=swap"));
@@ -691,6 +729,7 @@ assert("world continuous QA rendering is qa-only", worldJs.includes("function ru
 assert("static analytics hooks cover mode routing", index.includes("window.dataLayer.push") && index.includes('window.gtag("event"') && index.includes("window.sdTrack") && index.includes('"mode_enter_world"') && index.includes('"mode_return_static"'));
 assert("static analytics hooks cover conversion events", ["form_submit", "phone_click", "email_click", "pricing_cta_click", "business_card_qr_visit", "live_project_click"].every((eventName) => index.includes(`"${eventName}"`)) && index.includes("syncAttributionFields") && index.includes("trackCampaignVisit"));
 assert("world analytics hooks cover mode and station events", worldJs.includes("window.dataLayer.push") && worldJs.includes('window.gtag("event"') && ["mode_enter_world", "mode_return_static", "station_click_live", "station_click_case_study", "station_hover", "world_fallback_shown", "webgl_context_lost"].every((eventName) => worldJs.includes(`"${eventName}"`)));
+assert("static trust stats avoid unverified numeric claims", ["Founder-Led", "Scope-First", "Direct", "Client-Owned"].every((text) => index.includes(`data-text="${text}"`)) && !index.includes('data-counter="15"') && !index.includes('data-counter="48"') && !index.includes('data-counter="100"') && !index.includes("Projects Built") && !index.includes("48hr"));
 assert("world portrait camera starts inside walkable right-reference gallery room", worldJs.includes("const cameraFov = portraitViewport ? 62 : 54") && worldJs.includes("const basePose = galleryCameraPose()") && worldJs.includes("new THREE.Vector3(-4.72, 1.5, 4.86)") && worldJs.includes("new THREE.Vector3(-0.8, 1.4, -5.18)"));
 assert("world portrait station panel has compact toggle", world.includes('class="station-panel is-compact"') && world.includes('id="panelToggleButton"') && world.includes('aria-controls="stationPanelBody"') && world.includes('aria-expanded="false"') && worldCss.includes(".station-panel.is-compact") && worldJs.includes("syncStationPanelMode"));
 assert("world mobile topbar keeps static return visible", worldCss.includes(".topbar-actions") && worldCss.includes("flex: 0 0 auto") && worldCss.includes("margin-left: auto") && worldCss.includes("text-overflow: ellipsis"));
@@ -747,7 +786,11 @@ assert("README links device QA checklist", readme.includes("DEVICE_QA_QUICK_STAR
 const outboundAudit = readText("OUTBOUND_LINK_AUDIT.md");
 assert("outbound audit documents approved station URL pass", outboundAudit.includes("All approved launch station live URLs passed") && !outboundAudit.includes("DEPLOYMENT_NOT_FOUND"));
 assert("outbound audit documents consistency coverage", outboundAudit.includes("href") && outboundAudit.includes("world-data.js") && outboundAudit.includes("station `liveUrl`"));
+assert("outbound audit documents current FormSubmit pass", outboundAudit.includes("FormSubmit endpoint") && outboundAudit.includes("HTTP 200") && outboundAudit.includes("9 outbound checks passed") && !outboundAudit.includes("HTTP 522"));
 assert("README links outbound audit", readme.includes("OUTBOUND_LINK_AUDIT.md") && readme.includes("node verify-outbound.mjs"));
+assert("README links free review template", readme.includes("FREE_WEBSITE_REVIEW_TEMPLATE.md") && readme.includes("3 trust issues, 3 local SEO opportunities, 1 next step"));
+assert("README links client onboarding requirements", readme.includes("CLIENT_ONBOARDING_REQUIREMENTS.md") && readme.includes("before quoting Growth"));
+assert("README links search local setup", readme.includes("SEARCH_LOCAL_SEO_LAUNCH_SETUP.md") && readme.includes("Search Console, Bing, analytics, GBP"));
 const localBrowserAudit = readText("LOCAL_BROWSER_AUDIT.md");
 assert("local browser audit documents static Lighthouse result", localBrowserAudit.includes("Performance | 94") && localBrowserAudit.includes("Accessibility | 100") && localBrowserAudit.includes("Best Practices | 100") && localBrowserAudit.includes("SEO | 100"));
 assert("local browser audit documents world Lighthouse result", localBrowserAudit.includes("Performance | 97") && localBrowserAudit.includes("world.html?try=1") && localBrowserAudit.includes("noindex,follow"));
@@ -759,6 +802,7 @@ assert("local browser audit documents concrete performance fixes", localBrowserA
 assert("local browser audit documents four-station visual capture", localBrowserAudit.includes("current-world-fourstation-desktop.png") && localBrowserAudit.includes("current-world-fourstation-portrait.png"));
 assert("README links local browser audit", readme.includes("LOCAL_BROWSER_AUDIT.md"));
 const audit = readText("COMPLETION_AUDIT.md");
+const livePrdAudit = readText("SHOWCASE_V3_LIVE_PRD_AUDIT.md");
 const photoMatchReview = readText("PHOTO_MATCH_REVIEW.md");
 assert("completion audit documents local evidence", audit.includes("node verify-world.mjs") && audit.includes("Passed locally"));
 assert("completion audit includes local browser audit evidence", audit.includes("LOCAL_BROWSER_AUDIT.md") && audit.includes("Passed locally"));
@@ -767,18 +811,23 @@ assert("completion audit documents approved case-study copy gate", audit.include
 assert("completion audit documents remaining external gates", audit.includes("Not complete") && audit.includes("Operator approval"));
 assert("photo-match review documents owner option C decision", photoMatchReview.includes("This pass is not a 1:1 replica") && photoMatchReview.includes("https://showcase-designs-preview.pages.dev/world?presentation=1") && photoMatchReview.includes("Selected option: 3") && photoMatchReview.includes("hybrid/generated room-plate approach") && photoMatchReview.includes("Real-device iOS Safari report is still missing"));
 assert("README links completion audit", readme.includes("COMPLETION_AUDIT.md"));
+assert("live PRD audit maps launch requirements", ["L-1 Production cutover", "L-2 Deploy package", "SEO-1 Canonical static marketing page", "SEO-2 Search Console launch", "SEO-3 Showcase local trust signals", "TRUST-1 Evidence-based claims", "TRUST-2 Founder-led positioning", "CONV-1 Contact and lead capture", "CONV-2 Analytics and tracking", "ACQ-1 Business card funnel", "ACQ-2 Outreach system", "Release criteria"].every((item) => livePrdAudit.includes(item)) && livePrdAudit.includes("Trust stats use `Founder-Led`, `Scope-First`, `Direct`, and `Client-Owned`") && readme.includes("SHOWCASE_V3_LIVE_PRD_AUDIT.md"));
+assert("live PRD audit records preview deploy and production project discovery", livePrdAudit.includes("https://7b30c5f6.showcase-designs-preview.pages.dev") && livePrdAudit.includes("verify-production.mjs` passed 63 checks") && livePrdAudit.includes("verify-photo-match.mjs` passed 10 checks") && livePrdAudit.includes("visible Cloudflare Pages projects do not include") && livePrdAudit.includes("showcase-designs.com"));
 const requirementsTrace = readText("REQUIREMENTS_TRACE.md");
 assert("requirements trace maps all PRD functional requirements", ["F-1.1", "F-1.2", "F-1.3", "F-1.4", "F-1.5", "F-1.6", "F-1.7", "F-1.8", "F-2.1", "F-2.2", "F-2.3", "F-2.4", "F-2.5", "F-2.6", "F-2.7", "F-2.8", "F-2.9", "F-2.10", "F-2.11", "F-2.12", "F-2.13", "F-2.14", "F-2.15", "F-2.16", "F-2.17", "F-3.1", "F-3.2", "F-3.3", "F-3.4", "F-3.5"].every((id) => requirementsTrace.includes(id)));
 assert("requirements trace maps launch gates and blockers", requirementsTrace.includes("Static LCP p75") && requirementsTrace.includes("Mobile FPS") && requirementsTrace.includes("Visible draw calls") && requirementsTrace.includes("Current Blockers") && requirementsTrace.includes("Cloudflare"));
 assert("README links requirements trace", readme.includes("REQUIREMENTS_TRACE.md"));
 const operatorInputs = readText("OPERATOR_INPUTS.md");
 assert("operator inputs document exact external blockers", ["Cloudflare Preview Deploy", "showcase-designs-preview", "Real-Device QA Reports", "Production Core Web Vitals", "Copy Approval", "Operator Launch Approval"].every((item) => operatorInputs.includes(item)) && !operatorInputs.includes("Gustavo's Landscape URL"));
+assert("operator inputs mirror PRD open questions", ["Exact approved client/project list", "EvenPath, Felco, Abel, and Beckel", "Approved numeric claims", "Final public phone number", "Final public email address", "Compliant physical mailing address or PO box", "Cloudflare production project name and production branch", "Private founding-client offer approved", "Growth price after first 3-5 clients", "Business card targeting"].every((item) => operatorInputs.includes(item)) && operatorInputs.includes("Do not guess these answers"));
 assert("operator inputs document follow-up verification commands", operatorInputs.includes("node verify-outbound.mjs") && operatorInputs.includes("node verify-production.mjs") && operatorInputs.includes("node verify-world.mjs") && operatorInputs.includes("node verify-device-qa.mjs"));
+assert("operator inputs link search local setup", operatorInputs.includes("SEARCH_LOCAL_SEO_LAUNCH_SETUP.md") && operatorInputs.includes("Google Search Console property") && operatorInputs.includes("GBP eligible"));
 assert("README and completion audit link operator inputs", readme.includes("OPERATOR_INPUTS.md") && audit.includes("OPERATOR_INPUTS.md"));
 const launchChecklist = readText("LAUNCH_CHECKLIST.md");
 assert("launch checklist documents production route gate", launchChecklist.includes("curl -I https://showcase-designs.com/world") && launchChecklist.includes("Production Route Gate") && launchChecklist.includes("Cloudflare Pages"));
 assert("launch checklist documents production verifier", launchChecklist.includes("node verify-production.mjs"));
 assert("launch checklist documents CWV thresholds", launchChecklist.includes("LCP `<= 2.5s`") && launchChecklist.includes("INP `<= 200ms`") && launchChecklist.includes("CLS `<= 0.1`"));
+assert("launch checklist documents search local SEO gate", launchChecklist.includes("Search And Local SEO Gate") && launchChecklist.includes("SEARCH_LOCAL_SEO_LAUNCH_SETUP.md") && launchChecklist.includes("Google Search Console property is verified"));
 assert("launch checklist documents operator approval", launchChecklist.includes("Operator Approval") && launchChecklist.includes("APPROVED / CHANGES REQUESTED"));
 assert("README links launch checklist", readme.includes("LAUNCH_CHECKLIST.md"));
 const productionAudit = readText("PRODUCTION_AUDIT.md");

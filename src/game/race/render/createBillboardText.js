@@ -1,28 +1,52 @@
 import * as THREE from 'three';
 
 export const BILLBOARD_TEXT_STYLE = {
-  background: 'rgba(7, 17, 27, 0.82)',
-  canvasHeight: 128,
-  canvasWidth: 512,
-  font: '900 42px ui-monospace, SFMono-Regular, Menlo, monospace',
-  opacity: 0.82,
+  accentBarHeight: 11,
+  background: '#050d16',
+  canvasHeight: 96,
+  canvasWidth: 384,
+  font: '900 34px ui-monospace, SFMono-Regular, Menlo, monospace',
+  innerBackground: '#0a1826',
+  opacity: 0.94,
   scale: { x: 16, y: 4, z: 1 },
-  strokeInset: 10,
+  strokeInset: 8,
   strokeWidth: 8,
-  textBaselineOffset: 4,
+  textBaselineOffset: 3,
 };
 
-export const createBillboardText = (
-  text,
-  color = '#fff8d5',
-  { documentRef = globalThis.document } = {}
-) => {
+const billboardAssetCache = new WeakMap();
+
+export const configureRaceCanvasTexture = (texture) => {
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearFilter;
+  return texture;
+};
+
+const billboardAssetCacheFor = (documentRef) => {
+  let cache = billboardAssetCache.get(documentRef);
+  if (!cache) {
+    cache = new Map();
+    billboardAssetCache.set(documentRef, cache);
+  }
+  return cache;
+};
+
+const billboardTextureKeyFor = (text, color) => `${color}::${text.toUpperCase()}`;
+
+const createBillboardTexture = (text, color, documentRef) => {
   const canvas = documentRef.createElement('canvas');
   canvas.width = BILLBOARD_TEXT_STYLE.canvasWidth;
   canvas.height = BILLBOARD_TEXT_STYLE.canvasHeight;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = BILLBOARD_TEXT_STYLE.background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, canvas.width, BILLBOARD_TEXT_STYLE.accentBarHeight);
+  ctx.fillRect(0, canvas.height - BILLBOARD_TEXT_STYLE.accentBarHeight, canvas.width, BILLBOARD_TEXT_STYLE.accentBarHeight);
+  ctx.fillStyle = BILLBOARD_TEXT_STYLE.innerBackground;
+  ctx.fillRect(14, 18, canvas.width - 28, canvas.height - 36);
   ctx.strokeStyle = color;
   ctx.lineWidth = BILLBOARD_TEXT_STYLE.strokeWidth;
   ctx.strokeRect(
@@ -37,16 +61,32 @@ export const createBillboardText = (
   ctx.fillStyle = color;
   ctx.fillText(text.toUpperCase(), canvas.width / 2, canvas.height / 2 + BILLBOARD_TEXT_STYLE.textBaselineOffset);
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      depthWrite: false,
-      map: texture,
-      opacity: BILLBOARD_TEXT_STYLE.opacity,
-      transparent: true,
-    })
-  );
+  return configureRaceCanvasTexture(new THREE.CanvasTexture(canvas));
+};
+
+export const createBillboardText = (
+  text,
+  color = '#fff8d5',
+  { documentRef = globalThis.document } = {}
+) => {
+  const cache = billboardAssetCacheFor(documentRef);
+  const textureKey = billboardTextureKeyFor(text, color);
+  let asset = cache.get(textureKey);
+  if (!asset) {
+    const texture = createBillboardTexture(text, color, documentRef);
+    asset = {
+      material: new THREE.SpriteMaterial({
+        depthTest: false,
+        depthWrite: false,
+        map: texture,
+        opacity: BILLBOARD_TEXT_STYLE.opacity,
+        transparent: true,
+      }),
+      texture,
+    };
+    cache.set(textureKey, asset);
+  }
+  const sprite = new THREE.Sprite(asset.material);
   sprite.scale.set(BILLBOARD_TEXT_STYLE.scale.x, BILLBOARD_TEXT_STYLE.scale.y, BILLBOARD_TEXT_STYLE.scale.z);
   return sprite;
 };

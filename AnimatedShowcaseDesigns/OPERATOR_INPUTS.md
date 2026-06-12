@@ -26,6 +26,46 @@ The current interactive 3D preview remains the performance/functionality baselin
 
 Gustavo's Landscape is intentionally removed until it is approved as a paying client or replaced by another approved project. Do not re-add it without explicit operator approval and a valid screenshot/live URL.
 
+## PRD Open Questions For Andrew
+
+These are the exact open questions from `SHOWCASE_V3_LIVE_PRD.md` that must be answered before production launch or before scaling outreach.
+
+```text
+1. Exact approved client/project list for public launch:
+2. EvenPath, Felco, Abel, and Beckel public display approval: YES / NO / PARTIAL
+3. Approved numeric claims, if any, including site count, response time, satisfaction, or turnaround:
+4. Final public phone number:
+5. Final public email address:
+6. Compliant physical mailing address or PO box for commercial outreach:
+7. Cloudflare production project name and production branch:
+8. Private founding-client offer approved: YES / NO
+8a. Founding-client slot count:
+9. Growth price after first 3-5 clients: keep $400/mo / move higher / decide later
+10. Business card targeting: contractors/home services only / all local businesses / other approved focus
+```
+
+Owner answers received on 2026-06-06:
+
+```text
+1. Preview before production: YES. Production approval is not granted yet.
+2. Latest deploy target before preview: use the most updated local build, then verify preview.
+3. Final public phone number: (520) 367-2769.
+4. Final public email address: andrew@showcase-designs.com.
+5. Compliant physical mailing address or PO box: not available yet; add one before scaled commercial outreach.
+6. EvenPath, Felco, Abel, and Beckel public display approval: YES. Andrew can get reviews.
+7. Approved numeric claims: no new numeric claims supplied; keep current trust-safe nonnumeric claims.
+8. Public pricing: Starter $150/mo subscription, Growth $400/mo subscription, or one-time ownership from $1,500. Do not use monthly + setup framing.
+9. Private founding-client flexibility: approved only for friends or people Andrew meets personally. Do not publish broad discounts.
+10. Growth price after first 3-5 clients: decide later.
+11. Analytics: no GA4 ID yet. Recommended default is GA4 for event reporting, with optional Cloudflare Web Analytics as a lightweight pageview backup.
+12. Search Console and Bing setup after deploy: YES.
+13. Google Business Profile: service-area profile likely exists; verify owner/profile URL after production is current.
+14. Business card targeting: all local businesses.
+15. Print cards only after production QR/form tests pass: YES.
+```
+
+Do not guess these answers. Do not guess remaining unknown answers. If an answer is unknown, leave it blank or mark `NEEDS OWNER DECISION` and keep the related launch gate blocked.
+
 ## 1. Cloudflare Preview Deploy
 
 Completed direct-upload deployment:
@@ -33,15 +73,20 @@ Completed direct-upload deployment:
 ```text
 Cloudflare Pages project: showcase-designs-preview
 Branch: main
+Latest preview-readiness deployment: https://7b30c5f6.showcase-designs-preview.pages.dev
+Previous launch-readiness deployment: https://0aa55ac2.showcase-designs-preview.pages.dev
 Previous hero-wall deployment: https://0cc4d1b9.showcase-designs-preview.pages.dev
 Previous photo-match deployment: https://61e0e520.showcase-designs-preview.pages.dev
 Previous hybrid-plate deployment: https://9bf74ca5.showcase-designs-preview.pages.dev
 Previous photo-lock/stone-overlay deployment: https://b47e5e1b.showcase-designs-preview.pages.dev
 Current render/camera tuning deployment: https://d6444b74.showcase-designs-preview.pages.dev
 Stable preview: https://showcase-designs-preview.pages.dev
-Verification: SHOWCASE_ORIGIN=https://showcase-designs-preview.pages.dev node verify-production.mjs -> 63 checks passed
-Visual verification: SHOWCASE_ORIGIN=https://showcase-designs-preview.pages.dev node verify-photo-match.mjs -> 10 checks passed
-Immutable verification: SHOWCASE_ORIGIN=https://d6444b74.showcase-designs-preview.pages.dev node verify-production.mjs -> 63 checks passed
+Verification: SHOWCASE_ORIGIN=https://showcase-designs-preview.pages.dev node verify-production.mjs -> 63 production checks passed
+Visual verification: SHOWCASE_ORIGIN=https://showcase-designs-preview.pages.dev node verify-photo-match.mjs -> 10 photo-match checks passed
+Immutable verification: SHOWCASE_ORIGIN=https://7b30c5f6.showcase-designs-preview.pages.dev node verify-production.mjs -> 63 production checks passed
+Immutable visual verification: SHOWCASE_ORIGIN=https://7b30c5f6.showcase-designs-preview.pages.dev node verify-photo-match.mjs -> 10 photo-match checks passed
+Direct source check on stable and immutable preview: Websites & Local SEO for Local Businesses, $150/mo, $400/mo, and andrew@showcase-designs.com present; old $149/$399 and setup wording absent.
+Trust-safe stat copy on stable preview: Founder-Led / Scope-First / Client-Owned present; old numeric stat markup absent
 ```
 
 Preview note from 2026-05-18: `world.css` now uses a photo-locked presentation layer for `?presentation=1` so the room plate is primary and the live canvas no longer double-exposes over it. Local and stable-preview `node verify-photo-match.mjs` checks passed after this change.
@@ -53,12 +98,21 @@ Preview note from 2026-05-19: `world.js` now raises the seamless-mode DPR cap in
 Last verified direct-upload artifact retained for reference:
 
 ```text
-Archive: deploy-artifacts/showcase-designs-dist-20260603-103616.zip
-SHA256: 5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92
-Source: generated from the allowlisted `dist/` package after the 2026-06-03 pricing/trust copy pass, launch acquisition runbook, UTM/contact-form attribution capture, and static conversion event hooks were added. Local verification passed with `node verify-world.mjs` and local-dist `verify-production.mjs`.
+Archive: deploy-artifacts/showcase-designs-dist-20260606-142403.zip
+SHA256: 1547ccd54ae80b06d49337bb6cce4758b86f730fd0bae13d606a428ecf84cd15
+Source: generated from the allowlisted `dist/` package after the 2026-06-06 owner-answer pass added the corrected `$150/mo`, `$400/mo`, and ownership-from-`$1,500` pricing model, `andrew@showcase-designs.com`, local-business positioning, regenerated business-card assets, and analytics recommendations. Archive contents were confirmed to match the current `index.html`.
 ```
 
 Production is deferred until the owner explicitly approves it. Preview sharing is approved.
+
+Cloudflare project list note from 2026-06-03:
+
+```text
+Command: npx wrangler pages project list
+Visible project for this site: showcase-designs-preview
+Custom domain on visible project: none, only showcase-designs-preview.pages.dev
+No visible Cloudflare Pages project currently lists showcase-designs.com as a project domain.
+```
 
 If deploying `showcase-designs.com` production separately later, record:
 
@@ -93,6 +147,25 @@ Command: node verify-outbound.mjs
 ```
 
 Before launch, rerun `node verify-outbound.mjs`. If FormSubmit fails, use an owner-approved alternate form provider or fallback contact flow before production approval.
+
+## 1.1 Search, Analytics, And Local Profile Setup
+
+Use `SEARCH_LOCAL_SEO_LAUNCH_SETUP.md` after production serves the current build. Do not submit the sitemap or request indexing while production still serves the stale Vercel site.
+
+Required inputs:
+
+```text
+Google Search Console property: VERIFIED / NOT VERIFIED
+Sitemap submitted: YES / NO
+Bing Webmaster Tools site: VERIFIED / NOT VERIFIED
+Analytics platform and Measurement ID: Recommended GA4 first; ID not provided yet.
+GBP eligible: YES, service-area profile expected
+GBP profile URL: NEEDS OWNER CONFIRMATION
+Approved GBP photos/screenshots:
+Review ask process approved: YES / NO
+```
+
+Record the complete evidence in `SEARCH_LOCAL_SEO_LAUNCH_SETUP.md`.
 
 ## 2. Real-Device QA Reports
 

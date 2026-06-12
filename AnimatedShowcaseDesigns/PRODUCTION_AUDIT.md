@@ -1,6 +1,6 @@
 # Production Audit
 
-Observed preview after latest deploy: 2026-05-19 11:07 local time from:
+Observed preview after latest deploy: 2026-06-03 20:20 UTC from:
 
 ```bash
 npx wrangler pages project list
@@ -20,6 +20,8 @@ Preview deployment is current and route health passed:
 ```text
 Exact Pages project: showcase-designs-preview
 Exact branch: main
+Latest preview-readiness deployment: https://7b30c5f6.showcase-designs-preview.pages.dev
+Previous launch-readiness deployment: https://0aa55ac2.showcase-designs-preview.pages.dev
 Earlier preview deployment: https://9db747ed.showcase-designs-preview.pages.dev
 Previous hero-wall deployment: https://0cc4d1b9.showcase-designs-preview.pages.dev
 Previous photo-match deployment: https://61e0e520.showcase-designs-preview.pages.dev
@@ -28,7 +30,10 @@ Previous photo-lock/stone-overlay deployment: https://b47e5e1b.showcase-designs-
 Current render/camera tuning deployment: https://d6444b74.showcase-designs-preview.pages.dev
 63 production checks passed for https://showcase-designs-preview.pages.dev.
 10 photo-match checks passed for https://showcase-designs-preview.pages.dev.
-63 production checks passed for https://d6444b74.showcase-designs-preview.pages.dev.
+63 production checks passed for https://7b30c5f6.showcase-designs-preview.pages.dev.
+10 photo-match checks passed for https://7b30c5f6.showcase-designs-preview.pages.dev.
+Stable and immutable preview source contains the Local Businesses title, `$150/mo`, `$400/mo`, and `andrew@showcase-designs.com`; old `$149/$399` and setup wording are absent.
+Stable preview source contains Founder-Led, Scope-First, and Client-Owned stat copy, and no old numeric stat markup.
 ```
 
 Current-build evidence:
@@ -41,7 +46,7 @@ Current-build evidence:
 - The stable preview `world.js` includes `addHeroWallLighting`, `createHeroWallWashTexture`, `createFloorLightPoolTexture`, `createGardenSilhouetteTexture`, `presentationMode`, `createCeilingPhotoTexture`, `addStoneSlabMaterialOverlays`, the 2026-05-19 render/camera tuning, and the current inspection/glass/leather hooks.
 - `SHOWCASE_ORIGIN=https://showcase-designs-preview.pages.dev node verify-photo-match.mjs` captured `verification/photo-match-production-desktop.png` and `verification/photo-match-production-mobile.png`.
 - The stable preview `world-data.js` places EvenPath, Felco, and Beckel on the main wall, with Abel on the secondary side wall.
-- The immutable deployment URL and the stable preview URL serve the same current build identifiers, the same 2026-05-18 photo-lock/stone-overlay refinements, and the same 2026-05-19 render/camera tuning.
+- The immutable deployment URL and the stable preview URL serve the same current build identifiers, the same 2026-05-18 photo-lock/stone-overlay refinements, the same 2026-05-19 render/camera tuning, and the 2026-06-03 trust-safe stat copy.
 
 Previous verified direct-upload package:
 
@@ -53,21 +58,28 @@ SHA256 68902e6d81ed1fc8d57af765167c9dc69571dc7719fd637bd5fcb6c77e40a7bd
 Latest verified direct-upload package:
 
 ```text
-deploy-artifacts/showcase-designs-dist-20260603-103616.zip
-SHA256 5c49fe6fca877a1fb31d0f16730a2f038eb71c39194865fc767238f83802ed92
+deploy-artifacts/showcase-designs-dist-20260606-142403.zip
+SHA256 1547ccd54ae80b06d49337bb6cce4758b86f730fd0bae13d606a428ecf84cd15
 ```
 
-The 2026-06-03 launch-readiness package includes the pricing/trust copy pass, launch acquisition system, UTM/contact-form attribution capture, and static conversion event hooks. It is generated locally and ready for an approved Cloudflare Pages upload, but it is not yet deployed to `showcase-designs.com`.
+The 2026-06-06 preview-readiness package includes the corrected subscription-or-ownership pricing model, trust-safe nonnumeric stat copy, local-business positioning, launch acquisition system, regenerated business-card assets, UTM/contact-form attribution capture, static conversion event hooks, visible `andrew@showcase-designs.com` and phone fallback, and live PRD audit handoff. It is generated locally and deployed to the approved preview project, but it is not yet deployed to `showcase-designs.com`.
 
-Observed: 2026-05-19 18:07 UTC preview deploy evidence from `node verify-production.mjs`, `node verify-photo-match.mjs`, and direct `curl` checks.
+Observed: 2026-06-06 14:35 UTC preview deploy evidence from `npx wrangler pages deploy`, `node verify-production.mjs`, `node verify-photo-match.mjs`, and direct `curl` checks.
+
+Cloudflare Pages project-list finding on 2026-06-03:
+
+- The authenticated Cloudflare account lists `showcase-designs-preview`, `comeback-alexander`, `comeback-andrew`, and `saddlebrooke-preview`.
+- `showcase-designs-preview` only lists `showcase-designs-preview.pages.dev` as a project domain.
+- No visible Cloudflare Pages project currently lists `showcase-designs.com` as a project domain.
+- Do not guess a production project. Get the exact production project/domain workflow from Andrew before production cutover.
 
 Domain checked: `https://showcase-designs.com`
 
 ## Result
 
-Production is not serving this workspace build yet. Latest verifier result on 2026-05-11: `50 production checks failed for https://showcase-designs.com.`
+Production is not serving this workspace build yet. Earlier verifier result on 2026-05-11: `50 production checks failed for https://showcase-designs.com.`
 
-Latest verifier result on 2026-06-03: `54 production checks failed for https://showcase-designs.com.`
+Latest verifier result on 2026-06-03 at 20:30 UTC: `54 production checks failed for https://showcase-designs.com.`
 
 | URL | Expected | Observed | Status |
 | --- | --- | --- | --- |
@@ -145,7 +157,7 @@ node verify-production.mjs
 
 This command is expected to fail until production serves this workspace build.
 
-Latest observed result from 2026-06-03 17:36:07 UTC:
+Latest observed result from 2026-06-03 20:30:30 UTC:
 
 ```text
 54 production checks failed for https://showcase-designs.com.

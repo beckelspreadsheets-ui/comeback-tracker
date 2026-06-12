@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comeback City Arcade Kart Production Ready - Implementation Notes</title>
+  <style>
+    body {
+      color: #202124;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      margin: 0 auto;
+      max-width: 920px;
+      padding: 40px 24px;
+    }
+    h1, h2 { line-height: 1.2; }
+    code {
+      background: #f1f3f4;
+      border-radius: 4px;
+      padding: 2px 5px;
+    }
+    .meta {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .timeline {
+      background: #f8f9fa;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      max-height: 360px;
+      overflow: auto;
+      padding: 8px;
+    }
+    .timeline-note {
+      color: #5f6368;
+      margin-bottom: 10px;
+    }
+    .event {
+      background: #fff;
+      border: 1px solid #e8eaed;
+      border-radius: 8px;
+      margin: 8px 0;
+      padding: 12px 14px;
+    }
+    .event-head {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .event-summary {
+      margin: 0;
+    }
+    .event time {
+      color: #5f6368;
+      font-size: 13px;
+    }
+    .badge, .phase, .actor {
+      border-radius: 999px;
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 5px 8px;
+      text-transform: uppercase;
+    }
+    .badge { background: #e8f0fe; color: #174ea6; }
+    .status-done, .status-validated { background: #e6f4ea; color: #137333; }
+    .status-blocked, .status-failed { background: #fce8e6; color: #c5221f; }
+    .status-decision { background: #fef7e0; color: #b06000; }
+    .phase, .actor {
+      background: #f1f3f4;
+      color: #3c4043;
+      font-weight: 600;
+    }
+    li { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <h1>Comeback City Arcade Kart Production Ready</h1>
+  <div class="meta">
+    <p><strong>Goal ID:</strong> <code>comeback-city-arcade-kart-production-ready</code></p>
+    <p><strong>Started:</strong> 2026-06-07T23:02:06Z</p>
+    <p><strong>Parent goal:</strong> none</p>
+    <p><strong>Mode:</strong> full</p>
+    <p><strong>Objective:</strong> Implement COMEBACK_CITY_ARCADE_KART_PRD.md through Phase 3, Phase 4, and Phase 5 so the approved Comeback City arcade kart experience is production-ready with required evidence and validation.</p>
+  </div>
+
+  <h2>Resume Here</h2>
+  <ul>
+    <li><strong>Status:</strong> Phase 3 and Phase 4 are locally implemented and validated. Phase 5 remains open because current performance is below the agreed floor and owner/release inputs cannot be inferred from repo evidence.</li>
+    <li><strong>Current phase:</strong> Waiting for owner QA scores, production deployment evidence, CI/manual release checklist proof, and final signoffs.</li>
+    <li><strong>Completed work:</strong> Tuned desktop chase-camera framing for low-speed braking, active drift turns, offroad recovery, heading-camera steering, and final-stretch finish-gate shots; refreshed kart proof, playable proof, race content, browser race evidence, visual reference checks, build, and manual QA prep packet.</li>
+    <li><strong>Blockers:</strong> Current race-browser evidence reports <code>34.01</code> focused desktop actual FPS, <code>33.04</code> desktop all-scenario actual FPS, <code>26</code> sustained actual FPS, and <code>24.46</code> sustained delivered FPS, below the local <code>45</code> floor and PRD <code>55</code> target. Owner/human desktop and mobile QA scores, fresh-user 10-second clip result, production URL/deployment IDs/smokes/headers/rollback proof/monitoring signal, CI run URL or accepted clean-branch manual checklist, target-browser/device accessibility signoff, and final release approvals are not supplied.</li>
+    <li><strong>Next action:</strong> Get owner approval for any visual-resolution tradeoff, provide target-device/manual performance evidence, or supply the missing owner/release inputs; then rerun <code>npm run test:production:gates</code>.</li>
+    <li><strong>Last validation:</strong> <code>npm run test:kart-proof</code>, <code>npm run test:kart-playable</code>, <code>npm run test:race</code>, <code>npm run test:race:browser</code>, <code>npm run test:visual</code>, <code>npm run build</code>, <code>npm run test:qa:capture</code>, <code>npm run test:accessibility</code>, <code>npm run test:webgl</code>, <code>npm run test:release:artifacts</code>, <code>npm run test:security:prod</code>, and <code>npm run test:production:gates</code> ran on 2026-06-07 UTC. The production gate command completed but reported <code>r3-blocked-gates-remain</code>.</li>
+    <li><strong>Protected paths:</strong> Existing dirty user/generated changes across kart code, <code>tmp/</code> evidence, <code>.agent/</code>, and unrelated <code>AnimatedShowcaseDesigns/</code> files must be preserved.</li>
+  </ul>
+
+  <h2>Progress Timeline</h2>
+  <p class="timeline-note">Progress is rendered directly in this file from the inline <code>progressEvents</code> array below. Append a new event to that array whenever execution reality changes meaningfully.</p>
+  <div id="progress-timeline" class="timeline"></div>
+
+  <h2>Decisions Outside The Spec</h2>
+  <ul>
+    <li>Use one production-ready goal ledger for the remaining PRD work because the user asked to keep going until production ready, even though the PRD also includes single-phase prompts.</li>
+    <li>Treat existing <code>/#race</code> implementation and browser harnesses as candidate Phase 3/4 work to validate before adding new mechanics.</li>
+  </ul>
+
+  <h2>Changes And Tradeoffs</h2>
+  <ul>
+    <li>Adjusted chase-camera framing instead of weakening browser thresholds: low-speed desktop braking/start views pull back, drift turns pull back, offroad recovery pulls back, heading-camera steering pulls back, and final-stretch finish-gate shots pull back.</li>
+    <li>Updated <code>scripts/production-gate-readiness-audit.mjs</code> so the production gate reports current <code>tmp/race-playtests/race-browser-playtest-summary.json</code> performance when present, while retaining the older kept <code>perf-023</code> evidence for history.</li>
+    <li>Probed current headless Chromium timing with default, GPU, SwiftShader, and frame-unlimited launch options. All remained near <code>30</code> actual FPS despite low app frame work, so no browser-launch flag was promoted as a production performance fix.</li>
+    <li>Probed HUD compositor overrides for backdrop blur, shadows, filters, and blend mode. The override did not clearly beat the baseline repeat, so no CSS performance change was promoted.</li>
+    <li>The worktree is already dirty with many kart and evidence changes; this goal will preserve and build on that state.</li>
+  </ul>
+
+  <h2>Validation</h2>
+  <ul>
+    <li><code>npm run test:kart-proof</code> passed; static desktop/mobile proof still uses approved proof assets.</li>
+    <li><code>npm run test:kart-playable</code> passed; desktop manual controls and desktop/mobile autoplay hit boost pads, collect item boxes, show rivals, and advance laps.</li>
+    <li><code>npm run test:race</code> passed after camera changes.</li>
+    <li><code>npm run test:race:browser</code> passed with 24 race completions, 27 visual/fallback checks, no-minimap full-lap evidence, drift/mini-turbo, boost pads, item boxes, rivals, lap/finish flow, HUD-overlap checks, desktop/mobile screenshots, and sustained telemetry.</li>
+    <li><code>npm run test:visual</code> passed and refreshed visual comparison artifacts.</li>
+    <li><code>npm run build</code> passed with the existing Vite large-chunk warning.</li>
+    <li><code>npm run test:qa:capture</code> passed and generated local built-preview owner-review evidence; gate status is <code>manual-qa-evidence-prepared-human-scoring-required</code>.</li>
+    <li><code>npm run test:accessibility</code> passed; gate status is <code>local-accessibility-smoke-proven-not-manual-signoff</code>.</li>
+    <li><code>npm run test:webgl</code> passed; WebGL context loss fallback rendered.</li>
+    <li><code>npm run test:release:artifacts</code> passed technical checks; gate status is <code>technical-artifacts-pass-policy-needed</code> because policy/owner treatment is still required for the visual kart route/mode string in the built artifact.</li>
+    <li><code>npm run test:security:prod</code> passed with zero reported vulnerabilities.</li>
+    <li><code>npm run test:production:gates</code> completed after the audit update and reported <code>r3-blocked-gates-remain</code>: P0 status is 8 proven of 21 total, all 10 manual QA rubric rows are not run, current race-browser performance remains below target, and production deployment/signoff evidence is missing.</li>
+  </ul>
+
+  <h2>Evidence</h2>
+  <ul>
+    <li><a href="evidence/race-browser-playtest-summary-20260607T233404Z.json">Race browser summary</a></li>
+    <li><a href="evidence/manual-qa-capture-summary-20260607T233645Z.json">Manual QA capture summary</a></li>
+    <li><a href="evidence/accessibility-smoke-summary-20260607T233859Z.json">Accessibility smoke summary</a></li>
+    <li><a href="evidence/webgl-context-smoke-summary-20260607T233859Z.json">WebGL context smoke summary</a></li>
+    <li><a href="evidence/release-artifact-safety-report-20260607T233859Z.json">Release artifact safety report</a></li>
+    <li><a href="evidence/security-production-audit-summary-20260607T233859Z.json">Security production audit summary</a></li>
+    <li><a href="evidence/production-gate-readiness-summary-20260607T233859Z.json">Production gate readiness summary</a></li>
+    <li><a href="evidence/production-gate-readiness-summary-20260607T234316Z.json">Refreshed production gate readiness summary with current performance evidence</a></li>
+    <li><a href="evidence/race-hud-compositor-probe-20260607T234806Z.json">Race HUD compositor performance probe</a></li>
+    <li>Primary generated screenshots and clips remain under <code>tmp/race-playtests/</code>, <code>tmp/visual-reference-checks/</code>, <code>tmp/kart-proof-static-guard/</code>, <code>tmp/kart-playable-proof-test/</code>, and <code>tmp/manual-qa-capture/</code>.</li>
+  </ul>
+
+  <h2>Next Goal Candidates</h2>
+  <ul>
+    <li>Empty at start.</li>
+  </ul>
+  <script>
+    const progressEvents = [
+      {
+        ts: "2026-06-07T23:02:06Z",
+        status: "created",
+        phase: "start",
+        actor: "agent",
+        summary: "Goal ledger created."
+      },
+      {
+        ts: "2026-06-07T23:02:59Z",
+        status: "doing",
+        phase: "baseline-audit",
+        actor: "agent",
+        summary: "Read the PRD and found existing kart implementation covering much of Phase 3 and Phase 4; validation baseline is next."
+      },
+      {
+        ts: "2026-06-07T23:37:03Z",
+        status: "validated",
+        phase: "automated-proof",
+        actor: "agent",
+        summary: "Camera framing fixes landed and core kart proof commands passed: kart proof, playable proof, race content, browser race harness, visual references, build, and QA capture prep."
+      },
+      {
+        ts: "2026-06-07T23:38:59Z",
+        status: "blocked",
+        phase: "production-gates",
+        actor: "agent",
+        summary: "Release-hardening smokes passed locally, but production gates still report r3-blocked-gates-remain because owner QA, production deployment evidence, CI/manual release proof, target-device accessibility signoff, and final approvals are not supplied."
+      },
+      {
+        ts: "2026-06-07T23:43:22Z",
+        status: "validated",
+        phase: "production-gates",
+        actor: "agent",
+        summary: "Updated the production gate audit to consume current race-browser performance evidence. Rerun still reports r3-blocked-gates-remain with focused desktop 34.01 actual FPS and sustained 26 actual FPS, below target."
+      },
+      {
+        ts: "2026-06-07T23:45:00Z",
+        status: "decision",
+        phase: "performance",
+        actor: "agent",
+        summary: "Reviewed the existing performance trail. The current production gate still reports desktop performance below target, and the clear remaining render-scale lever needs owner approval because it trades visual resolution for FPS."
+      },
+      {
+        ts: "2026-06-07T23:48:06Z",
+        status: "decision",
+        phase: "performance",
+        actor: "agent",
+        summary: "Ran a HUD compositor override probe. The override case did not clearly beat the baseline repeat, so no CSS performance change was promoted; performance and external signoff gates remain blocked."
+      }
+    ];
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderEvent(event) {
+      const status = escapeHtml(event.status || "event");
+      const phase = escapeHtml(event.phase || "general");
+      const actor = escapeHtml(event.actor || "agent");
+      const timestamp = escapeHtml(event.ts || "");
+      const summary = escapeHtml(event.summary || "");
+      return `
+        <article class="event">
+          <div class="event-head">
+            <span class="badge status-${status}">${status}</span>
+            <span class="phase">${phase}</span>
+            <span class="actor">${actor}</span>
+            <time datetime="${timestamp}">${timestamp}</time>
+          </div>
+          <p class="event-summary">${summary}</p>
+        </article>
+      `;
+    }
+
+    function renderProgressTimeline() {
+      const target = document.getElementById("progress-timeline");
+      const events = Array.isArray(progressEvents) ? progressEvents : [];
+      if (events.length === 0) {
+        target.innerHTML = "<p>No progress events recorded yet.</p>";
+        return;
+      }
+      target.innerHTML = events.map(renderEvent).join("");
+    }
+    renderProgressTimeline();
+  </script>
+</body>
+</html>

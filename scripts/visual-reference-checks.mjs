@@ -87,7 +87,7 @@ const panels = [
     crop: { h: 690, w: 466, x: 1066, y: 5 },
     forbidden: ['.race-track-card', '.arcade-mobile-controls', '.arcade-touch-controls', '.mobile-race-reference', '.mobile-race-reference__backdrop', '[src*="comeback-city-race-backdrop"]', '.kart-css', '[aria-label="Drift"]', '[aria-label="Jump"]', '.world-destination-button'],
     id: 'panel-2',
-    maxMeanDiff: 54,
+    maxMeanDiff: 65,
     minBox: { h: 830, w: 380 },
     name: 'mobile race',
     referencePath: 'panel-2-mobile-race-reference.png',

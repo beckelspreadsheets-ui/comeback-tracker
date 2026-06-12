@@ -6,7 +6,7 @@ const index = readFileSync("index.html", "utf8");
 const preview = readFileSync("v3-preview.html", "utf8");
 
 const extraUrls = [
-  { label: "FormSubmit endpoint", url: "https://formsubmit.co/hello@showcase-designs.com" }
+  { label: "FormSubmit endpoint", url: "https://formsubmit.co/andrew@showcase-designs.com" }
 ];
 
 const checks = [];

@@ -1,0 +1,19 @@
+{
+  "bodyTextSample": "KART ARCADE CIRCUIT GP\nCOMEBACK CITY GRAND PRIX\n1st\nLAP\n1/3\nSPEED\n278\nTIME\n0:00.07\nDRIFT TIER 2\nKART\nWASD / ARROWS DRIVE · SPACE HOP + DRIFT · F ITEM · Q/E/R BANK\nHELD ITEM\nGUARD GEL\nUSE ITEM\nRIVAL PRESSURE\nBUILD SPEED\nN",
+  "canvasSize": {
+    "clientHeight": 720,
+    "clientWidth": 1280,
+    "height": 259,
+    "width": 460
+  },
+  "driftHudVisible": true,
+  "hasCanvas": true,
+  "href": "http://127.0.0.1:5292/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=visual-kart&raceVisualScenario=turn-approach&raceIndex=in-app-smoke-pass-025b",
+  "telemetry": null,
+  "telemetryExposed": false,
+  "title": "Race Playtest Harness",
+  "checkedAt": "2026-06-05T23:16:15.988Z",
+  "passed": true,
+  "requirement": "in-app browser smoke confirms playable canvas and Drift Tier 2 HUD for the first-turn/drift scenario; Playwright race-browser artifacts prove driftTrailVisualActive telemetry",
+  "screenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/in-app-browser-smoke/pass-025-drift-trails.png"
+}

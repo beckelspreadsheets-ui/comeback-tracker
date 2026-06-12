@@ -1,0 +1,26 @@
+{
+  "capturedAt": "2026-06-05T23:55:45Z",
+  "name": "pass-027-start-finish-gate",
+  "passed": false,
+  "partial": true,
+  "url": "http://127.0.0.1:5298/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=visual-kart&raceVisualScenario=idle&raceIndex=in-app-pass-027-start-finish-gate",
+  "title": "Race Playtest Harness",
+  "checks": {
+    "hasCanvas": true,
+    "canvas": {
+      "height": 720,
+      "width": 1280,
+      "x": 0,
+      "y": 0
+    },
+    "hasRaceHud": true,
+    "hasSpeedHud": true,
+    "hasPackFightHud": true,
+    "screenshot": {
+      "ok": false,
+      "error": "tab.screenshot timed out in the in-app Browser surface while capturing the WebGL route"
+    }
+  },
+  "bodyTextSample": "KART ARCADE CIRCUIT GP\nCOMEBACK CITY GRAND PRIX\n4th\nLAP\n1/3\nSPEED\n0\nTIME\n0:02.30\nDRIFT READY\nKART\nWASD / ARROWS DRIVE · SPACE HOP + DRIFT · F ITEM · Q/E/R BANK\nHELD ITEM\nGUARD GEL\nUSE ITEM\nRIVAL PRESSURE\nPACK FIGHT\nN",
+  "notes": "The in-app Browser rendered the race harness, WebGL canvas, and HUD. Visual screenshot capture was unavailable in that browser surface, so this is recorded as partial evidence only."
+}

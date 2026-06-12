@@ -32,6 +32,22 @@
     "fallback": "Code-generated measured district canvas textures and geometry remain renderable without these decals"
   },
   {
+    "filePath": "src/assets/game/proof/comeback-city-kart-proof-desktop-v1.png",
+    "source": "Generated with the built-in image generation tool on 2026-06-07 from the owner-supplied Comeback City target screenshot as style/composition reference plus a project-authored text prompt",
+    "license": "Project-owned generated visual proof asset",
+    "role": "Desktop 16:9 bitmap-first static visual proof mounted by /#visual-kart-proof after owner rejected CSS/HTML shape-art proof direction",
+    "sizeBudget": "Generated proof PNG, approximately 2.2 MB; not imported by the live /#race runtime",
+    "fallback": "Static proof route can fall back to the mobile proof asset or prior visual-reference routes; gameplay remains blocked until owner accepts a visual direction"
+  },
+  {
+    "filePath": "src/assets/game/proof/comeback-city-kart-proof-mobile-v1.png",
+    "source": "Generated with the built-in image generation tool on 2026-06-07 from the owner-supplied Comeback City target screenshot as style/composition reference plus a project-authored text prompt",
+    "license": "Project-owned generated visual proof asset",
+    "role": "Mobile portrait bitmap-first static visual proof mounted by /#visual-kart-proof after owner rejected CSS/HTML shape-art proof direction",
+    "sizeBudget": "Generated proof PNG, approximately 2.1 MB; not imported by the live /#race runtime",
+    "fallback": "Static proof route can fall back to the desktop proof asset or prior visual-reference routes; gameplay remains blocked until owner accepts a visual direction"
+  },
+  {
     "filePath": "src/game/city3dAssets.js",
     "source": "Procedural Three.js geometry authored in-repo",
     "license": "Project-owned",
@@ -78,5 +94,45 @@
     "role": "Not used by live /#race scene",
     "sizeBudget": "Reference asset only",
     "fallback": "Procedural skyline, water, mountains, and district geometry"
+  },
+  {
+    "filePath": "src/assets/game/models/toy-car-kit/*.glb + colormap.png",
+    "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models",
+    "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
+    "role": "Authored low-poly vehicle (hero kart + recolored rivals), item box, banana, and cone meshes for the V2 Three.js race runtime; palette colormap recolored per kart at runtime to the approved V2 trait-card colors",
+    "sizeBudget": "Six GLB models + one 8 KB palette PNG, about 360 KB total",
+    "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails"
+  },
+  {
+    "filePath": "src/assets/game/models/avatars/crrt-bunny.glb",
+    "source": "Owner-generated with Tripo (image-to-3D) on 2026-06-11 from owner-authored CRRT Bunny seated-pose renders (GPT Image Gen, sheets in src/assets/game/art-direction/avatars/); high-detail export optimized in-repo via gltf-transform (weld, simplify to ~18k triangles, 512px texture)",
+    "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
+    "role": "CRRT Bunny driver avatar seated on the player kart driver mount in the V2 Three.js race runtime",
+    "sizeBudget": "About 660 KB GLB with embedded 512px texture, ~18k triangles",
+    "fallback": "Kart renders driverless if the avatar GLB fails to load"
+  },
+  {
+    "filePath": "src/assets/game/models/avatars/crrt-penguin.glb",
+    "source": "Owner-generated with Tripo (image-to-3D) on 2026-06-11 from owner-authored CRRT Penguin seated renders (tclow-ordinalpenguin); optimized in-repo to ~11k triangles, 512px texture",
+    "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
+    "role": "CRRT Penguin (Frost Pilot) driver avatar on the Blue Speed rival kart",
+    "sizeBudget": "About 420 KB GLB, ~11k triangles",
+    "fallback": "Rival kart renders driverless if the avatar GLB fails to load"
+  },
+  {
+    "filePath": "src/assets/game/models/tripo/hero-kart-tripo.glb",
+    "source": "Owner-generated with Tripo (image-to-3D) on 2026-06-11 from the approved V2 hero kart trait card crops (tmp/tripo-inputs/); optimized in-repo via gltf-transform to ~40k triangles, 1024px texture",
+    "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
+    "role": "A/B-test hero kart body, selectable at runtime with ?tripoKart=1; fused mesh (static wheels). Not the default pending owner A/B decision vs the Kenney body",
+    "sizeBudget": "About 1.5 MB GLB with embedded 1024px texture, ~40k triangles",
+    "fallback": "Default Kenney drag-racer body renders when the flag is absent or the GLB fails"
+  },
+  {
+    "filePath": "src/assets/game/models/avatars/seth-penguin.glb",
+    "source": "Owner-generated with Tripo (image-to-3D) on 2026-06-11 (seth-3dpengu); optimized in-repo to ~13k triangles, 512px texture",
+    "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
+    "role": "Seth Penguin driver avatar on the Purple Lab rival kart (third roster character)",
+    "sizeBudget": "About 495 KB GLB, ~13k triangles",
+    "fallback": "Rival kart renders driverless if the avatar GLB fails to load"
   }
 ]

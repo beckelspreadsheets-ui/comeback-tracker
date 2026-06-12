@@ -50,7 +50,7 @@ The static page should win on speed, clarity, SEO, and conversion. The 3D page s
 
 ## 3. Background & Context
 
-Showcase Designs is a small design and development studio building websites and local SEO systems for contractors and home-service SMBs.
+Showcase Designs is a small design and development studio building websites and local SEO systems for local businesses and service companies.
 
 Current known active clients:
 

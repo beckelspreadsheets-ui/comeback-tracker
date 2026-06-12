@@ -1,0 +1,11 @@
+{
+  "capturedAt": "2026-06-05T21:34:31.818Z",
+  "url": "http://127.0.0.1:5280/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=visual-kart&raceVisualScenario=turn-approach&raceIndex=in-app-pass-020-turn-approach",
+  "result": {
+    "hudText": "Kart Arcade Circuit GPComeback City Grand Prix1stLap1/3Speed278Time0:02.86Drift Tier 2kart | Held itemGuard GelUse item | Rival pressureBuild speed",
+    "ok": true,
+    "telemetryGlobalAvailable": false,
+    "title": "Race Playtest Harness"
+  },
+  "screenshot": "not-captured"
+}

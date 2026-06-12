@@ -62,7 +62,7 @@ export const updateRaceAutoplayPlayer = ({
       player.heldItem = createHeldRaceItem(playtest.visualScenario === 'boost' ? 'boost' : 'shield', 1);
       player.heldBalloon = player.heldItem;
       if (playtest.visualScenario === 'finish-line') {
-        player.progress = compiled.startProgress || 0.012;
+        player.progress = wrap01((compiled.startProgress || 0.012) - 0.045);
         player.lap = compiled.laps;
         player.lapStartTime = race.time;
       }
@@ -123,10 +123,7 @@ export const updateRaceAutoplayPlayer = ({
     }
 
     if (playtest.visualScenario === 'turn-approach') {
-      const checkpoint =
-        compiled.cameraCheckpoints.find((entry) => entry.key === 'camera-near-lab') ||
-        compiled.cameraCheckpoints.find((entry) => Number.isFinite(entry.progress));
-      const checkpointSample = compiled.pointAt(checkpoint?.progress ?? 0.56);
+      const checkpointSample = compiled.pointAt(0.185);
       player.progress = checkpointSample.progress;
       player.position.copy(checkpointSample.point);
       player.heading = Math.atan2(checkpointSample.tangent.x, checkpointSample.tangent.z);
@@ -138,6 +135,19 @@ export const updateRaceAutoplayPlayer = ({
     player.driftActive = false;
     player.driftCharge = 0;
     player.driftDirection = 0;
+
+    if (playtest.visualScenario === 'turn-approach') {
+      player.steerInput = 0.58;
+      player.driftActive = true;
+      player.driftCharge = 1.42;
+      player.driftDirection = 1;
+      visualStats.driftStartCount = Math.max(visualStats.driftStartCount, 1);
+      visualStats.driftTierSeen = Math.max(visualStats.driftTierSeen, 2);
+    }
+
+    if (playtest.visualScenario === 'finish-line') {
+      player.steerInput = 0;
+    }
 
     if (playtest.visualScenario === 'drift' || playtest.visualScenario === 'drift-tier-1') {
       player.steerInput = 0.58;
@@ -170,6 +180,9 @@ export const updateRaceAutoplayPlayer = ({
     if (playtest.visualScenario === 'item-pickup' && !player.heldItem) {
       player.heldItem = createHeldRaceItem('shield', 1);
       player.heldBalloon = player.heldItem;
+    }
+    if (playtest.visualScenario === 'item-pickup') {
+      player.shieldTimer = Math.max(player.shieldTimer || 0, 1.2);
     }
   }
 

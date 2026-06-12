@@ -1,8 +1,8 @@
 # Outbound Link Audit
 
 Observed: 2026-05-03 from local network checks.
-Latest passing station-link rerun: 2026-05-19 after the render/camera tuning preview deploy.
-Latest full outbound rerun: 2026-05-19.
+Latest passing station-link rerun: 2026-06-03 after the launch-readiness pass.
+Latest full outbound rerun: 2026-06-03 at 18:26 UTC.
 
 Command:
 
@@ -18,7 +18,7 @@ The verifier checks:
 
 ## Result
 
-All approved launch station live URLs passed. The full outbound command currently fails because FormSubmit returned HTTP 522.
+All approved launch station live URLs passed. The full outbound command currently passes, including the FormSubmit endpoint.
 
 | Link | URL | Observed | Status |
 | --- | --- | --- | --- |
@@ -26,21 +26,20 @@ All approved launch station live URLs passed. The full outbound command currentl
 | Felco Vending | `https://felcovending.com` | HTTP 200 | Passed |
 | Abel M. Fitness | `https://abelfitness.com/` | HTTP 200 | Passed |
 | Beckel Spreadsheets | `https://beckel-store.vercel.app` | HTTP 200 | Passed |
-| FormSubmit endpoint | `https://formsubmit.co/hello@showcase-designs.com` | HTTP 522 | Failing external dependency |
+| FormSubmit endpoint | `https://formsubmit.co/andrew@showcase-designs.com` | HTTP 200 | Passed |
 
 Latest command result:
 
 ```text
 node verify-outbound.mjs
-8 checks passed.
-1 outbound check failed: FormSubmit endpoint responds -> 522.
+9 outbound checks passed.
 ```
 
 ## Required Rule
 
 Do not add a station or static live-site link unless the client/project is approved and the URL passes `node verify-outbound.mjs`.
 
-Do not mark launch complete while FormSubmit returns HTTP 522 unless Andrew explicitly approves a different form provider or fallback contact flow.
+Do not mark launch complete if FormSubmit fails on a pre-launch rerun unless Andrew explicitly approves a different form provider or fallback contact flow.
 
 Before launch, rerun:
 

@@ -10,10 +10,10 @@
     "renderer": "webgl",
     "raceTrack": "comeback-city"
   },
-  "capturedAt": "2026-06-03T16:15:17.004Z",
+  "capturedAt": "2026-06-07T23:38:05.936Z",
   "fallbackScreenshotPath": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/webgl-context-smoke-test/webgl-context-loss-fallback.png",
   "fallbackState": {
-    "canvasDataUrlLength": 359658,
+    "canvasDataUrlLength": 357270,
     "hash": "#race",
     "renderer": "canvas2d-fallback",
     "webglContextStatus": {
@@ -26,7 +26,7 @@
   },
   "git": {
     "branch": "codex/release-v1-comebacktracker-kart-racer",
-    "commit": "937bd25"
+    "commit": "614d5a6"
   },
   "ignoredConsoleErrors": [
     "Failed to load resource: the server responded with a status of 404 (Not Found)"
@@ -35,5 +35,6 @@
     "method": "WEBGL_lose_context",
     "ok": true
   },
-  "routeUrl": "http://127.0.0.1:5198/#race"
+  "routeUrl": "http://127.0.0.1:5198/#race",
+  "target": "local-built-preview"
 }

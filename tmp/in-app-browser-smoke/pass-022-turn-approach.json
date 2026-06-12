@@ -1,0 +1,8 @@
+{
+  "canvasPresent": true,
+  "hudText": "Kart Arcade Circuit GPComeback City Grand Prix1stLap1/3Speed278Time0:02.29Drift Tier 2kart",
+  "shellPresent": true,
+  "telemetry": null,
+  "title": "Race Playtest Harness",
+  "url": "http://127.0.0.1:5279/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=visual-kart&raceVisualScenario=turn-approach&raceIndex=in-app-smoke-pass-022"
+}

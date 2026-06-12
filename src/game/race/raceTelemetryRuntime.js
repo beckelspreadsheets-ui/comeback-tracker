@@ -1,10 +1,11 @@
 import { VEHICLES } from './physics/kartTuning.js';
 import { publishRaceTelemetryFrame } from './raceTelemetry.js';
 
-export const DEFAULT_RACE_TELEMETRY_INTERVAL_MS = 140;
+export const DEFAULT_RACE_TELEMETRY_INTERVAL_MS = 250;
 
 export const createRaceTelemetryRuntime = ({
   camera,
+  boostPadMeshes = [],
   brakingTelemetryActiveFor = () => false,
   collisionCircles = [],
   compiled,
@@ -37,6 +38,7 @@ export const createRaceTelemetryRuntime = ({
     if (stats) stats.telemetryPublishCount = (stats.telemetryPublishCount || 0) + 1;
     const telemetryFrame = publishFrame({
       camera,
+      boostPadMeshes,
       brakingTelemetryActive: brakingTelemetryActiveFor(playtest),
       cameraRouteLookahead: getCameraRouteLookahead(),
       collisionCircles,
