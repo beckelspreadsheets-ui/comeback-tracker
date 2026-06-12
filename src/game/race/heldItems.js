@@ -1,6 +1,8 @@
-// Phase 3 held-item system — pure math, deterministic (no Math.random).
-// Item boxes grant a held item; firing produces a boost, a one-hit shield,
-// or a banana dropped behind that spins out whoever runs it over.
+// Held-item system — pure math, deterministic (no Math.random).
+// Themed item set (owner-approved): Hot Cocoa (boost), Fish Bone (dropped
+// hazard), Ice Shield (one-hit shield), Snowball (forward projectile that
+// renders with a per-character skin — carrot for CRRT Bunny, ice shard for
+// the penguins — identical stats, cosmetic flavor only).
 
 const wrap01 = (value) => ((value % 1) + 1) % 1;
 const shortDelta = (a, b) => {
@@ -9,16 +11,24 @@ const shortDelta = (a, b) => {
   return delta;
 };
 
-export const ITEM_KEYS = ['boost', 'banana', 'shield', 'snowball'];
+export const ITEM_KEYS = ['cocoa', 'fishbone', 'iceshield', 'snowball'];
+
+// HUD labels for the themed names (keys stay terse for telemetry).
+export const ITEM_LABELS = {
+  cocoa: 'COCOA',
+  fishbone: 'FISH BONE',
+  iceshield: 'ICE SHIELD',
+  snowball: 'SNOWBALL',
+};
 
 // Comeback logic (owner direction): the further back you are, the more
 // aggressive your pickups. Leaders get defense, tailenders get snowballs
 // and speed. Deterministic — table indexed by (boxIndex + lap).
 const ITEM_TABLES = {
-  1: ['banana', 'shield', 'banana', 'shield'],
-  2: ['boost', 'banana', 'shield', 'snowball'],
-  3: ['snowball', 'boost', 'banana', 'boost'],
-  4: ['snowball', 'boost', 'snowball', 'boost'],
+  1: ['fishbone', 'iceshield', 'fishbone', 'iceshield'],
+  2: ['cocoa', 'fishbone', 'iceshield', 'snowball'],
+  3: ['snowball', 'cocoa', 'fishbone', 'cocoa'],
+  4: ['snowball', 'cocoa', 'snowball', 'cocoa'],
 };
 
 // Snowball: thrown forward, outruns the field, spins out the first kart it
@@ -30,11 +40,12 @@ export const SNOWBALL = {
   ttl: 2.6,
 };
 
-export const throwSnowball = (projectiles, owner, progress, lane, speed) => {
+export const throwSnowball = (projectiles, owner, progress, lane, speed, skin = 'snowball') => {
   projectiles.push({
     lane,
     owner,
     progress: wrap01(progress + 6 / 3000),
+    skin,
     speed: speed + SNOWBALL.relSpeed,
     ttl: SNOWBALL.ttl,
   });
@@ -67,10 +78,10 @@ export const projectileHitFor = (projectiles, kartName, progress, lane, trackLen
 };
 
 export const ITEM_FEEL = {
-  bananaDropBack: 14, // world units behind the dropper
-  bananaHitLane: 0.16, // lane distance that counts as a hit
-  bananaHitProgress: 9, // world units that count as a hit
-  bananaPerKartCap: 2,
+  fishBoneDropBack: 14, // world units behind the dropper
+  fishBoneHitLane: 0.16, // lane distance that counts as a hit
+  fishBoneHitProgress: 9, // world units that count as a hit
+  fishBonePerKartCap: 2,
   spinDuration: 0.95,
   spinSpeedScale: 0.45,
 };
@@ -83,50 +94,50 @@ export const itemForPickup = (boxIndex, lap, position = 4) => {
   return table[(boxIndex + lap) % table.length];
 };
 
-export const createBananaField = () => [];
+export const createFishBoneField = () => [];
 
-export const dropBanana = (bananas, owner, progress, lane, trackLength) => {
-  const owned = bananas.filter((banana) => banana.owner === owner);
-  if (owned.length >= ITEM_FEEL.bananaPerKartCap) bananas.splice(bananas.indexOf(owned[0]), 1);
-  bananas.push({
+export const dropFishBone = (fishBones, owner, progress, lane, trackLength) => {
+  const owned = fishBones.filter((bone) => bone.owner === owner);
+  if (owned.length >= ITEM_FEEL.fishBonePerKartCap) fishBones.splice(fishBones.indexOf(owned[0]), 1);
+  fishBones.push({
     grace: 1.4, // seconds the dropper is immune to their fresh drop
     lane,
     owner,
-    progress: wrap01(progress - ITEM_FEEL.bananaDropBack / trackLength),
+    progress: wrap01(progress - ITEM_FEEL.fishBoneDropBack / trackLength),
   });
 };
 
 // Call once per frame to age drop-immunity.
-export const ageBananas = (bananas, dt) => {
-  bananas.forEach((banana) => {
-    banana.grace = Math.max(0, banana.grace - dt);
+export const ageFishBones = (fishBones, dt) => {
+  fishBones.forEach((bone) => {
+    bone.grace = Math.max(0, bone.grace - dt);
   });
 };
 
-// Returns the banana hit by the kart (and removes it), or null. A kart's
-// own banana only becomes dangerous to them once its grace expires —
+// Returns the fish bone hit by the kart (and removes it), or null. A kart's
+// own fish bone only becomes dangerous to them once its grace expires —
 // everyone else can hit it immediately.
-export const bananaHitFor = (bananas, kartName, progress, lane, trackLength) => {
-  for (let index = 0; index < bananas.length; index += 1) {
-    const banana = bananas[index];
-    if (banana.owner === kartName && banana.grace > 0) continue;
+export const fishBoneHitFor = (fishBones, kartName, progress, lane, trackLength) => {
+  for (let index = 0; index < fishBones.length; index += 1) {
+    const bone = fishBones[index];
+    if (bone.owner === kartName && bone.grace > 0) continue;
     if (
-      shortDelta(progress, banana.progress) * trackLength < ITEM_FEEL.bananaHitProgress &&
-      Math.abs(lane - banana.lane) < ITEM_FEEL.bananaHitLane
+      shortDelta(progress, bone.progress) * trackLength < ITEM_FEEL.fishBoneHitProgress &&
+      Math.abs(lane - bone.lane) < ITEM_FEEL.fishBoneHitLane
     ) {
-      bananas.splice(index, 1);
-      return banana;
+      fishBones.splice(index, 1);
+      return bone;
     }
   }
   return null;
 };
 
 // Deterministic rival item behavior: each rival fires at fixed progress
-// gates each lap — bumper personalities drop bananas, racers boost.
+// gates each lap — bumper personalities drop fish bones, racers boost.
 export const rivalItemActionAt = (rivalIndex, previousProgress, progress) => {
   const gates = [
-    { action: 'banana', at: 0.31 },
-    { action: 'boost', at: 0.66 },
+    { action: 'fishbone', at: 0.31 },
+    { action: 'cocoa', at: 0.66 },
   ];
   for (const gate of gates) {
     const trigger = wrap01(gate.at + rivalIndex * 0.07);

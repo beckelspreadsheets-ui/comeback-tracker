@@ -27,7 +27,33 @@ import {
 } from './raceProgression.js';
 import { ArcadeRace3D } from './ArcadeRace3D.jsx';
 import { ComebackCityKartRace } from './ComebackCityKartRace.jsx';
-import { ComebackCityThreeKartRace } from './ComebackCityThreeKartRace.jsx';
+import {
+  ComebackCityThreeKartRace,
+  DEFAULT_CHARACTER_KEY,
+  KART_CHARACTERS,
+  KART_OPTIONS,
+} from './ComebackCityThreeKartRace.jsx';
+import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
+import charSethPenguinUrl from '../assets/game/select/char-seth-penguin.png';
+import charMizzleUrl from '../assets/game/select/char-mizzle.png';
+import charTclowUrl from '../assets/game/select/char-tclow.png';
+import kartHeroUrl from '../assets/game/select/kart-hero.png';
+import kartIcesledUrl from '../assets/game/select/kart-icesled.png';
+import kartKenneyUrl from '../assets/game/select/kart-kenney.png';
+
+// Portraits are prerendered from the real GLBs by
+// scripts/select-portraits-capture.mjs — rerun it when the roster changes.
+const CHARACTER_PORTRAITS = {
+  'crrt-bunny': charCrrtBunnyUrl,
+  mizzle: charMizzleUrl,
+  'seth-penguin': charSethPenguinUrl,
+  tclow: charTclowUrl,
+};
+const KART_PORTRAITS = {
+  hero: kartHeroUrl,
+  icesled: kartIcesledUrl,
+  kenney: kartKenneyUrl,
+};
 import { BANKED_ITEMS, COMMON_BOX_ITEMS, ITEM_META } from './raceItems.js';
 import { RACE_TRACKS } from './raceTracks.js';
 
@@ -1727,10 +1753,10 @@ const KartIntroScreen = ({ onStart }) => (
         <div className="border border-white/12 bg-white/[0.03] p-4">
           <div className="mb-2 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd34f]">Items</div>
           <ul className="space-y-2 text-[13px] leading-snug text-white/80">
-            <li className="flex items-start gap-2"><Zap size={15} className="mt-0.5 shrink-0 text-[#ffd34f]" /> <span><span className="text-white">Boost bolt</span> — instant mini-turbo.</span></li>
-            <li className="flex items-start gap-2"><Shield size={15} className="mt-0.5 shrink-0 text-[#49d9ff]" /> <span><span className="text-white">Shield</span> — eats the next hit.</span></li>
-            <li className="flex items-start gap-2"><Banana size={15} className="mt-0.5 shrink-0 text-[#ffd34f]" /> <span><span className="text-white">Banana</span> — drops behind you; spins out whoever hits it.</span></li>
-            <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#9fdcff]" /> <span><span className="text-white">Snowball</span> — throws forward; first kart it catches spins out. You get these when you're behind.</span></li>
+            <li className="flex items-start gap-2"><Zap size={15} className="mt-0.5 shrink-0 text-[#ffd34f]" /> <span><span className="text-white">Hot Cocoa</span> — chug it for an instant mini-turbo.</span></li>
+            <li className="flex items-start gap-2"><Shield size={15} className="mt-0.5 shrink-0 text-[#49d9ff]" /> <span><span className="text-white">Ice Shield</span> — a crystal dome that eats the next hit.</span></li>
+            <li className="flex items-start gap-2"><Banana size={15} className="mt-0.5 shrink-0 text-[#f2ecd9]" /> <span><span className="text-white">Fish Bone</span> — drops behind you; spins out whoever runs it over.</span></li>
+            <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#9fdcff]" /> <span><span className="text-white">Snowball</span> — throws forward; first kart it catches spins out. Bunny throws carrots, penguins throw ice shards. You get these when you're behind.</span></li>
             <li>Question boxes hand you one — watch the slot in the HUD.</li>
           </ul>
         </div>
@@ -1745,6 +1771,114 @@ const KartIntroScreen = ({ onStart }) => (
           Start Race
         </button>
         <div className="mt-2 text-[11px] text-white/40">Beat Blue Speed for the win — he's fast, but he can't drift like you.</div>
+      </div>
+    </div>
+  </div>
+);
+
+// Stat spread is 0.92–1.08 — map onto bars so the differences read.
+const statPercent = (value) => Math.round(clamp(((value - 0.9) / 0.18) * 100, 8, 100));
+const KartStatBar = ({ label, value }) => (
+  <div className="flex items-center gap-2">
+    <span className="w-12 shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-white/45">{label}</span>
+    <div className="h-1.5 flex-1 bg-white/10">
+      <div className="h-full bg-[#7eefff]" style={{ width: `${statPercent(value)}%` }} />
+    </div>
+  </div>
+);
+
+// Pre-race garage: pick your racer AND your kart (karts carry light stat
+// spreads). The remaining characters take the rival seats in their signature
+// rides. Shown every visit after the one-time intro; QA automation skips it.
+const KartCharacterSelect = ({ kartKey, onStart, selectedKey, setKartKey, setSelectedKey }) => (
+  <div
+    className="absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
+    data-testid="race-character-select"
+  >
+    <div className="w-full max-w-4xl space-y-5 py-6">
+      <div className="text-center">
+        <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City</div>
+        <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Choose Your Racer</h2>
+        <p className="mt-1 text-[12px] text-white/50">The rest of the crew lines up against you.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {KART_CHARACTERS.map((entry) => {
+          const selected = entry.key === selectedKey;
+          return (
+            <button
+              key={entry.key}
+              type="button"
+              data-testid={`race-character-${entry.key}`}
+              onClick={() => {
+                setSelectedKey(entry.key);
+                setKartKey(entry.kart);
+              }}
+              className={`border p-3 text-center transition-colors ${
+                selected
+                  ? 'border-[#ffd34f] bg-[#ffd34f]/10'
+                  : 'border-white/12 bg-white/[0.03] hover:border-white/30'
+              }`}
+            >
+              <img
+                src={CHARACTER_PORTRAITS[entry.key]}
+                alt={entry.name}
+                className="mx-auto mb-2 h-24 w-24 object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.55)]"
+              />
+              <div className="font-mono text-[11px] font-black uppercase tracking-[0.08em] text-white">{entry.name}</div>
+              <div className="mt-1 text-[10px]" style={{ color: entry.accent }}>
+                throws {entry.projectileSkin === 'carrot' ? 'carrots' : 'ice shards'}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="text-center">
+        <h3 className="font-mono text-sm font-black uppercase tracking-[0.14em] text-white">Pick Your Kart</h3>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {KART_OPTIONS.map((entry) => {
+          const selected = entry.key === kartKey;
+          return (
+            <button
+              key={entry.key}
+              type="button"
+              data-testid={`race-kart-${entry.key}`}
+              onClick={() => setKartKey(entry.key)}
+              className={`border p-4 transition-colors ${
+                selected
+                  ? 'border-[#ffd34f] bg-[#ffd34f]/10'
+                  : 'border-white/12 bg-white/[0.03] hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <img
+                  src={KART_PORTRAITS[entry.key]}
+                  alt={entry.name}
+                  className="h-20 w-20 shrink-0 object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.55)]"
+                />
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="font-mono text-[11px] font-black uppercase tracking-[0.08em] text-white">{entry.name}</div>
+                  <div className="mb-2 text-[10px] text-white/50">{entry.tagline}</div>
+                  <div className="space-y-1">
+                    <KartStatBar label="Speed" value={entry.stats.topSpeed} />
+                    <KartStatBar label="Accel" value={entry.stats.accel} />
+                    <KartStatBar label="Turn" value={entry.stats.handling} />
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="text-center">
+        <button
+          type="button"
+          className="border border-[#ffd34f]/60 bg-[#ffd34f]/10 px-8 py-3 font-mono text-sm font-black uppercase tracking-[0.2em] text-[#ffd34f] transition-colors hover:bg-[#ffd34f]/20"
+          data-testid="race-character-start"
+          onClick={onStart}
+        >
+          Start Race
+        </button>
       </div>
     </div>
   </div>
@@ -1774,6 +1908,41 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
     }
     setIntroSeen(true);
   }, []);
+  // Character select: shown every visit (QA automation skips it, same rules
+  // as the intro). The last pick is remembered and preselected.
+  const [characterReady, setCharacterReady] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    if (window.navigator?.webdriver) return true;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('playableAutoplay') === '1' || params.get('raceAutoplay') === '1';
+  });
+  const [characterKey, setCharacterKey] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_CHARACTER_KEY;
+    try {
+      const saved = window.localStorage?.getItem('cc-kart-character');
+      return KART_CHARACTERS.some((entry) => entry.key === saved) ? saved : DEFAULT_CHARACTER_KEY;
+    } catch {
+      return DEFAULT_CHARACTER_KEY;
+    }
+  });
+  const [kartKey, setKartKey] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const saved = window.localStorage?.getItem('cc-kart-kart');
+      return KART_OPTIONS.some((entry) => entry.key === saved) ? saved : null;
+    } catch {
+      return null;
+    }
+  });
+  const confirmCharacter = useCallback(() => {
+    try {
+      window.localStorage?.setItem('cc-kart-character', characterKey);
+      if (kartKey) window.localStorage?.setItem('cc-kart-kart', kartKey);
+    } catch {
+      // localStorage unavailable — the pick still applies this session.
+    }
+    setCharacterReady(true);
+  }, [characterKey, kartKey]);
   const [raceProfile, setRaceProfile] = useState(null);
   const [command, setCommand] = useState(null);
   const [lastResult, setLastResult] = useState(null);
@@ -1933,15 +2102,25 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
           Today
         </button>
       )}
-      {introSeen ? (
+      {!introSeen ? (
+        <KartIntroScreen onStart={dismissIntro} />
+      ) : !characterReady ? (
+        <KartCharacterSelect
+          kartKey={kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart}
+          onStart={confirmCharacter}
+          selectedKey={characterKey}
+          setKartKey={setKartKey}
+          setSelectedKey={setCharacterKey}
+        />
+      ) : (
         <ComebackCityThreeKartRace
+          character={characterKey}
+          kart={kartKey}
           mode="race"
           onFinish={handleFinish}
           reducedMotion={Boolean(state.game?.hub?.reducedMotion)}
           runId={runId}
         />
-      ) : (
-        <KartIntroScreen onStart={dismissIntro} />
       )}
     </div>
   );

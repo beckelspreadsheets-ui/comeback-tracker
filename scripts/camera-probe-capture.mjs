@@ -8,7 +8,9 @@ import { chromium } from 'playwright';
 const PORT = 5310;
 const OUT = process.env.PROBE_OUT || 'tmp/camera-probe';
 const QUERY = process.env.PROBE_QUERY || '?playableAutoplay=1';
-const TARGETS = [0.1, 0.16, 0.19, 0.22, 0.3, 0.45, 0.55, 0.62, 0.68, 0.73, 0.85, 0.97];
+const TARGETS = process.env.PROBE_TARGETS
+  ? process.env.PROBE_TARGETS.split(',').map(Number)
+  : [0.1, 0.16, 0.19, 0.22, 0.3, 0.45, 0.55, 0.62, 0.68, 0.73, 0.85, 0.97];
 
 mkdirSync(OUT, { recursive: true });
 

@@ -17,7 +17,7 @@
     </script>
   </head>
   <body>
-    <div id="labels">columns: yaw 0 | 90 | 180 | 270 — rows: tripo-kart, kenney-racer, bunny, crrt-penguin, seth-penguin, mizzle, ice-sled · camera looks along -Z (the FACING column points at you)</div>
+    <div id="labels">columns: yaw 0 | 90 | 180 | 270 — rows: tripo-kart, kenney-racer, bunny, seth-penguin, mizzle, ice-sled, tclow · camera looks along -Z (the FACING column points at you)</div>
     <script type="module">
       import * as THREE from 'three';
       import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -26,10 +26,10 @@
         '/src/assets/game/models/tripo/hero-kart-tripo.glb',
         '/src/assets/game/models/toy-car-kit/vehicle-drag-racer.glb',
         '/src/assets/game/models/avatars/crrt-bunny.glb',
-        '/src/assets/game/models/avatars/crrt-penguin.glb',
         '/src/assets/game/models/avatars/seth-penguin.glb',
         '/src/assets/game/models/avatars/mizzle.glb',
         '/src/assets/game/models/tripo/ice-sled.glb',
+        '/src/assets/game/models/avatars/tclow-penguin.glb',
       ];
       const YAWS = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
 
@@ -61,7 +61,7 @@
             const center = fitted.getCenter(new THREE.Vector3());
             rig.position.set(
               (col - 1.5) * SPACING_X - center.x,
-              (3 - row) * SPACING_Y - fitted.min.y - 3.2,
+              (3.5 - row) * SPACING_Y - fitted.min.y - 3.2,
               -center.z
             );
             scene.add(rig);
@@ -74,7 +74,7 @@
       // Camera on +Z looking down -Z: a rig "faces correct" (drives toward
       // +Z in kart space) when it faces the camera.
       const camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 400);
-      camera.position.set(0, 4, 102);
+      camera.position.set(0, 4, 120);
       camera.lookAt(0, 0, 0);
       const animate = () => {
         renderer.render(scene, camera);

@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Portrait booth: renders ONE game GLB (?model=/path&yaw=radians) centered
+     on a transparent canvas for the character/kart select screen. Captured
+     by scripts/select-portraits-capture.mjs with omitBackground. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Select Portraits</title>
+    <style>
+      body { margin: 0; background: transparent; }
+      canvas { display: block; }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "/node_modules/three/build/three.module.js", "three/examples/jsm/": "/node_modules/three/examples/jsm/" } }
+    </script>
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+      const params = new URLSearchParams(window.location.search);
+      const modelUrl = params.get('model');
+      const yaw = Number(params.get('yaw') || 0);
+
+      const SIZE = 480;
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      renderer.setSize(SIZE, SIZE);
+      renderer.setClearColor(0x000000, 0);
+      document.body.appendChild(renderer.domElement);
+      const scene = new THREE.Scene();
+      scene.add(new THREE.HemisphereLight('#cdd9ff', '#2a2440', 2.8));
+      const sun = new THREE.DirectionalLight('#ffffff', 2.6);
+      sun.position.set(30, 60, 80);
+      scene.add(sun);
+
+      new GLTFLoader().load(modelUrl, (gltf) => {
+        const rig = gltf.scene;
+        const bounds = new THREE.Box3().setFromObject(rig);
+        const size = bounds.getSize(new THREE.Vector3());
+        const fit = 6 / Math.max(size.x, size.y, size.z);
+        rig.scale.setScalar(fit);
+        rig.rotation.y = yaw;
+        rig.updateMatrixWorld(true);
+        const fitted = new THREE.Box3().setFromObject(rig);
+        const center = fitted.getCenter(new THREE.Vector3());
+        rig.position.set(-center.x, -center.y, -center.z);
+        scene.add(rig);
+        window.__portraitReady = true;
+      });
+
+      const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
+      camera.position.set(0, 1.6, 11.5);
+      camera.lookAt(0, 0, 0);
+      const animate = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      };
+      animate();
+    </script>
+  </body>
+</html>

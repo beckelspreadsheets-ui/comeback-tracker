@@ -62,6 +62,44 @@ Tiering rule (approved): P1 sees only defense (Fish Bone/Ice Shield); mid-pack g
 skirmish items (Snowball/Slap Fish/Cocoa); **ultimates (Avalanche, Aurora, Penguin March)
 only appear P4 on the final lap** — earned by desperation, deterministic, tunable.
 
+## Round 7 feedback (2026-06-12, after items step 1)
+
+Owner verdicts: "major progress", mechanics "90–95% of the way to loving it". Items approved
+in direction but "still pretty hard to tell what they are" → items v2 size/glow step shipped
+same day, plus **character select** (owner asked how to pick; picker now in RaceScreen,
+`cc-kart-character` localStorage, `?character=` QA override, other three characters fill the
+rival seats). FPS dip reported during his play — machine was running parallel sessions; same
+busy-band as the spike gate. Re-verify on idle before reacting.
+
+**The next big arc — track visual overhaul (look changes, mechanics DO NOT):**
+
+- **Track a little larger** — scale the existing centerline (~1.15–1.25×); retune lap/speed
+  budgets in the playable gate. Layout shape stays (it's approved).
+- **The bridge doesn't read** — he never notices it. Make it unmistakable: distinct deck
+  color/material, side rails, taller/steeper presence, under-glow. Same for **alternative
+  routes**: the dare-ramp shortcut needs to read as a marked alternate path (colored ribbon,
+  entry signage); consider one ground-level fork (split around a feature, rejoin) if the
+  resize leaves room.
+- **Sides: owner picked the baked-shell look** (banked deck, beveled lit curbs, baked dusk
+  lighting — the round-5 A/B image). Adopt via the full-track Blender bake once the resize
+  lands; the pipeline is scripted and re-runnable, and unlit baked geometry is also the FPS
+  win.
+- **Penguin-centric world theme** (owner, 2026-06-12): the background/world should be a
+  theme the ordinals group will love — arctic-neon: aurora sky, icebergs/floes beyond the
+  rails, snow-dusted or igloo-style facades, ordinal-penguin statues/billboards, frozen
+  water under the bridge. This changes how the track LOOKS, not how it WORKS.
+- **Way better background** — part of the same pass (sky + parallax skyline).
+
+Sequencing proposal: resize + bridge/route readability first (one feel-check), then the
+penguin-theme dressing + full bake (second feel-check), then continue the item build order.
+
+Round 8 (same day): T Clow integrated from the drop folder (5th seat); select screen v2 with
+real GLB portraits (`scripts/select-portraits-capture.mjs`, rerun on roster changes) and a
+separate kart pick with stats (hero = balanced QA baseline / ice sled = fast+slippery /
+dragster = quick+nimble). Owner dislikes the generic dragster — his kart renders
+(glidercart/penguinglider sheets in the drop folder) replace it when the GLBs land. Owner to
+confirm the name↔penguin mapping on the select screen.
+
 ## After the items
 
 - **Phase 4 — Audio** (biggest remaining feel multiplier): engine pitch from speed, drift

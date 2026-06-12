@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Banana, Flag, Gauge, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Carrot, Coffee, Fish, Flag, Gauge, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -9,14 +10,13 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import racerModelUrl from '../assets/game/models/toy-car-kit/vehicle-drag-racer.glb?url';
 import itemBoxModelUrl from '../assets/game/models/toy-car-kit/item-box.glb?url';
-import bananaModelUrl from '../assets/game/models/toy-car-kit/item-banana.glb?url';
 import kartColormapUrl from '../assets/game/models/toy-car-kit/colormap.png';
 import crrtBunnyModelUrl from '../assets/game/models/avatars/crrt-bunny.glb?url';
-import crrtPenguinModelUrl from '../assets/game/models/avatars/crrt-penguin.glb?url';
 import sethPenguinModelUrl from '../assets/game/models/avatars/seth-penguin.glb?url';
 import heroKartTripoUrl from '../assets/game/models/tripo/hero-kart-tripo.glb?url';
 import iceSledUrl from '../assets/game/models/tripo/ice-sled.glb?url';
 import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
+import tclowModelUrl from '../assets/game/models/avatars/tclow-penguin.glb?url';
 import clinicFacadeUrl from '../assets/game/generated/district-facade-clinic.png';
 import foodFacadeUrl from '../assets/game/generated/district-facade-food.png';
 import garageFacadeUrl from '../assets/game/generated/district-facade-garage.png';
@@ -37,10 +37,11 @@ import {
   updateRivalRacers,
 } from './race/rivalRacers.js';
 import {
-  ageBananas,
-  bananaHitFor,
-  dropBanana,
+  ageFishBones,
+  dropFishBone,
+  fishBoneHitFor,
   ITEM_FEEL,
+  ITEM_LABELS,
   itemForPickup,
   projectileHitFor,
   throwSnowball,
@@ -86,11 +87,53 @@ const BOOST_SPEED = 284;
 // One scale for every kart — mixed sizes read as a bug (owner feedback).
 // Trimmed 1.24 -> 1.12 -> 1.01 across owner feel-checks ("10% more = perfect").
 const KART_SCALE = 1.01;
-const RIVALS = [
-  { accent: '#38d7ff', color: '#7e35f4', lane: -0.46, name: 'Purple Lab', suit: '#2c2440' },
-  { accent: '#9fe7ff', color: '#2378ff', lane: 0.04, name: 'Blue Speed', suit: '#1c2c4a' },
-  { accent: '#ffd34f', color: '#f28b2e', lane: 0.52, name: 'Orange Muscle', suit: '#3c2a1a' },
+// The playable roster (owner's characters; more ordinals coming). The player
+// picks one — the other three fill the rival seats. `kart` selects the body
+// pipeline ('hero' / 'icesled' = owner-rendered Tripo GLBs, 'kenney' =
+// recolored drag racer); `projectileSkin` is the cosmetic snowball flavor
+// (carrot for the bunny, ice shards for the penguins — identical stats);
+// `driverYaw` is the lab-verified authored yaw (all Tripo rigs face +X).
+export const KART_CHARACTERS = [
+  { accent: '#46d9ef', color: '#e8261d', driverHeight: 5.7, driverYaw: -Math.PI / 2, kart: 'hero', kartName: 'Hero Kart', key: 'crrt-bunny', name: 'CRRT Bunny', projectileSkin: 'carrot' },
+  // Owner correction (round 8): the penguin previously labeled "CRRT
+  // Penguin" IS T Clow — one character, the ice sled is his ride.
+  { accent: '#9fe7ff', color: '#2378ff', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'icesled', kartName: 'Ice Sled', key: 'tclow', name: 'T Clow', projectileSkin: 'iceshard' },
+  { accent: '#38d7ff', color: '#7e35f4', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Purple Dragster', key: 'seth-penguin', name: 'Seth Penguin', projectileSkin: 'iceshard' },
+  { accent: '#ffd34f', color: '#f28b2e', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Orange Dragster', key: 'mizzle', name: 'Mizzle', projectileSkin: 'iceshard' },
 ];
+
+// Karts are picked separately from characters (owner request, round 8) —
+// light stat spreads so the choice matters without breaking the QA speed
+// budgets. Multipliers apply to top speed cap, throttle accel, and steering
+// lane rate. 'hero' (1/1/1) is the gate-default baseline.
+export const KART_OPTIONS = [
+  { key: 'hero', name: 'Hero Kart', stats: { accel: 1.0, handling: 1.0, topSpeed: 1.0 }, tagline: 'Balanced' },
+  { key: 'icesled', name: 'Ice Sled', stats: { accel: 0.94, handling: 0.92, topSpeed: 1.05 }, tagline: 'Fast & slippery' },
+  { key: 'kenney', name: 'Dragster', stats: { accel: 1.08, handling: 1.04, topSpeed: 0.96 }, tagline: 'Quick off the line' },
+];
+const kartByKey = (key) => KART_OPTIONS.find((entry) => entry.key === key) || KART_OPTIONS[0];
+export const DEFAULT_CHARACTER_KEY = 'crrt-bunny';
+const characterByKey = (key) =>
+  KART_CHARACTERS.find((entry) => entry.key === key) || KART_CHARACTERS[0];
+
+// The three rival SEATS: fixed personalities (rivalRacers.js keys on `name`),
+// grid lanes, and AI flavor — whichever characters aren't the player fill
+// them in roster order.
+const RIVALS = [
+  { lane: -0.46, name: 'Purple Lab' },
+  { lane: 0.04, name: 'Blue Speed' },
+  { lane: 0.52, name: 'Orange Muscle' },
+];
+const rivalSeatsFor = (playerKey) => {
+  const remaining = KART_CHARACTERS.filter((entry) => entry.key !== playerKey);
+  return RIVALS.map((seat, index) => ({
+    ...seat,
+    accent: remaining[index].accent,
+    character: remaining[index],
+    color: remaining[index].color,
+    projectileSkin: remaining[index].projectileSkin,
+  }));
+};
 const ordinal = (position) => ['1st', '2nd', '3rd', '4th'][position - 1] || `${position}th`;
 const PROP_COUNT = 36;
 const VISUAL_ASSET_SET = 'comeback-city-v2-three-runtime';
@@ -106,10 +149,10 @@ const DISTRICT_FACADE_URLS = {
 // without crowding the spawn camera.
 const START_PROGRESS = wrap01((COMEBACK_CITY_COURSE_V2.startProgress || 0) + 0.03);
 
-const createInitialRace = () => ({
+const createInitialRace = (rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY)) => ({
   airState: createAirState(),
-  bananas: [],
   boostHits: 0,
+  fishBones: [],
   projectiles: [],
   boostTimer: 0,
   bumpCooldown: 0,
@@ -130,7 +173,7 @@ const createInitialRace = () => ({
   progress: START_PROGRESS,
   raceTime: 0,
   // Independent rival sim (Phase 2) — player starts at the back of the grid.
-  rivals: createRivalRacers(RIVALS, { gridProgress: START_PROGRESS }),
+  rivals: createRivalRacers(rivalSeats, { gridProgress: START_PROGRESS }),
   shortcut: createShortcutState(),
   speed: 0,
   spinOuts: 0,
@@ -635,27 +678,26 @@ const loadKartAssets = () => {
       }),
       // Driver avatars are optional — a failed load must not block the karts.
       gltfLoader.loadAsync(crrtBunnyModelUrl).catch(() => null),
-      gltfLoader.loadAsync(crrtPenguinModelUrl).catch(() => null),
       gltfLoader.loadAsync(sethPenguinModelUrl).catch(() => null),
       gltfLoader.loadAsync(heroKartTripoUrl).catch(() => null),
-      gltfLoader.loadAsync(bananaModelUrl).catch(() => null),
       gltfLoader.loadAsync(mizzleModelUrl).catch(() => null),
       gltfLoader.loadAsync(iceSledUrl).catch(() => null),
-    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, penguinGltf, sethGltf, tripoKartGltf, bananaGltf, mizzleGltf, iceSledGltf]) => ({
-      bananaScene: bananaGltf?.scene || null,
+      gltfLoader.loadAsync(tclowModelUrl).catch(() => null),
+    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf]) => ({
       colormapImage,
-      driverScene: bunnyGltf?.scene || null,
+      // Keyed by KART_CHARACTERS entries — seats are assigned at race start.
+      driverScenes: {
+        'crrt-bunny': bunnyGltf?.scene || null,
+        mizzle: mizzleGltf?.scene || null,
+        'seth-penguin': sethGltf?.scene || null,
+        tclow: tclowGltf?.scene || null,
+      },
       itemBoxScene: itemBoxGltf.scene,
+      kartScenes: {
+        hero: tripoKartGltf?.scene || null,
+        icesled: iceSledGltf?.scene || null,
+      },
       racerScene: racerGltf.scene,
-      rivalDriverScenes: {
-        'Blue Speed': penguinGltf?.scene || null,
-        'Orange Muscle': mizzleGltf?.scene || null,
-        'Purple Lab': sethGltf?.scene || null,
-      },
-      rivalKartScenes: {
-        'Blue Speed': iceSledGltf?.scene || null,
-      },
-      tripoKartScene: tripoKartGltf?.scene || null,
     }));
   }
   return kartAssetsPromise;
@@ -701,12 +743,7 @@ const KENNEY_WHEEL_NODES = ['wheel-fl', 'wheel-fr', 'wheel-bl', 'wheel-br'];
 // gameplay shots (both guessed wrong). Lab ground truth 2026-06-12: ALL
 // Tripo rigs (kart + seated avatars) natively face +X → yaw -π/2; the
 // Kenney drag racer faces -Z → yaw π.
-const DRIVER_YAW = {
-  'Blue Speed': -Math.PI / 2,
-  'Orange Muscle': -Math.PI / 2, // mizzle (lab-verified 2026-06-12)
-  'Purple Lab': -Math.PI / 2,
-  player: -Math.PI / 2,
-};
+// Per-character authored yaws live in KART_CHARACTERS.driverYaw.
 const KENNEY_BODY_YAW = Math.PI;
 
 // Seat the avatar on the kart's driver mount: toon-shaded with its baked
@@ -1523,7 +1560,12 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps) => {
   return propCount;
 };
 
-const createScene = ({ canvas, onUnavailable }) => {
+const createScene = ({
+  canvas,
+  onUnavailable,
+  playerCharacter = characterByKey(DEFAULT_CHARACTER_KEY),
+  rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY),
+}) => {
   const renderer = createRaceRenderer({ canvas, onUnavailable });
   if (!renderer) return null;
   renderer.setClearColor('#131a36', 1);
@@ -1576,38 +1618,94 @@ const createScene = ({ canvas, onUnavailable }) => {
   );
   RAMPS.forEach((ramp) => addRamp(world, sampler, ramp));
   addRamp(world, sampler, { progress: SHORTCUT.launchProgress, side: SHORTCUT.side }, { dare: true });
-  // Banana pool — meshes recycled to mirror the live banana list each frame.
-  // Procedural fallback until the authored GLB swaps in.
-  const bananaPool = [];
+  // Fish Bone pool — meshes recycled to mirror the live fish-bone list each
+  // frame (themed banana-class hazard). One merged skeleton geometry per
+  // holder keeps the draw count identical to the old single-mesh drop.
+  const fishBoneGeometry = (() => {
+    const parts = [];
+    const spine = new THREE.CylinderGeometry(0.2, 0.2, 4.6, 6);
+    spine.rotateX(Math.PI / 2);
+    parts.push(spine);
+    const skull = new THREE.ConeGeometry(1.05, 1.7, 5);
+    skull.rotateX(Math.PI / 2);
+    skull.translate(0, 0, 2.9);
+    parts.push(skull);
+    [-1.55, -0.45, 0.65].forEach((z, order) => {
+      const rib = new THREE.CylinderGeometry(0.11, 0.11, 2.3 - order * 0.35, 5);
+      rib.translate(0, 0, z);
+      parts.push(rib);
+    });
+    const tail = new THREE.OctahedronGeometry(1.05);
+    tail.scale(0.18, 1.5, 1);
+    tail.translate(0, 0, -2.85);
+    parts.push(tail);
+    // The octahedron is non-indexed while cylinders/cones are indexed —
+    // mergeGeometries refuses mixed inputs, so normalize first.
+    return mergeGeometries(parts.map((part) => part.toNonIndexed()));
+  })();
+  const fishBonePool = [];
   for (let index = 0; index < 8; index += 1) {
     const holder = new THREE.Group();
     holder.visible = false;
-    const fallback = new THREE.Mesh(
-      new THREE.SphereGeometry(2.2, 8, 6),
-      createToonMaterial('#ffd34f', { emissive: '#caa53d', emissiveIntensity: 0.25 })
+    const bone = new THREE.Mesh(
+      fishBoneGeometry,
+      createToonMaterial('#f7f1de', { emissive: '#e3d9b4', emissiveIntensity: 0.32 })
     );
-    fallback.scale.set(1, 0.6, 1.3);
-    fallback.position.y = 1.4;
-    fallback.userData.kind = 'banana-fallback';
-    holder.add(fallback);
-    addGlowSprite(holder, '#ffd34f', 7, 0.3, 1.2);
+    // Items read oversized on purpose (MK rule) — at race speed and camera
+    // distance a true-scale prop disappears. (Round-7 owner feedback:
+    // "still pretty hard to tell what they are" → another size/glow step.)
+    bone.scale.setScalar(1.5);
+    bone.position.y = 2.1;
+    holder.add(bone);
+    addGlowSprite(holder, '#f7f1de', 9, 0.42, 1.6);
     world.add(holder);
-    bananaPool.push(holder);
+    fishBonePool.push(holder);
   }
-  // Snowball pool — bright spheres with a cool glow.
-  const snowballPool = [];
+  // Projectile pool — the snowball slot renders with a cosmetic per-character
+  // skin (identical stats): snowball default, carrot for the CRRT Bunny
+  // player, ice shard for the penguin rivals. One variant visible at a time.
+  const projectilePool = [];
   for (let index = 0; index < 6; index += 1) {
     const holder = new THREE.Group();
     holder.visible = false;
-    const ball = new THREE.Mesh(
-      new THREE.SphereGeometry(1.7, 10, 8),
-      createBasicMaterial('#f4fbff', { emissive: '#bfeaff', emissiveIntensity: 0.7 })
+    const snowball = new THREE.Group();
+    snowball.userData.skin = 'snowball';
+    snowball.add(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(2.1, 10, 8),
+        createBasicMaterial('#f4fbff', { emissive: '#bfeaff', emissiveIntensity: 0.7 })
+      )
     );
-    ball.position.y = 1.7;
-    holder.add(ball);
-    addGlowSprite(holder, '#9fdcff', 7, 0.4, 1.7);
+    addGlowSprite(snowball, '#9fdcff', 9, 0.45, 0);
+    const carrot = new THREE.Group();
+    carrot.userData.skin = 'carrot';
+    const carrotBody = new THREE.ConeGeometry(1.5, 5.6, 8);
+    carrotBody.rotateX(Math.PI / 2);
+    carrot.add(
+      new THREE.Mesh(carrotBody, createBasicMaterial('#ff8a2a', { emissive: '#ff7d1f', emissiveIntensity: 0.6 }))
+    );
+    const carrotLeaf = new THREE.ConeGeometry(0.85, 2.2, 5);
+    carrotLeaf.rotateX(-Math.PI / 2);
+    carrotLeaf.translate(0, 0, -3.3);
+    carrot.add(
+      new THREE.Mesh(carrotLeaf, createBasicMaterial('#5fd068', { emissive: '#4cba55', emissiveIntensity: 0.55 }))
+    );
+    addGlowSprite(carrot, '#ffb066', 10, 0.55, 0);
+    const iceShard = new THREE.Group();
+    iceShard.userData.skin = 'iceshard';
+    const shardGeometry = new THREE.OctahedronGeometry(2.3);
+    shardGeometry.scale(0.8, 0.8, 1.6);
+    iceShard.add(
+      new THREE.Mesh(shardGeometry, createBasicMaterial('#dff6ff', { emissive: '#9fdcff', emissiveIntensity: 0.8 }))
+    );
+    addGlowSprite(iceShard, '#bfeaff', 10, 0.55, 0);
+    [snowball, carrot, iceShard].forEach((variant) => {
+      variant.visible = false;
+      variant.position.y = 1.7;
+      holder.add(variant);
+    });
     world.add(holder);
-    snowballPool.push(holder);
+    projectilePool.push(holder);
   }
   // Visible crest kicker — the bridge-top launch was firing invisibly
   // (owner-reported); now a glowing lip strip marks exactly where and why.
@@ -1652,35 +1750,50 @@ const createScene = ({ canvas, onUnavailable }) => {
 
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({
-    accent: '#46d9ef',
-    color: '#e8261d',
+    accent: playerCharacter.accent,
+    color: playerCharacter.color,
     scale: KART_SCALE,
   });
   const player = playerModel.group;
-  player.userData.kind = 'hero-red-kart';
-  // One-hit shield bubble (Phase 3) — params mined from the legacy shield.
+  player.userData.kind = 'player-kart';
+  // Ice Shield bubble (themed one-hit shield) — faceted ice dome: a low-poly
+  // crystal shell with a glowing edge wireframe, plus a ring of ice shards
+  // that orbit while the bubble spins.
   const shieldBubble = new THREE.Group();
   shieldBubble.visible = false;
+  const shieldShellGeometry = new THREE.IcosahedronGeometry(7.4 * KART_SCALE, 1);
   const shieldShell = new THREE.Mesh(
-    new THREE.SphereGeometry(7.4 * KART_SCALE, 16, 8),
-    new THREE.MeshBasicMaterial({ color: '#49d9ff', depthWrite: false, opacity: 0.3, transparent: true })
+    shieldShellGeometry,
+    new THREE.MeshBasicMaterial({ color: '#7fdcff', depthWrite: false, opacity: 0.22, transparent: true })
   );
   shieldShell.scale.set(1.12, 0.7, 1.3);
   shieldShell.position.y = 3.4;
   shieldBubble.add(shieldShell);
-  const shieldRing = new THREE.Mesh(
-    new THREE.TorusGeometry(7.2 * KART_SCALE, 0.3, 6, 24),
-    new THREE.MeshBasicMaterial({ color: '#f7fbff', depthWrite: false, opacity: 0.8, transparent: true })
+  const shieldFacets = new THREE.Mesh(
+    shieldShellGeometry,
+    new THREE.MeshBasicMaterial({ color: '#bfeaff', depthWrite: false, opacity: 0.45, transparent: true, wireframe: true })
   );
-  shieldRing.rotation.x = Math.PI / 2;
-  shieldRing.position.y = 3.2;
-  shieldBubble.add(shieldRing);
+  shieldFacets.scale.copy(shieldShell.scale);
+  shieldFacets.position.copy(shieldShell.position);
+  shieldBubble.add(shieldFacets);
+  const orbitShardGeometry = new THREE.OctahedronGeometry(0.85);
+  orbitShardGeometry.scale(0.7, 1.6, 0.7);
+  for (let index = 0; index < 6; index += 1) {
+    const shard = new THREE.Mesh(
+      orbitShardGeometry,
+      createBasicMaterial('#ecfeff', { emissive: '#9fdcff', emissiveIntensity: 0.85 })
+    );
+    const angle = (index / 6) * Math.PI * 2;
+    shard.position.set(Math.cos(angle) * 7.6 * KART_SCALE, 3.2, Math.sin(angle) * 7.6 * KART_SCALE);
+    shard.rotation.y = -angle;
+    shieldBubble.add(shard);
+  }
   shieldBubble.traverse((node) => {
     node.castShadow = false;
   });
   player.add(shieldBubble);
   world.add(player);
-  const rivalModels = RIVALS.map((rival) => {
+  const rivalModels = rivalSeats.map((rival) => {
     const model = createGroundedKartModel({
       accent: rival.accent,
       color: rival.color,
@@ -1697,10 +1810,10 @@ const createScene = ({ canvas, onUnavailable }) => {
   });
 
   return {
-    bananaPool,
     bloomPass,
-    snowballPool,
     boostPads,
+    fishBonePool,
+    projectilePool,
     buildingSwaps,
     camera,
     composer,
@@ -1756,11 +1869,13 @@ const readInput = (input, autoplay, race, cornerPush = 0) => {
   };
 };
 
-const publishTelemetry = (race, fpsEstimate, propCount, mode) => {
+const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEFAULT_CHARACTER_KEY, kartKey = 'hero') => {
   if (typeof window === 'undefined') return;
   window.__comebackCityKartTelemetry = {
     airborne: race.airState.airborne,
-    bananasOnTrack: race.bananas.length,
+    character: characterKey,
+    kart: kartKey,
+    fishBonesOnTrack: race.fishBones.length,
     boostHits: race.boostHits,
     countdown: Number(race.countdown.toFixed(2)),
     drift: race.drift,
@@ -1791,6 +1906,8 @@ const publishTelemetry = (race, fpsEstimate, propCount, mode) => {
 };
 
 export const ComebackCityThreeKartRace = ({
+  character = DEFAULT_CHARACTER_KEY,
+  kart = null,
   mode = 'race',
   onFinish = null,
   onRestart = null,
@@ -1808,18 +1925,56 @@ export const ComebackCityThreeKartRace = ({
     const params = new URLSearchParams(window.location.search);
     return params.get('playableAutoplay') === '1' || params.get('raceAutoplay') === '1';
   }, []);
+  // ?character= overrides the picker — used by QA captures to exercise any
+  // seat assignment without the select UI.
+  const characterKey = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('character');
+      if (param && KART_CHARACTERS.some((entry) => entry.key === param)) return param;
+    }
+    return KART_CHARACTERS.some((entry) => entry.key === character) ? character : DEFAULT_CHARACTER_KEY;
+  }, [character]);
+  const playerCharacter = characterByKey(characterKey);
+  // Kart is picked separately; defaults to the character's signature ride.
+  // ?kart= override mirrors ?character= for QA.
+  const kartKey = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('kart');
+      if (param && KART_OPTIONS.some((entry) => entry.key === param)) return param;
+    }
+    if (kart && KART_OPTIONS.some((entry) => entry.key === kart)) return kart;
+    return playerCharacter.kart;
+  }, [kart, playerCharacter]);
+  const playerKart = kartByKey(kartKey);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
+    const rivalSeats = rivalSeatsFor(characterKey);
     const engine = createScene({
       canvas,
       onUnavailable: (error) => setWebglError(error?.message || 'WebGL unavailable'),
+      playerCharacter,
+      rivalSeats,
     });
     if (!engine) return undefined;
     engineRef.current = engine;
     finishReportedRef.current = false;
-    const race = createInitialRace();
+    const race = createInitialRace(rivalSeats);
+    // ?itemShowcase=1 parks one of each item visual just past the spawn and
+    // raises the ice shield — deterministic close-ups for the approval
+    // previews (the live moments are too fast for polled screenshots).
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('itemShowcase') === '1') {
+      // Road-edge lanes — the rivals start ahead and sweep the straight, and
+      // anything inside their racing line gets eaten before the camera
+      // arrives.
+      race.fishBones.push({ grace: 0, lane: -0.8, owner: 'showcase', progress: wrap01(START_PROGRESS + 0.038) });
+      race.projectiles.push(
+        { lane: 0.8, owner: 'showcase', progress: wrap01(START_PROGRESS + 0.044), skin: 'carrot', speed: 0, ttl: 9999 },
+        { lane: -0.8, owner: 'showcase', progress: wrap01(START_PROGRESS + 0.05), skin: 'iceshard', speed: 0, ttl: 9999 }
+      );
+      race.shieldActive = true;
+    }
     const viewport = { aspect: 1, dpr: 1, height: 1, mobile: false, width: 1 };
     const frameTimes = [];
     let raf = 0;
@@ -1874,55 +2029,47 @@ export const ComebackCityThreeKartRace = ({
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    // Swap procedural fallback bodies for the authored Kenney models (CC0),
-    // recolored per kart to the approved V2 palette.
+    // Swap procedural fallback bodies for the authored models — the chosen
+    // character drives the player kart, the rest take the rival seats.
     loadKartAssets()
-      .then(({ bananaScene, colormapImage, driverScene, itemBoxScene, racerScene, rivalDriverScenes, rivalKartScenes, tripoKartScene }) => {
+      .then(({ colormapImage, driverScenes, itemBoxScene, kartScenes, racerScene }) => {
         if (disposed || engineRef.current !== engine) return;
-        // Owner-approved (2026-06-12): the Tripo hero-card kart is the player
-        // body. ?kenneyKart=1 keeps the old body reachable for comparison,
-        // and it remains the automatic fallback if the Tripo GLB fails.
+        // ?kenneyKart=1 keeps the recolored Kenney body reachable for
+        // comparison on the player kart; it is also the automatic fallback
+        // when a character's authored kart GLB fails to load.
         const wantsKenneyKart =
           typeof window !== 'undefined' &&
           new URLSearchParams(window.location.search).get('kenneyKart') === '1';
-        if (!wantsKenneyKart && tripoKartScene) {
-          attachTripoKartBody(engine.playerModel, tripoKartScene, true);
-        } else {
-          attachAuthoredKartBody(
-            engine.playerModel,
-            racerScene,
-            makeKartPaletteTexture(colormapImage, '#e8261d'),
-            true
-          );
-        }
-        if (driverScene) {
-          mountDriverAvatar(engine.playerModel, driverScene, { castsShadow: false, yaw: DRIVER_YAW.player });
-        }
-        engine.rivalModels.forEach((rival) => {
-          // Owner-rendered karts (Tripo) take the seat when present;
-          // recolored Kenney bodies remain the default. The drag-racer
-          // silhouette is long and slim — fit it larger than the hero body
-          // so rivals read the same mass.
-          const rivalKartScene = rivalKartScenes?.[rival.name];
-          if (rivalKartScene) {
-            attachTripoKartBody(rival.model, rivalKartScene, false);
+        const attachCharacter = (model, characterEntry, isPlayer) => {
+          // The player's kart pick overrides the character's signature ride.
+          const kartKind = isPlayer ? kartKey : characterEntry.kart;
+          const authoredKart =
+            kartKind !== 'kenney' && !(isPlayer && wantsKenneyKart) ? kartScenes[kartKind] : null;
+          if (authoredKart) {
+            attachTripoKartBody(model, authoredKart, isPlayer);
           } else {
+            // Drag-racer silhouette is long and slim — fit it larger than
+            // the hero body so every kart reads the same mass.
             attachAuthoredKartBody(
-              rival.model,
+              model,
               racerScene,
-              makeKartPaletteTexture(colormapImage, rival.color),
-              false,
+              makeKartPaletteTexture(colormapImage, characterEntry.color),
+              isPlayer,
               18.2
             );
           }
-          const rivalDriverScene = rivalDriverScenes[rival.name];
-          if (rivalDriverScene) {
-            mountDriverAvatar(rival.model, rivalDriverScene, {
+          const driverScene = driverScenes[characterEntry.key];
+          if (driverScene) {
+            mountDriverAvatar(model, driverScene, {
               castsShadow: false,
-              height: 6.4,
-              yaw: DRIVER_YAW[rival.name] || 0,
+              height: characterEntry.driverHeight,
+              yaw: characterEntry.driverYaw,
             });
           }
+        };
+        attachCharacter(engine.playerModel, playerCharacter, true);
+        engine.rivalModels.forEach((rival) => {
+          attachCharacter(rival.model, rival.character, false);
         });
         const itemMaterial = new THREE.MeshToonMaterial({
           gradientMap: getToonGradient(),
@@ -1954,31 +2101,6 @@ export const ComebackCityThreeKartRace = ({
           rig.position.sub(fitted.getCenter(new THREE.Vector3()));
           box.add(rig);
         });
-        // Swap banana fallbacks for the authored Kenney banana.
-        if (bananaScene) {
-          engine.bananaPool.forEach((holder) => {
-            const fallback = holder.children.find((child) => child.userData.kind === 'banana-fallback');
-            if (fallback) {
-              fallback.geometry?.dispose?.();
-              fallback.material?.dispose?.();
-              holder.remove(fallback);
-            }
-            const rig = bananaScene.clone(true);
-            rig.traverse((node) => {
-              if (node.isMesh) {
-                node.material = itemMaterial;
-                node.castShadow = false;
-              }
-            });
-            const bounds = new THREE.Box3().setFromObject(rig);
-            const size = bounds.getSize(new THREE.Vector3());
-            rig.scale.setScalar(4.6 / Math.max(size.x, size.y, size.z));
-            rig.updateMatrixWorld(true);
-            const fitted = new THREE.Box3().setFromObject(rig);
-            rig.position.y -= fitted.min.y;
-            holder.add(rig);
-          });
-        }
       })
       .catch(() => {
         // Procedural fallback bodies stay in place.
@@ -2049,7 +2171,7 @@ export const ComebackCityThreeKartRace = ({
     );
 
     const restartRace = () => {
-      Object.assign(race, createInitialRace());
+      Object.assign(race, createInitialRace(rivalSeats));
       finishReportedRef.current = false;
       onRestart?.();
     };
@@ -2092,7 +2214,7 @@ export const ComebackCityThreeKartRace = ({
           race.raceTime += dt;
           if (race.shortcut.active) {
             // Shortcut flight: the kart soars over the carousel infield —
-            // ground physics, pads, boxes and bananas are all skipped.
+            // ground physics, pads, boxes and fish bones are all skipped.
             if (input.drift && !race.shortcut.styled) race.shortcut.styled = true;
             const flight = updateShortcut(race.shortcut, dt);
             const landTarget = race.shortcut.failed ? SHORTCUT.failLandProgress : SHORTCUT.landProgress;
@@ -2170,27 +2292,32 @@ export const ComebackCityThreeKartRace = ({
             driftState.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
             race.speed = clamp(race.speed + DRIFT_FEEL.boostKick[airEvents.trickTier - 1] * 0.8, 0, BOOST_SPEED);
           }
-          // Held item fire: boost bolt, shield bubble, or banana behind.
+          // Held item fire: cocoa boost, ice shield, fish bone behind, or a
+          // snowball forward (rendered with the character's projectile skin).
           race.itemFireCooldown = Math.max(0, race.itemFireCooldown - dt);
           if (input.item && race.heldItem && race.itemFireCooldown <= 0) {
-            if (race.heldItem === 'boost') {
+            if (race.heldItem === 'cocoa') {
               driftState.miniTurboTier = 2;
               driftState.miniTurboTimer = DRIFT_FEEL.boostDurations[1];
               driftState.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
               race.speed = clamp(race.speed + DRIFT_FEEL.boostKick[1], 0, BOOST_SPEED);
-            } else if (race.heldItem === 'shield') {
+            } else if (race.heldItem === 'iceshield') {
               race.shieldActive = true;
-            } else if (race.heldItem === 'banana') {
-              dropBanana(race.bananas, 'player', race.progress, race.lane, engine.sampler.length);
+            } else if (race.heldItem === 'fishbone') {
+              dropFishBone(race.fishBones, 'player', race.progress, race.lane, engine.sampler.length);
             } else if (race.heldItem === 'snowball') {
-              throwSnowball(race.projectiles, 'player', race.progress, race.lane, race.speed);
+              throwSnowball(race.projectiles, 'player', race.progress, race.lane, race.speed, playerCharacter.projectileSkin);
             }
             race.heldItem = null;
             race.itemFireCooldown = 0.35;
           }
           race.boostTimer = Math.max(0, race.boostTimer - dt);
-          const maxSpeed = race.boostTimer > 0 || driftState.miniTurboTimer > 0 ? BOOST_SPEED : MAX_SPEED;
-          const accel = throttle && !spinning ? 118 : spinning ? -150 : -48;
+          // Kart stats: top speed cap, throttle accel, and steering rate all
+          // scale with the chosen kart (hero = 1/1/1, the gate baseline).
+          const maxSpeed =
+            (race.boostTimer > 0 || driftState.miniTurboTimer > 0 ? BOOST_SPEED : MAX_SPEED) *
+            playerKart.stats.topSpeed;
+          const accel = throttle && !spinning ? 118 * playerKart.stats.accel : spinning ? -150 : -48;
           const miniTurboAccel = driftState.miniTurboTimer > 0 ? 150 : 0;
           const brakeDrag = brake ? -180 : 0;
           const steeringDrag = Math.abs(race.steer) * (race.drift ? -8 : -22);
@@ -2206,7 +2333,9 @@ export const ComebackCityThreeKartRace = ({
           if (!airState.airborne) {
             const steerAuthority = spinning ? 0.12 : 1;
             const laneRate =
-              (race.drift ? driftLaneRate(driftState, race.steer) * 1.15 : race.steer * 0.72) * steerAuthority;
+              (race.drift ? driftLaneRate(driftState, race.steer) * 1.15 : race.steer * 0.72) *
+              steerAuthority *
+              playerKart.stats.handling;
             race.lane = clamp(race.lane + (laneRate + cornerPush) * dt, -0.95, 0.95);
             race.wallContact =
               (race.lane >= 0.95 && laneRate + cornerPush > 0) ||
@@ -2250,9 +2379,10 @@ export const ComebackCityThreeKartRace = ({
               race[key] = false;
             }
           });
-          // Bananas: age drop-immunity, then check the player (airborne karts
-          // fly over them; a shield eats the hit instead of spinning out).
-          ageBananas(race.bananas, dt);
+          // Fish bones: age drop-immunity, then check the player (airborne
+          // karts fly over them; an ice shield eats the hit instead of
+          // spinning out).
+          ageFishBones(race.fishBones, dt);
           updateProjectiles(race.projectiles, dt, engine.sampler.length);
           if (!airState.airborne && !spinning && race.spinTimer <= 0) {
             const struck = projectileHitFor(race.projectiles, 'player', race.progress, race.lane, engine.sampler.length);
@@ -2267,8 +2397,8 @@ export const ComebackCityThreeKartRace = ({
             }
           }
           if (!airState.airborne && !spinning) {
-            const bananaHit = bananaHitFor(race.bananas, 'player', race.progress, race.lane, engine.sampler.length);
-            if (bananaHit) {
+            const fishBoneHit = fishBoneHitFor(race.fishBones, 'player', race.progress, race.lane, engine.sampler.length);
+            if (fishBoneHit) {
               if (race.shieldActive) {
                 race.shieldActive = false;
               } else {
@@ -2286,7 +2416,6 @@ export const ComebackCityThreeKartRace = ({
           race.bumpCooldown = Math.max(0, race.bumpCooldown - dt);
           const playerTotal = (race.finished ? TOTAL_LAPS : race.lap - 1) + race.progress;
           const { playerBump } = updateRivalRacers(race.rivals, {
-            bananas: race.bananas,
             boostPads: COMEBACK_CITY_COURSE_V2.boostPads,
             boostSpeed: BOOST_SPEED,
             cornerPushFor,
@@ -2294,6 +2423,7 @@ export const ComebackCityThreeKartRace = ({
             curvatureAt: (progress) => trackCurvatureAt(engine.sampler, progress),
             dt,
             finalLap: race.lap === TOTAL_LAPS,
+            fishBones: race.fishBones,
             laneScale: engine.sampler.widthAt(race.progress) * 0.44,
             maxSpeed: MAX_SPEED,
             ramps: RAMPS,
@@ -2341,21 +2471,29 @@ export const ComebackCityThreeKartRace = ({
       if (race.shieldActive) {
         engine.shieldBubble.rotation.y += dt * 1.6;
       }
-      engine.snowballPool.forEach((holder, index) => {
+      engine.projectilePool.forEach((holder, index) => {
         const ball = race.projectiles[index];
         holder.visible = Boolean(ball);
         if (ball) {
           const sample = engine.sampler.pointAt(ball.progress, ball.lane);
           holder.position.copy(sample.point);
           holder.position.y += 0.3;
+          // Face the direction of travel so carrots and shards read as
+          // thrown things; rolling around the travel axis sells the speed.
+          holder.rotation.y = Math.atan2(sample.tangent.x, sample.tangent.z);
+          holder.children.forEach((variant) => {
+            const active = variant.userData.skin === (ball.skin || 'snowball');
+            variant.visible = active;
+            if (active) variant.rotation.z += dt * 9;
+          });
         }
       });
-      // Mirror the live banana list onto the pooled meshes.
-      engine.bananaPool.forEach((holder, index) => {
-        const banana = race.bananas[index];
-        holder.visible = Boolean(banana);
-        if (banana) {
-          const sample = engine.sampler.pointAt(banana.progress, banana.lane);
+      // Mirror the live fish-bone list onto the pooled meshes.
+      engine.fishBonePool.forEach((holder, index) => {
+        const bone = race.fishBones[index];
+        holder.visible = Boolean(bone);
+        if (bone) {
+          const sample = engine.sampler.pointAt(bone.progress, bone.lane);
           holder.position.copy(sample.point);
           holder.position.y += 0.2;
           holder.rotation.y += dt * 2.2;
@@ -2473,7 +2611,7 @@ export const ComebackCityThreeKartRace = ({
       engine.sun.target.position.copy(playerSample.point);
       engine.sun.target.updateMatrixWorld();
       engine.composer.render();
-      publishTelemetry(race, fpsEstimate, engine.propCount, mode);
+      publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey);
       snapshotTimer += dt;
       if (snapshotTimer > 0.14 || race.finished) {
         snapshotTimer = 0;
@@ -2521,7 +2659,7 @@ export const ComebackCityThreeKartRace = ({
       });
       if (engineRef.current === engine) engineRef.current = null;
     };
-  }, [autoplay, mode, onFinish, onRestart, reducedMotion, runId]);
+  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, reducedMotion, runId]);
 
   const setTouch = (key, value) => {
     inputRef.current = { ...inputRef.current, [key]: value };
@@ -2572,16 +2710,29 @@ export const ComebackCityThreeKartRace = ({
           <span>{snapshot.itemPickups}</span>
         </div>
         <div className="three-kart-race__badge" data-testid="race-held-item" data-held-item={snapshot.heldItem || 'none'}>
-          {snapshot.heldItem === 'banana' ? (
-            <Banana size={15} />
+          {snapshot.heldItem === 'fishbone' ? (
+            <Fish size={15} />
           ) : snapshot.heldItem === 'snowball' ? (
-            <Snowflake size={15} />
-          ) : snapshot.heldItem === 'shield' || snapshot.shieldActive ? (
+            // The snowball slot wears the character's projectile skin.
+            playerCharacter.projectileSkin === 'carrot' ? <Carrot size={15} /> : <Snowflake size={15} />
+          ) : snapshot.heldItem === 'cocoa' ? (
+            <Coffee size={15} />
+          ) : snapshot.heldItem === 'iceshield' || snapshot.shieldActive ? (
             <Shield size={15} />
           ) : (
-            <Zap size={15} />
+            <Snowflake size={15} />
           )}
-          <span>{snapshot.heldItem ? snapshot.heldItem.toUpperCase() : snapshot.shieldActive ? 'ON' : '—'}</span>
+          <span>
+            {snapshot.heldItem === 'snowball'
+              ? playerCharacter.projectileSkin === 'carrot'
+                ? 'CARROT'
+                : 'ICE SHARD'
+              : snapshot.heldItem
+                ? ITEM_LABELS[snapshot.heldItem] || snapshot.heldItem.toUpperCase()
+                : snapshot.shieldActive
+                  ? 'ON'
+                  : '—'}
+          </span>
         </div>
       </div>
       {snapshot.countdown > 0 ? (
@@ -2647,7 +2798,7 @@ export const ComebackCityThreeKartRace = ({
           onPointerLeave={() => setTouch('item', false)}
           onPointerUp={() => setTouch('item', false)}
         >
-          <Banana size={18} />
+          {playerCharacter.projectileSkin === 'carrot' ? <Carrot size={18} /> : <Snowflake size={18} />}
         </button>
       </div>
     </div>

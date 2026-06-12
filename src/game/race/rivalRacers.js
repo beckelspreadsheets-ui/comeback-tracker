@@ -3,11 +3,11 @@
 // corner-aware speed governor (same centrifugal model as the player), a simple
 // racing line toward the apex, boost-pad usage, MK-style rubber-banding, and
 // radial kart-vs-kart bumps. Personalities follow the avatar sheets.
-// Phase 3 adds banana hits + spin-outs + deterministic item gates; Phase 3.5
-// adds ballistic ramp/crest launches (rivals jump, but don't trick).
+// Phase 3 adds fish-bone hits + spin-outs + deterministic item gates; Phase
+// 3.5 adds ballistic ramp/crest launches (rivals jump, but don't trick).
 import {
-  bananaHitFor,
-  dropBanana,
+  dropFishBone,
+  fishBoneHitFor,
   ITEM_FEEL,
   projectileHitFor,
   rivalItemActionAt,
@@ -73,6 +73,7 @@ export const createRivalRacers = (rivals, { gridProgress = 0 } = {}) =>
     name: rival.name,
     pads: {},
     personality: RIVAL_PERSONALITIES[rival.name] || RIVAL_PERSONALITIES['Blue Speed'],
+    projectileSkin: rival.projectileSkin || 'snowball',
     previousProgress: wrap01(gridProgress + 0.004 + index * 0.005),
     // Staggered grid slots just ahead of the player (player starts P4).
     progress: wrap01(gridProgress + 0.004 + index * 0.005),
@@ -117,7 +118,7 @@ export const updateRivalRacers = (field, ctx) => {
     wallLane,
   } = ctx;
 
-  const { bananas, crestProgress, ramps } = ctx;
+  const { crestProgress, fishBones, ramps } = ctx;
   field.forEach((rival, index) => {
     const soul = rival.personality;
 
@@ -198,21 +199,21 @@ export const updateRivalRacers = (field, ctx) => {
     if (rival.previousProgress > 0.86 && rival.progress < 0.18) rival.lap += 1;
 
     // Phase 3: deterministic item gates — at fixed progress marks each lap a
-    // rival drops a banana when ahead, throws a snowball when chasing, or
-    // pops a boost. Comeback pressure flows both ways.
-    if (bananas) {
+    // rival drops a fish bone when ahead, throws a snowball when chasing, or
+    // pops a cocoa boost. Comeback pressure flows both ways.
+    if (fishBones) {
       const action = rivalItemActionAt(index, rival.previousProgress, rival.progress);
-      if (action === 'banana') {
+      if (action === 'fishbone') {
         if (ctx.projectiles && gapSeconds < -0.8) {
-          throwSnowball(ctx.projectiles, rival.name, rival.progress, rival.lane, rival.speed);
+          throwSnowball(ctx.projectiles, rival.name, rival.progress, rival.lane, rival.speed, rival.projectileSkin);
         } else {
-          dropBanana(bananas, rival.name, rival.progress, rival.lane, trackLength);
+          dropFishBone(fishBones, rival.name, rival.progress, rival.lane, trackLength);
         }
-      } else if (action === 'boost') rival.boostTimer = Math.max(rival.boostTimer, 0.9);
+      } else if (action === 'cocoa') rival.boostTimer = Math.max(rival.boostTimer, 0.9);
 
-      // Bananas and snowballs only catch grounded karts.
+      // Fish bones and snowballs only catch grounded karts.
       if (!rival.air.airborne) {
-        const hit = bananaHitFor(bananas, rival.name, rival.progress, rival.lane, trackLength);
+        const hit = fishBoneHitFor(fishBones, rival.name, rival.progress, rival.lane, trackLength);
         if (hit) rival.spinTimer = ITEM_FEEL.spinDuration;
         if (ctx.projectiles && rival.spinTimer <= 0) {
           const struck = projectileHitFor(ctx.projectiles, rival.name, rival.progress, rival.lane, trackLength);

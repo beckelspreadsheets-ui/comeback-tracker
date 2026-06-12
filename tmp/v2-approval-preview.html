@@ -44,7 +44,7 @@
     <span class="pill">kart-proof ✓</span>
     <span class="pill">kart-playable ✓</span>
     <span class="pill">test:race ✓</span>
-    <span class="pill">kart-3d-spike: blocked by machine load this run (Brave at 200% CPU, game itself fine) — passed 38/39/72 on the Phase-2 build; rerun when idle</span>
+    <span class="pill">kart-3d-spike: 32 median this run under load ~15 (other sessions working) — same band that read 27–33 busy / 38–39 idle before; rerun when idle</span>
 
     <h2>1 · Approved V2 reference cards</h2>
     <p class="note">The design-lock targets. The runtime below should read as this world (silhouettes, colors, materials, camera) — not match pixel-for-pixel.</p>
@@ -117,6 +117,79 @@
       <figure class="tall"><img src="camera-probe/mobile-p0_55.png" alt="Kenney kart" /><figcaption><strong>A — Kenney body</strong> (current default)</figcaption></figure>
       <figure class="tall"><img src="camera-probe-tripo/mobile-p0_55.png" alt="Tripo kart" /><figcaption><strong>B — Tripo body</strong> from your hero card</figcaption></figure>
       <figure class="wide"><img src="camera-probe-tripo/desktop-p0_45.png" alt="Tripo kart desktop" /><figcaption><strong>B on desktop</strong> — mid straight</figcaption></figure>
+    </div>
+
+    <h2 id="round-8">ROUND 8 — T CLOW JOINS + a select screen with real faces and kart stats (new — feel-check this)</h2>
+    <p class="note">
+      <strong>T Clow is in</strong> — his GLB was sitting in your drop folder; optimized 15.6MB → 2MB,
+      lab-verified (faces +X like every Tripo rig), fifth seat in the roster. <strong>Select screen v2:</strong>
+      real portraits prerendered from the actual GLBs (new booth: <code>scripts/select-portraits-capture.mjs</code> —
+      rerun it whenever the roster changes), and <strong>kart choice is now separate from character</strong>:
+      Hero Kart (balanced) / Ice Sled (fast &amp; slippery) / Dragster (quick off the line, nimble) with stat
+      bars — top speed, acceleration, and steering actually change per kart (hero = the QA baseline).
+      Any character can drive any kart: the bunny on the ice sled is verified below. The generic dragster
+      stays a placeholder until your kart renders land — I spotted <code>glidercart.png</code> /
+      <code>penguinglider.png</code> in the drop folder; when those become GLBs they slot straight in.
+      <strong>Roster corrected per your call:</strong> the penguin formerly labeled "CRRT Penguin" IS T Clow —
+      deduped, he keeps his newest render (goggles + bandana) and the ice sled. <strong>Layer23 cowboy
+      penguin:</strong> only his PNG sheet is in the drop folder so far — no GLB landed yet. The moment the
+      Tripo GLB appears he's a two-minute add (optimize → lab → roster + portrait).
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="character-select/select-screen.png" alt="Select screen v2" /><figcaption><strong>Select screen v2</strong> — five real portraits + kart pick with stat bars</figcaption></figure>
+      <figure class="tall"><img src="../src/assets/game/select/char-tclow.png" alt="T Clow portrait" /><figcaption><strong>T Clow</strong> — newest roster member</figcaption></figure>
+    </div>
+    <div class="row">
+      <figure><img src="character-select-tclow/desktop-p0_06.png" alt="T Clow racing" /><figcaption><strong>T Clow racing</strong> (placeholder dragster)</figcaption></figure>
+      <figure><img src="kart-pick/desktop-p0_06.png" alt="Bunny on the ice sled" /><figcaption><strong>Kart pick works</strong> — CRRT Bunny on the Ice Sled</figcaption></figure>
+    </div>
+
+    <h2 id="round-7">ROUND 7 — CHOOSE YOUR RACER + items you can actually read (new — feel-check this)</h2>
+    <p class="note">
+      <strong>Character select is in.</strong> After the intro you pick your racer every visit — the other
+      three line up against you with their own karts and projectile flavors (pick Mizzle and the CRRT Bunny
+      hunts you down in the red hero kart, throwing carrots). Your last pick is remembered;
+      <code>?character=mizzle</code> forces a seat for testing. <strong>Items v2:</strong> your "still hard to
+      tell what they are" → everything got a second size step and stronger glows (fish bone 1.5×, fatter
+      carrot with a bigger leaf, chunkier shards/snowballs). <strong>FPS:</strong> your dip very likely =
+      the parallel sessions again (my gate read 32 under load ~15, the same band that passes 38–39 idle) —
+      I'll verify on an idle machine before touching anything. <strong>Recorded for the next arc</strong>
+      (docs/ITEMS_AND_REFINEMENT_PLAN.md, Round 7): track ~1.2× larger, bridge + alternate routes that
+      actually read, your baked-shell sides pick, and the <strong>penguin-centric world theme</strong> —
+      look changes, mechanics don't.
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="character-select/select-screen.png" alt="Character select" /><figcaption><strong>Choose Your Racer</strong> — shown after the intro, every visit; last pick preselected</figcaption></figure>
+      <figure class="wide"><img src="character-select-penguin/desktop-p0_06.png" alt="Playing as CRRT Penguin" /><figcaption><strong>Playing as CRRT Penguin</strong> — you get the ice sled; the bunny becomes a rival in the red hero kart</figcaption></figure>
+    </div>
+    <div class="row">
+      <figure><img src="character-select/desktop-p0_06.png" alt="Playing as Mizzle" /><figcaption><strong>Playing as Mizzle</strong> — orange dragster seat</figcaption></figure>
+      <figure><img src="item-moments/iceshield-up-1.png" alt="Ice shield" /><figcaption><strong>Ice Shield</strong> at the new read</figcaption></figure>
+      <figure><img src="item-moments/fishbone-on-track-1.png" alt="Fish bone v2" /><figcaption><strong>Fish Bone v2</strong> — 1.5×, brighter ivory</figcaption></figure>
+    </div>
+
+    <h2 id="items-reskin">ITEMS STEP 1 — THE THEMED SET ARRIVES (new — feel-check this)</h2>
+    <p class="note">
+      The item slots are now <strong>your</strong> items. Banana → <strong style="color:#f2ecd9">Fish Bone</strong>
+      (a procedural skeleton — skull, ribs, tail — dropped behind, same trip rules). Boost →
+      <strong style="color:#ffb066">Hot Cocoa</strong>. Shield → <strong style="color:#9fdcff">Ice Shield</strong>,
+      and it finally looks like ice: a faceted crystal dome with six shards orbiting while it spins.
+      <strong>Per-character projectile skins</strong> (cosmetic only, identical stats): your CRRT Bunny throws a
+      <strong style="color:#ff8a2a">carrot</strong> — orange cone, green top, rolls around its flight axis like a
+      drill; all three penguin rivals throw <strong style="color:#bfeaff">ice shards</strong>. The HUD badge reads
+      the themed names (CARROT / FISH BONE / COCOA / ICE SHIELD) and the mobile fire button is now a carrot.
+      Items got the Mario Kart oversize treatment — true-scale props vanished at race speed.
+      New capture tooling for this whole arc: <code>scripts/item-moment-capture.mjs</code> screenshots live item
+      moments, and <code>?itemShowcase=1</code> parks one of each near spawn for close-ups.
+    </p>
+    <div class="row">
+      <figure class="wide"><img src="item-moments/iceshield-up-1.png" alt="Ice shield dome" /><figcaption><strong>Ice Shield up</strong> — faceted crystal dome + orbiting shards, spinning</figcaption></figure>
+      <figure class="wide"><img src="item-moments/carrot-flight-far-1.png" alt="Carrot in flight" /><figcaption><strong>Carrot away</strong> — orange tracer closing on the kart ahead</figcaption></figure>
+    </div>
+    <div class="row">
+      <figure><img src="item-moments/held-fishbone-1.png" alt="Held fish bone" /><figcaption><strong>Holding a Fish Bone</strong> — HUD badge reads the themed name</figcaption></figure>
+      <figure><img src="item-moments/fishbone-on-track-1.png" alt="Fish bone dropped" /><figcaption><strong>Fish Bone on track</strong> — ivory skeleton behind a rival, spinning slowly</figcaption></figure>
+      <figure><img src="item-moments/held-cocoa-1.png" alt="Held cocoa" /><figcaption><strong>Holding Hot Cocoa</strong> — fire it for the tier-2 boost</figcaption></figure>
     </div>
 
     <h2 id="round-6">ROUND 6 — new roster members, snowballs &amp; comeback items, visible crest launch</h2>
