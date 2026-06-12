@@ -1,8 +1,0 @@
-{
-  "canvasPresent": true,
-  "hudText": "KART ARCADE CIRCUIT GP\nCOMEBACK CITY GRAND PRIX\n4th\nLAP\n1/3\nSPEED\n278\nTIME\n0:15.03\nDRIFT READY\nKART\nWASD / ARROWS DRIVE · SPACE HOP + DRIFT · F ITEM · Q/E/R BANK\nHELD ITEM\nGUARD GEL\nUSE ITEM\nRIVAL PRESSURE\nPACK FIGHT\nN",
-  "shellPresent": true,
-  "telemetry": null,
-  "title": "Race Playtest Harness",
-  "url": "http://127.0.0.1:5282/race-playtest.html?raceAutoplay=1&raceTrack=comeback-city&raceMode=visual-kart&raceVisualScenario=rival-cluster&raceIndex=in-app-smoke-pass-023"
-}
