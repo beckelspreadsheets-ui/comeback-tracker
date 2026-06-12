@@ -1,1 +1,0 @@
-8d4aef74073da4c86b5360163478b978fe5c3101371bc7a8d18d7390e4003c55  src/assets/game/reference/comeback-city-original-reference.png

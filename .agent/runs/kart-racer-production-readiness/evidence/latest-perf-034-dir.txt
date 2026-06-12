@@ -1,1 +1,0 @@
-.agent/runs/kart-racer-production-readiness/evidence/perf-034-player-frame-vector-scratch-20260524T154421Z

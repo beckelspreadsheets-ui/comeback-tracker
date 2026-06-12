@@ -1,3 +1,0 @@
--rw-r--r--@ 1 andrewferguson  staff  1460 May 18 07:16 package.json
--rw-r--r--@ 1 andrewferguson  staff   599 Apr 16 16:13 public/_headers
--rw-r--r--@ 1 andrewferguson  staff   365 Apr 16 16:13 wrangler.toml
