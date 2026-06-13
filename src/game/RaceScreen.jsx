@@ -35,6 +35,7 @@ import {
   KART_CHARACTERS,
   KART_OPTIONS,
 } from './ComebackCityThreeKartRace.jsx';
+import { DEFAULT_TRACK_KEY, KART_TRACKS } from './race/tracks/index.js';
 import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
 import charSethPenguinUrl from '../assets/game/select/char-seth-penguin.png';
 import charMizzleUrl from '../assets/game/select/char-mizzle.png';
@@ -1800,16 +1801,43 @@ const KartStatBar = ({ label, value }) => (
 // Pre-race garage: pick your racer AND your kart (karts carry light stat
 // spreads). The remaining characters take the rival seats in their signature
 // rides. Shown every visit after the one-time intro; QA automation skips it.
-const KartCharacterSelect = ({ kartKey, onStart, selectedKey, setKartKey, setSelectedKey }) => (
+const KartCharacterSelect = ({ kartKey, onStart, selectedKey, setKartKey, setSelectedKey, setTrackKey, trackKey }) => (
   <div
     className="absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
     data-testid="race-character-select"
   >
     <div className="w-full max-w-4xl space-y-5 py-6">
       <div className="text-center">
-        <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City</div>
-        <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Choose Your Racer</h2>
-        <p className="mt-1 text-[12px] text-white/50">The rest of the crew lines up against you.</p>
+        <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City Grand Prix</div>
+        <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Race Setup</h2>
+        <p className="mt-1 text-[12px] text-white/50">Pick your track, your racer, and your kart.</p>
+      </div>
+      <div className="text-center">
+        <h3 className="font-mono text-sm font-black uppercase tracking-[0.14em] text-white">Pick Your Track</h3>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {KART_TRACKS.map((entry) => {
+          const selected = entry.key === trackKey;
+          return (
+            <button
+              key={entry.key}
+              type="button"
+              data-testid={`race-track-${entry.key}`}
+              onClick={() => setTrackKey(entry.key)}
+              className={`border p-4 text-left transition-colors ${
+                selected ? 'border-[#ffd34f] bg-[#ffd34f]/10' : 'border-white/12 bg-white/[0.03] hover:border-white/30'
+              }`}
+            >
+              <div className="font-mono text-[12px] font-black uppercase tracking-[0.08em] text-white">{entry.name}</div>
+              <div className="mt-1 text-[11px] text-white/55">{entry.tagline}</div>
+              <div className="mt-1 text-[10px] text-[#7eefff]">{entry.laps} laps</div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="text-center">
+        <h3 className="font-mono text-sm font-black uppercase tracking-[0.14em] text-white">Pick Your Racer</h3>
+        <p className="text-[11px] text-white/45">The rest of the crew lines up against you.</p>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {KART_CHARACTERS.map((entry) => {
@@ -1944,15 +1972,25 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
       return null;
     }
   });
+  const [kartTrackKey, setKartTrackKey] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_TRACK_KEY;
+    try {
+      const saved = window.localStorage?.getItem('cc-kart-track');
+      return KART_TRACKS.some((entry) => entry.key === saved) ? saved : DEFAULT_TRACK_KEY;
+    } catch {
+      return DEFAULT_TRACK_KEY;
+    }
+  });
   const confirmCharacter = useCallback(() => {
     try {
       window.localStorage?.setItem('cc-kart-character', characterKey);
+      window.localStorage?.setItem('cc-kart-track', kartTrackKey);
       if (kartKey) window.localStorage?.setItem('cc-kart-kart', kartKey);
     } catch {
       // localStorage unavailable — the pick still applies this session.
     }
     setCharacterReady(true);
-  }, [characterKey, kartKey]);
+  }, [characterKey, kartKey, kartTrackKey]);
   const [raceProfile, setRaceProfile] = useState(null);
   const [command, setCommand] = useState(null);
   const [lastResult, setLastResult] = useState(null);
@@ -2121,6 +2159,8 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
           selectedKey={characterKey}
           setKartKey={setKartKey}
           setSelectedKey={setCharacterKey}
+          setTrackKey={setKartTrackKey}
+          trackKey={kartTrackKey}
         />
       ) : (
         <ComebackCityThreeKartRace
@@ -2130,6 +2170,7 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
           onFinish={handleFinish}
           reducedMotion={Boolean(state.game?.hub?.reducedMotion)}
           runId={runId}
+          track={kartTrackKey}
         />
       )}
     </div>
