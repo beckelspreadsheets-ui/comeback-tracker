@@ -1682,6 +1682,78 @@ const makeIgloo = (radius) => {
   return g;
 };
 
+// Jagged background iceberg — a tall faceted ice peak with a bright cap.
+const makeIceberg = (height) => {
+  const g = new THREE.Group();
+  const ice = createToonMaterial('#cfe6f5', { emissive: '#7fb8d8', emissiveIntensity: 0.22 });
+  const main = new THREE.Mesh(new THREE.ConeGeometry(height * 0.5, height, 5), ice);
+  main.position.y = height / 2;
+  g.add(main);
+  const secondary = new THREE.Mesh(new THREE.ConeGeometry(height * 0.32, height * 0.6, 5), ice);
+  secondary.position.set(height * 0.42, height * 0.3, height * 0.18);
+  secondary.rotation.y = 0.6;
+  g.add(secondary);
+  const cap = new THREE.Mesh(
+    new THREE.ConeGeometry(height * 0.18, height * 0.28, 5),
+    createBasicMaterial('#eafaff', { emissive: '#bfeaff', emissiveIntensity: 0.55 })
+  );
+  cap.position.y = height * 0.86;
+  g.add(cap);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+// Small real-colored penguin (spectator/waddler) — black/white with a beak.
+const makePenguinSpectator = (s = 1.1) => {
+  const g = new THREE.Group();
+  const black = createToonMaterial('#222d3f');
+  const white = createToonMaterial('#f4f8ff');
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(1 * s, 1.3 * s, 2.6 * s, 8), black);
+  body.position.y = 1.5 * s;
+  g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1 * s, 8, 6), black);
+  head.position.y = 3.3 * s;
+  g.add(head);
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.9 * s, 8, 6), white);
+  belly.scale.set(0.8, 1.2, 0.55);
+  belly.position.set(0, 1.7 * s, 0.7 * s);
+  g.add(belly);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.28 * s, 0.7 * s, 6), createBasicMaterial('#ff9a2e'));
+  beak.rotation.x = Math.PI / 2;
+  beak.position.set(0, 3.2 * s, 1 * s);
+  g.add(beak);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+// Slogan banner texture (icy plaque with bold text).
+const makeSloganTexture = (text) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 128);
+  grad.addColorStop(0, '#0e3a52');
+  grad.addColorStop(1, '#1a5f78');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 128);
+  ctx.strokeStyle = '#bfeaff';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(6, 6, 500, 116);
+  ctx.fillStyle = '#eafaff';
+  ctx.font = '900 60px Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 70);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+};
+
 const addPenguinVillageDressing = (world, sampler, trackDef) => {
   const roadWidth = trackDef.course.mainRoadWidth || 56;
   // Giant ordinal-penguin ice statues at signature spots — the landmark.
@@ -1732,6 +1804,65 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
       shard.position.y = 3.2;
       world.add(setFlatTransform(shard));
     }
+  }
+  // Background icebergs ringing the horizon — the "iceberg" read. Far out
+  // beyond the track envelope, tall and jagged, skipping any near the road.
+  for (let i = 0; i < 16; i += 1) {
+    const a = (i / 16) * Math.PI * 2 + 0.25;
+    const r = 500 + (i % 3) * 22;
+    const h = 58 + (i % 4) * 24;
+    const pos = { x: Math.cos(a) * r, z: Math.sin(a) * r };
+    if (minCenterlineDistance(sampler, pos.x, pos.z) < 70) continue;
+    const berg = makeIceberg(h);
+    berg.position.set(pos.x, -2, pos.z);
+    berg.rotation.y = a * 1.7;
+    world.add(setFlatTransform(berg));
+  }
+  // Penguin spectator clusters along the rails — more penguins everywhere.
+  [0.1, 0.36, 0.6, 0.88].forEach((p, ci) => {
+    const side = ci % 2 === 0 ? -1 : 1;
+    const { normal, point, tangent } = sampler.pointAt(p);
+    for (let k = 0; k < 4; k += 1) {
+      const lateral = sampler.widthAt(p) * 0.5 + 8 + (k % 2) * 4;
+      const along = (k - 1.5) * 4.5;
+      const pos = point.clone().addScaledVector(normal, side * lateral).addScaledVector(tangent, along);
+      if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.5) continue;
+      const penguin = makePenguinSpectator(1.1);
+      penguin.position.copy(pos);
+      penguin.position.y = 0;
+      penguin.rotation.y = Math.atan2(point.x - pos.x, point.z - pos.z); // watch the race
+      world.add(setFlatTransform(penguin));
+    }
+  });
+  // "THE ICE IS NICE" arch over the start/finish — you drive under it each lap.
+  {
+    const { point, tangent } = sampler.pointAt(wrap01(trackDef.course.startProgress || 0));
+    const width = sampler.widthAt(0);
+    const arch = new THREE.Group();
+    arch.position.copy(point);
+    arch.rotation.y = Math.atan2(tangent.x, tangent.z);
+    const postMat = createToonMaterial('#dce9f2', { emissive: '#bfeaff', emissiveIntensity: 0.2 });
+    [-1, 1].forEach((s) => {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.7, 27, 8), postMat);
+      post.position.set(s * (width * 0.5 + 3), 13, 0);
+      arch.add(post);
+    });
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(width + 9, 1.8, 1.8), postMat);
+    bar.position.set(0, 27.5, 0);
+    arch.add(bar);
+    const banner = new THREE.Mesh(
+      new THREE.PlaneGeometry(width * 0.92, width * 0.23),
+      new THREE.MeshBasicMaterial({ map: makeSloganTexture('THE ICE IS NICE'), side: THREE.DoubleSide, transparent: true })
+    );
+    banner.position.set(0, 23, 0);
+    // Face the readable side toward oncoming racers (they approach from -z).
+    banner.rotation.y = Math.PI;
+    arch.add(banner);
+    addGlowSprite(arch, '#bfeaff', 26, 0.22, 24);
+    arch.traverse((n) => {
+      n.castShadow = false;
+    });
+    world.add(arch);
   }
 };
 
