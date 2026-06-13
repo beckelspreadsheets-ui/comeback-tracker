@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Carrot, Coffee, Fish, Flag, Gauge, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Carrot, CloudSnow, Coffee, Fish, FishSymbol, Flag, Footprints, Gauge, MountainSnow, Rainbow, Rocket, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -17,6 +17,7 @@ import heroKartTripoUrl from '../assets/game/models/tripo/hero-kart-tripo.glb?ur
 import iceSledUrl from '../assets/game/models/tripo/ice-sled.glb?url';
 import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
 import tclowModelUrl from '../assets/game/models/avatars/tclow-penguin.glb?url';
+import layer23ModelUrl from '../assets/game/models/avatars/layer23-penguin.glb?url';
 import clinicFacadeUrl from '../assets/game/generated/district-facade-clinic.png';
 import foodFacadeUrl from '../assets/game/generated/district-facade-food.png';
 import garageFacadeUrl from '../assets/game/generated/district-facade-garage.png';
@@ -34,17 +35,32 @@ import {
   createRivalRacers,
   playerPositionOf,
   rivalPositionsOf,
+  totalProgressOf,
   updateRivalRacers,
 } from './race/rivalRacers.js';
 import {
   ageFishBones,
+  AURORA,
+  AVALANCHE,
+  BLIZZARD,
+  dropBlizzard,
   dropFishBone,
   fishBoneHitFor,
+  insideBlizzard,
   ITEM_FEEL,
   ITEM_LABELS,
   itemForPickup,
+  MARCH,
+  marchHitFor,
   projectileHitFor,
+  sardineTargetFor,
+  startMarch,
+  SLAP_FISH,
+  slapFishHitsFor,
+  throwSardine,
   throwSnowball,
+  updateBlizzards,
+  updateMarch,
   updateProjectiles,
 } from './race/heldItems.js';
 import {
@@ -100,6 +116,7 @@ export const KART_CHARACTERS = [
   { accent: '#9fe7ff', color: '#2378ff', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'icesled', kartName: 'Ice Sled', key: 'tclow', name: 'T Clow', projectileSkin: 'iceshard' },
   { accent: '#38d7ff', color: '#7e35f4', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Purple Dragster', key: 'seth-penguin', name: 'Seth Penguin', projectileSkin: 'iceshard' },
   { accent: '#ffd34f', color: '#f28b2e', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Orange Dragster', key: 'mizzle', name: 'Mizzle', projectileSkin: 'iceshard' },
+  { accent: '#ffd9a0', color: '#a86b32', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Bronze Dragster', key: 'layer23', name: 'Layer 23', projectileSkin: 'iceshard' },
 ];
 
 // Karts are picked separately from characters (owner request, round 8) —
@@ -151,8 +168,17 @@ const START_PROGRESS = wrap01((COMEBACK_CITY_COURSE_V2.startProgress || 0) + 0.0
 
 const createInitialRace = (rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY)) => ({
   airState: createAirState(),
+  // Pending leader-killer: { by, target, timer } during the rumble warning.
+  avalanche: null,
+  avalancheBurst: 0,
+  auroraTimer: 0,
+  avalancheTarget: null,
+  blizzards: [],
+  // Live Penguin March crossing: { head, progress } while the train walks.
+  march: null,
   boostHits: 0,
   fishBones: [],
+  slapTimer: 0,
   projectiles: [],
   boostTimer: 0,
   bumpCooldown: 0,
@@ -683,11 +709,13 @@ const loadKartAssets = () => {
       gltfLoader.loadAsync(mizzleModelUrl).catch(() => null),
       gltfLoader.loadAsync(iceSledUrl).catch(() => null),
       gltfLoader.loadAsync(tclowModelUrl).catch(() => null),
-    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf]) => ({
+      gltfLoader.loadAsync(layer23ModelUrl).catch(() => null),
+    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf]) => ({
       colormapImage,
       // Keyed by KART_CHARACTERS entries — seats are assigned at race start.
       driverScenes: {
         'crrt-bunny': bunnyGltf?.scene || null,
+        layer23: layer23Gltf?.scene || null,
         mizzle: mizzleGltf?.scene || null,
         'seth-penguin': sethGltf?.scene || null,
         tclow: tclowGltf?.scene || null,
@@ -1699,13 +1727,60 @@ const createScene = ({
       new THREE.Mesh(shardGeometry, createBasicMaterial('#dff6ff', { emissive: '#9fdcff', emissiveIntensity: 0.8 }))
     );
     addGlowSprite(iceShard, '#bfeaff', 10, 0.55, 0);
-    [snowball, carrot, iceShard].forEach((variant) => {
+    // Rocket Sardine — a little silver fish with a rocket flame, nose-first.
+    const sardine = new THREE.Group();
+    sardine.userData.skin = 'sardine';
+    const sardineBody = new THREE.SphereGeometry(1, 10, 8);
+    sardineBody.scale(0.8, 1.0, 2.4);
+    sardine.add(
+      new THREE.Mesh(sardineBody, createBasicMaterial('#cfe8f4', { emissive: '#9fdcff', emissiveIntensity: 0.6 }))
+    );
+    const sardineTail = new THREE.OctahedronGeometry(1.0);
+    sardineTail.scale(0.16, 1.1, 0.8);
+    sardineTail.translate(0, 0, -2.7);
+    sardine.add(
+      new THREE.Mesh(sardineTail, createBasicMaterial('#b7dcec', { emissive: '#9fdcff', emissiveIntensity: 0.6 }))
+    );
+    const sardineFlame = new THREE.ConeGeometry(0.7, 2.2, 6);
+    sardineFlame.rotateX(-Math.PI / 2);
+    sardineFlame.translate(0, 0, -3.6);
+    sardine.add(
+      new THREE.Mesh(sardineFlame, createBasicMaterial('#ff7e14', { emissive: '#ff6a08', emissiveIntensity: 1.2 }))
+    );
+    addGlowSprite(sardine, '#ffb066', 10, 0.55, 0);
+    [snowball, carrot, iceShard, sardine].forEach((variant) => {
       variant.visible = false;
       variant.position.y = 1.7;
       holder.add(variant);
     });
     world.add(holder);
     projectilePool.push(holder);
+  }
+  // Blizzard dome pool — fog hemispheres mirroring the live blizzard list.
+  // Two nested transparent shells read as depth without real volumetrics.
+  const blizzardPool = [];
+  for (let index = 0; index < 3; index += 1) {
+    const holder = new THREE.Group();
+    holder.visible = false;
+    const outer = new THREE.Mesh(
+      new THREE.SphereGeometry(15, 18, 12),
+      new THREE.MeshBasicMaterial({ color: '#dff3ff', depthWrite: false, opacity: 0.3, transparent: true })
+    );
+    outer.scale.set(1, 0.5, 1);
+    holder.add(outer);
+    const inner = new THREE.Mesh(
+      new THREE.SphereGeometry(10, 14, 10),
+      new THREE.MeshBasicMaterial({ color: '#f4fbff', depthWrite: false, opacity: 0.4, transparent: true })
+    );
+    inner.scale.set(1, 0.5, 1);
+    holder.add(inner);
+    addGlowSprite(holder, '#dff3ff', 20, 0.22, 5);
+    holder.userData.shells = [outer, inner];
+    holder.traverse((node) => {
+      node.castShadow = false;
+    });
+    world.add(holder);
+    blizzardPool.push(holder);
   }
   // Visible crest kicker — the bridge-top launch was firing invisibly
   // (owner-reported); now a glowing lip strip marks exactly where and why.
@@ -1792,6 +1867,116 @@ const createScene = ({
     node.castShadow = false;
   });
   player.add(shieldBubble);
+  // Slap Fish swing rig — a big silver fish on an invisible arm that sweeps
+  // a full circle around the kart while the swipe timer runs.
+  const slapFishRig = new THREE.Group();
+  slapFishRig.visible = false;
+  {
+    const fish = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 10, 8),
+      createBasicMaterial('#cfe8f4', { emissive: '#9fdcff', emissiveIntensity: 0.5 })
+    );
+    body.scale.set(1.1, 1.5, 3.1);
+    fish.add(body);
+    const tailGeometry = new THREE.OctahedronGeometry(1.4);
+    tailGeometry.scale(0.16, 1.2, 0.9);
+    tailGeometry.translate(0, 0, -3.6);
+    fish.add(new THREE.Mesh(tailGeometry, createBasicMaterial('#b7dcEC', { emissive: '#9fdcff', emissiveIntensity: 0.5 })));
+    fish.position.set(7.6, 4.4, 0);
+    slapFishRig.add(fish);
+    addGlowSprite(fish, '#bfeaff', 8, 0.4, 0);
+    slapFishRig.traverse((node) => {
+      node.castShadow = false;
+    });
+  }
+  player.add(slapFishRig);
+  // Aurora Boost trail — translucent northern-light ribbons waving behind
+  // the kart while invincibility runs. Additive, no depth write, cheap.
+  const auroraRig = new THREE.Group();
+  auroraRig.visible = false;
+  {
+    const ribbonCanvas = document.createElement('canvas');
+    ribbonCanvas.width = 64;
+    ribbonCanvas.height = 256;
+    const ribbonCtx = ribbonCanvas.getContext('2d');
+    const ribbonGradient = ribbonCtx.createLinearGradient(0, 0, 0, 256);
+    ribbonGradient.addColorStop(0, 'rgba(124, 247, 160, 0)');
+    ribbonGradient.addColorStop(0.35, 'rgba(124, 247, 200, 0.85)');
+    ribbonGradient.addColorStop(0.7, 'rgba(110, 220, 255, 0.75)');
+    ribbonGradient.addColorStop(1, 'rgba(190, 130, 255, 0)');
+    ribbonCtx.fillStyle = ribbonGradient;
+    ribbonCtx.fillRect(0, 0, 64, 256);
+    const ribbonTexture = new THREE.CanvasTexture(ribbonCanvas);
+    [-2.6, 0, 2.6].forEach((x, order) => {
+      const ribbon = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.4, 15),
+        new THREE.MeshBasicMaterial({
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          map: ribbonTexture,
+          side: THREE.DoubleSide,
+          transparent: true,
+        })
+      );
+      ribbon.position.set(x, 5 + order * 0.8, -9);
+      ribbon.rotation.x = Math.PI / 2 - 0.35;
+      ribbon.userData.phase = order * 2.1;
+      auroraRig.add(ribbon);
+    });
+    addGlowSprite(auroraRig, '#9ff5d0', 14, 0.35, 3);
+  }
+  auroraRig.traverse((node) => {
+    node.castShadow = false;
+  });
+  player.add(auroraRig);
+  // Avalanche marker — rumble ring during the warning, expanding flash on
+  // the burst. Repositioned over the locked target every frame.
+  const avalancheMarker = new THREE.Group();
+  avalancheMarker.visible = false;
+  const avalancheRing = new THREE.Mesh(
+    new THREE.TorusGeometry(7.8, 0.55, 6, 26),
+    new THREE.MeshBasicMaterial({ color: '#ffffff', depthWrite: false, opacity: 0.85, transparent: true })
+  );
+  avalancheRing.rotation.x = Math.PI / 2;
+  avalancheMarker.add(avalancheRing);
+  const avalancheGlow = addGlowSprite(avalancheMarker, '#f4fbff', 16, 0.55, 4);
+  avalancheMarker.traverse((node) => {
+    node.castShadow = false;
+  });
+  world.add(avalancheMarker);
+  // Penguin March rig — seven marchers repositioned along the crossing
+  // every frame. Procedural stand-ins until the roster GLBs swap in.
+  const marchRig = new THREE.Group();
+  marchRig.visible = false;
+  const marchers = [];
+  for (let index = 0; index < 7; index += 1) {
+    const wrapper = new THREE.Group();
+    const inner = new THREE.Group();
+    const standIn = new THREE.Group();
+    standIn.userData.kind = 'march-fallback';
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.6, 2.1, 4.6, 8),
+      createToonMaterial('#1c2433', { emissive: '#0e1420', emissiveIntensity: 0.2 })
+    );
+    body.position.y = 2.3;
+    standIn.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 6), createToonMaterial('#1c2433'));
+    head.position.y = 5.2;
+    standIn.add(head);
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 6), createToonMaterial('#f4f8ff'));
+    belly.scale.set(0.8, 1.3, 0.55);
+    belly.position.set(1.0, 2.5, 0);
+    standIn.add(belly);
+    inner.add(standIn);
+    wrapper.add(inner);
+    wrapper.traverse((node) => {
+      node.castShadow = false;
+    });
+    marchRig.add(wrapper);
+    marchers.push({ inner, wrapper });
+  }
+  world.add(marchRig);
   world.add(player);
   const rivalModels = rivalSeats.map((rival) => {
     const model = createGroundedKartModel({
@@ -1810,10 +1995,18 @@ const createScene = ({
   });
 
   return {
+    auroraRig,
+    avalancheGlow,
+    avalancheMarker,
+    avalancheRing,
+    marchers,
+    marchRig,
+    blizzardPool,
     bloomPass,
     boostPads,
     fishBonePool,
     projectilePool,
+    slapFishRig,
     buildingSwaps,
     camera,
     composer,
@@ -1873,8 +2066,14 @@ const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEF
   if (typeof window === 'undefined') return;
   window.__comebackCityKartTelemetry = {
     airborne: race.airState.airborne,
+    auroraActive: race.auroraTimer > 0,
+    avalanchePending: Boolean(race.avalanche),
+    marchActive: Boolean(race.march),
+    avalancheTarget: race.avalanche?.target || race.avalancheTarget || null,
+    blizzardsOnTrack: race.blizzards.length,
     character: characterKey,
     kart: kartKey,
+    slapping: race.slapTimer > 0,
     fishBonesOnTrack: race.fishBones.length,
     boostHits: race.boostHits,
     countdown: Number(race.countdown.toFixed(2)),
@@ -1975,6 +2174,13 @@ export const ComebackCityThreeKartRace = ({
       );
       race.shieldActive = true;
     }
+    // ?giveItem=<key> keeps that item in the slot whenever it's empty —
+    // deterministic captures/tests of any single item (autoplay fires it on
+    // the next straight).
+    const giveItemKey =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('giveItem')
+        : null;
     const viewport = { aspect: 1, dpr: 1, height: 1, mobile: false, width: 1 };
     const frameTimes = [];
     let raf = 0;
@@ -2070,6 +2276,36 @@ export const ComebackCityThreeKartRace = ({
         attachCharacter(engine.playerModel, playerCharacter, true);
         engine.rivalModels.forEach((rival) => {
           attachCharacter(rival.model, rival.character, false);
+        });
+        // Penguin March marchers: swap the stand-ins for the real roster
+        // penguins, cycling through every penguin character — the train
+        // gets richer automatically as the owner adds ordinals.
+        const penguinKeys = KART_CHARACTERS.filter((entry) => entry.projectileSkin === 'iceshard').map(
+          (entry) => entry.key
+        );
+        engine.marchers.forEach((marcher, index) => {
+          const scene = driverScenes[penguinKeys[index % penguinKeys.length]];
+          if (!scene) return;
+          const fallback = marcher.inner.children.find((child) => child.userData.kind === 'march-fallback');
+          const rig = scene.clone(true);
+          rig.traverse((node) => {
+            if (node.isMesh) {
+              node.material = new THREE.MeshToonMaterial({
+                gradientMap: getToonGradient(),
+                map: node.material?.map || null,
+              });
+              node.castShadow = false;
+            }
+          });
+          const bounds = new THREE.Box3().setFromObject(rig);
+          const size = bounds.getSize(new THREE.Vector3());
+          rig.scale.setScalar(7 / Math.max(0.0001, size.y));
+          rig.updateMatrixWorld(true);
+          const fitted = new THREE.Box3().setFromObject(rig);
+          const center = fitted.getCenter(new THREE.Vector3());
+          rig.position.set(-center.x, -fitted.min.y, -center.z);
+          if (fallback) marcher.inner.remove(fallback);
+          marcher.inner.add(rig);
         });
         const itemMaterial = new THREE.MeshToonMaterial({
           gradientMap: getToonGradient(),
@@ -2292,8 +2528,10 @@ export const ComebackCityThreeKartRace = ({
             driftState.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
             race.speed = clamp(race.speed + DRIFT_FEEL.boostKick[airEvents.trickTier - 1] * 0.8, 0, BOOST_SPEED);
           }
-          // Held item fire: cocoa boost, ice shield, fish bone behind, or a
-          // snowball forward (rendered with the character's projectile skin).
+          if (giveItemKey && !race.heldItem && race.countdown <= 0) race.heldItem = giveItemKey;
+          // Held item fire: cocoa boost, ice shield, fish bone behind, a
+          // snowball forward (rendered with the character's projectile
+          // skin), a slap-fish swipe, or the avalanche ultimate.
           race.itemFireCooldown = Math.max(0, race.itemFireCooldown - dt);
           if (input.item && race.heldItem && race.itemFireCooldown <= 0) {
             if (race.heldItem === 'cocoa') {
@@ -2307,23 +2545,68 @@ export const ComebackCityThreeKartRace = ({
               dropFishBone(race.fishBones, 'player', race.progress, race.lane, engine.sampler.length);
             } else if (race.heldItem === 'snowball') {
               throwSnowball(race.projectiles, 'player', race.progress, race.lane, race.speed, playerCharacter.projectileSkin);
+            } else if (race.heldItem === 'slapfish') {
+              race.slapTimer = SLAP_FISH.swingDuration;
+              slapFishHitsFor(race.rivals, 'player', race.progress, race.lane, engine.sampler.length).forEach(
+                (name) => {
+                  const struck = race.rivals.find((rival) => rival.name === name);
+                  if (struck) struck.spinTimer = ITEM_FEEL.spinDuration;
+                }
+              );
+            } else if (race.heldItem === 'avalanche') {
+              // Lock onto whoever leads RIGHT NOW — possibly a regret.
+              const leadRival = race.rivals.reduce(
+                (best, rival) => (totalProgressOf(rival) > totalProgressOf(best) ? rival : best),
+                race.rivals[0]
+              );
+              const target =
+                race.position === 1 || !leadRival ? 'player' : leadRival.name;
+              race.avalanche = { by: 'player', target, timer: AVALANCHE.warningDuration };
+            } else if (race.heldItem === 'sardine') {
+              const playerTotalNow = race.lap - 1 + race.progress;
+              throwSardine(
+                race.projectiles,
+                'player',
+                race.progress,
+                race.lane,
+                race.speed,
+                sardineTargetFor(race.rivals, playerTotalNow)
+              );
+            } else if (race.heldItem === 'blizzard') {
+              dropBlizzard(race.blizzards, 'player', race.progress, race.lane, engine.sampler.length);
+            } else if (race.heldItem === 'aurora') {
+              race.auroraTimer = AURORA.duration;
+              race.speed = clamp(race.speed + AURORA.speedKick, 0, BOOST_SPEED);
+            } else if (race.heldItem === 'march') {
+              race.march = startMarch(race.progress, engine.sampler.length);
             }
             race.heldItem = null;
             race.itemFireCooldown = 0.35;
           }
           race.boostTimer = Math.max(0, race.boostTimer - dt);
+          race.auroraTimer = Math.max(0, race.auroraTimer - dt);
+          const auroraActive = race.auroraTimer > 0;
           // Kart stats: top speed cap, throttle accel, and steering rate all
           // scale with the chosen kart (hero = 1/1/1, the gate baseline).
           const maxSpeed =
-            (race.boostTimer > 0 || driftState.miniTurboTimer > 0 ? BOOST_SPEED : MAX_SPEED) *
+            (race.boostTimer > 0 || driftState.miniTurboTimer > 0 || auroraActive ? BOOST_SPEED : MAX_SPEED) *
             playerKart.stats.topSpeed;
           const accel = throttle && !spinning ? 118 * playerKart.stats.accel : spinning ? -150 : -48;
-          const miniTurboAccel = driftState.miniTurboTimer > 0 ? 150 : 0;
+          const miniTurboAccel = driftState.miniTurboTimer > 0 ? 150 : auroraActive ? 130 : 0;
           const brakeDrag = brake ? -180 : 0;
           const steeringDrag = Math.abs(race.steer) * (race.drift ? -8 : -22);
           race.speed = clamp(race.speed + (accel + miniTurboAccel + brakeDrag + steeringDrag) * dt, 0, maxSpeed);
           if (!throttle && !brake) race.speed = Math.max(0, race.speed - 38 * dt);
           if (spinning) race.speed = Math.max(46, race.speed);
+          // Blizzard fog caps grounded karts — yours included. Fly over it,
+          // steer around it, or plow through it with an aurora.
+          if (
+            !airState.airborne &&
+            !auroraActive &&
+            insideBlizzard(race.blizzards, race.progress, race.lane, engine.sampler.length)
+          ) {
+            race.speed = Math.min(race.speed, BLIZZARD.capSpeed);
+          }
           // While drifting the slide owns the lane: direction is locked,
           // steering tightens/widens the arc instead of switching sides.
           // The corner push shoves toward the outside wall — the player must
@@ -2373,7 +2656,8 @@ export const ComebackCityThreeKartRace = ({
               if (!race[key]) {
                 race[key] = true;
                 race.itemPickups += 1;
-                if (!race.heldItem) race.heldItem = itemForPickup(index, race.lap, race.position);
+                if (!race.heldItem)
+                  race.heldItem = itemForPickup(index, race.lap, race.position, race.lap === TOTAL_LAPS);
               }
             } else if (shortProgressDelta(race.progress, box.progress) > 0.05) {
               race[key] = false;
@@ -2383,10 +2667,33 @@ export const ComebackCityThreeKartRace = ({
           // karts fly over them; an ice shield eats the hit instead of
           // spinning out).
           ageFishBones(race.fishBones, dt);
-          updateProjectiles(race.projectiles, dt, engine.sampler.length);
+          updateBlizzards(race.blizzards, dt);
+          if (race.march && updateMarch(race.march, dt)) race.march = null;
+          // Rivals are the homing targets sardines steer toward.
+          updateProjectiles(race.projectiles, dt, engine.sampler.length, race.rivals);
+          // The waddle-train spins anyone grounded who runs the line (an
+          // aurora plows through; an ice shield eats the hit).
+          if (
+            race.march &&
+            !airState.airborne &&
+            !spinning &&
+            race.spinTimer <= 0 &&
+            race.auroraTimer <= 0 &&
+            marchHitFor(race.march, race.progress, race.lane, engine.sampler.length)
+          ) {
+            if (race.shieldActive) {
+              race.shieldActive = false;
+            } else {
+              race.spinTimer = ITEM_FEEL.spinDuration;
+              race.spinOuts += 1;
+              race.speed *= 0.45;
+            }
+          }
           if (!airState.airborne && !spinning && race.spinTimer <= 0) {
             const struck = projectileHitFor(race.projectiles, 'player', race.progress, race.lane, engine.sampler.length);
-            if (struck) {
+            if (struck && race.auroraTimer <= 0) {
+              // (an aurora'd kart still destroys the projectile — it just
+              // doesn't care)
               if (race.shieldActive) {
                 race.shieldActive = false;
               } else {
@@ -2398,7 +2705,7 @@ export const ComebackCityThreeKartRace = ({
           }
           if (!airState.airborne && !spinning) {
             const fishBoneHit = fishBoneHitFor(race.fishBones, 'player', race.progress, race.lane, engine.sampler.length);
-            if (fishBoneHit) {
+            if (fishBoneHit && race.auroraTimer <= 0) {
               if (race.shieldActive) {
                 race.shieldActive = false;
               } else {
@@ -2415,10 +2722,12 @@ export const ComebackCityThreeKartRace = ({
           // Rivals run their own race; bumps knock both karts.
           race.bumpCooldown = Math.max(0, race.bumpCooldown - dt);
           const playerTotal = (race.finished ? TOTAL_LAPS : race.lap - 1) + race.progress;
-          const { playerBump } = updateRivalRacers(race.rivals, {
+          const { avalancheBy, playerBump } = updateRivalRacers(race.rivals, {
             boostPads: COMEBACK_CITY_COURSE_V2.boostPads,
             boostSpeed: BOOST_SPEED,
             cornerPushFor,
+            blizzards: race.blizzards,
+            march: race.march,
             crestProgress: CREST_PROGRESS,
             curvatureAt: (progress) => trackCurvatureAt(engine.sampler, progress),
             dt,
@@ -2429,6 +2738,7 @@ export const ComebackCityThreeKartRace = ({
             ramps: RAMPS,
             projectiles: race.projectiles,
             player: {
+              aurora: race.auroraTimer > 0,
               bumpCooldown: race.bumpCooldown,
               lane: race.lane,
               progress: race.progress,
@@ -2445,6 +2755,41 @@ export const ComebackCityThreeKartRace = ({
             race.speed *= playerBump.speedScale;
           }
           race.position = playerPositionOf(playerTotal, race.rivals);
+          // A desperate last-place rival just fired the leader-killer.
+          if (avalancheBy && !race.avalanche) {
+            const leadRival = race.rivals.reduce(
+              (best, rival) => (totalProgressOf(rival) > totalProgressOf(best) ? rival : best),
+              race.rivals[0]
+            );
+            const target = race.position === 1 || !leadRival ? 'player' : leadRival.name;
+            race.avalanche = { by: avalancheBy, target, timer: AVALANCHE.warningDuration };
+          }
+          // Avalanche countdown: rumble the target, then bury them. It
+          // pierces the ice shield — being P1 is supposed to be scary.
+          race.slapTimer = Math.max(0, race.slapTimer - dt);
+          race.avalancheBurst = Math.max(0, race.avalancheBurst - dt);
+          if (race.avalanche) {
+            race.avalanche.timer -= dt;
+            if (race.avalanche.timer <= 0) {
+              if (race.avalanche.target === 'player') {
+                race.spinTimer = AVALANCHE.spinDuration;
+                race.spinOuts += 1;
+                race.speed *= AVALANCHE.speedScale;
+                race.driftState.active = false;
+                race.driftState.charge = 0;
+                race.driftState.tier = 0;
+              } else {
+                const buried = race.rivals.find((rival) => rival.name === race.avalanche.target);
+                if (buried) {
+                  buried.spinTimer = AVALANCHE.spinDuration;
+                  buried.speed = Math.max(46, buried.speed * AVALANCHE.speedScale);
+                }
+              }
+              race.avalancheBurst = 0.45;
+              race.avalancheTarget = race.avalanche.target;
+              race.avalanche = null;
+            }
+          }
         }
       }
 
@@ -2471,6 +2816,65 @@ export const ComebackCityThreeKartRace = ({
       if (race.shieldActive) {
         engine.shieldBubble.rotation.y += dt * 1.6;
       }
+      // Slap Fish sweep: one full revolution across the swing window.
+      engine.slapFishRig.visible = race.slapTimer > 0;
+      if (race.slapTimer > 0) {
+        engine.slapFishRig.rotation.y = (1 - race.slapTimer / SLAP_FISH.swingDuration) * Math.PI * 2;
+      }
+      // Penguin March: reposition the waddle-train along the crossing —
+      // single file across the road, bobbing and rocking as they go.
+      engine.marchRig.visible = Boolean(race.march);
+      if (race.march) {
+        const crossing = engine.sampler.pointAt(race.march.progress, 0);
+        const facingYaw = Math.atan2(-crossing.normal.z, crossing.normal.x);
+        engine.marchers.forEach((marcher, index) => {
+          const lane = race.march.head - ((index + 0.5) / engine.marchers.length) * MARCH.trainLength;
+          marcher.wrapper.visible = lane > MARCH.startLane + 0.05 && lane < MARCH.endLane - 0.05;
+          if (!marcher.wrapper.visible) return;
+          const spot = engine.sampler.pointAt(race.march.progress, lane);
+          marcher.wrapper.position.copy(spot.point);
+          marcher.wrapper.rotation.y = facingYaw;
+          marcher.inner.position.y = Math.abs(Math.sin(race.raceTime * 9 + index * 1.7)) * 0.55;
+          marcher.inner.rotation.z = Math.sin(race.raceTime * 9 + index * 1.7) * 0.12;
+        });
+      }
+      // Aurora ribbons sway and shimmer while invincibility runs.
+      engine.auroraRig.visible = race.auroraTimer > 0;
+      if (race.auroraTimer > 0) {
+        engine.auroraRig.children.forEach((ribbon) => {
+          if (ribbon.isMesh) {
+            ribbon.rotation.z = Math.sin(race.raceTime * 3 + ribbon.userData.phase) * 0.35;
+            ribbon.material.opacity = 0.65 + Math.sin(race.raceTime * 6 + ribbon.userData.phase) * 0.3;
+          }
+        });
+      }
+      // Avalanche marker: pulsing rumble ring over the locked target during
+      // the warning, an expanding flash on the burst.
+      {
+        const markerTarget = race.avalanche ? race.avalanche.target : race.avalancheBurst > 0 ? race.avalancheTarget : null;
+        engine.avalancheMarker.visible = Boolean(markerTarget);
+        if (markerTarget) {
+          const targetGroup =
+            markerTarget === 'player'
+              ? engine.playerModel.group
+              : engine.rivalModels.find((rival) => rival.name === markerTarget)?.model.group;
+          if (targetGroup) {
+            engine.avalancheMarker.position.copy(targetGroup.position);
+            engine.avalancheMarker.position.y += 5;
+          }
+          if (race.avalanche) {
+            const pulse = 1 + Math.sin(race.raceTime * 16) * 0.18;
+            engine.avalancheMarker.scale.setScalar(pulse);
+            engine.avalancheRing.material.opacity = 0.85;
+            engine.avalancheGlow.material.opacity = 0.55;
+          } else {
+            const burst = 1 - race.avalancheBurst / 0.45;
+            engine.avalancheMarker.scale.setScalar(1 + burst * 2.6);
+            engine.avalancheRing.material.opacity = 0.85 * (1 - burst);
+            engine.avalancheGlow.material.opacity = 0.8 * (1 - burst);
+          }
+        }
+      }
       engine.projectilePool.forEach((holder, index) => {
         const ball = race.projectiles[index];
         holder.visible = Boolean(ball);
@@ -2486,6 +2890,20 @@ export const ComebackCityThreeKartRace = ({
             variant.visible = active;
             if (active) variant.rotation.z += dt * 9;
           });
+        }
+      });
+      // Blizzard domes: mirror the live list, swirl slowly, fade out over
+      // the last second of their life.
+      engine.blizzardPool.forEach((holder, index) => {
+        const cloud = race.blizzards[index];
+        holder.visible = Boolean(cloud);
+        if (cloud) {
+          const sample = engine.sampler.pointAt(cloud.progress, cloud.lane);
+          holder.position.copy(sample.point);
+          holder.rotation.y += dt * 0.8;
+          const fade = Math.min(1, cloud.ttl / 1.2);
+          holder.userData.shells[0].material.opacity = 0.3 * fade;
+          holder.userData.shells[1].material.opacity = 0.4 * fade;
         }
       });
       // Mirror the live fish-bone list onto the pooled meshes.
@@ -2712,6 +3130,18 @@ export const ComebackCityThreeKartRace = ({
         <div className="three-kart-race__badge" data-testid="race-held-item" data-held-item={snapshot.heldItem || 'none'}>
           {snapshot.heldItem === 'fishbone' ? (
             <Fish size={15} />
+          ) : snapshot.heldItem === 'slapfish' ? (
+            <FishSymbol size={15} />
+          ) : snapshot.heldItem === 'avalanche' ? (
+            <MountainSnow size={15} />
+          ) : snapshot.heldItem === 'sardine' ? (
+            <Rocket size={15} />
+          ) : snapshot.heldItem === 'blizzard' ? (
+            <CloudSnow size={15} />
+          ) : snapshot.heldItem === 'aurora' ? (
+            <Rainbow size={15} />
+          ) : snapshot.heldItem === 'march' ? (
+            <Footprints size={15} />
           ) : snapshot.heldItem === 'snowball' ? (
             // The snowball slot wears the character's projectile skin.
             playerCharacter.projectileSkin === 'carrot' ? <Carrot size={15} /> : <Snowflake size={15} />

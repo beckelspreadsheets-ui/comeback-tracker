@@ -7,7 +7,9 @@ import {
   Banana,
   Snowflake,
   Car,
+  Fish,
   Flag,
+  Mountain,
   Gauge,
   Medal,
   Rocket,
@@ -37,6 +39,7 @@ import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
 import charSethPenguinUrl from '../assets/game/select/char-seth-penguin.png';
 import charMizzleUrl from '../assets/game/select/char-mizzle.png';
 import charTclowUrl from '../assets/game/select/char-tclow.png';
+import charLayer23Url from '../assets/game/select/char-layer23.png';
 import kartHeroUrl from '../assets/game/select/kart-hero.png';
 import kartIcesledUrl from '../assets/game/select/kart-icesled.png';
 import kartKenneyUrl from '../assets/game/select/kart-kenney.png';
@@ -45,6 +48,7 @@ import kartKenneyUrl from '../assets/game/select/kart-kenney.png';
 // scripts/select-portraits-capture.mjs — rerun it when the roster changes.
 const CHARACTER_PORTRAITS = {
   'crrt-bunny': charCrrtBunnyUrl,
+  layer23: charLayer23Url,
   mizzle: charMizzleUrl,
   'seth-penguin': charSethPenguinUrl,
   tclow: charTclowUrl,
@@ -1757,6 +1761,12 @@ const KartIntroScreen = ({ onStart }) => (
             <li className="flex items-start gap-2"><Shield size={15} className="mt-0.5 shrink-0 text-[#49d9ff]" /> <span><span className="text-white">Ice Shield</span> — a crystal dome that eats the next hit.</span></li>
             <li className="flex items-start gap-2"><Banana size={15} className="mt-0.5 shrink-0 text-[#f2ecd9]" /> <span><span className="text-white">Fish Bone</span> — drops behind you; spins out whoever runs it over.</span></li>
             <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#9fdcff]" /> <span><span className="text-white">Snowball</span> — throws forward; first kart it catches spins out. Bunny throws carrots, penguins throw ice shards. You get these when you're behind.</span></li>
+            <li className="flex items-start gap-2"><Fish size={15} className="mt-0.5 shrink-0 text-[#cfe8f4]" /> <span><span className="text-white">Slap Fish</span> — swings a big fish; spins anyone riding alongside.</span></li>
+            <li className="flex items-start gap-2"><Rocket size={15} className="mt-0.5 shrink-0 text-[#ffb066]" /> <span><span className="text-white">Rocket Sardine</span> — homes in on the kart directly ahead. A shield blocks it.</span></li>
+            <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#dff3ff]" /> <span><span className="text-white">Blizzard Cloud</span> — parks a fog dome on the road for 8s; everyone inside crawls. Yours slows you too.</span></li>
+            <li className="flex items-start gap-2"><Mountain size={15} className="mt-0.5 shrink-0 text-[#f4fbff]" /> <span><span className="text-white">Avalanche</span> — last place, final lap only: buries whoever is in 1st. Watch for the rumble.</span></li>
+            <li className="flex items-start gap-2"><Sparkles size={15} className="mt-0.5 shrink-0 text-[#9ff5d0]" /> <span><span className="text-white">Aurora Boost</span> — last place, final lap only: 3s of invincible speed. Everything you touch spins; you don't.</span></li>
+            <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#f4f8ff]" /> <span><span className="text-white">Penguin March</span> — last place, final lap only: a waddle-train of ordinal penguins crosses the road ahead. Hit the line and you spin.</span></li>
             <li>Question boxes hand you one — watch the slot in the HUD.</li>
           </ul>
         </div>

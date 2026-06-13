@@ -35,14 +35,17 @@ try {
     captured.push(path);
   };
 
-  let prev = { fishBones: 0, heldItem: null, pickups: 0, spinOuts: 0 };
+  let prev = { avalanchePending: false, blizzards: 0, fishBones: 0, heldItem: null, pickups: 0, slapping: false, spinOuts: 0 };
   const deadline = Date.now() + 90000;
   while (Date.now() < deadline) {
     const t = await page.evaluate(() => ({
+      avalanchePending: window.__comebackCityKartTelemetry?.avalanchePending ?? false,
+      blizzards: window.__comebackCityKartTelemetry?.blizzardsOnTrack ?? 0,
       finished: window.__comebackCityKartTelemetry?.finished,
       fishBones: window.__comebackCityKartTelemetry?.fishBonesOnTrack ?? 0,
       heldItem: window.__comebackCityKartTelemetry?.heldItem ?? null,
       pickups: window.__comebackCityKartTelemetry?.itemPickups ?? 0,
+      slapping: window.__comebackCityKartTelemetry?.slapping ?? false,
       spinOuts: window.__comebackCityKartTelemetry?.spinOuts ?? 0,
     }));
     if (t.finished) break;
@@ -53,6 +56,34 @@ try {
       await shoot('carrot-flight-far');
     }
     if (prev.heldItem === 'iceshield' && !t.heldItem) await shoot('iceshield-up');
+    if (t.slapping && !prev.slapping) await shoot('slapfish-swing');
+    if (t.avalanchePending && !prev.avalanchePending) {
+      await shoot('avalanche-warning');
+      await page.waitForTimeout(1500);
+      await shoot('avalanche-burst');
+    }
+    if (prev.heldItem === 'march' && !t.heldItem) {
+      await shoot('march-started');
+      await page.waitForTimeout(1300);
+      await shoot('march-crossing');
+      await page.waitForTimeout(1300);
+      await shoot('march-late');
+    }
+    if (prev.heldItem === 'aurora' && !t.heldItem) {
+      await shoot('aurora-active');
+      await page.waitForTimeout(900);
+      await shoot('aurora-active-late');
+    }
+    if (prev.heldItem === 'sardine' && !t.heldItem) {
+      await shoot('sardine-flight');
+      await page.waitForTimeout(400);
+      await shoot('sardine-flight-far');
+    }
+    if (t.blizzards > prev.blizzards) {
+      await shoot('blizzard-dropped');
+      await page.waitForTimeout(1200);
+      await shoot('blizzard-parked');
+    }
     if (t.fishBones > prev.fishBones) await shoot('fishbone-on-track', 3);
     if (t.spinOuts > prev.spinOuts) await shoot('player-hit');
     prev = t;

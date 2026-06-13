@@ -20,6 +20,7 @@ const PORTRAITS = [
   { model: '/src/assets/game/models/avatars/seth-penguin.glb', name: 'char-seth-penguin', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/avatars/mizzle.glb', name: 'char-mizzle', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/avatars/tclow-penguin.glb', name: 'char-tclow', yaw: TRIPO_POSE },
+  { model: '/src/assets/game/models/avatars/layer23-penguin.glb', name: 'char-layer23', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/tripo/hero-kart-tripo.glb', name: 'kart-hero', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/tripo/ice-sled.glb', name: 'kart-icesled', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/toy-car-kit/vehicle-drag-racer.glb', name: 'kart-kenney', yaw: KENNEY_POSE },

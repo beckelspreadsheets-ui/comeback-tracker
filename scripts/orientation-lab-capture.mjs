@@ -34,7 +34,7 @@ try {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { height: 1100, width: 1500 } });
   await page.goto(`http://127.0.0.1:${PORT}/orientation-lab.html`, { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => window.__labLoaded >= 7, null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__labLoaded >= 8, null, { timeout: 30000 });
   await page.waitForTimeout(600);
   await page.screenshot({ path: path.join(OUT, 'lab.png') });
   await browser.close();

@@ -6,9 +6,12 @@
 // Phase 3 adds fish-bone hits + spin-outs + deterministic item gates; Phase
 // 3.5 adds ballistic ramp/crest launches (rivals jump, but don't trick).
 import {
+  BLIZZARD,
   dropFishBone,
   fishBoneHitFor,
+  insideBlizzard,
   ITEM_FEEL,
+  marchHitFor,
   projectileHitFor,
   rivalItemActionAt,
   throwSnowball,
@@ -119,6 +122,26 @@ export const updateRivalRacers = (field, ctx) => {
   } = ctx;
 
   const { crestProgress, fishBones, ramps } = ctx;
+  // Avalanche (ultimate): on the final lap, the last-place racer earns the
+  // leader-killer. If that's a rival, it fires once at a fixed progress
+  // gate — deterministic comeback pressure aimed at whoever leads.
+  let avalancheBy = null;
+  if (finalLap && fishBones) {
+    let lastRival = null;
+    field.forEach((rival) => {
+      if (!lastRival || totalProgressOf(rival) < totalProgressOf(lastRival)) lastRival = rival;
+    });
+    if (
+      lastRival &&
+      !lastRival.avalancheUsed &&
+      totalProgressOf(lastRival) < player.total &&
+      lastRival.previousProgress < 0.55 &&
+      lastRival.progress >= 0.55
+    ) {
+      lastRival.avalancheUsed = true;
+      avalancheBy = lastRival.name;
+    }
+  }
   field.forEach((rival, index) => {
     const soul = rival.personality;
 
@@ -194,6 +217,15 @@ export const updateRivalRacers = (field, ctx) => {
       }
     });
 
+    // Blizzard fog caps grounded karts — rivals respect it too.
+    if (
+      ctx.blizzards &&
+      !rival.air.airborne &&
+      insideBlizzard(ctx.blizzards, rival.progress, rival.lane, trackLength)
+    ) {
+      rival.speed = Math.min(rival.speed, BLIZZARD.capSpeed);
+    }
+
     rival.previousProgress = rival.progress;
     rival.progress = wrap01(rival.progress + (rival.speed / trackLength) * dt);
     if (rival.previousProgress > 0.86 && rival.progress < 0.18) rival.lap += 1;
@@ -211,13 +243,18 @@ export const updateRivalRacers = (field, ctx) => {
         }
       } else if (action === 'cocoa') rival.boostTimer = Math.max(rival.boostTimer, 0.9);
 
-      // Fish bones and snowballs only catch grounded karts.
+      // Fish bones, snowballs and the penguin march only catch grounded
+      // karts.
       if (!rival.air.airborne) {
         const hit = fishBoneHitFor(fishBones, rival.name, rival.progress, rival.lane, trackLength);
         if (hit) rival.spinTimer = ITEM_FEEL.spinDuration;
         if (ctx.projectiles && rival.spinTimer <= 0) {
           const struck = projectileHitFor(ctx.projectiles, rival.name, rival.progress, rival.lane, trackLength);
           if (struck) rival.spinTimer = ITEM_FEEL.spinDuration;
+        }
+        if (ctx.march && rival.spinTimer <= 0 && marchHitFor(ctx.march, rival.progress, rival.lane, trackLength)) {
+          rival.spinTimer = ITEM_FEEL.spinDuration;
+          rival.speed = Math.max(46, rival.speed * 0.45);
         }
       }
     }
@@ -269,6 +306,18 @@ export const updateRivalRacers = (field, ctx) => {
       const rearFirst = karts[a].total < karts[b].total;
       karts[a].cooldown = 0.7;
       karts[b].cooldown = 0.7;
+      // Aurora Boost: the player plows through kart contact — the rival
+      // spins out and gets shoved aside, the player doesn't even wobble.
+      if (player.aurora && (!karts[a].ref || !karts[b].ref)) {
+        const other = karts[a].ref || karts[b].ref;
+        if (other) {
+          other.bumpCooldown = 0.7;
+          other.spinTimer = ITEM_FEEL.spinDuration;
+          other.lane = clamp(other.lane + (karts[a].ref ? apart : -apart) * 0.2, -wallLane, wallLane);
+          other.speed *= 0.55;
+        }
+        continue;
+      }
       [
         { kart: karts[a], lanePush: apart * 0.12, speedScale: rearFirst ? 0.9 : 0.96 },
         { kart: karts[b], lanePush: -apart * 0.12, speedScale: rearFirst ? 0.96 : 0.9 },
@@ -283,5 +332,5 @@ export const updateRivalRacers = (field, ctx) => {
       });
     }
   }
-  return { playerBump };
+  return { avalancheBy, playerBump };
 };

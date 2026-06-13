@@ -11,24 +11,69 @@ const shortDelta = (a, b) => {
   return delta;
 };
 
-export const ITEM_KEYS = ['cocoa', 'fishbone', 'iceshield', 'snowball'];
+export const ITEM_KEYS = ['aurora', 'avalanche', 'blizzard', 'cocoa', 'fishbone', 'iceshield', 'march', 'sardine', 'slapfish', 'snowball'];
 
 // HUD labels for the themed names (keys stay terse for telemetry).
 export const ITEM_LABELS = {
+  aurora: 'AURORA',
+  avalanche: 'AVALANCHE',
+  blizzard: 'BLIZZARD',
   cocoa: 'COCOA',
   fishbone: 'FISH BONE',
   iceshield: 'ICE SHIELD',
+  march: 'MARCH',
+  sardine: 'SARDINE',
+  slapfish: 'SLAP FISH',
   snowball: 'SNOWBALL',
 };
 
+// Aurora Boost: ~3s of invincible speed — fish bones, projectiles, blizzard
+// fog and kart contact all bounce off (they spin, you don't).
+export const AURORA = {
+  duration: 3,
+  speedKick: 60,
+};
+
 // Comeback logic (owner direction): the further back you are, the more
-// aggressive your pickups. Leaders get defense, tailenders get snowballs
-// and speed. Deterministic — table indexed by (boxIndex + lap).
+// aggressive your pickups. Leaders get defense only, mid-pack gets skirmish
+// and zone items, tailenders get the passing tools. Deterministic — table
+// indexed by (boxIndex + lap).
 const ITEM_TABLES = {
   1: ['fishbone', 'iceshield', 'fishbone', 'iceshield'],
-  2: ['cocoa', 'fishbone', 'iceshield', 'snowball'],
-  3: ['snowball', 'cocoa', 'fishbone', 'cocoa'],
-  4: ['snowball', 'cocoa', 'snowball', 'cocoa'],
+  2: ['cocoa', 'slapfish', 'iceshield', 'blizzard'],
+  3: ['snowball', 'slapfish', 'sardine', 'cocoa'],
+  4: ['snowball', 'sardine', 'snowball', 'cocoa'],
+};
+// Ultimates are P4-final-lap exclusive (owner-approved tiering): earned by
+// desperation, deterministic, tunable.
+const FINAL_LAP_P4_TABLE = ['avalanche', 'aurora', 'march', 'sardine'];
+
+// Slap Fish: melee swipe — spins any kart riding alongside. The counter to
+// bumper personalities; useless at range, hilarious in a scrum.
+export const SLAP_FISH = {
+  hitLane: 0.55, // generous side window — it's a fish, it's big
+  hitProgress: 12, // world units fore/aft that count as "alongside"
+  swingDuration: 0.55,
+};
+
+// Names of every racer the swipe connects with (the swiper never hits
+// themselves).
+export const slapFishHitsFor = (racers, swiperName, progress, lane, trackLength) =>
+  racers
+    .filter(
+      (racer) =>
+        racer.name !== swiperName &&
+        shortDelta(progress, racer.progress) * trackLength < SLAP_FISH.hitProgress &&
+        Math.abs(lane - racer.lane) < SLAP_FISH.hitLane
+    )
+    .map((racer) => racer.name);
+
+// Avalanche: the leader-killer ultimate. Locks onto whoever is P1 when
+// fired, rumbles a warning, then buries them — through any shield.
+export const AVALANCHE = {
+  spinDuration: 1.5,
+  speedScale: 0.35,
+  warningDuration: 1.5,
 };
 
 // Snowball: thrown forward, outruns the field, spins out the first kart it
@@ -51,9 +96,50 @@ export const throwSnowball = (projectiles, owner, progress, lane, speed, skin = 
   });
 };
 
-export const updateProjectiles = (projectiles, dt, trackLength) => {
+// Rocket Sardine: a homing snowball aimed at the kart DIRECTLY AHEAD of the
+// shooter — the passing tool (Avalanche is the leader-killer). It steers its
+// lane toward the target while it flies; a shield still eats the hit.
+export const SARDINE = {
+  laneSteer: 2.4, // lane units/s it can correct toward the target
+  relSpeed: 88,
+  ttl: 3.4,
+};
+
+// The racer directly ahead of the shooter, or null if nobody is.
+export const sardineTargetFor = (racers, shooterTotal) => {
+  let target = null;
+  racers.forEach((racer) => {
+    const gap = (racer.lap - 1 + racer.progress) - shooterTotal;
+    if (gap > 0 && (!target || gap < target.gap)) target = { gap, name: racer.name };
+  });
+  return target ? target.name : null;
+};
+
+export const throwSardine = (projectiles, owner, progress, lane, speed, targetName) => {
+  projectiles.push({
+    homing: targetName, // null = flies straight, plain snowball rules
+    lane,
+    owner,
+    progress: wrap01(progress + 6 / 3000),
+    skin: 'sardine',
+    speed: speed + SARDINE.relSpeed,
+    ttl: SARDINE.ttl,
+  });
+};
+
+// racers (optional) lets homing projectiles steer toward their target's
+// live lane; plain snowballs ignore it.
+export const updateProjectiles = (projectiles, dt, trackLength, racers = null) => {
   for (let index = projectiles.length - 1; index >= 0; index -= 1) {
     const ball = projectiles[index];
+    if (ball.homing && racers) {
+      const target = racers.find((racer) => racer.name === ball.homing);
+      if (target) {
+        const delta = target.lane - ball.lane;
+        const step = SARDINE.laneSteer * dt;
+        ball.lane += Math.abs(delta) < step ? delta : Math.sign(delta) * step;
+      }
+    }
     ball.progress = wrap01(ball.progress + (ball.speed / trackLength) * dt);
     ball.ttl -= dt;
     if (ball.ttl <= 0) projectiles.splice(index, 1);
@@ -88,9 +174,10 @@ export const ITEM_FEEL = {
 
 // Deterministic pickup: the kart's live position picks the comeback table,
 // (boxIndex + lap) rotates within it — reproducible, but being behind
-// reliably arms you.
-export const itemForPickup = (boxIndex, lap, position = 4) => {
-  const table = ITEM_TABLES[Math.min(4, Math.max(1, position))];
+// reliably arms you. P4 on the final lap unlocks the ultimates.
+export const itemForPickup = (boxIndex, lap, position = 4, finalLap = false) => {
+  const clamped = Math.min(4, Math.max(1, position));
+  const table = finalLap && clamped === 4 ? FINAL_LAP_P4_TABLE : ITEM_TABLES[clamped];
   return table[(boxIndex + lap) % table.length];
 };
 
@@ -131,6 +218,71 @@ export const fishBoneHitFor = (fishBones, kartName, progress, lane, trackLength)
   }
   return null;
 };
+
+// Blizzard Cloud: a fog dome parked on the road for ~8s that caps the speed
+// of anyone grounded inside it. Readable, dodgeable, brutal where the road
+// narrows.
+export const BLIZZARD = {
+  capSpeed: 96,
+  dropBack: 20, // world units behind the dropper — it's a trap, not a hat
+  duration: 8,
+  hitLane: 0.55,
+  hitProgress: 15, // world units — the dome is big
+};
+
+export const dropBlizzard = (blizzards, owner, progress, lane, trackLength) => {
+  blizzards.push({
+    lane,
+    owner,
+    progress: wrap01(progress - BLIZZARD.dropBack / trackLength),
+    ttl: BLIZZARD.duration,
+  });
+};
+
+export const updateBlizzards = (blizzards, dt) => {
+  for (let index = blizzards.length - 1; index >= 0; index -= 1) {
+    blizzards[index].ttl -= dt;
+    if (blizzards[index].ttl <= 0) blizzards.splice(index, 1);
+  }
+};
+
+// True when the kart is grounded inside any dome (no owner immunity — your
+// own blizzard slows you too; drop it wisely).
+export const insideBlizzard = (blizzards, progress, lane, trackLength) =>
+  blizzards.some(
+    (cloud) =>
+      shortDelta(progress, cloud.progress) * trackLength < BLIZZARD.hitProgress &&
+      Math.abs(lane - cloud.lane) < BLIZZARD.hitLane
+  );
+
+// Penguin March: the signature ultimate. A waddle-train of ordinal penguins
+// crosses the road ahead of the firer, sweeping from one edge to the other —
+// anyone grounded who hits the line spins. The train is drawn from the
+// roster, so it grows as the owner adds penguins.
+export const MARCH = {
+  aheadUnits: 110, // crossing point ahead of the firer — visible, avoidable
+  endLane: 1.45,
+  hitProgress: 9,
+  laneSpeed: 0.6, // lane units/s the train waddles across
+  startLane: -1.35, // head starts off-road
+  trainLength: 1.1, // lane units the train occupies
+};
+
+export const startMarch = (progress, trackLength) => ({
+  head: MARCH.startLane,
+  progress: wrap01(progress + MARCH.aheadUnits / trackLength),
+});
+
+// Advances the train; returns true when the tail has cleared the far edge.
+export const updateMarch = (march, dt) => {
+  march.head += MARCH.laneSpeed * dt;
+  return march.head - MARCH.trainLength > MARCH.endLane;
+};
+
+export const marchHitFor = (march, progress, lane, trackLength) =>
+  shortDelta(progress, march.progress) * trackLength < MARCH.hitProgress &&
+  lane <= march.head &&
+  lane >= march.head - MARCH.trainLength;
 
 // Deterministic rival item behavior: each rival fires at fixed progress
 // gates each lap — bumper personalities drop fish bones, racers boost.
