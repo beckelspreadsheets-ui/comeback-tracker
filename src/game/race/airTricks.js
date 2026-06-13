@@ -12,29 +12,9 @@ export const TRICK_FEEL = {
   trickSpinRate: 8.5, // rad/s of visual yaw spin
 };
 
-// Ramps live on the straights, off the center line so they're a deliberate
-// line choice; the bridge crest is a free natural launch.
-export const RAMPS = [
-  { progress: 0.075, side: -0.35 },
-  { progress: 0.685, side: 0.35 },
-];
-
-// Shortcut dare-ramp: jump the entire south carousel from the inside line.
-// Only sticks if you arrive ABOVE natural top speed (boost/mini-turbo/trick
-// required — that's the commit); case it slow and you crash-land mid-corner
-// with a long spin-out at crawl speed. Risk ≈ 4-5s lost, reward ≈ 2-3s won.
-export const SHORTCUT = {
-  failFlightTime: 0.85,
-  failLandProgress: 0.272,
-  failSpeed: 40,
-  failSpin: 1.8,
-  flightTime: 1.55,
-  landProgress: 0.365,
-  launchProgress: 0.212,
-  minSpeed: 232,
-  peakHeight: 26,
-  side: -0.7,
-};
+// Ramp placements and the dare-shortcut parameters are TRACK DATA — they
+// live in each TrackDefinition (src/game/race/tracks/). These functions take
+// the track's shortcut def so the math works for every track.
 
 export const createShortcutState = () => ({
   active: false,
@@ -45,10 +25,10 @@ export const createShortcutState = () => ({
   t: 0,
 });
 
-export const launchShortcut = (shortcut, speed, progress, lane) => {
+export const launchShortcut = (shortcut, def, speed, progress, lane) => {
   if (shortcut.active) return false;
   shortcut.active = true;
-  shortcut.failed = speed < SHORTCUT.minSpeed;
+  shortcut.failed = speed < def.minSpeed;
   shortcut.fromLane = lane;
   shortcut.fromProgress = progress;
   shortcut.styled = false;
@@ -57,9 +37,9 @@ export const launchShortcut = (shortcut, speed, progress, lane) => {
 };
 
 // Advances flight; returns { landed, failed }.
-export const updateShortcut = (shortcut, dt) => {
+export const updateShortcut = (shortcut, def, dt) => {
   if (!shortcut.active) return { failed: false, landed: false };
-  const duration = shortcut.failed ? SHORTCUT.failFlightTime : SHORTCUT.flightTime;
+  const duration = shortcut.failed ? def.failFlightTime : def.flightTime;
   shortcut.t = Math.min(1, shortcut.t + dt / duration);
   if (shortcut.t >= 1) {
     shortcut.active = false;
@@ -68,8 +48,8 @@ export const updateShortcut = (shortcut, dt) => {
   return { failed: false, landed: false };
 };
 
-export const shortcutArcHeight = (shortcut) =>
-  Math.sin(Math.PI * Math.min(1, shortcut.t)) * (shortcut.failed ? 12 : SHORTCUT.peakHeight);
+export const shortcutArcHeight = (shortcut, def) =>
+  Math.sin(Math.PI * Math.min(1, shortcut.t)) * (shortcut.failed ? 12 : def.peakHeight);
 
 export const createAirState = () => ({
   airborne: false,

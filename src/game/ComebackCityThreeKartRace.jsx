@@ -23,7 +23,7 @@ import foodFacadeUrl from '../assets/game/generated/district-facade-food.png';
 import garageFacadeUrl from '../assets/game/generated/district-facade-garage.png';
 import gymFacadeUrl from '../assets/game/generated/district-facade-gym.png';
 import labFacadeUrl from '../assets/game/generated/district-facade-lab.png';
-import { COMEBACK_CITY_COURSE_V2 } from './courseV2.js';
+import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import {
   DRIFT_FEEL,
   createDriftState,
@@ -69,8 +69,6 @@ import {
   createShortcutState,
   launchAir,
   launchShortcut,
-  RAMPS,
-  SHORTCUT,
   shortcutArcHeight,
   shortcutPitchFor,
   TRICK_FEEL,
@@ -95,8 +93,6 @@ const formatTime = (seconds = 0) => {
   return `${minutes}:${rest.toFixed(2).padStart(5, '0')}`;
 };
 
-const TOTAL_LAPS = COMEBACK_CITY_COURSE_V2.laps || 3;
-const ROAD_WIDTH = COMEBACK_CITY_COURSE_V2.mainRoadWidth || 50;
 const TRACK_SAMPLES = 112;
 const MAX_SPEED = 228;
 const BOOST_SPEED = 284;
@@ -162,11 +158,14 @@ const DISTRICT_FACADE_URLS = {
   lab: labFacadeUrl,
 };
 
-// Spawn just past the finish line so the gate frames the lap wrap at progress 0
-// without crowding the spawn camera.
-const START_PROGRESS = wrap01((COMEBACK_CITY_COURSE_V2.startProgress || 0) + 0.03);
+// Spawn offset past the finish line lives in the track def (startOffset).
+const startProgressFor = (trackDef) =>
+  wrap01((trackDef.course.startProgress || 0) + (trackDef.startOffset || 0));
 
-const createInitialRace = (rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY)) => ({
+const createInitialRace = (
+  rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY),
+  trackDef = trackByKey(DEFAULT_TRACK_KEY)
+) => ({
   airState: createAirState(),
   // Pending leader-killer: { by, target, timer } during the rumble warning.
   avalanche: null,
@@ -193,13 +192,14 @@ const createInitialRace = (rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY)) =>
   itemPickups: 0,
   landSquashTimer: 0,
   lap: 1,
+  laps: trackDef.laps,
   lane: 0,
   position: 1 + RIVALS.length,
-  previousProgress: START_PROGRESS,
-  progress: START_PROGRESS,
+  previousProgress: startProgressFor(trackDef),
+  progress: startProgressFor(trackDef),
   raceTime: 0,
   // Independent rival sim (Phase 2) — player starts at the back of the grid.
-  rivals: createRivalRacers(rivalSeats, { gridProgress: START_PROGRESS }),
+  rivals: createRivalRacers(rivalSeats, { gridProgress: startProgressFor(trackDef) }),
   shortcut: createShortcutState(),
   speed: 0,
   spinOuts: 0,
@@ -211,33 +211,36 @@ const createInitialRace = (rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY)) =>
   wallContact: false,
 });
 
-// Bridge band peaks at progress ~0.467 where the climb crosses over the
-// dive (which passes under at ~0.191); peak must clear kart visual height.
-// Measured from the generated centerline's self-intersection.
-const BRIDGE_BAND = { from: 0.4, peak: 21, to: 0.534 };
-// Crest of the bridge — crossing it at speed is a free launch window.
-const CREST_PROGRESS = (BRIDGE_BAND.from + BRIDGE_BAND.to) / 2;
-const getElevation = (progress) => {
-  const p = wrap01(progress);
-  if (p > BRIDGE_BAND.from && p < BRIDGE_BAND.to) {
-    const t = (p - BRIDGE_BAND.from) / (BRIDGE_BAND.to - BRIDGE_BAND.from);
-    return Math.sin(t * Math.PI) * BRIDGE_BAND.peak;
-  }
-  return 0;
+// Elevation comes from the track def's bridge band (sin bump between
+// from/to peaking at `peak`); the crest is the free natural launch window.
+const crestProgressFor = (trackDef) => {
+  const band = trackDef.elevation.bridgeBand;
+  return (band.from + band.to) / 2;
+};
+const makeElevation = (trackDef) => {
+  const band = trackDef.elevation.bridgeBand;
+  return (progress) => {
+    const p = wrap01(progress);
+    if (p > band.from && p < band.to) {
+      const t = (p - band.from) / (band.to - band.from);
+      return Math.sin(t * Math.PI) * band.peak;
+    }
+    return 0;
+  };
 };
 
-const makeTrackCurve = () => {
-  const points = COMEBACK_CITY_COURSE_V2.centerline.map(
-    (point, index, list) => new THREE.Vector3(point.x, getElevation(index / list.length), point.z)
+const makeTrackCurve = (trackDef, elevationAt) => {
+  const points = trackDef.course.centerline.map(
+    (point, index, list) => new THREE.Vector3(point.x, elevationAt(index / list.length), point.z)
   );
   return new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.38);
 };
 
 // Smoothed road-width table from the authored ribbons — wide carousels,
 // narrow skill sections, soft transitions (~35 world units).
-const makeWidthTable = () => {
+const makeWidthTable = (trackDef) => {
   const N = 224;
-  const ribbons = COMEBACK_CITY_COURSE_V2.roadRibbons;
+  const ribbons = trackDef.course.roadRibbons;
   const table = new Float32Array(N);
   for (let index = 0; index < N; index += 1) {
     const p = index / N;
@@ -254,9 +257,11 @@ const makeWidthTable = () => {
   return table;
 };
 
-const makeSampler = (curve) => {
+const makeSampler = (trackDef) => {
+  const elevationAt = makeElevation(trackDef);
+  const curve = makeTrackCurve(trackDef, elevationAt);
   const length = curve.getLength();
-  const widthTable = makeWidthTable();
+  const widthTable = makeWidthTable(trackDef);
   const widthAt = (progress) => {
     const scaled = wrap01(progress) * widthTable.length;
     const low = Math.floor(scaled) % widthTable.length;
@@ -265,11 +270,12 @@ const makeSampler = (curve) => {
   };
   return {
     curve,
+    elevationAt,
     length,
     pointAt(progress, lane = 0) {
       const p = wrap01(progress);
       const center = curve.getPointAt(p);
-      center.y = getElevation(p);
+      center.y = elevationAt(p);
       const tangent = curve.getTangentAt(p);
       tangent.y = 0;
       tangent.normalize();
@@ -877,7 +883,9 @@ const addGlowSprite = (parent, color, spriteScale, opacity = 0.5, y = 0) => {
   return sprite;
 };
 
-const addTrack = (world, sampler) => {
+const addTrack = (world, sampler, trackDef) => {
+  const bridgeBand = trackDef.elevation.bridgeBand;
+  const roadWidth = trackDef.course.mainRoadWidth || 50;
   const vertices = [];
   const uvs = [];
   const indices = [];
@@ -1064,7 +1072,7 @@ const addTrack = (world, sampler) => {
       const positions = [];
       const indices = [];
       for (let step = 0; step <= SKIRT_STEPS; step += 1) {
-        const p = BRIDGE_BAND.from - 0.008 + (BRIDGE_BAND.to - BRIDGE_BAND.from + 0.016) * (step / SKIRT_STEPS);
+        const p = bridgeBand.from - 0.008 + (bridgeBand.to - bridgeBand.from + 0.016) * (step / SKIRT_STEPS);
         const { point } = sampler.pointAt(p, side);
         positions.push(point.x, point.y + top, point.z, point.x, Math.max(0.05, point.y - depth), point.z);
         if (step < SKIRT_STEPS) {
@@ -1091,12 +1099,12 @@ const addTrack = (world, sampler) => {
   const onLowerRoad = (x, z) => {
     for (let index = 0; index < TRACK_SAMPLES; index += 1) {
       const { center } = sampler.pointAt(index / TRACK_SAMPLES);
-      if (center.y < 2 && Math.hypot(center.x - x, center.z - z) < ROAD_WIDTH * 0.62) return true;
+      if (center.y < 2 && Math.hypot(center.x - x, center.z - z) < roadWidth * 0.62) return true;
     }
     return false;
   };
-  for (let p = BRIDGE_BAND.from + 0.012; p < BRIDGE_BAND.to - 0.01; p += 0.018) {
-    const deckHeight = getElevation(p);
+  for (let p = bridgeBand.from + 0.012; p < bridgeBand.to - 0.01; p += 0.018) {
+    const deckHeight = sampler.elevationAt(p);
     if (deckHeight < 3.2) continue;
     const { point: beamPoint, tangent } = sampler.pointAt(p, 0);
     let pairClear = true;
@@ -1438,7 +1446,8 @@ const addOpeningFacadeRun = (world, sampler, loader, buildingSwaps) => {
   });
 };
 
-const addDistrictsAndProps = (world, sampler, loader, buildingSwaps) => {
+const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef) => {
+  const roadWidth = trackDef.course.mainRoadWidth || 50;
   const propMat = {
     cone: createBasicMaterial('#ff8b21', { emissive: '#ff8b21', emissiveIntensity: 0.18 }),
     lamp: createBasicMaterial('#9feeff', { emissive: '#56e2ff', emissiveIntensity: 1.3 }),
@@ -1450,7 +1459,7 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps) => {
   let propCount = 0;
   addOpeningFacadeRun(world, sampler, loader, buildingSwaps);
 
-  COMEBACK_CITY_COURSE_V2.districtAnchors.forEach((district) => {
+  trackDef.course.districtAnchors.forEach((district) => {
     const { normal, point, tangent } = sampler.pointAt(district.progress);
     const placement = clearBuildingPlacement(sampler, point, normal, district.side, district.setback * 0.82);
     if (!placement) return;
@@ -1516,7 +1525,7 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps) => {
     group.position.copy(point).addScaledVector(normal, side * (sampler.widthAt(progress) * 0.82 + (index % 3) * 9));
     // The anchor's own road section is cleared by construction, but the
     // route folds back on itself — skip props that land on another section.
-    if (minCenterlineDistance(sampler, group.position.x, group.position.z) < ROAD_WIDTH * 0.62) continue;
+    if (minCenterlineDistance(sampler, group.position.x, group.position.z) < roadWidth * 0.62) continue;
     group.rotation.y = Math.atan2(tangent.x, tangent.z);
     if (index % 4 === 0) {
       group.add(makeBox({ x: 2, y: 7, z: 2 }, { y: 3.5 }, propMat.trunk));
@@ -1550,7 +1559,7 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps) => {
     const { normal, point } = sampler.pointAt(progress);
     const stack = new THREE.Group();
     stack.position.copy(point).addScaledVector(normal, side * sampler.widthAt(progress) * 0.74);
-    if (minCenterlineDistance(sampler, stack.position.x, stack.position.z) < ROAD_WIDTH * 0.62) continue;
+    if (minCenterlineDistance(sampler, stack.position.x, stack.position.z) < roadWidth * 0.62) continue;
     for (let tier = 0; tier < 3; tier += 1) {
       const tire = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.72, 6, 14), propMat.tire);
       tire.position.y = 1 + tier * 1.1;
@@ -1561,7 +1570,7 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps) => {
     propCount += 1;
   }
 
-  COMEBACK_CITY_COURSE_V2.sceneryAnchors.forEach((anchor) => {
+  trackDef.course.sceneryAnchors.forEach((anchor) => {
     if (anchor.kind === 'water') {
       const water = new THREE.Mesh(
         new THREE.BoxGeometry(anchor.w, 0.4, anchor.d),
@@ -1593,6 +1602,7 @@ const createScene = ({
   onUnavailable,
   playerCharacter = characterByKey(DEFAULT_CHARACTER_KEY),
   rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY),
+  trackDef = trackByKey(DEFAULT_TRACK_KEY),
 }) => {
   const renderer = createRaceRenderer({ canvas, onUnavailable });
   if (!renderer) return null;
@@ -1636,16 +1646,17 @@ const createScene = ({
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
 
-  const curve = makeTrackCurve();
-  const sampler = makeSampler(curve);
-  addTrack(world, sampler);
+  const sampler = makeSampler(trackDef);
+  addTrack(world, sampler, trackDef);
   const questionTexture = makeQuestionTexture();
-  const boostPads = COMEBACK_CITY_COURSE_V2.boostPads.map((pad, index) => addPad(world, sampler, pad, index));
-  const itemBoxes = COMEBACK_CITY_COURSE_V2.itemBoxes.map((box, index) =>
+  const boostPads = trackDef.course.boostPads.map((pad, index) => addPad(world, sampler, pad, index));
+  const itemBoxes = trackDef.course.itemBoxes.map((box, index) =>
     addItemBox(world, sampler, box, index, questionTexture)
   );
-  RAMPS.forEach((ramp) => addRamp(world, sampler, ramp));
-  addRamp(world, sampler, { progress: SHORTCUT.launchProgress, side: SHORTCUT.side }, { dare: true });
+  trackDef.ramps.forEach((ramp) => addRamp(world, sampler, ramp));
+  if (trackDef.shortcut) {
+    addRamp(world, sampler, { progress: trackDef.shortcut.launchProgress, side: trackDef.shortcut.side }, { dare: true });
+  }
   // Fish Bone pool — meshes recycled to mirror the live fish-bone list each
   // frame (themed banana-class hazard). One merged skeleton geometry per
   // holder keeps the draw count identical to the old single-mesh drop.
@@ -1785,7 +1796,7 @@ const createScene = ({
   // Visible crest kicker — the bridge-top launch was firing invisibly
   // (owner-reported); now a glowing lip strip marks exactly where and why.
   {
-    const crest = wrap01((BRIDGE_BAND.from + BRIDGE_BAND.to) / 2);
+    const crest = wrap01(crestProgressFor(trackDef));
     const { point, tangent } = sampler.pointAt(crest);
     const kicker = new THREE.Group();
     kicker.position.copy(point);
@@ -1821,7 +1832,7 @@ const createScene = ({
   }
   addFinishGate(world, sampler);
   const buildingSwaps = [];
-  const propCount = addDistrictsAndProps(world, sampler, loader, buildingSwaps);
+  const propCount = addDistrictsAndProps(world, sampler, loader, buildingSwaps, trackDef);
 
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({
@@ -2092,7 +2103,7 @@ const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEF
     raceTime: Number(race.raceTime.toFixed(2)),
     renderer: 'three-kart',
     rivalCount: RIVALS.length,
-    rivalPositions: rivalPositionsOf((race.finished ? TOTAL_LAPS : race.lap - 1) + race.progress, race.rivals),
+    rivalPositions: rivalPositionsOf((race.finished ? race.laps : race.lap - 1) + race.progress, race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
     routeProgress: Number(race.progress.toFixed(3)),
     speed: Math.round(race.speed),
@@ -2112,6 +2123,7 @@ export const ComebackCityThreeKartRace = ({
   onRestart = null,
   reducedMotion = false,
   runId = 1,
+  track = DEFAULT_TRACK_KEY,
 }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
@@ -2145,21 +2157,33 @@ export const ComebackCityThreeKartRace = ({
     return playerCharacter.kart;
   }, [kart, playerCharacter]);
   const playerKart = kartByKey(kartKey);
+  // Track is a registry pick; ?track= override mirrors the other QA params.
+  const trackKey = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('track');
+      if (param && KART_TRACKS.some((entry) => entry.key === param)) return param;
+    }
+    return KART_TRACKS.some((entry) => entry.key === track) ? track : DEFAULT_TRACK_KEY;
+  }, [track]);
+  const trackDef = trackByKey(trackKey);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
+    const crestProgress = crestProgressFor(trackDef);
+    const startProgress = startProgressFor(trackDef);
     const rivalSeats = rivalSeatsFor(characterKey);
     const engine = createScene({
       canvas,
       onUnavailable: (error) => setWebglError(error?.message || 'WebGL unavailable'),
       playerCharacter,
       rivalSeats,
+      trackDef,
     });
     if (!engine) return undefined;
     engineRef.current = engine;
     finishReportedRef.current = false;
-    const race = createInitialRace(rivalSeats);
+    const race = createInitialRace(rivalSeats, trackDef);
     // ?itemShowcase=1 parks one of each item visual just past the spawn and
     // raises the ice shield — deterministic close-ups for the approval
     // previews (the live moments are too fast for polled screenshots).
@@ -2167,10 +2191,10 @@ export const ComebackCityThreeKartRace = ({
       // Road-edge lanes — the rivals start ahead and sweep the straight, and
       // anything inside their racing line gets eaten before the camera
       // arrives.
-      race.fishBones.push({ grace: 0, lane: -0.8, owner: 'showcase', progress: wrap01(START_PROGRESS + 0.038) });
+      race.fishBones.push({ grace: 0, lane: -0.8, owner: 'showcase', progress: wrap01(startProgress + 0.038) });
       race.projectiles.push(
-        { lane: 0.8, owner: 'showcase', progress: wrap01(START_PROGRESS + 0.044), skin: 'carrot', speed: 0, ttl: 9999 },
-        { lane: -0.8, owner: 'showcase', progress: wrap01(START_PROGRESS + 0.05), skin: 'iceshard', speed: 0, ttl: 9999 }
+        { lane: 0.8, owner: 'showcase', progress: wrap01(startProgress + 0.044), skin: 'carrot', speed: 0, ttl: 9999 },
+        { lane: -0.8, owner: 'showcase', progress: wrap01(startProgress + 0.05), skin: 'iceshard', speed: 0, ttl: 9999 }
       );
       race.shieldActive = true;
     }
@@ -2452,17 +2476,17 @@ export const ComebackCityThreeKartRace = ({
             // Shortcut flight: the kart soars over the carousel infield —
             // ground physics, pads, boxes and fish bones are all skipped.
             if (input.drift && !race.shortcut.styled) race.shortcut.styled = true;
-            const flight = updateShortcut(race.shortcut, dt);
-            const landTarget = race.shortcut.failed ? SHORTCUT.failLandProgress : SHORTCUT.landProgress;
+            const flight = updateShortcut(race.shortcut, trackDef.shortcut, dt);
+            const landTarget = race.shortcut.failed ? trackDef.shortcut.failLandProgress : trackDef.shortcut.landProgress;
             race.previousProgress = race.progress;
             race.progress = lerp(race.shortcut.fromProgress, landTarget, race.shortcut.t);
             if (!race.shortcut.failed) race.lane = lerp(race.shortcut.fromLane, -0.1, race.shortcut.t);
             if (flight.landed) {
               race.landSquashTimer = 0.18;
               if (flight.failed) {
-                race.spinTimer = SHORTCUT.failSpin;
+                race.spinTimer = trackDef.shortcut.failSpin;
                 race.spinOuts += 1;
-                race.speed = SHORTCUT.failSpeed;
+                race.speed = trackDef.shortcut.failSpeed;
               } else if (race.shortcut.styled) {
                 race.driftState.miniTurboTier = 2;
                 race.driftState.miniTurboTimer = DRIFT_FEEL.boostDurations[1];
@@ -2497,7 +2521,7 @@ export const ComebackCityThreeKartRace = ({
           // Ramps and the bridge crest launch the kart; the drift button
           // doubles as the trick button mid-air (MK-style).
           if (!airState.airborne && !spinning) {
-            RAMPS.forEach((ramp) => {
+            trackDef.ramps.forEach((ramp) => {
               if (
                 shortProgressDelta(race.progress, ramp.progress) * engine.sampler.length <
                   TRICK_FEEL.rampHitProgress &&
@@ -2506,17 +2530,17 @@ export const ComebackCityThreeKartRace = ({
                 launchAir(airState, race.speed);
               }
             });
-            if (race.previousProgress < CREST_PROGRESS && race.progress >= CREST_PROGRESS) {
+            if (race.previousProgress < crestProgress && race.progress >= crestProgress) {
               launchAir(airState, race.speed, { big: true });
             }
             // The dare ramp: commit with boost speed or eat a long spin-out.
             if (
-              shortProgressDelta(race.progress, SHORTCUT.launchProgress) * engine.sampler.length <
+              shortProgressDelta(race.progress, trackDef.shortcut.launchProgress) * engine.sampler.length <
                 TRICK_FEEL.rampHitProgress &&
-              Math.abs(race.lane - SHORTCUT.side) < TRICK_FEEL.rampHitLane &&
+              Math.abs(race.lane - trackDef.shortcut.side) < TRICK_FEEL.rampHitLane &&
               race.speed > 120
             ) {
-              launchShortcut(race.shortcut, race.speed, race.progress, race.lane);
+              launchShortcut(race.shortcut, trackDef.shortcut, race.speed, race.progress, race.lane);
             }
           }
           const airEvents = updateAir(airState, { actionHeld: Boolean(input.drift), dt });
@@ -2632,13 +2656,13 @@ export const ComebackCityThreeKartRace = ({
           race.progress = wrap01(race.progress + (race.speed / engine.sampler.length) * dt);
           if (race.previousProgress > 0.86 && race.progress < 0.18) {
             race.lap += 1;
-            if (race.lap > TOTAL_LAPS) {
-              race.lap = TOTAL_LAPS;
+            if (race.lap > race.laps) {
+              race.lap = race.laps;
               race.finished = true;
               race.speed = 0;
             }
           }
-          COMEBACK_CITY_COURSE_V2.boostPads.forEach((pad) => {
+          trackDef.course.boostPads.forEach((pad) => {
             const key = `boost-${pad.key}`;
             if (shortProgressDelta(race.progress, pad.progress) < 0.012 && Math.abs(race.lane - (pad.side || 0)) < 0.36) {
               if (!race[key]) {
@@ -2650,14 +2674,14 @@ export const ComebackCityThreeKartRace = ({
               race[key] = false;
             }
           });
-          COMEBACK_CITY_COURSE_V2.itemBoxes.forEach((box, index) => {
+          trackDef.course.itemBoxes.forEach((box, index) => {
             const key = `item-${index}`;
             if (shortProgressDelta(race.progress, box.progress) < 0.014 && Math.abs(race.lane - (box.side || 0)) < 0.42) {
               if (!race[key]) {
                 race[key] = true;
                 race.itemPickups += 1;
                 if (!race.heldItem)
-                  race.heldItem = itemForPickup(index, race.lap, race.position, race.lap === TOTAL_LAPS);
+                  race.heldItem = itemForPickup(index, race.lap, race.position, race.lap === race.laps);
               }
             } else if (shortProgressDelta(race.progress, box.progress) > 0.05) {
               race[key] = false;
@@ -2721,21 +2745,21 @@ export const ComebackCityThreeKartRace = ({
           }
           // Rivals run their own race; bumps knock both karts.
           race.bumpCooldown = Math.max(0, race.bumpCooldown - dt);
-          const playerTotal = (race.finished ? TOTAL_LAPS : race.lap - 1) + race.progress;
+          const playerTotal = (race.finished ? race.laps : race.lap - 1) + race.progress;
           const { avalancheBy, playerBump } = updateRivalRacers(race.rivals, {
-            boostPads: COMEBACK_CITY_COURSE_V2.boostPads,
+            boostPads: trackDef.course.boostPads,
             boostSpeed: BOOST_SPEED,
             cornerPushFor,
             blizzards: race.blizzards,
             march: race.march,
-            crestProgress: CREST_PROGRESS,
+            crestProgress: crestProgress,
             curvatureAt: (progress) => trackCurvatureAt(engine.sampler, progress),
             dt,
-            finalLap: race.lap === TOTAL_LAPS,
+            finalLap: race.lap === race.laps,
             fishBones: race.fishBones,
             laneScale: engine.sampler.widthAt(race.progress) * 0.44,
             maxSpeed: MAX_SPEED,
-            ramps: RAMPS,
+            ramps: trackDef.ramps,
             projectiles: race.projectiles,
             player: {
               aurora: race.auroraTimer > 0,
@@ -2807,7 +2831,7 @@ export const ComebackCityThreeKartRace = ({
         hop:
           hopHeightFor(driftState.hopTimer) +
           race.airState.height +
-          (race.shortcut.active ? shortcutArcHeight(race.shortcut) : 0),
+          (race.shortcut.active ? shortcutArcHeight(race.shortcut, trackDef.shortcut) : 0),
         pitch: airPitchFor(race.airState) + shortcutPitchFor(race.shortcut),
         slideYaw: driftState.slideYaw,
         squash: race.squash,
@@ -3117,7 +3141,7 @@ export const ComebackCityThreeKartRace = ({
         </div>
         <div className="three-kart-race__badge">
           <Flag size={15} />
-          <span>{snapshot.lap}/{TOTAL_LAPS}</span>
+          <span>{snapshot.lap}/{snapshot.laps}</span>
         </div>
         <div className="three-kart-race__badge">
           <Zap size={15} />
