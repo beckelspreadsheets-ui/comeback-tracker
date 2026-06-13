@@ -637,17 +637,22 @@ const makeNoiseTexture = ({ base, repeat = 8, speckles = [] }) => {
   return texture;
 };
 
-const makeDuskSkyTexture = () => {
+// Vertical sky gradient from per-track stops [[offset, color], ...] (top→
+// bottom). Default = the comeback-city dusk.
+const DUSK_SKY_STOPS = [
+  [0, '#0a0f28'],
+  [0.5, '#1c2150'],
+  [0.74, '#462a66'],
+  [0.86, '#a04a74'],
+  [1, '#e08a5a'],
+];
+const makeSkyTexture = (stops = DUSK_SKY_STOPS) => {
   const canvas = document.createElement('canvas');
   canvas.width = 64;
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
   const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-  gradient.addColorStop(0, '#0a0f28');
-  gradient.addColorStop(0.5, '#1c2150');
-  gradient.addColorStop(0.74, '#462a66');
-  gradient.addColorStop(0.86, '#a04a74');
-  gradient.addColorStop(1, '#e08a5a');
+  stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 64, 512);
   const texture = new THREE.CanvasTexture(canvas);
@@ -886,6 +891,7 @@ const addGlowSprite = (parent, color, spriteScale, opacity = 0.5, y = 0) => {
 const addTrack = (world, sampler, trackDef) => {
   const bridgeBand = trackDef.elevation.bridgeBand;
   const roadWidth = trackDef.course.mainRoadWidth || 50;
+  const palette = trackDef.palette || {};
   const vertices = [];
   const uvs = [];
   const indices = [];
@@ -930,14 +936,16 @@ const addTrack = (world, sampler, trackDef) => {
   road.userData.kind = 'real-3d-track-mesh';
   world.add(road);
 
-  const grassTexture = makeNoiseTexture({
-    base: '#1f4636',
-    repeat: 16,
-    speckles: [
-      { color: '#28593f', count: 380, size: 3.4 },
-      { color: '#16352a', count: 320, size: 4.2 },
-    ],
-  });
+  const grassTexture = makeNoiseTexture(
+    palette.ground || {
+      base: '#1f4636',
+      repeat: 16,
+      speckles: [
+        { color: '#28593f', count: 380, size: 3.4 },
+        { color: '#16352a', count: 320, size: 4.2 },
+      ],
+    }
+  );
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(1120, 1060, 18, 18),
     new THREE.MeshStandardMaterial({ color: '#ffffff', map: grassTexture, roughness: 0.92 })
@@ -947,8 +955,8 @@ const addTrack = (world, sampler, trackDef) => {
   ground.receiveShadow = true;
   world.add(setFlatTransform(ground));
 
-  const CURB_RED = new THREE.Color('#ff5d4f');
-  const CURB_WHITE = new THREE.Color('#f8fbff');
+  const CURB_RED = new THREE.Color(palette.curb?.a || '#ff5d4f');
+  const CURB_WHITE = new THREE.Color(palette.curb?.b || '#f8fbff');
   const buildCheckerRibbon = ({
     checkerEvery = 1,
     colorA = CURB_RED,
@@ -1021,8 +1029,8 @@ const addTrack = (world, sampler, trackDef) => {
     world.add(curb);
     const wall = buildCheckerRibbon({
       checkerEvery: 2,
-      colorA: new THREE.Color('#e94d3f'),
-      colorB: new THREE.Color('#f8fbff'),
+      colorA: new THREE.Color(palette.wall?.a || '#e94d3f'),
+      colorB: new THREE.Color(palette.wall?.b || '#f8fbff'),
       innerMul: 0.62,
       outerMul: 0.62,
       side,
@@ -1033,10 +1041,11 @@ const addTrack = (world, sampler, trackDef) => {
     world.add(wall);
     // Continuous neon edge rail on top of the barrier — the "curb lights &
     // edge lighting" module from the roadside-props card.
+    const railColor = new THREE.Color(palette.rail || '#36e2ff').multiplyScalar(1.7);
     const railTop = buildCheckerRibbon({
       checkerEvery: TRACK_SAMPLES * 2,
-      colorA: new THREE.Color('#36e2ff').multiplyScalar(1.7),
-      colorB: new THREE.Color('#36e2ff').multiplyScalar(1.7),
+      colorA: railColor,
+      colorB: railColor,
       innerMul: 0.605,
       outerMul: 0.635,
       side,
@@ -1600,6 +1609,132 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef) =
   return propCount;
 };
 
+// ---- Penguin Village dressing: the arctic/ordinal identity --------------
+// Procedural for now (no async GLB dependency); the giant statues read
+// clearly as penguins. Owner can later swap real ordinal GLBs into the
+// statue mounts. All unlit/toon, no shadow casters — cheap.
+const makeIcePenguin = (height) => {
+  const g = new THREE.Group();
+  const s = height / 10;
+  const ice = createToonMaterial('#dcebf6', { emissive: '#9fcfe6', emissiveIntensity: 0.3 });
+  const belly = createToonMaterial('#f6fbff', { emissive: '#d8ecf6', emissiveIntensity: 0.25 });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(2.6 * s, 3.2 * s, 6.4 * s, 10), ice);
+  body.position.y = 3.4 * s;
+  g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(2.5 * s, 12, 9), ice);
+  head.position.y = 7.6 * s;
+  g.add(head);
+  const bellyMesh = new THREE.Mesh(new THREE.SphereGeometry(2.2 * s, 10, 8), belly);
+  bellyMesh.scale.set(0.82, 1.3, 0.6);
+  bellyMesh.position.set(0, 3.7 * s, 1.7 * s);
+  g.add(bellyMesh);
+  const beak = new THREE.Mesh(
+    new THREE.ConeGeometry(0.7 * s, 2 * s, 7),
+    createBasicMaterial('#ff9a2e', { emissive: '#ff7d1f', emissiveIntensity: 0.4 })
+  );
+  beak.rotation.x = Math.PI / 2;
+  beak.position.set(0, 7.4 * s, 2.5 * s);
+  g.add(beak);
+  [-1, 1].forEach((side) => {
+    const flipper = new THREE.Mesh(new THREE.SphereGeometry(1 * s, 6, 6), ice);
+    flipper.scale.set(0.4, 1.6, 0.85);
+    flipper.position.set(side * 3 * s, 3.6 * s, 0);
+    g.add(flipper);
+  });
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeIceStatue = (height) => {
+  const g = new THREE.Group();
+  const pedestal = new THREE.Mesh(
+    new THREE.CylinderGeometry(height * 0.34, height * 0.42, height * 0.4, 8),
+    createToonMaterial('#bcd9ec', { emissive: '#8fc0db', emissiveIntensity: 0.2 })
+  );
+  pedestal.position.y = height * 0.2;
+  g.add(pedestal);
+  const penguin = makeIcePenguin(height * 0.78);
+  penguin.position.y = height * 0.4;
+  g.add(penguin);
+  addGlowSprite(g, '#bfeaff', height * 0.9, 0.22, height * 0.55);
+  return g;
+};
+
+const makeIgloo = (radius) => {
+  const g = new THREE.Group();
+  const snow = createToonMaterial('#eef6fb', { emissive: '#cfe4f0', emissiveIntensity: 0.18 });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), snow);
+  g.add(dome);
+  const entrance = new THREE.Mesh(new THREE.BoxGeometry(radius * 0.7, radius * 0.6, radius * 0.7), snow);
+  entrance.position.set(0, radius * 0.3, radius * 0.92);
+  g.add(entrance);
+  const hole = new THREE.Mesh(
+    new THREE.CircleGeometry(radius * 0.26, 12),
+    createBasicMaterial('#0a1622')
+  );
+  hole.position.set(0, radius * 0.32, radius * 1.28);
+  g.add(hole);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const addPenguinVillageDressing = (world, sampler, trackDef) => {
+  const roadWidth = trackDef.course.mainRoadWidth || 56;
+  // Giant ordinal-penguin ice statues at signature spots — the landmark.
+  [
+    { p: 0.16, side: 1, h: 48 },
+    { p: 0.5, side: -1, h: 42 },
+    { p: 0.82, side: 1, h: 46 },
+  ].forEach(({ p, side, h }) => {
+    const { normal, point } = sampler.pointAt(p);
+    const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 64));
+    if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.7) return;
+    const statue = makeIceStatue(h);
+    statue.position.copy(pos);
+    statue.rotation.y = Math.atan2(point.x - pos.x, point.z - pos.z); // face the road
+    world.add(statue);
+  });
+  // Igloos around the loop.
+  for (let i = 0; i < 10; i += 1) {
+    const p = (0.04 + i * 0.097) % 1;
+    const side = i % 2 === 0 ? -1 : 1;
+    const { normal, point, tangent } = sampler.pointAt(p);
+    const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 26 + (i % 3) * 10));
+    if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.62) continue;
+    const igloo = makeIgloo(7 + (i % 3) * 1.6);
+    igloo.position.copy(pos);
+    igloo.rotation.y = Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
+    world.add(setFlatTransform(igloo));
+  }
+  // Snow mounds + ice-shard clusters as low filler.
+  for (let i = 0; i < 16; i += 1) {
+    const p = (0.02 + i * 0.061) % 1;
+    const side = i % 2 === 0 ? 1 : -1;
+    const { normal, point } = sampler.pointAt(p);
+    const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 14 + (i % 4) * 6));
+    if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.56) continue;
+    if (i % 2 === 0) {
+      const mound = new THREE.Mesh(new THREE.SphereGeometry(4 + (i % 3), 8, 6), createToonMaterial('#eef6fb'));
+      mound.scale.set(1.5, 0.55, 1.5);
+      mound.position.copy(pos);
+      mound.position.y = 0.6;
+      world.add(setFlatTransform(mound));
+    } else {
+      const shard = new THREE.Mesh(
+        new THREE.ConeGeometry(1.5, 6 + (i % 3) * 2, 5),
+        createBasicMaterial('#bfe6ff', { emissive: '#9fdcff', emissiveIntensity: 0.5 })
+      );
+      shard.position.copy(pos);
+      shard.position.y = 3.2;
+      world.add(setFlatTransform(shard));
+    }
+  }
+};
+
 const createScene = ({
   canvas,
   onUnavailable,
@@ -1607,16 +1742,17 @@ const createScene = ({
   rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY),
   trackDef = trackByKey(DEFAULT_TRACK_KEY),
 }) => {
+  const palette = trackDef.palette || {};
   const renderer = createRaceRenderer({ canvas, onUnavailable });
   if (!renderer) return null;
-  renderer.setClearColor('#131a36', 1);
+  renderer.setClearColor(palette.clearColor || '#131a36', 1);
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true;
   // Hard-edged shadows match the toon shading and are markedly cheaper than PCF.
   renderer.shadowMap.type = THREE.BasicShadowMap;
 
   const scene = new THREE.Scene();
-  scene.background = makeDuskSkyTexture();
+  scene.background = makeSkyTexture(palette.sky);
   scene.fog = new THREE.Fog('#272252', 240, 820);
   const camera = new THREE.PerspectiveCamera(66, 1, 0.25, 860);
   const world = new THREE.Group();
@@ -1837,6 +1973,7 @@ const createScene = ({
   addFinishGate(world, sampler);
   const buildingSwaps = [];
   const propCount = addDistrictsAndProps(world, sampler, loader, buildingSwaps, trackDef);
+  if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef);
 
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({

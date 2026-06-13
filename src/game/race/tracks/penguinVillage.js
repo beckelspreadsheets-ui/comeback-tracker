@@ -6,18 +6,20 @@
 // the arctic dressing land in later passes. Pure data; gate scripts import it.
 import { buildCenterline, validateCenterline } from './buildCenterline.js';
 
-// Six corners forming a friendly wide loop (final world coords; no extra
-// scale). Per-corner radii: flowing side sweepers, gentler corners into the
-// straights. Validated: ~2374 units, min radius ~118, no self-intersections.
+// A loop with real character — mixed left/right turns (the W3 dent is a
+// concave right-hander, the rest sweep), a long main-street start straight,
+// a wide pond sweeper, and one tighter signature corner. Validated:
+// ~2442 units, min radius ~72, no self-intersections.
 const WAYPOINTS = [
-  { x: -364, z: 221 }, // main-street start (bottom-left)
-  { x: 364, z: 221 }, // bottom-right — end of the long start straight
-  { x: 488, z: -39 }, // frozen-pond sweep (right)
-  { x: 221, z: -293 }, // top-right
-  { x: -221, z: -293 }, // fish-market straight (top)
-  { x: -488, z: -39 }, // left return
+  { x: -380, z: 250 }, // main-street start (bottom-left)
+  { x: 320, z: 250 }, // end of the long start straight (bottom-right)
+  { x: 480, z: 70 }, // wide frozen-pond sweeper (right)
+  { x: 250, z: -40 }, // signature tight inside dent (a right-hander)
+  { x: 380, z: -250 }, // back out to the top-right
+  { x: -200, z: -300 }, // fish-market straight (top)
+  { x: -470, z: -40 }, // wide left return
 ];
-const centerline = buildCenterline(WAYPOINTS, { radius: [130, 118, 165, 118, 130, 165], spacing: 22 });
+const centerline = buildCenterline(WAYPOINTS, { radius: [120, 110, 155, 72, 110, 145, 150], spacing: 22 });
 export const PENGUIN_VILLAGE_GEOMETRY = validateCenterline(centerline);
 
 const PENGUIN_VILLAGE_COURSE = Object.freeze({
@@ -64,6 +66,32 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   elevation: { bridgeBand: { from: 0.4, peak: 0, to: 0.534 }, crestLaunch: false },
   ramps: [],
   shortcut: null,
+  // Arctic-neon palette: snow ground, icy dusk sky, ice-blue edges. Road
+  // asphalt stays dark (readability rule — Sherbet Land does the same).
+  palette: {
+    clearColor: '#0c1a2e',
+    sky: [
+      [0, '#0a1a30'],
+      [0.45, '#163a55'],
+      [0.7, '#2d6f86'],
+      [0.85, '#5fb8c4'],
+      [1, '#bfe8ec'],
+    ],
+    ground: {
+      base: '#d7e6f1',
+      repeat: 16,
+      speckles: [
+        { color: '#c4d8e6', count: 300, size: 3.4 },
+        { color: '#eef6fb', count: 340, size: 4.2 },
+        { color: '#b0c8da', count: 120, size: 2 },
+      ],
+    },
+    curb: { a: '#7fd4ff', b: '#f8fbff' },
+    rail: '#8fe6ff',
+    wall: { a: '#6fb8e0', b: '#f8fbff' },
+  },
+  // Arctic dressing: giant ordinal-penguin ice statues, igloos, snow + ice.
+  dressing: { penguinVillage: true },
   // Shorter loop than Comeback City; budgets stay generous for the gate.
   budgets: { finishSeconds: 45, speedFloor: 130 },
 });
