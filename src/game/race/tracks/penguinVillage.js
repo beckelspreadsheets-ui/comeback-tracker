@@ -62,8 +62,9 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   course: PENGUIN_VILLAGE_COURSE,
   laps: 3,
   startOffset: 0.03,
-  // Flat (peak 0) and no bridge launch — the village is ground-level for now.
-  elevation: { bridgeBand: { from: 0.4, peak: 0, to: 0.534 }, crestLaunch: false },
+  // Ice-bridge OVERPASS on the top straight (progress ~0.49-0.71): the road
+  // climbs over a frozen river and back down. No forced crest jump.
+  elevation: { bridgeBand: { from: 0.55, peak: 17, to: 0.67 }, crestLaunch: false },
   ramps: [],
   shortcut: null,
   // Arctic-neon palette: snow ground, icy dusk sky, ice-blue edges. Road
@@ -89,9 +90,14 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     curb: { a: '#7fd4ff', b: '#f8fbff' },
     rail: '#8fe6ff',
     wall: { a: '#6fb8e0', b: '#f8fbff' },
+    // Ice-bridge structure: frosted deck skirts, icy glow underline, pale
+    // ice pillars.
+    bridge: { skirt: '#1c3a4a', glow: '#8fe6ff', pillar: '#9fc6dc', pillarEmissive: '#3a6478', beam: '#3a6478' },
   },
   // Arctic dressing: giant ordinal-penguin ice statues, igloos, snow + ice.
-  dressing: { penguinVillage: true },
+  // customStartArch: skip the default finish gantry (the ICE IS NICE arch
+  // marks the start/finish instead).
+  dressing: { penguinVillage: true, customStartArch: true },
   // Shorter loop than Comeback City; budgets stay generous for the gate.
   budgets: { finishSeconds: 45, speedFloor: 130 },
 });

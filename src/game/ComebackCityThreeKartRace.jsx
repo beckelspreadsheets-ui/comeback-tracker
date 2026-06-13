@@ -1070,8 +1070,15 @@ const addTrack = (world, sampler, trackDef) => {
   // ---- Bridge structure (owner feedback: the climb must read as a real
   // bridge, not a floating road). Deck skirts hang below both road edges
   // with a neon underline; chunky pillar pairs with cross-beams carry it.
-  const skirtMat = createBasicMaterial('#1a2438', { emissive: '#1a2438', emissiveIntensity: 0.15 });
-  const skirtGlowMat = createBasicMaterial('#36e2ff', { emissive: '#36e2ff', emissiveIntensity: 1.1 });
+  const bridgeCfg = palette.bridge || {};
+  const skirtMat = createBasicMaterial(bridgeCfg.skirt || '#1a2438', {
+    emissive: bridgeCfg.skirt || '#1a2438',
+    emissiveIntensity: 0.15,
+  });
+  const skirtGlowMat = createBasicMaterial(bridgeCfg.glow || '#36e2ff', {
+    emissive: bridgeCfg.glow || '#36e2ff',
+    emissiveIntensity: 1.1,
+  });
   const SKIRT_STEPS = 26;
   [-1, 1].forEach((side) => {
     [
@@ -1101,8 +1108,11 @@ const addTrack = (world, sampler, trackDef) => {
     });
   });
 
-  const pillarMat = createBasicMaterial('#3a4a63', { emissive: '#22304a', emissiveIntensity: 0.3 });
-  const beamMat = createBasicMaterial('#2a3852');
+  const pillarMat = createBasicMaterial(bridgeCfg.pillar || '#3a4a63', {
+    emissive: bridgeCfg.pillarEmissive || '#22304a',
+    emissiveIntensity: 0.3,
+  });
+  const beamMat = createBasicMaterial(bridgeCfg.beam || '#2a3852');
   // A pillar position that lands on the lower road (the routes share ground at
   // the crossing) would stand in the racing line — skip those.
   const onLowerRoad = (x, z) => {
@@ -1326,32 +1336,36 @@ const addRamp = (world, sampler, ramp, { dare = false } = {}) => {
   return group;
 };
 
-const addFinishGate = (world, sampler) => {
+const addFinishGate = (world, sampler, trackDef) => {
   const gateWidth = sampler.widthAt(0);
   const group = new THREE.Group();
   const { point, tangent } = sampler.pointAt(0);
   group.position.copy(point);
   group.rotation.y = Math.atan2(tangent.x, tangent.z);
   group.userData.kind = 'finish-gate';
-  const postMat = createBasicMaterial('#f8fbff');
-  const boardMat = createBasicMaterial('#16213e', { emissive: '#38d7ff', emissiveIntensity: 0.4 });
-  [-1, 1].forEach((side) => {
-    const post = new THREE.Mesh(new RoundedBoxGeometry(2.2, 30, 2.2, 1, 0.5), postMat);
-    post.position.set(side * gateWidth * 0.58, 15, 0);
-    group.add(post);
-  });
-  const board = new THREE.Mesh(new RoundedBoxGeometry(gateWidth * 1.25, 8.2, 3.2, 1, 0.9), boardMat);
-  // Keep the board above the chase camera's max height so the camera never
-  // clips through it when crossing the line.
-  board.position.set(0, 32, 0);
-  group.add(board);
-  for (let x = -22; x <= 22; x += 7.4) {
-    const tile = new THREE.Mesh(
-      new THREE.BoxGeometry(3.4, 2.3, 3.2),
-      createBasicMaterial(Math.round(x / 7.4) % 2 === 0 ? '#f8fbff' : '#111827')
-    );
-    tile.position.set(x, 32.3, -1.8);
-    group.add(tile);
+  // Tracks with their own start gantry (e.g. Penguin Village's arch) skip the
+  // default overhead posts/board — only the ground checker line remains.
+  if (!trackDef.dressing?.customStartArch) {
+    const postMat = createBasicMaterial('#f8fbff');
+    const boardMat = createBasicMaterial('#16213e', { emissive: '#38d7ff', emissiveIntensity: 0.4 });
+    [-1, 1].forEach((side) => {
+      const post = new THREE.Mesh(new RoundedBoxGeometry(2.2, 30, 2.2, 1, 0.5), postMat);
+      post.position.set(side * gateWidth * 0.58, 15, 0);
+      group.add(post);
+    });
+    const board = new THREE.Mesh(new RoundedBoxGeometry(gateWidth * 1.25, 8.2, 3.2, 1, 0.9), boardMat);
+    // Keep the board above the chase camera's max height so the camera never
+    // clips through it when crossing the line.
+    board.position.set(0, 32, 0);
+    group.add(board);
+    for (let x = -22; x <= 22; x += 7.4) {
+      const tile = new THREE.Mesh(
+        new THREE.BoxGeometry(3.4, 2.3, 3.2),
+        createBasicMaterial(Math.round(x / 7.4) % 2 === 0 ? '#f8fbff' : '#111827')
+      );
+      tile.position.set(x, 32.3, -1.8);
+      group.add(tile);
+    }
   }
   for (let row = 0; row < 2; row += 1) {
     for (let column = 0; column < 10; column += 1) {
@@ -1730,25 +1744,36 @@ const makePenguinSpectator = (s = 1.1) => {
   return g;
 };
 
-// Slogan banner texture (icy plaque with bold text).
+// Slogan banner texture matching the owner's reference: teal radial panel,
+// inset glowing border, and glowing white brushy text. The white outer frame
+// is geometry (built around this panel in the arch).
 const makeSloganTexture = (text) => {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
+  canvas.width = 1024;
+  canvas.height = 256;
   const ctx = canvas.getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 0, 128);
-  grad.addColorStop(0, '#0e3a52');
-  grad.addColorStop(1, '#1a5f78');
+  const grad = ctx.createRadialGradient(512, 128, 40, 512, 128, 640);
+  grad.addColorStop(0, '#1f6480');
+  grad.addColorStop(1, '#0b2c40');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 512, 128);
-  ctx.strokeStyle = '#bfeaff';
-  ctx.lineWidth = 8;
-  ctx.strokeRect(6, 6, 500, 116);
-  ctx.fillStyle = '#eafaff';
-  ctx.font = '900 60px Arial, sans-serif';
+  ctx.fillRect(0, 0, 1024, 256);
+  // Inset glowing border.
+  ctx.strokeStyle = 'rgba(206,240,255,0.92)';
+  ctx.lineWidth = 6;
+  ctx.shadowColor = '#bfeaff';
+  ctx.shadowBlur = 18;
+  ctx.strokeRect(28, 28, 968, 200);
+  // Glowing white text — heavy condensed font + double-pass halo to read as
+  // the reference's brushy glow.
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 italic 150px "Trebuchet MS", "Arial Black", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, 256, 70);
+  ctx.shadowColor = 'rgba(150,220,255,0.95)';
+  ctx.shadowBlur = 30;
+  ctx.fillText(text, 512, 142);
+  ctx.shadowBlur = 14;
+  ctx.fillText(text, 512, 142);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
@@ -1805,6 +1830,39 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
       world.add(setFlatTransform(shard));
     }
   }
+  // Frozen river crossing UNDER the bridge overpass — what the road bridges.
+  const band = trackDef.elevation?.bridgeBand;
+  if (band && band.peak > 0) {
+    const crest = (band.from + band.to) / 2;
+    const { point, tangent } = sampler.pointAt(crest);
+    const river = new THREE.Group();
+    river.position.set(point.x, 0.2, point.z);
+    river.rotation.y = Math.atan2(tangent.x, tangent.z); // local z = along road
+    const water = new THREE.Mesh(
+      new THREE.BoxGeometry(280, 0.4, 70),
+      createBasicMaterial('#2a6a8a', { emissive: '#1a4a64', emissiveIntensity: 0.32 })
+    );
+    river.add(water);
+    const sheen = new THREE.Mesh(
+      new THREE.BoxGeometry(280, 0.1, 22),
+      new THREE.MeshBasicMaterial({ color: '#cfeeff', transparent: true, opacity: 0.4 })
+    );
+    sheen.position.y = 0.3;
+    river.add(sheen);
+    // Ice-floe shards drifting on the river.
+    [-90, -30, 40, 100].forEach((x, i) => {
+      const floe = new THREE.Mesh(
+        new THREE.CylinderGeometry(6 + (i % 2) * 3, 6 + (i % 2) * 3, 0.6, 6),
+        createToonMaterial('#eef6fb')
+      );
+      floe.position.set(x, 0.5, (i % 2 ? 1 : -1) * 16);
+      river.add(floe);
+    });
+    river.traverse((n) => {
+      n.castShadow = false;
+    });
+    world.add(setFlatTransform(river));
+  }
   // Background icebergs ringing the horizon — the "iceberg" read. Far out
   // beyond the track envelope, tall and jagged, skipping any near the road.
   for (let i = 0; i < 16; i += 1) {
@@ -1834,31 +1892,49 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
       world.add(setFlatTransform(penguin));
     }
   });
-  // "THE ICE IS NICE" arch over the start/finish — you drive under it each lap.
+  // "THE ICE IS NICE" gantry over the start/finish — white frame + teal
+  // glowing sign, matching the owner's reference. Driven under each lap.
   {
     const { point, tangent } = sampler.pointAt(wrap01(trackDef.course.startProgress || 0));
     const width = sampler.widthAt(0);
     const arch = new THREE.Group();
     arch.position.copy(point);
     arch.rotation.y = Math.atan2(tangent.x, tangent.z);
-    const postMat = createToonMaterial('#dce9f2', { emissive: '#bfeaff', emissiveIntensity: 0.2 });
+    const frameMat = createToonMaterial('#f4f9ff', { emissive: '#dceefb', emissiveIntensity: 0.3 });
+    const signY = 24;
+    const bannerW = width * 0.98;
+    const bannerH = width * 0.26;
+    const t = 2.4; // frame thickness
+    // Tall white posts at the road edges.
     [-1, 1].forEach((s) => {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.7, 27, 8), postMat);
-      post.position.set(s * (width * 0.5 + 3), 13, 0);
+      const post = new THREE.Mesh(new RoundedBoxGeometry(t * 1.4, signY + bannerH / 2 + 2, t * 1.4, 1, 0.6), frameMat);
+      post.position.set(s * (width * 0.5 + 4), (signY + bannerH / 2) / 2, 0);
       arch.add(post);
     });
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(width + 9, 1.8, 1.8), postMat);
-    bar.position.set(0, 27.5, 0);
-    arch.add(bar);
+    // White rectangular frame around the sign panel.
+    [bannerH / 2 + t / 2, -bannerH / 2 - t / 2].forEach((dy) => {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(bannerW + t * 2, t, t), frameMat);
+      bar.position.set(0, signY + dy, 0);
+      arch.add(bar);
+    });
+    [bannerW / 2 + t / 2, -bannerW / 2 - t / 2].forEach((dx) => {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(t, bannerH, t), frameMat);
+      bar.position.set(dx, signY, 0);
+      arch.add(bar);
+    });
+    // Teal glowing sign panel (readable side faces oncoming racers).
     const banner = new THREE.Mesh(
-      new THREE.PlaneGeometry(width * 0.92, width * 0.23),
-      new THREE.MeshBasicMaterial({ map: makeSloganTexture('THE ICE IS NICE'), side: THREE.DoubleSide, transparent: true })
+      new THREE.PlaneGeometry(bannerW, bannerH),
+      new THREE.MeshBasicMaterial({ map: makeSloganTexture('THE ICE IS NICE'), side: THREE.DoubleSide })
     );
-    banner.position.set(0, 23, 0);
-    // Face the readable side toward oncoming racers (they approach from -z).
+    banner.position.set(0, signY, 0.2);
     banner.rotation.y = Math.PI;
     arch.add(banner);
-    addGlowSprite(arch, '#bfeaff', 26, 0.22, 24);
+    const bannerBack = banner.clone();
+    bannerBack.position.z = -0.2;
+    bannerBack.rotation.y = 0;
+    arch.add(bannerBack);
+    addGlowSprite(arch, '#bfeaff', 30, 0.25, signY);
     arch.traverse((n) => {
       n.castShadow = false;
     });
@@ -2101,7 +2177,7 @@ const createScene = ({
     addGlowSprite(kicker, '#bfeaff', 18, 0.4, 2);
     world.add(kicker);
   }
-  addFinishGate(world, sampler);
+  addFinishGate(world, sampler, trackDef);
   const buildingSwaps = [];
   const propCount = addDistrictsAndProps(world, sampler, loader, buildingSwaps, trackDef);
   if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef);
