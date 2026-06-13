@@ -4,6 +4,46 @@ The working doc for the multi-track era. Strategy and the 12-track ranking live 
 [TRACK_SYSTEMS_PLAN.md](TRACK_SYSTEMS_PLAN.md); the arctic art kit and readability research
 live in [PENGUIN_WORLD_PLAN.md](PENGUIN_WORLD_PLAN.md). This doc is the build order.
 
+---
+
+## ⏸ PAUSE / HANDOFF NOTE (2026-06-12)
+
+Session paused here because **Claude Fable 5 was discontinued mid-build**; continuing on
+Opus 4.8, which is a different (less capable on this particular agentic-throughput work)
+model. Everything through this point is committed AND pushed to
+`origin/codex/release-v1-comebacktracker-kart-racer` (tip `9b008cc`). Nothing is lost.
+
+**Exactly where we are in Phase 0:**
+- ✅ **Phase 0.1 DONE & GREEN** (commit `9b008cc`): `TrackDefinition` extracted —
+  comeback-city is now pure data at `src/game/race/tracks/comebackCity.js`, with a registry
+  at `src/game/race/tracks/index.js`. Runtime takes a `track` prop + `?track=` override and
+  threads `trackDef` through the sampler, builders, shortcut/ramp/crest logic, laps, HUD.
+  `airTricks` shortcut helpers now take the track's shortcut def. Build + all three gates
+  pass; behavior-neutral (this was a pure refactor — the game plays identically).
+- ⏭ **Phase 0.2 NOT STARTED**: track-select row in the RaceScreen cup UI + `cc-kart-track`
+  localStorage + passing the `track` prop from RaceScreen. NOT blocking — only one track
+  exists, and the runtime already defaults to comeback-city, so the game is fully playable
+  without it. Do this when track #2 is near.
+- ⏭ **Phase 0.3 NOT STARTED**: make `kart-playable` read `budgets` from the track def
+  (already present on the def: `{ finishSeconds: 45, speedFloor: 140 }`) and accept a
+  `TRACK=<key>` env. Mechanical; do it alongside the first new track.
+- ⏭ **Phase 0.4 (hazard-system extraction: crossers/zones/breakables) NOT STARTED.** The
+  Penguin March code in `ComebackCityThreeKartRace.jsx` + `heldItems.js` is the template
+  for the `crossers` system; the blizzard `insideBlizzard` check is the template for
+  `zones`. Extract these when building Penguin Village (they're its core hazards).
+
+**Resume pointer:** the next engineer/model picks up at Phase 0.2 (or jumps straight to
+Phase 1 Penguin Village, doing 0.2–0.4 as that track needs them — the def system already
+supports a second track being added to the registry today). Kickoff prompt at the bottom
+of this doc still applies.
+
+**Capability caveat for the next model:** Fable 5 ran this build with heavy parallel
+tool use, deterministic capture tooling, and self-checking via the orientation lab + item
+captures. If continuing on a less capable model, lean hard on the existing scripts
+(`scripts/item-moment-capture.mjs`, `?giveItem=`, `?track=`, `?character=`, `?kart=`,
+orientation lab, select-portraits booth) rather than re-deriving — they encode the
+hard-won gotchas.
+
 Standing rules for every phase: the current neon track is UNTOUCHED and stays green in the
 gates; every round ends with `npm run build` + `test:kart-proof` + `test:kart-playable` +
 `test:race`, a probe/capture, a new top section in `tmp/v2-approval-preview.html`, and an
