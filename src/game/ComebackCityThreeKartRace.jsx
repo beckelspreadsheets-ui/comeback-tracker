@@ -1457,7 +1457,8 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef) =
     tire: createBasicMaterial('#151923'),
   };
   let propCount = 0;
-  addOpeningFacadeRun(world, sampler, loader, buildingSwaps);
+  // The hand-placed opening facade run is comeback-city dressing — opt-in.
+  if (trackDef.dressing?.openingFacades) addOpeningFacadeRun(world, sampler, loader, buildingSwaps);
 
   trackDef.course.districtAnchors.forEach((district) => {
     const { normal, point, tangent } = sampler.pointAt(district.progress);
@@ -1517,7 +1518,9 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef) =
     propCount += 1;
   });
 
-  for (let index = 0; index < 24; index += 1) {
+  // Roadside scatter (trees / lamps / cones / planters) is comeback-city
+  // neon-district dressing — opt-in; new tracks bring their own props.
+  if (trackDef.dressing?.roadsideProps) for (let index = 0; index < 24; index += 1) {
     const progress = (0.035 + index * 0.041) % 1;
     const side = index % 2 === 0 ? -1 : 1;
     const { normal, point, tangent } = sampler.pointAt(progress);
@@ -1553,7 +1556,7 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef) =
     propCount += 1;
   }
 
-  for (let index = 0; index < 7; index += 1) {
+  if (trackDef.dressing?.roadsideProps) for (let index = 0; index < 7; index += 1) {
     const progress = (0.12 + index * 0.12) % 1;
     const side = index % 2 === 0 ? -1 : 1;
     const { normal, point } = sampler.pointAt(progress);
@@ -1795,7 +1798,8 @@ const createScene = ({
   }
   // Visible crest kicker — the bridge-top launch was firing invisibly
   // (owner-reported); now a glowing lip strip marks exactly where and why.
-  {
+  // Only tracks with a real bridge launch get one (flat tracks opt out).
+  if (trackDef.elevation.crestLaunch) {
     const crest = wrap01(crestProgressFor(trackDef));
     const { point, tangent } = sampler.pointAt(crest);
     const kicker = new THREE.Group();
@@ -2073,7 +2077,7 @@ const readInput = (input, autoplay, race, cornerPush = 0) => {
   };
 };
 
-const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEFAULT_CHARACTER_KEY, kartKey = 'hero') => {
+const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEFAULT_CHARACTER_KEY, kartKey = 'hero', trackKey = DEFAULT_TRACK_KEY) => {
   if (typeof window === 'undefined') return;
   window.__comebackCityKartTelemetry = {
     airborne: race.airState.airborne,
@@ -2084,6 +2088,8 @@ const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEF
     blizzardsOnTrack: race.blizzards.length,
     character: characterKey,
     kart: kartKey,
+    track: trackKey,
+    laps: race.laps,
     slapping: race.slapTimer > 0,
     fishBonesOnTrack: race.fishBones.length,
     boostHits: race.boostHits,
@@ -2530,11 +2536,17 @@ export const ComebackCityThreeKartRace = ({
                 launchAir(airState, race.speed);
               }
             });
-            if (race.previousProgress < crestProgress && race.progress >= crestProgress) {
+            if (
+              trackDef.elevation.crestLaunch &&
+              race.previousProgress < crestProgress &&
+              race.progress >= crestProgress
+            ) {
               launchAir(airState, race.speed, { big: true });
             }
             // The dare ramp: commit with boost speed or eat a long spin-out.
+            // Only present on tracks that define a shortcut.
             if (
+              trackDef.shortcut &&
               shortProgressDelta(race.progress, trackDef.shortcut.launchProgress) * engine.sampler.length <
                 TRICK_FEEL.rampHitProgress &&
               Math.abs(race.lane - trackDef.shortcut.side) < TRICK_FEEL.rampHitLane &&
@@ -3053,7 +3065,7 @@ export const ComebackCityThreeKartRace = ({
       engine.sun.target.position.copy(playerSample.point);
       engine.sun.target.updateMatrixWorld();
       engine.composer.render();
-      publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey);
+      publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey);
       snapshotTimer += dt;
       if (snapshotTimer > 0.14 || race.finished) {
         snapshotTimer = 0;
@@ -3065,6 +3077,7 @@ export const ComebackCityThreeKartRace = ({
           heldItem: race.heldItem,
           itemPickups: race.itemPickups,
           lap: race.lap,
+          laps: race.laps,
           position: race.position,
           progress: race.progress,
           raceTime: race.raceTime,

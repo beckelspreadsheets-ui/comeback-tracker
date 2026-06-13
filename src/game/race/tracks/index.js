@@ -3,8 +3,9 @@
 // by track key inside the runtime so these defs stay node-importable for
 // the QA gates.
 import { COMEBACK_CITY_TRACK } from './comebackCity.js';
+import { PENGUIN_VILLAGE_TRACK } from './penguinVillage.js';
 
-export const KART_TRACKS = [COMEBACK_CITY_TRACK];
+export const KART_TRACKS = [COMEBACK_CITY_TRACK, PENGUIN_VILLAGE_TRACK];
 
 export const DEFAULT_TRACK_KEY = 'comeback-city';
 
