@@ -117,7 +117,7 @@ export const verifyAccessJwt = async (request, env) => {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (payload.exp && Number(payload.exp) <= now) {
+  if (!payload.exp || Number(payload.exp) <= now) {
     throw new SyncError(401, 'sync-auth-expired');
   }
   if (payload.nbf && Number(payload.nbf) > now) {

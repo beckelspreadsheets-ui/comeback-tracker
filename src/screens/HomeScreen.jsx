@@ -17,7 +17,12 @@ import {
   Utensils,
 } from 'lucide-react';
 import { Card } from '../components/primitives.jsx';
-import { GAME_AVATARS, isWorkoutDayComplete, nextSuggestedDay } from '../game/gameProfile.js';
+import {
+  deriveGameProfile,
+  GAME_AVATARS,
+  isWorkoutDayComplete,
+  nextSuggestedDay,
+} from '../game/gameProfile.js';
 import { PROGRAM, LIFTS } from '../lib/program.js';
 import { phaseForWeek, isDeloadWeek } from '../lib/utils.js';
 
@@ -53,70 +58,7 @@ const AVATARS = GAME_AVATARS.map((avatar) => ({
   ...(AVATAR_UI[avatar.key] || AVATAR_UI.nova),
 }));
 
-const hasSetEntry = (set) =>
-  String(set?.wt ?? '').trim() !== '' || String(set?.reps ?? '').trim() !== '';
 
-const dayFromLogKey = (key) => Number(key.match(/d(\d+)$/)?.[1]);
-
-const prescribedSetCount = (exercise) => Math.max(1, Number(exercise.sets) || 1);
-
-const summarizeWorkoutProgress = (state) => {
-  let loggedSets = 0;
-  let completedExercises = 0;
-  let jointWarnings = 0;
-
-  Object.entries(state.logs || {}).forEach(([logKey, log]) => {
-    const dayData = PROGRAM.find((day) => day.day === dayFromLogKey(logKey));
-    (log.exercises || []).forEach((exerciseLog, index) => {
-      const setCount = (exerciseLog.sets || []).filter(hasSetEntry).length;
-      const prescribed = prescribedSetCount(dayData?.exercises?.[index] || {});
-      loggedSets += setCount;
-      if (setCount >= prescribed) completedExercises += 1;
-      if (exerciseLog.joint === 'yellow') jointWarnings += 1;
-      if (exerciseLog.joint === 'red') jointWarnings += 3;
-    });
-  });
-
-  return { loggedSets, completedExercises, jointWarnings };
-};
-
-const countFoodDays = (foodLog = {}) =>
-  Object.values(foodLog).filter((day) =>
-    Object.values(day || {}).some((entries) => Array.isArray(entries) && entries.length > 0)
-  ).length;
-
-const countMetricWeeks = (metrics = []) =>
-  metrics.filter((row) => row?.bw || row?.waist || row?.arm || row?.thigh).length;
-
-const buildGameProfile = (state) => {
-  const workout = summarizeWorkoutProgress(state);
-  const foodDays = countFoodDays(state.food?.log);
-  const metricWeeks = countMetricWeeks(state.metrics);
-  const filledRMs = Object.values(state.oneRMs).filter((v) => v && !isNaN(v)).length;
-  const totalXp =
-    workout.loggedSets * 35 +
-    workout.completedExercises * 90 +
-    foodDays * 120 +
-    metricWeeks * 160 +
-    filledRMs * 40;
-  const level = Math.max(1, Math.floor(totalXp / 500) + 1);
-  const currentLevelXp = totalXp % 500;
-  const avatar = AVATARS.find((item) => item.key === state.game?.avatar) || AVATARS[0];
-  const jointHp = Math.max(0, 100 - workout.jointWarnings * 8);
-
-  return {
-    avatar,
-    totalXp,
-    level,
-    currentLevelXp,
-    nextLevelXp: 500,
-    workout,
-    foodDays,
-    metricWeeks,
-    filledRMs,
-    jointHp,
-  };
-};
 
 const ModeSwitch = ({ mode, onMode }) => (
   <div className="grid grid-cols-2 border border-bone/[0.07] bg-ink/60">
@@ -508,7 +450,7 @@ const CityMap = ({ state, onNav, game }) => {
       <CityNode
         title="Clinic"
         Icon={Shield}
-        meta={`${game.jointHp} HP`}
+        meta={`${game.recoveryShield} HP`}
         onClick={() => onNav('joint')}
         tone="pine"
         className="left-4 bottom-5"
@@ -572,8 +514,8 @@ const WorldHome = ({ state, setState, onNav, phase, deload, game }) => {
         <StatCell label="Combo" value={game.workout.completedExercises} suffix="stages" />
         <StatCell
           label="Shield"
-          value={game.jointHp}
-          tone={game.jointHp < 70 ? 'text-vermillion' : game.jointHp < 90 ? 'text-gold' : 'text-pine'}
+          value={game.recoveryShield}
+          tone={game.recoveryShield < 70 ? 'text-vermillion' : game.recoveryShield < 90 ? 'text-gold' : 'text-pine'}
         />
       </section>
 
@@ -812,7 +754,7 @@ export const HomeScreen = ({ state, setState, onNav, readOnly = false }) => {
   const deload = isDeloadWeek(state.currentWeek);
   const filledRMs = Object.values(state.oneRMs).filter((v) => v && !isNaN(v)).length;
   const calibrated = filledRMs >= 8;
-  const game = buildGameProfile(state);
+  const game = deriveGameProfile(state);
   const mode = state.game?.homeMode || 'world';
 
   const totalSessions = Object.keys(state.logs).length;

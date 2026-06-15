@@ -3436,7 +3436,7 @@ export const ComebackCityThreeKartRace = ({
           bestLap: null,
           place: race.position,
           time: race.raceTime,
-          trackKey: 'comeback-city',
+          trackKey,
         });
       }
       raf = window.requestAnimationFrame(frame);
