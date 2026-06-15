@@ -532,6 +532,24 @@ const createGroundedKartModel = ({
   });
   model.add(driftSparkGroup);
 
+  // Mini-turbo cyan burst ring — created once, animated during mini-turbo.
+  const miniTurboRing = new THREE.Mesh(
+    new THREE.TorusGeometry(3.4, 0.22, 4, 16),
+    createBasicMaterial('#00E5FF', {
+      emissive: '#00E5FF',
+      emissiveIntensity: 1.0,
+      opacity: 0.95,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  miniTurboRing.rotation.x = -Math.PI / 2;
+  miniTurboRing.position.y = 1.35;
+  miniTurboRing.visible = false;
+  miniTurboRing.renderOrder = 35;
+  model.add(miniTurboRing);
+
   // Real shadow map does the grounding now; keep a faint blob for soft contact.
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(6.2 * scale, 22),
@@ -551,7 +569,7 @@ const createGroundedKartModel = ({
   model.traverse((node) => {
     if (node.isMesh) node.castShadow = true;
   });
-  [boostFlame, driftSparkGroup].forEach((vfx) =>
+  [boostFlame, driftSparkGroup, miniTurboRing].forEach((vfx) =>
     vfx.traverse((node) => {
       node.castShadow = false;
     })
@@ -581,7 +599,7 @@ const createGroundedKartModel = ({
     });
   };
 
-  return { boostFlame, driftSparkGroup, driverMount, group, idleFlames, replaceBody, wheels };
+  return { boostFlame, driftSparkGroup, driverMount, group, idleFlames, miniTurboRing, replaceBody, wheels };
 };
 
 const makeQuestionTexture = () => {
@@ -3322,6 +3340,16 @@ export const ComebackCityThreeKartRace = ({
               (releaseFlash ? 0.9 : 0)
           );
         });
+      }
+      // Mini-turbo cyan burst ring: scale up + fade out for the boost duration.
+      const ring = engine.playerModel.miniTurboRing;
+      ring.visible = miniTurboActive;
+      if (miniTurboActive) {
+        const ringDuration = DRIFT_FEEL.boostDurations[driftState.miniTurboTier - 1] || 1;
+        const ringProgress = 1 - driftState.miniTurboTimer / ringDuration;
+        const ringScale = 0.35 + ringProgress * (1.7 + driftState.miniTurboTier * 0.25);
+        ring.scale.setScalar(ringScale);
+        ring.material.opacity = 0.95 * (1 - ringProgress);
       }
       engine.playerModel.wheels.forEach((wheel) => {
         wheel.rotation.x -= dt * race.speed * 0.12;
