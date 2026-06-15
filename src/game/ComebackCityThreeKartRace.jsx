@@ -532,6 +532,36 @@ const createGroundedKartModel = ({
   });
   model.add(driftSparkGroup);
 
+  // Tier 2+ ground ice trail — low-poly shards that scrape the road during
+  // high-tier drifts. Created once, toggled by drift tier in the render loop.
+  const driftIceTrailGroup = new THREE.Group();
+  driftIceTrailGroup.visible = false;
+  const iceTrailMaterial = createBasicMaterial('#7EC8E8', {
+    emissive: '#7EC8E8',
+    emissiveIntensity: 0.85,
+    opacity: 0.85,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  [-1, 1].forEach((side) => {
+    for (let index = 0; index < 4; index += 1) {
+      const shard = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.42 + index * 0.08, 0),
+        iceTrailMaterial.clone()
+      );
+      shard.scale.set(1.0, 0.55, 2.0);
+      shard.position.set(side * (4.3 + index * 0.42), 0.35, -5.4 - index * 1.25);
+      shard.rotation.set(
+        ((side * 37 + index * 13) % 10) * 0.04,
+        ((side * 19 + index * 7) % 8) * 0.39,
+        ((side * 53 + index * 11) % 10) * 0.04
+      );
+      driftIceTrailGroup.add(shard);
+    }
+  });
+  model.add(driftIceTrailGroup);
+
   // Mini-turbo cyan burst ring — created once, animated during mini-turbo.
   const miniTurboRing = new THREE.Mesh(
     new THREE.TorusGeometry(3.4, 0.22, 4, 16),
@@ -569,7 +599,7 @@ const createGroundedKartModel = ({
   model.traverse((node) => {
     if (node.isMesh) node.castShadow = true;
   });
-  [boostFlame, driftSparkGroup, miniTurboRing].forEach((vfx) =>
+  [boostFlame, driftSparkGroup, driftIceTrailGroup, miniTurboRing].forEach((vfx) =>
     vfx.traverse((node) => {
       node.castShadow = false;
     })
@@ -599,7 +629,7 @@ const createGroundedKartModel = ({
     });
   };
 
-  return { boostFlame, driftSparkGroup, driverMount, group, idleFlames, miniTurboRing, replaceBody, wheels };
+  return { boostFlame, driftIceTrailGroup, driftSparkGroup, driverMount, group, idleFlames, miniTurboRing, replaceBody, wheels };
 };
 
 const makeQuestionTexture = () => {
@@ -3339,6 +3369,17 @@ export const ComebackCityThreeKartRace = ({
               Math.sin(race.raceTime * 22 + sparkIndex * 1.7) * 0.18 +
               (releaseFlash ? 0.9 : 0)
           );
+        });
+      }
+      // Tier 2+ ground ice trail: visible while charging tier 2/3 drift.
+      const iceTrailTier = race.drift ? driftState.tier : 0;
+      engine.playerModel.driftIceTrailGroup.visible = iceTrailTier >= 2;
+      if (engine.playerModel.driftIceTrailGroup.visible) {
+        engine.playerModel.driftIceTrailGroup.children.forEach((shard, shardIndex) => {
+          const trailIntensity = 0.6 + (iceTrailTier - 2) * 0.35;
+          shard.material.opacity = 0.5 + trailIntensity * 0.45 + Math.sin(race.raceTime * 18 + shardIndex * 1.3) * 0.12;
+          shard.material.emissiveIntensity = 0.55 + trailIntensity * 0.45;
+          shard.scale.setScalar(0.9 + trailIntensity * 0.45 + Math.sin(race.raceTime * 14 + shardIndex * 2.1) * 0.12);
         });
       }
       // Mini-turbo cyan burst ring: scale up + fade out for the boost duration.
