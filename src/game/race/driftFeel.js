@@ -19,7 +19,7 @@ export const DRIFT_FEEL = {
   slideAngleMax: 0.5, // ~29° when steering hard into the drift
   // Index 0 is the pre-tier charging color, then tiers 1-3 (plan: blue →
   // orange → purple).
-  sparkColors: ['#f7fbff', '#46d9ef', '#ff9a2e', '#c879ff'],
+  sparkColors: ['#F5F8FF', '#00E5FF', '#7EC8E8', '#7B61FF'],
 };
 
 export const driftTierForCharge = (charge) =>
