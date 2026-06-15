@@ -523,7 +523,7 @@ const createGroundedKartModel = ({
         new THREE.DodecahedronGeometry(0.4 + index * 0.08, 0),
         createBasicMaterial(index % 2 ? '#ffd34f' : accent, {
           emissive: index % 2 ? '#ffd34f' : accent,
-          emissiveIntensity: 1.0,
+          emissiveIntensity: 0.5,
         })
       );
       spark.position.set(side * (5.0 + index * 0.3), 0.9 + index * 0.2, -4.2 - index * 0.8);
@@ -3313,7 +3313,7 @@ export const ComebackCityThreeKartRace = ({
           spark.material.color.set(sparkColor);
           spark.material.emissive?.set(sparkColor);
           if (spark.material.emissiveIntensity !== undefined) {
-            spark.material.emissiveIntensity = 0.9 + sparkTier * 0.25;
+            spark.material.emissiveIntensity = 0.55 + sparkTier * 0.18;
           }
           spark.scale.setScalar(
             0.7 +
