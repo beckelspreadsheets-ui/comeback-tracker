@@ -10,7 +10,7 @@ A personal fitness/recovery PWA built with React + Vite, deployed to Cloudflare 
 - `src/App.jsx` — custom router (single `useState`, no react-router); deep linking only via `#race` hash
 - `src/screens/` — top-level screens (Home, Day, Food, Metrics, Calibration, Settings, Joint, Race)
 - `src/components/` — shared UI (FoodEntrySheet, BarcodeScanner, RestTimer, primitives)
-- `src/hooks/usePersistedState.js` — single state atom, localStorage + cloud sync, OCC versioning, schema v4
+- `src/hooks/usePersistedState.js` — single state atom, localStorage + cloud sync, OCC versioning, schema v5
 - `src/lib/` — workout program, nutrition, food helpers, utilities
 - `src/game/` — Three.js world hub + arcade race + economy/profile derivation
 - `functions/api/` — `/sync/*` (CF Access JWT) and `/fatsecret/*` (OAuth2 proxy)
