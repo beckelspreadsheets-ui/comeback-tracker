@@ -65,34 +65,59 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   // Ice-bridge OVERPASS on the top straight (progress ~0.49-0.71): the road
   // climbs over a frozen river and back down. No forced crest jump.
   elevation: { bridgeBand: { from: 0.55, peak: 17, to: 0.67 }, crestLaunch: false },
-  ramps: [],
+  ramps: [
+    // Pond-edge kicker for a small air trick; off the racing line so it's a
+    // deliberate line choice, not a trap.
+    { progress: 0.34, side: -0.55 },
+  ],
   shortcut: null,
+  surfaceBands: [
+    { progressStart: 0, progressEnd: 0.24, laneStart: -1, laneEnd: 1, type: 'asphalt' },
+    { progressStart: 0.24, progressEnd: 0.42, laneStart: -0.75, laneEnd: 0.75, type: 'ice' },
+    { progressStart: 0.24, progressEnd: 0.42, laneStart: -1, laneEnd: -0.75, type: 'snow' },
+    { progressStart: 0.24, progressEnd: 0.42, laneStart: 0.75, laneEnd: 1, type: 'snow' },
+    { progressStart: 0.42, progressEnd: 1, laneStart: -1, laneEnd: 1, type: 'asphalt' },
+  ],
+  breakableObjects: [
+    { key: 'snowman-market-1', type: 'snowman', progress: 0.46, side: 0.72 },
+    { key: 'snowman-market-2', type: 'snowman', progress: 0.51, side: -0.7 },
+    { key: 'snowman-market-3', type: 'snowman', progress: 0.56, side: 0.74 },
+    { key: 'snowman-market-4', type: 'snowman', progress: 0.61, side: -0.72 },
+    { key: 'snowman-market-5', type: 'snowman', progress: 0.66, side: 0.7 },
+    { key: 'snowman-market-6', type: 'snowman', progress: 0.71, side: -0.74 },
+    { key: 'ice-pillar-pond-1', type: 'icePillar', progress: 0.28, side: 0.88 },
+    { key: 'ice-pillar-pond-2', type: 'icePillar', progress: 0.36, side: -0.86 },
+  ],
+  crossers: [
+    { key: 'fish-cart-market', progress: 0.55, direction: 1, speed: 0.45, width: 0.28, modelType: 'fishCart' },
+    { key: 'penguin-march-return', progress: 0.82, direction: -1, speed: 0.38, width: 0.35, modelType: 'penguinMarch' },
+  ],
   // Arctic-neon palette: snow ground, icy dusk sky, ice-blue edges. Road
   // asphalt stays dark (readability rule — Sherbet Land does the same).
   palette: {
-    clearColor: '#0c1a2e',
+    clearColor: '#0a1a2e',
     sky: [
-      [0, '#0a1a30'],
-      [0.45, '#163a55'],
-      [0.7, '#2d6f86'],
-      [0.85, '#5fb8c4'],
-      [1, '#bfe8ec'],
+      [0, '#061220'],
+      [0.42, '#0f2a42'],
+      [0.66, '#1a4a5e'],
+      [0.83, '#3a7a8a'],
+      [1, '#9fd4e0'],
     ],
     ground: {
-      base: '#d7e6f1',
+      base: '#eaf4fa',
       repeat: 16,
       speckles: [
-        { color: '#c4d8e6', count: 300, size: 3.4 },
-        { color: '#eef6fb', count: 340, size: 4.2 },
-        { color: '#b0c8da', count: 120, size: 2 },
+        { color: '#dbeaf3', count: 300, size: 3.4 },
+        { color: '#f5f9ff', count: 340, size: 4.2 },
+        { color: '#c8dde8', count: 120, size: 2 },
       ],
     },
-    curb: { a: '#7fd4ff', b: '#f8fbff' },
-    rail: '#8fe6ff',
-    wall: { a: '#6fb8e0', b: '#f8fbff' },
-    // Ice-bridge structure: frosted deck skirts, icy glow underline, pale
-    // ice pillars.
-    bridge: { skirt: '#1c3a4a', glow: '#8fe6ff', pillar: '#9fc6dc', pillarEmissive: '#3a6478', beam: '#3a6478' },
+    curb: { a: '#F5F8FF', b: '#00E5FF' },
+    rail: '#00E5FF',
+    wall: { a: '#7EC8E8', b: '#F5F8FF' },
+    // Ice-bridge structure: frosted deck skirts, bright cyan glow underline,
+    // pale ice pillars.
+    bridge: { skirt: '#1a3a4a', glow: '#00E5FF', pillar: '#a8d4e8', pillarEmissive: '#3a6a7a', beam: '#2a4a5a' },
   },
   // Arctic dressing: giant ordinal-penguin ice statues, igloos, snow + ice.
   // customStartArch: skip the default finish gantry (the ICE IS NICE arch
