@@ -2107,10 +2107,10 @@ const createScene = ({
     snowball.add(
       new THREE.Mesh(
         new THREE.SphereGeometry(2.1, 10, 8),
-        createBasicMaterial('#f4fbff', { emissive: '#bfeaff', emissiveIntensity: 0.7 })
+        createBasicMaterial('#F5F8FF', { emissive: '#00E5FF', emissiveIntensity: 0.7 })
       )
     );
-    addGlowSprite(snowball, '#9fdcff', 9, 0.45, 0);
+    addGlowSprite(snowball, '#00E5FF', 9, 0.45, 0);
     const carrot = new THREE.Group();
     carrot.userData.skin = 'carrot';
     const carrotBody = new THREE.ConeGeometry(1.5, 5.6, 8);
@@ -2130,9 +2130,9 @@ const createScene = ({
     const shardGeometry = new THREE.OctahedronGeometry(2.3);
     shardGeometry.scale(0.8, 0.8, 1.6);
     iceShard.add(
-      new THREE.Mesh(shardGeometry, createBasicMaterial('#dff6ff', { emissive: '#9fdcff', emissiveIntensity: 0.8 }))
+      new THREE.Mesh(shardGeometry, createBasicMaterial('#7EC8E8', { emissive: '#00E5FF', emissiveIntensity: 0.8 }))
     );
-    addGlowSprite(iceShard, '#bfeaff', 10, 0.55, 0);
+    addGlowSprite(iceShard, '#00E5FF', 10, 0.55, 0);
     // Rocket Sardine — a little silver fish with a rocket flame, nose-first.
     const sardine = new THREE.Group();
     sardine.userData.skin = 'sardine';
@@ -2151,9 +2151,9 @@ const createScene = ({
     sardineFlame.rotateX(-Math.PI / 2);
     sardineFlame.translate(0, 0, -3.6);
     sardine.add(
-      new THREE.Mesh(sardineFlame, createBasicMaterial('#ff7e14', { emissive: '#ff6a08', emissiveIntensity: 1.2 }))
+      new THREE.Mesh(sardineFlame, createBasicMaterial('#FF8C00', { emissive: '#FFD34F', emissiveIntensity: 1.2 }))
     );
-    addGlowSprite(sardine, '#ffb066', 10, 0.55, 0);
+    addGlowSprite(sardine, '#FFD34F', 10, 0.55, 0);
     [snowball, carrot, iceShard, sardine].forEach((variant) => {
       variant.visible = false;
       variant.position.y = 1.7;
