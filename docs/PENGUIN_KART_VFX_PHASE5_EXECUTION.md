@@ -48,12 +48,31 @@ Phase 4 agent changes are also uncommitted; I will commit only the Phase 5 task 
 | Task | Status |
 |---|---|
 | Task 1 — Verify owner target/scope brief | Done: decisions present in `docs/race-visual-target-brief.md` and `docs/race-owner-review-packet.md` |
-| Task 2 — Fresh desktop FPS baseline | In progress |
+| Task 2 — Fresh desktop FPS baseline | Done: baseline captured at `tmp/phase5-baseline/phase5-baseline-summary.json` |
 | Task 3 — Controlled FPS optimization | Pending |
 | Task 4 — Manual QA capture | Pending |
 | Task 5 — Fresh-user review | Pending |
 | Task 6 — IP/provenance and design sign-off | Pending |
 | Task 7 — Automation re-run | Pending |
+
+## Current blocker / environment note
+
+`npm run test:race:browser` does **not** complete in this local environment. It successfully runs:
+- all 24 core-loop races,
+- sustained normal-play capture,
+- no-minimap lap readability capture,
+- 7 desktop visual snapshots (idle, driving, acceleration, braking, reverse, steering-low-speed, steering-high-speed),
+
+and then times out on the `opening-sequence` visual snapshot `page.waitForFunction` even with `RACE_VISUAL_READY_TIMEOUT_MS=60000`. The same `opening-sequence` scenario passes in isolation with a fresh dev server and fresh browser, so this appears to be a cumulative environment/infra issue rather than a race-code regression.
+
+Impact:
+- Task 2 baseline was captured from the partial run artifacts.
+- Task 3 optimization will use `npm run test:race` + focused manual Playwright captures for before/after evidence instead of relying on the full browser suite.
+- Task 7 automation re-run will attempt the full suite again; if it still fails, the timeout will be documented as an environment blocker separate from any Phase 5 code changes.
+
+Mitigation:
+- Re-run `npm run test:race:browser` after each FPS change attempt; if it still times out at the same point, use the partial-run sustained telemetry and individual scenario captures as evidence.
+- Do not claim the full browser gate passes until the suite completes.
 
 ## Task-by-task plan
 
@@ -68,11 +87,32 @@ Phase 4 agent changes are also uncommitted; I will commit only the Phase 5 task 
 
 ### Task 2 — Fresh desktop FPS baseline and scene budget
 
-- **Files touched:** `tmp/race-playtests/race-browser-playtest-summary.json` (artifact), `docs/PENGUIN_KART_VFX_PHASE5_EXECUTION.md` (record evidence path), possibly telemetry constants in `src/game/race/render/createRaceScene.js` only if the budget probe needs exported constants.
-- **Goal:** Run `npm run test:race:browser` and record fresh focused + sustained desktop FPS, frame work/render times, renderer calls/triangles/programs/textures, and scene budget counts.
+- **Status:** Done — baseline captured from partial `npm run test:race:browser` run; full suite times out in this environment after 7 successful desktop visual snapshots.
+- **Files touched:** `docs/PENGUIN_KART_VFX_PHASE5_BASELINE.json` (committed summary), `docs/PENGUIN_KART_VFX_PHASE5_EXECUTION.md`, and evidence in `.agent/runs/kart-racer-production-readiness/evidence/phase5-baseline-20260616/` (gitignored).
+- **Goal:** Capture fresh focused + sustained desktop FPS, frame work/render times, renderer calls/triangles/programs/textures, and scene budget counts.
 - **Preservation gates:** kart size, road-ahead coverage, visible rivals ≥3, HUD overlap, route lookahead, camera clip count = 0, drift, boost, item pickup, reduced motion, audio mute, WebGL fallback.
-- **Acceptance:** `npm run test:race`, `npm run test:race:browser`, and `npm run build` pass; baseline is recorded with timestamp and path.
-- **Screenshot/telemetry:** Attach `tmp/race-playtests/race-browser-playtest-summary.json`; note sustained normal-play actual FPS, desktop focused actual FPS, and budget counts.
+- **Acceptance:** `npm run test:race` and `npm run build` pass; baseline recorded with timestamp and evidence path. `npm run test:race:browser` does not complete in this environment due to a cumulative timeout on the `opening-sequence` visual snapshot (see blocker note below); partial artifacts are preserved.
+- **Baseline results:**
+  - Captured at: `2026-06-16T21:16:11.807Z`
+  - Branch/commit: `codex/release-v1-comebacktracker-kart-racer` / `ccc4b95d`
+  - Sustained normal play (`raceNoFinish=1`, lap 2, normalized speed ~0.667):
+    - `actualFps.average`: **22.69** (min 20.8, max 26.2)
+    - `deliveredFps`: **21.03**
+    - `frameElapsedMs.average`: **52.9**
+    - `frameWorkMs.average`: **1.6**
+    - Renderer: **313 calls**, **59976 triangles**, **8 programs**, **19 textures**
+    - Scene budget: **881 objects**, **737 meshes**, **173 instanced meshes**, **251 materials**, **79266 triangles**
+      - track: 260 objects, 235 meshes, 43338 triangles
+      - scenery: 310 objects, 266 meshes, 23944 triangles
+      - rivals/player: 188 objects, 148 meshes, 6968 triangles
+      - pickups: 118 objects, 88 meshes, 5016 triangles
+      - vfx: 27 objects, 22 meshes, 1396 triangles
+  - Focused desktop states (from partial visual snapshots):
+    - idle: actualFps **34.4**, kart height ratio **0.16**, roadAheadCoverage **1.0**, visibleRivals **3**, clipCount **0**
+    - driving: actualFps **35.9**, kart height ratio **0.212**, roadAheadCoverage **1.0**, visibleRivals **3**, clipCount **0**
+- **Evidence path:** `.agent/runs/kart-racer-production-readiness/evidence/phase5-baseline-20260616/phase5-baseline-summary.json`
+- **Committed summary:** `docs/PENGUIN_KART_VFX_PHASE5_BASELINE.json`
+- **Screenshot/telemetry:** `.agent/runs/kart-racer-production-readiness/evidence/phase5-baseline-20260616/sustained-normal-play-comeback-city.telemetry.json`, `visual-comeback-city-desktop-*.telemetry.json`, and corresponding PNGs.
 - **Commit:** `Capture Phase 5 desktop FPS baseline and scene budget`
 
 ### Task 3 — Controlled FPS optimization pass

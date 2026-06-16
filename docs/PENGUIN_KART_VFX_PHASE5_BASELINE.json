@@ -1,0 +1,112 @@
+{
+  "capturedAt": "2026-06-16T21:16:11.807Z",
+  "git": {
+    "branch": "codex/release-v1-comebacktracker-kart-racer",
+    "commit": "ccc4b95d"
+  },
+  "evidenceDir": ".agent/runs/kart-racer-production-readiness/evidence/phase5-baseline-20260616",
+  "sustainedNormalPlay": {
+    "actualFps": {
+      "average": 22.69,
+      "max": 26.2,
+      "min": 20.8,
+      "sampleCount": 34
+    },
+    "deliveredFps": 21.03,
+    "frameElapsedMs": {
+      "average": 52.9,
+      "max": 83.3,
+      "min": 33.7,
+      "sampleCount": 34
+    },
+    "frameWorkMs": {
+      "average": 1.6,
+      "max": 6.01,
+      "min": 1.11,
+      "sampleCount": 34
+    },
+    "renderer": {
+      "calls": 313,
+      "frame": 226,
+      "geometries": 546,
+      "lines": 0,
+      "points": 0,
+      "programs": 8,
+      "textures": 19,
+      "triangles": 59976
+    },
+    "sceneBudget": {
+      "categories": {
+        "pickups": {
+          "geometries": 88,
+          "groups": 30,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 47,
+          "meshes": 88,
+          "objects": 118,
+          "rootCount": 36,
+          "triangles": 5016
+        },
+        "rivalsAndPlayer": {
+          "geometries": 148,
+          "groups": 40,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 63,
+          "meshes": 148,
+          "objects": 188,
+          "rootCount": 4,
+          "triangles": 6968
+        },
+        "scenery": {
+          "geometries": 231,
+          "groups": 27,
+          "instancedMeshes": 43,
+          "lights": 0,
+          "materials": 123,
+          "meshes": 266,
+          "objects": 310,
+          "rootCount": 105,
+          "triangles": 23944
+        },
+        "track": {
+          "geometries": 115,
+          "groups": 22,
+          "instancedMeshes": 130,
+          "lights": 0,
+          "materials": 19,
+          "meshes": 235,
+          "objects": 260,
+          "rootCount": 153,
+          "triangles": 43338,
+          "instancedTrackMeshCount": 117,
+          "visualSegmentCount": 111
+        },
+        "vfx": {
+          "geometries": 22,
+          "groups": 5,
+          "instancedMeshes": 0,
+          "lights": 0,
+          "materials": 19,
+          "meshes": 22,
+          "objects": 27,
+          "rootCount": 6,
+          "triangles": 1396
+        }
+      },
+      "scene": {
+        "geometries": 582,
+        "groups": 120,
+        "instancedMeshes": 173,
+        "lights": 3,
+        "materials": 251,
+        "meshes": 737,
+        "objects": 881,
+        "rootCount": 1,
+        "triangles": 79266
+      }
+    }
+  },
+  "note": "Captured from npm run test:race:browser partial run; full suite times out in this environment on opening-sequence visual snapshot after 7 successful desktop snapshots."
+}
