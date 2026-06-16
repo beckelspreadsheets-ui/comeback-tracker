@@ -458,7 +458,7 @@ const createGroundedKartModel = ({
   // Rear bumper, light bar, exhausts
   addPart(box(6.9, 1.05, 0.9, blackMat), 0, 2.2, -4.95);
   addPart(box(4.2, 0.42, 0.26, createBasicMaterial('#ff4a3d', { emissive: '#ff4a3d', emissiveIntensity: 1.0 })), 0, 2.95, -5.2);
-  const flameMat = createBasicMaterial('#ff7e14', { emissive: '#ff6a08', emissiveIntensity: 1.25 });
+  const flameMat = createBasicMaterial('#FF8C00', { emissive: '#FF8C00', emissiveIntensity: 1.0 });
   const idleFlames = [];
   [-1.5, 1.5].forEach((x) => {
     const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.54, 1.2, 8), hubMat);
@@ -507,8 +507,9 @@ const createGroundedKartModel = ({
 
   const boostFlame = new THREE.Group();
   boostFlame.visible = false;
+  const boostFlameMat = createBasicMaterial('#FF8C00', { emissive: '#FFD34F', emissiveIntensity: 1.1 });
   [-1.5, 1.5].forEach((x) => {
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.8, 4.6, 7), flameMat.clone());
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.8, 4.6, 7), boostFlameMat.clone());
     flame.position.set(x, 2.1, -8.0);
     flame.rotation.x = -Math.PI / 2;
     boostFlame.add(flame);
