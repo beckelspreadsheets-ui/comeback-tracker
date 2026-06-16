@@ -1969,6 +1969,130 @@ const makeCannerySign = () => {
   return g;
 };
 
+const makeSnowyLampPost = () => {
+  const g = new THREE.Group();
+  const poleMat = createToonMaterial('#4a5568');
+  const snowMat = createToonMaterial('#F5F8FF');
+  const amber = createBasicMaterial('#F5A623', { emissive: '#FFD34F', emissiveIntensity: 0.9 });
+  // Pole and base.
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 11, 8), poleMat);
+  pole.position.y = 5.5;
+  g.add(pole);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 1.2, 8), poleMat);
+  base.position.y = 0.6;
+  g.add(base);
+  const snowBase = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.6, 0.7, 8), snowMat);
+  snowBase.position.y = 0.35;
+  g.add(snowBase);
+  // Lantern arm and glowing lamp.
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 2.4), poleMat);
+  arm.position.set(0, 9.8, 0.8);
+  g.add(arm);
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2, 1.4), amber);
+  lamp.position.set(0, 9, 2);
+  g.add(lamp);
+  // Snow cap on the pole top.
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(1, 1.2, 8), snowMat);
+  cap.position.y = 11.6;
+  g.add(cap);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makePennantFlags = () => {
+  const g = new THREE.Group();
+  const poleMat = createToonMaterial('#4a5568');
+  const snowMat = createToonMaterial('#F5F8FF');
+  const colors = ['#00E5FF', '#F5F8FF', '#FFD34F'];
+  [-1, 1].forEach((sx) => {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 9, 8), poleMat);
+    pole.position.set(sx * 5, 4.5, 0);
+    g.add(pole);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 0.6, 8), snowMat);
+    base.position.set(sx * 5, 0.3, 0);
+    g.add(base);
+  });
+  // String with triangular pennants.
+  for (let i = 0; i < 5; i += 1) {
+    const t = (i + 1) / 6;
+    const x = -5 + t * 10;
+    const y = 8.2 - Math.sin(t * Math.PI) * 1.2;
+    const flag = new THREE.Mesh(
+      new THREE.ConeGeometry(0.7, 1.4, 3),
+      createBasicMaterial(colors[i % colors.length])
+    );
+    flag.rotation.z = -Math.PI / 2;
+    flag.rotation.y = Math.PI / 2;
+    flag.position.set(x, y - 0.7, 0);
+    g.add(flag);
+  }
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makePenguinCrossingTexture = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#00E5FF';
+  ctx.beginPath();
+  ctx.moveTo(128, 8);
+  ctx.lineTo(248, 128);
+  ctx.lineTo(128, 248);
+  ctx.lineTo(8, 128);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#F5F8FF';
+  ctx.lineWidth = 10;
+  ctx.stroke();
+  // Simple penguin silhouette.
+  ctx.fillStyle = '#F5F8FF';
+  ctx.beginPath();
+  ctx.ellipse(128, 120, 38, 52, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(128, 70, 26, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#00E5FF';
+  ctx.beginPath();
+  ctx.ellipse(128, 132, 22, 34, 0, 0, Math.PI * 2);
+  ctx.fill();
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+};
+
+const makePenguinCrossingSign = () => {
+  const g = new THREE.Group();
+  const poleMat = createToonMaterial('#4a5568');
+  const snowMat = createToonMaterial('#F5F8FF');
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 8.5, 8), poleMat);
+  pole.position.y = 4.25;
+  g.add(pole);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 0.8, 8), snowMat);
+  base.position.y = 0.4;
+  g.add(base);
+  const board = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.4, 4.4),
+    new THREE.MeshBasicMaterial({ map: makePenguinCrossingTexture(), side: THREE.DoubleSide })
+  );
+  board.position.set(0, 7.4, 0.35);
+  g.add(board);
+  const boardBack = board.clone();
+  boardBack.position.z = -0.35;
+  boardBack.rotation.y = Math.PI;
+  g.add(boardBack);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
 const addPenguinVillageDressing = (world, sampler, trackDef) => {
   const roadWidth = trackDef.course.mainRoadWidth || 56;
   // Giant ordinal-penguin ice statues at signature spots — the landmark.
@@ -2019,6 +2143,29 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
       shard.position.y = 3.2;
       world.add(setFlatTransform(shard));
     }
+  }
+  // Main-street prop dressing along the long start straight (0.0–0.24).
+  {
+    const streetProps = [
+      { p: 0.04, side: -1, type: 'lamp' },
+      { p: 0.09, side: 1, type: 'lamp' },
+      { p: 0.14, side: -1, type: 'lamp' },
+      { p: 0.19, side: 1, type: 'lamp' },
+      { p: 0.06, side: 1, type: 'flags' },
+      { p: 0.16, side: -1, type: 'flags' },
+      { p: 0.22, side: 1, type: 'crossing' },
+    ];
+    streetProps.forEach(({ p, side, type }) => {
+      const { normal, point, tangent } = sampler.pointAt(p);
+      const offset = type === 'crossing' ? 22 : type === 'flags' ? 18 : 16;
+      const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + offset));
+      if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.58) return;
+      const prop = type === 'lamp' ? makeSnowyLampPost() : type === 'flags' ? makePennantFlags() : makePenguinCrossingSign();
+      prop.position.copy(pos);
+      prop.position.y = 0;
+      prop.rotation.y = Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
+      world.add(setFlatTransform(prop));
+    });
   }
   // Frozen river crossing UNDER the bridge overpass — what the road bridges.
   const band = trackDef.elevation?.bridgeBand;
