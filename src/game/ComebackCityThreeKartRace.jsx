@@ -2309,10 +2309,10 @@ const createScene = ({
     ribbonCanvas.height = 256;
     const ribbonCtx = ribbonCanvas.getContext('2d');
     const ribbonGradient = ribbonCtx.createLinearGradient(0, 0, 0, 256);
-    ribbonGradient.addColorStop(0, 'rgba(124, 247, 160, 0)');
-    ribbonGradient.addColorStop(0.35, 'rgba(124, 247, 200, 0.85)');
-    ribbonGradient.addColorStop(0.7, 'rgba(110, 220, 255, 0.75)');
-    ribbonGradient.addColorStop(1, 'rgba(190, 130, 255, 0)');
+    ribbonGradient.addColorStop(0, 'rgba(0, 229, 201, 0)');
+    ribbonGradient.addColorStop(0.35, 'rgba(57, 255, 140, 0.85)');
+    ribbonGradient.addColorStop(0.7, 'rgba(123, 97, 255, 0.75)');
+    ribbonGradient.addColorStop(1, 'rgba(0, 229, 201, 0)');
     ribbonCtx.fillStyle = ribbonGradient;
     ribbonCtx.fillRect(0, 0, 64, 256);
     const ribbonTexture = new THREE.CanvasTexture(ribbonCanvas);
@@ -2332,7 +2332,7 @@ const createScene = ({
       ribbon.userData.phase = order * 2.1;
       auroraRig.add(ribbon);
     });
-    addGlowSprite(auroraRig, '#9ff5d0', 14, 0.35, 3);
+    addGlowSprite(auroraRig, '#39FF8C', 14, 0.35, 3);
   }
   auroraRig.traverse((node) => {
     node.castShadow = false;
