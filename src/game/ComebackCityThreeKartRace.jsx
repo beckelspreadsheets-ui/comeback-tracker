@@ -2170,17 +2170,17 @@ const createScene = ({
     holder.visible = false;
     const outer = new THREE.Mesh(
       new THREE.SphereGeometry(15, 18, 12),
-      new THREE.MeshBasicMaterial({ color: '#dff3ff', depthWrite: false, opacity: 0.3, transparent: true })
+      new THREE.MeshBasicMaterial({ color: '#7EC8E8', depthWrite: false, opacity: 0.28, transparent: true })
     );
     outer.scale.set(1, 0.5, 1);
     holder.add(outer);
     const inner = new THREE.Mesh(
       new THREE.SphereGeometry(10, 14, 10),
-      new THREE.MeshBasicMaterial({ color: '#f4fbff', depthWrite: false, opacity: 0.4, transparent: true })
+      new THREE.MeshBasicMaterial({ color: '#F5F8FF', depthWrite: false, opacity: 0.36, transparent: true })
     );
     inner.scale.set(1, 0.5, 1);
     holder.add(inner);
-    addGlowSprite(holder, '#dff3ff', 20, 0.22, 5);
+    addGlowSprite(holder, '#00E5FF', 20, 0.22, 5);
     holder.userData.shells = [outer, inner];
     holder.traverse((node) => {
       node.castShadow = false;
