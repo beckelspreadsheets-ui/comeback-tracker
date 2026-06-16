@@ -2083,7 +2083,7 @@ const createScene = ({
     holder.visible = false;
     const bone = new THREE.Mesh(
       fishBoneGeometry,
-      createToonMaterial('#f7f1de', { emissive: '#e3d9b4', emissiveIntensity: 0.32 })
+      createToonMaterial('#F5F8FF', { emissive: '#7EC8E8', emissiveIntensity: 0.32 })
     );
     // Items read oversized on purpose (MK rule) — at race speed and camera
     // distance a true-scale prop disappears. (Round-7 owner feedback:
@@ -2091,7 +2091,7 @@ const createScene = ({
     bone.scale.setScalar(1.5);
     bone.position.y = 2.1;
     holder.add(bone);
-    addGlowSprite(holder, '#f7f1de', 9, 0.42, 1.6);
+    addGlowSprite(holder, '#00E5FF', 9, 0.42, 1.6);
     world.add(holder);
     fishBonePool.push(holder);
   }
