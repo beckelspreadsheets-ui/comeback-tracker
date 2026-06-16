@@ -2170,6 +2170,116 @@ const makeFrozenTireBumper = () => {
   return g;
 };
 
+const makeVillageBench = () => {
+  const g = new THREE.Group();
+  const wood = createToonMaterial('#9c6b3c');
+  const snow = createToonMaterial('#F5F8FF');
+  const metal = createToonMaterial('#7EC8E8');
+  // Seat and back slats.
+  g.add(makeBox({ x: 7, y: 0.5, z: 2.2 }, { y: 1.5, z: 0.6 }, wood));
+  g.add(makeBox({ x: 7, y: 2.2, z: 0.4 }, { y: 2.6, z: -0.4 }, wood));
+  // Legs / armrests.
+  [-1, 1].forEach((sx) => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.6, 3.2, 2.4), metal);
+    arm.position.set(sx * 3.6, 1.6, 0.4);
+    g.add(arm);
+  });
+  // Snow on the seat and back.
+  g.add(makeBox({ x: 7.2, y: 0.35, z: 2.4 }, { y: 1.8, z: 0.6 }, snow));
+  g.add(makeBox({ x: 7.2, y: 0.35, z: 0.6 }, { y: 3.75, z: -0.4 }, snow));
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeIglooMailbox = () => {
+  const g = new THREE.Group();
+  const ice = createToonMaterial('#EAF4FA', { emissive: '#D6ECF7', emissiveIntensity: 0.15 });
+  const door = createToonMaterial('#00E5FF');
+  const poleMat = createToonMaterial('#4a5568');
+  // Pole.
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 4.5, 8), poleMat);
+  pole.position.y = 2.25;
+  g.add(pole);
+  // Igloo body.
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(2.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), ice);
+  dome.position.y = 4.2;
+  g.add(dome);
+  // Door slot.
+  const slot = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.6, 0.4), door);
+  slot.position.set(0, 4.2, 2.0);
+  g.add(slot);
+  // Little flag.
+  const flag = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 0.1), createBasicMaterial('#F5A623'));
+  flag.position.set(1.4, 5.4, 0);
+  g.add(flag);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeSledCart = () => {
+  const g = new THREE.Group();
+  const wood = createToonMaterial('#9c6b3c');
+  const metal = createToonMaterial('#7EC8E8');
+  const rope = createToonMaterial('#c49a6c');
+  // Bed.
+  g.add(makeBox({ x: 8, y: 0.6, z: 4 }, { y: 1.4 }, wood));
+  // Side rails.
+  [-1, 1].forEach((sz) => {
+    g.add(makeBox({ x: 8.4, y: 0.5, z: 0.4 }, { y: 2.0, z: sz * 2.0 }, metal));
+  });
+  // Front handlebars.
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 4, 8), metal);
+  handle.rotation.x = Math.PI / 2;
+  handle.position.set(4.8, 2.4, 0);
+  g.add(handle);
+  const upright = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.6, 8), metal);
+  upright.position.set(4.2, 2.0, 0);
+  g.add(upright);
+  // Runners.
+  [-1, 1].forEach((sz) => {
+    const runner = new THREE.Mesh(new THREE.BoxGeometry(9.5, 0.3, 0.4), metal);
+    runner.position.set(-0.3, 0.4, sz * 2.2);
+    g.add(runner);
+  });
+  // Rope coil at the front.
+  const coil = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.2, 6, 12), rope);
+  coil.rotation.x = Math.PI / 2;
+  coil.position.set(5.4, 0.5, 0);
+  g.add(coil);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeIceBlockBarrier = () => {
+  const g = new THREE.Group();
+  const ice = createToonMaterial('#7EC8E8', { emissive: '#00E5FF', emissiveIntensity: 0.25 });
+  const metal = createToonMaterial('#F5F8FF');
+  // Two rows of ice blocks.
+  for (let row = 0; row < 2; row += 1) {
+    for (let col = 0; col < 4; col += 1) {
+      const block = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.4, 2.6), ice);
+      block.position.set(col * 2.7 - 4.05, 1.2 + row * 2.3, (row % 2 ? 0.6 : -0.6));
+      g.add(block);
+    }
+  }
+  // Corner brackets.
+  [-1, 1].forEach((sx) => {
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.8, 5.2, 0.8), metal);
+    bracket.position.set(sx * 5.4, 2.6, 0);
+    g.add(bracket);
+  });
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
 const addPenguinVillageDressing = (world, sampler, trackDef) => {
   const roadWidth = trackDef.course.mainRoadWidth || 56;
   // Giant ordinal-penguin ice statues at signature spots — the landmark.
@@ -2360,6 +2470,34 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
           : type === 'stall'
           ? makeMarketStall()
           : makeCannerySign();
+      prop.position.copy(pos);
+      prop.position.y = 0;
+      prop.rotation.y = Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
+      world.add(setFlatTransform(prop));
+    });
+  }
+  // Return-bend village prop dressing (0.72–1.0).
+  {
+    const returnProps = [
+      { p: 0.74, side: -1, type: 'bench', offset: 16 },
+      { p: 0.78, side: 1, type: 'mailbox', offset: 15 },
+      { p: 0.84, side: -1, type: 'sled', offset: 18 },
+      { p: 0.9, side: 1, type: 'barrier', offset: 16 },
+      { p: 0.95, side: -1, type: 'bench', offset: 16 },
+      { p: 0.98, side: 1, type: 'mailbox', offset: 14 },
+    ];
+    returnProps.forEach(({ p, side, type, offset }) => {
+      const { normal, point, tangent } = sampler.pointAt(p);
+      const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + offset));
+      if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.58) return;
+      const prop =
+        type === 'bench'
+          ? makeVillageBench()
+          : type === 'mailbox'
+          ? makeIglooMailbox()
+          : type === 'sled'
+          ? makeSledCart()
+          : makeIceBlockBarrier();
       prop.position.copy(pos);
       prop.position.y = 0;
       prop.rotation.y = Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
