@@ -651,7 +651,7 @@ const makeQuestionTexture = () => {
   return texture;
 };
 
-const ITEM_BOX_COLORS = ['#38d7ff', '#b56cff', '#ff8b21', '#7ee06b', '#ff5d68'];
+const ITEM_BOX_COLORS = ['#00E5FF', '#7EC8E8', '#F5F8FF', '#39FF8C', '#7B61FF'];
 
 const makeNoiseTexture = ({ base, repeat = 8, speckles = [] }) => {
   const canvas = document.createElement('canvas');
