@@ -2093,6 +2093,83 @@ const makePenguinCrossingSign = () => {
   return g;
 };
 
+const makeChunkyIceCrystal = (scale = 1) => {
+  const g = new THREE.Group();
+  const crystalMat = createBasicMaterial('#00E5FF', {
+    emissive: '#7EC8E8',
+    emissiveIntensity: 0.55,
+    opacity: 0.82,
+    transparent: true,
+  });
+  const capMat = createBasicMaterial('#F5F8FF', {
+    emissive: '#F5F8FF',
+    emissiveIntensity: 0.35,
+    opacity: 0.9,
+    transparent: true,
+  });
+  [
+    { r: 1.6, h: 6.2, x: 0, z: 0, ry: 0 },
+    { r: 1.1, h: 4.4, x: -2.2, z: 0.8, ry: 0.5 },
+    { r: 1.2, h: 4.8, x: 2.1, z: -0.6, ry: -0.4 },
+    { r: 0.85, h: 3.2, x: 0.6, z: 2, ry: 0.9 },
+  ].forEach(({ r, h, x, z, ry }) => {
+    const shard = new THREE.Mesh(new THREE.ConeGeometry(r * scale, h * scale, 5), crystalMat);
+    shard.position.set(x * scale, (h * scale) / 2, z * scale);
+    shard.rotation.y = ry;
+    g.add(shard);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.55 * scale, h * 0.35 * scale, 5), capMat);
+    cap.position.set(x * scale, (h * scale) * 0.92, z * scale);
+    cap.rotation.y = ry;
+    g.add(cap);
+  });
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeSnowMound = (scale = 1) => {
+  const g = new THREE.Group();
+  const snow = createToonMaterial('#F5F8FF', { emissive: '#EAF4FA', emissiveIntensity: 0.12 });
+  const mound = new THREE.Mesh(new THREE.SphereGeometry(4 * scale, 8, 6), snow);
+  mound.scale.set(1.5, 0.55, 1.5);
+  mound.position.y = 0.6 * scale;
+  g.add(mound);
+  const top = new THREE.Mesh(new THREE.SphereGeometry(2.2 * scale, 7, 5), snow);
+  top.scale.set(1, 0.8, 1);
+  top.position.y = 2.1 * scale;
+  g.add(top);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeFrozenTireBumper = () => {
+  const g = new THREE.Group();
+  const tireMat = createToonMaterial('#2a3a4a');
+  const iceMat = createBasicMaterial('#7EC8E8', { emissive: '#00E5FF', emissiveIntensity: 0.45 });
+  const snowMat = createToonMaterial('#F5F8FF');
+  [0, 2.4].forEach((y) => {
+    const tire = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.9, 8, 16), tireMat);
+    tire.rotation.x = Math.PI / 2;
+    tire.position.y = y + 1.4;
+    g.add(tire);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.25, 6, 16), iceMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = y + 1.4;
+    g.add(rim);
+  });
+  const snowCap = new THREE.Mesh(new THREE.SphereGeometry(2.8, 8, 6), snowMat);
+  snowCap.scale.set(1, 0.5, 1);
+  snowCap.position.y = 5.2;
+  g.add(snowCap);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
 const addPenguinVillageDressing = (world, sampler, trackDef) => {
   const roadWidth = trackDef.course.mainRoadWidth || 56;
   // Giant ordinal-penguin ice statues at signature spots — the landmark.
@@ -2121,7 +2198,7 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
     igloo.rotation.y = Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
     world.add(setFlatTransform(igloo));
   }
-  // Snow mounds + ice-shard clusters as low filler.
+  // Snow mounds + ice-shard clusters as low filler, tuned to the concept palette.
   for (let i = 0; i < 16; i += 1) {
     const p = (0.02 + i * 0.061) % 1;
     const side = i % 2 === 0 ? 1 : -1;
@@ -2129,20 +2206,47 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
     const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 14 + (i % 4) * 6));
     if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.56) continue;
     if (i % 2 === 0) {
-      const mound = new THREE.Mesh(new THREE.SphereGeometry(4 + (i % 3), 8, 6), createToonMaterial('#eef6fb'));
-      mound.scale.set(1.5, 0.55, 1.5);
+      const mound = makeSnowMound(0.9 + (i % 3) * 0.12);
       mound.position.copy(pos);
-      mound.position.y = 0.6;
       world.add(setFlatTransform(mound));
     } else {
       const shard = new THREE.Mesh(
         new THREE.ConeGeometry(1.5, 6 + (i % 3) * 2, 5),
-        createBasicMaterial('#bfe6ff', { emissive: '#9fdcff', emissiveIntensity: 0.5 })
+        createBasicMaterial('#00E5FF', { emissive: '#7EC8E8', emissiveIntensity: 0.6 })
       );
       shard.position.copy(pos);
       shard.position.y = 3.2;
       world.add(setFlatTransform(shard));
     }
+  }
+  // Pond-sweep prop dressing (0.24–0.42): chunky crystals, snow mounds, frozen tire bumpers.
+  {
+    const pondProps = [
+      { p: 0.26, side: -1, type: 'crystal', offset: 18 },
+      { p: 0.3, side: 1, type: 'crystal', offset: 16 },
+      { p: 0.36, side: -1, type: 'crystal', offset: 20 },
+      { p: 0.4, side: 1, type: 'crystal', offset: 17 },
+      { p: 0.28, side: 1, type: 'mound', offset: 14 },
+      { p: 0.34, side: -1, type: 'mound', offset: 15 },
+      { p: 0.39, side: 1, type: 'mound', offset: 13 },
+      { p: 0.32, side: -1, type: 'bumper', offset: 18 },
+      { p: 0.38, side: 1, type: 'bumper', offset: 17 },
+    ];
+    pondProps.forEach(({ p, side, type, offset }) => {
+      const { normal, point, tangent } = sampler.pointAt(p);
+      const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + offset));
+      if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.58) return;
+      const prop =
+        type === 'crystal'
+          ? makeChunkyIceCrystal(1.0 + (Math.floor(p * 100) % 3) * 0.12)
+          : type === 'mound'
+          ? makeSnowMound(1.0 + (Math.floor(p * 100) % 2) * 0.15)
+          : makeFrozenTireBumper();
+      prop.position.copy(pos);
+      prop.position.y = 0;
+      prop.rotation.y = Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
+      world.add(setFlatTransform(prop));
+    });
   }
   // Main-street prop dressing along the long start straight (0.0–0.24).
   {
