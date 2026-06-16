@@ -1241,6 +1241,59 @@ const addPad = (world, sampler, pad, index) => {
   return group;
 };
 
+const makeWinterItemCrate = (accent = '#00E5FF') => {
+  const crate = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: '#7EC8E8',
+    emissive: '#00E5FF',
+    emissiveIntensity: 0.35,
+    flatShading: true,
+    metalness: 0.08,
+    opacity: 0.82,
+    roughness: 0.28,
+    transparent: true,
+  });
+  const bracketMat = new THREE.MeshStandardMaterial({
+    color: '#F5F8FF',
+    emissive: accent,
+    emissiveIntensity: 0.65,
+    flatShading: true,
+    metalness: 0.45,
+    roughness: 0.22,
+  });
+  const body = new THREE.Mesh(new RoundedBoxGeometry(6.8, 6.8, 6.8, 1, 0.85), bodyMat);
+  crate.add(body);
+  // Metal corner brackets.
+  [
+    [-1, -1, -1],
+    [-1, -1, 1],
+    [-1, 1, -1],
+    [-1, 1, 1],
+    [1, -1, -1],
+    [1, -1, 1],
+    [1, 1, -1],
+    [1, 1, 1],
+  ].forEach(([x, y, z]) => {
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), bracketMat);
+    bracket.position.set(x * 3.1, y * 3.1, z * 3.1);
+    crate.add(bracket);
+  });
+  // Glowing edge bands.
+  const edgeMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.9 });
+  [[0, 1, 0], [0, -1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].forEach(([x, y, z]) => {
+    const edge = new THREE.Mesh(
+      new THREE.BoxGeometry(x ? 7.2 : 0.25, y ? 7.2 : 0.25, z ? 7.2 : 0.25),
+      edgeMat
+    );
+    edge.position.set(x * 3.42, y * 3.42, z * 3.42);
+    crate.add(edge);
+  });
+  crate.traverse((n) => {
+    n.castShadow = true;
+  });
+  return crate;
+};
+
 const addItemBox = (world, sampler, box, index, questionTexture) => {
   const group = new THREE.Group();
   const { point } = sampler.pointAt(box.progress, box.side || 0);
@@ -1250,24 +1303,11 @@ const addItemBox = (world, sampler, box, index, questionTexture) => {
   group.userData.progress = box.progress;
   group.userData.index = index;
   const color = ITEM_BOX_COLORS[index % ITEM_BOX_COLORS.length];
-  const cube = new THREE.Mesh(
-    new RoundedBoxGeometry(6.8, 6.8, 6.8, 1, 0.85),
-    new THREE.MeshStandardMaterial({
-      color,
-      emissive: color,
-      emissiveIntensity: 0.72,
-      flatShading: true,
-      metalness: 0.12,
-      opacity: 0.78,
-      roughness: 0.24,
-      transparent: true,
-    })
-  );
-  cube.rotation.z = 0.42;
-  cube.rotation.x = 0.3;
-  cube.castShadow = true;
-  cube.userData.kind = 'item-cube-fallback';
-  group.add(cube);
+  const crate = makeWinterItemCrate(color);
+  crate.rotation.z = 0.42;
+  crate.rotation.x = 0.3;
+  crate.userData.kind = 'item-cube-fallback';
+  group.add(crate);
   const question = new THREE.Mesh(
     new THREE.PlaneGeometry(4.4, 4.4),
     new THREE.MeshBasicMaterial({
