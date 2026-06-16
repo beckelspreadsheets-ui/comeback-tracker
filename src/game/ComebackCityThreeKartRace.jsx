@@ -1828,6 +1828,147 @@ const makeSloganTexture = (text) => {
   return texture;
 };
 
+// ---- Penguin Village track dressing props (Phase 3) ------------------------
+
+const makeFishCrate = (size = 1) => {
+  const g = new THREE.Group();
+  const wood = createToonMaterial('#9c6b3c');
+  const metal = createToonMaterial('#b8d4e8');
+  g.add(makeRoundedBox({ x: 6 * size, y: 5 * size, z: 6 * size }, { y: 2.5 * size }, wood, 0.45 * size));
+  // Metal corner brackets and bands.
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
+    g.add(makeBox({ x: 1.1 * size, y: 5.2 * size, z: 1.1 * size }, { x: sx * 2.9 * size, y: 2.6 * size, z: sz * 2.9 * size }, metal));
+  });
+  [-1, 1].forEach((sz) => {
+    g.add(makeBox({ x: 6.2 * size, y: 1 * size, z: 1.1 * size }, { y: (sz > 0 ? 4.8 : 0.4) * size, z: sz * 2.9 * size }, metal));
+    g.add(makeBox({ x: 1.1 * size, y: 1 * size, z: 6.2 * size }, { x: -2.9 * size, y: (sz > 0 ? 4.8 : 0.4) * size, z: 0 }, metal));
+    g.add(makeBox({ x: 1.1 * size, y: 1 * size, z: 6.2 * size }, { x: 2.9 * size, y: (sz > 0 ? 4.8 : 0.4) * size, z: 0 }, metal));
+  });
+  // Simple fish emblem on the front face.
+  const emblem = new THREE.Group();
+  const fishBody = new THREE.Mesh(new THREE.SphereGeometry(1.1 * size, 8, 6), createBasicMaterial('#F5F8FF'));
+  fishBody.scale.set(1.3, 1, 0.55);
+  emblem.add(fishBody);
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.65 * size, 1.3 * size, 4), createBasicMaterial('#F5F8FF'));
+  tail.rotation.z = -Math.PI / 2;
+  tail.position.set(-1.5 * size, 0, 0);
+  emblem.add(tail);
+  emblem.position.set(0, 2.5 * size, 3.05 * size);
+  g.add(emblem);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeMarketStall = () => {
+  const g = new THREE.Group();
+  const wood = createToonMaterial('#9c6b3c');
+  const snow = createToonMaterial('#F5F8FF');
+  const blue = createToonMaterial('#00E5FF');
+  const white = createToonMaterial('#F5F8FF');
+  // Counter and back panel.
+  g.add(makeRoundedBox({ x: 11, y: 3.6, z: 6 }, { y: 1.8 }, wood, 0.35));
+  g.add(makeBox({ x: 11, y: 5, z: 1 }, { y: 5.8, z: -2.6 }, wood));
+  // Corner posts.
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 8, 8), wood);
+    post.position.set(sx * 5, 4, sz * 2.6);
+    g.add(post);
+  });
+  // Roof frame and striped awning.
+  g.add(makeBox({ x: 12.4, y: 0.5, z: 7.2 }, { y: 8.1 }, wood));
+  for (let i = 0; i < 4; i += 1) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.4, 7.6), i % 2 === 0 ? blue : white);
+    stripe.position.set(-4.65 + i * 3.1, 7.6, 0.4);
+    stripe.rotation.z = 0.18;
+    g.add(stripe);
+  }
+  // Snow cap on the roof.
+  g.add(makeBox({ x: 12.8, y: 0.9, z: 7.6 }, { y: 8.7 }, snow));
+  // A fish crate displayed on the counter.
+  const crate = makeFishCrate(0.35);
+  crate.position.set(0, 3.6, 0);
+  g.add(crate);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeFishBarrel = () => {
+  const g = new THREE.Group();
+  const wood = createToonMaterial('#9c6b3c');
+  const metal = createToonMaterial('#7EC8E8');
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 5.6, 12), wood);
+  body.position.y = 2.8;
+  g.add(body);
+  [1.0, 4.6].forEach((y) => {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(2.42, 0.22, 6, 16), metal);
+    band.rotation.x = Math.PI / 2;
+    band.position.y = y;
+    g.add(band);
+  });
+  // Fish emblem.
+  const emblem = new THREE.Mesh(new THREE.SphereGeometry(1.1, 8, 6), createBasicMaterial('#F5F8FF'));
+  emblem.scale.set(1.3, 0.9, 0.35);
+  emblem.position.set(0, 2.8, 2.45);
+  g.add(emblem);
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
+const makeCannerySignTexture = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0b2c40';
+  ctx.fillRect(0, 0, 512, 256);
+  ctx.fillStyle = '#F5A623';
+  ctx.font = '900 74px "Arial Black", Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SARDINE', 256, 92);
+  ctx.font = '900 56px "Arial Black", Arial, sans-serif';
+  ctx.fillText('CANNERY', 256, 172);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+};
+
+const makeCannerySign = () => {
+  const g = new THREE.Group();
+  const frame = createToonMaterial('#8b5a2b');
+  const snow = createToonMaterial('#F5F8FF');
+  // Posts.
+  [-1, 1].forEach((sx) => {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 10, 8), frame);
+    post.position.set(sx * 8, 5, 0);
+    g.add(post);
+  });
+  // Board and sign face.
+  const board = new THREE.Mesh(new RoundedBoxGeometry(18, 7, 0.8, 1, 0.4), frame);
+  board.position.set(0, 7.5, 0);
+  g.add(board);
+  const faceMat = new THREE.MeshBasicMaterial({ map: makeCannerySignTexture() });
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(16, 5.6), faceMat);
+  face.position.set(0, 7.5, 0.45);
+  g.add(face);
+  const faceBack = face.clone();
+  faceBack.position.z = -0.45;
+  faceBack.rotation.y = Math.PI;
+  g.add(faceBack);
+  // Snow cap.
+  g.add(makeBox({ x: 18.6, y: 0.8, z: 1.2 }, { y: 11.1 }, snow));
+  g.traverse((n) => {
+    n.castShadow = false;
+  });
+  return g;
+};
+
 const addPenguinVillageDressing = (world, sampler, trackDef) => {
   const roadWidth = trackDef.course.mainRoadWidth || 56;
   // Giant ordinal-penguin ice statues at signature spots — the landmark.
@@ -1941,6 +2082,39 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
       world.add(setFlatTransform(penguin));
     }
   });
+  // Fish-market prop dressing along the market-row straight (0.42–0.72).
+  {
+    const marketProps = [
+      { p: 0.44, side: -1, type: 'crate', offset: 16 },
+      { p: 0.47, side: -1, type: 'crate', offset: 18 },
+      { p: 0.52, side: 1, type: 'crate', offset: 17 },
+      { p: 0.58, side: 1, type: 'crate', offset: 15 },
+      { p: 0.64, side: -1, type: 'crate', offset: 16 },
+      { p: 0.46, side: 1, type: 'barrel', offset: 16 },
+      { p: 0.56, side: -1, type: 'barrel', offset: 15 },
+      { p: 0.68, side: 1, type: 'barrel', offset: 16 },
+      { p: 0.5, side: 1, type: 'stall', offset: 28 },
+      { p: 0.62, side: -1, type: 'stall', offset: 28 },
+      { p: 0.7, side: -1, type: 'sign', offset: 34 },
+    ];
+    marketProps.forEach(({ p, side, type, offset }, index) => {
+      const { normal, point, tangent } = sampler.pointAt(p);
+      const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + offset));
+      if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.58) return;
+      const prop =
+        type === 'crate'
+          ? makeFishCrate(0.9 + (index % 3) * 0.08)
+          : type === 'barrel'
+          ? makeFishBarrel()
+          : type === 'stall'
+          ? makeMarketStall()
+          : makeCannerySign();
+      prop.position.copy(pos);
+      prop.position.y = 0;
+      prop.rotation.y = Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
+      world.add(setFlatTransform(prop));
+    });
+  }
   // "THE ICE IS NICE" gantry over the start/finish — white frame + teal
   // glowing sign, matching the owner's reference. Driven under each lap.
   {
