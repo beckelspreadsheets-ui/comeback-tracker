@@ -2247,14 +2247,14 @@ const createScene = ({
   const shieldShellGeometry = new THREE.IcosahedronGeometry(7.4 * KART_SCALE, 1);
   const shieldShell = new THREE.Mesh(
     shieldShellGeometry,
-    new THREE.MeshBasicMaterial({ color: '#7fdcff', depthWrite: false, opacity: 0.22, transparent: true })
+    new THREE.MeshBasicMaterial({ color: '#7EC8E8', depthWrite: false, opacity: 0.22, transparent: true })
   );
   shieldShell.scale.set(1.12, 0.7, 1.3);
   shieldShell.position.y = 3.4;
   shieldBubble.add(shieldShell);
   const shieldFacets = new THREE.Mesh(
     shieldShellGeometry,
-    new THREE.MeshBasicMaterial({ color: '#bfeaff', depthWrite: false, opacity: 0.45, transparent: true, wireframe: true })
+    new THREE.MeshBasicMaterial({ color: '#F5F8FF', depthWrite: false, opacity: 0.45, transparent: true, wireframe: true })
   );
   shieldFacets.scale.copy(shieldShell.scale);
   shieldFacets.position.copy(shieldShell.position);
@@ -2264,7 +2264,7 @@ const createScene = ({
   for (let index = 0; index < 6; index += 1) {
     const shard = new THREE.Mesh(
       orbitShardGeometry,
-      createBasicMaterial('#ecfeff', { emissive: '#9fdcff', emissiveIntensity: 0.85 })
+      createBasicMaterial('#F5F8FF', { emissive: '#00E5FF', emissiveIntensity: 0.85 })
     );
     const angle = (index / 6) * Math.PI * 2;
     shard.position.set(Math.cos(angle) * 7.6 * KART_SCALE, 3.2, Math.sin(angle) * 7.6 * KART_SCALE);
