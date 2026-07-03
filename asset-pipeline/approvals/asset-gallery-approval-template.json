@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "approvalType": "asset-gallery-review",
+  "galleryRunId": "",
+  "reviewer": "",
+  "reviewedAt": "",
+  "proofPaths": {
+    "contactSheet": "",
+    "galleryReport": ""
+  },
+  "records": [
+    {
+      "assetId": "",
+      "sourceRepoPath": "",
+      "candidateRepoPath": "",
+      "candidateHash": "",
+      "sourceHash": "",
+      "decision": "pending",
+      "approvedForPromotion": false,
+      "checks": {
+        "silhouette": "pending",
+        "materials": "pending",
+        "grounding": "pending",
+        "scale": "pending",
+        "provenance": "pending"
+      },
+      "notes": ""
+    }
+  ]
+}

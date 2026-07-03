@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "cacheRoot": "asset-pipeline/raw/runtime-copies",
+  "cachedRuntimeCopies": [
+    {
+      "runtimeRepoPath": "src/assets/game/models/avatars/layer23-penguin.glb",
+      "cacheRepoPath": "asset-pipeline/raw/runtime-copies/layer23-penguin__0622be5ab6c7.glb",
+      "sha256": "sha256:0622be5ab6c7b1bb6829fe2c5747194e19db2faabccd3bb4c557cdb5e28d58ec"
+    },
+    {
+      "runtimeRepoPath": "src/assets/game/models/avatars/mizzle.glb",
+      "cacheRepoPath": "asset-pipeline/raw/runtime-copies/mizzle__7de9b5e55e89.glb",
+      "sha256": "sha256:7de9b5e55e8911ba740e5b52ce35ac39ce4dd9e32195c90dab2683242fdf6078"
+    },
+    {
+      "runtimeRepoPath": "src/assets/game/models/avatars/tclow-penguin.glb",
+      "cacheRepoPath": "asset-pipeline/raw/runtime-copies/tclow-penguin__7e50be8d0218.glb",
+      "sha256": "sha256:7e50be8d0218bbee34c116ebe9259a0aeca2e575b9b3ad285e044c9dac40eeff"
+    },
+    {
+      "runtimeRepoPath": "src/assets/game/models/tripo/ice-sled.glb",
+      "cacheRepoPath": "asset-pipeline/raw/runtime-copies/ice-sled__3f70a14552d5.glb",
+      "sha256": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "outputRoot": "asset-pipeline/working/blender-decimate",
+  "profiles": {
+    "seated-character-blender-22k-v1": {
+      "assetClass": "seated-character",
+      "targetTriangles": 22000,
+      "removeDoublesThreshold": 0.0001,
+      "dissolveAngleDegrees": 0,
+      "maxTextureSize": 512,
+      "textureQuality": 80,
+      "meshoptLevel": "medium"
+    },
+    "rival-kart-blender-15k-v1": {
+      "assetClass": "rival-kart",
+      "targetTriangles": 15000,
+      "removeDoublesThreshold": 0.0001,
+      "dissolveAngleDegrees": 0,
+      "maxTextureSize": 512,
+      "textureQuality": 80,
+      "meshoptLevel": "medium"
+    }
+  },
+  "assets": [
+    {
+      "assetId": "avatar.driver.layer23-penguin",
+      "label": "Layer 23 Penguin",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/layer23-penguin__0622be5ab6c7.glb",
+      "sourceHash": "sha256:0622be5ab6c7b1bb6829fe2c5747194e19db2faabccd3bb4c557cdb5e28d58ec",
+      "targetRuntimeRepoPath": "src/assets/game/models/avatars/layer23-penguin.glb",
+      "profile": "seated-character-blender-22k-v1"
+    },
+    {
+      "assetId": "avatar.driver.mizzle",
+      "label": "Mizzle",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/mizzle__7de9b5e55e89.glb",
+      "sourceHash": "sha256:7de9b5e55e8911ba740e5b52ce35ac39ce4dd9e32195c90dab2683242fdf6078",
+      "targetRuntimeRepoPath": "src/assets/game/models/avatars/mizzle.glb",
+      "profile": "seated-character-blender-22k-v1"
+    },
+    {
+      "assetId": "kart.rival.ice-sled",
+      "label": "Ice Sled",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/ice-sled__3f70a14552d5.glb",
+      "sourceHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
+      "targetRuntimeRepoPath": "src/assets/game/models/tripo/ice-sled.glb",
+      "profile": "rival-kart-blender-15k-v1"
+    }
+  ]
+}

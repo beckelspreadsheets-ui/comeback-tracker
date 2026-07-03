@@ -1,0 +1,41 @@
+{
+  "apply": true,
+  "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+  "candidateValidationPath": "asset-pipeline/audit/2026-06-19T16-15-43-706Z__asset-validation__candidates/validation.json",
+  "notes": [],
+  "promoted": [
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "layer23-penguin-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateHash": "sha256:6e5afbbc95bd462defde486642fcd811a5a9482b1a5ebd303d2ecb21877e339b",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/layer23-penguin/layer23-penguin__seated-character-blender-22k-v1__0622be5ab6c7__44c7d2dd2a2d__meshopt.glb",
+      "previousRuntimeHash": "sha256:0622be5ab6c7b1bb6829fe2c5747194e19db2faabccd3bb4c557cdb5e28d58ec",
+      "promotedAt": "2026-06-20T13:21:08.325Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-21-08-325Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/avatars/layer23-penguin.glb",
+      "sourceHash": "sha256:0622be5ab6c7b1bb6829fe2c5747194e19db2faabccd3bb4c557cdb5e28d58ec",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/layer23-penguin__0622be5ab6c7.glb"
+    }
+  ],
+  "proof": {
+    "comparisonPath": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json",
+    "ok": true,
+    "proofRunDir": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof"
+  },
+  "runId": "2026-06-20T13-21-08-325Z__asset-promotion",
+  "selected": [
+    {
+      "approvedForPromotion": true,
+      "assetId": "layer23-penguin-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateBudgetStatus": "warn",
+      "candidatePipeline": "blender-decimate",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "warn",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    }
+  ],
+  "startedAt": "2026-06-20T13:21:08.325Z"
+}

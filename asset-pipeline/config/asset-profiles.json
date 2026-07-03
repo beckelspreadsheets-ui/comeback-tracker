@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "profiles": {
+    "hero-kart-balanced-v1": {
+      "class": "hero-kart",
+      "allowSimplify": true,
+      "simplifyRatio": 0.08,
+      "simplifyError": 0.01,
+      "lockBorder": false,
+      "allowJoin": true,
+      "keepNamed": true,
+      "maxTextureSize": 1024,
+      "colorTextureQuality": 82,
+      "meshoptLevel": "medium"
+    },
+    "rival-kart-balanced-v1": {
+      "class": "rival-kart",
+      "allowSimplify": true,
+      "simplifyRatio": 0.06,
+      "simplifyError": 0.015,
+      "lockBorder": false,
+      "allowJoin": true,
+      "keepNamed": true,
+      "maxTextureSize": 1024,
+      "colorTextureQuality": 82,
+      "meshoptLevel": "medium"
+    },
+    "rival-kart-aggressive-v1": {
+      "class": "rival-kart",
+      "allowSimplify": true,
+      "simplifyRatio": 0.035,
+      "simplifyError": 0.028,
+      "lockBorder": false,
+      "allowJoin": true,
+      "keepNamed": true,
+      "maxTextureSize": 768,
+      "colorTextureQuality": 80,
+      "meshoptLevel": "medium"
+    },
+    "rival-kart-very-aggressive-v1": {
+      "class": "rival-kart",
+      "allowSimplify": true,
+      "simplifyRatio": 0.022,
+      "simplifyError": 0.045,
+      "lockBorder": false,
+      "allowJoin": true,
+      "keepNamed": true,
+      "maxTextureSize": 512,
+      "colorTextureQuality": 78,
+      "meshoptLevel": "medium"
+    },
+    "rival-kart-budget-cap-v1": {
+      "class": "rival-kart",
+      "allowSimplify": true,
+      "simplifyRatio": 0.015,
+      "simplifyError": 0.4,
+      "lockBorder": false,
+      "allowJoin": true,
+      "keepNamed": true,
+      "maxTextureSize": 512,
+      "colorTextureQuality": 76,
+      "meshoptLevel": "medium"
+    },
+    "seated-character-balanced-v1": {
+      "class": "seated-character",
+      "allowSimplify": true,
+      "simplifyRatio": 0.08,
+      "simplifyError": 0.008,
+      "lockBorder": false,
+      "allowJoin": false,
+      "keepNamed": true,
+      "maxTextureSize": 1024,
+      "colorTextureQuality": 84,
+      "meshoptLevel": "medium"
+    },
+    "seated-character-aggressive-v1": {
+      "class": "seated-character",
+      "allowSimplify": true,
+      "simplifyRatio": 0.04,
+      "simplifyError": 0.018,
+      "lockBorder": false,
+      "allowJoin": false,
+      "keepNamed": true,
+      "maxTextureSize": 768,
+      "colorTextureQuality": 82,
+      "meshoptLevel": "medium"
+    },
+    "seated-character-very-aggressive-v1": {
+      "class": "seated-character",
+      "allowSimplify": true,
+      "simplifyRatio": 0.025,
+      "simplifyError": 0.032,
+      "lockBorder": false,
+      "allowJoin": false,
+      "keepNamed": true,
+      "maxTextureSize": 512,
+      "colorTextureQuality": 80,
+      "meshoptLevel": "medium"
+    },
+    "seated-character-budget-cap-v1": {
+      "class": "seated-character",
+      "allowSimplify": true,
+      "simplifyRatio": 0.015,
+      "simplifyError": 0.4,
+      "lockBorder": false,
+      "allowJoin": false,
+      "keepNamed": true,
+      "maxTextureSize": 512,
+      "colorTextureQuality": 78,
+      "meshoptLevel": "medium"
+    },
+    "simple-prop-v1": {
+      "class": "simple-prop",
+      "allowSimplify": true,
+      "simplifyRatio": 0.1,
+      "simplifyError": 0.02,
+      "lockBorder": false,
+      "allowJoin": true,
+      "keepNamed": false,
+      "maxTextureSize": 256,
+      "colorTextureQuality": 80,
+      "meshoptLevel": "medium"
+    },
+    "complex-prop-v1": {
+      "class": "complex-prop",
+      "allowSimplify": true,
+      "simplifyRatio": 0.1,
+      "simplifyError": 0.015,
+      "lockBorder": false,
+      "allowJoin": true,
+      "keepNamed": true,
+      "maxTextureSize": 512,
+      "colorTextureQuality": 82,
+      "meshoptLevel": "medium"
+    },
+    "track-module-v1": {
+      "class": "track-module",
+      "allowSimplify": true,
+      "simplifyRatio": 0.2,
+      "simplifyError": 0.005,
+      "lockBorder": true,
+      "allowJoin": true,
+      "keepNamed": true,
+      "maxTextureSize": 512,
+      "colorTextureQuality": 82,
+      "meshoptLevel": "medium"
+    },
+    "recompress-only-v1": {
+      "class": null,
+      "allowSimplify": false,
+      "allowJoin": false,
+      "keepNamed": true,
+      "maxTextureSize": 1024,
+      "colorTextureQuality": 84,
+      "meshoptLevel": "medium"
+    }
+  },
+  "classifications": [
+    {
+      "path": "3d generations:character sheets/red+go-kart+3d+model.glb",
+      "assetId": "source.tripo.red-go-kart",
+      "class": "hero-kart",
+      "role": "source-hero-kart"
+    },
+    {
+      "path": "3d generations:character sheets/ice+sled+3d+model.glb",
+      "assetId": "source.tripo.ice-sled",
+      "class": "rival-kart",
+      "role": "source-rival-kart"
+    },
+    {
+      "path": "3d generations:character sheets/crrt-bunny.glb",
+      "assetId": "source.tripo.crrt-bunny",
+      "class": "seated-character",
+      "role": "source-driver-avatar"
+    },
+    {
+      "path": "3d generations:character sheets/seth-3dpengu.glb",
+      "assetId": "source.tripo.seth-penguin",
+      "class": "seated-character",
+      "role": "source-driver-avatar"
+    },
+    {
+      "path": "3d generations:character sheets/tclow-ordinalpenguin.glb",
+      "assetId": "source.tripo.tclow-penguin",
+      "class": "seated-character",
+      "role": "source-driver-avatar"
+    },
+    {
+      "path": "3d generations:character sheets/layer233d.glb",
+      "assetId": "source.tripo.layer23-penguin",
+      "class": "seated-character",
+      "role": "source-driver-avatar"
+    },
+    {
+      "path": "3d generations:character sheets/mizzlepixelated3d.glb",
+      "assetId": "source.tripo.mizzle",
+      "class": "seated-character",
+      "role": "source-driver-avatar"
+    },
+    {
+      "path": "src/assets/game/models/tripo/hero-kart-tripo.glb",
+      "assetId": "kart.hero.tripo",
+      "class": "hero-kart",
+      "role": "runtime-hero-kart"
+    },
+    {
+      "path": "src/assets/game/models/tripo/ice-sled.glb",
+      "assetId": "kart.rival.ice-sled",
+      "class": "rival-kart",
+      "role": "runtime-rival-kart"
+    },
+    {
+      "pathPrefix": "src/assets/game/models/avatars/",
+      "assetIdPrefix": "avatar.driver",
+      "class": "seated-character",
+      "role": "runtime-driver-avatar"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/item-box.glb",
+      "assetId": "pickup.item-box",
+      "class": "item-box",
+      "role": "runtime-pickup"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/item-banana.glb",
+      "assetId": "pickup.item-banana",
+      "class": "simple-prop",
+      "role": "runtime-pickup"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/item-cone.glb",
+      "assetId": "prop.item-cone",
+      "class": "simple-prop",
+      "role": "runtime-prop"
+    },
+    {
+      "pathPrefix": "src/assets/game/models/toy-car-kit/vehicle-",
+      "assetIdPrefix": "kart.kenney",
+      "class": "rival-kart",
+      "role": "runtime-vehicle"
+    }
+  ]
+}

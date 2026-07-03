@@ -1,0 +1,41 @@
+{
+  "apply": true,
+  "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+  "candidateValidationPath": "asset-pipeline/audit/2026-06-19T16-15-43-706Z__asset-validation__candidates/validation.json",
+  "notes": [],
+  "promoted": [
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "ice-sled-candidate-blender-decimate-rival-kart-blender-15k-v1",
+      "candidateHash": "sha256:bd6ce093427fcb99758f9fe1e07d9199aca7add3cf8a7816423e097a9eadc91e",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/ice-sled/ice-sled__rival-kart-blender-15k-v1__3f70a14552d5__6fb1ace0efe5__meshopt.glb",
+      "previousRuntimeHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
+      "promotedAt": "2026-06-20T13:22:07.811Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-22-07-811Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/tripo/ice-sled.glb",
+      "sourceHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/ice-sled__3f70a14552d5.glb"
+    }
+  ],
+  "proof": {
+    "comparisonPath": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json",
+    "ok": true,
+    "proofRunDir": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof"
+  },
+  "runId": "2026-06-20T13-22-07-811Z__asset-promotion",
+  "selected": [
+    {
+      "approvedForPromotion": true,
+      "assetId": "ice-sled-candidate-blender-decimate-rival-kart-blender-15k-v1",
+      "candidateBudgetStatus": "warn",
+      "candidatePipeline": "blender-decimate",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "warn",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    }
+  ],
+  "startedAt": "2026-06-20T13:22:07.811Z"
+}

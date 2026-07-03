@@ -1,0 +1,18 @@
+{
+  "apply": false,
+  "approvalPath": "asset-pipeline/gallery/runs/2026-06-18T18-47-44-739Z__asset-gallery/approval-template.json",
+  "candidateValidationPath": "asset-pipeline/audit/2026-06-18T18-49-49-290Z__asset-validation__candidates/validation.json",
+  "notes": [
+    "No records are approved for promotion; runtime asset bytes were not changed.",
+    "Dry-run only. Pass --apply with --asset <assetId> after approval to copy bytes."
+  ],
+  "promoted": [],
+  "proof": {
+    "comparisonPath": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json",
+    "ok": true,
+    "proofRunDir": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof"
+  },
+  "runId": "2026-06-18T18-50-29-962Z__asset-promotion",
+  "selected": [],
+  "startedAt": "2026-06-18T18:50:29.962Z"
+}

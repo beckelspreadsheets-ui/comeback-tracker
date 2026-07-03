@@ -1,0 +1,41 @@
+{
+  "apply": true,
+  "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+  "candidateValidationPath": "asset-pipeline/audit/2026-06-19T16-15-43-706Z__asset-validation__candidates/validation.json",
+  "notes": [],
+  "promoted": [
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "item-banana-candidate-gltf-transform-simple-prop-v1",
+      "candidateHash": "sha256:e171d73c1e8a6ee7492c38c9367a41f2b6726d7f499f178f4c0498fd3a5b1154",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/item-banana/item-banana__simple-prop-v1__7343a68ff41e__a6153d37cd5c.glb",
+      "previousRuntimeHash": "sha256:7343a68ff41e052587a4db894077038a37e81f3b24c63689cdbece21647fce62",
+      "promotedAt": "2026-06-20T13:23:01.039Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-23-01-039Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/toy-car-kit/item-banana.glb",
+      "sourceHash": "sha256:7343a68ff41e052587a4db894077038a37e81f3b24c63689cdbece21647fce62",
+      "sourceRepoPath": "src/assets/game/models/toy-car-kit/item-banana.glb"
+    }
+  ],
+  "proof": {
+    "comparisonPath": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json",
+    "ok": true,
+    "proofRunDir": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof"
+  },
+  "runId": "2026-06-20T13-23-01-039Z__asset-promotion",
+  "selected": [
+    {
+      "approvedForPromotion": true,
+      "assetId": "item-banana-candidate-gltf-transform-simple-prop-v1",
+      "candidateBudgetStatus": "pass",
+      "candidatePipeline": "gltf-transform",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "pass",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    }
+  ],
+  "startedAt": "2026-06-20T13:23:01.039Z"
+}

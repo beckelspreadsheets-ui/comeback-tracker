@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "roots": [
+    {
+      "id": "legacy-character-sheets",
+      "path": "3d generations:character sheets",
+      "kind": "immutable-source",
+      "required": true
+    },
+    {
+      "id": "pipeline-intake",
+      "path": "asset-pipeline/raw",
+      "kind": "immutable-source",
+      "required": false
+    },
+    {
+      "id": "promoted-runtime-models",
+      "path": "src/assets/game/models",
+      "kind": "runtime",
+      "required": true
+    }
+  ]
+}

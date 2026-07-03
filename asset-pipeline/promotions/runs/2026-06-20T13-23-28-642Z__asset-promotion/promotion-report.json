@@ -1,0 +1,41 @@
+{
+  "apply": true,
+  "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+  "candidateValidationPath": "asset-pipeline/audit/2026-06-19T16-15-43-706Z__asset-validation__candidates/validation.json",
+  "notes": [],
+  "promoted": [
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "item-cone-candidate-gltf-transform-simple-prop-v1",
+      "candidateHash": "sha256:b7fcd99e0afa8e45639e637638438ab139b271d7413246ad99597a8be85587ac",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/item-cone/item-cone__simple-prop-v1__9fb546dc8d86__a6153d37cd5c.glb",
+      "previousRuntimeHash": "sha256:9fb546dc8d86e15d9e0d6008f721b3bcd83645d107c0ab68634c25e243a7f6f6",
+      "promotedAt": "2026-06-20T13:23:28.642Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-23-28-642Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/toy-car-kit/item-cone.glb",
+      "sourceHash": "sha256:9fb546dc8d86e15d9e0d6008f721b3bcd83645d107c0ab68634c25e243a7f6f6",
+      "sourceRepoPath": "src/assets/game/models/toy-car-kit/item-cone.glb"
+    }
+  ],
+  "proof": {
+    "comparisonPath": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json",
+    "ok": true,
+    "proofRunDir": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof"
+  },
+  "runId": "2026-06-20T13-23-28-642Z__asset-promotion",
+  "selected": [
+    {
+      "approvedForPromotion": true,
+      "assetId": "item-cone-candidate-gltf-transform-simple-prop-v1",
+      "candidateBudgetStatus": "pass",
+      "candidatePipeline": "gltf-transform",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "pass",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    }
+  ],
+  "startedAt": "2026-06-20T13:23:28.642Z"
+}

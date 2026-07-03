@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "route": "/#race",
+  "query": {
+    "playableAutoplay": "1"
+  },
+  "capture": {
+    "durationMs": 10000,
+    "sampleIntervalMs": 500,
+    "screenshotMarks": [
+      { "key": "start", "atMs": 1200 },
+      { "key": "mid", "atMs": 5200 },
+      { "key": "end", "atMs": 10000 }
+    ]
+  },
+  "scenarios": [
+    {
+      "key": "desktop",
+      "label": "Desktop chase proof",
+      "viewport": { "width": 1365, "height": 768 },
+      "deviceScaleFactor": 1
+    },
+    {
+      "key": "mobile",
+      "label": "Mobile chase proof",
+      "viewport": { "width": 390, "height": 844 },
+      "deviceScaleFactor": 1
+    }
+  ],
+  "topDown": {
+    "enabled": true,
+    "query": {
+      "playableAutoplay": "1",
+      "proofCamera": "top"
+    },
+    "atMs": 2600
+  },
+  "gates": {
+    "maxConsoleErrors": 0,
+    "maxNetworkFailures": 0,
+    "maxDrawCalls": 650,
+    "maxTriangles": 900000,
+    "maxTransferBytes": 52000000,
+    "minChangedRatio": 0.045,
+    "minFps": 12,
+    "fpsWarmupMs": 2500,
+    "minLuminanceRange": 8,
+    "minPropCount": 20,
+    "minRouteProgressDelta": 0.08,
+    "requiredRenderer": "three-kart",
+    "requiredVisualAssetSet": "comeback-city-v2-three-runtime"
+  }
+}

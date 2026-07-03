@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "promotions": [
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "layer23-penguin-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateHash": "sha256:6e5afbbc95bd462defde486642fcd811a5a9482b1a5ebd303d2ecb21877e339b",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/layer23-penguin/layer23-penguin__seated-character-blender-22k-v1__0622be5ab6c7__44c7d2dd2a2d__meshopt.glb",
+      "previousRuntimeHash": "sha256:0622be5ab6c7b1bb6829fe2c5747194e19db2faabccd3bb4c557cdb5e28d58ec",
+      "promotedAt": "2026-06-20T13:21:08.325Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-21-08-325Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/avatars/layer23-penguin.glb",
+      "sourceHash": "sha256:0622be5ab6c7b1bb6829fe2c5747194e19db2faabccd3bb4c557cdb5e28d58ec",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/layer23-penguin__0622be5ab6c7.glb"
+    },
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "mizzle-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateHash": "sha256:4e621b083c5173cfa51a47076b8d55a6bb3264aea9ba66027dd3048852cbcc4c",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/mizzle/mizzle__seated-character-blender-22k-v1__7de9b5e55e89__60857101a320__meshopt.glb",
+      "previousRuntimeHash": "sha256:7de9b5e55e8911ba740e5b52ce35ac39ce4dd9e32195c90dab2683242fdf6078",
+      "promotedAt": "2026-06-20T13:21:41.393Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-21-41-393Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/avatars/mizzle.glb",
+      "sourceHash": "sha256:7de9b5e55e8911ba740e5b52ce35ac39ce4dd9e32195c90dab2683242fdf6078",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/mizzle__7de9b5e55e89.glb"
+    },
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "ice-sled-candidate-blender-decimate-rival-kart-blender-15k-v1",
+      "candidateHash": "sha256:bd6ce093427fcb99758f9fe1e07d9199aca7add3cf8a7816423e097a9eadc91e",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/ice-sled/ice-sled__rival-kart-blender-15k-v1__3f70a14552d5__6fb1ace0efe5__meshopt.glb",
+      "previousRuntimeHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
+      "promotedAt": "2026-06-20T13:22:07.811Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-22-07-811Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/tripo/ice-sled.glb",
+      "sourceHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/ice-sled__3f70a14552d5.glb"
+    },
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "tclow-penguin-candidate-gltf-transform-seated-character-balanced-v1",
+      "candidateHash": "sha256:6a34c995bde92a4ace89a806d81544e056c82453940df9afd78a53753532ecf9",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/tclow-penguin/tclow-penguin__seated-character-balanced-v1__7e50be8d0218__60a218d03458.glb",
+      "previousRuntimeHash": "sha256:7e50be8d0218bbee34c116ebe9259a0aeca2e575b9b3ad285e044c9dac40eeff",
+      "promotedAt": "2026-06-20T13:22:34.717Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-22-34-717Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/avatars/tclow-penguin.glb",
+      "sourceHash": "sha256:7e50be8d0218bbee34c116ebe9259a0aeca2e575b9b3ad285e044c9dac40eeff",
+      "sourceRepoPath": "src/assets/game/models/avatars/tclow-penguin.glb"
+    },
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "item-banana-candidate-gltf-transform-simple-prop-v1",
+      "candidateHash": "sha256:e171d73c1e8a6ee7492c38c9367a41f2b6726d7f499f178f4c0498fd3a5b1154",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/item-banana/item-banana__simple-prop-v1__7343a68ff41e__a6153d37cd5c.glb",
+      "previousRuntimeHash": "sha256:7343a68ff41e052587a4db894077038a37e81f3b24c63689cdbece21647fce62",
+      "promotedAt": "2026-06-20T13:23:01.039Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-23-01-039Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/toy-car-kit/item-banana.glb",
+      "sourceHash": "sha256:7343a68ff41e052587a4db894077038a37e81f3b24c63689cdbece21647fce62",
+      "sourceRepoPath": "src/assets/game/models/toy-car-kit/item-banana.glb"
+    },
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "item-cone-candidate-gltf-transform-simple-prop-v1",
+      "candidateHash": "sha256:b7fcd99e0afa8e45639e637638438ab139b271d7413246ad99597a8be85587ac",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/item-cone/item-cone__simple-prop-v1__9fb546dc8d86__a6153d37cd5c.glb",
+      "previousRuntimeHash": "sha256:9fb546dc8d86e15d9e0d6008f721b3bcd83645d107c0ab68634c25e243a7f6f6",
+      "promotedAt": "2026-06-20T13:23:28.642Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-23-28-642Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/toy-car-kit/item-cone.glb",
+      "sourceHash": "sha256:9fb546dc8d86e15d9e0d6008f721b3bcd83645d107c0ab68634c25e243a7f6f6",
+      "sourceRepoPath": "src/assets/game/models/toy-car-kit/item-cone.glb"
+    }
+  ]
+}

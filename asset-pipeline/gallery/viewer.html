@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asset Gallery Viewer</title>
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #eef2f6; color: #172033; font: 12px system-ui, sans-serif; }
+    body { display: grid; place-items: center; }
+    canvas { display: block; background: #eef2f6; }
+  </style>
+</head>
+<body>
+  <canvas id="stage" width="512" height="512" aria-label="asset preview"></canvas>
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+    import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const modelUrl = params.get('model');
+    const expectedHash = params.get('expectedHash');
+    const view = params.get('view') || 'front';
+    const yaw = Number(params.get('yaw') || 0);
+    const canvas = document.getElementById('stage');
+
+    const fail = (message, detail = {}) => {
+      const error = { message, detail };
+      window.__assetGalleryError = error;
+      throw new Error(`${message}: ${JSON.stringify(detail)}`);
+    };
+
+    const sha256 = async (url) => {
+      const response = await fetch(url);
+      if (!response.ok) fail('asset fetch failed', { status: response.status, url });
+      const digest = await crypto.subtle.digest('SHA-256', await response.arrayBuffer());
+      return `sha256:${[...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+    };
+
+    const resourceManager = new THREE.LoadingManager();
+    resourceManager.setURLModifier((url) => {
+      if (url.endsWith('Textures/colormap.png')) return '/src/assets/game/models/toy-car-kit/colormap.png';
+      return url;
+    });
+
+    const frameCamera = (camera, size, center) => {
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const radius = Math.max(5.5, maxDim * 2.35);
+      const targetY = Math.max(0.8, size.y * 0.44);
+      const y = Math.max(1.1, center.y + size.y * 0.08);
+      if (view === 'side') camera.position.set(radius, y, 0);
+      else if (view === 'rear') camera.position.set(0, y, -radius);
+      else if (view === 'top') {
+        camera.position.set(0, Math.max(5.5, Math.max(size.x, size.z) * 2.5), 0.01);
+        camera.up.set(0, 0, -1);
+      } else camera.position.set(0, y, radius);
+      camera.lookAt(0, targetY, 0);
+      camera.near = 0.01;
+      camera.far = radius * 6;
+      camera.updateProjectionMatrix();
+    };
+
+    const run = async () => {
+      if (!modelUrl) fail('missing model parameter');
+      const actualHash = await sha256(modelUrl);
+      if (expectedHash && actualHash !== expectedHash) {
+        fail('asset hash mismatch', { actualHash, expectedHash, modelUrl });
+      }
+
+      const renderer = new THREE.WebGLRenderer({ alpha: false, antialias: true, canvas, preserveDrawingBuffer: true });
+      renderer.setPixelRatio(1);
+      renderer.setSize(canvas.width, canvas.height, false);
+      renderer.setClearColor('#eef2f6', 1);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#eef2f6');
+      scene.add(new THREE.HemisphereLight('#ffffff', '#68778a', 2.4));
+      const key = new THREE.DirectionalLight('#ffffff', 2.2);
+      key.position.set(3, 5, 4);
+      scene.add(key);
+      const rim = new THREE.DirectionalLight('#b7e8ff', 1.1);
+      rim.position.set(-4, 3, -3);
+      scene.add(rim);
+
+      const loader = new GLTFLoader(resourceManager);
+      loader.setMeshoptDecoder(MeshoptDecoder);
+      const gltf = await loader.loadAsync(modelUrl);
+      const root = gltf.scene || gltf.scenes?.[0];
+      if (!root) fail('loaded glTF has no scene');
+      root.rotation.y = yaw;
+      scene.add(root);
+
+      let bounds = new THREE.Box3().setFromObject(root);
+      const rawSize = bounds.getSize(new THREE.Vector3());
+      if (!Number.isFinite(rawSize.length()) || rawSize.length() <= 0) {
+        fail('loaded glTF has empty bounds', { rawSize: rawSize.toArray() });
+      }
+      const scale = 2.35 / Math.max(rawSize.x, rawSize.y, rawSize.z);
+      root.scale.setScalar(scale);
+      root.updateMatrixWorld(true);
+      bounds = new THREE.Box3().setFromObject(root);
+      const center = bounds.getCenter(new THREE.Vector3());
+      root.position.sub(center);
+      root.position.y -= bounds.min.y - center.y;
+      root.updateMatrixWorld(true);
+      bounds = new THREE.Box3().setFromObject(root);
+      const size = bounds.getSize(new THREE.Vector3());
+      const normalizedCenter = bounds.getCenter(new THREE.Vector3());
+
+      const floor = new THREE.GridHelper(4.2, 8, '#b8c3d1', '#d4dbe5');
+      floor.position.y = -0.01;
+      scene.add(floor);
+
+      const camera = new THREE.PerspectiveCamera(38, canvas.width / canvas.height, 0.01, 80);
+      frameCamera(camera, size, normalizedCenter);
+      renderer.render(scene, camera);
+
+      window.__assetGalleryReady = {
+        actualHash,
+        bounds: {
+          min: bounds.min.toArray(),
+          max: bounds.max.toArray(),
+          size: size.toArray(),
+        },
+        rendererInfo: {
+          geometries: renderer.info.memory.geometries,
+          textures: renderer.info.memory.textures,
+          triangles: renderer.info.render.triangles,
+        },
+        view,
+      };
+    };
+
+    run().catch((error) => {
+      if (!window.__assetGalleryError) {
+        window.__assetGalleryError = { message: error.message, stack: error.stack };
+      }
+      console.error(error);
+    });
+  </script>
+</body>
+</html>

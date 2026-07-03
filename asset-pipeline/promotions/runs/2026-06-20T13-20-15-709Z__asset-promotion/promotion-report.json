@@ -1,0 +1,84 @@
+{
+  "apply": false,
+  "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+  "candidateValidationPath": "asset-pipeline/audit/2026-06-19T16-15-43-706Z__asset-validation__candidates/validation.json",
+  "notes": [
+    "Dry-run only. Pass --apply with --asset <assetId> after approval to copy bytes."
+  ],
+  "promoted": [],
+  "proof": {
+    "comparisonPath": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json",
+    "ok": true,
+    "proofRunDir": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof"
+  },
+  "runId": "2026-06-20T13-20-15-709Z__asset-promotion",
+  "selected": [
+    {
+      "approvedForPromotion": true,
+      "assetId": "layer23-penguin-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateBudgetStatus": "warn",
+      "candidatePipeline": "blender-decimate",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "warn",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    },
+    {
+      "approvedForPromotion": true,
+      "assetId": "mizzle-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateBudgetStatus": "warn",
+      "candidatePipeline": "blender-decimate",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "warn",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    },
+    {
+      "approvedForPromotion": true,
+      "assetId": "ice-sled-candidate-blender-decimate-rival-kart-blender-15k-v1",
+      "candidateBudgetStatus": "warn",
+      "candidatePipeline": "blender-decimate",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "warn",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    },
+    {
+      "approvedForPromotion": true,
+      "assetId": "tclow-penguin-candidate-gltf-transform-seated-character-balanced-v1",
+      "candidateBudgetStatus": "warn",
+      "candidatePipeline": "gltf-transform",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "warn",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    },
+    {
+      "approvedForPromotion": true,
+      "assetId": "item-banana-candidate-gltf-transform-simple-prop-v1",
+      "candidateBudgetStatus": "pass",
+      "candidatePipeline": "gltf-transform",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "pass",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    },
+    {
+      "approvedForPromotion": true,
+      "assetId": "item-cone-candidate-gltf-transform-simple-prop-v1",
+      "candidateBudgetStatus": "pass",
+      "candidatePipeline": "gltf-transform",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "pass",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    }
+  ],
+  "startedAt": "2026-06-20T13:20:15.709Z"
+}

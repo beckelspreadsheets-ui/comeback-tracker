@@ -1,0 +1,41 @@
+{
+  "apply": true,
+  "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+  "candidateValidationPath": "asset-pipeline/audit/2026-06-19T16-15-43-706Z__asset-validation__candidates/validation.json",
+  "notes": [],
+  "promoted": [
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "mizzle-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateHash": "sha256:4e621b083c5173cfa51a47076b8d55a6bb3264aea9ba66027dd3048852cbcc4c",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/mizzle/mizzle__seated-character-blender-22k-v1__7de9b5e55e89__60857101a320__meshopt.glb",
+      "previousRuntimeHash": "sha256:7de9b5e55e8911ba740e5b52ce35ac39ce4dd9e32195c90dab2683242fdf6078",
+      "promotedAt": "2026-06-20T13:21:41.393Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-21-41-393Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/avatars/mizzle.glb",
+      "sourceHash": "sha256:7de9b5e55e8911ba740e5b52ce35ac39ce4dd9e32195c90dab2683242fdf6078",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/mizzle__7de9b5e55e89.glb"
+    }
+  ],
+  "proof": {
+    "comparisonPath": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json",
+    "ok": true,
+    "proofRunDir": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof"
+  },
+  "runId": "2026-06-20T13-21-41-393Z__asset-promotion",
+  "selected": [
+    {
+      "approvedForPromotion": true,
+      "assetId": "mizzle-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateBudgetStatus": "warn",
+      "candidatePipeline": "blender-decimate",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "warn",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    }
+  ],
+  "startedAt": "2026-06-20T13:21:41.393Z"
+}

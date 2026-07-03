@@ -1,0 +1,41 @@
+{
+  "apply": true,
+  "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+  "candidateValidationPath": "asset-pipeline/audit/2026-06-19T16-15-43-706Z__asset-validation__candidates/validation.json",
+  "notes": [],
+  "promoted": [
+    {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "tclow-penguin-candidate-gltf-transform-seated-character-balanced-v1",
+      "candidateHash": "sha256:6a34c995bde92a4ace89a806d81544e056c82453940df9afd78a53753532ecf9",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/tclow-penguin/tclow-penguin__seated-character-balanced-v1__7e50be8d0218__60a218d03458.glb",
+      "previousRuntimeHash": "sha256:7e50be8d0218bbee34c116ebe9259a0aeca2e575b9b3ad285e044c9dac40eeff",
+      "promotedAt": "2026-06-20T13:22:34.717Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "runId": "2026-06-20T13-22-34-717Z__asset-promotion",
+      "runtimeRepoPath": "src/assets/game/models/avatars/tclow-penguin.glb",
+      "sourceHash": "sha256:7e50be8d0218bbee34c116ebe9259a0aeca2e575b9b3ad285e044c9dac40eeff",
+      "sourceRepoPath": "src/assets/game/models/avatars/tclow-penguin.glb"
+    }
+  ],
+  "proof": {
+    "comparisonPath": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json",
+    "ok": true,
+    "proofRunDir": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof"
+  },
+  "runId": "2026-06-20T13-22-34-717Z__asset-promotion",
+  "selected": [
+    {
+      "approvedForPromotion": true,
+      "assetId": "tclow-penguin-candidate-gltf-transform-seated-character-balanced-v1",
+      "candidateBudgetStatus": "warn",
+      "candidatePipeline": "gltf-transform",
+      "candidateHashOk": true,
+      "candidateValidationStatus": "warn",
+      "decision": "approved",
+      "errors": [],
+      "sourceHashOk": true
+    }
+  ],
+  "startedAt": "2026-06-20T13:22:34.717Z"
+}
