@@ -9,6 +9,18 @@ import { RACE_TRACKS } from '../src/game/raceTracks.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const port = Number(process.env.RACE_PLAYTEST_PORT || 5187);
+
+console.warn(
+  [
+    '='.repeat(78),
+    'LEGACY ArcadeRace3D route — this suite mounts race-playtest.html, NOT the',
+    'shipped ComebackCityThreeKartRace (/#race). Its visual/FPS thresholds do',
+    'not describe the shipped game. Shipped-game perf lives in',
+    'scripts/phase5-sustained-capture.mjs (A2); shipped-game proofs in',
+    'scripts/kart-playable-proof-test.mjs. See docs/race-v1-blocker-backlog.md #9/#10.',
+    '='.repeat(78),
+  ].join('\n')
+);
 const baseUrl = `http://127.0.0.1:${port}`;
 const screenshotsDir = path.join(root, 'tmp', 'race-playtests');
 const visualSnapshotReadyTimeoutMs = Number(process.env.RACE_VISUAL_READY_TIMEOUT_MS || 25000);

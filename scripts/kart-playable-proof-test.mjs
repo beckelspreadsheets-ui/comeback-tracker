@@ -329,6 +329,32 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
   };
 };
 
+// Amendment 9 (exec plan): the proof must also drive Penguin Village —
+// without it the penguin-track acceptance criteria in Phases B/D are
+// unverifiable. Shorter than the comeback-city run: shell + track identity +
+// sustained motion, no finish wait.
+const runPenguinVillageEvidence = async (browser) => {
+  const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
+  await page.goto(`${baseUrl}/?playableAutoplay=1&track=penguin-village#race`, { waitUntil: 'networkidle' });
+  const facts = await assertPlayableShell(page, 'penguin-village');
+  await waitForRaceActive(page);
+  await page.waitForTimeout(1200);
+  const start = await readTelemetry(page, 'penguin-village start');
+  if (start.track !== 'penguin-village') {
+    fail('Penguin Village run is not on the penguin-village track', { start });
+  }
+  await page.screenshot({ path: path.join(outputDir, 'penguin-village-start.png'), fullPage: false });
+  await page.waitForTimeout(7600);
+  const mid = await readTelemetry(page, 'penguin-village mid');
+  await page.screenshot({ path: path.join(outputDir, 'penguin-village-mid.png'), fullPage: false });
+  await page.close();
+  if (!(mid.speed >= 120 && (mid.lap > start.lap || mid.routeProgress > start.routeProgress))) {
+    fail('Penguin Village autoplay did not sustain race speed and route progress', { mid, start });
+  }
+  if (mid.rivalCount < 3) fail('Penguin Village autoplay does not show three rivals in telemetry', { facts, mid });
+  return { facts, mid, start };
+};
+
 const run = async () => {
   await rm(outputDir, { force: true, recursive: true });
   await mkdir(outputDir, { recursive: true });
@@ -365,6 +391,7 @@ const run = async () => {
     const manualDesktop = await runManualDesktopControls(browser);
     const desktopAutoplay = await runAutoplayEvidence(browser, 'desktop', { width: 1365, height: 768 });
     const mobileAutoplay = await runAutoplayEvidence(browser, 'mobile', { width: 390, height: 844 });
+    const penguinVillage = await runPenguinVillageEvidence(browser);
     const visibleMotionReport = {
       controlVisual,
       desktopAutoplay: desktopAutoplay.visibleMotion,
@@ -378,6 +405,7 @@ const run = async () => {
       mobileAutoplay,
       outputDir: path.relative(root, outputDir),
       passed: true,
+      penguinVillage,
       visibleMotionReport: path.relative(root, path.join(outputDir, 'visible-motion-report.json')),
     };
     await writeContactSheet();

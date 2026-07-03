@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- A2 FPS harness: mounts the SHIPPED ComebackCityThreeKartRace with zero
+     app-shell/cloud-sync involvement. Dev-server-only page (not in the vite
+     rollup inputs), same mechanism as race-playtest.html (legacy).
+     track/character/kart/autoplay come free via the component's own URL
+     params: ?raceAutoplay=1&track=<key>&character=<key>&kart=<key>. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kart Playtest Harness</title>
+    <style>
+      html, body, #root { height: 100%; margin: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/game/KartPlaytestHarness.jsx"></script>
+  </body>
+</html>

@@ -3388,6 +3388,13 @@ const readInput = (input, autoplay, race, cornerPush = 0) => {
   };
 };
 
+const rollingAverage = (samples) => {
+  if (!samples.length) return null;
+  let total = 0;
+  for (const value of samples) total += value;
+  return Number((total / samples.length).toFixed(2));
+};
+
 const publishTelemetry = (
   race,
   fpsEstimate,
@@ -3422,6 +3429,8 @@ const publishTelemetry = (
     driftCharge: Number(race.driftCharge.toFixed(2)),
     driftTier: race.driftTier,
     finished: race.finished,
+    frameElapsedMs: runtimeStats.frameElapsedMs ?? null,
+    frameWorkMs: runtimeStats.frameWorkMs ?? null,
     heldItem: race.heldItem,
     fpsEstimate: Math.round(fpsEstimate),
     itemPickups: race.itemPickups,
@@ -3552,6 +3561,12 @@ export const ComebackCityThreeKartRace = ({
         : null;
     const viewport = { aspect: 1, dpr: 1, height: 1, mobile: false, width: 1 };
     const frameTimes = [];
+    // A2 instrumentation: UNCLAMPED frame-to-frame elapsed vs post-render work
+    // time. The elapsed/work split is what exposed the legacy rAF-throttling
+    // artifact (1.6ms work inside 52.9ms elapsed frames) — fpsEstimate alone
+    // cannot distinguish "GPU-bound" from "browser throttled".
+    const frameElapsedSamples = [];
+    const frameWorkSamples = [];
     let raf = 0;
     let disposed = false;
     let previousFrameTime = performance.now();
@@ -3828,6 +3843,10 @@ export const ComebackCityThreeKartRace = ({
     const frame = () => {
       if (disposed) return;
       const now = performance.now();
+      // Unclamped delta sampled BEFORE the physics clamp — throttled frames
+      // must show their real length here even though the sim clamps to 40ms.
+      frameElapsedSamples.push(now - previousFrameTime);
+      while (frameElapsedSamples.length > 40) frameElapsedSamples.shift();
       const rawDt = Math.min(0.04, Math.max(0.001, (now - previousFrameTime) / 1000));
       previousFrameTime = now;
       const dt = reducedMotion ? rawDt * 0.86 : rawDt;
@@ -4462,9 +4481,13 @@ export const ComebackCityThreeKartRace = ({
       engine.sun.target.position.copy(playerSample.point);
       engine.sun.target.updateMatrixWorld();
       engine.composer.render();
+      frameWorkSamples.push(performance.now() - now);
+      while (frameWorkSamples.length > 40) frameWorkSamples.shift();
       publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey, {
         bakedBuildings: engine.bakedBuildings,
         bakedSpike: engine.bakedSpike,
+        frameElapsedMs: rollingAverage(frameElapsedSamples),
+        frameWorkMs: rollingAverage(frameWorkSamples),
         proofCameraMode,
         rendererStats: rendererStatsForFrame(now),
       });

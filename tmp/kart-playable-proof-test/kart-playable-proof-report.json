@@ -10,38 +10,40 @@
       "bakedSpike": "inactive",
       "marchActive": false,
       "avalancheTarget": null,
-      "blizzardsOnTrack": 1,
+      "blizzardsOnTrack": 0,
       "character": "crrt-bunny",
       "kart": "hero",
       "track": "comeback-city",
       "trackVisualsEnabled": false,
       "laps": 3,
       "slapping": false,
-      "fishBonesOnTrack": 2,
+      "fishBonesOnTrack": 1,
       "boostHits": 7,
       "countdown": 0,
       "drift": false,
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 32.94,
+      "frameWorkMs": 1.17,
       "heldItem": null,
-      "fpsEstimate": 41,
-      "itemPickups": 12,
+      "fpsEstimate": 30,
+      "itemPickups": 11,
       "lap": 2,
-      "miniTurbo": 0,
-      "miniTurboTier": 0,
+      "miniTurbo": 0.15,
+      "miniTurboTier": 2,
       "position": 1,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 18.54,
+      "raceTime": 17.5,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 479,
-        "geometries": 441,
-        "meshCount": 479,
+        "drawCalls": 480,
+        "geometries": 442,
+        "meshCount": 480,
         "shadowMapEnabled": true,
         "textures": 45,
-        "triangles": 282464
+        "triangles": 282592
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -54,19 +56,19 @@
           "position": 2
         },
         {
-          "name": "Purple Lab",
+          "name": "Orange Muscle",
           "position": 3
         },
         {
-          "name": "Orange Muscle",
+          "name": "Purple Lab",
           "position": 4
         }
       ],
       "route": "race",
-      "routeProgress": 0.576,
-      "speed": 228,
+      "routeProgress": 0.473,
+      "speed": 284,
       "spinOuts": 0,
-      "steer": 0.99,
+      "steer": -0.31,
       "tricksLanded": 1,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -104,85 +106,18 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": true,
+      "frameElapsedMs": 28.91,
+      "frameWorkMs": 1.14,
       "heldItem": null,
-      "fpsEstimate": 30,
+      "fpsEstimate": 34,
       "itemPickups": 23,
       "lap": 3,
-      "miniTurbo": 0.78,
+      "miniTurbo": 0.77,
       "miniTurboTier": 2,
       "position": 1,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 34.77,
-      "renderer": "three-kart",
-      "rendererStats": {
-        "drawCalls": 478,
-        "geometries": 440,
-        "meshCount": 478,
-        "shadowMapEnabled": true,
-        "textures": 45,
-        "triangles": 282568
-      },
-      "rivalCount": 3,
-      "rivalPositions": [
-        {
-          "name": "player",
-          "position": 1
-        },
-        {
-          "name": "Blue Speed",
-          "position": 2
-        },
-        {
-          "name": "Orange Muscle",
-          "position": 3
-        },
-        {
-          "name": "Purple Lab",
-          "position": 4
-        }
-      ],
-      "route": "race",
-      "routeProgress": 0.002,
-      "speed": 0,
-      "spinOuts": 0,
-      "steer": 0.15,
-      "tricksLanded": 4,
-      "visualAssetSet": "comeback-city-v2-three-runtime",
-      "wallContact": false
-    },
-    "mid": {
-      "airborne": false,
-      "auroraActive": false,
-      "avalanchePending": false,
-      "bakedBuildings": "active",
-      "bakedSpike": "inactive",
-      "marchActive": false,
-      "avalancheTarget": null,
-      "blizzardsOnTrack": 1,
-      "character": "crrt-bunny",
-      "kart": "hero",
-      "track": "comeback-city",
-      "trackVisualsEnabled": false,
-      "laps": 3,
-      "slapping": false,
-      "fishBonesOnTrack": 2,
-      "boostHits": 4,
-      "countdown": 0,
-      "drift": false,
-      "driftCharge": 0,
-      "driftTier": 0,
-      "finished": false,
-      "heldItem": null,
-      "fpsEstimate": 40,
-      "itemPickups": 7,
-      "lap": 1,
-      "miniTurbo": 0.64,
-      "miniTurboTier": 2,
-      "position": 2,
-      "propCount": 34,
-      "proofCameraMode": "chase",
-      "raceTime": 10.79,
+      "raceTime": 34.87,
       "renderer": "three-kart",
       "rendererStats": {
         "drawCalls": 479,
@@ -195,27 +130,98 @@
       "rivalCount": 3,
       "rivalPositions": [
         {
-          "name": "Blue Speed",
+          "name": "player",
           "position": 1
         },
         {
-          "name": "player",
+          "name": "Purple Lab",
           "position": 2
         },
         {
-          "name": "Purple Lab",
+          "name": "Orange Muscle",
           "position": 3
         },
         {
-          "name": "Orange Muscle",
+          "name": "Blue Speed",
           "position": 4
         }
       ],
       "route": "race",
-      "routeProgress": 0.874,
-      "speed": 284,
+      "routeProgress": 0.002,
+      "speed": 0,
       "spinOuts": 0,
-      "steer": 0.88,
+      "steer": 0.29,
+      "tricksLanded": 4,
+      "visualAssetSet": "comeback-city-v2-three-runtime",
+      "wallContact": false
+    },
+    "mid": {
+      "airborne": false,
+      "auroraActive": false,
+      "avalanchePending": false,
+      "bakedBuildings": "active",
+      "bakedSpike": "inactive",
+      "marchActive": false,
+      "avalancheTarget": null,
+      "blizzardsOnTrack": 0,
+      "character": "crrt-bunny",
+      "kart": "hero",
+      "track": "comeback-city",
+      "trackVisualsEnabled": false,
+      "laps": 3,
+      "slapping": false,
+      "fishBonesOnTrack": 1,
+      "boostHits": 3,
+      "countdown": 0,
+      "drift": false,
+      "driftCharge": 0,
+      "driftTier": 0,
+      "finished": false,
+      "frameElapsedMs": 23.62,
+      "frameWorkMs": 0.72,
+      "heldItem": null,
+      "fpsEstimate": 42,
+      "itemPickups": 6,
+      "lap": 1,
+      "miniTurbo": 0,
+      "miniTurboTier": 0,
+      "position": 1,
+      "propCount": 34,
+      "proofCameraMode": "chase",
+      "raceTime": 10.26,
+      "renderer": "three-kart",
+      "rendererStats": {
+        "drawCalls": 479,
+        "geometries": 441,
+        "meshCount": 479,
+        "shadowMapEnabled": true,
+        "textures": 45,
+        "triangles": 282464
+      },
+      "rivalCount": 3,
+      "rivalPositions": [
+        {
+          "name": "player",
+          "position": 1
+        },
+        {
+          "name": "Orange Muscle",
+          "position": 2
+        },
+        {
+          "name": "Blue Speed",
+          "position": 3
+        },
+        {
+          "name": "Purple Lab",
+          "position": 4
+        }
+      ],
+      "route": "race",
+      "routeProgress": 0.828,
+      "speed": 228,
+      "spinOuts": 0,
+      "steer": 0,
       "tricksLanded": 1,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -236,12 +242,14 @@
       "laps": 3,
       "slapping": false,
       "fishBonesOnTrack": 0,
-      "boostHits": 2,
+      "boostHits": 1,
       "countdown": 0,
       "drift": false,
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 34.12,
+      "frameWorkMs": 1.15,
       "heldItem": null,
       "fpsEstimate": 29,
       "itemPickups": 1,
@@ -251,7 +259,7 @@
       "position": 3,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 3.02,
+      "raceTime": 2.95,
       "renderer": "three-kart",
       "rendererStats": {
         "drawCalls": 479,
@@ -264,7 +272,7 @@
       "rivalCount": 3,
       "rivalPositions": [
         {
-          "name": "Blue Speed",
+          "name": "Orange Muscle",
           "position": 1
         },
         {
@@ -276,13 +284,13 @@
           "position": 3
         },
         {
-          "name": "Orange Muscle",
+          "name": "Blue Speed",
           "position": 4
         }
       ],
       "route": "race",
-      "routeProgress": 0.198,
-      "speed": 223,
+      "routeProgress": 0.192,
+      "speed": 228,
       "spinOuts": 0,
       "steer": -1,
       "tricksLanded": 0,
@@ -291,8 +299,8 @@
     },
     "video": "tmp/kart-playable-proof-test/desktop-10s.webm",
     "visibleMotion": {
-      "average": 77.01,
-      "changedRatio": 0.964,
+      "average": 59.26,
+      "changedRatio": 0.872,
       "crop": {
         "h": 476,
         "w": 983,
@@ -325,8 +333,10 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 34.48,
+      "frameWorkMs": 1.29,
       "heldItem": null,
-      "fpsEstimate": 34,
+      "fpsEstimate": 29,
       "itemPickups": 0,
       "lap": 1,
       "miniTurbo": 0,
@@ -334,7 +344,7 @@
       "position": 4,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 1.74,
+      "raceTime": 1.8,
       "renderer": "three-kart",
       "rendererStats": {
         "drawCalls": 479,
@@ -364,8 +374,8 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.081,
-      "speed": 161,
+      "routeProgress": 0.082,
+      "speed": 163,
       "spinOuts": 0,
       "steer": 0,
       "tricksLanded": 0,
@@ -394,8 +404,10 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 29.94,
+      "frameWorkMs": 0.99,
       "heldItem": "snowball",
-      "fpsEstimate": 38,
+      "fpsEstimate": 33,
       "itemPickups": 1,
       "lap": 1,
       "miniTurbo": 0,
@@ -403,7 +415,7 @@
       "position": 4,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 3.38,
+      "raceTime": 3.48,
       "renderer": "three-kart",
       "rendererStats": {
         "drawCalls": 479,
@@ -433,13 +445,13 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.177,
-      "speed": 48,
+      "routeProgress": 0.182,
+      "speed": 70,
       "spinOuts": 0,
       "steer": 0,
       "tricksLanded": 0,
       "visualAssetSet": "comeback-city-v2-three-runtime",
-      "wallContact": false
+      "wallContact": true
     },
     "facts": {
       "oldArcadeCanvasCount": 0,
@@ -474,8 +486,10 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 31.57,
+      "frameWorkMs": 1.19,
       "heldItem": null,
-      "fpsEstimate": 35,
+      "fpsEstimate": 32,
       "itemPickups": 0,
       "lap": 1,
       "miniTurbo": 0,
@@ -483,7 +497,7 @@
       "position": 4,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 0.35,
+      "raceTime": 0.39,
       "renderer": "three-kart",
       "rendererStats": {
         "drawCalls": 471,
@@ -543,8 +557,10 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 32.13,
+      "frameWorkMs": 1.18,
       "heldItem": "snowball",
-      "fpsEstimate": 36,
+      "fpsEstimate": 31,
       "itemPickups": 1,
       "lap": 1,
       "miniTurbo": 0,
@@ -552,7 +568,7 @@
       "position": 4,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 2.53,
+      "raceTime": 2.63,
       "renderer": "three-kart",
       "rendererStats": {
         "drawCalls": 479,
@@ -582,10 +598,10 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.136,
+      "routeProgress": 0.14,
       "speed": 228,
       "spinOuts": 0,
-      "steer": 0.99,
+      "steer": 1,
       "tricksLanded": 0,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -614,8 +630,10 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 14.52,
+      "frameWorkMs": 0.76,
       "heldItem": null,
-      "fpsEstimate": 59,
+      "fpsEstimate": 69,
       "itemPickups": 12,
       "lap": 2,
       "miniTurbo": 0,
@@ -623,15 +641,15 @@
       "position": 1,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 17.97,
+      "raceTime": 17.81,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 479,
-        "geometries": 441,
-        "meshCount": 479,
+        "drawCalls": 480,
+        "geometries": 442,
+        "meshCount": 480,
         "shadowMapEnabled": true,
         "textures": 45,
-        "triangles": 282464
+        "triangles": 282592
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -653,10 +671,10 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.53,
+      "routeProgress": 0.514,
       "speed": 284,
       "spinOuts": 0,
-      "steer": 0.46,
+      "steer": -0.08,
       "tricksLanded": 1,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -681,7 +699,7 @@
       "bakedSpike": "inactive",
       "marchActive": false,
       "avalancheTarget": null,
-      "blizzardsOnTrack": 0,
+      "blizzardsOnTrack": 1,
       "character": "crrt-bunny",
       "kart": "hero",
       "track": "comeback-city",
@@ -695,8 +713,10 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 14.19,
+      "frameWorkMs": 0.72,
       "heldItem": null,
-      "fpsEstimate": 69,
+      "fpsEstimate": 70,
       "itemPickups": 6,
       "lap": 1,
       "miniTurbo": 0,
@@ -704,7 +724,7 @@
       "position": 2,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 10.47,
+      "raceTime": 10.27,
       "renderer": "three-kart",
       "rendererStats": {
         "drawCalls": 479,
@@ -734,10 +754,10 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.845,
+      "routeProgress": 0.828,
       "speed": 228,
       "spinOuts": 0,
-      "steer": 0.4,
+      "steer": 0,
       "tricksLanded": 1,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -760,12 +780,14 @@
       "fishBonesOnTrack": 0,
       "boostHits": 1,
       "countdown": 0,
-      "drift": false,
-      "driftCharge": 0,
+      "drift": true,
+      "driftCharge": 0.22,
       "driftTier": 0,
       "finished": false,
+      "frameElapsedMs": 18.35,
+      "frameWorkMs": 0.83,
       "heldItem": null,
-      "fpsEstimate": 59,
+      "fpsEstimate": 54,
       "itemPickups": 1,
       "lap": 1,
       "miniTurbo": 0,
@@ -773,7 +795,7 @@
       "position": 4,
       "propCount": 34,
       "proofCameraMode": "chase",
-      "raceTime": 2.84,
+      "raceTime": 2.71,
       "renderer": "three-kart",
       "rendererStats": {
         "drawCalls": 479,
@@ -803,18 +825,18 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.183,
+      "routeProgress": 0.173,
       "speed": 228,
       "spinOuts": 0,
-      "steer": -0.99,
+      "steer": -0.97,
       "tricksLanded": 0,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
     },
     "video": "tmp/kart-playable-proof-test/mobile-10s.webm",
     "visibleMotion": {
-      "average": 53.05,
-      "changedRatio": 0.878,
+      "average": 42.94,
+      "changedRatio": 0.54,
       "crop": {
         "h": 473,
         "w": 351,
@@ -826,5 +848,160 @@
   },
   "outputDir": "tmp/kart-playable-proof-test",
   "passed": true,
+  "penguinVillage": {
+    "facts": {
+      "oldArcadeCanvasCount": 0,
+      "oldFallbackCanvasCount": 0,
+      "pixiCanvasCount": 0,
+      "threeCanvasCount": 1,
+      "propCount": 36,
+      "raceRenderer": "three-kart",
+      "resultPanelVisible": false,
+      "shellVisible": true,
+      "touchButtonCount": 6
+    },
+    "mid": {
+      "airborne": false,
+      "auroraActive": false,
+      "avalanchePending": false,
+      "bakedBuildings": "active",
+      "bakedSpike": "inactive",
+      "marchActive": false,
+      "avalancheTarget": null,
+      "blizzardsOnTrack": 1,
+      "character": "crrt-bunny",
+      "kart": "hero",
+      "track": "penguin-village",
+      "trackVisualsEnabled": false,
+      "laps": 3,
+      "slapping": false,
+      "fishBonesOnTrack": 0,
+      "boostHits": 3,
+      "countdown": 0,
+      "drift": false,
+      "driftCharge": 0,
+      "driftTier": 0,
+      "finished": false,
+      "frameElapsedMs": 25.29,
+      "frameWorkMs": 1.05,
+      "heldItem": null,
+      "fpsEstimate": 40,
+      "itemPickups": 6,
+      "lap": 1,
+      "miniTurbo": 0,
+      "miniTurboTier": 0,
+      "position": 2,
+      "propCount": 0,
+      "proofCameraMode": "chase",
+      "raceTime": 9.06,
+      "renderer": "three-kart",
+      "rendererStats": {
+        "drawCalls": 782,
+        "geometries": 749,
+        "meshCount": 782,
+        "shadowMapEnabled": true,
+        "textures": 35,
+        "triangles": 279778
+      },
+      "rivalCount": 3,
+      "rivalPositions": [
+        {
+          "name": "Orange Muscle",
+          "position": 1
+        },
+        {
+          "name": "player",
+          "position": 2
+        },
+        {
+          "name": "Blue Speed",
+          "position": 3
+        },
+        {
+          "name": "Purple Lab",
+          "position": 4
+        }
+      ],
+      "route": "race",
+      "routeProgress": 0.773,
+      "speed": 228,
+      "spinOuts": 1,
+      "steer": -0.05,
+      "tricksLanded": 0,
+      "visualAssetSet": "comeback-city-v2-three-runtime",
+      "wallContact": false
+    },
+    "start": {
+      "airborne": false,
+      "auroraActive": false,
+      "avalanchePending": false,
+      "bakedBuildings": "active",
+      "bakedSpike": "inactive",
+      "marchActive": false,
+      "avalancheTarget": null,
+      "blizzardsOnTrack": 0,
+      "character": "crrt-bunny",
+      "kart": "hero",
+      "track": "penguin-village",
+      "trackVisualsEnabled": false,
+      "laps": 3,
+      "slapping": false,
+      "fishBonesOnTrack": 0,
+      "boostHits": 0,
+      "countdown": 0,
+      "drift": false,
+      "driftCharge": 0,
+      "driftTier": 0,
+      "finished": false,
+      "frameElapsedMs": 29.98,
+      "frameWorkMs": 1.44,
+      "heldItem": null,
+      "fpsEstimate": 33,
+      "itemPickups": 1,
+      "lap": 1,
+      "miniTurbo": 0,
+      "miniTurboTier": 0,
+      "position": 3,
+      "propCount": 0,
+      "proofCameraMode": "chase",
+      "raceTime": 1.29,
+      "renderer": "three-kart",
+      "rendererStats": {
+        "drawCalls": 782,
+        "geometries": 749,
+        "meshCount": 782,
+        "shadowMapEnabled": true,
+        "textures": 34,
+        "triangles": 279778
+      },
+      "rivalCount": 3,
+      "rivalPositions": [
+        {
+          "name": "Orange Muscle",
+          "position": 1
+        },
+        {
+          "name": "Blue Speed",
+          "position": 2
+        },
+        {
+          "name": "player",
+          "position": 3
+        },
+        {
+          "name": "Purple Lab",
+          "position": 4
+        }
+      ],
+      "route": "race",
+      "routeProgress": 0.091,
+      "speed": 152,
+      "spinOuts": 0,
+      "steer": 0,
+      "tricksLanded": 0,
+      "visualAssetSet": "comeback-city-v2-three-runtime",
+      "wallContact": false
+    }
+  },
   "visibleMotionReport": "tmp/kart-playable-proof-test/visible-motion-report.json"
 }
