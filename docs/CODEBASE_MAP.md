@@ -152,7 +152,7 @@ Used fully by `ArcadeRace3D`; partially by the god-file. Layers:
 
 **Geometry/physics**: `track/trackGeometry.js` (`compileTrack3D` → `pointAt`/`nearest` — **both O(n) linear scans, called per-frame**; CatmullRom sampling), `physics/kartPhysics.js` (30+ pure force/drift/jump/collision fns operating on mutable state), `physics/kartTuning.js` (`VEHICLES` kart/hover/plane tables, `DRIFT_TUNING`), `camera/chaseCamera.js` (chase profile + collision avoidance — **6+ `new THREE.Vector3` per frame**).
 
-**Per-frame runtime** (`race/race*Runtime.js` + frame modules): `raceFrameClock` (dt clamp 33ms normal / 160ms playtest, FPS lerp), `raceControlsBase` (+ `raceControls` injects playtest), `racePlayerFrame` (the 22-step player physics tick), `raceFrameUpdates`, `raceUpdateRuntime` (composition root binding updatePlayer/Rivals/Hazards/Events/Rankings/Camera), `raceRivals`, `raceVehicleRuntime` (`addBoost`/`setVehicleMode`), `raceHitRuntime`, `raceDropRuntime`, `raceFinishRuntime` (writes `window.__racePlaytestResult`), `raceMotionRuntime` (reduced-motion), `raceCameraRuntime`, `raceAudio` (Web Audio drone/cues — lazy AudioContext, never closes it), `raceHud.jsx` (React overlay; `telemetry` pumped from outside), `raceState` (initial state factory), `raceProgress` (lap detection via `prev>0.82 && new<0.18` threshold, scoring).
+**Per-frame runtime** (`race/race*Runtime.js` + frame modules): `raceFrameClock` (dt clamp 33ms normal / 160ms playtest, FPS lerp), `raceControlsBase` (+ `raceControls` injects playtest), `racePlayerFrame` (the 22-step player physics tick), `raceFrameUpdates`, `raceUpdateRuntime` (composition root binding updatePlayer/Rivals/Hazards/Events/Rankings/Camera), `raceRivals`, `raceVehicleRuntime` (`addBoost`/`setVehicleMode`), `raceHitRuntime`, `raceDropRuntime`, `raceFinishRuntime` (writes `window.__racePlaytestResult`), `raceMotionRuntime` (reduced-motion), `raceCameraRuntime`, `audio/AudioManager` (silent placeholder manager — no AudioContext, no sound; preserves event hooks for final assets), `raceHud.jsx` (React overlay; `telemetry` pumped from outside), `raceState` (initial state factory), `raceProgress` (lap detection via `prev>0.82 && new<0.18` threshold, scoring).
 
 **Telemetry**: `raceTelemetry` (measurement + `publishRaceTelemetryFrame`), `raceTelemetryRuntime` (rate-gate, default 250ms), `raceTelemetryDiagnostics` (writes `window.__raceVisualTelemetry` + samples).
 
@@ -236,7 +236,7 @@ sequenceDiagram
 9. **FatSecret proxy has no auth check** in code — security depends on CF Access at the route level + same-origin CSP.
 10. **CSP `blob:` in `connect-src`** is required (export + textures); removing it washes out race textures on deploy.
 11. **Asset pipeline**: never `gltf-transform optimize` the avatar GLBs (corrupts them); GLBs/JSON are not PWA-precached.
-12. **`raceAudio` never closes its AudioContext** — repeated race mounts without navigation accumulate contexts (~6 browser cap).
+12. **`audio/AudioManager` is silent and creates no AudioContext** — audio is deferred to end of project; final assets will need autoplay-safe lifecycle handling when wired in.
 
 ---
 

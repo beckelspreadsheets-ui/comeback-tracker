@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comeback City Asset Pipeline Phase 1 Notes</title>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; margin: 2rem; max-width: 980px; color: #1f2933; }
+    h1, h2 { line-height: 1.2; }
+    code { background: #f3f4f6; padding: 0.1rem 0.25rem; border-radius: 4px; }
+    .status { font-weight: 700; }
+    .event { border-left: 3px solid #4967d8; padding-left: 0.75rem; margin: 0.75rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Comeback City Asset Pipeline Phase 1</h1>
+
+  <h2>Resume Here</h2>
+  <ul>
+    <li><span class="status">Status:</span> [done] Phase 1 pipeline implementation is complete; current runtime assets intentionally fail strict checks and are documented.</li>
+    <li><span class="status">Current phase:</span> Phase 1 non-destructive inventory and manifest foundation.</li>
+    <li><span class="status">Completed work:</span> Goal ledger, config, package scripts, audit/validation helpers, audit command, validation command, ignore rules, reports, and validation runs.</li>
+    <li><span class="status">Active work:</span> none for Phase 1.</li>
+    <li><span class="status">Blockers:</span> none.</li>
+    <li><span class="status">Next exact action:</span> Phase 2 should address GLB optimization/loader work after owner review of current strict failures.</li>
+    <li><span class="status">Last validation:</span> build passes; asset all-scope audit passes; strict runtime asset check fails with expected current asset/manifest findings; several existing browser/visual tests fail and are listed below.</li>
+    <li><span class="status">Protected paths:</span> all GLB/PNG/source asset bytes and runtime behavior are protected; no Phase 2 features.</li>
+  </ul>
+
+  <h2>References</h2>
+  <ul>
+    <li>User-provided Pro synthesis and implementation brief, received 2026-06-18.</li>
+    <li>Exact Phase 1 Codex task prompt, received 2026-06-18.</li>
+    <li>Repository root: <code>/Users/andrewferguson/Downloads/comeback-tracker</code>.</li>
+    <li>Source root: <code>3d generations:character sheets</code>.</li>
+    <li>Runtime model root: <code>src/assets/game/models</code>.</li>
+    <li>Existing manifest: <code>src/assets/game/asset-manifest.json</code>.</li>
+  </ul>
+
+  <h2>Decisions</h2>
+  <ul>
+    <li>[done] Create a dedicated Phase 1 ledger because the user requested a goal with references first.</li>
+    <li>[done] Preserve <code>src/assets/game/asset-manifest.json</code> as an array. Adding a top-level schema object would break the current manifest shape, so future fields are documented in <code>asset-pipeline/config/manifest-schema.md</code> and reported as missing by strict validation.</li>
+    <li>[done] Strict runtime validation reports missing future hash fields but does not fabricate provenance or hashes into the existing manifest.</li>
+    <li>[done] Existing GLB/PNG bytes and runtime import paths were not modified.</li>
+  </ul>
+
+  <h2>Validation Status</h2>
+  <ul>
+    <li>[done] <code>npm run assets:audit -- --scope all</code>: exit 0; found 7 source GLBs, 14 runtime GLBs, 0 candidates; pass 9, warn 1, fail 11.</li>
+    <li>[done] <code>npm run assets:audit -- --scope runtime --strict</code>: exit 1; all 14 runtime GLBs have strict findings, mostly missing source/output hash fields plus current runtime budget/parse/manifest drift issues.</li>
+    <li>[done] <code>npm run assets:validate -- --scope runtime</code>: exit 0; 14 runtime files, validator pass 7, validator fail 7; official validator output retained in JSON.</li>
+    <li>[done] <code>npm run assets:check</code>: exit 1 at strict runtime audit, as expected for current asset set.</li>
+    <li>[done] <code>npm run build</code>: exit 0.</li>
+    <li>[done] <code>npm run test:bundle</code>: exit 1; existing bundle/image/artifact budgets exceeded.</li>
+    <li>[done] <code>npm run test:webgl</code>: exit 1; timeout waiting for <code>[data-testid="race-screen"][data-race-renderer="webgl"][data-race-track="comeback-city"]</code>.</li>
+    <li>[done] <code>npm run test:kart-proof</code>: exit 0.</li>
+    <li>[done] <code>npm run test:kart-playable</code>: exit 0.</li>
+    <li>[done] <code>npm run test:race</code>: exit 0.</li>
+    <li>[done] <code>npm run test:race:browser</code>: exit 1; Playwright waitForFunction timeout.</li>
+    <li>[done] <code>npm run test:visual</code>: exit 1; timeout waiting for <code>[data-visual-section="mobile-race"]</code>; console logs missing <code>Textures/colormap.png</code>.</li>
+    <li>[done] <code>npm run test:kart-3d-spike</code>: exit 1; desktop spike FPS median below target, measured median 28.</li>
+  </ul>
+
+  <h2>Known Asset Findings</h2>
+  <ul>
+    <li>[done] Highest runtime geometry: <code>layer23-penguin.glb</code> 4,030,820 bytes / 100,350 triangles; <code>mizzle.glb</code> 3,548,292 / 88,030; <code>ice-sled.glb</code> 3,268,512 / 81,820; <code>tclow-penguin.glb</code> 2,030,056 / 64,948; <code>hero-kart-tripo.glb</code> 1,049,128 / 23,172.</li>
+    <li>[done] Runtime manifest drift: <code>layer23-penguin.glb</code> and <code>tclow-penguin.glb</code> are runtime files without manifest records; manifest references missing <code>crrt-penguin.glb</code>.</li>
+    <li>[done] Seven Kenney toy-car GLBs fail NodeIO/validator because they reference missing external <code>Textures/colormap.png</code>.</li>
+    <li>[done] Current strict manifest gaps: matched runtime records lack future <code>sourceHash</code> and <code>outputHash</code> fields.</li>
+  </ul>
+
+  <h2>Progress Timeline</h2>
+  <div id="timeline"></div>
+
+  <script>
+    const progressEvents = [
+      {
+        ts: "2026-06-18T03:14:33Z",
+        status: "doing",
+        phase: "goal-ledger",
+        actor: "agent",
+        summary: "Created Phase 1 goal ledger before implementation.",
+        evidence: []
+      },
+      {
+        ts: "2026-06-18T03:20:46Z",
+        status: "done",
+        phase: "asset-audit",
+        actor: "agent",
+        summary: "Full all-scope asset audit completed with 7 source GLBs and 14 runtime GLBs.",
+        evidence: ["asset-pipeline/audit/2026-06-18T03-21-58-104Z__assets-audit__all/summary.md"]
+      },
+      {
+        ts: "2026-06-18T03:22:14Z",
+        status: "done",
+        phase: "asset-validation",
+        actor: "agent",
+        summary: "Runtime validation retained official glTF validator output and documented current runtime failures.",
+        evidence: ["asset-pipeline/audit/2026-06-18T03-22-14-533Z__asset-validation__runtime/validation.md"]
+      },
+      {
+        ts: "2026-06-18T03:31:00Z",
+        status: "done",
+        phase: "existing-tests",
+        actor: "agent",
+        summary: "Build and requested race/kart/WebGL/visual checks were run; passing and failing commands are listed in Validation Status.",
+        evidence: []
+      }
+    ];
+
+    const timeline = document.getElementById("timeline");
+    for (const event of progressEvents) {
+      const div = document.createElement("div");
+      div.className = "event";
+      div.innerHTML = `<strong>${event.ts}</strong> [${event.status}] ${event.phase}: ${event.summary}`;
+      timeline.appendChild(div);
+    }
+  </script>
+</body>
+</html>

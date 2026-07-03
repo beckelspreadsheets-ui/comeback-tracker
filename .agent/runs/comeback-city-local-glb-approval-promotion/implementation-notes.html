@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comeback City Local GLB Approval Promotion Notes</title>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; margin: 2rem; max-width: 1060px; color: #1f2933; }
+    h1, h2 { line-height: 1.2; }
+    code { background: #f3f4f6; padding: 0.1rem 0.25rem; border-radius: 4px; }
+    .status { font-weight: 700; }
+    .event { border-left: 3px solid #4967d8; padding-left: 0.75rem; margin: 0.75rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Comeback City Local GLB Approval Promotion</h1>
+
+  <h2>Resume Here</h2>
+  <ul>
+    <li><span class="status">Status:</span> [done] Six approved assets promoted one at a time; per-asset runtime validation, full runtime validation, build, gameplay, playable proof, and race proof gates passed.</li>
+    <li><span class="status">Current phase:</span> final handoff.</li>
+    <li><span class="status">Completed work:</span> Read goal skill instructions, PRD, ADR, prior ledger, approval records, latest candidate validation, proof comparison, promotion script, runtime validation script, and package scripts. Verified exactly one approved record per target runtime path; verified source/candidate hashes for all approved records; verified approved candidates are budget pass/warn and candidate validation parser/validator passed. Promotion dry-run selected six records and promoted zero bytes. Promoted and validated <code>layer23-penguin</code>, <code>mizzle</code>, <code>ice-sled</code>, <code>tclow-penguin</code>, <code>item-banana</code>, and <code>item-cone</code>. Restored 23 owner-authorized tracked PNG assets from <code>HEAD</code> to clear the build blocker. Full runtime validation completed with 14 files, 9 pass, 5 warn, 0 fail, and 14 validator pass. <code>npm run test:track-visuals</code>, <code>npm run build</code>, <code>npm run test:race</code>, <code>npm run test:kart-playable</code>, and <code>npm run test:race-proof</code> passed.</li>
+    <li><span class="status">Active work:</span> none.</li>
+    <li><span class="status">Blockers:</span> none.</li>
+    <li><span class="status">Next exact action:</span> none for this goal.</li>
+    <li><span class="status">Last validation:</span> <code>npm run test:race-proof</code> exited 0; proof run <code>asset-pipeline/proof/runs/2026-06-20T16-45-54-632Z__race-proof</code>; comparison <code>ok: true</code>, errors 0; contact sheet <code>asset-pipeline/proof/runs/2026-06-20T16-45-54-632Z__race-proof/visual-review-contact-sheet.html</code>.</li>
+    <li><span class="status">Protected paths:</span> raw source assets; gameplay mechanics, physics, controls, progression, item logic, rivals, lap logic, route registration, default camera behavior, and track-data-driven collision/progress/physics.</li>
+  </ul>
+
+  <h2>Decisions</h2>
+  <ul>
+    <li>[done] Treated the existing dirty worktree as current implementation state and did not revert unrelated files.</li>
+    <li>[done] Created root docs at <code>docs/COMEBACK_CITY_LOCAL_GLB_PIPELINE_MASTER_PRD.md</code> and <code>docs/adr/0001-comeback-city-local-glb-approval-promotion.md</code>.</li>
+    <li>[done] Did not infer approval from candidate quality. The requested approval file now has six explicit approved records and one approved record per target runtime path.</li>
+    <li>[done] Treated the 2026-06-19 candidate validation run as the candidate validation gate because it is the latest candidates validation run and matches the requested file.</li>
+    <li>[done] Promotion order follows approval-file order so each asset can be isolated if a gate fails.</li>
+    <li>[done] Restored 23 tracked PNG assets from <code>HEAD</code> only after owner direction was given, clearing the build blocker without changing gameplay code.</li>
+  </ul>
+
+  <h2>Progress Timeline</h2>
+  <div id="timeline"></div>
+
+  <script>
+    const progressEvents = [
+      {
+        ts: "2026-06-19T19:54:06Z",
+        status: "doing",
+        phase: "goal-ledger",
+        actor: "agent",
+        summary: "Created the local GLB approval/promotion goal ledger and set current-state discovery as the next action.",
+        evidence: [
+          ".agent/runs/comeback-city-local-glb-approval-promotion/GOAL.md",
+          ".agent/runs/comeback-city-local-glb-approval-promotion/implementation-notes.html"
+        ]
+      },
+      {
+        ts: "2026-06-19T19:56:40Z",
+        status: "done",
+        phase: "prd-adr",
+        actor: "agent",
+        summary: "Created the current-state Master PRD and ADR for the local GLB approval/promotion pipeline.",
+        evidence: [
+          "docs/COMEBACK_CITY_LOCAL_GLB_PIPELINE_MASTER_PRD.md",
+          "docs/adr/0001-comeback-city-local-glb-approval-promotion.md"
+        ]
+      },
+      {
+        ts: "2026-06-19T19:57:06Z",
+        status: "done",
+        phase: "promotion-dry-run",
+        actor: "agent",
+        summary: "Ran promotion dry-run against the requested gallery approval file. The approval file has no approved records, so the run selected 0 assets, promoted 0 assets, and changed no runtime bytes.",
+        evidence: [
+          "asset-pipeline/promotions/runs/2026-06-19T19-56-51-811Z__asset-promotion/promotion-report.md",
+          "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:20:33Z",
+        status: "done",
+        phase: "promotion-preflight",
+        actor: "agent",
+        summary: "Resumed the goal after owner approvals were added. Verified six approved records, one per target runtime path, with matching source and candidate hashes, candidate validation pass/warn, no budget fails, and proof comparison ok.",
+        evidence: [
+          "asset-pipeline/promotions/runs/2026-06-20T13-20-15-709Z__asset-promotion/promotion-report.md",
+          "asset-pipeline/audit/2026-06-19T16-15-43-706Z__asset-validation__candidates/validation.json",
+          "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof/comparison.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:21:20Z",
+        status: "done",
+        phase: "promote-layer23-penguin",
+        actor: "agent",
+        summary: "Promoted layer23-penguin via a single --apply --asset command. Runtime bytes matched candidate hash and filtered runtime validation returned warn with no fail and validator passed.",
+        evidence: [
+          "asset-pipeline/promotions/runs/2026-06-20T13-21-08-325Z__asset-promotion/promotion-report.json",
+          "asset-pipeline/audit/2026-06-20T13-21-11-005Z__asset-validation__runtime/validation.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:21:49Z",
+        status: "done",
+        phase: "promote-mizzle",
+        actor: "agent",
+        summary: "Promoted mizzle via a single --apply --asset command. Runtime bytes matched candidate hash and filtered runtime validation returned warn with no fail and validator passed.",
+        evidence: [
+          "asset-pipeline/promotions/runs/2026-06-20T13-21-41-393Z__asset-promotion/promotion-report.json",
+          "asset-pipeline/audit/2026-06-20T13-21-43-782Z__asset-validation__runtime/validation.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:22:17Z",
+        status: "done",
+        phase: "promote-ice-sled",
+        actor: "agent",
+        summary: "Promoted ice-sled via a single --apply --asset command. Runtime bytes matched candidate hash and filtered runtime validation returned warn with no fail and validator passed.",
+        evidence: [
+          "asset-pipeline/promotions/runs/2026-06-20T13-22-07-811Z__asset-promotion/promotion-report.json",
+          "asset-pipeline/audit/2026-06-20T13-22-10-339Z__asset-validation__runtime/validation.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:22:44Z",
+        status: "done",
+        phase: "promote-tclow-penguin",
+        actor: "agent",
+        summary: "Promoted tclow-penguin via a single --apply --asset command. Runtime bytes matched candidate hash and filtered runtime validation returned warn with no fail and validator passed.",
+        evidence: [
+          "asset-pipeline/promotions/runs/2026-06-20T13-22-34-717Z__asset-promotion/promotion-report.json",
+          "asset-pipeline/audit/2026-06-20T13-22-38-125Z__asset-validation__runtime/validation.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:23:11Z",
+        status: "done",
+        phase: "promote-item-banana",
+        actor: "agent",
+        summary: "Promoted item-banana via a single --apply --asset command. Runtime bytes matched candidate hash and filtered runtime validation passed with no fail and validator passed.",
+        evidence: [
+          "asset-pipeline/promotions/runs/2026-06-20T13-23-01-039Z__asset-promotion/promotion-report.json",
+          "asset-pipeline/audit/2026-06-20T13-23-06-008Z__asset-validation__runtime/validation.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:23:38Z",
+        status: "done",
+        phase: "promote-item-cone",
+        actor: "agent",
+        summary: "Promoted item-cone via a single --apply --asset command. Runtime bytes matched candidate hash and filtered runtime validation passed with no fail and validator passed. All six approved assets are now promoted.",
+        evidence: [
+          "asset-pipeline/promotions/runs/2026-06-20T13-23-28-642Z__asset-promotion/promotion-report.json",
+          "asset-pipeline/audit/2026-06-20T13-23-31-080Z__asset-validation__runtime/validation.json",
+          "asset-pipeline/promotions/promotion-ledger.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:24:09Z",
+        status: "done",
+        phase: "full-runtime-validation",
+        actor: "agent",
+        summary: "Ran full post-promotion runtime asset validation. It reported 14 files, 9 pass, 5 warn, 0 fail, and all 14 official validator checks passed.",
+        evidence: [
+          "asset-pipeline/audit/2026-06-20T13-24-00-426Z__asset-validation__runtime/validation.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:24:31Z",
+        status: "done",
+        phase: "track-visual-validation",
+        actor: "agent",
+        summary: "Ran test:track-visuals. Track visual validation passed for two tracks and the bad asset rejection check passed.",
+        evidence: [
+          "asset-pipeline/audit/2026-06-20T13-24-25-922Z__track-visual-validation/track-visual-validation.json"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:25:06Z",
+        status: "blocked",
+        phase: "build-gate",
+        actor: "agent",
+        summary: "Ran npm run build after promotions. Build failed on unresolved PNG imports from files already deleted in the dirty worktree, so the remaining gameplay/proof gates were not run.",
+        evidence: [
+          "src/game/ComebackCityThreeKartRace.jsx",
+          "src/game/ComebackCityKartRace.jsx",
+          "src/game/comebackCityVisuals.jsx",
+          "src/game/RaceScreen.jsx"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:26:44Z",
+        status: "blocked",
+        phase: "build-blocker-audit",
+        actor: "agent",
+        summary: "Audited the build blocker. There are 33 missing PNG import sites, all targeting files that exist in HEAD but are deleted in the dirty worktree. No replacement copies were found elsewhere under the repository.",
+        evidence: [
+          "src/assets/game/generated/district-facade-clinic.png",
+          "src/assets/game/comeback-city-race-backdrop-v2.png",
+          "src/assets/game/generated-race-v2/player/player-boost.png",
+          "src/assets/game/select/char-crrt-bunny.png"
+        ]
+      },
+      {
+        ts: "2026-06-20T13:27:32Z",
+        status: "blocked",
+        phase: "blocked-threshold",
+        actor: "agent",
+        summary: "Verified the same build blocker on the third consecutive goal turn. Native goal is ready to be marked blocked because progress now requires owner direction on restoring tracked PNGs or supplying replacements.",
+        evidence: [
+          ".agent/runs/comeback-city-local-glb-approval-promotion/implementation-notes.html",
+          ".agent/GOALS.md"
+        ]
+      },
+      {
+        ts: "2026-06-20T16:43:51Z",
+        status: "done",
+        phase: "restore-png-assets",
+        actor: "agent",
+        summary: "Restored 23 tracked deleted PNG assets from HEAD after owner approval so the build could resolve imported visual assets.",
+        evidence: [
+          "src/assets/game/generated/district-facade-clinic.png",
+          "src/assets/game/generated-race-v2/player/player-boost.png",
+          "src/assets/game/select/char-crrt-bunny.png"
+        ]
+      },
+      {
+        ts: "2026-06-20T16:46:50Z",
+        status: "done",
+        phase: "final-gates",
+        actor: "agent",
+        summary: "Ran the remaining PRD gates after PNG restore. npm run build, npm run test:race, npm run test:kart-playable, and npm run test:race-proof passed; the fresh race proof comparison reported ok true with zero errors.",
+        evidence: [
+          "tmp/kart-playable-proof-test/kart-playable-proof-report.json",
+          "asset-pipeline/proof/runs/2026-06-20T16-45-54-632Z__race-proof/comparison.json",
+          "asset-pipeline/proof/runs/2026-06-20T16-45-54-632Z__race-proof/visual-review-contact-sheet.html"
+        ]
+      }
+    ];
+
+    const timeline = document.getElementById("timeline");
+    timeline.innerHTML = progressEvents.map((event) => `
+      <div class="event">
+        <strong>${event.ts}</strong> [${event.status}] ${event.phase}<br>
+        ${event.summary}
+        ${event.evidence.length ? `<ul>${event.evidence.map((item) => `<li><code>${item}</code></li>`).join("")}</ul>` : ""}
+      </div>
+    `).join("");
+  </script>
+</body>
+</html>

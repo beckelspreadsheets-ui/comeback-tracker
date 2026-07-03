@@ -1,0 +1,434 @@
+# Comeback City - Research Report 1: Three.js Asset & Runtime Pipeline
+
+_Source: Claude report one pasted by owner. Raw attachment preserved at `docs/research/claude-report-1-asset-runtime-pipeline.raw.txt`._
+
+
+**Stage 1 of 3.** Scope: a repeatable, scripted path from raw Tripo GLB / PNG source assets to optimized, testable Three.js runtime assets, without disturbing the existing React/Vite/Three.js race mechanics. Companion deliverables: Report 2 (tracks + Unreal look-dev) and the Pro synthesis (Codex build brief).
+
+Date context: 2026-06-17. Tool behavior verified against current primary docs at research time (see §12).
+
+Convention in this doc:
+- **[sourced]** = verified against official/primary documentation.
+- **[repo]** = fact taken from the embedded repo context you provided.
+- **[judgment]** = engineering recommendation, not a sourced fact.
+
+---
+
+## 1. Executive Recommendation
+
+Build a **five-stage, file-system-driven, idempotent asset pipeline** that lives entirely in `scripts/` and is gated by your existing test harness. The pipeline is:
+
+```
+raw/  →  audit  →  optimize  →  validate  →  proof  →  promote → manifest
+```
+
+Core decisions:
+
+1. **Geometry compression: meshopt (EXT_meshopt_compression), not Draco.** [judgment, grounded in sourced facts] Three.js bundles the meshopt decoder and enables it with one call (`setMeshoptDecoder`) **[sourced]**; meshopt decodes fast and is designed to compress further under gzip **[sourced]**. Draco yields marginally smaller files but needs an externally-hosted decoder and is slower to decode — the wrong tradeoff for a game that streams many small models. Keep Draco as a documented fallback only.
+
+2. **Geometry reduction: `weld` → `simplify` (meshoptimizer's `MeshoptSimplifier`).** [judgment] Your raw Tripo exports are ~280k–300k triangles each **[repo]**; your *working* runtime karts/characters prove that 13k–25k triangles read beautifully in this art style. The optimizer's job is to make that reduction automatic and consistent instead of the hand-done, inconsistent result currently in the repo (your bunny is 15k tris / 0.55 MB but two of your penguins are still 88k–100k tris / 3.4–3.8 MB).
+
+3. **Textures: resize + WebP as the baseline; KTX2/Basis (ETC1S) as an optional Phase-2 upgrade.** [judgment] Your source models carry a single ~JPEG texture each **[repo]**. Resizing to 512–1024 and re-encoding to WebP wins download size with no runtime decoder cost. KTX2/ETC1S additionally cuts GPU VRAM (it transcodes to native compressed formats on device) but adds the Basis transcoder dependency and `detectSupport(renderer)` wiring **[sourced]** — defer it until asset count or mobile VRAM telemetry justifies it.
+
+4. **Write the optimizer as a scripted Node program using the glTF-Transform JS API, not the one-shot `gltf-transform optimize` CLI.** [judgment] The bundled `optimize` command runs `prune({ keepAttributes: false })` internally, which strips secondary UV channels and applies a fixed join/flatten profile **[sourced]** — fine for many models, but you want per-asset-class control over simplify ratio, texture size, and weld tolerance. The functional API gives that control and matches your existing `.mjs` script convention **[repo]**.
+
+5. **Preserve mechanics by treating optimized GLBs as drop-in replacements at the same import paths.** [judgment] Your runtime already loads optimized avatars/karts from `src/assets/game/models/...` with procedural fallbacks if a GLB fails **[repo]**. The pipeline writes to those same promoted paths; mechanics code (`kartPhysics`, `raceProgress`, track data) never imports raw assets and never changes.
+
+The whole thing is enforced by gates you already have: `test:bundle`, `test:visual`, `test:webgl`, `test:kart-proof`, `test:kart-playable`, `test:kart-3d-spike` **[repo]**. The pipeline adds three new gates (audit, optimize-verify, manifest) that slot into the same `npm run` pattern.
+
+---
+
+## 2. Runtime Asset Pipeline
+
+The pipeline is a directed flow over a fixed folder layout (§6). Each stage is a script (§5), reads from the previous stage's output folder, and is **idempotent** — re-running with unchanged inputs produces unchanged outputs (use a content hash to skip work).
+
+```
+┌────────────┐   audit     ┌────────────┐  optimize   ┌─────────────┐
+│  raw/      │────────────▶│ audit JSON │────────────▶│ optimized/  │
+│ (Tripo GLB │  measure +  │ + flags    │ weld/simp/  │ (runtime    │
+│  + PNG)    │  classify   │            │ tex/meshopt │  candidates)│
+└────────────┘             └────────────┘             └──────┬──────┘
+                                                             │ validate
+                          ┌──────────────────────────────────┘
+                          ▼
+                  ┌──────────────┐  pass → ┌──────────────┐  proof  ┌──────────────┐
+                  │ validate     │────────▶│ gallery +    │────────▶│ Playwright   │
+                  │ (budgets,    │  fail → │ contact-sheet│ render  │ screenshots/ │
+                  │  spec, dims) │  reject/│ render       │         │ video        │
+                  └──────────────┘         └──────────────┘         └──────┬───────┘
+                          │                                                │
+                          ▼ (on fail)                                      ▼ pass
+                  ┌──────────────┐                              ┌──────────────────┐
+                  │ rejected/    │                              │ promote → copy to│
+                  │ + reason log │                              │ src/.../models/  │
+                  └──────────────┘                              │ + update manifest│
+                                                                └──────────────────┘
+```
+
+Stage responsibilities:
+
+- **audit** — measure every source asset (size, vertices, triangles, materials, textures, texture dims, animation count, bounding box, up-axis guess), classify it (kart / character / prop / item / track-module), and flag what exceeds source-acceptance budgets. Output is a machine-readable report; nothing is modified.
+- **optimize** — apply the per-class transform chain, write candidates to `optimized/`. Deterministic; logs before/after deltas.
+- **validate** — assert each candidate against the optimized-acceptance budgets (§4) and re-validate against the glTF spec. Pass → eligible for promotion. Fail → moved to `rejected/` with a reason.
+- **proof** — render candidates into a static gallery route and capture Playwright evidence (still + video), plus a contact sheet against the V2 trait cards.
+- **promote** — copy approved candidates to the runtime model folders and rewrite `asset-manifest.json` provenance/budget/fallback entries.
+
+---
+
+## 3. GLB Optimization Strategy
+
+### 3.1 Transform chain (per asset, scripted)
+
+Order matters. Recommended chain **[judgment, built from sourced function behavior]**:
+
+1. `dedup()` — collapse duplicate accessors/textures. **[sourced]**
+2. `weld({ tolerance: 0.0001 })` — merge coincident vertices so simplify has a clean topology to work on. Required before `simplify` or it under-performs. **[sourced]**
+3. `simplify({ simplifier: MeshoptSimplifier, ratio, error })` — the triangle reducer. `ratio` is the fraction of vertices to *keep*; `error` is the allowed deviation as a fraction of mesh radius. **[sourced]** Per-class ratios in §3.3.
+4. `join({ keepNamed: false })` — merge compatible primitives to cut draw calls. **[sourced]** (Skip/loosen for assets whose named sub-meshes you animate or swap.)
+5. `prune({ keepAttributes: true })` — drop unreferenced nodes/textures/data. Keep `keepAttributes: true` so you don't silently lose a UV set you need. **[sourced]**
+6. `textureResize({ size: [W, H] })` (or `textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [...] })`) — clamp texture dimensions / re-encode to WebP. WebP requires the `sharp` encoder on Node. **[sourced]**
+7. `reorder({ encoder: MeshoptEncoder })` — optimize vertex/index order for GPU and for meshopt compression. **[sourced]**
+8. Write with the meshopt extension enabled (the CLI equivalent is `gltf-transform meshopt in out --level medium`). **[sourced]**
+
+`MeshoptSimplifier` and `MeshoptEncoder` come from the `meshoptimizer` npm package; you must `await MeshoptSimplifier.ready` / `MeshoptEncoder.ready` before use. **[sourced]**
+
+### 3.2 Inspect & validate commands (audit + validate stages)
+
+- `gltf-transform inspect model.glb` — full stats table (mesh, material, texture, animation). **[sourced]**
+- `gltf-transform validate model.glb` — spec conformance. **[sourced]**
+- Programmatic vertex counts for the audit: `getSceneVertexCount`, `getMeshVertexCount`, `getPrimitiveVertexCount` from `@gltf-transform/functions`. **[sourced]**
+
+### 3.3 Per-class simplify targets (first-pass settings)
+
+| Class | `simplify` ratio | `error` | Texture clamp |
+|---|---|---|---|
+| Hero kart | 0.10–0.15 | 0.01 | 1024 |
+| Rival kart | 0.08–0.12 | 0.02 | 1024 (shared atlas where possible) |
+| Seated character | 0.10–0.15 | 0.01 | 1024 |
+| Complex prop / facade | 0.10 | 0.02 | 512 |
+| Simple prop / item / boost pad | 0.05–0.10 | 0.03 | 256 |
+
+These ratios reproduce roughly what your *good* existing assets already are (300k → ~15–25k tris). Tune per-asset; the validate gate (§4) is the backstop. Note that `simplify` cannot exceed the mesh's ability to preserve topology under `error`; if output stalls above target, lower `error` and re-weld with `toleranceNormal: 0.5` for more aggressive merging. **[sourced]**
+
+### 3.4 Compression decision matrix
+
+| Option | Geometry | Texture | Runtime cost | Verdict |
+|---|---|---|---|---|
+| **meshopt** | EXT_meshopt_compression | — | tiny bundled WASM decoder, fast | **Primary (geometry)** |
+| Draco | KHR_draco_mesh_compression | — | external decoder, slower | Fallback only |
+| WebP textures | — | EXT_texture_webp | none (native browser) | **Primary (texture, Phase 1)** |
+| KTX2 / ETC1S | — | KHR_texture_basisu | Basis transcoder + `detectSupport` | Optional (Phase 2, VRAM) |
+| gzip | lossless wrapper | — | server/transport | Enable at hosting layer |
+
+### 3.5 Fallback strategy for unsupported compression
+
+Two independent layers, both already compatible with your runtime:
+
+1. **Decode availability.** Meshopt needs WebAssembly; this is universal in your modern-browser/PWA target, so no JS fallback buffers are required. (If you ever need legacy support, `gltfpack -cf` emits uncompressed fallback buffers — out of scope here.) **[sourced]**
+2. **Asset-load failure.** Your runtime already keeps procedural fallback meshes if an optional GLB fails to load **[repo]**. The pipeline preserves this: never make a procedural primitive unreachable, and record the fallback path in the manifest per asset.
+
+---
+
+## 4. Asset Budgets
+
+Anchored on your shipping runtime GLBs (proven at your ≥34 FPS gate) **[repo]**, not invented. Your bunny (14.9k tris / 0.55 MB) and hero-kart-tripo (23.1k tris / 1.0 MB) are the empirical "good" reference; your 88k–100k-tri penguins are over budget and should be re-optimized.
+
+### 4.1 Source-acceptance (into `raw/`, untouched — these are *flags*, not rejections)
+
+- Flag for mandatory optimization if: > 8 MB **OR** > 150k triangles **OR** texture > 2048² **OR** > 1 material with no atlas plan.
+- Your Tripo exports (~15 MB, ~300k tris) all trip this — expected.
+
+### 4.2 Optimized-acceptance (the promotion gate)
+
+| Asset class | Triangles (max) | File size (max) | Texture (max) | Draw calls |
+|---|---|---|---|---|
+| Hero kart | 25k | 1.2 MB | 1024² | 1–2 |
+| Rival kart | 18k | 0.8 MB | 1024² (shared) | 1 |
+| Seated character | 25k | 1.0 MB | 1024² | 1–2 |
+| Simple prop (cone/box) | 1.5k | 0.10 MB | 256² | 1 |
+| Complex prop / facade | 8k | 0.50 MB | 512² | 1–3 |
+| Item box | 2k | 0.12 MB | 256–512² | 1 |
+| Boost pad | 1k | 0.08 MB | 256² + emissive | 1 |
+| Track module | 6k | 0.40 MB | 512–1024² (tiling) | 1–2 |
+
+### 4.3 Full visible race scene
+
+| Metric | Mobile target | Desktop ceiling |
+|---|---|---|
+| Triangles on screen | ≤ 350k | ≤ 700k |
+| Draw calls | ≤ 120 | ≤ 180 |
+| GPU texture memory | ≤ 120 MB | ≤ 200 MB |
+| Over-the-wire GLB payload (one race load) | ≤ 8 MB | ≤ 12 MB |
+| Median FPS (existing gate) | ≥ 34 floor / 50+ target | ≥ 34 floor / 60 target |
+
+**Draw-call note** [judgment]: the single biggest mobile-WebGL lever here is *not* triangle count — it's draw calls. Reuse one kart GLB across rivals via `THREE.InstancedMesh` (collapses N rivals to 1 draw call), and `join()` static props. Characters differ per racer and stay separate. Your existing scene keeps shadows off in the main renderer **[repo]** — keep that; it's the right call for this budget.
+
+### 4.4 Bundle vs. asset payload
+
+Keep this distinction explicit in `test:bundle`: the **JS bundle** (Three.js ~150 KB gzipped + app) should stay ≤ ~600 KB gzipped; **GLB assets** are loaded at runtime (via `?url` import or `public/`) and are budgeted separately as "race payload" above. Don't let large GLBs leak into the JS chunk graph.
+
+---
+
+## 5. Script Plan
+
+All scripts are ESM `.mjs` in `scripts/`, matching your existing harness **[repo]**. Shared helper module `scripts/lib/asset-pipeline.mjs` holds the glTF-Transform I/O setup, class inference, and budget tables (single source of truth).
+
+Shared dev dependencies to add:
+`@gltf-transform/core`, `@gltf-transform/functions`, `@gltf-transform/extensions`, `meshoptimizer`, `sharp`. (`@gltf-transform/cli` optionally, for ad-hoc inspection.) Optional Phase 2: `draco3dgltf` (only if you enable Draco fallback).
+
+### 5.1 `scripts/audit-game-assets.mjs`
+- **Inputs:** every GLB/PNG under `raw/` (and optionally the current `src/assets/game/models/**`).
+- **Outputs:** `asset-pipeline/audit/audit-report.json` + a human `audit-report.md`.
+- **Packages:** `@gltf-transform/core`, `@gltf-transform/functions`.
+- **Command:** `npm run assets:audit`
+- **Pass/fail:** non-blocking by default; `--strict` exits non-zero if any *promoted* runtime asset exceeds §4.2.
+- **Generates:** per-asset record `{ path, class, bytes, vertices, triangles, materials, textures, maxTexDim, animations, bbox, flags[] }`.
+
+### 5.2 `scripts/optimize-game-glbs.mjs`  ← load-bearing
+- **Inputs:** `raw/**.glb` (+ class config map).
+- **Outputs:** `asset-pipeline/optimized/<class>/<name>.glb` + `optimize-log.json` (before/after tris, bytes, % reduction).
+- **Packages:** `@gltf-transform/core`, `@gltf-transform/functions`, `meshoptimizer`, `sharp`.
+- **Command:** `npm run assets:optimize` (optionally `-- --only crrt-bunny`).
+- **Pass/fail:** fails if any output still exceeds its class budget after optimization, or if `gltf-transform validate` fails.
+- **Generates:** optimized candidates + log; content-hash cache to skip unchanged inputs.
+
+Reference implementation core (first scope — single-mesh, single-texture Tripo assets):
+
+```js
+// scripts/optimize-game-glbs.mjs (core)
+import { NodeIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { dedup, weld, simplify, join, prune, textureCompress, reorder }
+  from '@gltf-transform/functions';
+import { MeshoptSimplifier, MeshoptEncoder } from 'meshoptimizer';
+import sharp from 'sharp';
+
+await MeshoptSimplifier.ready;
+await MeshoptEncoder.ready;
+
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+
+export async function optimizeAsset(inPath, outPath, cfg) {
+  const doc = await io.read(inPath);
+  await doc.transform(
+    dedup(),
+    weld({ tolerance: 0.0001 }),
+    simplify({ simplifier: MeshoptSimplifier, ratio: cfg.ratio, error: cfg.error }),
+    join({ keepNamed: cfg.keepNamed ?? false }),
+    prune({ keepAttributes: true }),
+    textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [cfg.tex, cfg.tex] }),
+    reorder({ encoder: MeshoptEncoder }),
+  );
+  // Enable meshopt compression on write (extension registered above).
+  await io.write(outPath, doc);
+}
+```
+
+(Per-class `cfg` from §3.3 / §4.2. For meshopt write specifics, mirror the CLI `meshopt --level medium` behavior; verify the current `@gltf-transform/functions` meshopt write helper signature at implementation time — see §11.)
+
+### 5.3 `scripts/validate-game-assets.mjs`
+- **Inputs:** `asset-pipeline/optimized/**`.
+- **Outputs:** `validate-report.json`; moves failures to `asset-pipeline/rejected/` with `reason.txt`.
+- **Packages:** `@gltf-transform/core`, `@gltf-transform/functions` (+ a glTF validator step).
+- **Command:** `npm run assets:validate`
+- **Pass/fail:** exits non-zero on any budget breach or spec-invalid asset.
+- **Generates:** pass/fail manifest feeding promote.
+
+### 5.4 `scripts/render-asset-gallery.mjs`
+- **Inputs:** optimized candidates.
+- **Outputs:** a static gallery served at `/#asset-gallery` (a dev-only route that loads each candidate on a turntable), consumed by the proof step.
+- **Packages:** none new (uses the existing Three.js runtime + a minimal gallery scene).
+- **Command:** `npm run assets:gallery` (builds the route) — captured by §5.5.
+- **Pass/fail:** n/a (render target); blank-canvas check happens in proof.
+
+### 5.5 `scripts/capture-race-proof.mjs`
+- **Inputs:** built preview server (`vite preview` after `npm run build`), routes `/#race-3d-spike`, `/#race`, `/#asset-gallery`.
+- **Outputs:** `asset-pipeline/proof/<timestamp>/` — desktop PNG (1365×768), mobile PNG (390×844), 10 s desktop WebM, 10 s mobile WebM, gallery PNG.
+- **Packages:** `playwright` (already present **[repo]**), `pngjs` (already present **[repo]**).
+- **Command:** `npm run assets:proof`
+- **Pass/fail:** fails on blank/near-uniform canvas, missing `[data-race-renderer="three-kart"]`, or `fpsEstimate < 34` (reuses your spike-test thresholds).
+- **Generates:** evidence folder + `proof-index.json`.
+
+### 5.6 `scripts/compare-race-visuals.mjs`
+- **Inputs:** proof PNGs + V2 trait cards in `src/assets/game/art-direction/v2/`.
+- **Outputs:** a contact sheet (candidate render beside its reference card) + a mean-difference report.
+- **Packages:** `pngjs` (present), `sharp` (for compositing the sheet).
+- **Command:** `npm run assets:compare`
+- **Pass/fail:** soft gate — mean-difference threshold flags drift for human review (extends your existing `visual-reference-checks.mjs` pattern **[repo]**). Not a hard auto-fail (art is subjective).
+- **Generates:** `contact-sheet.png`, `visual-diff.json`.
+
+### 5.7 `scripts/promote-approved-assets.mjs`
+- **Inputs:** validate pass-manifest + (optional) human approval flag.
+- **Outputs:** copies approved GLBs to `src/assets/game/models/...`; rewrites `src/assets/game/asset-manifest.json` (source, license, role, byte budget, fallback, optimize stats, proof artifact ref).
+- **Packages:** none new.
+- **Command:** `npm run assets:promote -- --approve`
+- **Pass/fail:** refuses to promote any asset not present in the validate pass-manifest; refuses if manifest write would orphan a runtime import.
+- **Generates:** updated runtime assets + manifest + a `CHANGELOG` line.
+
+`package.json` additions:
+```json
+{
+  "assets:audit":   "node scripts/audit-game-assets.mjs",
+  "assets:optimize":"node scripts/optimize-game-glbs.mjs",
+  "assets:validate":"node scripts/validate-game-assets.mjs",
+  "assets:gallery": "node scripts/render-asset-gallery.mjs",
+  "assets:proof":   "node scripts/capture-race-proof.mjs",
+  "assets:compare": "node scripts/compare-race-visuals.mjs",
+  "assets:promote": "node scripts/promote-approved-assets.mjs",
+  "assets:all":     "npm run assets:audit && npm run assets:optimize && npm run assets:validate"
+}
+```
+
+---
+
+## 6. File Structure
+
+New top-level pipeline workspace (kept **out** of `src/` so working files never ship):
+
+```
+asset-pipeline/
+  raw/                      # immutable copies of Tripo GLB + source PNG (drop zone)
+    karts/  characters/  props/  items/  track/
+  optimized/                # candidates produced by optimize stage
+    karts/  characters/  props/  items/  track/
+  rejected/                 # validate failures + reason.txt
+  audit/                    # audit-report.json / .md
+  proof/<timestamp>/        # Playwright screenshots, WebM, gallery, contact sheet
+  config/
+    asset-classes.json      # name → class → simplify/texture/budget overrides
+  README.md
+scripts/
+  lib/asset-pipeline.mjs    # shared IO + budgets + class inference
+  audit-game-assets.mjs
+  optimize-game-glbs.mjs
+  validate-game-assets.mjs
+  render-asset-gallery.mjs
+  capture-race-proof.mjs
+  compare-race-visuals.mjs
+  promote-approved-assets.mjs
+```
+
+Runtime targets (existing, written to by promote) **[repo]**:
+```
+src/assets/game/models/avatars/*.glb
+src/assets/game/models/tripo/*.glb
+src/assets/game/asset-manifest.json
+```
+
+Rationale: `raw/` is your single source of truth and is never mutated; everything downstream is reproducible from it. `proof/` is your audit trail for promotion decisions. Only `promote` ever writes into `src/`.
+
+---
+
+## 7. Runtime Integration
+
+No mechanics change. Integration points **[repo]**:
+
+- **`src/game/ComebackCityThreeKartRace.jsx`** — already imports optimized avatar + Tripo kart GLBs and constructs the loader. Add (once) the meshopt decoder:
+  ```js
+  import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+  loader.setMeshoptDecoder(MeshoptDecoder); // before .load() — sourced
+  ```
+  If/when you enable KTX2 (Phase 2), additionally:
+  ```js
+  import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
+  const ktx2 = new KTX2Loader().setTranscoderPath('/basis/').detectSupport(renderer);
+  loader.setKTX2Loader(ktx2); // must be set before loading KTX2 textures — sourced
+  ```
+  (Copy `three/examples/jsm/libs/basis/` into `public/basis/` so Vite serves it.) **[judgment]**
+
+- **`src/game/race/render/*`** — `createKartModel.js` / `createRaceVehicles.js` keep consuming GLBs by path; only the *files* improve. Keep the existing yaw corrections (Tripo rigs face +X → `yaw = -π/2`; Kenney faces −Z → `yaw = π`) **[repo]**. The pipeline must **not** re-orient meshes; orientation stays a runtime concern so the data model is stable. Preserve `?kenneyKart=1` and `?bakedSpike=1` A/B switches.
+
+- **`src/game/race/tracks/*`** — unaffected by this report; track *visuals* are Report 2. Track data stays pure/Node-importable so QA scripts keep working.
+
+- **`src/assets/game/asset-manifest.json`** — becomes the contract. `promote` writes, per asset: `source`, `license`, `role`, `sizeBudgetBytes`, `actualBytes`, `triangles`, `fallback`, `optimizedFrom`, `proofRef`. Runtime and CI both read it; the manifest gate (§9) fails if a promoted file's actual stats violate its recorded budget.
+
+---
+
+## 8. Visual Proof (Playwright)
+
+Extends your working `kart-3d-spike-test.mjs` pattern (build → `vite preview` → navigate → assert telemetry → screenshot/WebM) **[repo]**. Artifacts per run, written to `asset-pipeline/proof/<timestamp>/`:
+
+| Artifact | Spec | Pass condition |
+|---|---|---|
+| Desktop still | `/#race` @ 1365×768 | non-blank canvas; `data-race-renderer="three-kart"` present |
+| Mobile still | `/#race` @ 390×844 | non-blank; stable framing (kart in frame) |
+| Desktop video | 10 s WebM @ 1365×768 | start vs. mid frame differ (motion proven) |
+| Mobile video | 10 s WebM @ 390×844 | motion proven |
+| Asset gallery | `/#asset-gallery` desktop | every candidate renders, none blank |
+| Contact sheet | candidate vs. V2 card | mean-diff under review threshold (soft) |
+
+Blank-canvas detection: sample the WebGL canvas pixels (you already use `pngjs` + `preserveDrawingBuffer:false`, so read via `page.screenshot` of the canvas element, not `toDataURL`). Fallback detection: assert **zero** Pixi canvases, **zero** legacy arcade canvases, **exactly one** three-kart canvas, `propCount >= 20`, and `visualAssetSet === "comeback-city-v2-three-runtime"` — all already in your spike test **[repo]**.
+
+Video capture in Playwright is configured at the browser-context level (`recordVideo`), so wrap the proof navigation in a context that records, then trim/keep the 10 s window. Verify the exact `recordVideo` option names against current Playwright docs at build time (§11).
+
+---
+
+## 9. CI Gates
+
+Wire into the gates you already run **[repo]**, in this order. Earlier = cheaper = fails faster.
+
+```
+1. npm run assets:audit -- --strict     # promoted assets within budget        (NEW)
+2. npm run build                          # app + assets build
+3. npm run test:bundle                    # JS bundle + asset payload budgets    [repo]
+4. npm run test:webgl                     # WebGL context smoke                  [repo]
+5. npm run test:kart-proof                # static guard                        [repo]
+6. npm run test:kart-playable             # playability proof                    [repo]
+7. npm run test:visual                    # visual reference checks              [repo]
+8. npm run test:kart-3d-spike             # 3D spike + FPS≥34 + non-blank        [repo]
+9. npm run assets:validate                # optimized-asset budget/spec gate     (NEW)
+10. (manifest gate) promoted stats == manifest budgets                          (NEW)
+```
+
+The three NEW gates reuse the shared budget table in `scripts/lib/asset-pipeline.mjs`, so a budget change is a one-file edit. Don't duplicate thresholds across scripts.
+
+---
+
+## 10. Implementation Phases
+
+Sized so a coding agent ships each in one focused session.
+
+- **P1 — Inventory + manifest contract.** Create `asset-pipeline/` tree; copy raw Tripo GLBs into `raw/`; write `audit-game-assets.mjs` + `lib/asset-pipeline.mjs`; emit first audit report; define manifest schema. *Exit:* `npm run assets:audit` prints stats for all current assets.
+- **P2 — Optimizer.** Implement `optimize-game-glbs.mjs` (the §5.2 core) + `validate-game-assets.mjs`. Re-optimize the two over-budget penguins as the proof case. *Exit:* every candidate passes §4.2; before/after log shows the penguins down from ~100k to ≤25k tris.
+- **P3 — Gallery + proof.** `render-asset-gallery.mjs` + `/#asset-gallery` route; `capture-race-proof.mjs`; `compare-race-visuals.mjs`. *Exit:* one proof folder with stills, two WebMs, gallery, contact sheet; blank/fallback checks pass.
+- **P4 — Promote + manifest gate.** `promote-approved-assets.mjs`; manifest rewrite; CI manifest gate. *Exit:* promoting a candidate updates `src/` + manifest and the existing race route still passes `test:kart-3d-spike`.
+- **P5 — Wire all gates + docs.** Add NEW gates to CI sequence; `asset-pipeline/README.md` runbook. *Exit:* `npm run assets:all` + full test suite green on a clean checkout.
+
+---
+
+## 11. Risks & Decisions
+
+Open questions for you (only what blocks implementation):
+
+1. **Meshopt vs. KTX2 timing.** Recommend meshopt-geometry + WebP-texture now, KTX2 later. Confirm, or do you want KTX2/ETC1S in P2 (adds the Basis transcoder to `public/` and the `detectSupport` wiring)?
+2. **Rival instancing.** Do rivals reuse one kart mesh (best for draw calls; collapses to 1 `InstancedMesh`) or does each rival need a visually distinct kart from the V2 rival cards? This changes the rival budget (18k each vs. one shared mesh) and the scene draw-call ceiling.
+3. **Promotion approval.** Fully automated promotion on green gates, or require a manual `--approve` flag after you eyeball the contact sheet? (I default to manual for art, auto for everything else.)
+4. **Character LOD.** Two of your penguins are 88k–100k tris. Re-optimize in place to ≤25k, or keep a high-poly "hero/select-screen" variant and a low-poly "race" variant? (Recommend single ≤25k for race; reuse the existing select-screen PNGs for the menu, so no high-poly GLB needed.)
+5. **Texture floor.** Is 512² acceptable for characters/karts in the N64-era-with-polish target, or do you want 1024² held for the hero kart specifically? (512² roughly halves VRAM.)
+
+Risks to manage:
+
+- **Over-simplification artifacts** on organic characters (penguins/bunny) — `simplify` can collapse fingers/beaks. Mitigation: per-asset ratio override in `config/asset-classes.json` + the contact-sheet gate catches it visually before promote.
+- **`optimize` CLI surprises** (uv1 stripping, aggressive join) — mitigated by using the functional API with `prune({keepAttributes:true})` and explicit `join`. **[sourced]**
+- **Meshopt write helper signature drift** in `@gltf-transform/functions` — verify the current meshopt application step at build time; the CLI `gltf-transform meshopt` path is the stable fallback.
+- **Decoder path under Vite** — `meshopt_decoder.module.js` imports cleanly from the `three` package; KTX2 Basis transcoder needs files served from `public/`. Test both in `vite preview`, not just `vite dev`.
+- **glTF-Transform licensing** — MIT; free for commercial use, with sponsorship requested for for-profit projects. No license blocker for CRRT. **[sourced]**
+
+---
+
+## 12. Sources
+
+- glTF-Transform — CLI command reference: https://gltf-transform.dev/cli
+- glTF-Transform — Functions package & API (transform chain, `textureCompress`, MIT license): https://github.com/donmccurdy/glTF-Transform
+- glTF-Transform — CLI package (Draco/meshopt/KTX2/WebP/resize commands): https://www.npmjs.com/package/@gltf-transform/cli
+- glTF-Transform — CHANGELOG (vertex-count helpers, `prune` `keepExtras`, simplify via meshoptimizer): https://github.com/donmccurdy/glTF-Transform/blob/main/CHANGELOG.md
+- glTF-Transform — `optimize` internals / `prune({keepAttributes:false})` UV stripping: https://github.com/donmccurdy/glTF-Transform/discussions/1296
+- glTF-Transform — `weld` + `simplify` ordering and parameters: https://github.com/donmccurdy/glTF-Transform/discussions/1658
+- meshoptimizer / gltfpack — `EXT_meshopt_compression`, three.js r122+ `setMeshoptDecoder`, `-cf` fallback buffers: https://meshoptimizer.org/gltf/
+- three.js — GLTFLoader docs: https://threejs.org/docs/#examples/en/loaders/GLTFLoader
+- three.js — KTX2Loader docs (`setTranscoderPath`, `detectSupport`): https://threejs.org/docs/#examples/en/loaders/KTX2Loader
+- Unreal Engine 5.8 — first-party MCP plugin (referenced for Report 2): https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor
+
+---
+
+*End of Report 1. Next: Report 2 — Track Production, Visual Direction, and Unreal MCP Look-Dev.*

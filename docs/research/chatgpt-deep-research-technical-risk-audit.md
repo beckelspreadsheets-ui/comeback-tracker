@@ -1,0 +1,426 @@
+# Three.js Asset Pipeline for Comeback City Kart
+
+_Source: ChatGPT deep research report pasted by owner. Raw attachment preserved at `docs/research/chatgpt-deep-research-technical-risk-audit.raw.txt`._
+
+## Executive recommendation
+
+The best first version for Comeback City is a dual-variant glTF pipeline centered on GLB as the runtime container, glTF Transform as the offline optimizer, Meshopt as the default geometry compression, and KTX2/Basis Universal as the default texture compression. In practice, that means every approved asset produces two runtime outputs: a primary asset using EXT_meshopt_compression plus KHR_texture_basisu, and a fallback asset using quantized but uncompressed geometry plus WebP or PNG/JPEG textures. That choice fits browser delivery well because glTF is designed for efficient transmission and loading, GLB keeps the asset self-contained in one binary, Three.js GLTFLoader supports KHR_mesh_quantization, KHR_texture_basisu, KHR_meshopt_compression, EXT_meshopt_compression, and Draco, and Vite’s public directory is the cleanest way to serve exact asset filenames referenced by a JSON manifest. 
+
+For a kart game, Meshopt should be the default geometry path, not Draco. The reason is runtime behavior: glTF Transform documents Meshopt as lightweight, fast to decode, and appropriate for models of any size, while Draco is best reserved for geometry-heavy assets and can lose its advantage on smaller assets because decoder cost may outweigh size savings. That tradeoff matters in a racing game, where visible assets stream in while maintaining responsiveness on mobile hardware. Keep Draco as an opt-in override for unusually large static track modules when download size beats decode latency in your target environment. 
+
+The implementation principle is simple: do not let imported art own gameplay. Preserve the current React/Vite/Three.js race mechanics by keeping collision, lap logic, boosts, checkpoints, input, and item behavior in the existing gameplay files, while moving only the visual surface to manifest-driven GLB assets. That keeps the current race playable even if an asset fails validation or falls back to a simpler visual. Three.js also makes this separation practical because repeated props can be instanced to reduce draw calls, renderer statistics can be sampled through renderer.info, and materials and textures can be explicitly disposed when assets are swapped or unloaded. 
+
+If Blender is part of the source toolchain, keep authoring constraints intentionally narrow for the first shipping version: export Binary .glb, restrict materials to Principled BSDF or Unlit, and use Actions/NLA for any animation that must survive export. Blender’s glTF documentation and API docs explicitly describe GLB export, supported material families, and Actions/NLA animation export. 
+
+Assumptions used in this report: I can see the target file paths you named — src/game/ComebackCityThreeKartRace.jsx, src/game/race/render/*, src/game/race/tracks/*, and src/assets/game/asset-manifest.json — but I could not inspect the current repository contents in this conversation. So the report assumes: the project already runs on React + Vite + Three.js; the existing race is already playable with placeholder or procedural visuals; the listed npm scripts already exist or can be re-wired; and the owner is willing to add build-time asset generation outside the browser runtime. Where those assumptions may be wrong, I call out exact owner questions later in the report.
+
+## Pipeline design
+
+The repeatable path should be:
+
+```text
+game-assets/raw
+  -> audit
+  -> classify
+  -> optimize
+  -> validate
+  -> preview
+  -> capture proof
+  -> promote
+  -> update manifest
+  -> consume in runtime
+```
+That flow matches the strengths of the tooling. glTF Transform provides audit, validation, restructuring, quantization, simplification, texture conversion, and compression tooling; Khronos’s glTF-Validator emits machine-readable JSON reports with both issues and asset stats; Playwright captures screenshots, videos, and visual comparisons; and Vite cleanly serves finalized runtime assets from public while leaving your source manifest in src/assets/game. 
+
+A practical implementation-ready flow for each asset should look like this:
+
+Stage	What happens	Primary tools	Pass condition	Artifacts
+Raw source	Artist drops *.glb, source textures, and sidecar metadata	Blender export, file conventions	File opens, naming valid	game-assets/raw/...
+Audit	Read file stats, materials, textures, triangles, animations, extensions	inspect, validate, gltf-validator	No fatal parse/spec errors	*.audit.json
+Classify	Assign budget class and optimization profile	custom script + metadata	Class known, budget profile attached	asset-audit.json
+Optimize	Dedup, prune, weld, join, quantize, simplify, texture compress, geometry compress	glTF Transform API/CLI	Both primary and fallback assets produced	*.primary.glb, *.fallback.glb
+Validate	Run spec validation + custom budget checks + manifest schema	gltf-validator, custom checks	Zero errors, zero hard-budget violations	asset-validation.json
+Preview	Load assets in the same loader path the game uses	local Vite preview + Three.js	Asset renders, no blank canvas, no runtime loader error	gallery page, thumb PNGs
+Capture proof	Desktop/mobile screenshots, videos, gallery shot, diff data	Playwright	Proof artifacts captured and nonblank	proof/...
+Promote	Copy approved outputs into runtime folder	Node FS scripts	Only validated assets promoted	public/game/runtime/...
+Update manifest	Write URLs, metrics, fallback URLs, revision	JSON generator	Manifest schema valid	src/assets/game/asset-manifest.json
+
+The classification step is not optional. The optimization settings that are correct for a hero kart are wrong for an instanced traffic cone. Put that decision in a sidecar metadata file such as asset.meta.json, living next to the raw asset, with fields like id, kind, budgetClass, compression, allowSimplify, requiredAnchors, proofCamera, collisionSource, and authoringNotes. That gives the scripts a stable way to avoid over-compressing hero assets or under-optimizing repeated props. This is consistent with glTF Transform’s scripting model, which is built around reading a document, applying staged transforms, and writing deterministic outputs. 
+
+## GLB optimization strategy
+
+Use .glb only for runtime delivery. A GLB is a single binary with one buffer, which makes cache handling, copying, manifesting, and Preview/Playwright proofing simpler than multipart .gltf + .bin + textures. For browser delivery in a game repo, that operational simplicity is more valuable than hand-editability. 
+
+The canonical optimization sequence should be:
+
+```bash
+# audit
+npx gltf-transform inspect input.glb
+npx gltf-transform validate input.glb
+
+# structure cleanup
+npx gltf-transform dedup input.glb step1.glb
+npx gltf-transform prune step1.glb step2.glb
+npx gltf-transform weld step2.glb step3.glb
+npx gltf-transform reorder step3.glb step4.glb
+npx gltf-transform quantize step4.glb step5.glb
+
+# draw-call reduction when safe
+npx gltf-transform join step5.glb step6.glb
+
+# lossy reduction only if the class allows it
+npx gltf-transform simplify step6.glb step7.glb
+
+# primary runtime variant
+npx gltf-transform uastc step7.glb step8.glb \
+  --slots "{normalTexture,occlusionTexture,metallicRoughnessTexture}" \
+  --level 4 --rdo --rdo-lambda 4 --zstd 18 --verbose
+npx gltf-transform etc1s step8.glb primary.glb --quality 255 --verbose
+npx gltf-transform meshopt primary.glb primary.glb --level medium
+
+# fallback runtime variant
+# do this in the Node API with textureCompress(...slots:/^(?!normalTexture).*$/...)
+```
+That sequence is grounded in what the official tools actually expose. inspect reports whether the model is geometry-heavy, texture-heavy, or draw-call-heavy. validate checks spec correctness. dedup removes duplicate accessors, textures, materials, and meshes. prune removes unreferenced data. weld merges identical vertices and improves cache efficiency. reorder optimizes locality of reference and is explicitly recommended for Web-oriented transmission size or GPU efficiency. quantize reduces memory footprint with KHR_mesh_quantization. join reduces draw calls. simplify is deliberately lossy and therefore should be conditional on class. resample should also be added whenever an asset contains baked animation. 
+
+For texture handling, use KTX2 in the primary variant and WebP/PNG in the fallback. Khronos’s KHR_texture_basisu extension exists specifically to use KTX2 with Basis Universal supercompression for more efficient transmission and reduced GPU memory footprint, and Three.js requires KTX2Loader to decode those textures. glTF Transform’s own guidance shows a mixed approach: use UASTC for normal and packed data textures, and ETC1S for the rest. That is the right trade for a kart game because normal maps and packed ORM textures are the maps most likely to show block artifacts under aggressive ETC1S compression. 
+
+The default geometry compression should be Meshopt, using meshopt after structure cleanup and before final validation. Meshopt provides very fast runtime decompression and a lightweight decoder, and glTF Transform explicitly notes that compression alone does not improve framerate directly; framerate gains come from reducing vertex count and draw calls with simplification and joining. That is why your pipeline should always combine Meshopt with budget-driven simplification and draw-call reduction, not treat compression as a performance feature by itself. 
+
+Use Draco only as an override, not the default. A reasonable policy is: if raw geometry payload is above roughly 1 MB and the asset is mostly static and rarely hot-swapped, allow compression: "draco" in the asset metadata. glTF Transform documents Draco as especially valuable when geometry dominates file size, but also notes that for geometry smaller than 1 MB the decoder library may outweigh the savings. Three.js supports Draco, but it requires explicit loader wiring and decoder assets. 
+
+The fallback strategy should be a separate GLB, not optional fallback images embedded into the same GLB. The Khronos extension spec allows optional PNG fallback images in the same asset, but glTF Transform’s KHRTextureBasisu docs state that when the extension is added by glTF Transform it should be required, and the tool does not support writing fallback PNG/JPEG data into the same asset. That makes separate primary and fallback GLBs the cleanest and most deterministic implementation in this repo. 
+
+## Budgets and file structure
+
+The following budgets are recommended engineering targets, not official industry standards. They are derived from the constraints official docs emphasize for WebGL apps: keep VRAM under a measured budget, batch draw calls, use mipmaps for 3D textures, use compressed texture formats to reduce GPU memory, and use instancing where repeated meshes share geometry and material. Those principles are what the numbers below are trying to make concrete for a mobile-first browser racer. 
+
+Asset budgets
+Asset class	Triangles target	Hard max	Materials / draw calls target	Texture cap	Primary GLB target	Fallback GLB max	Estimated active GPU memory target
+Hero kart	12k	18k	1 material / 1–2 calls	1×1024 color, 1×1024 normal, 1×512 ORM	250–450 KB	700 KB	2.5–3.5 MiB
+Rival kart	8k	12k	1 material / 1 call	1×1024 color, 1×512 normal/ORM	180–320 KB	500 KB	1.5–2.5 MiB
+Seated character	10k	15k	1–2 materials / 1–2 calls	1×1024 color, 1×512 normal, 1×512 ORM	220–420 KB	650 KB	2–3 MiB
+Simple prop	300	1k	1 material / 1 call before instancing	1×256 or shared atlas	10–40 KB	80 KB	0.05–0.2 MiB
+Complex prop	2k	6k	1 material / 1–2 calls	1×512 color, optional 1×512 ORM	60–180 KB	300 KB	0.5–1.2 MiB
+Item box	1k	2k	1 material / 1 call	1×512 color+emissive	40–120 KB	180 KB	0.4–0.9 MiB
+Boost pad	500	1.5k	1 material / 1 call	1×256 or 1×512	20–80 KB	120 KB	0.2–0.6 MiB
+Track module	10k	25k	1–2 materials / 1–3 calls	1×1024 atlas, optional 1×1024 detail/normal	250–900 KB	1.3 MB	3–6 MiB
+Full visible race scene	80k–120k	140k mobile / 220k desktop	60–90 calls mobile / 120 desktop	active unique texture set <= 12 MiB compressed assets	first visible set <= 4.5 MB compressed	<= 7 MB	70–120 MiB total scene budget
+
+For texture dimensions, keep the default ceilings at 256 for tiny props and decals, 512 for most props and interactive pickups, 1024 for hero vehicles and close-view characters, and 2048 only when the track module truly needs an atlas and can prove it in screenshots. A mipmapped 1024² uncompressed RGBA8 texture costs about 5.33 MiB, while a 1024² compressed texture around 4–8 bits per pixel is roughly 0.67–1.33 MiB including mip overhead; the same relationship scales to 2048² textures as roughly 21.33 MiB uncompressed versus 2.67–5.33 MiB compressed. Those latter numbers are an engineering inference based on MDN’s compressed-format memory behavior, MDN’s 30% mip overhead note, and common ETC2/ASTC-class bit rates that KTX2 transcoders target at runtime. 
+
+For bundle budgets, keep asset bytes out of the JS bundle entirely. The race route should lazy-load visual decoders and runtime assets only when the player enters the race. A good first target is: main app JS+CSS <= 320 KB gzip, race-mode async JS <= 450 KB gzip, decoders <= 400 KB compressed and lazy-loaded, and initial race asset payload <= 5 MB compressed on mobile. Those numbers are recommendations based on the fact that Vite treats public assets separately from the source graph, so you can keep the race art payload from inflating initial route JS. 
+
+Recommended file structure
+Use exact folders like this:
+
+```text
+game-assets/
+  raw/
+    karts/
+    characters/
+    props/
+    tracks/
+  working/
+    primary/
+    fallback/
+    metrics/
+  rejected/
+  thumbs/
+  proof/
+    screenshots/
+    videos/
+    diffs/
+    contact-sheets/
+    traces/
+  manifests/
+    asset-audit.json
+    asset-validation.json
+    asset-gallery.json
+    asset-promotion-log.json
+  budgets/
+    game-asset-budgets.json
+
+public/
+  game/
+    runtime/
+      glb/
+        karts/
+        characters/
+        props/
+        tracks/
+      decoders/
+        basis/
+        draco/
+
+src/
+  assets/
+    game/
+      asset-manifest.json
+```
+Put raw, working, rejected, proof, budgets, and manifests outside src/ so they never enter the app bundle accidentally. Put promoted runtime GLBs and decoder blobs in public/game/runtime, because Vite serves public files at root and copies them to the output directory as-is without transformation. Keep the source-of-truth manifest in src/assets/game/asset-manifest.json, because the app should import that JSON directly and use its public-root-relative URLs like /game/runtime/glb/.... 
+
+Scripts, commands, and dependencies
+Install the new toolchain like this:
+
+```bash
+npm i -D \
+  @gltf-transform/cli \
+  @gltf-transform/core \
+  @gltf-transform/extensions \
+  @gltf-transform/functions \
+  gltf-validator \
+  sharp \
+  meshoptimizer \
+  draco3dgltf \
+  fast-glob \
+  execa \
+  zod \
+  pngjs \
+  pixelmatch \
+  wait-on \
+  playwright \
+  @playwright/test
+
+npx playwright install --with-deps
+```
+That dependency set directly matches the primary docs: glTF Transform exposes both CLI and scripting APIs; sharp is the recommended image encoder for texture optimization in Node; Playwright’s official install flow downloads browser binaries with npx playwright install --with-deps; and the mesh/Draco packages align with the official glTF Transform scripting examples for Node I/O and compression dependencies. 
+
+These package.json entries are the simplest wiring for the first version:
+
+```json
+{
+  "scripts": {
+    "assets:audit": "node scripts/audit-game-assets.mjs",
+    "assets:optimize": "node scripts/optimize-game-glbs.mjs",
+    "assets:validate": "node scripts/validate-game-assets.mjs",
+    "assets:gallery": "node scripts/render-asset-gallery.mjs",
+    "assets:proof": "node scripts/capture-race-proof.mjs",
+    "assets:compare": "node scripts/compare-race-visuals.mjs",
+    "assets:promote": "node scripts/promote-approved-assets.mjs"
+  }
+}
+```
+## Script plan
+
+Script	Inputs	Outputs	Required packages	Command example	Pass / fail criteria	Generated files
+scripts/audit-game-assets.mjs	game-assets/raw/**/*.glb, optional asset.meta.json	consolidated audit + per-asset reports	@gltf-transform/core, @gltf-transform/extensions, @gltf-transform/functions, gltf-validator, fast-glob, zod	node scripts/audit-game-assets.mjs --src game-assets/raw --out game-assets/manifests/asset-audit.json	Pass: every file loads, validates, and classifies. Fail: parse errors, spec errors, duplicate IDs, unknown budget class without override.	game-assets/manifests/asset-audit.json, game-assets/manifests/per-asset/*.audit.json
+scripts/optimize-game-glbs.mjs	raw assets + audit manifest + budget config	primary and fallback working GLBs + metrics	execa, sharp, meshoptimizer, draco3dgltf, glTF Transform packages, fast-glob	node scripts/optimize-game-glbs.mjs --src game-assets/raw --work game-assets/working --budgets game-assets/budgets/game-asset-budgets.json	Pass: each approved raw asset emits primary and fallback. Fail: missing variant, failed transform, size regression > threshold, hard budget violation.	game-assets/working/primary/**/*.glb, game-assets/working/fallback/**/*.glb, game-assets/working/metrics/*.json
+scripts/validate-game-assets.mjs	working GLBs + budget config + audit data	validation summary	gltf-validator, @gltf-transform/functions, zod	node scripts/validate-game-assets.mjs --work game-assets/working --out game-assets/manifests/asset-validation.json	Pass: validator errors = 0, hard budgets = 0, required anchors present, manifest fields resolvable. Fail: any spec error or hard-budget miss.	game-assets/manifests/asset-validation.json
+scripts/render-asset-gallery.mjs	validated working assets	thumbnail PNGs + gallery manifest + optional static gallery HTML/JSON	playwright, sharp, fast-glob, wait-on	node scripts/render-asset-gallery.mjs --work game-assets/working --out game-assets/thumbs	Pass: every promoted asset has a nonblank thumb and metadata row. Fail: missing thumbnails, blank renders, loader errors.	game-assets/thumbs/**/*.png, game-assets/manifests/asset-gallery.json
+scripts/capture-race-proof.mjs	local preview server + runtime manifest + proof seed	screenshots, videos, trace, metrics	playwright, wait-on, execa	node scripts/capture-race-proof.mjs --url http://127.0.0.1:4173 --seed asset-pipeline	Pass: desktop/mobile screenshots + videos saved, canvas nonblank, race scene renders, proof metrics captured. Fail: blank canvas, console errors, loader errors, unexpected fallback, missing output artifacts.	game-assets/proof/screenshots/*.png, game-assets/proof/videos/*.webm, game-assets/proof/traces/*.zip, game-assets/proof/metrics.json
+scripts/compare-race-visuals.mjs	proof screenshots + baseline refs	diffs + contact sheets + summary	pixelmatch, pngjs, sharp, fast-glob	node scripts/compare-race-visuals.mjs --actual game-assets/proof/screenshots --expected tests/visual/references/v2	Pass: diff under configured threshold. Fail: threshold exceeded or baseline missing in strict CI mode.	game-assets/proof/diffs/*.png, game-assets/proof/contact-sheets/*.png, game-assets/proof/visual-compare.json
+scripts/promote-approved-assets.mjs	validated working assets + approval manifest	runtime files + updated manifest + promotion log	node:fs/promises, crypto, fast-glob, zod	node scripts/promote-approved-assets.mjs --from game-assets/working --to public/game/runtime --manifest src/assets/game/asset-manifest.json	Pass: only validated assets copied, manifest rewritten atomically, all URLs exist. Fail: promotion without validation, URL mismatch, stale metrics.	public/game/runtime/**, src/assets/game/asset-manifest.json, game-assets/manifests/asset-promotion-log.json
+
+For optimize-game-glbs.mjs, the actual implementation should use both the glTF Transform scripting API and CLI. Use the Node API for audit, custom per-class conditionals, fallback texture conversion with textureCompress, and JSON metrics; use the CLI only for the KTX2/Basis passes where the official tool already exposes uastc, etc1s, and ktxfix commands cleanly. That hybrid approach is more maintainable than trying to force every step through the CLI or every step through raw extension plumbing. 
+
+## Runtime integration and visual proof
+
+src/game/ComebackCityThreeKartRace.jsx should remain the authoritative gameplay orchestrator. Do not replace race logic with artist-authored scene graphs. Instead, introduce a visual asset layer that maps existing gameplay entities to manifest IDs. A kart entity that the game already knows as “player kart” or “rival kart” should gain only a visualAssetId and possibly visualVariant, while physics size, wheelbase, hitbox, boost behavior, slipstream logic, and checkpoint behavior remain in code. This keeps the race mechanics stable while visual assets can iterate independently. 
+
+Inside src/game/race/render/*, add a small loader stack. At minimum, you want: raceAssetRegistry.ts or .js to read the manifest; loadRaceAsset.ts to choose primary vs fallback; cloneRaceAssetScene.ts to return reusable scene instances; and disposeRaceAssetScene.ts to traverse the scene and call dispose() on geometry, materials, and textures when appropriate. This is important because GLTFLoader uses image bitmaps and Three.js docs warn that they are not automatically garbage-collected when no longer referenced; explicit cleanup matters if you swap scenes, re-enter races, or hot-reload in development. 
+
+Inside src/game/race/tracks/*, keep the current track definition authoritative for layout, checkpoints, collision, spline, item spawn points, and boost triggers, but let each module reference a promoted visual asset ID. In other words: the track files become the place where logical track pieces say “use track.module.corner-neon-01 here”, not the place where raw meshes are authored. This lets you preserve today’s race behavior while upgrading scenery piece by piece.
+
+src/assets/game/asset-manifest.json should become a generated file with a schema like this:
+
+```json
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-17T00:00:00.000Z",
+  "runtimeBaseUrl": "/game/runtime",
+  "decoders": {
+    "basisTranscoderPath": "/game/runtime/decoders/basis/",
+    "dracoDecoderPath": "/game/runtime/decoders/draco/"
+  },
+  "assets": {
+    "kart.hero.comeback-city": {
+      "kind": "kart",
+      "budgetClass": "hero-kart",
+      "primary": "/game/runtime/glb/karts/comeback-city.primary.glb",
+      "fallback": "/game/runtime/glb/karts/comeback-city.fallback.glb",
+      "thumbnail": "/game-assets/thumbs/karts/comeback-city.png",
+      "metrics": {
+        "triangles": 11842,
+        "materials": 1,
+        "drawCallsExpected": 1,
+        "primaryBytes": 392144,
+        "fallbackBytes": 581923
+      },
+      "anchors": {
+        "seat": [0, 0.42, -0.08],
+        "frontAxle": [0, 0.18, 0.66],
+        "rearAxle": [0, 0.18, -0.61]
+      }
+    }
+  }
+}
+```
+The runtime loader should choose the primary variant whenever KTX2 and the selected geometry codec are available, and otherwise choose fallback. The required Three.js wiring is straightforward and official: GLTFLoader.setKTX2Loader() is required for KTX2, KTX2Loader.detectSupport(renderer) must run before loading textures, GLTFLoader.setMeshoptDecoder() is required for EXT_meshopt_compression, and GLTFLoader.setDRACOLoader() is required only for Draco assets. 
+
+A practical loader skeleton looks like this:
+
+js
+Copy
+import manifest from '@/assets/game/asset-manifest.json';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'meshoptimizer';
+
+export function createRaceAssetLoader(renderer) {
+  const gltfLoader = new GLTFLoader();
+
+  const ktx2Loader = new KTX2Loader()
+    .setTranscoderPath(manifest.decoders.basisTranscoderPath)
+    .detectSupport(renderer);
+
+  const dracoLoader = new DRACOLoader()
+    .setDecoderPath(manifest.decoders.dracoDecoderPath);
+
+  gltfLoader.setKTX2Loader(ktx2Loader);
+  gltfLoader.setMeshoptDecoder(MeshoptDecoder);
+  gltfLoader.setDRACOLoader(dracoLoader);
+
+  function pickVariant(entry) {
+    return entry.primary ?? entry.fallback;
+  }
+
+  return {
+    async load(assetId) {
+      const entry = manifest.assets[assetId];
+      const url = pickVariant(entry);
+      return gltfLoader.loadAsync(url);
+    },
+    dispose() {
+      ktx2Loader.dispose();
+      dracoLoader.dispose();
+    }
+  };
+}
+To preserve visuals correctly, do not regress Three.js color handling. Current Three.js docs show the renderer’s outputColorSpace default as SRGBColorSpace, and GLTFLoader natively supports the modern glTF material and texture extensions you want to use. Unless your repo is pinned to a much older Three.js release, you should keep that modern color-management path intact rather than manually overriding glTF-loaded texture color spaces. 
+
+## Visual proof workflow
+
+The proof workflow should be automated with Playwright and produce these artifacts on every promoted asset batch:
+
+Artifact	Required viewport / device	What it proves	Implementation note
+Desktop screenshot	1440×900 Chromium	primary race scene visually loads	page.screenshot() or toHaveScreenshot()
+Mobile screenshot	393×851 mobile emulation	mobile-safe layout and asset readability	Playwright emulation with touch/mobile context
+Desktop video	10 seconds	motion, shader stability, streaming, no mid-race blanks	browser context with recordVideo; close context to save
+Mobile video	10 seconds	same proof under mobile emulation	same as above with mobile context
+Asset gallery screenshot	full-page	every promoted asset renders in browser	one gallery route, full-page screenshot
+Contact sheet vs V2 references	static image sheet	easy human review of old vs new look	sharp montage + diff labels
+WebGL nonblank checks	JS eval + image histogram	catches “canvas exists but scene never rendered”	inspect renderer.info, canvas pixels, alpha coverage
+Fallback detection checks	JS eval + console scan	proves fallback only happens when expected	expose window.__assetPipelineMetrics
+
+Playwright’s official docs cover screenshots, full-page screenshots, stored visual comparisons through toHaveScreenshot(), mobile emulation via device/context options, and test video output. They also recommend using traces on CI retries for debugging. That makes Playwright a good fit not just for proof capture, but for actionable failure artifacts. 
+
+For the nonblank-canvas gate, do two checks. First, inspect runtime counters in the page: renderer.info.render.calls > 0, renderer.info.memory.geometries > 0, and renderer.info.memory.textures > 0. Second, analyze the captured PNG and fail if more than 98% of pixels are the same color or if alpha is effectively zero across the frame. That two-part approach catches both logic bugs and rendering bugs. Three.js exposes the render stats officially through renderer.info, and Playwright provides screenshot buffers for post-processing. 
+
+For the fallback gate, instrument the runtime with a small metrics object such as:
+
+js
+Copy
+window.__assetPipelineMetrics = {
+  usedFallbackAssets: [],
+  failedPrimaryAssets: [],
+  renderCalls: 0,
+  textureCount: 0,
+  geometryCount: 0
+};
+Then make Playwright read it with page.evaluate(). In the normal desktop/mobile proof runs, usedFallbackAssets should be empty. In a dedicated “fallback simulation” run, intentionally disable KTX2 or Meshopt and assert that the fallback assets render correctly instead of failing the scene. That is the simplest way to prove your resilience path actually works.
+
+## CI gates and implementation phases
+
+The existing script names you provided should become hard gates with these behaviors:
+
+Existing command	Gate behavior
+npm run build	Must build the app, emit a valid manifest, and confirm that all promoted runtime URLs exist under public/game/runtime.
+npm run test:kart-proof	Must run the Playwright proof capture and produce desktop/mobile screenshots, desktop/mobile 10-second videos, metrics JSON, and no blank-canvas failures.
+npm run test:kart-playable	Must prove the optimized assets do not break race mechanics: race starts, input or bot controls work, at least one lap/checkpoint flow still completes, and no asset-load error halts play.
+npm run test:kart-3d-spike	Must smoke-test GLTFLoader + manifest + decoder integration in isolation on one kart, one track module, one prop, and one fallback path.
+npm run test:visual	Must run screenshot comparisons and diff thresholds against the accepted visual baseline.
+npm run test:webgl	Must assert WebGL context creation, nonblank rendering, compressed texture support detection, and fallback functioning when codecs are unavailable.
+npm run test:bundle	Must assert JS bundle budgets and that runtime art bytes stay out of the initial JS bundle.
+
+The test:visual gate should use toHaveScreenshot() or equivalent pixel diffing for desktop race, mobile race, and asset gallery images. For deterministic results, freeze the race seed, lock the camera path, disable volatile overlays, and if necessary apply a Playwright stylePath to hide transient UI that would otherwise produce meaningless diffs. Playwright documents both snapshot generation/update flow and custom stylePath for determinism. 
+
+The test:webgl gate should include three specific assertions. First, the page must create a WebGL context successfully. Second, it must render at least one frame with nonzero renderer.info stats. Third, it must pass a fallback simulation where KTX2 or Meshopt use is disabled and the scene still renders with fallback assets. That gate matters because official loader docs show KTX2 depends on WebAssembly and detected format support, while compressed texture availability varies by device and browser extensions. 
+
+## Implementation phases
+
+Phase one should add the folder structure, budget config, raw metadata schema, and audit-game-assets.mjs. Do not optimize anything yet. The deliverable is a truthful inventory of what the raw assets contain and which ones can already pass validation. 
+
+Phase two should implement optimize-game-glbs.mjs and validate-game-assets.mjs, producing primary and fallback variants for one hero kart, one rival kart, one seated character, one prop, one boost pad, and one track module. That is the smallest slice that exercises every major budget class. 
+
+Phase three should integrate manifest-driven loading into src/game/ComebackCityThreeKartRace.jsx and src/game/race/render/*, but only swap visuals for one lane of content at a time. Start with the player kart and one track module while leaving everything else on current visuals. That minimizes the blast radius on race mechanics.
+
+Phase four should add Playwright proof capture and visual compare, along with the dedicated proof seed and asset gallery route. Do this before promoting a full art drop, so every future asset batch has machine-verifiable proof from day one. 
+
+Phase five should expand coverage to all track modules and repeated props, add instancing where the renderer path permits it, and enforce the CI hard gates. This is where draw-call and VRAM wins become visible, because repeated scenery is where batching and instancing matter most for a kart game. 
+
+## Risks, decisions, assumptions, and exact owner questions
+
+The highest-risk decisions are these. First, whether you want runtime assets in public/ or hashed imports from src/. This report recommends public/ because the manifest is JSON and Vite explicitly supports exact-path public assets served and copied as-is. Second, whether you want Meshopt-only or Meshopt plus rare Draco overrides. This report recommends Meshopt-first. Third, whether your current gameplay layer derives any behavior from render mesh bounds; if it does, you need to stop doing that before replacing visual meshes wholesale. 
+
+The main technical risks are predictable. Over-compressing hero assets will produce visible surface artifacts; KTX2 without a fallback path will fail on unsupported environments; letting track art define gameplay layout will destabilize racing logic; and not disposing old materials/textures will leak memory across route reloads or repeated sessions. Those are exactly the kinds of issues the primary docs warn about: compressed texture formats vary by platform, KTX2 depends on runtime support detection, and Three.js resources should be explicitly disposed when no longer used. 
+
+## Exact follow-up questions for the owner
+
+What Three.js version is currently pinned in the repo, and does the existing renderer already use the modern outputColorSpace path?
+Does src/assets/game/asset-manifest.json already have a schema in production, or can it be replaced outright with a generated schema?
+Does the current race logic derive collision, wheel placement, kart size, or checkpoint behavior from visual mesh bounds anywhere in src/game/ComebackCityThreeKartRace.jsx or src/game/race/render/*?
+Do src/game/race/tracks/* currently separate collision/layout data from decorative render data, or are those still mixed together?
+Are you willing to serve runtime art from public/game/runtime, or do you need transformed and hashed asset URLs from within src/?
+Are there already V2 reference screenshots/videos in the repo for the visual comparison gate, or must the first approved run generate them?
+Which mobile devices define success for this project: low-end Android, mid-range Android, recent iPhone, or a mixed set?
+Is the seated character intended to stay mostly static, or do you need a skinned animated driver in the first version?
+Are you willing to ship the Basis and Draco decoder files in public/game/runtime/decoders, or is there an existing asset-hosting constraint?
+Do any assets need to remain editable in external DCC tooling after optimization, or can optimized GLBs be treated as strictly generated artifacts?
+
+## Sources
+
+Three.js official docs
+
+GLTFLoader support and loader setup. 
+KTX2Loader setup, detectSupport(), transcoder path, and WASM requirement. 
+DRACOLoader decoder path and worker controls. 
+InstancedMesh draw-call reduction. 
+Renderer.outputColorSpace and renderer.info. 
+Material.dispose() and Texture.dispose(). 
+glTF and Khronos primary docs
+
+glTF overview and positioning as runtime delivery format. 
+glTF 2.0 specification. 
+KHR_texture_basisu extension spec and fallback examples. 
+EXT_meshopt_compression extension spec. 
+KHR_draco_mesh_compression extension spec. 
+Official glTF Validator. 
+glTF Transform official docs
+
+CLI quickstart and command list. 
+Scripting API overview and Node examples. 
+inspect, dedup, prune, weld, reorder, quantize, simplify, meshopt, resample, join, textureCompress, KHRTextureBasisu, KHRDracoMeshCompression. 
+Blender official docs
+
+glTF exporter supports GLB, Principled BSDF / Unlit materials, and Actions/NLA animation export. 
+Playwright official docs
+
+Screenshots and full-page screenshots. 
+Visual comparisons with toHaveScreenshot(). 
+Video recording. 
+Emulation and mobile/device settings. 
+CI traces and trace viewer guidance. 
+Installation. 
+Vite official docs
+
+Static asset handling, explicit URL imports, and public directory behavior. 
+WebGL and mobile performance official docs
+
+WebGL best practices: per-pixel VRAM budget, smaller back buffer, batching, eager deletion, mipmaps. 
+Compressed texture formats and GPU-memory benefits. 
+Meshopt and Draco primary docs
+
+meshoptimizer and gltfpack background. 
+Draco project overview.

@@ -1,0 +1,568 @@
+Comeback City — Automated Three.js Asset & Track Pipeline
+Final Implementation Plan (June 18, 2026)
+1. Final Recommendation
+Chosen workflow: A scripted glTF-Transform optimization pipeline for assets combined with a hybrid modular track system for visuals. Unreal Engine 5.8 MCP is positioned as an optional backlogged look-dev lab — valuable for reference but not on the critical path.
+Why this workflow wins:
+Preserves existing investment: All React/Vite/Three.js race mechanics, telemetry, and QA gates remain untouched. No engine migration.
+Repeatable asset production: Raw Tripo GLBs (15 MB, 280K triangles) become runtime assets (1–4 MB, 12–50K triangles) through a single npm run test:asset-optimize command.
+Data-driven tracks with authored visuals: Track collision, progress, and AI pathing stay in JavaScript. Visuals upgrade from procedural boxes to instanced GLB modules + authored scenery.
+CI-native: Every gate runs headless in CI. No GUI tools required for standard operations.
+Optional Unreal MCP: The experimental UE 5.8 MCP plugin is real and available, but the project does not depend on it. It can be activated later if look-development needs justify the setup cost.
+2. Implementation Brief for Codex
+2.1 What to Build
+Build an automated asset pipeline and modular track system for the Comeback City kart game. The pipeline turns raw GLB sources into optimized runtime assets. The track system replaces procedural road boxes with reusable visual modules while keeping all existing race mechanics intact.
+2.2 Core Constraints
+Do not modify existing race mechanics (physics, controls, items, AI, telemetry)
+Do not change the React/Vite/Three.js stack
+Do not add runtime dependencies beyond three (already present)
+Do not require Unreal Engine for any production task
+Preserve all existing test scripts and their pass criteria
+Add new scripts alongside existing ones; don't rename or remove
+3. File Structure
+plain
+comeback-tracker/
+├── src/
+│   ├── assets/
+│   │   └── game/
+│   │       ├── models/
+│   │       │   ├── _raw/trip/              # NEW: incoming Tripo GLBs
+│   │       │   ├── _raw/kenney/            # NEW: incoming Kenney GLBs
+│   │       │   ├── avatars/                # EXISTING
+│   │       │   ├── toy-car-kit/            # EXISTING
+│   │       │   ├── tripo/                  # EXISTING
+│   │       │   ├── track-modules/          # NEW: road/curb/barrier GLBs
+│   │       │   └── props/                  # NEW: district props
+│   │       └── art-direction/
+│   │           └── v2/reference-screenshots/ # NEW
+│   ├── game/
+│   │   └── race/
+│   │       ├── tracks/
+│   │       │   ├── modules/                # NEW: track kit logic
+│   │       │   │   ├── TrackModuleLoader.js
+│   │       │   │   ├── ModulePlacer.js
+│   │       │   │   └── MaterialPresets.js
+│   │       │   └── index.js                # MODIFY: add visual fields
+│   │       └── render/
+│   │           ├── createTrackMesh.js      # MODIFY: instanced modules
+│   │           └── createRaceScenery.js    # MODIFY: scenery anchors
+│   └── ComebackCityThreeKartRace.jsx       # MODIFY: Draco loader
+├── scripts/
+│   ├── audit-game-assets.mjs               # NEW
+│   ├── optimize-game-glbs.mjs              # NEW
+│   ├── validate-game-assets.mjs            # NEW
+│   ├── render-asset-gallery.mjs            # NEW
+│   ├── capture-race-proof.mjs              # NEW
+│   ├── compare-race-visuals.mjs            # NEW
+│   ├── promote-approved-assets.mjs         # NEW
+│   └── bundle-asset-budget-report.mjs      # EXISTING
+├── .asset-workspace/                       # NEW: gitignored
+│   ├── audit/
+│   ├── optimized/
+│   ├── rejected/
+│   ├── gallery/
+│   └── proof/
+├── vite.config.js                          # MODIFY
+└── package.json                            # MODIFY
+4. NPM Scripts
+Add these to package.json alongside existing ones:
+JSON
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+
+    "test:asset-audit": "node scripts/audit-game-assets.mjs",
+    "test:asset-optimize": "node scripts/optimize-game-glbs.mjs",
+    "test:asset-validate": "node scripts/validate-game-assets.mjs",
+    "test:asset-gallery": "node scripts/render-asset-gallery.mjs",
+    "test:capture-proof": "node scripts/capture-race-proof.mjs",
+    "test:visual-compare": "node scripts/compare-race-visuals.mjs",
+    "test:asset-promote": "node scripts/promote-approved-assets.mjs",
+
+    "test:kart-proof": "node scripts/kart-proof-static-guard.mjs",
+    "test:kart-playable": "node scripts/kart-playable-proof-test.mjs",
+    "test:kart-3d-spike": "node scripts/kart-3d-spike-test.mjs",
+    "test:visual": "node scripts/visual-reference-checks.mjs",
+    "test:webgl": "node scripts/webgl-context-smoke-test.mjs",
+    "test:bundle": "node scripts/bundle-asset-budget-report.mjs",
+    "test:race": "node scripts/race-content-playtest.mjs",
+    "test:race:browser": "node scripts/race-browser-playtest.mjs"
+  }
+}
+5. Automation Scripts
+5.1 audit-game-assets.mjs
+Table
+Field	Value
+Path	scripts/audit-game-assets.mjs
+Purpose	Scan _raw/ GLBs and produce audit reports
+Inputs	src/assets/game/models/_raw/**/*.glb
+Outputs	.asset-workspace/audit-report.json, .asset-workspace/audit-summary.md
+Packages	@gltf-transform/core, @gltf-transform/extensions
+Pass	Valid GLB, >=1 mesh, has UVs, >=1 material, <500K tris, <50 MB
+Fail	Move to .asset-workspace/rejected/ with diagnostic JSON; exit 1
+First scope	Audit all 7 Tripo GLBs and Kenney assets
+5.2 optimize-game-glbs.mjs
+Table
+Field	Value
+Path	scripts/optimize-game-glbs.mjs
+Purpose	Run weld -> dedup -> simplify -> resize -> webp -> draco
+Inputs	.asset-workspace/audit-report.json (PASS assets)
+Outputs	.asset-workspace/optimized/*.glb, .asset-workspace/optimization-log.json
+Packages	@gltf-transform/cli, sharp
+Pass	Output size < budget, tris < budget, validates
+Fail	Log failure, exit 1
+First scope	Optimize hero kart (red) + one rival kart (purple)
+Command used:
+bash
+gltf-transform optimize input.glb output.glb \
+  --compress draco \
+  --texture-compress webp \
+  --texture-size 1024 \
+  --simplify-ratio 0.5
+Optimization profiles:
+Table
+Profile	Simplify Ratio	Texture Size	Draco Quantization
+hero	0.5	1024	14
+rival	0.35	1024	12
+character	0.6	1024	14
+prop-simple	0.3	512	11
+prop-complex	0.4	1024	12
+track	0.3	512	10
+5.3 validate-game-assets.mjs
+Table
+Field	Value
+Path	scripts/validate-game-assets.mjs
+Purpose	Validate optimized assets against spec and budgets
+Inputs	.asset-workspace/optimized/*.glb
+Outputs	.asset-workspace/validation-report.json
+Packages	@gltf-transform/cli
+Pass	gltf-transform validate passes, all budgets met
+Fail	List violations, exit 1
+First scope	Validate optimized hero + rival karts
+5.4 render-asset-gallery.mjs
+Table
+Field	Value
+Path	scripts/render-asset-gallery.mjs
+Purpose	Generate HTML gallery with Three.js preview
+Inputs	.asset-workspace/optimized/*.glb
+Outputs	.asset-workspace/gallery/index.html
+Packages	three
+Pass	Gallery loads, all previews render
+Fail	Log failed previews, exit 1
+First scope	Gallery for 2 optimized karts
+5.5 capture-race-proof.mjs
+Table
+Field	Value
+Path	scripts/capture-race-proof.mjs
+Purpose	Capture screenshots and videos via Playwright
+Inputs	Running preview server, /#race route
+Outputs	.asset-workspace/proof/*.{png,webm}
+Packages	playwright (existing)
+Pass	Screenshots non-blank, race selector present
+Fail	Attach artifacts, exit 1
+First scope	Desktop + mobile screenshot of #race
+5.6 compare-race-visuals.mjs
+Table
+Field	Value
+Path	scripts/compare-race-visuals.mjs
+Purpose	Compare screenshots against reference images
+Inputs	Current screenshots, src/assets/game/proof/reference/*.png
+Outputs	Mean difference report, diff images
+Packages	pngjs (existing), pixelmatch
+Pass	Mean pixel difference < 5%
+Fail	Generate diff overlay, exit 1
+First scope	Compare against existing kart-proof-desktop-v1.png
+5.7 promote-approved-assets.mjs
+Table
+Field	Value
+Path	scripts/promote-approved-assets.mjs
+Purpose	Copy validated assets to runtime folder, update manifest
+Inputs	.asset-workspace/optimized/*.glb (validation-passed)
+Outputs	src/assets/game/models/**/*, updated asset-manifest.json
+Packages	Node.js fs/promises
+Pass	Files copied, manifest updated, git-ready
+Fail	Rollback partial copy, exit 1
+First scope	Promote optimized hero kart
+6. Asset Budgets (Final)
+6.1 Source GLB Acceptance
+Table
+Metric	Minimum	Reject If
+File size	Any	>100 MB
+Triangles	Any	>1,000,000
+UV mapping	Has UV1	No UVs
+Materials	>=1	0
+Format	GLB 2.0	Not GLB
+6.2 Optimized GLB Acceptance
+Table
+Asset Type	Max Size	Max Triangles	Max Vertices	Max Texture
+Hero kart	1.5 MB	25,000	25,000	1024x1024
+Rival kart	1.0 MB	15,000	15,000	1024x1024
+Seated character	2.0 MB	50,000	50,000	1024x1024
+Simple prop	0.3 MB	5,000	5,000	512x512
+Complex prop	0.8 MB	15,000	15,000	1024x1024
+Item box	0.2 MB	3,000	3,000	512x512
+Track module	0.5 MB	10,000	10,000	512x512
+6.3 Scene Budgets
+Table
+Metric	Mobile Target	Desktop Target
+Draw calls	<100	<200
+On-screen triangles	<100,000	<500,000
+Texture memory	<50 MB	<200 MB
+Total GLB download	<15 MB	<25 MB
+Bundle size	<20 MB	<20 MB
+FPS (median)	>=34 (existing gate)	>=60 (target)
+Load time (first race)	<5s	<3s
+7. Track Workflow
+7.1 Track Definition Schema (Extended)
+JavaScript
+const EXAMPLE_TRACK = {
+  // EXISTING (preserved exactly)
+  key: 'comeback-city',
+  name: 'Comeback City',
+  course: COURSE_DATA,
+  laps: 3,
+  startOffset: 0.03,
+  elevation: { from: 0.4, peak: 21, to: 0.534 },
+  ramps: [...],
+  shortcut: { ... },
+  surfaceBands: [...],
+  breakableObjects: [...],
+  crossers: [...],
+  palette: { ... },
+  budgets: { finishSeconds: 45, speedFloor: 140 },
+
+  // NEW: Visual modules
+  visualModules: {
+    roadStyle: 'asphalt-neon',
+    curbStyle: 'red-white-striped',
+    barrierStyle: 'plastic-red',
+    laneMarking: 'yellow-dashed',
+  },
+
+  // NEW: Camera hints
+  cameraHints: [
+    { t: 0.0, height: 2.5, distance: 6.0 },
+    { t: 0.5, height: 2.0, distance: 5.5 },
+  ],
+
+  // NEW: Mobile framing
+  mobileCropHints: [
+    { t: 0.0, fov: 65, renderScale: 0.6 },
+    { t: 0.5, fov: 70, renderScale: 0.55 },
+  ],
+
+  // NEW: Scenery anchors
+  sceneryAnchors: [
+    { t: 0.1, offset: { x: 8, y: 0, z: 0 }, asset: 'district-facade-gym', scale: 1.0 },
+  ],
+
+  // NEW: District portals
+  districtPortals: [
+    { t: 0.15, district: 'gym', facadeAsset: 'district-facade-gym', portalGlowColor: 0x00ff88 },
+  ],
+
+  // NEW: Prop density zones
+  propZones: [
+    { tFrom: 0.0, tTo: 0.3, density: 'high', types: ['barrier', 'cone'] },
+  ],
+};
+7.2 Visual Module Kit
+Table
+Module	File	Budget	Instanced
+Road straight	road-straight.glb	<500 tris	Yes
+Road curve left	road-curve-left.glb	<1000 tris	Yes
+Road curve right	road-curve-right.glb	<1000 tris	Yes
+Curb section	curb-1m.glb	<100 tris	Yes
+Barrier	barrier-plastic.glb	<300 tris	Yes
+Finish gate	finish-gate.glb	<3000 tris	No
+District facade	facade-{district}.glb	<5000 tris	No
+7.3 Runtime Placement (InstancedMesh)
+JavaScript
+const roadGeo = await loadGLBModule('road-straight.glb');
+const instances = new THREE.InstancedMesh(roadGeo, roadMaterial, maxCount);
+
+placeAlongCurve(centerline, spacing, (point, tangent, t) => {
+  dummy.position.copy(point);
+  dummy.rotation.y = Math.atan2(tangent.x, tangent.z);
+  dummy.updateMatrix();
+  instances.setMatrixAt(index++, dummy.matrix);
+});
+7.4 Camera/Framing Proof
+Desktop: 1365x768, FOV 65deg, render scale 0.58
+Mobile: 390x844, FOV 70deg, render scale 0.55-0.6
+Capture via Playwright after countdown + 2s gameplay
+8. Visual QA Gates (Final)
+Table
+Gate	Script	Criteria	Blocks Promotion?
+Asset audit	test:asset-audit	All raw assets valid	Yes
+Optimization	test:asset-optimize	All assets optimize	Yes
+Validation	test:asset-validate	All within budget	Yes
+Manifest	test:asset-promote	Manifest updated	Yes
+Route render	test:kart-3d-spike	Renderer=three-kart, FPS>=34	Yes
+Screenshot	test:capture-proof	Desktop+mobile captured	Yes
+Visual compare	test:visual-compare	Mean diff < 5%	Yes
+Bundle size	test:bundle	Total < 20 MB	Yes
+WebGL context	test:webgl	Non-blank canvas	Yes
+Gate execution order:
+plain
+build -> asset-audit -> asset-optimize -> asset-validate -> webgl 
+-> kart-3d-spike -> capture-proof -> visual-compare -> bundle -> kart-playable
+9. Unreal MCP Role
+9.1 When to Use Unreal MCP
+Table
+Scenario	Action
+Current track looks good in Three.js	Do not use Unreal
+Lighting looks flat, needs reference	Use Unreal MCP
+New district needs material exploration	Use Unreal MCP
+CI pipeline or runtime	Never use Unreal
+9.2 What Counts as Useful Output
+Table
+Output Type	Use in Three.js
+Reference screenshot	Visual QA comparison
+Lighting parameters	Replicate in Three.js renderer
+Material settings	Apply to MeshStandardMaterial
+Exported GLB	Through optimization pipeline
+9.3 Setup (Backlogged)
+Install Unreal Engine 5.8
+Enable ModelContextProtocol experimental plugin
+Install ChiR24/Unreal_mcp or preferred MCP server
+Stage one track section
+Export reference screenshot + parameters
+Replicate settings in Three.js
+Evaluate value before expanding
+10. Seedance Decision
+When video generation becomes useful: After the race route produces stable, visually strong screenshots matching V2 art direction.
+Proof that should come first:
+Desktop screenshot of /race with modular track + authored scenery
+Mobile screenshot showing readable HUD and stable framing
+10-second WebM from Playwright showing smooth gameplay
+Contact sheet against V2 trait cards
+Only then consider Seedance 2.0 for promotional trailers.
+11. Owner Decisions Required
+Table
+#	Question	Default if Unanswered
+1	Are the 7 Tripo GLBs the complete raw set?	Assume complete
+2	What is the minimum target device?	iPhone 12 equivalent
+3	Should Kenney assets also be optimized?	Leave as-is
+4	Is WebP sufficient, or plan KTX2?	WebP for launch
+5	Are new kart/character designs in progress?	Pipeline supports incremental
+12. Phase Plan
+Phase 1: Inventory & Manifest (Days 1-2)
+Install @gltf-transform/cli and @gltf-transform/core
+Create .asset-workspace/ structure
+Create src/assets/game/models/_raw/ folders
+Update vite.config.js with assetsInclude: ['**/*.glb']
+Update asset-manifest.json schema
+Phase 2: GLB Optimization Scripts (Days 3-5)
+Implement audit-game-assets.mjs
+Implement optimize-game-glbs.mjs with profiles
+Implement validate-game-assets.mjs
+Add npm scripts
+Run on hero kart + one rival kart
+Phase 3: Asset Preview Gallery (Days 6-7)
+Implement render-asset-gallery.mjs
+Create HTML gallery with Three.js preview
+Generate for optimized assets
+Phase 4: Track Kit Schema (Days 8-10)
+Define TrackModuleLoader.js interface
+Create MaterialPresets.js
+Implement ModulePlacer.js
+Add visual fields to track definitions
+Test with COMEBACK_CITY_TRACK
+Phase 5: First Visual Proof Route (Days 11-13)
+Create/source first track module GLBs
+Implement instanced placement in createTrackMesh.js
+Add one district facade
+Run visual proof capture
+Generate contact sheet vs V2 cards
+Phase 6: Automated Evidence (Days 14-15)
+Implement capture-race-proof.mjs
+Implement compare-race-visuals.mjs
+Set reference images
+Integrate into CI pipeline
+Phase 7: Route Promotion (Days 16-17)
+Run full gate suite
+Update visualAssetSet telemetry
+Promote /race route
+Document pipeline for team
+Phase 8: Optional Unreal MCP Lab (Backlogged)
+Install Unreal 5.8 + MCP plugin
+Stage lighting reference
+Export parameters for Three.js
+Evaluate value
+13. First Codex Task (Exact Prompt)
+plain
+Implement the Comeback City asset audit and optimization pipeline.
+
+CONTEXT:
+- React 18 + Vite + Three.js 0.184 kart racing game
+- Raw Tripo GLBs are 15 MB / 280K triangles - too heavy for web
+- Need automated scripts to turn them into optimized runtime assets
+- Pipeline must be CI-friendly (headless, no GUI)
+
+TASKS:
+
+1. Install packages:
+   npm install -D @gltf-transform/cli @gltf-transform/core @gltf-transform/extensions
+
+2. Create directory structure:
+   - .asset-workspace/ (add to .gitignore)
+   - .asset-workspace/audit/
+   - .asset-workspace/optimized/
+   - .asset-workspace/rejected/
+   - .asset-workspace/gallery/
+   - .asset-workspace/proof/
+   - src/assets/game/models/_raw/trip/
+   - src/assets/game/models/_raw/kenney/
+
+3. Create scripts/audit-game-assets.mjs:
+   - Scan src/assets/game/models/_raw/**/*.glb
+   - Use @gltf-transform/core NodeIO to parse each GLB
+   - Extract: mesh count, material count, texture count, triangle count, vertex count, file size
+   - Check: valid GLB, has UVs, has materials, triangles < 500000, size < 50MB
+   - Output: .asset-workspace/audit-report.json with metrics and PASS/FAIL verdict
+   - Output: .asset-workspace/audit-summary.md (human-readable table)
+   - FAIL assets: move to .asset-workspace/rejected/ with diagnostic JSON
+   - Exit code 0 if all PASS, 1 if any FAIL
+
+4. Create scripts/optimize-game-glbs.mjs:
+   - Read .asset-workspace/audit-report.json
+   - For each PASS asset, run:
+     gltf-transform optimize input.glb output.glb --compress draco --texture-compress webp --texture-size 1024
+   - Support profiles: hero (ratio 0.5), rival (ratio 0.35), character (ratio 0.6)
+   - Profile selected by filename pattern (configurable mapping)
+   - Output: .asset-workspace/optimized/{original-name}.glb
+   - Output: .asset-workspace/optimization-log.json with before/after
+   - Exit code 0 on success, 1 on failure
+
+5. Create scripts/validate-game-assets.mjs:
+   - Read .asset-workspace/optimized/*.glb
+   - Run: gltf-transform validate on each
+   - Check budgets: hero < 1.5MB + < 25K tris, rival < 1.0MB + < 15K tris
+   - Output: .asset-workspace/validation-report.json
+   - Exit code 0 if all pass, 1 if any fail
+
+6. Update package.json:
+   - Add scripts: test:asset-audit, test:asset-optimize, test:asset-validate
+
+7. Update vite.config.js:
+   - Add assetsInclude: ['**/*.glb', '**/*.gltf']
+
+8. Run the full pipeline on existing assets and report results.
+
+CONSTRAINTS:
+- Do not modify existing race mechanics files
+- Do not remove existing npm scripts
+- Use ES modules (.mjs) for all new scripts
+- All scripts must run headless
+- Log progress to console with clear PASS/FAIL indicators
+14. GLB Optimization Deep Dive
+14.1 Single-Asset Command
+bash
+gltf-transform optimize input.glb output.glb \
+  --compress draco \
+  --texture-compress webp \
+  --texture-size 1024 \
+  --simplify-ratio 0.5 \
+  --simplify-lock-border \
+  --vertex-layout interleaved
+14.2 Pipeline Stages
+Table
+Stage	Effect	Typical Reduction
+Deduplicate	Remove duplicate accessors/textures	5-15%
+Weld	Merge equivalent vertices	10-30% vertices
+Simplify	Reduce triangles	30-70% triangles
+Flatten	Collapse scene graph	Node overhead
+Join	Merge compatible primitives	Fewer draw calls
+Prune	Remove unreferenced properties	Cleanup
+Texture resize	Cap to 1024x1024	VRAM reduction
+Texture compress (WebP)	50-70% texture size	Download reduction
+Draco compress	90-95% geometry	File size reduction
+14.3 Draco Decoder Setup
+JavaScript
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
+14.4 Fallback Strategy
+Primary: Load Draco-compressed GLB
+Fallback 1: Load uncompressed GLB if Draco decoder fails
+Fallback 2: Use procedural geometry if GLB 404s
+Log: Report to telemetry which fallback activated
+15. Material Presets (V2 Style)
+Table
+Preset	Color	Roughness	Metalness	Emissive
+asphalt-neon	#2a2a2a	0.8	0.0	0x000000
+curb-red	#cc2222	0.6	0.0	0x000000
+curb-white	#eeeeee	0.6	0.0	0x000000
+barrier-red	#dd1111	0.4	0.1	0x000000
+metal-rail	#888888	0.3	0.8	0x000000
+glow-boost	#00ffff	0.2	0.0	0x00ffff
+district-gym	#00ff88	0.5	0.2	0x004422
+district-lab	#8844ff	0.5	0.2	0x220044
+16. Playwright Capture Implementation
+JavaScript
+import { chromium } from 'playwright';
+
+const browser = await chromium.launch();
+const context = await browser.createContext({
+  viewport: { width: 1365, height: 768 },
+  recordVideo: { dir: './proof/', size: { width: 1365, height: 768 } }
+});
+const page = await context.newPage();
+
+await page.goto('http://localhost:4173/#race');
+await page.waitForSelector('[data-testid="comeback-city-3d-kart-race"]');
+await page.waitForFunction(() => {
+  const t = window.__comebackCityKartTelemetry;
+  return t && t.countdown === 0;
+}, { timeout: 30000 });
+
+await page.waitForTimeout(2000);
+await page.screenshot({ path: './proof/desktop-race.png' });
+await context.close();
+17. Vite Configuration
+JavaScript
+// vite.config.js
+export default defineConfig({
+  assetsInclude: ['**/*.glb', '**/*.gltf'],
+  build: {
+    assetsInlineLimit: 0,
+    rollupOptions: {
+      output: {
+        assetFileNames: (assetInfo) => {
+          const ext = assetInfo.name.split('.').pop();
+          if (ext === 'glb' || ext === 'gltf') {
+            return `assets/game/models/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
+        }
+      }
+    }
+  }
+});
+18. Asset Manifest Schema
+JSON
+{
+  "assets": [
+    {
+      "id": "hero-kart-tripo",
+      "source": "Tripo 3D from V2 trait card",
+      "license": "owner-generated",
+      "role": "player-kart-primary",
+      "path": "models/tripo/hero-kart-tripo.glb",
+      "budget": { "maxSizeMB": 1.5, "maxTriangles": 25000, "maxTextureSize": 1024 },
+      "actual": { "sizeMB": 1.00, "triangles": 23172, "textureSize": 1024 },
+      "fallback": "procedural-kart-hero",
+      "dracoCompressed": true,
+      "webpTextures": true,
+      "verified": "2026-06-18"
+    }
+  ]
+}
+Generated from Deep Research Reports 1 & 2. Sources: glTF-Transform CLI docs, Three.js documentation, Playwright docs, Unreal Engine 5.8 release notes, web/mobile 3D performance research.

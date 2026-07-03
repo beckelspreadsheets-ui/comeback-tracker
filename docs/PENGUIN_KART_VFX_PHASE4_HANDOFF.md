@@ -1,4 +1,6 @@
-> Handoff prompt: paste this verbatim to the next agent to resume Phase 4 work.
+> ⚠️ **DEFERRED — DO NOT EXECUTE NOW.** Phase 4 audio has been postponed to the end of the project by user decision. This handoff is archived until audio work is revisited. See `docs/PENGUIN_KART_AUDIO_DEFERRED.md` for the preserved asset brief.
+
+> Handoff prompt: paste this verbatim to the next agent to resume Phase 4 work (when audio is revisited).
 
 # Penguin Kart VFX — Phase 4 Handoff Prompt
 

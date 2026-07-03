@@ -88,9 +88,37 @@ Other game surfaces:
 - `src/game/ComebackCityScene3D.jsx` imports plaza measurement JSON plus the five generated facade PNGs.
 - `src/game/raceTelemetry.js` and `src/game/courseV2.js` reference `/src/assets/game/asset-manifest.json` as metadata.
 
+## Final Pre-Release Scan
+
+Scan run: 2026-06-17T19:13:21Z by AI-side Phase 5 automation.
+
+### Scan commands
+
+```sh
+rg -n "assets/game|\.png|\.jpg|\.jpeg|\.webp|\.svg|new Audio|AudioContext|oscillator|createOscillator|fetch\(" src/game/ArcadeRace3D.jsx src/game/RaceScreen.jsx src/game/race src/game/raceTracks.js src/game/raceItems.js src/game/raceHazards.js src/game/city3dAssets.js src/assets/game/asset-manifest.json
+rg -n "Mario|Nintendo|Luigi|Peach|Bowser|Yoshi|Koopa|Toad|Mushroom|Banana Peel|Blue Shell|Red Shell|Green Shell|Rainbow Road|Princess|Donkey|Wario|Waluigi" src/game src/assets/game scripts/race-*
+rg -n "import .*assets/game|from '../assets/game|from '../../assets/game|url\(|src/assets/game" src/game src/App.jsx src/main.jsx src/index.css src/game/*.css
+find src/assets/game -maxdepth 3 -type f -print | sort | while IFS= read -r f; do printf '%s\t%s\t%s\n' "$f" "$(wc -c < "$f" | tr -d ' ')" "$(shasum -a 256 "$f" | cut -d ' ' -f 1)"; done
+```
+
+### Findings
+
+| Area | Result | Notes |
+|---|---|---|
+| Live race runtime binary images | Reviewed | Current V2 race runtime is `src/game/ComebackCityThreeKartRace.jsx`. It imports Kenney Toy Car Kit CC0 GLB models + palette PNG (license included), owner-generated Tripo avatar/kart GLBs, and generated district facade PNGs. No unlicensed external bitmaps or sampled audio are imported. |
+| Sampled audio | Clear | `src/game/race/raceAudio.js` continues to use WebAudio oscillators; no `.mp3`/`.wav`/`.ogg` imports found in race runtime. |
+| Protected terms in source | Clear after edit | One code comment in `src/game/ComebackCityThreeKartRace.jsx` previously read "Mario-Kart-style chase camera"; rephrased to "Arcade chase camera" on 2026-06-17. Remaining matches are only in planning/art-direction docs that define the IP boundary. |
+| New assets since last audit | Documented | Added `src/assets/game/select/*.png` to `src/assets/game/asset-manifest.json`; these are in-repo renders from the real GLB roster models via `scripts/select-portraits-capture.mjs`. |
+| Asset inventory hashes | Fingerprinted | Full file/hash/size list recorded in scan evidence (see `.agent/runs/kart-racer-production-readiness/evidence/phase5-automation-2026-06-17/ip-scan.log`). |
+
+### Risks retained
+
+- `src/game/ComebackCityKartRace.jsx` (legacy V1 renderer) still imports generated race sprites and a legacy backdrop. It is not the current live `/#race` runtime, but remains in the repo. All imported bitmaps are project-owned/generated.
+- Kenney Toy Car Kit is CC0/public domain and correctly attributed in `src/assets/game/models/toy-car-kit/License.txt`.
+
 ## Required Before V1 Sign-Off
 
-1. Final scan before PR that the live race route still does not import unreviewed binary images or sampled audio.
+1. Final scan before PR that the live race route still does not import unreviewed binary images or sampled audio. ✅ Completed 2026-06-17; see Final Pre-Release Scan above.
 2. If new ChatGPT Image Gen 2 assets are generated after this audit, add them to the inventory, fingerprint them, and repeat owner protected-similarity review before release.
 3. Keep the owner-selected `RACE-001` visual target as composition/layout reference only, not copied production art.
 4. Re-run the protected-term/source scan after final item, HUD, audio, and track changes.

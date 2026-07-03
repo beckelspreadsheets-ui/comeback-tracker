@@ -12,9 +12,15 @@
 | Phase 1 | Existing drift VFX polish only | Blocked until screenshots approve each task |
 | Phase 2 | Particle / item VFX (boost, shield, snowball, fish bone, blizzard, aurora, pickups) | Do not start without user approval |
 | Phase 3 | Penguin Village track dressing (arch, statues, igloos, crystals, stalls) | Do not start without user approval |
-| Phase 4 | Audio plan and wiring | Do not start without user approval and original audio assets |
+| Phase 4 | Audio plan and wiring | **Deferred to end of project** — see `docs/PENGUIN_KART_AUDIO_DEFERRED.md` |
+| Phase 5 | V1 production hardening / blocker resolution | Do not start without user approval and confirmed scope priorities |
 
-**Stop after Phase 1.** Do not begin Phase 2 without explicit user approval.
+**Stop after Phase 1.** Do not begin Phase 2 without explicit user approval.  
+**Stop after Phase 4.** Do not begin Phase 5 without explicit user approval.
+
+## Scope Note — Audio Deferred
+
+Audio/Phase 4 has been explicitly deferred to the very end of the project by user decision. The full asset brief and wiring notes are preserved in `docs/PENGUIN_KART_AUDIO_DEFERRED.md` so work can resume without losing context.
 
 ---
 

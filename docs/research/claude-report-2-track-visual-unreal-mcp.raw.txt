@@ -1,0 +1,291 @@
+# Comeback City — Research Report 2: Track Production, Visual Direction & Unreal MCP Look-Dev
+
+**Stage 2 of 3.** Scope: how to build visually strong tracks for the existing data-driven Three.js race runtime, how to translate the V2 art cards into runtime choices, and where (if anywhere) Unreal Engine 5.8 MCP earns a place. Companion deliverables: Report 1 (asset pipeline) and the Pro synthesis (Codex build brief).
+
+Date context: 2026-06-17. Tool/licensing claims verified against current primary docs at research time (see §13).
+
+Tags as in Report 1: **[sourced]** / **[repo]** / **[judgment]**.
+
+---
+
+## 1. Executive Recommendation
+
+**Build tracks as data-driven definitions + a procedural Three.js "track kit," and use Blender-authored GLBs surgically for hero set-pieces. Treat Unreal MCP as an optional, evidence-gated reference lab that is not in the critical path.** [judgment]
+
+The reasoning is concrete and specific to this game:
+
+- Your art target — low-poly, glossy/toy-like, chunky silhouettes, N64-era readability with modern polish, saturated clean color **[repo]** — is exactly what procedural Three.js geometry plus a tiny authored prop kit produces best and cheapest. It does *not* need Nanite-class geometry density or Lumen GI.
+- Your repo already has the data-driven track spine (`tracks/*.js`, `buildCenterline.js`, `trackGeometry.js`) and procedural visual generation (`createTrackMesh.js`, `createRaceScene.js`) **[repo]**. The job is to extend, not replace.
+- **Unreal's marginal visual gains mostly don't survive export to the web.** Unreal ships an in-engine glTF exporter (since 5.1) that handles static/skeletal meshes, animation, levels, and materials with baked textures **[sourced]**, but material baking/expression matching isn't available at runtime and requires hand-built glTF *proxy* materials **[sourced]**, and Nanite/Lumen are engine-internal rendering systems that have no Three.js equivalent. So you'd export simplified static meshes + baked textures at best — something Blender does more directly and for free.
+- Running UE 5.8 (whose MCP is a first-party but **experimental, incomplete, API-unstable** plugin **[sourced]**) on your 24 GB M4 Mac Mini **[repo]** is a poor cost/benefit for a solo operator versus Blender + Three.js.
+
+So: **Blender is the authoring workhorse, Three.js is the renderer, Unreal is a curiosity you keep at arm's length** until it proves a specific, hard-to-get-otherwise win (§7).
+
+---
+
+## 2. Track Authoring Strategy
+
+| Option | Effort | Visual ceiling | Determinism | Web fit | Verdict |
+|---|---|---|---|---|---|
+| Pure JS/JSON definitions | Low | n/a (data only) | Total | Native | **Spine — keep & extend** |
+| Procedural Three.js mesh gen | Med | High for this style | Total | Native | **Primary visual generator** |
+| Modular track-kit pieces | Med | High | Total | Native | **Primary — code kit + a few GLBs** |
+| Blender-authored GLB segments | Med-High | Very high | High (static) | Native after optimize | **Surgical — hero set-pieces only** |
+| Unreal look-dev → export to Three.js | High | High in UE, **lossy to web** | Low | Poor (proxy mats, no Lumen/Nanite) | **Optional reference lab only** |
+
+Key distinctions:
+
+- **Determinism lives in data, visuals live in meshes.** Collision/progress (centerline, width, surface bands, lap logic) must stay pure data so your Node QA scripts keep importing tracks headlessly **[repo]**. Visual richness is layered on top and never feeds back into collision.
+- **Procedural vs. authored is a per-element decision, not a whole-track decision.** Road ribbons, curbs, barriers, lane markings, boost pads, ramps → procedural from data (cheap, instant iteration, deterministic). District facades, finish gate, signature hero props → authored GLB (where silhouette/detail matters and procedural looks generic).
+
+---
+
+## 3. Recommended Hybrid Workflow
+
+Four layers, built in this order:
+
+```
+Layer 0 — TRACK DATA (deterministic, pure JS)
+   centerline · width bands · elevation · banking · surface bands
+   boost pads · item boxes · finish gate · hazards · lap logic
+   → imported by runtime AND by Node QA scripts (unchanged contract)
+        │
+Layer 1 — PROCEDURAL VISUAL KIT (code-generated Three.js meshes)
+   road ribbon · curbs · barriers · rails · lane markings · ramps
+   · boost-pad visuals · tunnel/bridge shells
+   → generated in createTrackMesh.js from Layer 0 data
+        │
+Layer 2 — AUTHORED HERO GLBs (Blender → Report 1 optimizer)
+   district facades/portals · finish/checkpoint gate · signature props
+   → placed at Layer-0 anchor points; procedural box stays as fallback
+        │
+Layer 3 — VISUAL PROOF GATE (Report 1 harness)
+   real-3D / grounded / readable-edge / density / FPS checks
+   → must pass before a track route is promoted to /#race
+```
+
+Rules:
+- **Art cards are the visual source of truth** **[repo]**. Procedural materials and authored GLBs both target the V2 card for their element; the contact-sheet gate (§10) flags drift.
+- **Every authored GLB has a procedural fallback** so a failed load degrades, never blanks — matching your existing fallback architecture **[repo]**.
+- **No route promotion without proof** **[repo]**.
+
+---
+
+## 4. Track Data Model
+
+Extends your existing fields (`key, name, tagline, course, laps, startOffset, elevation, ramps, shortcut, surfaceBands, breakableObjects, crossers, palette, dressing, budgets`; course has `centerline/minimap path, road ribbons, boost pads, item boxes, district anchors, scenery anchors`) **[repo]**. Additions in **bold**; keep everything pure/serializable so Node imports it.
+
+```js
+// track definition (additions in comments)
+{
+  key, name, tagline,
+  laps, startOffset,
+  course: {
+    centerline,            // [repo] waypoints / minimap path
+    roadRibbons,           // [repo]
+    boostPads,             // [repo]
+    itemBoxes,             // [repo]
+    districtAnchors,       // [repo]
+    sceneryAnchors,        // [repo]
+    // ADD:
+    widthBands,            // [{ from, to, halfWidth }] per-segment road width
+    banking,               // [{ from, to, rollDeg }] per-segment roll for curves
+    finishGate,            // { t, style, kitPiece } placement on centerline
+    hazards,               // [{ t, type, params }] (oil, ice patch, mover)
+    props,                 // [{ t, offset, kitPiece, glb?, scale, yaw }]
+    districtPortals,       // [{ t, district, facadeGlb?, glow }]
+    sceneryZones,          // [{ from, to, palette, fogTint, density }]
+    cameraHints,           // [{ from, to, fov, height, distance, lookAhead }]
+    mobileCropHints        // [{ from, to, fov, height }] mobile-only overrides
+  },
+  elevation,               // [repo] { from, peak, to } band
+  ramps, shortcut,         // [repo]
+  surfaceBands,            // [repo] asphalt/ice/snow friction zones
+  breakableObjects, crossers, // [repo]
+  palette, dressing,       // [repo]
+  budgets                  // [repo] { finishSeconds, speedFloor }
+}
+```
+
+`t` = normalized position along the centerline (0–1), so every placement is resolution-independent and survives centerline edits. `cameraHints`/`mobileCropHints` let the chase camera (§6) tighten on hairpins and widen on straights without per-track camera code.
+
+---
+
+## 5. Modular Track Kit
+
+Each piece is parameterized off Layer-0 data. "Source" column = how it's built first.
+
+| Piece | Source | Key params | Collision note |
+|---|---|---|---|
+| Straight | Procedural | length, halfWidth | from width band |
+| Left / Right curve | Procedural | radius, arc, banking | centerline + roll |
+| S-curve | Procedural | composed curves | centerline |
+| Ramp up / down | Procedural | rise, run | elevation band drives physics |
+| Tunnel approach | Procedural | shell radius, length | visual only; road collides |
+| Bridge / overpass | Procedural | span, pier spacing | elevation band (you already have `peak`) |
+| Curb sections | Procedural | profile, contrast color | non-collide trim (visual edge) |
+| Barriers | Procedural | height, repeat | collide (wall contact telemetry exists) |
+| Rails | Procedural | post spacing | optional collide |
+| Lane markings | Procedural | dash len/gap, color | non-collide decal |
+| Boost pad | Procedural | size, emissive, pulse | trigger volume (boost telemetry exists) |
+| Item box | Procedural **or** Kenney GLB | spin, bob | trigger volume |
+| Finish / checkpoint gate | **Authored GLB** | width, banner | trigger plane |
+| District facade / portal | **Authored GLB** | district id, glow | non-collide backdrop |
+| Signature hero prop | **Authored GLB** | per-prop | non-collide or box-collide |
+
+First implementation scope: ship the **procedural** pieces first (they cover ~80% of the visible track and need no art pipeline), then add the three **authored** classes via Blender once the procedural kit passes proof.
+
+---
+
+## 6. Visual Style Translation (V2 cards → runtime)
+
+Anchor on your existing renderer config — ACES filmic tonemapping at exposure 1.2, sRGB output, hemisphere + sun + rim lights, fog 210/580, render scale 0.58 desktop / 0.6 mobile, DPR cap 2, shadows off for performance **[repo]**. Translate the V2 language onto that base:
+
+| V2 trait | Three.js recipe |
+|---|---|
+| Glossy toy-like materials | `MeshStandardMaterial`, roughness 0.2–0.4, metalness 0.0–0.3, **a shared environment map** for the "clearcoat sheen" (cheap, big payoff with shadows off) |
+| Chunky silhouettes, N64 readability | low-poly beveled forms + **rim light** to pop the silhouette against fog; avoid micro-detail that reads as noise at mobile scale |
+| Saturated clean color | sRGB + ACES (you have it); keep AO subtle so colors stay clean, not muddy; per-district `palette` from data |
+| Neon accents | **emissive materials + a bloom pass** (selective bloom on boost pads, portals, finish gate) |
+| Asphalt | dark low-roughness base + faint normal/tiling; lane markings as bright decals |
+| Curb / rubber | high-contrast curb color; rubber barriers slightly rougher than karts |
+| Portal glow / fire | emissive + bloom; animate intensity for life |
+| Foliage / barriers | flat-shaded low-poly; instanced for density without draw-call cost |
+| Chase camera | follow player kart; use `cameraHints` (fov/height/distance/lookAhead) per zone |
+| Mobile framing | `mobileCropHints` widen FOV + raise height so the road reads on a 390-wide viewport |
+
+Two style levers that matter most here [judgment]: (1) **a single shared env map** does most of the "premium glossy" work once shadows are off; (2) **selective bloom** is what sells "neon arcade" — keep it on emissive-flagged materials only so the whole scene doesn't wash out. Both are cheap on mobile.
+
+---
+
+## 7. Unreal MCP Optional Lab
+
+### 7.1 What it actually is, today
+UE 5.8 ships a **first-party** MCP plugin (engine id `ModelContextProtocol`, friendly name "Unreal MCP") that embeds an MCP server in the editor on `http://127.0.0.1:8000/mcp` and exposes engine functions — spawning actors, configuring lighting, creating material instances, inspecting Slate widgets, running automation tests — as tools any MCP client (Claude Code, Cursor) can call **[sourced]**. It is **experimental**: many features are incomplete and APIs/data formats may change **[sourced]**, and 5.8 itself is a mid-May-2026 preview **[sourced]**. Community alternatives exist (e.g. flopperam hosted MCP for UE 5.5–5.7; a Go-binary `mcp-unreal` using the Remote Control API on port 30010) **[sourced]** but carry the same "AI touching engine internals" risk class **[sourced]**.
+
+### 7.2 Setup (if you try it)
+Enable the plugin in Edit > Plugins (it pulls in the Toolset Registry dependency), set Auto-Start in Editor Preferences > Model Context Protocol, run `ModelContextProtocol.GenerateClientConfig` to emit the client config, then launch your MCP agent from the workspace root **[sourced]**. Optionally use the in-editor Terminal plugin to keep the agent in one window **[sourced]**.
+
+### 7.3 What it can usefully do for you
+- **Layout blockout:** ask the agent to place blocks/proxy meshes to compose a city/district arrangement quickly, then read back transforms as **reference coordinates** for your Layer-0 `districtAnchors`.
+- **Lighting/material mood reference:** stage a lighting setup and **screenshot it** as a visual target to reproduce by hand in Three.js.
+- **Static-mesh + baked-texture export:** via the in-engine glTF exporter (Python-scriptable: `unreal.GLTFExporter.export_to_gltf`) **[sourced]** — but only with **pre-baked/proxy materials** **[sourced]**, and the result still goes through the Report 1 optimizer.
+
+### 7.4 What does NOT transfer (the honesty section)
+- **Lumen** (real-time GI) — no web equivalent; bake or eyeball only.
+- **Nanite** geometry density — UE-internal; doesn't round-trip via glTF well **[sourced]** and Three.js can't render it anyway.
+- **Complex material graphs** — collapse to baked textures / proxy materials; you lose the procedural material network **[sourced]**.
+
+### 7.5 The evidence bar before expanding Unreal usage
+Adopt Unreal beyond a one-off experiment **only if** it produces, in a timeboxed trial, **a specific reference image or static GLB that measurably improved the Three.js runtime AND could not be gotten faster in Blender or directly in Three.js.** Concretely: one proof-folder comparison where the Unreal-derived asset/reference beats the hand-built version on the contact-sheet gate. Absent that, Unreal stays off the critical path. Given your hardware and solo bandwidth, the honest default is **skip it for v1**.
+
+---
+
+## 8. Blender Optional Workflow (the actual workhorse)
+
+Blender is free, scriptable headless, and exports clean GLBs that feed straight into the Report 1 optimizer. Use it for cleanup *and* hero authoring.
+
+Headless invocation **[sourced]**:
+```bash
+# macOS executable path
+/Applications/Blender.app/Contents/MacOS/Blender -b input.blend \
+  --python scripts/blender/export_glb.py -- --out asset-pipeline/raw/...
+
+# or one-liner export
+/Applications/Blender.app/Contents/MacOS/Blender -b in.blend \
+  --python-expr "import bpy; bpy.ops.export_scene.gltf(filepath='out.glb')"
+```
+
+`bpy` ops you'll script **[sourced]**:
+- Import source (`bpy.ops.import_scene.gltf` / fbx / obj).
+- **Origin correction:** `bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')` so the Report 1 pipeline and runtime get consistent pivots (your runtime applies yaw fixes by convention **[repo]** — keep pivots predictable so those stay valid).
+- **Scale normalize:** set dimensions, then `bpy.ops.object.transform_apply(scale=True)`.
+- **Decimate:** add a `DECIMATE` modifier and apply (coarse pass; the Report 1 `simplify` does the precise web-target reduction).
+- **Normals / UV / material fixes:** recalc normals, basic UV cleanup, assign a single PBR material to match the toy-like target.
+- **Export:** `bpy.ops.export_scene.gltf(filepath=..., export_format='GLB')`.
+
+When to use Blender:
+- **Pre-clean Tripo source** (origin/scale/normals) *before* the Report 1 optimizer, so the optimizer only does web reduction.
+- **Author hero GLB segments** — district facades, finish gate, signature props — modeled to the V2 cards.
+- **Track-segment baking** (optional) if a procedural piece can't hit the look.
+
+Output target: `asset-pipeline/raw/...` → Report 1 audit → optimize → validate → proof → promote. One pipeline, two source origins (Tripo-generated and Blender-authored).
+
+---
+
+## 9. Visual QA Gates (track-specific)
+
+Automatable, layered on Report 1's harness + your telemetry **[repo]**:
+
+| Gate | Check | Signal |
+|---|---|---|
+| Real 3D geometry | scene is not a flat plane | depth variance in render / non-zero elevation in data |
+| Grounded karts | kart Y ≈ road surface Y | telemetry `airborne=false` on flat segments; no float/sink |
+| Readable road edge | curb/road contrast present | contact-sheet vs. track card |
+| Visible elevation/curve | camera sees non-straight world | start-vs-mid frame differ (you already diff these) |
+| Prop density | enough world dressing | `propCount >= 20` (existing gate) |
+| District identity | each district visually distinct | gallery render per district |
+| No placeholder/fallback | no procedural-box where GLB expected | forbidden-element check (existing pattern) |
+| No blank canvas | WebGL canvas non-uniform | pixel-sample (existing) |
+| Stable framing | desktop + mobile both readable | stills at 1365×768 and 390×844 |
+| FPS | playable | median `fpsEstimate >= 34` (existing gate) |
+| Renderer identity | three-kart, not Pixi/legacy | `data-race-renderer="three-kart"`, zero Pixi canvases (existing) |
+
+---
+
+## 10. Evidence Plan
+
+Reuse the Report 1 proof harness; add track-specific artifacts. Per track, per run → `asset-pipeline/proof/<timestamp>/`:
+
+- Desktop still (`/#race` 1365×768) and mobile still (390×844).
+- 10 s desktop WebM + 10 s mobile WebM (motion proven via frame diff).
+- **Top-down track layout** — orthographic render of centerline + road ribbons + boost/item/finish markers (proves real geometry and lap shape; render headlessly from Layer-0 data).
+- **Contact sheet vs. V2 cards** — track/material/prop renders beside their reference cards.
+- **Track-module gallery** — each kit piece rendered in isolation on `/#asset-gallery` (or a `/#track-kit` route).
+
+---
+
+## 11. Licensing & Provenance
+
+Record per asset in `asset-manifest.json` (Report 1 §7). Sources and their handling:
+
+| Source | License | Web-shippable? | Manifest fields |
+|---|---|---|---|
+| Owner-generated Tripo (from your own renders/cards) | Owner-owned | **Yes** | source=tripo, derivedFrom=<card>, license=owner |
+| Kenney Toy Car Kit | CC0 | **Yes** | source=kenney, license=CC0 |
+| Blender-authored (you) | Owner-owned | **Yes** | source=blender-authored, license=owner |
+| Unreal-**rendered** reference image | reference only | n/a (not shipped) | reference asset; you reproduce the look, don't ship their pixels |
+| Unreal-**exported** GLB of engine/Fab content | **Epic EULA — verify** | **Often NO** | flag: Epic-licensed content is generally Unreal-only; do not ship to a web runtime without confirming the specific asset's license |
+| Third-party textures / HDRIs / plugins | varies | verify each | record source URL + license + seat |
+
+**The real trap** [judgment]: Epic/Fab/Quixel content is typically licensed for use *within Unreal Engine projects*. Exporting such an asset as GLB into a non-Unreal web game can breach the license. **Owner-generated and CC0 are clean; Epic-sourced art is not freely portable.** Using an Unreal *render* as a visual *target* you reproduce by hand is fine — shipping their actual meshes/textures is not. Verify any specific asset's terms before promotion.
+
+---
+
+## 12. Implementation Roadmap
+
+- **T1 — Track-kit schema.** Extend the track data model (§4) with `widthBands`, `banking`, `finishGate`, `hazards`, `props`, `districtPortals`, `sceneryZones`, `cameraHints`, `mobileCropHints`. Keep Node-importable; existing QA scripts still pass. *Exit:* both existing tracks load with the new fields (defaulted).
+- **T2 — First procedural visual kit.** Implement the procedural pieces (§5) in `createTrackMesh.js` driven by the new fields: width bands, banking, curbs, barriers, lane markings, boost-pad visuals, ramps, bridge/tunnel shells. *Exit:* `comeback-city` renders with real width/banking/curbs and passes the §9 gates.
+- **T3 — First authored hero segment.** In Blender, author one district facade or the finish gate to its V2 card; run it through the Report 1 optimizer; place it at its Layer-0 anchor with procedural fallback. *Exit:* authored GLB renders grounded with the procedural box as fallback.
+- **T4 — First proof route.** Add `/#track-kit` (and reuse `/#asset-gallery`) for module/track review. *Exit:* gallery renders every kit piece, none blank.
+- **T5 — Screenshot/video gate.** Wire the §10 evidence into the Report 1 proof script (add the top-down layout render). *Exit:* one proof folder with stills, two WebMs, top-down layout, contact sheet.
+- **T6 — Optional Unreal MCP lab (only if pursued).** Timeboxed trial against the §7.5 evidence bar. *Exit:* either a proof-folder win that justifies it, or a written "not worth it for v1" and move on.
+- **T7 — Route promotion.** Promote the improved track to `/#race` only after all gates pass **[repo]**. *Exit:* `test:kart-3d-spike` green on the new visuals.
+
+---
+
+## 13. Sources
+
+- Unreal Engine 5.8 — first-party MCP plugin (setup, `127.0.0.1:8000/mcp`, exposed tools, experimental status): https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor
+- Unreal Engine — glTF Exporter (in-engine since 5.1; meshes/materials/levels): https://dev.epicgames.com/documentation/en-us/unreal-engine/exporting-unreal-engine-content-to-gltf
+- Unreal Engine — How the glTF Exporter handles content (special considerations): https://dev.epicgames.com/documentation/en-us/unreal-engine/how-the-gltf-exporter-handles-unreal-engine-content
+- Unreal Engine — Scripting glTF exports (Python `GLTFExporter.export_to_gltf`; runtime needs proxy materials): https://dev.epicgames.com/documentation/unreal-engine/scripting-gltf-exports-in-unreal-engine
+- Blender — Command-line arguments (`-b`, `--python`, `--python-expr`): https://docs.blender.org/manual/en/latest/advanced/command_line/arguments.html
+- Blender — `bpy.ops.export_scene.gltf` parameters: https://docs.blender.org/api/current/bpy.ops.export_scene.html
+- Khronos — Blender glTF converter (headless CLI pattern): https://github.khronos.org/glTF-Tutorials/BlenderGltfConverter/
+- three.js — GLTFLoader / KTX2Loader (runtime decode; Report 1 §12 for full list): https://threejs.org/docs/#examples/en/loaders/GLTFLoader
+- (Report 1 §12 covers glTF-Transform and meshopt sources used by the shared pipeline.)
+
+---
+
+*End of Report 2. Next: Pro Synthesis — combine Reports 1 and 2 into a single Codex implementation brief, resolve conflicts, and list the owner decisions.*
