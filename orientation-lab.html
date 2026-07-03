@@ -21,6 +21,7 @@
     <script type="module">
       import * as THREE from 'three';
       import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+      import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
       const MODELS = [
         '/src/assets/game/models/tripo/hero-kart-tripo.glb',
@@ -47,6 +48,7 @@
       const SPACING_X = 11;
       const SPACING_Y = 9;
       const loader = new GLTFLoader();
+      loader.setMeshoptDecoder(MeshoptDecoder); // pipeline emits EXT_meshopt_compression GLBs
       let loaded = 0;
       MODELS.forEach((url, row) => {
         loader.load(url, (gltf) => {

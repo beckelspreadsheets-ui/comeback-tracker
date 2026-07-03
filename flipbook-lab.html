@@ -1,0 +1,113 @@
+<!doctype html>
+<!-- Flipbook lab: renders sprite-sheet billboards with the LOCKED runtime
+     recipe from docs/FLIPBOOK_BILLBOARD_SPEC.md — MeshBasicMaterial + HDR
+     color multiplier over the game's exact bloom chain (UnrealBloomPass
+     0.55/0.45/threshold 1.0, ACES exposure 1.05) — so cadence, gutters,
+     and emissive pop can be approved before a sheet touches the game.
+     Served by vite dev only. Load a candidate sheet with
+     ?sheet=/path/to/sheet.webp&cols=4&rows=4&frames=16 -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Flipbook Lab</title>
+    <style>
+      body { margin: 0; background: #10142a; }
+      canvas { display: block; }
+      #labels { position: fixed; left: 0; top: 0; color: #cfe3ff; font: 12px monospace; padding: 6px 10px; }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "/node_modules/three/build/three.module.js", "three/examples/jsm/": "/node_modules/three/examples/jsm/" } }
+    </script>
+  </head>
+  <body>
+    <div id="labels">left: 8x1 strip @ k=2.5 (blooms) · middle: 4x4 grid @ k=2.5 (blooms) · right: same strip @ k=1.0 (no bloom — the difference IS the recipe) · 10Hz, golden-ratio phases, ±7% detune</div>
+    <script type="module">
+      import * as THREE from 'three';
+      import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+      import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+      import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+      import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+
+      const params = new URLSearchParams(location.search);
+      const CELL = 256;
+      const GUTTER = 8;
+      const CONTENT = CELL - GUTTER * 2;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05; // matches ComebackCityThreeKartRace.jsx:2853
+      document.body.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#10142a');
+      const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 0, 7.5);
+
+      // Game bloom chain: ComebackCityThreeKartRace.jsx:2886-2891
+      const composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.55, 0.45, 1.0));
+      composer.addPass(new OutputPass());
+
+      const loader = new THREE.TextureLoader();
+      const screens = [];
+
+      // Locked material recipe: unlit map + unclamped HDR color multiplier —
+      // bright texels exceed 1.0 in the composer's HalfFloat buffer and cross
+      // the threshold-1.0 bloom pass; tone mapping happens after, in OutputPass.
+      const addScreen = ({ url, cols, rows, frames, k, x, w }) => {
+        loader.load(url, (base) => {
+          base.colorSpace = THREE.SRGBColorSpace;
+          base.wrapS = THREE.ClampToEdgeWrapping;
+          base.wrapT = THREE.ClampToEdgeWrapping;
+          base.minFilter = THREE.LinearMipmapLinearFilter;
+          base.magFilter = THREE.LinearFilter;
+          base.anisotropy = 4;
+          // UV inset to the 240px content region (8px gutter stays outside).
+          base.repeat.set(CONTENT / (CELL * cols), CONTENT / (CELL * rows));
+          const material = new THREE.MeshBasicMaterial({ map: base, toneMapped: false });
+          material.color.setRGB(k, k, k);
+          const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, w), material);
+          mesh.position.set(x, 0, 0);
+          scene.add(mesh);
+          screens.push({ texture: base, cols, rows, frames, lastFrame: -1, phase: screens.length * frames * 0.618, hz: 10 * (1 + 0.07 * (screens.length % 2 === 0 ? 1 : -1)) });
+        });
+      };
+
+      const custom = params.get('sheet');
+      if (custom) {
+        addScreen({ url: custom, cols: Number(params.get('cols') || 8), rows: Number(params.get('rows') || 1), frames: Number(params.get('frames') || 8), k: Number(params.get('k') || 2.5), x: 0, w: 4.6 });
+      } else {
+        addScreen({ url: '/tmp/flipbook-lab/test-neon-8x1.webp', cols: 8, rows: 1, frames: 8, k: 2.5, x: -4.9, w: 4.4 });
+        addScreen({ url: '/tmp/flipbook-lab/test-neon-4x4.webp', cols: 4, rows: 4, frames: 16, k: 2.5, x: 0, w: 4.4 });
+        addScreen({ url: '/tmp/flipbook-lab/test-neon-8x1.webp', cols: 8, rows: 1, frames: 8, k: 1.0, x: 4.9, w: 4.4 });
+      }
+
+      const setFrame = (screen, frame) => {
+        const col = frame % screen.cols;
+        const row = Math.floor(frame / screen.cols);
+        // flipY=true: V origin bottom-left; image-space row 0 (top) = highest V band.
+        screen.texture.offset.set(
+          (col * CELL + GUTTER) / (CELL * screen.cols),
+          1 - ((row + 1) * CELL - GUTTER) / (CELL * screen.rows)
+        );
+      };
+
+      const clock = new THREE.Clock();
+      renderer.setAnimationLoop(() => {
+        const elapsed = clock.getElapsedTime();
+        for (const screen of screens) {
+          const frame = Math.floor(elapsed * screen.hz + screen.phase) % screen.frames;
+          if (frame !== screen.lastFrame) {
+            screen.lastFrame = frame;
+            setFrame(screen, frame); // offset write only on frame change — no per-frame work
+          }
+        }
+        composer.render();
+        window.__flipbookLabFrames = screens.map((screen) => screen.lastFrame);
+      });
+    </script>
+  </body>
+</html>
