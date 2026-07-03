@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- B1 palette lab: Penguin Village atmosphere candidates at routeProgress 0.30
+     (pond sweep). Regen: node tmp/m2-palette-lab/capture-palette-variants.mjs -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Palette Lab — Penguin Village B1</title>
+    <style>
+      body { margin: 0; padding: 20px; background: #0c1020; color: #dfe8ff; font: 14px/1.5 -apple-system, sans-serif; }
+      h1 { font-size: 18px; }
+      p.hint { color: #93a3c8; max-width: 72ch; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 18px; }
+      figure { margin: 0; background: #131a30; border: 1px solid #2a3450; border-radius: 8px; overflow: hidden; }
+      img { width: 100%; display: block; }
+      figcaption { padding: 10px 12px; }
+      code { display: block; margin-top: 6px; font-size: 10px; color: #7f90b8; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <h1>Palette Lab — Penguin Village atmosphere (B1)</h1>
+    <p class="hint">Same sim position (routeProgress 0.30, pond sweep — the open vista where
+    distance haze reads strongest). Pick a number, or name two to blend/iterate. The winner
+    lands as the penguinVillage.js palette diff; Comeback City is untouched either way.
+    V0 is today's shipped look for reference.</p>
+    <div class="grid">
+      <figure>
+        <img src="/tmp/m2-palette-lab/v0-current-default-p0p30.png" alt="V0 — current default (purple dusk, shared with Comeback City)" loading="lazy" />
+        <figcaption><strong>V0</strong> — current default (purple dusk, shared with Comeback City)<br />
+        <code>no overrides (shipped default)</code></figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-palette-lab/v1-icy-haze-p0p30.png" alt="V1 — icy haze: pale milky-blue fog, cyan-shifted hemi, pale winter sun" loading="lazy" />
+        <figcaption><strong>V1</strong> — icy haze: pale milky-blue fog, cyan-shifted hemi, pale winter sun<br />
+        <code>{"fog":{"color":"#7fa8c8","near":200,"far":780},"hemi":{"sky":"#7399a8","ground":"#11273d","intensity":3.3},"sunColor":"#ffd9a0","rimLightColor":"#00e5ff"}</code></figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-palette-lab/v2-deep-polar-night-p0p30.png" alt="V2 — deep polar night: dark navy fog pulls distance into darkness" loading="lazy" />
+        <figcaption><strong>V2</strong> — deep polar night: dark navy fog pulls distance into darkness<br />
+        <code>{"fog":{"color":"#0d2438","near":190,"far":720},"hemi":{"sky":"#6b9bb5","ground":"#11263f","intensity":3.1},"sunColor":"#ffcf95","rimLightColor":"#00e5ff"}</code></figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-palette-lab/v3-glacier-milk-p0p30.png" alt="V3 — glacier milk: brightest haze (near 160), soft whiteout distance" loading="lazy" />
+        <figcaption><strong>V3</strong> — glacier milk: brightest haze (near 160), soft whiteout distance<br />
+        <code>{"fog":{"color":"#a8c8dc","near":160,"far":740},"hemi":{"sky":"#7998a3","ground":"#11273a","intensity":3.3},"sunColor":"#ffe3b3","rimLightColor":"#36e2ff"}</code></figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-palette-lab/v4-aurora-teal-p0p30.png" alt="V4 — aurora teal: green-shifted haze + mint rim (aurora tie-in)" loading="lazy" />
+        <figcaption><strong>V4</strong> — aurora teal: green-shifted haze + mint rim (aurora tie-in)<br />
+        <code>{"fog":{"color":"#5f9a96","near":200,"far":760},"hemi":{"sky":"#6b9d96","ground":"#0e292f","intensity":3.3},"sunColor":"#ffd9a0","rimLightColor":"#3cf5c8"}</code></figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-palette-lab/v5-steel-blue-p0p30.png" alt="V5 — cold steel blue: desaturated blue-grey haze, palest sun" loading="lazy" />
+        <figcaption><strong>V5</strong> — cold steel blue: desaturated blue-grey haze, palest sun<br />
+        <code>{"fog":{"color":"#6d87a8","near":210,"far":780},"hemi":{"sky":"#7e96ae","ground":"#14263e","intensity":3.2},"sunColor":"#f2e0c0","rimLightColor":"#66d9ff"}</code></figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-palette-lab/v6-violet-ice-p0p30.png" alt="V6 — violet ice: keeps kinship with Comeback City dusk, colder + hazier" loading="lazy" />
+        <figcaption><strong>V6</strong> — violet ice: keeps kinship with Comeback City dusk, colder + hazier<br />
+        <code>{"fog":{"color":"#8f9cc8","near":210,"far":780},"hemi":{"sky":"#8093bc","ground":"#1a2442","intensity":3.3},"sunColor":"#ffd0a0","rimLightColor":"#7fd4ff"}</code></figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-palette-lab/v7-pale-dawn-p0p30.png" alt="V7 — pale dawn ice: warm-milk horizon, cream sun" loading="lazy" />
+        <figcaption><strong>V7</strong> — pale dawn ice: warm-milk horizon, cream sun<br />
+        <code>{"fog":{"color":"#c0ccd8","near":180,"far":760},"hemi":{"sky":"#84959c","ground":"#132736","intensity":3.3},"sunColor":"#ffe8c8","rimLightColor":"#9fe7ff"}</code></figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-palette-lab/v8-storm-front-p0p30.png" alt="V8 — storm front: closest grey-blue haze (near 150), moody" loading="lazy" />
+        <figcaption><strong>V8</strong> — storm front: closest grey-blue haze (near 150), moody<br />
+        <code>{"fog":{"color":"#4a6478","near":150,"far":680},"hemi":{"sky":"#689bb8","ground":"#0f273f","intensity":3},"sunColor":"#e8c9a0","rimLightColor":"#00d5ff"}</code></figcaption>
+      </figure>
+    </div>
+  </body>
+</html>

@@ -2864,7 +2864,17 @@ const createScene = ({
   trackDef = trackByKey(DEFAULT_TRACK_KEY),
   trackVisualsEnabled = false,
 }) => {
-  const palette = trackDef.palette || {};
+  let palette = trackDef.palette || {};
+  // Palette lab (dev QA, B1/B2 variant review): ?paletteLab=1 merges
+  // window.__paletteLabOverrides over the track palette so the variant lab
+  // captures candidate looks without touching shipped defaults.
+  if (
+    typeof window !== 'undefined' &&
+    window.__paletteLabOverrides &&
+    new URLSearchParams(window.location.search).get('paletteLab') === '1'
+  ) {
+    palette = { ...palette, ...window.__paletteLabOverrides };
+  }
   const renderer = createRaceRenderer({ canvas, onUnavailable });
   if (!renderer) return null;
   renderer.setClearColor(palette.clearColor || '#131a36', 1);
@@ -2877,15 +2887,25 @@ const createScene = ({
 
   const scene = new THREE.Scene();
   scene.background = makeSkyTexture(palette.sky);
-  scene.fog = new THREE.Fog('#272252', 240, 820);
+  // B1: atmosphere reads from the track palette; the fallbacks reproduce
+  // Comeback City exactly (its palette has no fog/hemi/sun keys, by
+  // construction). NOTE fog.far must stay <= 840 — camera far is 860 and
+  // fog far beyond camera far silently no-ops the haze.
+  const fogCfg = palette.fog || {};
+  scene.fog = new THREE.Fog(fogCfg.color || '#272252', fogCfg.near ?? 240, fogCfg.far ?? 820);
   const camera = new THREE.PerspectiveCamera(66, 1, 0.25, 860);
   const world = new THREE.Group();
   scene.add(world);
   const loader = new THREE.TextureLoader();
-  scene.add(new THREE.HemisphereLight('#8d8ce0', '#2a1e4a', 3.3));
+  const hemi = new THREE.HemisphereLight(
+    palette.hemi?.sky || '#8d8ce0',
+    palette.hemi?.ground || '#2a1e4a',
+    palette.hemi?.intensity ?? 3.3
+  );
+  scene.add(hemi);
   // Shadow-casting key light rides with the kart so a small, sharp shadow
   // frustum covers the action instead of a blurry one covering the world.
-  const sun = new THREE.DirectionalLight('#ffae72', 2.6);
+  const sun = new THREE.DirectionalLight(palette.sunColor || '#ffae72', 2.6);
   sun.position.set(-150, 52, -70);
   sun.castShadow = !trackVisualsEnabled;
   sun.shadow.mapSize.set(384, 384);
@@ -2898,9 +2918,9 @@ const createScene = ({
   sun.shadow.bias = -0.0008;
   scene.add(sun);
   scene.add(sun.target);
-  const rim = new THREE.DirectionalLight('#4fd8ff', 2.0);
-  rim.position.set(92, 56, 74);
-  scene.add(rim);
+  const rimLight = new THREE.DirectionalLight(palette.rimLightColor || '#4fd8ff', 2.0);
+  rimLight.position.set(92, 56, 74);
+  scene.add(rimLight);
 
   // Post-processing: bloom is what makes the neon dusk actually glow.
   const composer = new EffectComposer(renderer);
@@ -3296,10 +3316,14 @@ const createScene = ({
     buildingSwaps,
     camera,
     composer,
+    // B1: atmosphere handles exposed so B2's palette moments can lerp
+    // fog/hemi/sun/rim at runtime (scene.fog is reachable via scene).
+    hemi,
     itemBoxes,
     playerModel,
     propCount,
     renderer,
+    rimLight,
     rivalModels,
     sampler,
     scene,
