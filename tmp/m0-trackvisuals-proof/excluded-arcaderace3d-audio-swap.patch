@@ -1,0 +1,40 @@
+diff --git a/src/game/ArcadeRace3D.jsx b/src/game/ArcadeRace3D.jsx
+index a9fbad8b..8d1940b0 100644
+--- a/src/game/ArcadeRace3D.jsx
++++ b/src/game/ArcadeRace3D.jsx
+@@ -19,7 +19,7 @@ import {
+   recordSteeringTurn90,
+ } from './race/raceTelemetry.js';
+ import { RaceHud } from './race/raceHud.jsx';
+-import { createRaceAudioController } from './race/raceAudio.js';
++import { createAudioManager } from './audio/AudioManager.js';
+ import {
+   applyRaceKeyDown,
+   applyRaceKeyUp,
+@@ -272,7 +272,7 @@ export const ArcadeRace3D = ({
+           visualStats,
+         });
+ 
+-      const raceAudio = createRaceAudioController({
++      const raceAudio = createAudioManager({
+         muted: audioMutedRef.current,
+         trackKey: compiled.key,
+       });
+@@ -330,6 +330,8 @@ export const ArcadeRace3D = ({
+ 
+       const {
+         updateAutoplayPlayer,
++        updateBreakables,
++        updateCrossers,
+         updatePlayer,
+         updateRankings,
+         updateRivals,
+@@ -477,6 +479,8 @@ export const ArcadeRace3D = ({
+         updateRivals(dt);
+         updateTrackEvents(dt);
+         updateTrackHazards(dt);
++        updateBreakables(dt);
++        updateCrossers(dt);
+         updateRankings();
+         markPhase('world');
+         syncRaceMeshes({

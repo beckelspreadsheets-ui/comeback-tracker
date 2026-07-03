@@ -1,0 +1,69 @@
+diff --git a/src/game/race/render/createRaceScenery.js b/src/game/race/render/createRaceScenery.js
+index 02cc4625..65f4a0f8 100644
+--- a/src/game/race/render/createRaceScenery.js
++++ b/src/game/race/render/createRaceScenery.js
+@@ -88,7 +88,7 @@ export const createRaceScenery = ({
+ 
+   const createInstancedMesh = ({
+     castShadow = false,
+-    frustumCulled = false,
++    frustumCulled = true,
+     geometry,
+     material,
+     matrices,
+@@ -99,6 +99,8 @@ export const createRaceScenery = ({
+     const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
+     matrices.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+     mesh.instanceMatrix.needsUpdate = true;
++    mesh.computeBoundingBox();
++    mesh.computeBoundingSphere();
+     mesh.castShadow = castShadow;
+     mesh.frustumCulled = frustumCulled;
+     mesh.receiveShadow = receiveShadow;
+@@ -156,7 +158,7 @@ export const createRaceScenery = ({
+     const rows = Math.max(2, Math.floor(h / 4));
+     for (let row = 0; row < rows; row += 1) {
+       for (let col = 0; col < cols; col += 1) {
+-        if ((row + col) % 3 === 0) continue;
++        if ((row + col) % 2 === 0) continue;
+         const wx = x - w * 0.34 + (w * 0.68 * col) / Math.max(1, cols - 1);
+         const wy = 3.6 + row * 3.2;
+         [-1, 1].forEach((side) => {
+@@ -1217,8 +1219,6 @@ export const createRaceScenery = ({
+     const perimeterRoofGeometry = new THREE.BoxGeometry(1, 1, 1);
+     const perimeterBlockMatrices = skylineMats.map(() => []);
+     const perimeterRoofMatrices = [[], []];
+-    const perimeterWindowGeometry = new THREE.BoxGeometry(1.1, 0.9, 0.12);
+-    const perimeterWindowMatrices = [];
+     const placeBlock = (x, z, index, yaw = 0) => {
+       const h = 18 + (index % 7) * 5.5 + (index % 6 === 0 ? 12 : 0);
+       const w = 7 + (index % 3) * 2.2;
+@@ -1236,15 +1236,6 @@ export const createRaceScenery = ({
+         rotationY: blockYaw,
+         scale: new THREE.Vector3(w + 1.1, 1.4, d + 1.1),
+       });
+-
+-      for (let row = 0; row < Math.min(5, Math.floor(h / 6)); row += 1) {
+-        [-0.28, 0.28].forEach((side) => {
+-          addInstanceMatrix(perimeterWindowMatrices, {
+-            position: new THREE.Vector3(x + side * w, 4.8 + row * 4.8, z - d / 2 - 0.08),
+-            rotationY: blockYaw,
+-          });
+-        });
+-      }
+     };
+ 
+     const xStart = bounds.minX - 56;
+@@ -1282,12 +1273,6 @@ export const createRaceScenery = ({
+         parent: world,
+       });
+     });
+-    createInstancedMesh({
+-      geometry: perimeterWindowGeometry,
+-      material: windowMat,
+-      matrices: perimeterWindowMatrices,
+-      parent: world,
+-    });
+   };
+   addPerimeterSkyline();
+ 
