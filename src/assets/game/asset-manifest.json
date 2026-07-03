@@ -96,12 +96,62 @@
     "fallback": "Procedural skyline, water, mountains, and district geometry"
   },
   {
-    "filePath": "src/assets/game/models/toy-car-kit/*.glb + colormap.png",
+    "filePath": "src/assets/game/models/toy-car-kit/colormap.png",
     "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models",
     "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
-    "role": "Authored low-poly vehicle (hero kart + recolored rivals), item box, banana, and cone meshes for the V2 Three.js race runtime; palette colormap recolored per kart at runtime to the approved V2 trait-card colors",
-    "sizeBudget": "Six GLB models + one 8 KB palette PNG, about 360 KB total",
+    "role": "Palette colormap recolored per kart at runtime to the approved V2 trait-card colors (shared by the Kenney toy-car-kit GLBs)",
+    "sizeBudget": "One 8 KB palette PNG",
     "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails"
+  },
+  {
+    "filePath": "src/assets/game/models/toy-car-kit/item-box.glb",
+    "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models; shipped as downloaded (no transform)",
+    "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
+    "role": "Item box pickup mesh for the V2 Three.js race runtime",
+    "sizeBudget": "About 18 KB GLB",
+    "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails",
+    "sourceHash": "sha256:314b75f3e8c3e99ef189d8c5c5ab911fe9d6bed274bb4658881129b2161d1925",
+    "outputHash": "sha256:314b75f3e8c3e99ef189d8c5c5ab911fe9d6bed274bb4658881129b2161d1925"
+  },
+  {
+    "filePath": "src/assets/game/models/toy-car-kit/vehicle-drag-racer.glb",
+    "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models; shipped as downloaded (no transform)",
+    "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
+    "role": "Rival kart body (drag racer, recolored at runtime per seat accent)",
+    "sizeBudget": "About 102 KB GLB",
+    "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails",
+    "sourceHash": "sha256:e55cec7720744af6bdee05f0716c032dabede9d173a3629fd8af7ec58447ce1d",
+    "outputHash": "sha256:e55cec7720744af6bdee05f0716c032dabede9d173a3629fd8af7ec58447ce1d"
+  },
+  {
+    "filePath": "src/assets/game/models/toy-car-kit/vehicle-racer.glb",
+    "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models; shipped as downloaded (no transform)",
+    "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
+    "role": "Rival kart body (racer, recolored at runtime per seat accent)",
+    "sizeBudget": "About 102 KB GLB",
+    "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails",
+    "sourceHash": "sha256:2cdf369f231bf3e38bdf3a376144971f1b4d1a1e558000047ac927c5ac81a42c",
+    "outputHash": "sha256:2cdf369f231bf3e38bdf3a376144971f1b4d1a1e558000047ac927c5ac81a42c"
+  },
+  {
+    "filePath": "src/assets/game/models/toy-car-kit/vehicle-racer-low.glb",
+    "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models; shipped as downloaded (no transform)",
+    "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
+    "role": "Rival kart body (low racer, recolored at runtime per seat accent)",
+    "sizeBudget": "About 101 KB GLB",
+    "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails",
+    "sourceHash": "sha256:d585746ad006094cf745630b2866af65c6c244589dab346179fd41007f9fac6e",
+    "outputHash": "sha256:d585746ad006094cf745630b2866af65c6c244589dab346179fd41007f9fac6e"
+  },
+  {
+    "filePath": "src/assets/game/models/toy-car-kit/vehicle-vintage-racer.glb",
+    "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models; shipped as downloaded (no transform)",
+    "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
+    "role": "Rival kart body (vintage racer, recolored at runtime per seat accent)",
+    "sizeBudget": "About 100 KB GLB",
+    "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails",
+    "sourceHash": "sha256:8528456ca062685ddabb713509eb60b82146e26343b283344c26811dd5d8faf8",
+    "outputHash": "sha256:8528456ca062685ddabb713509eb60b82146e26343b283344c26811dd5d8faf8"
   },
   {
     "filePath": "src/assets/game/models/avatars/crrt-bunny.glb",
@@ -109,15 +159,34 @@
     "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
     "role": "CRRT Bunny driver avatar seated on the player kart driver mount in the V2 Three.js race runtime",
     "sizeBudget": "About 660 KB GLB with embedded 512px texture, ~18k triangles",
-    "fallback": "Kart renders driverless if the avatar GLB fails to load"
+    "fallback": "Kart renders driverless if the avatar GLB fails to load",
+    "sourceHash": "sha256:8f6f60d956081690ba551d2ea3478eea41051043953d0eb824d00ee152b7307e",
+    "outputHash": "sha256:8f6f60d956081690ba551d2ea3478eea41051043953d0eb824d00ee152b7307e"
   },
   {
-    "filePath": "src/assets/game/models/avatars/crrt-penguin.glb",
-    "source": "Owner-generated with Tripo (image-to-3D) on 2026-06-11 from owner-authored CRRT Penguin seated renders (tclow-ordinalpenguin); optimized in-repo to ~11k triangles, 512px texture",
-    "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
-    "role": "CRRT Penguin (Frost Pilot) driver avatar on the Blue Speed rival kart",
-    "sizeBudget": "About 420 KB GLB, ~11k triangles",
-    "fallback": "Rival kart renders driverless if the avatar GLB fails to load"
+    "filePath": "src/assets/game/models/avatars/tclow-penguin.glb",
+    "source": "Approved optimized candidate from src/assets/game/models/avatars/tclow-penguin.glb",
+    "license": "Owner-created/generated asset; see approval and proof ledger",
+    "role": "Runtime promoted asset for tclow-penguin-candidate-gltf-transform-seated-character-balanced-v1",
+    "sizeBudget": "Promoted candidate hash sha256:6a34c995bde92a4ace89a806d81544e056c82453940df9afd78a53753532ecf9",
+    "fallback": "Existing runtime loader fallback behavior remains in place if this GLB fails to load",
+    "sourceHash": "sha256:7e50be8d0218bbee34c116ebe9259a0aeca2e575b9b3ad285e044c9dac40eeff",
+    "outputHash": "sha256:6a34c995bde92a4ace89a806d81544e056c82453940df9afd78a53753532ecf9",
+    "assetId": "tclow-penguin-candidate-gltf-transform-seated-character-balanced-v1",
+    "assetClass": "seated-character",
+    "status": "runtime-hard-pass-target-warning",
+    "proof": "asset-pipeline/proof/runs/2026-06-18T15-13-10-911Z__race-proof/comparison.md",
+    "runtimeTransform": "Approved gltf-transform seated-character-balanced-v1",
+    "promotion": {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "tclow-penguin-candidate-gltf-transform-seated-character-balanced-v1",
+      "candidateHash": "sha256:6a34c995bde92a4ace89a806d81544e056c82453940df9afd78a53753532ecf9",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/tclow-penguin/tclow-penguin__seated-character-balanced-v1__7e50be8d0218__60a218d03458.glb",
+      "promotedAt": "2026-06-20T13:22:34.717Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "sourceHash": "sha256:7e50be8d0218bbee34c116ebe9259a0aeca2e575b9b3ad285e044c9dac40eeff",
+      "sourceRepoPath": "src/assets/game/models/avatars/tclow-penguin.glb"
+    }
   },
   {
     "filePath": "src/assets/game/models/tripo/hero-kart-tripo.glb",
@@ -125,7 +194,9 @@
     "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
     "role": "A/B-test hero kart body, selectable at runtime with ?tripoKart=1; fused mesh (static wheels). Not the default pending owner A/B decision vs the Kenney body",
     "sizeBudget": "About 1.5 MB GLB with embedded 1024px texture, ~40k triangles",
-    "fallback": "Default Kenney drag-racer body renders when the flag is absent or the GLB fails"
+    "fallback": "Default Kenney drag-racer body renders when the flag is absent or the GLB fails",
+    "sourceHash": "sha256:6d6817d9b429a6ce4d5e6b1c56628b0eff89e9d926f58d76f63a6ff86da64f62",
+    "outputHash": "sha256:6d6817d9b429a6ce4d5e6b1c56628b0eff89e9d926f58d76f63a6ff86da64f62"
   },
   {
     "filePath": "src/assets/game/models/avatars/seth-penguin.glb",
@@ -133,22 +204,137 @@
     "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
     "role": "Seth Penguin driver avatar on the Purple Lab rival kart (third roster character)",
     "sizeBudget": "About 495 KB GLB, ~13k triangles",
-    "fallback": "Rival kart renders driverless if the avatar GLB fails to load"
+    "fallback": "Rival kart renders driverless if the avatar GLB fails to load",
+    "sourceHash": "sha256:ec6348cf5f3ff1e1c4acc8b922b323737c40db5132a9eaaed386ce3d682ce2da",
+    "outputHash": "sha256:ec6348cf5f3ff1e1c4acc8b922b323737c40db5132a9eaaed386ce3d682ce2da"
   },
   {
     "filePath": "src/assets/game/models/avatars/mizzle.glb",
-    "source": "Owner-generated in Tripo from 3d generations:character sheets/mizzlesitting.png (2026-06-12); optimized in-repo via gltf-transform weld/simplify/resize-512",
-    "license": "Owner-created asset",
-    "role": "Mizzle seated driver avatar \u2014 Orange Muscle's seat (voxel penguin, bomber jacket)",
-    "sizeBudget": "<4MB optimized from 16MB Tripo export",
-    "fallback": "Seat stays empty if the GLB fails to load"
+    "source": "Approved optimized candidate from asset-pipeline/raw/runtime-copies/mizzle__7de9b5e55e89.glb",
+    "license": "Owner-created/generated asset; see approval and proof ledger",
+    "role": "Runtime promoted asset for mizzle-candidate-blender-decimate-seated-character-blender-22k-v1",
+    "sizeBudget": "Promoted candidate hash sha256:4e621b083c5173cfa51a47076b8d55a6bb3264aea9ba66027dd3048852cbcc4c",
+    "fallback": "Existing runtime loader fallback behavior remains in place if this GLB fails to load",
+    "promotion": {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "mizzle-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateHash": "sha256:4e621b083c5173cfa51a47076b8d55a6bb3264aea9ba66027dd3048852cbcc4c",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/mizzle/mizzle__seated-character-blender-22k-v1__7de9b5e55e89__60857101a320__meshopt.glb",
+      "promotedAt": "2026-06-20T13:21:41.393Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "sourceHash": "sha256:7de9b5e55e8911ba740e5b52ce35ac39ce4dd9e32195c90dab2683242fdf6078",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/mizzle__7de9b5e55e89.glb"
+    },
+    "assetClass": "seated-character",
+    "assetId": "mizzle-candidate-blender-decimate-seated-character-blender-22k-v1",
+    "outputHash": "sha256:4e621b083c5173cfa51a47076b8d55a6bb3264aea9ba66027dd3048852cbcc4c",
+    "sourceHash": "sha256:7de9b5e55e8911ba740e5b52ce35ac39ce4dd9e32195c90dab2683242fdf6078",
+    "status": "runtime-hard-pass-target-warning",
+    "runtimeTransform": "Approved blender-decimate seated-character-blender-22k-v1"
+  },
+  {
+    "filePath": "src/assets/game/models/avatars/layer23-penguin.glb",
+    "source": "Approved optimized candidate from asset-pipeline/raw/runtime-copies/layer23-penguin__0622be5ab6c7.glb",
+    "license": "Owner-created/generated asset; see approval and proof ledger",
+    "role": "Runtime promoted asset for layer23-penguin-candidate-blender-decimate-seated-character-blender-22k-v1",
+    "sizeBudget": "Promoted candidate hash sha256:6e5afbbc95bd462defde486642fcd811a5a9482b1a5ebd303d2ecb21877e339b",
+    "fallback": "Existing runtime loader fallback behavior remains in place if this GLB fails to load",
+    "sourceHash": "sha256:0622be5ab6c7b1bb6829fe2c5747194e19db2faabccd3bb4c557cdb5e28d58ec",
+    "outputHash": "sha256:6e5afbbc95bd462defde486642fcd811a5a9482b1a5ebd303d2ecb21877e339b",
+    "assetId": "layer23-penguin-candidate-blender-decimate-seated-character-blender-22k-v1",
+    "assetClass": "seated-character",
+    "status": "runtime-hard-pass-target-warning",
+    "proof": "asset-pipeline/proof/runs/2026-06-18T15-13-10-911Z__race-proof/comparison.md",
+    "runtimeTransform": "Approved blender-decimate seated-character-blender-22k-v1",
+    "promotion": {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "layer23-penguin-candidate-blender-decimate-seated-character-blender-22k-v1",
+      "candidateHash": "sha256:6e5afbbc95bd462defde486642fcd811a5a9482b1a5ebd303d2ecb21877e339b",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/layer23-penguin/layer23-penguin__seated-character-blender-22k-v1__0622be5ab6c7__44c7d2dd2a2d__meshopt.glb",
+      "promotedAt": "2026-06-20T13:21:08.325Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "sourceHash": "sha256:0622be5ab6c7b1bb6829fe2c5747194e19db2faabccd3bb4c557cdb5e28d58ec",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/layer23-penguin__0622be5ab6c7.glb"
+    }
   },
   {
     "filePath": "src/assets/game/models/tripo/ice-sled.glb",
-    "source": "Owner-generated in Tripo from 3d generations:character sheets/glidercart.png (2026-06-12); optimized in-repo via gltf-transform weld/simplify/resize-512",
-    "license": "Owner-created asset",
-    "role": "Ice sled kart body for Blue Speed (replaces recolored Kenney drag-racer when loaded)",
-    "sizeBudget": "<4MB optimized from 16.5MB Tripo export",
-    "fallback": "Recolored Kenney drag-racer body"
+    "source": "Approved optimized candidate from asset-pipeline/raw/runtime-copies/ice-sled__3f70a14552d5.glb",
+    "license": "Owner-created/generated asset; see approval and proof ledger",
+    "role": "Runtime promoted asset for ice-sled-candidate-blender-decimate-rival-kart-blender-15k-v1",
+    "sizeBudget": "Promoted candidate hash sha256:bd6ce093427fcb99758f9fe1e07d9199aca7add3cf8a7816423e097a9eadc91e",
+    "fallback": "Existing runtime loader fallback behavior remains in place if this GLB fails to load",
+    "promotion": {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "ice-sled-candidate-blender-decimate-rival-kart-blender-15k-v1",
+      "candidateHash": "sha256:bd6ce093427fcb99758f9fe1e07d9199aca7add3cf8a7816423e097a9eadc91e",
+      "candidateRepoPath": "asset-pipeline/working/blender-decimate/2026-06-19T16-14-41-834Z__blender-decimation/ice-sled/ice-sled__rival-kart-blender-15k-v1__3f70a14552d5__6fb1ace0efe5__meshopt.glb",
+      "promotedAt": "2026-06-20T13:22:07.811Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "sourceHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
+      "sourceRepoPath": "asset-pipeline/raw/runtime-copies/ice-sled__3f70a14552d5.glb"
+    },
+    "assetClass": "rival-kart",
+    "assetId": "ice-sled-candidate-blender-decimate-rival-kart-blender-15k-v1",
+    "outputHash": "sha256:bd6ce093427fcb99758f9fe1e07d9199aca7add3cf8a7816423e097a9eadc91e",
+    "sourceHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
+    "status": "runtime-hard-pass-target-warning",
+    "runtimeTransform": "Approved blender-decimate rival-kart-blender-15k-v1"
+  },
+  {
+    "filePath": "src/assets/game/select/*.png",
+    "source": "Rendered in-repo by scripts/select-portraits-capture.mjs from the real GLB roster models (avatars and karts) in a transparent HTML booth",
+    "license": "Project-owned renders derived from owner-created/Tripo and CC0 Kenney source models",
+    "role": "Character and kart portraits on the RaceScreen.jsx select grid",
+    "sizeBudget": "Eight PNG portraits, approximately 1.1 MB total",
+    "fallback": "Select grid falls back to colored placeholder cards if portraits fail to load"
+  },
+  {
+    "fallback": "Existing runtime loader fallback behavior remains in place if this GLB fails to load",
+    "filePath": "src/assets/game/models/toy-car-kit/item-banana.glb",
+    "license": "Owner-created/generated asset; see approval and proof ledger",
+    "promotion": {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "item-banana-candidate-gltf-transform-simple-prop-v1",
+      "candidateHash": "sha256:e171d73c1e8a6ee7492c38c9367a41f2b6726d7f499f178f4c0498fd3a5b1154",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/item-banana/item-banana__simple-prop-v1__7343a68ff41e__a6153d37cd5c.glb",
+      "promotedAt": "2026-06-20T13:23:01.039Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "sourceHash": "sha256:7343a68ff41e052587a4db894077038a37e81f3b24c63689cdbece21647fce62",
+      "sourceRepoPath": "src/assets/game/models/toy-car-kit/item-banana.glb"
+    },
+    "assetClass": "simple-prop",
+    "assetId": "item-banana-candidate-gltf-transform-simple-prop-v1",
+    "outputHash": "sha256:e171d73c1e8a6ee7492c38c9367a41f2b6726d7f499f178f4c0498fd3a5b1154",
+    "sourceHash": "sha256:7343a68ff41e052587a4db894077038a37e81f3b24c63689cdbece21647fce62",
+    "status": "runtime-hard-pass",
+    "runtimeTransform": "Approved gltf-transform simple-prop-v1",
+    "role": "Runtime promoted asset for item-banana-candidate-gltf-transform-simple-prop-v1",
+    "sizeBudget": "Promoted candidate hash sha256:e171d73c1e8a6ee7492c38c9367a41f2b6726d7f499f178f4c0498fd3a5b1154",
+    "source": "Approved optimized candidate from src/assets/game/models/toy-car-kit/item-banana.glb"
+  },
+  {
+    "fallback": "Existing runtime loader fallback behavior remains in place if this GLB fails to load",
+    "filePath": "src/assets/game/models/toy-car-kit/item-cone.glb",
+    "license": "Owner-created/generated asset; see approval and proof ledger",
+    "promotion": {
+      "approvalPath": "asset-pipeline/gallery/runs/2026-06-19T16-16-30-254Z__asset-gallery/approval-template.json",
+      "assetId": "item-cone-candidate-gltf-transform-simple-prop-v1",
+      "candidateHash": "sha256:b7fcd99e0afa8e45639e637638438ab139b271d7413246ad99597a8be85587ac",
+      "candidateRepoPath": "asset-pipeline/working/optimized/2026-06-19T16-14-01-832Z__glb-optimization/item-cone/item-cone__simple-prop-v1__9fb546dc8d86__a6153d37cd5c.glb",
+      "promotedAt": "2026-06-20T13:23:28.642Z",
+      "proofRun": "asset-pipeline/proof/runs/2026-06-18T15-17-27-452Z__race-proof",
+      "sourceHash": "sha256:9fb546dc8d86e15d9e0d6008f721b3bcd83645d107c0ab68634c25e243a7f6f6",
+      "sourceRepoPath": "src/assets/game/models/toy-car-kit/item-cone.glb"
+    },
+    "assetClass": "simple-prop",
+    "assetId": "item-cone-candidate-gltf-transform-simple-prop-v1",
+    "outputHash": "sha256:b7fcd99e0afa8e45639e637638438ab139b271d7413246ad99597a8be85587ac",
+    "sourceHash": "sha256:9fb546dc8d86e15d9e0d6008f721b3bcd83645d107c0ab68634c25e243a7f6f6",
+    "status": "runtime-hard-pass",
+    "runtimeTransform": "Approved gltf-transform simple-prop-v1",
+    "role": "Runtime promoted asset for item-cone-candidate-gltf-transform-simple-prop-v1",
+    "sizeBudget": "Promoted candidate hash sha256:b7fcd99e0afa8e45639e637638438ab139b271d7413246ad99597a8be85587ac",
+    "source": "Approved optimized candidate from src/assets/game/models/toy-car-kit/item-cone.glb"
   }
 ]
