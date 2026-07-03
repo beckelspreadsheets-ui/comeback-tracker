@@ -7,7 +7,20 @@ export const RACE_RENDERER_OPTIONS = Object.freeze({
   preserveDrawingBuffer: false,
 });
 
+// Shipped-game render scale. Desktop raised 0.58 -> 0.85 (A3, 2026-07-02):
+// the 0.58 cut chased a headless-instrument artifact; headed canonical
+// captures on the reference hardware hold 144 FPS at 0.85 (worst sample
+// 143.5, frameWorkMs ~1.3ms). Mobile untouched (no mobile instrument yet).
 export const RACE_RENDER_SCALE = Object.freeze({
+  desktop: 0.85,
+  mobile: 0.6,
+});
+
+// Legacy ArcadeRace3D keeps the scale its browser-suite pixel thresholds
+// were calibrated at. The legacy route is not shipped; raising its
+// resolution just starves the suite's software-GL readiness analysis in
+// headless Chromium for zero product benefit.
+export const RACE_RENDER_SCALE_LEGACY = Object.freeze({
   desktop: 0.58,
   mobile: 0.6,
 });
@@ -49,6 +62,7 @@ export const fitRaceRendererToCanvas = ({
   canvas,
   raceViewport,
   renderer,
+  scaleTable = RACE_RENDER_SCALE,
   windowRef = globalThis.window,
 } = {}) => {
   const rect = canvas.getBoundingClientRect();
@@ -56,7 +70,7 @@ export const fitRaceRendererToCanvas = ({
   raceViewport.height = Math.max(1, rect.height || 1);
   raceViewport.mobile = raceViewport.width / raceViewport.height < 0.74;
   const rawDpr = Math.min(windowRef?.devicePixelRatio || 1, 2);
-  const renderScale = raceViewport.mobile ? RACE_RENDER_SCALE.mobile : RACE_RENDER_SCALE.desktop;
+  const renderScale = raceViewport.mobile ? scaleTable.mobile : scaleTable.desktop;
   const dpr = Math.max(0.355, rawDpr * renderScale);
   const width = Math.max(1, Math.floor(rect.width * dpr));
   const height = Math.max(1, Math.floor(rect.height * dpr));

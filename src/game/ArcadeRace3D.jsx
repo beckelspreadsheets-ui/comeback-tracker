@@ -8,6 +8,7 @@ import {
   VEHICLES,
 } from './race/physics/kartTuning.js';
 import {
+  RACE_RENDER_SCALE_LEGACY,
   fitRaceRendererToCanvas,
 } from './race/render/createRaceScene.js';
 import {
@@ -259,6 +260,9 @@ export const ArcadeRace3D = ({
           canvas,
           raceViewport,
           renderer,
+          // Legacy stays at the scale its browser-suite pixel thresholds were
+          // calibrated at; the shipped racer's A3 raise does not apply here.
+          scaleTable: RACE_RENDER_SCALE_LEGACY,
           windowRef: window,
         });
 
