@@ -17,3 +17,14 @@ dist-ssr
 
 # Bulky per-run agent evidence (screenshots/videos) — ledgers stay tracked
 .agent/runs/*/evidence/
+
+# Generated asset-pipeline outputs
+asset-pipeline/audit/
+asset-pipeline/working/
+asset-pipeline/gallery/runs/
+asset-pipeline/proof/runs/
+asset-pipeline/**/cache/
+asset-pipeline/**/thumbnails/
+asset-pipeline/**/*.webm
+asset-pipeline/**/*.mp4
+asset-pipeline/manifests/latest-*.json
