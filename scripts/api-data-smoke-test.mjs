@@ -673,19 +673,28 @@ const runSyncSmoke = async (sign) => {
   };
 };
 
-const runFatSecretSmoke = async (fetchMock) => {
+const runFatSecretSmoke = async (fetchMock, sign) => {
+  const authEnv = syncEnv(new MockD1());
+  const unauthenticated = await json(
+    await fatSecretSearchGet({
+      env: authEnv,
+      request: new Request('https://app.example.test/api/fatsecret/search?q=a'),
+    })
+  );
+  assert(unauthenticated.status === 401 && unauthenticated.body.error === 'sync-auth-required', 'Unauthenticated FatSecret query did not fail safely', unauthenticated);
+
   const shortQuery = await json(
     await fatSecretSearchGet({
-      env: {},
-      request: new Request('https://app.example.test/api/fatsecret/search?q=a'),
+      env: authEnv,
+      request: await requestWithJwt('https://app.example.test/api/fatsecret/search?q=a', sign),
     })
   );
   assert(shortQuery.status === 200 && Array.isArray(shortQuery.body.foods.food), 'Short FatSecret query should return empty result', shortQuery);
 
   const missingCredentials = await json(
     await fatSecretSearchGet({
-      env: {},
-      request: new Request('https://app.example.test/api/fatsecret/search?q=banana'),
+      env: authEnv,
+      request: await requestWithJwt('https://app.example.test/api/fatsecret/search?q=banana', sign),
     })
   );
   assert(
@@ -696,13 +705,14 @@ const runFatSecretSmoke = async (fetchMock) => {
 
   const missingItemId = await json(
     await fatSecretItemGet({
-      env: {},
-      request: new Request('https://app.example.test/api/fatsecret/item'),
+      env: authEnv,
+      request: await requestWithJwt('https://app.example.test/api/fatsecret/item', sign),
     })
   );
   assert(missingItemId.status === 400 && missingItemId.body.error === 'missing-id', 'Missing FatSecret item id did not fail safely', missingItemId);
 
   const fatEnv = {
+    ...authEnv,
     FATSECRET_CLIENT_ID: 'fat-client',
     FATSECRET_CLIENT_SECRET: 'fat-secret-value',
   };
@@ -710,7 +720,7 @@ const runFatSecretSmoke = async (fetchMock) => {
   const search = await json(
     await fatSecretSearchGet({
       env: fatEnv,
-      request: new Request('https://app.example.test/api/fatsecret/search?q=banana'),
+      request: await requestWithJwt('https://app.example.test/api/fatsecret/search?q=banana', sign),
     })
   );
   assert(search.status === 200 && search.body.foods.food[0].food_id === 'banana-1', 'FatSecret search success failed', search);
@@ -719,7 +729,7 @@ const runFatSecretSmoke = async (fetchMock) => {
   const item = await json(
     await fatSecretItemGet({
       env: fatEnv,
-      request: new Request('https://app.example.test/api/fatsecret/item?id=banana-1'),
+      request: await requestWithJwt('https://app.example.test/api/fatsecret/item?id=banana-1', sign),
     })
   );
   assert(item.status === 200 && item.body.food.food_id === 'banana-1', 'FatSecret item success failed', item);
@@ -729,7 +739,7 @@ const runFatSecretSmoke = async (fetchMock) => {
   const apiError = await json(
     await fatSecretSearchGet({
       env: fatEnv,
-      request: new Request('https://app.example.test/api/fatsecret/search?q=banana'),
+      request: await requestWithJwt('https://app.example.test/api/fatsecret/search?q=banana', sign),
     })
   );
   assert(apiError.status === 502 && apiError.body.error === 'fatsecret-api-14', 'FatSecret API error did not fail safely', apiError);
@@ -746,6 +756,7 @@ const runFatSecretSmoke = async (fetchMock) => {
     missingCredentialsStatus: missingCredentials.status,
     searchResultCount: search.body.foods.food.length,
     shortQueryCount: shortQuery.body.foods.food.length,
+    unauthenticatedStatus: unauthenticated.status,
   };
 };
 
@@ -917,7 +928,7 @@ const run = async () => {
   const fetchMock = installFetchMock({ jwk: signer.jwk });
   try {
     const sync = await runSyncSmoke(signer.sign);
-    const fatSecret = await runFatSecretSmoke(fetchMock);
+    const fatSecret = await runFatSecretSmoke(fetchMock, signer.sign);
     const summary = {
       capturedAt: new Date().toISOString(),
       d1MigrationTables: ['user_states', 'state_backups'],
