@@ -42,6 +42,7 @@
     "test:hub": "node scripts/hub-smoke-test.mjs",
     "test:visual": "node scripts/visual-reference-checks.mjs",
     "assets:audit": "node scripts/audit-game-assets.mjs",
+    "assets:bake": "node scripts/bake-baked-glbs.mjs",
     "assets:candidates": "node scripts/build-candidate-index.mjs",
     "assets:decimate": "node scripts/blender-decimate-assets.mjs",
     "assets:gallery": "node scripts/render-asset-gallery.mjs",

@@ -3278,6 +3278,13 @@ const createScene = ({
     avalancheGlow,
     avalancheMarker,
     avalancheRing,
+    // Baked-GLB load state machines (pending -> active | missing |
+    // loaded-but-empty). Surfaced in telemetry; the kart-playable proof
+    // FAILS the comeback-city run unless bakedBuildings reaches 'active' —
+    // the 404-into-silent-procedural-fallback regression may never recur
+    // silently (2026-07-02 incident).
+    bakedBuildings: 'pending',
+    bakedSpike: 'inactive',
     marchers,
     marchRig,
     blizzardPool,
@@ -3397,6 +3404,8 @@ const publishTelemetry = (
     airborne: race.airState.airborne,
     auroraActive: race.auroraTimer > 0,
     avalanchePending: Boolean(race.avalanche),
+    bakedBuildings: runtimeStats.bakedBuildings ?? null,
+    bakedSpike: runtimeStats.bakedSpike ?? null,
     marchActive: Boolean(race.march),
     avalancheTarget: race.avalanche?.target || race.avalancheTarget || null,
     blizzardsOnTrack: race.blizzards.length,
@@ -3706,20 +3715,30 @@ export const ComebackCityThreeKartRace = ({
     // gym-sweeper shell (public/baked-spike.glb) on the procedural road.
     // Rendered unlit — all lighting is in the baked texture.
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('bakedSpike') === '1') {
-      createGameGltfLoader().load('/baked-spike.glb', (gltf) => {
-        if (disposed || engineRef.current !== engine) return;
-        const shell = gltf.scene;
-        shell.traverse((node) => {
-          if (node.isMesh) {
-            node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
-            node.castShadow = false;
-            node.receiveShadow = false;
-          }
-        });
-        shell.position.y = 0.12;
-        shell.userData.kind = 'baked-spike-shell';
-        engine.world.add(shell);
-      });
+      engine.bakedSpike = 'pending';
+      createGameGltfLoader().load(
+        '/baked-spike.glb',
+        (gltf) => {
+          if (disposed || engineRef.current !== engine) return;
+          const shell = gltf.scene;
+          shell.traverse((node) => {
+            if (node.isMesh) {
+              node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
+              node.castShadow = false;
+              node.receiveShadow = false;
+            }
+          });
+          shell.position.y = 0.12;
+          shell.userData.kind = 'baked-spike-shell';
+          engine.world.add(shell);
+          engine.bakedSpike = 'active';
+        },
+        undefined,
+        (error) => {
+          console.warn('[kart] /baked-spike.glb failed to load — spike overlay skipped', error);
+          engine.bakedSpike = 'missing';
+        }
+      );
     }
 
     // Baked building family (Blender, owner-approved direction): swap the
@@ -3732,7 +3751,11 @@ export const ComebackCityThreeKartRace = ({
         const variants = ['bldg-tower', 'bldg-block', 'bldg-arcade']
           .map((name) => gltf.scene.getObjectByName(name))
           .filter(Boolean);
-        if (!variants.length) return;
+        if (!variants.length) {
+          console.warn('[kart] /baked-buildings.glb loaded but contains no known building variants — procedural fallback active');
+          engine.bakedBuildings = 'loaded-but-empty';
+          return;
+        }
         engine.buildingSwaps.forEach((swap, index) => {
           const rig = variants[index % variants.length].clone(true);
           rig.traverse((node) => {
@@ -3761,9 +3784,13 @@ export const ComebackCityThreeKartRace = ({
             });
           swap.group.add(rig);
         });
+        engine.bakedBuildings = 'active';
       },
       undefined,
-      () => {}
+      (error) => {
+        console.warn('[kart] /baked-buildings.glb failed to load — procedural fallback active', error);
+        engine.bakedBuildings = 'missing';
+      }
     );
 
     const restartRace = () => {
@@ -4436,6 +4463,8 @@ export const ComebackCityThreeKartRace = ({
       engine.sun.target.updateMatrixWorld();
       engine.composer.render();
       publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey, {
+        bakedBuildings: engine.bakedBuildings,
+        bakedSpike: engine.bakedSpike,
         proofCameraMode,
         rendererStats: rendererStatsForFrame(now),
       });

@@ -189,6 +189,27 @@ const waitForRaceActive = async (page) => {
   });
 };
 
+// The 2026-07-02 incident: /baked-buildings.glb 404'd into a silent empty
+// error callback and the shipped track quietly downgraded to procedural
+// boxes. The GLB loads async after mount, so wait out 'pending', then require
+// 'active' — anything else ('missing', 'loaded-but-empty') fails the proof.
+const assertBakedBuildingsActive = async (page, label) => {
+  await page.waitForFunction(
+    () => {
+      const state = window.__comebackCityKartTelemetry?.bakedBuildings;
+      return state && state !== 'pending';
+    },
+    null,
+    { timeout: 15000 }
+  );
+  const state = await page.evaluate(() => window.__comebackCityKartTelemetry?.bakedBuildings || null);
+  if (state !== 'active') {
+    fail(`${label}: baked buildings are not active (state=${state}) — procedural fallback would ship silently`, {
+      bakedBuildings: state,
+    });
+  }
+};
+
 const assertPlayableShell = async (page, mode) => {
   await page.waitForSelector('[data-testid="race-screen"][data-race-renderer="three-kart"]', { timeout: 15000 });
   await page.waitForSelector('[data-testid="comeback-city-3d-kart-race"][data-race-renderer="three-kart"]', {
@@ -224,6 +245,7 @@ const runManualDesktopControls = async (browser) => {
   const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
   await page.goto(`${baseUrl}/#race`, { waitUntil: 'networkidle' });
   const facts = await assertPlayableShell(page, 'desktop');
+  await assertBakedBuildingsActive(page, 'desktop manual');
   await waitForRaceActive(page);
   await page.waitForTimeout(300);
   const idle = await readTelemetry(page, 'desktop idle');
