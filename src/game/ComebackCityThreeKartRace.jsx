@@ -7,7 +7,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { createGameGltfLoader } from './race/render/gltfLoader.js';
 import racerModelUrl from '../assets/game/models/toy-car-kit/vehicle-drag-racer.glb?url';
 import itemBoxModelUrl from '../assets/game/models/toy-car-kit/item-box.glb?url';
 import kartColormapUrl from '../assets/game/models/toy-car-kit/colormap.png';
@@ -752,7 +752,7 @@ const createToonMaterial = (color, options = {}) =>
 let kartAssetsPromise = null;
 const loadKartAssets = () => {
   if (!kartAssetsPromise) {
-    const gltfLoader = new GLTFLoader();
+    const gltfLoader = createGameGltfLoader();
     kartAssetsPromise = Promise.all([
       gltfLoader.loadAsync(racerModelUrl),
       gltfLoader.loadAsync(itemBoxModelUrl),
@@ -3372,7 +3372,7 @@ export const ComebackCityThreeKartRace = ({
     // gym-sweeper shell (public/baked-spike.glb) on the procedural road.
     // Rendered unlit — all lighting is in the baked texture.
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('bakedSpike') === '1') {
-      new GLTFLoader().load('/baked-spike.glb', (gltf) => {
+      createGameGltfLoader().load('/baked-spike.glb', (gltf) => {
         if (disposed || engineRef.current !== engine) return;
         const shell = gltf.scene;
         shell.traverse((node) => {
@@ -3391,7 +3391,7 @@ export const ComebackCityThreeKartRace = ({
     // Baked building family (Blender, owner-approved direction): swap the
     // procedural district/facade boxes for clean lightmapped buildings.
     // Procedural boxes remain the fallback if the GLB is missing.
-    new GLTFLoader().load(
+    createGameGltfLoader().load(
       '/baked-buildings.glb',
       (gltf) => {
         if (disposed || engineRef.current !== engine) return;
