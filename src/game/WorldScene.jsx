@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CornerDownRight } from 'lucide-react';
 import * as THREE from 'three';
-import { CAMERA_PRESETS, VISUAL_PALETTE } from './comebackCityVisuals.jsx';
+import { CAMERA_PRESETS, VISUAL_PALETTE } from './comebackCityVisualTokens.jsx';
 import { GAME_AVATARS } from './gameProfile.js';
 import { WORLD_BOUNDS } from './worldConfig.js';
 

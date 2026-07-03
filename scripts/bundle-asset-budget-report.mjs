@@ -6,14 +6,23 @@ import { execSync } from 'node:child_process';
 const repoRoot = process.cwd();
 const distDir = process.env.BUNDLE_BUDGET_DIST_DIR || join(repoRoot, 'dist');
 const artifactDir = process.env.BUNDLE_BUDGET_ARTIFACT_DIR || join(repoRoot, 'tmp', 'bundle-budget');
+// Re-baselined 2026-07-02 (A4, graphics V2 PRD) against the honest post-fix
+// build: QA proof PNGs no longer ship (comebackCityVisualTokens split), the
+// dead 2D ComebackCityKartRace import is gone, meshopt avatar re-promotions
+// landed, and public/baked-*.glb count as shipped content. Measured: total
+// 12.30 MiB / 7263 KiB gzip, images 1.86 MiB, JS 4.79 MiB (1199 KiB gzip),
+// largest file 2.75 MiB (the shared three.js world chunk). Supersedes the
+// 2026-06-01 delegated 8.5 MiB baseline, which predates the 3D kart content
+// (GLBs alone are 5.5 MiB). Threshold minus measured = the published Phase C
+// headroom — see the report's headroom block.
 const budgetThresholds = {
-  imageTotalMiB: Number(process.env.BUNDLE_BUDGET_IMAGE_TOTAL_MIB || 3.25),
+  imageTotalMiB: Number(process.env.BUNDLE_BUDGET_IMAGE_TOTAL_MIB || 4.0),
   javascriptTotalGzipKiB: Number(process.env.BUNDLE_BUDGET_JS_GZIP_KIB || 1400),
   javascriptTotalMiB: Number(process.env.BUNDLE_BUDGET_JS_TOTAL_MIB || 5.25),
-  largestFileMiB: Number(process.env.BUNDLE_BUDGET_LARGEST_FILE_MIB || 3.75),
+  largestFileMiB: Number(process.env.BUNDLE_BUDGET_LARGEST_FILE_MIB || 3.0),
   largestJavaScriptGzipKiB: Number(process.env.BUNDLE_BUDGET_LARGEST_JS_GZIP_KIB || 900),
-  totalGzipKiB: Number(process.env.BUNDLE_BUDGET_TOTAL_GZIP_KIB || 4600),
-  totalMiB: Number(process.env.BUNDLE_BUDGET_TOTAL_MIB || 8.5),
+  totalGzipKiB: Number(process.env.BUNDLE_BUDGET_TOTAL_GZIP_KIB || 8500),
+  totalMiB: Number(process.env.BUNDLE_BUDGET_TOTAL_MIB || 15.0),
 };
 
 const fail = (message, detail = {}) => {
@@ -186,8 +195,16 @@ const run = async () => {
       checks: budgetChecks,
       failures: budgetFailures,
       note:
-        'Owner delegated a reasonable kart-racer V1 baseline on 2026-06-01. These thresholds allow current custom bitmap and race scene assets while flagging material growth before release.',
+        'Re-baselined 2026-07-02 (graphics V2 PRD task A4) against the honest post-fix build: QA proof PNGs excluded from production, dead 2D-kart import removed, meshopt avatars landed, baked GLBs counted. Supersedes the 2026-06-01 owner-delegated 8.5 MiB baseline, which predates the 3D kart content. Threshold minus measured = the published Phase C headroom (see headroom block).',
       thresholds: budgetThresholds,
+    },
+    // Phase C consumes this: bake textures ship as WebP (images category), so
+    // the images headroom is the Phase C bake budget; WebP draws down the
+    // total headroom ~1:1 in gzip terms (it barely compresses further).
+    headroom: {
+      imagesMiB: Number((budgetThresholds.imageTotalMiB - (categorySummary.images?.sizeMiB || 0)).toFixed(3)),
+      totalGzipKiB: Number((budgetThresholds.totalGzipKiB - finalizeBucket(total).gzipKiB).toFixed(2)),
+      totalMiB: Number((budgetThresholds.totalMiB - finalizeBucket(total).sizeMiB).toFixed(3)),
     },
     categories: categorySummary,
     distDir,
@@ -199,7 +216,7 @@ const run = async () => {
     },
     largestFiles: files.slice(0, 15),
     note:
-      'This records local built artifact sizes against the owner-delegated kart-racer V1 bundle baseline. Preview and production release evidence still need deployed smoke and sign-off.',
+      'This records local built artifact sizes against the 2026-07-02 A4 re-baseline (default VITE_USER_PRESET build is the budget contract until the kart game gets its own Pages project budget). Preview and production release evidence still need deployed smoke and sign-off.',
     summary: {
       cssFileCount: cssFiles.length,
       cssTotalKiB: kib(cssFiles.reduce((sum, file) => sum + file.sizeBytes, 0)),

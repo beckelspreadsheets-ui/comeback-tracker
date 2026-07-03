@@ -23,7 +23,7 @@ import {
   CurrencyStack,
   DISTRICT_VISUALS,
   DistrictCloseupStrip,
-} from './comebackCityVisuals.jsx';
+} from './comebackCityVisualTokens.jsx';
 import { WORLD_BOUNDS } from './worldConfig.js';
 
 const ICONS = {

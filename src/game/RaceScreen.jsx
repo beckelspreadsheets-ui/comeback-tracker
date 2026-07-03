@@ -28,7 +28,6 @@ import {
   upgradeCost,
 } from './raceProgression.js';
 import { ArcadeRace3D } from './ArcadeRace3D.jsx';
-import { ComebackCityKartRace } from './ComebackCityKartRace.jsx';
 import {
   ComebackCityThreeKartRace,
   DEFAULT_CHARACTER_KEY,

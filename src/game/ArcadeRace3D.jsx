@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CAMERA_PRESETS,
   VISUAL_PALETTE,
-} from './comebackCityVisuals.jsx';
+} from './comebackCityVisualTokens.jsx';
 import {
   DEFAULT_VEHICLE_BY_STYLE,
   VEHICLES,
