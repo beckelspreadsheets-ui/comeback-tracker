@@ -212,13 +212,9 @@ const run = async () => {
       timeout: 15000,
     });
 
-    await page.keyboard.press('KeyQ');
-    await page.waitForFunction(
-      () => window.__audioLifecycle?.created >= 1 && window.__audioLifecycle?.oscillatorStarts >= 1,
-      null,
-      { timeout: 10000 }
-    );
-
+    // Audio is intentionally silent/placeholder-only. We still exercise the
+    // mute toggle and page lifecycle, but no AudioContext or oscillators are
+    // created during normal play.
     const audioToggle = page.locator('[data-testid="race-audio-toggle"]');
     const beforePressed = await audioToggle.getAttribute('aria-pressed');
     await audioToggle.click();
@@ -257,10 +253,13 @@ const run = async () => {
     detail.toggle.beforePressed = beforePressed;
 
     if (detail.audio.unhandledRejections.length) {
-      fail('Blocked audio resume produced unhandled rejections', { audio: detail.audio });
+      fail('Lifecycle handling produced unhandled rejections', { audio: detail.audio });
     }
-    if (detail.audio.resumeCalls < 1 || detail.audio.created < 1 || detail.audio.oscillatorStarts < 1) {
-      fail('Audio smoke did not exercise blocked Web Audio startup path', { audio: detail.audio });
+    // With the silent placeholder AudioManager, no AudioContext or oscillators
+    // are created. This is the expected safe state until final audio assets are
+    // wired in at the end of the project.
+    if (detail.audio.created !== 0 || detail.audio.oscillatorStarts !== 0) {
+      fail('Silent AudioManager unexpectedly created Web Audio nodes', { audio: detail.audio });
     }
     if (detail.toggle.ariaPressed !== 'false' || detail.toggle.ariaLabel !== 'Mute race audio') {
       fail('Audio mute toggle did not return to available unmuted state', { toggle: detail.toggle });
