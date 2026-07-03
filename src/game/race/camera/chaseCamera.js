@@ -10,6 +10,21 @@ const signedAngleDelta = (target, current) => {
   return delta;
 };
 
+// Module-level scratch vectors to reduce per-frame allocations. These are
+// reused within a single updateChaseCameraFrame call; any value that outlives
+// the call is cloned before return.
+const _forward = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _desired = new THREE.Vector3();
+const _lookBase = new THREE.Vector3();
+const _lookAt = new THREE.Vector3();
+const _rayStart = new THREE.Vector3();
+const _toCamera = new THREE.Vector3();
+const _rayDirection = new THREE.Vector3();
+const _offset = new THREE.Vector3();
+const _fallbackTarget = new THREE.Vector3();
+
+
 export const cameraCollisionCandidateFor = ({
   distance = 0,
   object,
@@ -136,7 +151,7 @@ export const resolveRouteLookaheadTarget = ({
   targetSeconds = 1.25,
 }) => {
   const fallbackDistance = Math.max(0, profile?.lookAhead || 0);
-  const fallbackTarget = player?.position?.clone?.().addScaledVector(fallbackForward, fallbackDistance);
+  _fallbackTarget.copy(player?.position || _fallbackTarget.set(0, 0, 0)).addScaledVector(fallbackForward || _forward.set(0, 0, 1), fallbackDistance);
   const missingRoute =
     !compiled?.pointAt ||
     !fallbackForward ||
@@ -150,7 +165,7 @@ export const resolveRouteLookaheadTarget = ({
       curvature: 0,
       distance: fallbackDistance,
       seconds: speed > 0.1 ? rounded(fallbackDistance / speed) : null,
-      target: fallbackTarget,
+      target: _fallbackTarget.clone(),
       usedRoute: false,
     };
   }
@@ -163,7 +178,7 @@ export const resolveRouteLookaheadTarget = ({
       curvature: 0,
       distance,
       seconds: speed > 0.1 ? rounded(distance / speed) : null,
-      target: fallbackTarget,
+      target: _fallbackTarget.clone(),
       usedRoute: false,
     };
   }
@@ -199,20 +214,20 @@ export const applyCameraCollisionAvoidance = ({
   const attempts = Math.max(1, maxResolveAttempts);
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const toCamera = desired.clone().sub(rayStart);
-    const rawDistance = toCamera.length();
+    _toCamera.copy(desired).sub(rayStart);
+    const rawDistance = _toCamera.length();
     if (rawDistance <= 1) return { avoided, clipped: false, desired };
 
-    const rayDirection = toCamera.clone().normalize();
+    _rayDirection.copy(_toCamera).normalize();
     const candidates = cameraCollisionCandidatesFor({
       collisionObjects,
       distance: rawDistance,
-      rayDirection,
+      rayDirection: _rayDirection,
       rayStart,
     });
     if (!candidates.length) return { avoided, clipped: false, desired };
 
-    raycaster.set(rayStart, rayDirection);
+    raycaster.set(rayStart, _rayDirection);
     raycaster.far = rawDistance;
     const hit = raycaster
       .intersectObjects(candidates, true)
@@ -231,7 +246,7 @@ export const applyCameraCollisionAvoidance = ({
       minimumCameraDistance,
       hit.distance - hitBackoff - attempt * 1.4
     );
-    desired.copy(rayStart).addScaledVector(rayDirection, safeDistance);
+    desired.copy(rayStart).addScaledVector(_rayDirection, safeDistance);
     desired.y = Math.max(
       desired.y + attemptLift,
       rayStart.y + collisionLift + attemptLift
@@ -259,8 +274,8 @@ export const updateChaseCameraFrame = ({
   vehicle,
 } = {}) => {
   const isPlane = player.vehicleMode === 'plane';
-  const forward = new THREE.Vector3(Math.sin(player.heading), 0, Math.cos(player.heading));
-  const right = new THREE.Vector3(forward.z, 0, -forward.x);
+  _forward.set(Math.sin(player.heading), 0, Math.cos(player.heading));
+  _right.set(_forward.z, 0, -_forward.x);
   const altitude = isPlane ? player.flightAltitude : player.jumpHeight;
   const playerSpeed = player.velocity.length();
   const nearestRoad = !isPlane && compiled?.nearest ? compiled.nearest(player.position) : null;
@@ -294,45 +309,48 @@ export const updateChaseCameraFrame = ({
     ? null
     : resolveRouteLookaheadTarget({
         compiled,
-        fallbackForward: forward,
+        fallbackForward: _forward,
         player,
         profile,
         speed: playerSpeed,
       });
-  const desired = player.position
-    .clone()
-    .addScaledVector(forward, -profile.chaseDistance)
-    .addScaledVector(right, -player.steerInput * profile.speedRatio * profile.sideOffsetScale)
-    .add(new THREE.Vector3(0, profile.chaseHeight, 0));
-  const lookBase = routeLookahead?.target || player.position.clone().addScaledVector(forward, profile.lookAhead);
-  const lookAt = lookBase.clone().add(new THREE.Vector3(0, profile.lookHeight, 0));
+  _desired.copy(player.position)
+    .addScaledVector(_forward, -profile.chaseDistance)
+    .addScaledVector(_right, -player.steerInput * profile.speedRatio * profile.sideOffsetScale)
+    .add(_offset.set(0, profile.chaseHeight, 0));
+  if (routeLookahead?.target) {
+    _lookBase.copy(routeLookahead.target);
+  } else {
+    _lookBase.copy(player.position).addScaledVector(_forward, profile.lookAhead);
+  }
+  _lookAt.copy(_lookBase).add(_offset.set(0, profile.lookHeight, 0));
 
   if (!reducedMotion && (race?.cameraShakeTimer || 0) > 0) {
     const shake = race.cameraShakeTimer / 0.2;
-    desired.x += (random() - 0.5) * 1.2 * shake;
-    desired.y += (random() - 0.5) * 0.7 * shake;
+    _desired.x += (random() - 0.5) * 1.2 * shake;
+    _desired.y += (random() - 0.5) * 0.7 * shake;
   }
 
   if (cameraCollisionObjects.length) {
-    const rayStart = player.position.clone().add(new THREE.Vector3(0, altitude + 3.4, 0));
+    _rayStart.copy(player.position).add(_offset.set(0, altitude + 3.4, 0));
     const cameraAvoidance = applyCameraCollisionAvoidance({
       collisionLift: profile.collisionLift,
       collisionObjects: cameraCollisionObjects,
-      desired,
+      desired: _desired,
       raycaster,
-      rayStart,
+      rayStart: _rayStart,
     });
     if (cameraAvoidance.avoided && collisionStats) collisionStats.cameraAvoidanceCount += 1;
     if (cameraAvoidance.clipped && collisionStats) collisionStats.cameraClipCount += 1;
   }
 
   if (!cameraInitialized) {
-    camera.position.copy(desired);
+    camera.position.copy(_desired);
     cameraInitialized = true;
   } else {
-    camera.position.lerp(desired, 1 - Math.exp(-9.4 * dt));
+    camera.position.lerp(_desired, 1 - Math.exp(-9.4 * dt));
   }
-  camera.lookAt(lookAt);
+  camera.lookAt(_lookAt);
   camera.rotation.z += cameraRollFor({
     driftActive: player.driftActive,
     reducedMotion,
@@ -346,8 +364,10 @@ export const updateChaseCameraFrame = ({
 
   return {
     cameraInitialized,
-    desired,
-    lookAt,
+    // Clones, not the module scratch vectors — a caller that stores these
+    // across frames must not see them silently rewritten next frame.
+    desired: _desired.clone(),
+    lookAt: _lookAt.clone(),
     profile,
     routeLookahead,
   };

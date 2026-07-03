@@ -7,7 +7,6 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { createGameGltfLoader } from './race/render/gltfLoader.js';
 import racerModelUrl from '../assets/game/models/toy-car-kit/vehicle-drag-racer.glb?url';
 import itemBoxModelUrl from '../assets/game/models/toy-car-kit/item-box.glb?url';
 import kartColormapUrl from '../assets/game/models/toy-car-kit/colormap.png';
@@ -77,6 +76,12 @@ import {
 } from './race/airTricks.js';
 import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
+import { createGameGltfLoader } from './race/render/gltfLoader.js';
+import {
+  buildVisualPlacementAnchors,
+  resolveTrackVisuals,
+  roadVisualBandAt,
+} from './race/tracks/trackVisualSchema.js';
 import './comebackCityThreeKartRace.css';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -382,6 +387,9 @@ const addGlowDisc = (group, color, scale = 1) => {
 const createGroundedKartModel = ({
   accent = '#38d7ff',
   color = '#ef4334',
+  // ?trackVisuals=1 look: stronger blob + accent contact glow standing in for
+  // the disabled renderer shadow pass. Default keeps the approved shipped look.
+  contactGrounding = false,
   scale = 1,
 } = {}) => {
   const group = new THREE.Group();
@@ -581,21 +589,40 @@ const createGroundedKartModel = ({
   miniTurboRing.renderOrder = 35;
   model.add(miniTurboRing);
 
-  // Real shadow map does the grounding now; keep a faint blob for soft contact.
+  // Blob shadow keeps karts grounded; with contactGrounding (?trackVisuals=1)
+  // it deepens and gains an accent glow disc to replace the shadow pass.
   const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(6.2 * scale, 22),
+    new THREE.CircleGeometry((contactGrounding ? 7.0 : 6.2) * scale, contactGrounding ? 24 : 22),
     new THREE.MeshBasicMaterial({
       color: '#03060c',
       depthWrite: false,
-      opacity: 0.24,
+      opacity: contactGrounding ? 0.34 : 0.24,
       transparent: true,
     })
   );
-  shadow.scale.y = 1.35;
+  shadow.scale.y = contactGrounding ? 1.42 : 1.35;
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.07;
   shadow.renderOrder = 2;
   group.add(shadow);
+  let contactGlow = null;
+  if (contactGrounding) {
+    contactGlow = new THREE.Mesh(
+      new THREE.CircleGeometry(5.8 * scale, 24),
+      new THREE.MeshBasicMaterial({
+        blending: THREE.AdditiveBlending,
+        color: accent,
+        depthWrite: false,
+        opacity: 0.14,
+        transparent: true,
+      })
+    );
+    contactGlow.scale.y = 1.55;
+    contactGlow.rotation.x = -Math.PI / 2;
+    contactGlow.position.y = 0.085;
+    contactGlow.renderOrder = 3;
+    group.add(contactGlow);
+  }
 
   model.traverse((node) => {
     if (node.isMesh) node.castShadow = true;
@@ -630,7 +657,7 @@ const createGroundedKartModel = ({
     });
   };
 
-  return { boostFlame, driftIceTrailGroup, driftSparkGroup, driverMount, group, idleFlames, miniTurboRing, replaceBody, wheels };
+  return { boostFlame, contactGlow, driftIceTrailGroup, driftSparkGroup, driverMount, group, idleFlames, miniTurboRing, replaceBody, shadow, wheels };
 };
 
 const makeQuestionTexture = () => {
@@ -754,10 +781,6 @@ const loadKartAssets = () => {
   if (!kartAssetsPromise) {
     const gltfLoader = createGameGltfLoader({
       resourceMap: {
-        // The optimized toy-car-kit GLBs reference their palette as an
-        // external Textures/colormap.png; in production builds the GLBs get
-        // hashed /assets/ URLs so that relative path 404s. Route it to the
-        // bundled asset instead.
         'Textures/colormap.png': kartColormapUrl,
       },
     });
@@ -945,17 +968,41 @@ const addGlowSprite = (parent, color, spriteScale, opacity = 0.5, y = 0) => {
   return sprite;
 };
 
-const addTrack = (world, sampler, trackDef) => {
+const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const bridgeBand = trackDef.elevation.bridgeBand;
   const roadWidth = trackDef.course.mainRoadWidth || 50;
   const palette = trackDef.palette || {};
+  const visualRoadEnabled = trackVisuals.enabled && Boolean(trackDef.visual);
+  const visualRoad = trackVisuals.road;
+  const bankYOffsetAt = (progress, signedWidthMultiplier) => {
+    if (!visualRoadEnabled) return 0;
+    const band = roadVisualBandAt(trackVisuals, progress);
+    const degrees = band?.bankingDegrees || 0;
+    return signedWidthMultiplier * sampler.widthAt(progress) * Math.sin(THREE.MathUtils.degToRad(degrees));
+  };
+  const surfacePointAt = (progress, lane = 0) => {
+    const sample = sampler.pointAt(progress, lane);
+    sample.point.y += bankYOffsetAt(progress, lane * 0.44);
+    return sample;
+  };
+  const resolveMul = (value, progress, width, band) =>
+    typeof value === 'function' ? value(progress, width, band) : value;
+  const shoulderWidthAt = (progress, width, band) =>
+    visualRoadEnabled ? Math.max(0, band?.shoulderWidth ?? visualRoad.shoulder.width) : Math.max(0, width * 0.06);
+  const curbWidthAt = (progress, width, band) =>
+    visualRoadEnabled ? Math.max(0.5, band?.curbWidth ?? visualRoad.curb.width) : Math.max(0.5, width * 0.06);
+  const shoulderOuterMulAt = (progress, width, band) => 0.44 + shoulderWidthAt(progress, width, band) / width;
+  const curbInnerMulAt = (progress, width, band) => shoulderOuterMulAt(progress, width, band) + 0.006;
+  const curbOuterMulAt = (progress, width, band) =>
+    curbInnerMulAt(progress, width, band) + curbWidthAt(progress, width, band) / width;
+  const barrierMulAt = (progress, width, band) => curbOuterMulAt(progress, width, band) + 0.055;
   const vertices = [];
   const uvs = [];
   const indices = [];
   for (let index = 0; index <= TRACK_SAMPLES; index += 1) {
     const progress = index / TRACK_SAMPLES;
-    const left = sampler.pointAt(progress, -1).point;
-    const right = sampler.pointAt(progress, 1).point;
+    const left = surfacePointAt(progress, -1).point;
+    const right = surfacePointAt(progress, 1).point;
     left.y += 0.05;
     right.y += 0.05;
     vertices.push(left.x, left.y, left.z, right.x, right.y, right.z);
@@ -971,13 +1018,15 @@ const addTrack = (world, sampler, trackDef) => {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   const asphaltTexture = makeNoiseTexture({
-    base: '#2c3450',
+    base: visualRoadEnabled ? visualRoad.asphalt.base : '#2c3450',
     repeat: 1,
-    speckles: [
-      { color: '#3a4666', count: 420, size: 2.4 },
-      { color: '#202840', count: 360, size: 3.1 },
-      { color: '#46537a', count: 130, size: 1.6 },
-    ],
+    speckles: visualRoadEnabled
+      ? visualRoad.asphalt.speckles
+      : [
+          { color: '#3a4666', count: 420, size: 2.4 },
+          { color: '#202840', count: 360, size: 3.1 },
+          { color: '#46537a', count: 130, size: 1.6 },
+        ],
   });
   const road = new THREE.Mesh(
     geometry,
@@ -1031,12 +1080,15 @@ const addTrack = (world, sampler, trackDef) => {
     const samples = [];
     for (let index = 0; index <= TRACK_SAMPLES; index += 1) {
       const progress = index / TRACK_SAMPLES;
+      const band = roadVisualBandAt(trackVisuals, progress);
       const { normal, point, tangent } = sampler.pointAt(progress);
       const width = sampler.widthAt(progress);
-      const inner = point.clone().addScaledVector(normal, side * innerMul * width);
-      const outer = point.clone().addScaledVector(normal, side * outerMul * width);
-      inner.y += yBottom;
-      outer.y += yTop;
+      const innerValue = resolveMul(innerMul, progress, width, band);
+      const outerValue = resolveMul(outerMul, progress, width, band);
+      const inner = point.clone().addScaledVector(normal, side * innerValue * width);
+      const outer = point.clone().addScaledVector(normal, side * outerValue * width);
+      inner.y += yBottom + bankYOffsetAt(progress, side * innerValue);
+      outer.y += yTop + bankYOffsetAt(progress, side * outerValue);
       samples.push({ inner, outer, tangent });
       positions.push(inner.x, inner.y, inner.z, outer.x, outer.y, outer.z);
       const color = Math.floor(index / checkerEvery) % 2 === 0 ? colorA : colorB;
@@ -1072,11 +1124,87 @@ const addTrack = (world, sampler, trackDef) => {
     ribbon.receiveShadow = true;
     return ribbon;
   };
+  const buildProgressRibbon = ({
+    color,
+    endProgress,
+    innerMul,
+    outerMul,
+    side,
+    startProgress,
+    steps = 8,
+    yBottom = 0.42,
+    yTop = 0.42,
+  }) => {
+    const positions = [];
+    const colors = [];
+    const indices = [];
+    const span = ((endProgress - startProgress) % 1 + 1) % 1 || 1;
+    const tint = new THREE.Color(color);
+    for (let step = 0; step <= steps; step += 1) {
+      const progress = wrap01(startProgress + span * (step / steps));
+      const band = roadVisualBandAt(trackVisuals, progress);
+      const { normal, point, tangent } = sampler.pointAt(progress);
+      const width = sampler.widthAt(progress);
+      const innerValue = resolveMul(innerMul, progress, width, band);
+      const outerValue = resolveMul(outerMul, progress, width, band);
+      const inner = point.clone().addScaledVector(normal, side * innerValue * width);
+      const outer = point.clone().addScaledVector(normal, side * outerValue * width);
+      inner.y += yBottom + bankYOffsetAt(progress, side * innerValue);
+      outer.y += yTop + bankYOffsetAt(progress, side * outerValue);
+      positions.push(inner.x, inner.y, inner.z, outer.x, outer.y, outer.z);
+      colors.push(tint.r, tint.g, tint.b, tint.r, tint.g, tint.b);
+      if (step < steps) {
+        // Skip folded offset spans on the tightest bend; the full road mesh
+        // remains continuous, and these are additive glow accents only.
+        const nextProgress = wrap01(startProgress + span * ((step + 1) / steps));
+        const nextPoint = sampler.pointAt(nextProgress, 0).point;
+        if (nextPoint.clone().sub(point).dot(tangent) <= 0) continue;
+        const a = step * 2;
+        if (side > 0) indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        else indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    const ribbon = new THREE.Mesh(
+      geometry,
+      new THREE.MeshBasicMaterial({
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        opacity: 0.82,
+        side: THREE.DoubleSide,
+        transparent: true,
+        vertexColors: true,
+      })
+    );
+    ribbon.userData.kind = 'district-edge-glow-ribbon';
+    return ribbon;
+  };
 
   [-1, 1].forEach((side) => {
+    if (visualRoadEnabled && visualRoad.shoulder.enabled) {
+      const shoulderColor = new THREE.Color(visualRoad.shoulder.color);
+      const shoulder = buildCheckerRibbon({
+        checkerEvery: TRACK_SAMPLES * 2,
+        colorA: shoulderColor,
+        colorB: shoulderColor,
+        innerMul: 0.44,
+        outerMul: shoulderOuterMulAt,
+        side,
+        yBottom: 0.16,
+        yTop: 0.12,
+      });
+      shoulder.userData.kind = 'visual-shoulder-ribbon';
+      world.add(shoulder);
+    }
     const curb = buildCheckerRibbon({
-      innerMul: 0.5,
-      outerMul: 0.56,
+      colorA: new THREE.Color(visualRoadEnabled ? visualRoad.curb.colorA : CURB_RED),
+      colorB: new THREE.Color(visualRoadEnabled ? visualRoad.curb.colorB : CURB_WHITE),
+      innerMul: visualRoadEnabled ? curbInnerMulAt : 0.5,
+      outerMul: visualRoadEnabled ? curbOuterMulAt : 0.56,
       side,
       unlit: true,
       yBottom: 0.32,
@@ -1086,10 +1214,10 @@ const addTrack = (world, sampler, trackDef) => {
     world.add(curb);
     const wall = buildCheckerRibbon({
       checkerEvery: 2,
-      colorA: new THREE.Color(palette.wall?.a || '#e94d3f'),
-      colorB: new THREE.Color(palette.wall?.b || '#f8fbff'),
-      innerMul: 0.62,
-      outerMul: 0.62,
+      colorA: new THREE.Color(visualRoadEnabled ? visualRoad.barrier.wallA : palette.wall?.a || '#e94d3f'),
+      colorB: new THREE.Color(visualRoadEnabled ? visualRoad.barrier.wallB : palette.wall?.b || '#f8fbff'),
+      innerMul: visualRoadEnabled ? barrierMulAt : 0.62,
+      outerMul: visualRoadEnabled ? barrierMulAt : 0.62,
       side,
       yBottom: 0.02,
       yTop: 2.6,
@@ -1098,13 +1226,17 @@ const addTrack = (world, sampler, trackDef) => {
     world.add(wall);
     // Continuous neon edge rail on top of the barrier — the "curb lights &
     // edge lighting" module from the roadside-props card.
-    const railColor = new THREE.Color(palette.rail || '#36e2ff').multiplyScalar(1.7);
+    const railColor = new THREE.Color(visualRoadEnabled ? visualRoad.barrier.railColor : palette.rail || '#36e2ff').multiplyScalar(1.7);
     const railTop = buildCheckerRibbon({
       checkerEvery: TRACK_SAMPLES * 2,
       colorA: railColor,
       colorB: railColor,
-      innerMul: 0.605,
-      outerMul: 0.635,
+      innerMul: visualRoadEnabled
+        ? (progress, width, band) => barrierMulAt(progress, width, band) - 0.015
+        : 0.605,
+      outerMul: visualRoadEnabled
+        ? (progress, width, band) => barrierMulAt(progress, width, band) + 0.015
+        : 0.635,
       side,
       unlit: true,
       yBottom: 2.6,
@@ -1114,15 +1246,38 @@ const addTrack = (world, sampler, trackDef) => {
     world.add(railTop);
   });
 
-  const lineMat = createBasicMaterial('#ffd34f', { emissive: '#ffd34f', emissiveIntensity: 0.65 });
-  for (let index = 0; index < TRACK_SAMPLES; index += 4) {
-    const progress = index / TRACK_SAMPLES;
-    const { point, tangent } = sampler.pointAt(progress);
-    const mark = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 11.5), lineMat);
-    mark.position.copy(point);
-    mark.position.y += 0.22;
-    mark.rotation.y = Math.atan2(tangent.x, tangent.z);
-    world.add(setFlatTransform(mark));
+  const laneMarkings = visualRoadEnabled ? visualRoad.laneMarkings : { color: '#ffd34f', enabled: true, everySamples: 4, mode: 'center-dash' };
+  if (laneMarkings.enabled && laneMarkings.mode !== 'none') {
+    const lineMat = createBasicMaterial(laneMarkings.color, { emissive: laneMarkings.color, emissiveIntensity: 0.65 });
+    for (let index = 0; index < TRACK_SAMPLES; index += laneMarkings.everySamples) {
+      const progress = index / TRACK_SAMPLES;
+      const { point, tangent } = surfacePointAt(progress);
+      const mark = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 11.5), lineMat);
+      mark.position.copy(point);
+      mark.position.y += 0.22;
+      mark.rotation.y = Math.atan2(tangent.x, tangent.z);
+      mark.userData.kind = 'visual-lane-marking';
+      world.add(setFlatTransform(mark));
+    }
+  }
+  if (visualRoadEnabled) {
+    (trackVisuals.districtCues || []).forEach((cue) => {
+      [-1, 1].forEach((side) => {
+        const ribbon = buildProgressRibbon({
+          color: cue.accent,
+          endProgress: cue.progress + cue.span * 0.5,
+          innerMul: (progress, width, band) => barrierMulAt(progress, width, band) - 0.08,
+          outerMul: (progress, width, band) => barrierMulAt(progress, width, band) - 0.02,
+          side,
+          startProgress: cue.progress - cue.span * 0.5,
+          steps: 10,
+          yBottom: 2.84,
+          yTop: 2.84,
+        });
+        ribbon.userData.districtKey = cue.key;
+        world.add(ribbon);
+      });
+    });
   }
   // ---- Bridge structure (owner feedback: the climb must read as a real
   // bridge, not a floating road). Deck skirts hang below both road edges
@@ -1215,6 +1370,44 @@ const addTrack = (world, sampler, trackDef) => {
       world.add(setFlatTransform(arrow));
     });
   }
+  let visualPropCount = 0;
+  if (visualRoadEnabled) {
+    const anchors = buildVisualPlacementAnchors(trackVisuals);
+    if (anchors.length) {
+      const geometry = new THREE.CylinderGeometry(0.85, 1.25, 6.2, 6);
+      const material = createBasicMaterial(anchors[0].color || visualRoad.barrier.railColor, {
+        emissive: anchors[0].color || visualRoad.barrier.railColor,
+        emissiveIntensity: 1.15,
+      });
+      const mesh = new THREE.InstancedMesh(geometry, material, anchors.length);
+      const matrixSource = new THREE.Object3D();
+      anchors.forEach((anchor, index) => {
+        const progress = anchor.progress;
+        const band = roadVisualBandAt(trackVisuals, progress);
+        const width = sampler.widthAt(progress);
+        const edgeOffset =
+          shoulderOuterMulAt(progress, width, band) * width +
+          curbWidthAt(progress, width, band) +
+          anchor.offset;
+        const { normal, point, tangent } = sampler.pointAt(progress, 0);
+        matrixSource.position.copy(point).addScaledVector(normal, anchor.side * edgeOffset);
+        matrixSource.position.y += bankYOffsetAt(progress, anchor.side * edgeOffset / width) + 3.1 * anchor.scale + anchor.verticalOffset;
+        matrixSource.rotation.set(0, Math.atan2(tangent.x, tangent.z) + (anchor.side > 0 ? Math.PI / 2 : -Math.PI / 2), 0);
+        matrixSource.scale.setScalar(anchor.scale);
+        matrixSource.updateMatrix();
+        mesh.setMatrixAt(index, matrixSource.matrix);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      mesh.userData.kind = 'visual-instanced-barrier-family';
+      mesh.userData.assetId = anchors[0].assetId;
+      mesh.userData.instanceCount = anchors.length;
+      world.add(mesh);
+      visualPropCount = anchors.length;
+    }
+  }
+  return visualPropCount;
 };
 
 const addPad = (world, sampler, pad, index) => {
@@ -1433,8 +1626,14 @@ const addRamp = (world, sampler, ramp, { dare = false } = {}) => {
   return group;
 };
 
-const addFinishGate = (world, sampler, trackDef) => {
+const addFinishGate = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const gateWidth = sampler.widthAt(0);
+  // Schema colors and the beacon/halo dressing are part of the ?trackVisuals=1
+  // experiment; flag-off reproduces the approved gate exactly.
+  const gateVisual = (trackVisuals.enabled && trackDef.visual?.finishGate) || {};
+  const gateAccent = gateVisual.beacon || '#38d7ff';
+  const gateHalo = gateVisual.halo || '#ffd34f';
+  const gateTrim = gateVisual.trim || '#f8fbff';
   const group = new THREE.Group();
   const { point, tangent } = sampler.pointAt(0);
   group.position.copy(point);
@@ -1443,12 +1642,21 @@ const addFinishGate = (world, sampler, trackDef) => {
   // Tracks with their own start gantry (e.g. Penguin Village's arch) skip the
   // default overhead posts/board — only the ground checker line remains.
   if (!trackDef.dressing?.customStartArch) {
-    const postMat = createBasicMaterial('#f8fbff');
-    const boardMat = createBasicMaterial('#16213e', { emissive: '#38d7ff', emissiveIntensity: 0.4 });
+    const postMat = createBasicMaterial(gateTrim);
+    const boardMat = createBasicMaterial('#16213e', { emissive: gateAccent, emissiveIntensity: 0.4 });
+    const beaconMat = trackVisuals.enabled
+      ? createBasicMaterial(gateAccent, { emissive: gateAccent, emissiveIntensity: 1.25 })
+      : null;
     [-1, 1].forEach((side) => {
       const post = new THREE.Mesh(new RoundedBoxGeometry(2.2, 30, 2.2, 1, 0.5), postMat);
       post.position.set(side * gateWidth * 0.58, 15, 0);
       group.add(post);
+      if (beaconMat) {
+        const beacon = new THREE.Mesh(new THREE.DodecahedronGeometry(2.8, 0), beaconMat);
+        beacon.position.set(side * gateWidth * 0.58, 31.4, 0);
+        group.add(beacon);
+        addGlowSprite(group, gateAccent, 16, 0.28, 31.4).position.x = side * gateWidth * 0.58;
+      }
     });
     const board = new THREE.Mesh(new RoundedBoxGeometry(gateWidth * 1.25, 8.2, 3.2, 1, 0.9), boardMat);
     // Keep the board above the chase camera's max height so the camera never
@@ -1462,6 +1670,27 @@ const addFinishGate = (world, sampler, trackDef) => {
       );
       tile.position.set(x, 32.3, -1.8);
       group.add(tile);
+    }
+    if (trackVisuals.enabled) {
+      const haloRing = new THREE.Mesh(
+        new THREE.TorusGeometry(gateWidth * 0.46, 0.42, 8, 44),
+        new THREE.MeshBasicMaterial({
+          blending: THREE.AdditiveBlending,
+          color: gateHalo,
+          depthWrite: false,
+          opacity: 0.72,
+          transparent: true,
+        })
+      );
+      haloRing.position.set(0, 32, -2.25);
+      haloRing.scale.y = 0.2;
+      group.add(haloRing);
+      const lowerGlow = new THREE.Mesh(
+        new THREE.BoxGeometry(gateWidth * 1.02, 0.38, 1.2),
+        createBasicMaterial(gateHalo, { emissive: gateHalo, emissiveIntensity: 1.05 })
+      );
+      lowerGlow.position.set(0, 27.6, -2.2);
+      group.add(lowerGlow);
     }
   }
   for (let row = 0; row < 2; row += 1) {
@@ -1566,7 +1795,7 @@ const addOpeningFacadeRun = (world, sampler, loader, buildingSwaps) => {
   });
 };
 
-const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef) => {
+const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const roadWidth = trackDef.course.mainRoadWidth || 50;
   const propMat = {
     cone: createBasicMaterial('#ff8b21', { emissive: '#ff8b21', emissiveIntensity: 0.18 }),
@@ -1636,6 +1865,31 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef) =
     addGlowDisc(group, district.accent, 1.25).position.set(0, 0.16, -14);
     world.add(group);
     propCount += 1;
+    // Roadside district cue posts are ?trackVisuals=1 dressing (they also
+    // inflate propCount telemetry, so the gate keeps flag-off telemetry equal).
+    if (!trackVisuals.enabled) return;
+    const cuePosition = point.clone().addScaledVector(normal, district.side * (sampler.widthAt(district.progress) * 0.5 + 16));
+    if (minCenterlineDistance(sampler, cuePosition.x, cuePosition.z) >= roadWidth * 0.58) {
+      const cue = new THREE.Group();
+      cue.position.copy(cuePosition);
+      cue.rotation.y = Math.atan2(tangent.x, tangent.z) + (district.side > 0 ? -Math.PI / 2 : Math.PI / 2);
+      cue.userData.kind = `district-${district.key}-road-cue`;
+      const cueMat = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 1.15 });
+      const darkMat = createBasicMaterial(district.dark);
+      [-1, 1].forEach((postSide) => {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.7, 8.6, 6), cueMat);
+        post.position.set(postSide * 4.2, 4.3, 0);
+        cue.add(post);
+      });
+      const base = makeRoundedBox({ x: 11.5, y: 1.2, z: 2.1 }, { y: 0.6 }, darkMat, 0.35);
+      cue.add(base);
+      const crest = new THREE.Mesh(new THREE.DodecahedronGeometry(2.1, 0), cueMat);
+      crest.position.y = 9.8;
+      cue.add(crest);
+      addGlowSprite(cue, district.accent, 14, 0.32, 5.4);
+      world.add(setFlatTransform(cue));
+      propCount += 1;
+    }
   });
 
   // Roadside scatter (trees / lamps / cones / planters) is comeback-city
@@ -2608,14 +2862,17 @@ const createScene = ({
   playerCharacter = characterByKey(DEFAULT_CHARACTER_KEY),
   rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY),
   trackDef = trackByKey(DEFAULT_TRACK_KEY),
+  trackVisualsEnabled = false,
 }) => {
   const palette = trackDef.palette || {};
   const renderer = createRaceRenderer({ canvas, onUnavailable });
   if (!renderer) return null;
   renderer.setClearColor(palette.clearColor || '#131a36', 1);
   renderer.toneMappingExposure = 1.05;
-  renderer.shadowMap.enabled = true;
-  // Hard-edged shadows match the toon shading and are markedly cheaper than PCF.
+  // The ?trackVisuals=1 experiment trades real-time shadows for stronger
+  // blob/contact grounding; the shipped default keeps the approved
+  // shadow-mapped look until the owner signs the §9 default-on gate.
+  renderer.shadowMap.enabled = !trackVisualsEnabled;
   renderer.shadowMap.type = THREE.BasicShadowMap;
 
   const scene = new THREE.Scene();
@@ -2630,7 +2887,7 @@ const createScene = ({
   // frustum covers the action instead of a blurry one covering the world.
   const sun = new THREE.DirectionalLight('#ffae72', 2.6);
   sun.position.set(-150, 52, -70);
-  sun.castShadow = true;
+  sun.castShadow = !trackVisualsEnabled;
   sun.shadow.mapSize.set(384, 384);
   sun.shadow.camera.left = -64;
   sun.shadow.camera.right = 64;
@@ -2653,7 +2910,8 @@ const createScene = ({
   composer.addPass(new OutputPass());
 
   const sampler = makeSampler(trackDef);
-  addTrack(world, sampler, trackDef);
+  const trackVisuals = resolveTrackVisuals(trackDef, { enabled: trackVisualsEnabled });
+  const trackVisualPropCount = addTrack(world, sampler, trackDef, trackVisuals);
   const questionTexture = makeQuestionTexture();
   const boostPads = trackDef.course.boostPads.map((pad, index) => addPad(world, sampler, pad, index));
   const itemBoxes = trackDef.course.itemBoxes.map((box, index) =>
@@ -2837,15 +3095,16 @@ const createScene = ({
     addGlowSprite(kicker, '#bfeaff', 18, 0.4, 2);
     world.add(kicker);
   }
-  addFinishGate(world, sampler, trackDef);
+  addFinishGate(world, sampler, trackDef, trackVisuals);
   const buildingSwaps = [];
-  const propCount = addDistrictsAndProps(world, sampler, loader, buildingSwaps, trackDef);
+  const propCount = addDistrictsAndProps(world, sampler, loader, buildingSwaps, trackDef, trackVisuals) + trackVisualPropCount;
   if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef);
 
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({
     accent: playerCharacter.accent,
     color: playerCharacter.color,
+    contactGrounding: trackVisuals.enabled,
     scale: KART_SCALE,
   });
   const player = playerModel.group;
@@ -3001,6 +3260,7 @@ const createScene = ({
     const model = createGroundedKartModel({
       accent: rival.accent,
       color: rival.color,
+      contactGrounding: trackVisuals.enabled,
       scale: KART_SCALE,
     });
     model.group.userData.kind = 'grounded-rival-kart';
@@ -3038,7 +3298,47 @@ const createScene = ({
     scene,
     shieldBubble,
     sun,
+    trackVisualsEnabled: trackVisuals.enabled,
     world,
+  };
+};
+
+const RENDER_STATS_REFRESH_MS = 750;
+const geometryTriangleCounts = new WeakMap();
+
+const triangleCountForGeometry = (geometry) => {
+  if (!geometry) return 0;
+  const cached = geometryTriangleCounts.get(geometry);
+  if (cached !== undefined) return cached;
+  const indexCount = geometry.index?.count || geometry.attributes?.position?.count || 0;
+  const triangles = Math.floor(indexCount / 3);
+  geometryTriangleCounts.set(geometry, triangles);
+  return triangles;
+};
+
+const estimateSceneRenderStats = (world, renderer) => {
+  const geometries = new Set();
+  let drawCalls = 0;
+  let meshCount = 0;
+  let triangles = 0;
+  world.traverse((object) => {
+    if (!object.visible || (!object.isMesh && !object.isInstancedMesh)) return;
+    meshCount += 1;
+    const materialCount = Array.isArray(object.material) ? object.material.length : 1;
+    drawCalls += materialCount;
+    if (object.geometry) {
+      geometries.add(object.geometry.uuid);
+      const baseTriangles = triangleCountForGeometry(object.geometry);
+      triangles += baseTriangles * (object.isInstancedMesh ? object.count || 1 : 1);
+    }
+  });
+  return {
+    drawCalls,
+    geometries: geometries.size,
+    meshCount,
+    shadowMapEnabled: renderer.shadowMap.enabled,
+    textures: renderer.info.memory.textures,
+    triangles,
   };
 };
 
@@ -3081,8 +3381,18 @@ const readInput = (input, autoplay, race, cornerPush = 0) => {
   };
 };
 
-const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEFAULT_CHARACTER_KEY, kartKey = 'hero', trackKey = DEFAULT_TRACK_KEY) => {
+const publishTelemetry = (
+  race,
+  fpsEstimate,
+  propCount,
+  mode,
+  characterKey = DEFAULT_CHARACTER_KEY,
+  kartKey = 'hero',
+  trackKey = DEFAULT_TRACK_KEY,
+  runtimeStats = {}
+) => {
   if (typeof window === 'undefined') return;
+  const trackVisualsEnabled = Boolean(window.__comebackCityKartTrackVisualsEnabled);
   window.__comebackCityKartTelemetry = {
     airborne: race.airState.airborne,
     auroraActive: race.auroraTimer > 0,
@@ -3093,6 +3403,7 @@ const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEF
     character: characterKey,
     kart: kartKey,
     track: trackKey,
+    trackVisualsEnabled,
     laps: race.laps,
     slapping: race.slapTimer > 0,
     fishBonesOnTrack: race.fishBones.length,
@@ -3110,8 +3421,10 @@ const publishTelemetry = (race, fpsEstimate, propCount, mode, characterKey = DEF
     miniTurboTier: race.driftState.miniTurboTier,
     position: race.position,
     propCount,
+    proofCameraMode: runtimeStats.proofCameraMode || 'chase',
     raceTime: Number(race.raceTime.toFixed(2)),
     renderer: 'three-kart',
+    rendererStats: runtimeStats.rendererStats || null,
     rivalCount: RIVALS.length,
     rivalPositions: rivalPositionsOf((race.finished ? race.laps : race.lap - 1) + race.progress, race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
@@ -3175,6 +3488,17 @@ export const ComebackCityThreeKartRace = ({
     }
     return KART_TRACKS.some((entry) => entry.key === track) ? track : DEFAULT_TRACK_KEY;
   }, [track]);
+  const trackVisualsEnabled = useMemo(() => {
+    // Opt-in experiment (PRD P0-3b): default OFF everywhere until the owner
+    // signs the §9 trackVisualSchema default-on gate.
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('trackVisuals') === '1' || params.get('trackVisualSchema') === '1';
+  }, []);
+  const proofCameraMode = useMemo(() => {
+    if (typeof window === 'undefined') return 'chase';
+    return new URLSearchParams(window.location.search).get('proofCamera') === 'top' ? 'top' : 'chase';
+  }, []);
   const trackDef = trackByKey(trackKey);
 
   useEffect(() => {
@@ -3189,8 +3513,10 @@ export const ComebackCityThreeKartRace = ({
       playerCharacter,
       rivalSeats,
       trackDef,
+      trackVisualsEnabled,
     });
     if (!engine) return undefined;
+    if (typeof window !== 'undefined') window.__comebackCityKartTrackVisualsEnabled = engine.trackVisualsEnabled;
     engineRef.current = engine;
     finishReportedRef.current = false;
     const race = createInitialRace(rivalSeats, trackDef);
@@ -3461,6 +3787,16 @@ export const ComebackCityThreeKartRace = ({
     };
     const spinOutYaw = (spinTimer) =>
       spinTimer > 0 ? (1 - spinTimer / ITEM_FEEL.spinDuration) * Math.PI * 2 : 0;
+
+    let cachedRendererStats = estimateSceneRenderStats(engine.world, engine.renderer);
+    let nextRendererStatsRefresh = performance.now() + RENDER_STATS_REFRESH_MS;
+    const rendererStatsForFrame = (now) => {
+      if (now >= nextRendererStatsRefresh) {
+        cachedRendererStats = estimateSceneRenderStats(engine.world, engine.renderer);
+        nextRendererStatsRefresh = now + RENDER_STATS_REFRESH_MS;
+      }
+      return cachedRendererStats;
+    };
 
     const frame = () => {
       if (disposed) return;
@@ -4050,47 +4386,59 @@ export const ComebackCityThreeKartRace = ({
         });
       });
 
-      // Mario-Kart-style chase camera: low, close, and locked to the track
-      // path behind the kart — the camera rides the road, so corners can
-      // never put it inside walls or buildings. Slight duck under the bridge.
-      const underpass = race.progress > 0.15 && race.progress < 0.24;
-      // After the finish, pull up slightly for a results tableau centered on
-      // the kart (staying short of the gate behind it).
-      const cameraBackUnits = race.finished ? 30 : viewport.mobile ? 43 : 38;
-      const cameraHeight = race.finished
-        ? 13
-        : (viewport.mobile ? 12.5 : 10.5) * (underpass ? 0.62 : 1);
-      const cameraProgress = wrap01(race.progress - cameraBackUnits / engine.sampler.length);
-      const cameraSample = engine.sampler.pointAt(cameraProgress, race.lane * 0.6);
-      const desiredCamera = cameraSample.point
-        .clone()
-        .add(new THREE.Vector3(0, cameraHeight + clamp(race.speed / 90, 0, 2.2), 0));
-      engine.camera.position.lerp(desiredCamera, 1 - Math.pow(0.00003, dt));
-      // Vertical follow stays tight so bridge climbs/descents keep the kart
-      // framed instead of the camera floating above the drop.
-      engine.camera.position.y = lerp(engine.camera.position.y, desiredCamera.y, 1 - Math.pow(0.0000005, dt));
-      const lookAt = race.finished
-        ? playerSample.point.clone().add(new THREE.Vector3(0, 6, 0))
-        : playerSample.point
-            .clone()
-            .addScaledVector(playerSample.tangent, viewport.mobile ? 26 : 30)
-            .add(new THREE.Vector3(0, viewport.mobile ? 5.5 : 4.5, 0));
-      engine.camera.lookAt(lookAt);
-      // Mini-turbo gets a small extra FOV kick on top of the speed widening.
-      const targetFov =
-        (viewport.mobile ? 68 : 70) +
-        clamp(race.speed / MAX_SPEED, 0, 1.15) * 7 +
-        (miniTurboActive ? 3.5 : 0);
+      let targetFov;
+      if (proofCameraMode === 'top') {
+        const target = playerSample.point.clone().addScaledVector(playerSample.tangent, 22);
+        const desiredCamera = target.clone().add(new THREE.Vector3(0, viewport.mobile ? 180 : 220, 0.01));
+        engine.camera.position.lerp(desiredCamera, 1 - Math.pow(0.00003, dt));
+        engine.camera.lookAt(target);
+        targetFov = viewport.mobile ? 58 : 54;
+      } else {
+        // Arcade chase camera: low, close, and locked to the track path behind
+        // the kart — the camera rides the road, so corners can never put it
+        // inside walls or buildings. Slight duck under the bridge.
+        const underpass = race.progress > 0.15 && race.progress < 0.24;
+        // After the finish, pull up slightly for a results tableau centered on
+        // the kart (staying short of the gate behind it).
+        const cameraBackUnits = race.finished ? 30 : viewport.mobile ? 43 : 38;
+        const cameraHeight = race.finished
+          ? 13
+          : (viewport.mobile ? 12.5 : 10.5) * (underpass ? 0.62 : 1);
+        const cameraProgress = wrap01(race.progress - cameraBackUnits / engine.sampler.length);
+        const cameraSample = engine.sampler.pointAt(cameraProgress, race.lane * 0.6);
+        const desiredCamera = cameraSample.point
+          .clone()
+          .add(new THREE.Vector3(0, cameraHeight + clamp(race.speed / 90, 0, 2.2), 0));
+        engine.camera.position.lerp(desiredCamera, 1 - Math.pow(0.00003, dt));
+        // Vertical follow stays tight so bridge climbs/descents keep the kart
+        // framed instead of the camera floating above the drop.
+        engine.camera.position.y = lerp(engine.camera.position.y, desiredCamera.y, 1 - Math.pow(0.0000005, dt));
+        const lookAt = race.finished
+          ? playerSample.point.clone().add(new THREE.Vector3(0, 6, 0))
+          : playerSample.point
+              .clone()
+              .addScaledVector(playerSample.tangent, viewport.mobile ? 26 : 30)
+              .add(new THREE.Vector3(0, viewport.mobile ? 5.5 : 4.5, 0));
+        engine.camera.lookAt(lookAt);
+        // Mini-turbo gets a small extra FOV kick on top of the speed widening.
+        targetFov =
+          (viewport.mobile ? 68 : 70) +
+          clamp(race.speed / MAX_SPEED, 0, 1.15) * 7 +
+          (miniTurboActive ? 3.5 : 0);
+      }
       if (Math.abs(engine.camera.fov - targetFov) > 0.1) {
         engine.camera.fov = lerp(engine.camera.fov, targetFov, 1 - Math.pow(0.001, dt));
         engine.camera.updateProjectionMatrix();
       }
-      // Keep the shadow frustum centered on the action.
+      // Keep the key/rim direction centered on the action.
       engine.sun.position.set(playerSample.point.x - 95, playerSample.point.y + 110, playerSample.point.z - 45);
       engine.sun.target.position.copy(playerSample.point);
       engine.sun.target.updateMatrixWorld();
       engine.composer.render();
-      publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey);
+      publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey, {
+        proofCameraMode,
+        rendererStats: rendererStatsForFrame(now),
+      });
       snapshotTimer += dt;
       if (snapshotTimer > 0.14 || race.finished) {
         snapshotTimer = 0;
@@ -4138,8 +4486,11 @@ export const ComebackCityThreeKartRace = ({
         else object.material?.dispose?.();
       });
       if (engineRef.current === engine) engineRef.current = null;
+      if (window.__comebackCityKartTrackVisualsEnabled === engine.trackVisualsEnabled) {
+        delete window.__comebackCityKartTrackVisualsEnabled;
+      }
     };
-  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, reducedMotion, runId]);
+  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, proofCameraMode, reducedMotion, runId, trackVisualsEnabled]);
 
   const setTouch = (key, value) => {
     inputRef.current = { ...inputRef.current, [key]: value };
@@ -4154,6 +4505,7 @@ export const ComebackCityThreeKartRace = ({
       data-prop-count={PROP_COUNT}
       data-race-renderer="three-kart"
       data-testid="comeback-city-3d-kart-race"
+      data-track-visuals-enabled={trackVisualsEnabled ? 'true' : 'false'}
     >
       <canvas
         ref={canvasRef}

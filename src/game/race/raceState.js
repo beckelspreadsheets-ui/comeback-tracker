@@ -8,6 +8,12 @@ import {
 import * as THREE from 'three';
 import { FLIGHT_ALTITUDE_LIMITS } from './physics/kartTuning.js';
 import {
+  createBreakables,
+} from './raceBreakables.js';
+import {
+  createCrossers,
+} from './raceCrossers.js';
+import {
   TRACK_SCALE,
   layerOffset,
 } from './track/trackGeometry.js';
@@ -204,6 +210,8 @@ export const createRaceState = (compiled, profile, defaultVehicle) => {
   return {
     bananas,
     balloons,
+    breakables: compiled.breakableObjects?.length ? createBreakables(compiled) : null,
+    crossers: compiled.crossers?.length ? createCrossers(compiled) : null,
     defaultVehicle,
     droppedBananas: [],
     droppedHazards: [],

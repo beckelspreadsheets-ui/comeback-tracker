@@ -1,3 +1,5 @@
+import { LAP_WRAP_THRESHOLD } from './track/trackGeometry.js';
+
 export const scoreRacer = (racer, { finishedBonus = 20 } = {}) => {
   const lap = Number.isFinite(racer?.lap) ? racer.lap : 1;
   const progress = Number.isFinite(racer?.progress) ? racer.progress : 0;
@@ -24,7 +26,7 @@ export const applyLapProgress = ({
   const previousProgress = Number.isFinite(racer.progress) ? racer.progress : 0;
   racer.progress = progress;
 
-  if (!racer.finished && previousProgress > 0.82 && racer.progress < 0.18) {
+  if (!racer.finished && previousProgress > LAP_WRAP_THRESHOLD && racer.progress < 0.18) {
     const lapTime = raceTime - (racer.lapStartTime || 0);
     if (trackLapSplits) {
       racer.bestLap = racer.bestLap ? Math.min(racer.bestLap, lapTime) : lapTime;
@@ -47,7 +49,7 @@ export const applyLapProgress = ({
     };
   }
 
-  if (previousProgress < 0.18 && racer.progress > 0.82) {
+  if (previousProgress < 0.18 && racer.progress > LAP_WRAP_THRESHOLD) {
     racer.progress = previousProgress;
     return {
       completedLap: false,

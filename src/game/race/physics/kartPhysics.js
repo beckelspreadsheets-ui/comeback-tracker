@@ -646,7 +646,10 @@ export const applyLateralGripForFrame = ({
   }
 
   const lateralSpeed = player.velocity.dot(right);
-  const grip = player.driftActive ? vehicle.driftGrip : vehicle.grip;
+  const surfaceGripMultiplier = player.driftActive
+    ? (player.surfaceDriftGripMultiplier || 1)
+    : (player.surfaceGripMultiplier || 1);
+  const grip = (player.driftActive ? vehicle.driftGrip : vehicle.grip) * surfaceGripMultiplier;
   const gripBlend = clamp(grip * dt, 0, 1);
   player.velocity.addScaledVector(right, -lateralSpeed * gripBlend);
 

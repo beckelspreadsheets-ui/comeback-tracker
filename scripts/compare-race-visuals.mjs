@@ -162,7 +162,16 @@ const compareScenario = async ({ config, report, runDir, scenario }) => {
   } else {
     if (lastTelemetry.renderer !== gates.requiredRenderer) errors.push(`${scenario.key}: renderer ${lastTelemetry.renderer}`);
     if (lastTelemetry.visualAssetSet !== gates.requiredVisualAssetSet) errors.push(`${scenario.key}: visual asset set ${lastTelemetry.visualAssetSet}`);
-    if (!lastTelemetry.trackVisualsEnabled) errors.push(`${scenario.key}: track visuals unexpectedly disabled`);
+    // trackVisuals is the opt-in ?trackVisuals=1 experiment (PRD P0-3b):
+    // the proof must run at the SHIPPED default, so the gate asserts the
+    // telemetry matches whatever the scenario config requested (default off)
+    // rather than demanding the experiment be on.
+    const expectTrackVisuals = config.query?.trackVisuals === '1' || config.query?.trackVisualSchema === '1';
+    if (typeof lastTelemetry.trackVisualsEnabled !== 'boolean') {
+      errors.push(`${scenario.key}: telemetry missing trackVisualsEnabled`);
+    } else if (lastTelemetry.trackVisualsEnabled !== expectTrackVisuals) {
+      errors.push(`${scenario.key}: trackVisualsEnabled ${lastTelemetry.trackVisualsEnabled}, expected ${expectTrackVisuals}`);
+    }
     if ((lastTelemetry.propCount || 0) < gates.minPropCount) errors.push(`${scenario.key}: propCount below ${gates.minPropCount}`);
     if (!routeAdvanced(firstTelemetry, lastTelemetry, gates.minRouteProgressDelta)) {
       errors.push(`${scenario.key}: route did not advance enough`);

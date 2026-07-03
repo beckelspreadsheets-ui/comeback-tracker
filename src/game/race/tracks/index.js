@@ -4,8 +4,11 @@
 // the QA gates.
 import { COMEBACK_CITY_TRACK } from './comebackCity.js';
 import { PENGUIN_VILLAGE_TRACK } from './penguinVillage.js';
+import { assertValidTrackVisuals } from './trackVisualSchema.js';
 
 export const KART_TRACKS = [COMEBACK_CITY_TRACK, PENGUIN_VILLAGE_TRACK];
+
+assertValidTrackVisuals(KART_TRACKS);
 
 export const DEFAULT_TRACK_KEY = 'comeback-city';
 

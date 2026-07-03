@@ -17,6 +17,12 @@ import {
   throwSnowball,
 } from './heldItems.js';
 import { launchAir, TRICK_FEEL, updateAir } from './airTricks.js';
+import { breakableHitFor } from './raceBreakables.js';
+import {
+  applyCrosserHitToRacer,
+  crosserAvoidanceLanes,
+  crosserHitFor,
+} from './raceCrossers.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const lerp = (from, to, amount) => from + (to - from) * amount;
@@ -109,7 +115,9 @@ export const updateRivalRacers = (field, ctx) => {
   const {
     boostPads,
     boostSpeed,
+    breakables,
     cornerPushFor,
+    crossers,
     curvatureAt,
     dt,
     finalLap,
@@ -152,6 +160,7 @@ export const updateRivalRacers = (field, ctx) => {
       rival.speed = Math.max(46, rival.speed - 160 * dt);
       rival.previousProgress = rival.progress;
       rival.progress = wrap01(rival.progress + (rival.speed / trackLength) * dt);
+      // V2 rival lap-wrap intentionally uses 0.86; V1 uses LAP_WRAP_THRESHOLD.
       if (rival.previousProgress > 0.86 && rival.progress < 0.18) rival.lap += 1;
       return;
     }
@@ -196,6 +205,21 @@ export const updateRivalRacers = (field, ctx) => {
     }
     targetLane += Math.sin(raceTime * 0.9 + index * 2.1) * 0.05;
 
+    // Crosser avoidance: steer away from fish carts / penguin marches ahead.
+    if (crossers?.instances?.length) {
+      const hints = crosserAvoidanceLanes({
+        crossers,
+        lane: rival.lane,
+        progress: rival.progress,
+        racerSpeed: rival.speed,
+        trackLength,
+      });
+      if (hints.length) {
+        const best = hints.sort((a, b) => b.urgency - a.urgency)[0];
+        targetLane = lerp(targetLane, best.targetLane, best.urgency);
+      }
+    }
+
     const cornerPush = cornerPushFor(kappaNow, rival.speed);
     rival.laneVel = clamp((targetLane - rival.lane) * 2.2, -soul.authority, soul.authority);
     rival.lane = clamp(rival.lane + (rival.laneVel + cornerPush) * dt, -wallLane, wallLane);
@@ -228,6 +252,7 @@ export const updateRivalRacers = (field, ctx) => {
 
     rival.previousProgress = rival.progress;
     rival.progress = wrap01(rival.progress + (rival.speed / trackLength) * dt);
+    // V2 rival lap-wrap intentionally uses 0.86; V1 uses LAP_WRAP_THRESHOLD.
     if (rival.previousProgress > 0.86 && rival.progress < 0.18) rival.lap += 1;
 
     // Phase 3: deterministic item gates — at fixed progress marks each lap a
@@ -257,6 +282,27 @@ export const updateRivalRacers = (field, ctx) => {
           rival.speed = Math.max(46, rival.speed * 0.45);
         }
       }
+    }
+
+    // Breakable track props: rivals smash snowmen and ice pillars too.
+    if (breakables?.objects?.length && !rival.air.airborne && rival.spinTimer <= 0) {
+      breakableHitFor({
+        breakables,
+        lane: rival.lane,
+        progress: rival.progress,
+        trackLength,
+      });
+    }
+
+    // Moving crosser hazards catch grounded rivals.
+    if (crossers?.instances?.length && !rival.air.airborne && rival.spinTimer <= 0) {
+      const crosser = crosserHitFor({
+        crossers,
+        lane: rival.lane,
+        progress: rival.progress,
+        trackLength,
+      });
+      if (crosser) applyCrosserHitToRacer({ racer: rival, crosser });
     }
 
     // Phase 3.5: rivals take ramps and the bridge crest (jump, no tricks).

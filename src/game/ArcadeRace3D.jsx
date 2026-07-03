@@ -330,6 +330,8 @@ export const ArcadeRace3D = ({
 
       const {
         updateAutoplayPlayer,
+        updateBreakables,
+        updateCrossers,
         updatePlayer,
         updateRankings,
         updateRivals,
@@ -477,6 +479,8 @@ export const ArcadeRace3D = ({
         updateRivals(dt);
         updateTrackEvents(dt);
         updateTrackHazards(dt);
+        updateBreakables(dt);
+        updateCrossers(dt);
         updateRankings();
         markPhase('world');
         syncRaceMeshes({

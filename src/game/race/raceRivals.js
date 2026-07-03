@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { layerOffset as routeLayerOffset } from './track/trackGeometry.js';
+import { LAP_WRAP_THRESHOLD, layerOffset as routeLayerOffset } from './track/trackGeometry.js';
 
 export const RIVAL_ROUTE_LAYER_SCORE = {
   air: { plane: 1.3, hover: 0.55, kart: 0.2 },
@@ -251,7 +251,7 @@ export const updateRaceRivalsForFrame = ({
         layerOffset(rival.layer, compiled.roadWidth) +
         Math.sin(rival.wobble) * compiled.roadWidth * 0.045
     );
-    if (previousProgress > 0.82 && rival.progress < 0.18) {
+    if (previousProgress > LAP_WRAP_THRESHOLD && rival.progress < 0.18) {
       rival.lap += 1;
       if (rival.lap > compiled.laps) {
         if (playtest?.noFinish) {

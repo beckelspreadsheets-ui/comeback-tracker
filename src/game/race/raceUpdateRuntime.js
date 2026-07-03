@@ -13,6 +13,15 @@ import {
   applyLapProgress,
   scoreRacer,
 } from './raceProgress.js';
+import {
+  breakableHitFor,
+  updateBreakablesForFrame,
+} from './raceBreakables.js';
+import {
+  applyCrosserHitToRacer,
+  crosserHitFor,
+  updateCrossersForFrame,
+} from './raceCrossers.js';
 import { updateRaceRivalsForFrame } from './raceRivals.js';
 
 export const createRaceUpdateRuntime = ({
@@ -189,12 +198,54 @@ export const createRaceUpdateRuntime = ({
 
   const updateRankings = () => updateRankingsFrame({ race });
 
+  const updateBreakables = (dt) => {
+    if (!race.breakables) return { hit: null, spawnRequests: [] };
+    updateBreakablesForFrame({ breakables: race.breakables, dt });
+    const hit = breakableHitFor({
+      breakables: race.breakables,
+      lane: race.player.lane,
+      progress: race.player.progress,
+      trackLength: compiled.totalLength,
+    });
+    if (hit?.spawnRequest?.type === 'itemBox' && !race.player.heldItem) {
+      race.player.heldItem = 'cocoa';
+    }
+    return { hit, spawnRequests: race.breakables.spawnRequests };
+  };
+
+  const updateCrossers = (dt) => {
+    if (!race.crossers) return { crosser: null };
+    updateCrossersForFrame({
+      crossers: race.crossers,
+      dt,
+      trackLength: compiled.totalLength,
+    });
+    const crosser = crosserHitFor({
+      crossers: race.crossers,
+      lane: race.player.lane,
+      progress: race.player.progress,
+      trackLength: compiled.totalLength,
+    });
+    const player = race.player;
+    if (
+      crosser &&
+      player.vehicleMode !== 'plane' &&
+      (player.jumpHeight || 0) <= 0.05 &&
+      (player.hitTimer || 0) <= 0
+    ) {
+      applyCrosserHitToRacer({ racer: player, crosser });
+    }
+    return { crosser };
+  };
+
   return {
     applyHazardEffect,
     applyVehicleIntegration,
     resolveWorldCollisions,
     triggerHazardByType,
     updateAutoplayPlayer,
+    updateBreakables,
+    updateCrossers,
     updateLapProgress,
     updatePlayer,
     updateRankings,

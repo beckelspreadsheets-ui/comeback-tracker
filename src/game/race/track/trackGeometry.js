@@ -8,11 +8,22 @@ export const ROAD_WIDTH_MULTIPLIER = 1.48;
 export const ROAD_WIDTH_MIN = 34;
 export const SHOULDER_WIDTH = 7.4;
 
+// Canonical lap-wrap threshold used by the V1 modular runtime. V2 keeps its
+// existing 0.86 thresholds locked in ComebackCityThreeKartRace.jsx and
+// rivalRacers.js; do not change those without owner sign-off.
+export const LAP_WRAP_THRESHOLD = 0.82;
+
 const { cruise: FLIGHT_CRUISE_ALTITUDE } = FLIGHT_ALTITUDE_LIMITS;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const wrap01 = (value) => ((value % 1) + 1) % 1;
 const distance2D = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+
+// Module-level scratch vectors to reduce per-frame allocations in the hot
+// nearest/pointAt paths. They are reused within a single call chain; any
+// value that outlives the call is cloned before return.
+const _scratchSample = new THREE.Vector3();
+const _scratchNormal = new THREE.Vector3();
 
 export const layerAltitude = (layerKey) =>
   layerKey === 'air' ? FLIGHT_CRUISE_ALTITUDE : layerKey === 'hybrid' ? 7.5 : 0;
@@ -39,17 +50,17 @@ export const sampleCourseLine = (points, { closed = false, divisions = 32 } = {}
   return samples;
 };
 
-const pointOnSegment = (segment, t) => ({
-  point: new THREE.Vector3(
-    segment.a.x + segment.dx * t,
-    0,
-    segment.a.z + segment.dz * t
-  ),
-  tangent: segment.tangent.clone(),
-});
+// Returns scratch vectors; callers must clone before storing or returning.
+const pointOnSegment = (segment, t) => {
+  _scratchSample.set(segment.a.x + segment.dx * t, 0, segment.a.z + segment.dz * t);
+  return {
+    point: _scratchSample,
+    tangent: segment.tangent,
+  };
+};
 
 export const compileTrack3D = (track) => {
-  const courseV2 = track.courseV2 || null;
+  const courseV2 = track.courseV2 || track.course || null;
   const points = courseV2
     ? sampleCourseLine(courseV2.centerline, {
         closed: true,
@@ -71,6 +82,10 @@ export const compileTrack3D = (track) => {
       dx,
       dz,
       length,
+      maxX: Math.max(a.x, b.x),
+      maxZ: Math.max(a.z, b.z),
+      minX: Math.min(a.x, b.x),
+      minZ: Math.min(a.z, b.z),
       start: totalLength,
       tangent: new THREE.Vector3(dx / length, 0, dz / length),
     });
@@ -90,23 +105,33 @@ export const compileTrack3D = (track) => {
   const nearestOnSegments = (sourceSegments, sourceTotalLength, position, progressMapper = (value) => value) => {
     let best = null;
     sourceSegments.forEach((segment) => {
+      // Cheap AABB reject: if the segment's bounding box is farther from the
+      // position than the current best distance, skip the projection.
+      if (best) {
+        const closestX = clamp(position.x, segment.minX, segment.maxX);
+        const closestZ = clamp(position.z, segment.minZ, segment.maxZ);
+        const dx = position.x - closestX;
+        const dz = position.z - closestZ;
+        if (dx * dx + dz * dz > best.distance * best.distance) return;
+      }
+
       const ax = position.x - segment.a.x;
       const az = position.z - segment.a.z;
       const t = clamp((ax * segment.dx + az * segment.dz) / (segment.length * segment.length), 0, 1);
       const sample = pointOnSegment(segment, t);
       const dist = distance2D(position, sample.point);
       if (!best || dist < best.distance) {
-        const rawNormal = new THREE.Vector3(-segment.tangent.z, 0, segment.tangent.x);
+        const rawNormal = _scratchNormal.set(-segment.tangent.z, 0, segment.tangent.x);
         const side =
           (position.x - sample.point.x) * rawNormal.x + (position.z - sample.point.z) * rawNormal.z >= 0
             ? 1
             : -1;
         best = {
           distance: dist,
-          normal: rawNormal.multiplyScalar(side),
-          point: sample.point,
+          normal: rawNormal.clone().multiplyScalar(side),
+          point: sample.point.clone(),
           progress: progressMapper((segment.start + segment.length * t) / sourceTotalLength),
-          tangent: segment.tangent.clone(),
+          tangent: sample.tangent.clone(),
         };
       }
     });
@@ -119,8 +144,10 @@ export const compileTrack3D = (track) => {
       segments.find((item) => target >= item.start && target <= item.start + item.length) ||
       segments[segments.length - 1];
     const t = clamp((target - segment.start) / segment.length, 0, 1);
+    const sample = pointOnSegment(segment, t);
     return {
-      ...pointOnSegment(segment, t),
+      point: sample.point.clone(),
+      tangent: sample.tangent.clone(),
       progress: target / totalLength,
     };
   };
@@ -153,6 +180,10 @@ export const compileTrack3D = (track) => {
         dx,
         dz,
         length,
+        maxX: Math.max(a.x, b.x),
+        maxZ: Math.max(a.z, b.z),
+        minX: Math.min(a.x, b.x),
+        minZ: Math.min(a.z, b.z),
         start: branchLength,
         tangent: new THREE.Vector3(dx / length, 0, dz / length),
       });

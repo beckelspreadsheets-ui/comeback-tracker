@@ -14,6 +14,10 @@ import {
   VEHICLES,
 } from './physics/kartTuning.js';
 import {
+  applySurfaceToPhysics,
+  surfaceTypeAt,
+} from './physics/surfacePhysics.js';
+import {
   DRIFT_HOP_DURATION,
   applyLateralGripForFrame,
   applyGroundJumpForFrame,
@@ -77,6 +81,11 @@ export const updateRacePlayerForFrame = ({
   player.layer = isPlane ? 'air' : player.vehicleMode === 'hover' ? 'hybrid' : 'ground';
   const nearest = compiled.nearest(player.position);
   updateLapProgress(player, nearest);
+  player.surfaceType = surfaceTypeAt(
+    { progress: player.progress, lane: player.lane },
+    compiled.surfaceBands
+  );
+  applySurfaceToPhysics(player, player.surfaceType, dt);
   player.steerInput += (controls.steer - player.steerInput) * clamp(dt * 11, 0, 1);
 
   const forward = new THREE.Vector3(Math.sin(player.heading), 0, Math.cos(player.heading));
@@ -128,7 +137,12 @@ export const updateRacePlayerForFrame = ({
   });
   player.hitTimer = driveForces.nextHitTimer;
   if (driveForces.dragMultiplier !== 1) player.velocity.multiplyScalar(driveForces.dragMultiplier);
-  if (driveForces.forwardImpulse) player.velocity.addScaledVector(forward, driveForces.forwardImpulse);
+  if (driveForces.forwardImpulse) {
+    player.velocity.addScaledVector(
+      forward,
+      driveForces.forwardImpulse * (player.surfaceAccelerationMultiplier || 1)
+    );
+  }
 
   const driftCanStart = canActivateDrift({
     driftHopTimer: player.driftHopTimer || 0,
@@ -166,10 +180,14 @@ export const updateRacePlayerForFrame = ({
   }
 
   if (player.driftActive) {
+    // Surface multiplier scales the charge RATE (via dt — the increment is
+    // linear in dt), never the accumulated total: multiplying the clamped
+    // total compounds per-frame (ice 1.25x explodes past the 2.8 cap, snow
+    // 0.92x decays charge geometrically).
     player.driftCharge = driftChargeForFrame({
       charge: player.driftCharge,
       driftDirection: player.driftDirection,
-      dt,
+      dt: dt * (player.surfaceDriftChargeMultiplier || 1),
       speed,
       steerInput: player.steerInput,
       vehicle,
@@ -193,7 +211,7 @@ export const updateRacePlayerForFrame = ({
     jumpHeight: player.jumpHeight,
     signedForwardSpeed,
     speed,
-    steerInput: player.steerInput,
+    steerInput: player.steerInput * (player.surfaceSteerMultiplier || 1),
     vehicle,
     vehicleMode: player.vehicleMode,
   });
