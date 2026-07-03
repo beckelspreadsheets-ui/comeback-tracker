@@ -1,0 +1,30 @@
+name: Asset Integrity
+
+# PRD P0-5 (graphics V2): every push runs the strict runtime asset audit so a
+# binary asset can never land without its manifest provenance entry again —
+# the 2026-07-02 incident's root cause was exactly this class of drift.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  assets-check:
+    name: assets:check (strict runtime audit + validation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Asset audit + validation (strict, runtime scope)
+        run: npm run assets:check
