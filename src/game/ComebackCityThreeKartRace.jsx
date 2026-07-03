@@ -752,7 +752,15 @@ const createToonMaterial = (color, options = {}) =>
 let kartAssetsPromise = null;
 const loadKartAssets = () => {
   if (!kartAssetsPromise) {
-    const gltfLoader = createGameGltfLoader();
+    const gltfLoader = createGameGltfLoader({
+      resourceMap: {
+        // The optimized toy-car-kit GLBs reference their palette as an
+        // external Textures/colormap.png; in production builds the GLBs get
+        // hashed /assets/ URLs so that relative path 404s. Route it to the
+        // bundled asset instead.
+        'Textures/colormap.png': kartColormapUrl,
+      },
+    });
     kartAssetsPromise = Promise.all([
       gltfLoader.loadAsync(racerModelUrl),
       gltfLoader.loadAsync(itemBoxModelUrl),
