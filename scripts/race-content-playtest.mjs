@@ -289,6 +289,14 @@ import {
   KART_CONTACT,
   updateRivalRacers,
 } from '../src/game/race/rivalRacers.js';
+// B2 palette moments (shipped V2 kart runtime): pure per-lap atmosphere
+// lerp helpers — base fill, segment pick, smoothstep easing, and the
+// 1.0 -> 0.0 lap wrap.
+import {
+  createMomentSample,
+  resolveMoments,
+  sampleMoments,
+} from '../src/game/race/paletteMoments.js';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import * as THREE from 'three';
@@ -9863,10 +9871,159 @@ const validateKartContactHelpers = () => {
   }
 };
 
+// B2 palette moments (shipped V2 kart runtime, paletteMoments.js): a
+// moment-less palette resolves to null (Comeback City's untouched-by-
+// construction guarantee), sparse moments fill every endpoint from the
+// palette base, fog.far clamps to 840 (camera far 860 no-ops beyond),
+// sampling is exact at moment boundaries, smoothstep-eased mid-segment,
+// allocation-free, and the last->first wrap segment converges on the first
+// moment from both sides so the lap seam (0.95 -> 0.05) cannot color-pop.
+const validatePaletteMomentHelpers = () => {
+  const hex01 = (hex) => ({
+    r: parseInt(hex.slice(1, 3), 16) / 255,
+    g: parseInt(hex.slice(3, 5), 16) / 255,
+    b: parseInt(hex.slice(5, 7), 16) / 255,
+  });
+  const colorsClose = (a, b, epsilon = 1e-9) =>
+    Math.abs(a.r - b.r) <= epsilon && Math.abs(a.g - b.g) <= epsilon && Math.abs(a.b - b.b) <= epsilon;
+  const close = (a, b, epsilon = 1e-9) => Math.abs(a - b) <= epsilon;
+  // Penguin Village's landed B1 V8 + B3 V6 palette shape.
+  const palette = {
+    fog: { color: '#4a6478', near: 150, far: 680 },
+    hemi: { sky: '#689bb8', ground: '#0f273f', intensity: 3 },
+    sunColor: '#e8c9a0',
+    rimLightColor: '#00d5ff',
+    heroRim: { power: 2.6, strength: 0.32, tint: '#eaf6ff' },
+  };
+
+  // 1) Null paths: no moments key / empty array — the per-frame hook's
+  //    single truthy check rides on this.
+  const nullResolved = resolveMoments(palette);
+  const emptyResolved = resolveMoments({ ...palette, moments: [] });
+
+  // 2) Base fill: a bare moment inherits every endpoint from the palette
+  //    (fog/hemi/sun colors decoded to sRGB triples, sun intensity from the
+  //    createScene DirectionalLight, rimTint from heroRim.tint — NOT the
+  //    rimLight color); unsorted input sorts by progress; fog.far clamps.
+  const resolved = resolveMoments(
+    {
+      ...palette,
+      moments: [
+        { progress: 0.84, fog: { near: 120 }, sun: { intensity: 2.2 } },
+        { progress: 0.02 },
+        { progress: 0.3, fog: { far: 900 } },
+        { progress: 0.55, sun: { color: '#f0b070' } },
+      ],
+    },
+    { rimTint: '#eaf6ff' }
+  );
+  const first = resolved[0];
+  const baseFilled =
+    colorsClose(first.fogColor, hex01('#4a6478')) &&
+    first.fogNear === 150 &&
+    first.fogFar === 680 &&
+    colorsClose(first.hemiSky, hex01('#689bb8')) &&
+    colorsClose(first.hemiGround, hex01('#0f273f')) &&
+    colorsClose(first.sunColor, hex01('#e8c9a0')) &&
+    first.sunIntensity === 2.6 &&
+    colorsClose(first.rim, hex01('#00d5ff')) &&
+    colorsClose(first.rimTint, hex01('#eaf6ff')) &&
+    first.bloom === 1;
+  const sortedByProgress = resolved.every(
+    (moment, index) => index === 0 || resolved[index - 1].progress <= moment.progress
+  );
+
+  // 3) Boundary + mid-segment easing: exactly on a moment t is 0; halfway
+  //    between two moments smoothstep(0.5) = 0.5; quarter-way eases to
+  //    smoothstep(0.25) = 0.15625.
+  const sample = createMomentSample();
+  const atBoundary = sampleMoments(resolved, 0.02, sample);
+  const boundaryExact =
+    atBoundary === sample && atBoundary.segment === 0 && atBoundary.t === 0 && atBoundary.fogNear === 150;
+  // Segment 0.02 -> 0.30 (fogNear 150 both, fogFar 680 -> 840): midpoint.
+  sampleMoments(resolved, 0.16, sample);
+  const midEased = close(sample.t, 0.5) && close(sample.fogFar, (680 + 840) / 2);
+  sampleMoments(resolved, 0.09, sample);
+  const quarterEased = close(sample.t, 0.15625) && close(sample.fogFar, 680 + (840 - 680) * 0.15625);
+
+  // 4) Wrap seam: the 0.84 -> 0.02 segment spans the lap boundary. Sampling
+  //    at 0.95 sits inside it; approaching 0.02 from below (0.0199…) must
+  //    converge on the first moment's exact values (no pop at the finish
+  //    line), and 0.05-style early progress still belongs to segment 0's
+  //    start only AFTER the first moment — before it, it is the wrap tail.
+  sampleMoments(resolved, 0.95, sample);
+  const wrapRaw = (0.95 - 0.84) / (0.02 - 0.84 + 1);
+  const wrapEase = wrapRaw * wrapRaw * (3 - 2 * wrapRaw);
+  const wrapMid =
+    sample.segment === resolved.length - 1 &&
+    close(sample.t, wrapEase) &&
+    close(sample.fogNear, 120 + (150 - 120) * wrapEase) &&
+    close(sample.sunIntensity, 2.2 + (2.6 - 2.2) * wrapEase);
+  sampleMoments(resolved, 0.0199999, sample);
+  const seamConverges =
+    sample.segment === resolved.length - 1 &&
+    close(sample.fogNear, 150, 1e-4) &&
+    close(sample.sunIntensity, 2.6, 1e-6) &&
+    colorsClose(sample.fogColor, hex01('#4a6478'), 1e-6);
+
+  // 5) Zero allocations: repeated samples reuse the same scratch object and
+  //    its nested color triples.
+  const fogColorRef = sample.fogColor;
+  const rimTintRef = sample.rimTint;
+  const reused =
+    sampleMoments(resolved, 0.5, sample) === sample &&
+    sample.fogColor === fogColorRef &&
+    sample.rimTint === rimTintRef;
+
+  // 6) Single-moment sets are constant everywhere (wrap segment with
+  //    identical endpoints), so a one-moment palette can never flicker.
+  const single = resolveMoments({ ...palette, moments: [{ progress: 0.3, fog: { near: 100 } }] });
+  const singleSample = createMomentSample();
+  sampleMoments(single, 0.1, singleSample);
+  const singleLow = singleSample.fogNear;
+  sampleMoments(single, 0.9, singleSample);
+  const singleConstant = singleLow === 100 && singleSample.fogNear === 100;
+
+  if (
+    nullResolved !== null ||
+    emptyResolved !== null ||
+    resolved.length !== 4 ||
+    !baseFilled ||
+    !sortedByProgress ||
+    resolved[1].fogFar !== 840 ||
+    !boundaryExact ||
+    !midEased ||
+    !quarterEased ||
+    !wrapMid ||
+    !seamConverges ||
+    !reused ||
+    !singleConstant
+  ) {
+    fail('Palette moments should fill from base, clamp fog.far, ease segments, and stay seam-continuous across the lap wrap', {
+      baseFilled,
+      boundaryExact,
+      emptyResolved,
+      fogFarClamped: resolved[1].fogFar,
+      midEased,
+      nullResolved,
+      quarterEased,
+      resolvedLength: resolved.length,
+      reused,
+      seamConverges,
+      seamFogNear: sample.fogNear,
+      singleConstant,
+      sortedByProgress,
+      wrapMid,
+      wrapT: wrapEase,
+    });
+  }
+};
+
 await validateAssetManifest();
 validateItems();
 validateKartContactHelpers();
 validateKartPhysicsHelpers();
+validatePaletteMomentHelpers();
 validateRaceProgressHelpers();
 validateChaseCameraHelpers();
 validateRaceAudioHelpers();

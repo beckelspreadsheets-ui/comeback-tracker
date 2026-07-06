@@ -1,0 +1,500 @@
+[
+  {
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] [.WebGL-0x13c001c6000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "[warning] [.WebGL-0x13c001c2400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] [.WebGL-0x13c001cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "[warning] [.WebGL-0x13c001cea00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    ],
+    "normalized": null,
+    "shots": [
+      {
+        "shotKey": "p0p05",
+        "telemetry": {
+          "bakedBuildings": "pending",
+          "fpsEstimate": 2,
+          "frameWorkMs": 29.85,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "postChainEnabled": false,
+          "routeProgress": 0.05
+        }
+      },
+      {
+        "shotKey": "p0p30",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 21,
+          "frameWorkMs": 1.06,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "postChainEnabled": false,
+          "routeProgress": 0.301
+        }
+      },
+      {
+        "shotKey": "p0p55",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 18,
+          "frameWorkMs": 1.26,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "postChainEnabled": false,
+          "routeProgress": 0.552
+        }
+      },
+      {
+        "shotKey": "p0p84",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 18,
+          "frameWorkMs": 1.05,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "postChainEnabled": false,
+          "routeProgress": 0.843
+        }
+      },
+      {
+        "shotKey": "seam-out",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 17,
+          "frameWorkMs": 1.05,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "postChainEnabled": false,
+          "routeProgress": 0.962
+        }
+      },
+      {
+        "shotKey": "seam-in",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 18,
+          "frameWorkMs": 1.4,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "postChainEnabled": false,
+          "routeProgress": 0.063
+        }
+      }
+    ],
+    "variantKey": "v0-off"
+  },
+  {
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "normalized": [
+      {
+        "progress": 0.02
+      },
+      {
+        "progress": 0.3,
+        "fog": {
+          "color": "#52707f",
+          "far": 740
+        },
+        "hemi": {
+          "sky": "#5f9eb4",
+          "ground": "#0f283a"
+        },
+        "sun": {
+          "color": "#e2cba8"
+        }
+      },
+      {
+        "progress": 0.55,
+        "fog": {
+          "color": "#5a6675",
+          "near": 160
+        },
+        "hemi": {
+          "sky": "#7797b2",
+          "ground": "#16253b"
+        },
+        "sun": {
+          "color": "#efc08e",
+          "intensity": 2.7
+        }
+      },
+      {
+        "progress": 0.84,
+        "fog": {
+          "color": "#465e74",
+          "near": 135
+        },
+        "hemi": {
+          "sky": "#6699cd",
+          "ground": "#102641"
+        },
+        "sun": {
+          "color": "#dfc4a4",
+          "intensity": 2.45
+        },
+        "rim": "#18dcff"
+      }
+    ],
+    "shots": [
+      {
+        "shotKey": "p0p05",
+        "telemetry": {
+          "bakedBuildings": "pending",
+          "fpsEstimate": 2,
+          "frameWorkMs": 26.8,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.05
+        }
+      },
+      {
+        "shotKey": "p0p30",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 21,
+          "frameWorkMs": 1.06,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.301
+        }
+      },
+      {
+        "shotKey": "p0p55",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 16,
+          "frameWorkMs": 1.28,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.552
+        }
+      },
+      {
+        "shotKey": "p0p84",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 20,
+          "frameWorkMs": 1.02,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.843
+        }
+      },
+      {
+        "shotKey": "seam-out",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 19,
+          "frameWorkMs": 1.07,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.962
+        }
+      },
+      {
+        "shotKey": "seam-in",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 19,
+          "frameWorkMs": 1.4,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.063
+        }
+      }
+    ],
+    "variantKey": "v1-subtle"
+  },
+  {
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "normalized": [
+      {
+        "progress": 0.02
+      },
+      {
+        "progress": 0.3,
+        "fog": {
+          "color": "#5d8290",
+          "near": 170,
+          "far": 800
+        },
+        "hemi": {
+          "sky": "#56a0bb",
+          "ground": "#0e2839"
+        },
+        "sun": {
+          "color": "#dccfb2"
+        },
+        "rim": "#00e5ff"
+      },
+      {
+        "progress": 0.55,
+        "fog": {
+          "color": "#5f6472",
+          "near": 140
+        },
+        "hemi": {
+          "sky": "#8095b0",
+          "ground": "#1e2335"
+        },
+        "sun": {
+          "color": "#f2b579",
+          "intensity": 2.85
+        },
+        "rim": "#22c9e8"
+      },
+      {
+        "progress": 0.84,
+        "fog": {
+          "color": "#3f566e",
+          "near": 122,
+          "far": 640
+        },
+        "hemi": {
+          "sky": "#6898d3",
+          "ground": "#102741"
+        },
+        "sun": {
+          "color": "#d8b795",
+          "intensity": 2.3
+        },
+        "rim": "#2be2ff"
+      }
+    ],
+    "shots": [
+      {
+        "shotKey": "p0p05",
+        "telemetry": {
+          "bakedBuildings": "pending",
+          "fpsEstimate": 2,
+          "frameWorkMs": 25.47,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.05
+        }
+      },
+      {
+        "shotKey": "p0p30",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 19,
+          "frameWorkMs": 1.16,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.301
+        }
+      },
+      {
+        "shotKey": "p0p55",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 15,
+          "frameWorkMs": 1.29,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.552
+        }
+      },
+      {
+        "shotKey": "p0p84",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 21,
+          "frameWorkMs": 1.03,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.843
+        }
+      },
+      {
+        "shotKey": "seam-out",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 17,
+          "frameWorkMs": 1.11,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.962
+        }
+      },
+      {
+        "shotKey": "seam-in",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 17,
+          "frameWorkMs": 1.43,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.063
+        }
+      }
+    ],
+    "variantKey": "v2-journey"
+  },
+  {
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "normalized": [
+      {
+        "progress": 0.02
+      },
+      {
+        "progress": 0.3,
+        "fog": {
+          "color": "#6e93a0",
+          "near": 185,
+          "far": 830
+        },
+        "hemi": {
+          "sky": "#43a5c4",
+          "ground": "#0c2939"
+        },
+        "sun": {
+          "color": "#cfd3c0"
+        },
+        "rim": "#00f2ff",
+        "bloom": 1.08
+      },
+      {
+        "progress": 0.55,
+        "fog": {
+          "color": "#6d6470",
+          "near": 132
+        },
+        "hemi": {
+          "sky": "#9390a7",
+          "ground": "#2b1f3c"
+        },
+        "sun": {
+          "color": "#f7a75e",
+          "intensity": 3
+        },
+        "rim": "#3ab8d8",
+        "bloom": 0.92
+      },
+      {
+        "progress": 0.84,
+        "fog": {
+          "color": "#35506b",
+          "near": 112,
+          "far": 620
+        },
+        "hemi": {
+          "sky": "#5a9ae9",
+          "ground": "#0e2748"
+        },
+        "sun": {
+          "color": "#c9a98c",
+          "intensity": 2.15
+        },
+        "rim": "#40eaff",
+        "bloom": 1.12
+      }
+    ],
+    "shots": [
+      {
+        "shotKey": "p0p05",
+        "telemetry": {
+          "bakedBuildings": "pending",
+          "fpsEstimate": 2,
+          "frameWorkMs": 25.85,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.05
+        }
+      },
+      {
+        "shotKey": "p0p30",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 21,
+          "frameWorkMs": 1.11,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.301
+        }
+      },
+      {
+        "shotKey": "p0p55",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 16,
+          "frameWorkMs": 1.26,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.552
+        }
+      },
+      {
+        "shotKey": "p0p84",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 20,
+          "frameWorkMs": 1.03,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.843
+        }
+      },
+      {
+        "shotKey": "seam-out",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 18,
+          "frameWorkMs": 1.11,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.962
+        }
+      },
+      {
+        "shotKey": "seam-in",
+        "telemetry": {
+          "bakedBuildings": "active",
+          "fpsEstimate": 18,
+          "frameWorkMs": 1.43,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "postChainEnabled": false,
+          "routeProgress": 0.063
+        }
+      }
+    ],
+    "variantKey": "v3-dramatic"
+  }
+]

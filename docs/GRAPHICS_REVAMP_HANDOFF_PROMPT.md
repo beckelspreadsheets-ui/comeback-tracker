@@ -1,6 +1,6 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-**Updated 2026-07-06 (fourth update today — the "start B2 here" version)** (supersedes the third update: B3 is SETTLED FOR PENGUIN VILLAGE — owner picked V6 "ice white" from rim-lab.html, landed as `palette.heroRim`, ships ON at 144 FPS; Comeback City ships rim-off BY OWNER CHOICE, its pick stays open. ALSO LANDED same day, gameplay: kart-vs-kart collision (solid karts, symmetric rear-hit spin-outs) + fish-bone arm delay + autoplay item sense — commit 6a016533; race timelines shifted, all suites re-verified green. NEXT SESSION STARTS AT: B2 (per-lap palette moments, kickoff brief below) → M2 benchmark review → Phase C city-visuals kickoff).
+**Updated 2026-07-06 (fifth update today — the "B2 is built, start the M2 benchmark review here" version)** (supersedes the fourth update: B2 per-lap palette moments is BUILT AND VERIFIED — pure module + createScene wiring + node tests + moments lab landed; the shipped default stays moment-LESS on every track until the owner picks a set from moments-lab.html, so both tracks are pixel-unchanged by construction (race:proof pass errors=0 at the landing commit, 144 FPS holds on both). M2 construction is DONE (B1/B2/B3/B4 all built); the milestone now waits only on owner picks + the benchmark review. NEXT SESSION STARTS AT: M2 benchmark review (checklist below; batch the open picks — B2 moment set, CC rim — into it) → Phase C city-visuals kickoff).
 
 **Purpose:** paste the block below into a new agent session to continue the graphics revamp with zero context loss. It is file-anchored — everything it references is committed — so it works for an agent with no memory of prior sessions.
 
@@ -67,8 +67,61 @@ full battery and pushed):
   exposes frameElapsedMs/frameWorkMs/rendererStats/bakedBuildings/
   trackVisualsEnabled/proofCameraMode/postChainEnabled; race:proof
   (capture+compare) PASSES at HEAD.
-- M2 IN PROGRESS — B1 COMPLETE, B4 COMPLETE (gated), B3 BUILT (owner pick
-  pending). Ledger:
+- M2 IN PROGRESS — construction DONE: B1 COMPLETE, B4 COMPLETE (gated),
+  B3 SETTLED for PV / CC pick open, B2 BUILT (owner pick pending). Ledger:
+  B2 (built + verified 2026-07-06, fourth session; SHIPPED DEFAULT IS
+  MOMENT-LESS on every track until the owner picks a set — both tracks
+  pixel-unchanged by construction, race:proof pass errors=0 with NO
+  baseline regeneration): src/game/race/paletteMoments.js is PURE (no
+  THREE; node-importable) — resolveMoments(palette, baseOverrides) fills
+  every optional field from the palette's own base (PV = the landed V8
+  values; bare palettes = the CC shipped hardcodes), decodes hex to sRGB
+  triples once, clamps fog.far <= 840, sorts by progress;
+  sampleMoments(resolved, progress, out) does wrap-aware smoothstep
+  segment lerp into a preallocated scratch (zero per-frame allocations;
+  approaching the first moment from the wrap side converges exactly — no
+  finish-line pop, proven in node tests). Data shape: additive
+  palette.moments = [{ progress, fog{color,near,far}, hemi{sky,ground},
+  sun{color,intensity}, rim, rimTint, bloom }]. CHANNEL SEMANTICS that
+  matter: rim drives the rimLight DirectionalLight; rimTint drives
+  TOON_RIM_SHARED_TINT and its BASE is the ACTIVE hero-rim tint (owner's
+  V6 "ice white", lab override included) so candidates that omit rimTint
+  can never repaint the picked rim; bloom is a chain-agnostic MULTIPLIER
+  (applyPaletteMoments branches on engine.postChainEnabled:
+  bloomEffect.intensity vs bloomPass.strength; ?post=1&postBloom=0 leaves
+  both refs null -> bloom lerp skipped); hemi INTENSITY is deliberately
+  not a moment channel (white-out rule — hue only). Wiring: createScene
+  precompiles engine.paletteMoments = { bloomBase, resolved, sample } (or
+  null) right after the composer block; applyPaletteMoments(engine,
+  race.progress) runs after the sun-follow block, before composer.render;
+  colors land via setRGB(..., THREE.SRGBColorSpace) which matches new
+  Color(hex) under r184 default color management. Dev hook (rimLab
+  pattern): ?momentsLab=1 + window.__momentsLabOverrides REPLACES
+  palette.moments; ?momentsLab=0 forces off (the control that stays valid
+  after a pick lands). Telemetry gained paletteMomentsEnabled. Tests:
+  validatePaletteMomentHelpers in scripts/race-content-playtest.mjs (base
+  fill, sort, fog-far clamp, boundary exactness, smoothstep easing,
+  wrap-seam convergence, zero-alloc reuse, single-moment constancy). Lab
+  live: moments-lab.html (regen: node
+  tmp/m2-moments-lab/capture-moments-variants.mjs, PORT 5315) — V0
+  control + 3 candidate sets (v1-subtle / v2-journey / v3-dramatic), each
+  = 4 lap moments keyed on telemetry routeProgress 0.05/0.30/0.55/0.84
+  PLUS a seam pair (0.96 / 0.06 next lap — the two tiles must read
+  identical or the set fails); hemi candidates luma-normalized at capture
+  (matchLuma from the palette lab) and captions print the NORMALIZED
+  literals — the pick lands those verbatim as penguinVillage.js
+  palette.moments + proof recapture in that commit. Evidence:
+  tmp/m2-moments-lab/capture-telemetry.json; wrap-seam probe
+  (probe-wrap-seam.mjs) recorded control + v2-journey seam-crossing webms
+  and A/B'd frameWorkMs medians under identical screencast overhead —
+  1.30ms control vs 1.46ms moments-on (lerps are free; NOTE playwright
+  video recording inflates ABSOLUTE frameWorkMs ~30x, only the A/B delta
+  is meaningful — a first probe draft false-alarmed on a 5ms absolute
+  gate). Verified at the landing commit: test:race green (incl. the new
+  validator), test:track-visuals green, test:kart-playable green both
+  tracks, test:race-proof pass errors=0, phase5 headed medians CC 144.02
+  (worst 143.27) / PV 144.02 (worst 143.47), test:visual fails ONLY on
+  ledgered panel-2.
   B3 (built + verified 2026-07-06, third session): composable
   shader-injection helper src/game/race/render/toonRimShader.js is the
   Amendment 7 single home (addShaderInjection registry + merged
@@ -122,10 +175,12 @@ full battery and pushed):
   ~120 SMAA budget; SMAA kept, no FXAA fallback); ?post=1 FPS 144 both
   tracks, no regression. Evidence: post-lab.html + tmp/m2-b4-post-chain/;
   phase5 gained PHASE5_URL_EXTRA + postChainEnabled sampling.
-  STILL PENDING for M2 close: B2, then the benchmark review (owner
+  STILL PENDING for M2 close: the benchmark review only (owner
   signs/declines the §9 post-ban supersession there — B4 stays URL-gated
-  until then). B3's Comeback City rim pick is OPEN but does NOT block M2
-  (owner explicitly kept CC rim-off for now).
+  until then). Open picks to batch into it: B2 moment set
+  (moments-lab.html) and B3's Comeback City rim (rim-lab.html) — neither
+  blocks the review; shipped defaults stay moment-less / CC rim-off until
+  the owner picks.
 - GAMEPLAY LANDED 2026-07-06 (commit 6a016533, outside the graphics plan
   but it changes race timelines — know it exists): kart-vs-kart collision.
   rivalRacers.js KART_CONTACT = per-frame lateral push-apart separation
@@ -204,66 +259,14 @@ full battery and pushed):
   before long capture batches. A palette/color change can never affect
   physics — don't chase speed failures into color commits.
 
-YOUR TASK NOW: B2 (per-lap palette moments) — the LAST construction task
-of M2. B1/B3/B4 are landed (B3: PV ships the V6 "ice white" heroRim; CC
-ships rim-off by owner choice — its pick stays open in rim-lab.html and
-does NOT block you; ?rimLab=1 forces a candidate, ?rimLab=0 forces off).
-
-B2 KICKOFF BRIEF (full task detail: execution plan B2 section — read it;
-deltas since it was written are folded in here):
-- WHAT: Penguin Village's four authored road ribbons (main street 0.02,
-  pond sweep 0.30, fish market 0.55, return bend 0.84 — align to
-  penguinVillage.js roadRibbons) become 3-4 atmosphere lerps per lap
-  driven by race.progress. Comeback City has no moments key → null path,
-  pixel-untouched by construction (same trick as B1/B3).
-- BUILD: src/game/race/paletteMoments.js — PURE (no THREE import, node-
-  importable, deterministic): resolveMoments(palette) fills every
-  optional field from the landed B1 V8 base values (fog '#4a6478'
-  150/680, hemi '#689bb8'/'#0f273f' @3.0, sun '#e8c9a0') so lerp
-  endpoints are always fully specified; sampleMoments(resolved, progress,
-  out) does wrap-aware segment lerp (last→first across 1.0→0.0) with
-  smoothstep easing. Data shape = additive palette.moments key:
-  [{ progress, fog: {color,near,far}, hemi: {sky,ground}, sun:
-  {color,intensity}, rim }].
-- WIRE: in createScene, if palette.moments?.length, precompile via
-  resolveMoments into THREE.Color pairs ONCE onto engine.paletteMoments
-  (else null). Per-frame hook applyPaletteMoments(engine, race.progress)
-  immediately before engine.composer.render(), after the sun-follow
-  block. Handles ALREADY exposed on the engine return: hemi, rimLight,
-  sun, scene.fog via scene. NEW since the exec plan: (a) the rim tint —
-  lerp TOON_RIM_SHARED_TINT.value (toonRimShader.js; one Color.set
-  retints every rimmed hero material, comment in createScene says B2 may
-  lerp it); (b) bloom — branch on engine.postChainEnabled: legacy
-  UnrealBloomPass ref is engine.bloomPass (.strength), pmndrs ?post=1 ref
-  is engine.bloomEffect (.intensity); exactly one is non-null. ZERO
-  per-frame allocations (scratch Colors made in createScene).
-- GUARDS: fog.far stays <= 840 in every moment (camera far 860 no-ops
-  beyond); hemi moment colors LUMA-NORMALIZED to the V8 base (vary hue,
-  never brightness — the white-out lesson; copy matchLuma from
-  tmp/m2-palette-lab/capture-palette-variants.mjs); moments must start/
-  end near the V8 base so the lap wrap (0.95→0.05) has no color pop.
-- OWNER GATE (design-choice workflow): build a MOMENTS LAB before
-  landing — tmp/m2-moments-lab/ capture script (copy the rim-lab pattern:
-  vite dev port 531x, headless, telemetry routeProgress-keyed shots at
-  each moment progress 0.05/0.30/0.55/0.84, console-error collection) ×
-  2-3 candidate moment SETS (e.g. subtle/journey/dramatic), page
-  moments-lab.html at repo root, entry in approvals-hub.html Labs list,
-  ?momentsLab=1 + window.__momentsLabOverrides dev hook in createScene
-  (clone the paletteLab hook — overrides replace palette.moments).
-  Shipped default stays moment-LESS until the owner picks a set; the pick
-  lands as the palette.moments key + proof recapture in that commit.
-- TESTS: node assert for sampleMoments at segment boundaries, mid-
-  segment, and the wrap seam (0.95→0.05) — add a
-  validatePaletteMomentHelpers to scripts/race-content-playtest.mjs
-  (import from ../src/game/race/paletteMoments.js, follow
-  validateKartContactHelpers right above the call list).
-- VERIFY (serial, never two vite suites at once): npm run test:race ·
-  test:track-visuals · test:kart-playable · test:race-proof (CC proof
-  route must pass UNCHANGED — moments are PV-only) · full-lap PV capture
-  checking the wrap seam · phase5 headed both tracks (144 must hold; a
-  handful of lerps is free) · test:visual (panel-2 known-red only).
-
-THEN: M2 BENCHMARK REVIEW closes the milestone. Checklist:
+YOUR TASK NOW: M2 BENCHMARK REVIEW — construction is done (B1/B2/B3/B4
+all built; B2 landed 2026-07-06 with the moments lab live and the shipped
+default moment-less; B3: PV ships the V6 "ice white" heroRim, CC ships
+rim-off by owner choice). Two picks are OPEN and batch naturally into the
+review: B2 moment set (moments-lab.html — if the owner picks, land the
+printed literals as penguinVillage.js palette.moments + full battery +
+proof recapture in that commit) and CC rim (rim-lab.html — lands as a
+heroRim key in comebackCity.js + battery + proof recapture). Checklist:
 - Full A/B walk-through with the owner from approvals-hub: B1 palette
   (landed), B3 rim on/off per track (?rimLab=0 vs default), B2 moments
   (picked set vs none), B4 ?post=1 on/off + per-effect toggles.
@@ -332,8 +335,9 @@ settled at that task's review, NOT as §9 rows. SETTLED 2026-07-06: B1
 palette pick = V8; B4 parity + vignette = approved, vignette ON in-chain):
 - B3 rim: PV SETTLED 2026-07-06 (V6 "ice white" landed, ships ON);
   Comeback City pick still OPEN (owner chose to keep CC rim-off for now —
-  rim-lab.html stays live for it). B2 moment values (per-task gate,
-  upcoming).
+  rim-lab.html stays live for it). B2 moment set: OPEN (moments-lab.html
+  live, 3 candidate sets + control; shipped default stays moment-less
+  until the pick).
 - M0/M1 scorecard re-rating from approvals-hub captures.
 - ?trackVisuals=1 default-on (A/B pairs already in approvals-hub).
 - A3 sharpness pair ack (0.58 vs 0.85, committed).
@@ -359,7 +363,7 @@ gates green, proofs re-captured, work committed and pushed.
 
 ## Not in the prompt but useful to know
 
-- **Evidence trails:** canonical FPS runs live in `.agent/runs/kart-racer-production-readiness/evidence/phase5-capture-*`; A/B captures in `tmp/m0-trackvisuals-proof/` and `tmp/m1-render-scale/`; B1 palette-lab tiles + capture scripts in `tmp/m2-palette-lab/` (contact sheet: `palette-lab.html`); B3 rim-lab tiles + capture/probe scripts in `tmp/m2-rim-lab/` (contact sheet: `rim-lab.html`; the extreme-value probe images are the injection/scenery-untouched proof). The race:proof "ledger" in git is only the pointer `asset-pipeline/proof/latest-proof-run.json` — the run artifacts under `asset-pipeline/proof/runs/` are gitignored and local-only.
+- **Evidence trails:** canonical FPS runs live in `.agent/runs/kart-racer-production-readiness/evidence/phase5-capture-*`; A/B captures in `tmp/m0-trackvisuals-proof/` and `tmp/m1-render-scale/`; B1 palette-lab tiles + capture scripts in `tmp/m2-palette-lab/` (contact sheet: `palette-lab.html`); B3 rim-lab tiles + capture/probe scripts in `tmp/m2-rim-lab/` (contact sheet: `rim-lab.html`; the extreme-value probe images are the injection/scenery-untouched proof); B2 moments-lab tiles + capture/seam-probe scripts in `tmp/m2-moments-lab/` (contact sheet: `moments-lab.html`; `seam-lap-*.webm` are the frame-by-frame wrap-seam evidence, `seam-probe.json` the lerps-are-free A/B). The race:proof "ledger" in git is only the pointer `asset-pipeline/proof/latest-proof-run.json` — the run artifacts under `asset-pipeline/proof/runs/` are gitignored and local-only.
 - **Session memory** (Claude Code auto-memory) mirrors this doc — `kart-project-state.md` is the READ-FIRST memory entry and was updated 2026-07-06.
 - **The owner reviews at** `http://localhost:5173/approvals-hub.html` (dev server usually already running).
 - Owner-call bookkeeping: the PRD's decision log (§9) records STANDING/STRATEGIC gates; per-task A/B gates (like the B1 palette pick) are tracked in the execution plan's per-task Owner-gate fields — the §9 footnote scopes the table this way on purpose. Update those docs, not chat history.

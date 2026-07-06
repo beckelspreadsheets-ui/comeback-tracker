@@ -1,0 +1,152 @@
+<!-- B2 moments lab: per-lap palette-moment candidate sets on Penguin Village,
+     captured at telemetry routeProgress 0.05/0.30/0.55/0.84 + the lap-wrap seam pair.
+     Regen: node tmp/m2-moments-lab/capture-moments-variants.mjs -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Moments Lab — per-lap palette moments (B2)</title>
+<style>
+body { margin: 0; padding: 20px; background: #0c1020; color: #dfe8ff; font: 14px/1.5 -apple-system, sans-serif; }
+h1 { font-size: 18px; }
+h2 { font-size: 15px; margin-top: 28px; }
+p.hint { color: #93a3c8; max-width: 72ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 18px; }
+figure { margin: 0; background: #131a30; border: 1px solid #2a3450; border-radius: 8px; overflow: hidden; }
+img { width: 100%; display: block; }
+figcaption { padding: 10px 12px; }
+code { display: block; margin-top: 10px; font-size: 10px; color: #7f90b8; word-break: break-all; }
+</style>
+</head>
+<body>
+  <h1>Moments lab — B2 per-lap palette moments (Penguin Village)</h1>
+  <p class="hint">Each row is one candidate SET: the same autoplay lap sampled at the four authored
+  road sections (main street / pond sweep / market row / return bend), plus a seam pair either side
+  of the finish line — the two seam tiles must read as the SAME atmosphere (any pop = that set
+  fails, whatever its mid-lap looks like). V0 is today's shipped look: one fixed atmosphere all
+  lap. Judge whether the lap reads as a journey — and that no tile drifts toward white-out on the
+  snow. Pick a set, or name a blend (e.g. "V2 with V1's market"). The pick lands as
+  penguinVillage.js palette.moments (values printed under each row are the exact literals);
+  Comeback City is untouched either way, and until a pick lands the game ships with NO moments.</p>
+    <section>
+      <h2>V0 — no moments (shipped default, control)</h2>
+      <div class="grid">
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v0-off-p0p05.png" alt="V0 — no moments (shipped default, control) — main street (anchor 0.02)" loading="lazy" />
+        <figcaption>main street (anchor 0.02)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v0-off-p0p30.png" alt="V0 — no moments (shipped default, control) — pond sweep (0.30)" loading="lazy" />
+        <figcaption>pond sweep (0.30)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v0-off-p0p55.png" alt="V0 — no moments (shipped default, control) — market row (0.55)" loading="lazy" />
+        <figcaption>market row (0.55)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v0-off-p0p84.png" alt="V0 — no moments (shipped default, control) — return bend (0.84)" loading="lazy" />
+        <figcaption>return bend (0.84)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v0-off-seam-out.png" alt="V0 — no moments (shipped default, control) — seam pair A — routeProgress 0.96" loading="lazy" />
+        <figcaption>seam pair A — routeProgress 0.96</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v0-off-seam-in.png" alt="V0 — no moments (shipped default, control) — seam pair B — routeProgress 0.06 (next lap; must match pair A)" loading="lazy" />
+        <figcaption>seam pair B — routeProgress 0.06 (next lap; must match pair A)</figcaption>
+      </figure>
+      </div>
+      <code>no moments (shipped default)</code>
+    </section>
+    <section>
+      <h2>V1 — subtle drift: the lap breathes, nobody could say where it changed</h2>
+      <div class="grid">
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v1-subtle-p0p05.png" alt="V1 — subtle drift: the lap breathes, nobody could say where it changed — main street (anchor 0.02)" loading="lazy" />
+        <figcaption>main street (anchor 0.02)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v1-subtle-p0p30.png" alt="V1 — subtle drift: the lap breathes, nobody could say where it changed — pond sweep (0.30)" loading="lazy" />
+        <figcaption>pond sweep (0.30)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v1-subtle-p0p55.png" alt="V1 — subtle drift: the lap breathes, nobody could say where it changed — market row (0.55)" loading="lazy" />
+        <figcaption>market row (0.55)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v1-subtle-p0p84.png" alt="V1 — subtle drift: the lap breathes, nobody could say where it changed — return bend (0.84)" loading="lazy" />
+        <figcaption>return bend (0.84)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v1-subtle-seam-out.png" alt="V1 — subtle drift: the lap breathes, nobody could say where it changed — seam pair A — routeProgress 0.96" loading="lazy" />
+        <figcaption>seam pair A — routeProgress 0.96</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v1-subtle-seam-in.png" alt="V1 — subtle drift: the lap breathes, nobody could say where it changed — seam pair B — routeProgress 0.06 (next lap; must match pair A)" loading="lazy" />
+        <figcaption>seam pair B — routeProgress 0.06 (next lap; must match pair A)</figcaption>
+      </figure>
+      </div>
+      <code>[{"progress":0.02},{"progress":0.3,"fog":{"color":"#52707f","far":740},"hemi":{"sky":"#5f9eb4","ground":"#0f283a"},"sun":{"color":"#e2cba8"}},{"progress":0.55,"fog":{"color":"#5a6675","near":160},"hemi":{"sky":"#7797b2","ground":"#16253b"},"sun":{"color":"#efc08e","intensity":2.7}},{"progress":0.84,"fog":{"color":"#465e74","near":135},"hemi":{"sky":"#6699cd","ground":"#102641"},"sun":{"color":"#dfc4a4","intensity":2.45},"rim":"#18dcff"}]</code>
+    </section>
+    <section>
+      <h2>V2 — journey: the execution-plan intent — open pond, lantern market, dusk return</h2>
+      <div class="grid">
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v2-journey-p0p05.png" alt="V2 — journey: the execution-plan intent — open pond, lantern market, dusk return — main street (anchor 0.02)" loading="lazy" />
+        <figcaption>main street (anchor 0.02)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v2-journey-p0p30.png" alt="V2 — journey: the execution-plan intent — open pond, lantern market, dusk return — pond sweep (0.30)" loading="lazy" />
+        <figcaption>pond sweep (0.30)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v2-journey-p0p55.png" alt="V2 — journey: the execution-plan intent — open pond, lantern market, dusk return — market row (0.55)" loading="lazy" />
+        <figcaption>market row (0.55)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v2-journey-p0p84.png" alt="V2 — journey: the execution-plan intent — open pond, lantern market, dusk return — return bend (0.84)" loading="lazy" />
+        <figcaption>return bend (0.84)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v2-journey-seam-out.png" alt="V2 — journey: the execution-plan intent — open pond, lantern market, dusk return — seam pair A — routeProgress 0.96" loading="lazy" />
+        <figcaption>seam pair A — routeProgress 0.96</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v2-journey-seam-in.png" alt="V2 — journey: the execution-plan intent — open pond, lantern market, dusk return — seam pair B — routeProgress 0.06 (next lap; must match pair A)" loading="lazy" />
+        <figcaption>seam pair B — routeProgress 0.06 (next lap; must match pair A)</figcaption>
+      </figure>
+      </div>
+      <code>[{"progress":0.02},{"progress":0.3,"fog":{"color":"#5d8290","near":170,"far":800},"hemi":{"sky":"#56a0bb","ground":"#0e2839"},"sun":{"color":"#dccfb2"},"rim":"#00e5ff"},{"progress":0.55,"fog":{"color":"#5f6472","near":140},"hemi":{"sky":"#8095b0","ground":"#1e2335"},"sun":{"color":"#f2b579","intensity":2.85},"rim":"#22c9e8"},{"progress":0.84,"fog":{"color":"#3f566e","near":122,"far":640},"hemi":{"sky":"#6898d3","ground":"#102741"},"sun":{"color":"#d8b795","intensity":2.3},"rim":"#2be2ff"}]</code>
+    </section>
+    <section>
+      <h2>V3 — dramatic swing: strong hue turns + bloom moments (pond glare, market ember, aurora return)</h2>
+      <div class="grid">
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v3-dramatic-p0p05.png" alt="V3 — dramatic swing: strong hue turns + bloom moments (pond glare, market ember, aurora return) — main street (anchor 0.02)" loading="lazy" />
+        <figcaption>main street (anchor 0.02)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v3-dramatic-p0p30.png" alt="V3 — dramatic swing: strong hue turns + bloom moments (pond glare, market ember, aurora return) — pond sweep (0.30)" loading="lazy" />
+        <figcaption>pond sweep (0.30)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v3-dramatic-p0p55.png" alt="V3 — dramatic swing: strong hue turns + bloom moments (pond glare, market ember, aurora return) — market row (0.55)" loading="lazy" />
+        <figcaption>market row (0.55)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v3-dramatic-p0p84.png" alt="V3 — dramatic swing: strong hue turns + bloom moments (pond glare, market ember, aurora return) — return bend (0.84)" loading="lazy" />
+        <figcaption>return bend (0.84)</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v3-dramatic-seam-out.png" alt="V3 — dramatic swing: strong hue turns + bloom moments (pond glare, market ember, aurora return) — seam pair A — routeProgress 0.96" loading="lazy" />
+        <figcaption>seam pair A — routeProgress 0.96</figcaption>
+      </figure>
+      <figure>
+        <img src="/tmp/m2-moments-lab/penguin-village-v3-dramatic-seam-in.png" alt="V3 — dramatic swing: strong hue turns + bloom moments (pond glare, market ember, aurora return) — seam pair B — routeProgress 0.06 (next lap; must match pair A)" loading="lazy" />
+        <figcaption>seam pair B — routeProgress 0.06 (next lap; must match pair A)</figcaption>
+      </figure>
+      </div>
+      <code>[{"progress":0.02},{"progress":0.3,"fog":{"color":"#6e93a0","near":185,"far":830},"hemi":{"sky":"#43a5c4","ground":"#0c2939"},"sun":{"color":"#cfd3c0"},"rim":"#00f2ff","bloom":1.08},{"progress":0.55,"fog":{"color":"#6d6470","near":132},"hemi":{"sky":"#9390a7","ground":"#2b1f3c"},"sun":{"color":"#f7a75e","intensity":3},"rim":"#3ab8d8","bloom":0.92},{"progress":0.84,"fog":{"color":"#35506b","near":112,"far":620},"hemi":{"sky":"#5a9ae9","ground":"#0e2748"},"sun":{"color":"#c9a98c","intensity":2.15},"rim":"#40eaff","bloom":1.12}]</code>
+    </section>
+</body>
+</html>

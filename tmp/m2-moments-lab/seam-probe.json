@@ -1,0 +1,1882 @@
+{
+  "controlWorkMedianMs": 1.3,
+  "journeyWorkMedianMs": 1.46,
+  "runs": [
+    {
+      "key": "control",
+      "samples": [
+        {
+          "frameWorkMs": 42.87,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 32.7,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 27.48,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 23.73,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 18.43,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 15.35,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 14.87,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 14.87,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 12.91,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 12.44,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 11.71,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 10.03,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 9.18,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 8.19,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 7.41,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 6.99,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 6.45,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 6,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 5.75,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 5.42,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 2.24,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 2.06,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.95,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.84,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.47,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.58,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.051
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.053
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.054
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.057
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.061
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.063
+        },
+        {
+          "frameWorkMs": 1.58,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.068
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.073
+        },
+        {
+          "frameWorkMs": 1.6,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.079
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.084
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.088
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.096
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.101
+        },
+        {
+          "frameWorkMs": 1.58,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.11
+        },
+        {
+          "frameWorkMs": 1.55,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.116
+        },
+        {
+          "frameWorkMs": 1.41,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.126
+        },
+        {
+          "frameWorkMs": 1.39,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.137
+        },
+        {
+          "frameWorkMs": 1.38,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.145
+        },
+        {
+          "frameWorkMs": 1.37,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.156
+        },
+        {
+          "frameWorkMs": 1.35,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.168
+        },
+        {
+          "frameWorkMs": 1.33,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.18
+        },
+        {
+          "frameWorkMs": 1.29,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.192
+        },
+        {
+          "frameWorkMs": 1.26,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.205
+        },
+        {
+          "frameWorkMs": 1.22,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.219
+        },
+        {
+          "frameWorkMs": 1.19,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.23
+        },
+        {
+          "frameWorkMs": 1.15,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.241
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.249
+        },
+        {
+          "frameWorkMs": 1.1,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.26
+        },
+        {
+          "frameWorkMs": 1.1,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.268
+        },
+        {
+          "frameWorkMs": 1.09,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.279
+        },
+        {
+          "frameWorkMs": 1.09,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.29
+        },
+        {
+          "frameWorkMs": 1.07,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.301
+        },
+        {
+          "frameWorkMs": 1.06,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.309
+        },
+        {
+          "frameWorkMs": 1.07,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.32
+        },
+        {
+          "frameWorkMs": 1.11,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.331
+        },
+        {
+          "frameWorkMs": 1.19,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.343
+        },
+        {
+          "frameWorkMs": 1.25,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.355
+        },
+        {
+          "frameWorkMs": 1.32,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.368
+        },
+        {
+          "frameWorkMs": 1.36,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.377
+        },
+        {
+          "frameWorkMs": 1.41,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.391
+        },
+        {
+          "frameWorkMs": 1.46,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.404
+        },
+        {
+          "frameWorkMs": 1.48,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.413
+        },
+        {
+          "frameWorkMs": 1.5,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.427
+        },
+        {
+          "frameWorkMs": 1.51,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.44
+        },
+        {
+          "frameWorkMs": 1.52,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.451
+        },
+        {
+          "frameWorkMs": 1.49,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.463
+        },
+        {
+          "frameWorkMs": 1.48,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.474
+        },
+        {
+          "frameWorkMs": 1.45,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.485
+        },
+        {
+          "frameWorkMs": 1.4,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.496
+        },
+        {
+          "frameWorkMs": 1.34,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.511
+        },
+        {
+          "frameWorkMs": 1.29,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.522
+        },
+        {
+          "frameWorkMs": 1.26,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.534
+        },
+        {
+          "frameWorkMs": 1.25,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.539
+        },
+        {
+          "frameWorkMs": 1.24,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.552
+        },
+        {
+          "frameWorkMs": 1.23,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.566
+        },
+        {
+          "frameWorkMs": 1.23,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.58
+        },
+        {
+          "frameWorkMs": 1.24,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.594
+        },
+        {
+          "frameWorkMs": 1.25,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.608
+        },
+        {
+          "frameWorkMs": 1.26,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.617
+        },
+        {
+          "frameWorkMs": 1.29,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.631
+        },
+        {
+          "frameWorkMs": 1.31,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.645
+        },
+        {
+          "frameWorkMs": 1.32,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.659
+        },
+        {
+          "frameWorkMs": 1.32,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.673
+        },
+        {
+          "frameWorkMs": 1.3,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.687
+        },
+        {
+          "frameWorkMs": 1.27,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.701
+        },
+        {
+          "frameWorkMs": 1.25,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.712
+        },
+        {
+          "frameWorkMs": 1.21,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.723
+        },
+        {
+          "frameWorkMs": 1.19,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.731
+        },
+        {
+          "frameWorkMs": 1.16,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.742
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.753
+        },
+        {
+          "frameWorkMs": 1.1,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.764
+        },
+        {
+          "frameWorkMs": 1.08,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.775
+        },
+        {
+          "frameWorkMs": 1.07,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.787
+        },
+        {
+          "frameWorkMs": 1.05,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.798
+        },
+        {
+          "frameWorkMs": 1.05,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.809
+        },
+        {
+          "frameWorkMs": 1.04,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.82
+        },
+        {
+          "frameWorkMs": 1.03,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.831
+        },
+        {
+          "frameWorkMs": 1.02,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.839
+        },
+        {
+          "frameWorkMs": 1.03,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.85
+        },
+        {
+          "frameWorkMs": 1.03,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.863
+        },
+        {
+          "frameWorkMs": 1.04,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.871
+        },
+        {
+          "frameWorkMs": 1.05,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.884
+        },
+        {
+          "frameWorkMs": 1.06,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.893
+        },
+        {
+          "frameWorkMs": 1.07,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.907
+        },
+        {
+          "frameWorkMs": 1.08,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.921
+        },
+        {
+          "frameWorkMs": 1.08,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.935
+        },
+        {
+          "frameWorkMs": 1.07,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.944
+        },
+        {
+          "frameWorkMs": 1.08,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.958
+        },
+        {
+          "frameWorkMs": 1.09,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.97
+        },
+        {
+          "frameWorkMs": 1.14,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.981
+        },
+        {
+          "frameWorkMs": 1.18,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.992
+        },
+        {
+          "frameWorkMs": 1.22,
+          "lap": 1,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 1
+        },
+        {
+          "frameWorkMs": 1.28,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.011
+        },
+        {
+          "frameWorkMs": 1.33,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.022
+        },
+        {
+          "frameWorkMs": 1.38,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.033
+        },
+        {
+          "frameWorkMs": 1.39,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.041
+        },
+        {
+          "frameWorkMs": 1.41,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.052
+        },
+        {
+          "frameWorkMs": 1.44,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.063
+        },
+        {
+          "frameWorkMs": 1.45,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.074
+        },
+        {
+          "frameWorkMs": 1.49,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.085
+        },
+        {
+          "frameWorkMs": 1.5,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.093
+        },
+        {
+          "frameWorkMs": 1.53,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.104
+        },
+        {
+          "frameWorkMs": 1.52,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.115
+        },
+        {
+          "frameWorkMs": 1.52,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.127
+        },
+        {
+          "frameWorkMs": 1.49,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.139
+        },
+        {
+          "frameWorkMs": 1.47,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.148
+        },
+        {
+          "frameWorkMs": 1.42,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.162
+        },
+        {
+          "frameWorkMs": 1.38,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.175
+        },
+        {
+          "frameWorkMs": 1.31,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.194
+        },
+        {
+          "frameWorkMs": 1.29,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.203
+        },
+        {
+          "frameWorkMs": 1.24,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.217
+        },
+        {
+          "frameWorkMs": 1.21,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.231
+        },
+        {
+          "frameWorkMs": 1.17,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.243
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.255
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.262
+        },
+        {
+          "frameWorkMs": 1.11,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.273
+        },
+        {
+          "frameWorkMs": 1.11,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.281
+        },
+        {
+          "frameWorkMs": 1.09,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.288
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 2,
+          "paletteMomentsEnabled": false,
+          "routeProgress": 0.299
+        }
+      ],
+      "workMedianMs": 1.3
+    },
+    {
+      "key": "v2-journey",
+      "samples": [
+        {
+          "frameWorkMs": 28.5,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 28.5,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 20.6,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 18.07,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 16.4,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 14.06,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 13.58,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 13.58,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 13.58,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 12.65,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 11.24,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 11.24,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 10.61,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 9.56,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 9.14,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 8.4,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 7.79,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 7.28,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 6.87,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 6.7,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 6.35,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 6.04,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 5.76,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 5.53,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 5.22,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 5.03,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 2.39,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 2.35,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 2.3,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 2.2,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 2.09,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.99,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.76,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.74,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.69,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.68,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.69,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.7,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.05
+        },
+        {
+          "frameWorkMs": 1.7,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.051
+        },
+        {
+          "frameWorkMs": 1.7,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.052
+        },
+        {
+          "frameWorkMs": 1.7,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.052
+        },
+        {
+          "frameWorkMs": 1.69,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.054
+        },
+        {
+          "frameWorkMs": 1.66,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.056
+        },
+        {
+          "frameWorkMs": 1.66,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.058
+        },
+        {
+          "frameWorkMs": 1.66,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.062
+        },
+        {
+          "frameWorkMs": 1.65,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.065
+        },
+        {
+          "frameWorkMs": 1.65,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.07
+        },
+        {
+          "frameWorkMs": 1.65,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.073
+        },
+        {
+          "frameWorkMs": 1.65,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.079
+        },
+        {
+          "frameWorkMs": 1.63,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.084
+        },
+        {
+          "frameWorkMs": 1.64,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.091
+        },
+        {
+          "frameWorkMs": 1.62,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.096
+        },
+        {
+          "frameWorkMs": 1.61,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.101
+        },
+        {
+          "frameWorkMs": 1.6,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.11
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.12
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.12
+        },
+        {
+          "frameWorkMs": 1.59,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.12
+        },
+        {
+          "frameWorkMs": 1.56,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.126
+        },
+        {
+          "frameWorkMs": 1.54,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.137
+        },
+        {
+          "frameWorkMs": 1.53,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.145
+        },
+        {
+          "frameWorkMs": 1.51,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.156
+        },
+        {
+          "frameWorkMs": 1.47,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.168
+        },
+        {
+          "frameWorkMs": 1.45,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.18
+        },
+        {
+          "frameWorkMs": 1.42,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.192
+        },
+        {
+          "frameWorkMs": 1.38,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.205
+        },
+        {
+          "frameWorkMs": 1.36,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.214
+        },
+        {
+          "frameWorkMs": 1.33,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.227
+        },
+        {
+          "frameWorkMs": 1.27,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.238
+        },
+        {
+          "frameWorkMs": 1.26,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.249
+        },
+        {
+          "frameWorkMs": 1.24,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.256
+        },
+        {
+          "frameWorkMs": 1.22,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.264
+        },
+        {
+          "frameWorkMs": 1.18,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.275
+        },
+        {
+          "frameWorkMs": 1.17,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.283
+        },
+        {
+          "frameWorkMs": 1.16,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.294
+        },
+        {
+          "frameWorkMs": 1.15,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.301
+        },
+        {
+          "frameWorkMs": 1.15,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.312
+        },
+        {
+          "frameWorkMs": 1.19,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.324
+        },
+        {
+          "frameWorkMs": 1.24,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.335
+        },
+        {
+          "frameWorkMs": 1.28,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.343
+        },
+        {
+          "frameWorkMs": 1.35,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.355
+        },
+        {
+          "frameWorkMs": 1.42,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.364
+        },
+        {
+          "frameWorkMs": 1.48,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.377
+        },
+        {
+          "frameWorkMs": 1.52,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.386
+        },
+        {
+          "frameWorkMs": 1.58,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.4
+        },
+        {
+          "frameWorkMs": 1.63,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.413
+        },
+        {
+          "frameWorkMs": 1.65,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.422
+        },
+        {
+          "frameWorkMs": 1.64,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.436
+        },
+        {
+          "frameWorkMs": 1.65,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.444
+        },
+        {
+          "frameWorkMs": 1.63,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.455
+        },
+        {
+          "frameWorkMs": 1.63,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.463
+        },
+        {
+          "frameWorkMs": 1.61,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.474
+        },
+        {
+          "frameWorkMs": 1.57,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.485
+        },
+        {
+          "frameWorkMs": 1.51,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.496
+        },
+        {
+          "frameWorkMs": 1.46,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.507
+        },
+        {
+          "frameWorkMs": 1.42,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.518
+        },
+        {
+          "frameWorkMs": 1.36,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.526
+        },
+        {
+          "frameWorkMs": 1.34,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.534
+        },
+        {
+          "frameWorkMs": 1.33,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.543
+        },
+        {
+          "frameWorkMs": 1.32,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.557
+        },
+        {
+          "frameWorkMs": 1.29,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.571
+        },
+        {
+          "frameWorkMs": 1.29,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.585
+        },
+        {
+          "frameWorkMs": 1.29,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.594
+        },
+        {
+          "frameWorkMs": 1.3,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.608
+        },
+        {
+          "frameWorkMs": 1.32,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.617
+        },
+        {
+          "frameWorkMs": 1.36,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.631
+        },
+        {
+          "frameWorkMs": 1.38,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.645
+        },
+        {
+          "frameWorkMs": 1.4,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.655
+        },
+        {
+          "frameWorkMs": 1.4,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.668
+        },
+        {
+          "frameWorkMs": 1.39,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.682
+        },
+        {
+          "frameWorkMs": 1.38,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.692
+        },
+        {
+          "frameWorkMs": 1.36,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.705
+        },
+        {
+          "frameWorkMs": 1.34,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.716
+        },
+        {
+          "frameWorkMs": 1.3,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.727
+        },
+        {
+          "frameWorkMs": 1.28,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.738
+        },
+        {
+          "frameWorkMs": 1.27,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.746
+        },
+        {
+          "frameWorkMs": 1.25,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.757
+        },
+        {
+          "frameWorkMs": 1.24,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.768
+        },
+        {
+          "frameWorkMs": 1.2,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.779
+        },
+        {
+          "frameWorkMs": 1.19,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.79
+        },
+        {
+          "frameWorkMs": 1.17,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.802
+        },
+        {
+          "frameWorkMs": 1.16,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.809
+        },
+        {
+          "frameWorkMs": 1.15,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.82
+        },
+        {
+          "frameWorkMs": 1.14,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.831
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.843
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.854
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.867
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.88
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.893
+        },
+        {
+          "frameWorkMs": 1.11,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.902
+        },
+        {
+          "frameWorkMs": 1.11,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.916
+        },
+        {
+          "frameWorkMs": 1.09,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.93
+        },
+        {
+          "frameWorkMs": 1.1,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.944
+        },
+        {
+          "frameWorkMs": 1.09,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.958
+        },
+        {
+          "frameWorkMs": 1.1,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.97
+        },
+        {
+          "frameWorkMs": 1.14,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.981
+        },
+        {
+          "frameWorkMs": 1.18,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.992
+        },
+        {
+          "frameWorkMs": 1.21,
+          "lap": 1,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 1
+        },
+        {
+          "frameWorkMs": 1.26,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.011
+        },
+        {
+          "frameWorkMs": 1.31,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.022
+        },
+        {
+          "frameWorkMs": 1.34,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.029
+        },
+        {
+          "frameWorkMs": 1.46,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.041
+        },
+        {
+          "frameWorkMs": 1.48,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.048
+        },
+        {
+          "frameWorkMs": 1.52,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.059
+        },
+        {
+          "frameWorkMs": 1.56,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.07
+        },
+        {
+          "frameWorkMs": 1.6,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.082
+        },
+        {
+          "frameWorkMs": 1.62,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.089
+        },
+        {
+          "frameWorkMs": 1.65,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.1
+        },
+        {
+          "frameWorkMs": 1.67,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.111
+        },
+        {
+          "frameWorkMs": 1.68,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.123
+        },
+        {
+          "frameWorkMs": 1.65,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.135
+        },
+        {
+          "frameWorkMs": 1.63,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.148
+        },
+        {
+          "frameWorkMs": 1.6,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.157
+        },
+        {
+          "frameWorkMs": 1.57,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.171
+        },
+        {
+          "frameWorkMs": 1.54,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.18
+        },
+        {
+          "frameWorkMs": 1.5,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.194
+        },
+        {
+          "frameWorkMs": 1.38,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.208
+        },
+        {
+          "frameWorkMs": 1.32,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.222
+        },
+        {
+          "frameWorkMs": 1.28,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.236
+        },
+        {
+          "frameWorkMs": 1.22,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.247
+        },
+        {
+          "frameWorkMs": 1.19,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.255
+        },
+        {
+          "frameWorkMs": 1.17,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.266
+        },
+        {
+          "frameWorkMs": 1.15,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.277
+        },
+        {
+          "frameWorkMs": 1.13,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.288
+        },
+        {
+          "frameWorkMs": 1.11,
+          "lap": 2,
+          "paletteMomentsEnabled": true,
+          "routeProgress": 0.299
+        }
+      ],
+      "workMedianMs": 1.46
+    }
+  ],
+  "videos": [
+    "seam-lap-control.webm",
+    "seam-lap-v2-journey.webm"
+  ]
+}

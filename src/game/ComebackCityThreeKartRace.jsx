@@ -90,6 +90,7 @@ import {
   updateShortcut,
 } from './race/airTricks.js';
 import { createBasicMaterial } from './race/render/createKartModel.js';
+import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
 import { applyToonRim, TOON_RIM_SHARED_TINT } from './race/render/toonRimShader.js';
@@ -815,6 +816,62 @@ const heroRimConfig = () => {
 let activeHeroRim = null;
 const applyHeroRim = (material) =>
   activeHeroRim ? applyToonRim(material, activeHeroRim) : material;
+
+// B2 palette moments dev hook (same pattern as ?rimLab): ?momentsLab=1 +
+// window.__momentsLabOverrides = [{ progress, fog, hemi, sun, rim, rimTint,
+// bloom }, ...] REPLACES palette.moments for a lab capture session;
+// ?momentsLab=0 forces moments OFF (the control tile on a track whose
+// shipped palette carries a moments key). Returns undefined when the param
+// is absent (no opinion — palette decides). Shipped default today is
+// moment-LESS on every track until the owner picks a set from
+// moments-lab.html.
+const momentsLabConfig = () => {
+  if (typeof window === 'undefined') return undefined;
+  const param = new URLSearchParams(window.location.search).get('momentsLab');
+  if (param === '0') return null;
+  if (param !== '1') return undefined;
+  return Array.isArray(window.__momentsLabOverrides) ? window.__momentsLabOverrides : null;
+};
+
+// B2: wrap-aware atmosphere lerp driven by per-lap race.progress, called
+// once per frame right before the composer renders. No-op unless
+// createScene precompiled engine.paletteMoments. Zero per-frame
+// allocations: sampleMoments mutates the scratch sample made in
+// createScene. Colors were lerped in sRGB by the pure module, so
+// setRGB(..., SRGBColorSpace) lands each endpoint exactly where the same
+// hex lands through new THREE.Color(hex).
+const applyPaletteMoments = (engine, progress) => {
+  const moments = engine.paletteMoments;
+  if (!moments) return;
+  const out = sampleMoments(moments.resolved, progress, moments.sample);
+  const fog = engine.scene.fog;
+  fog.color.setRGB(out.fogColor.r, out.fogColor.g, out.fogColor.b, THREE.SRGBColorSpace);
+  fog.near = out.fogNear;
+  // resolveMoments clamps fogFar <= 840 (camera far 860 silently no-ops).
+  fog.far = out.fogFar;
+  engine.hemi.color.setRGB(out.hemiSky.r, out.hemiSky.g, out.hemiSky.b, THREE.SRGBColorSpace);
+  engine.hemi.groundColor.setRGB(
+    out.hemiGround.r,
+    out.hemiGround.g,
+    out.hemiGround.b,
+    THREE.SRGBColorSpace
+  );
+  engine.sun.color.setRGB(out.sunColor.r, out.sunColor.g, out.sunColor.b, THREE.SRGBColorSpace);
+  engine.sun.intensity = out.sunIntensity;
+  engine.rimLight.color.setRGB(out.rim.r, out.rim.g, out.rim.b, THREE.SRGBColorSpace);
+  TOON_RIM_SHARED_TINT.value.setRGB(
+    out.rimTint.r,
+    out.rimTint.g,
+    out.rimTint.b,
+    THREE.SRGBColorSpace
+  );
+  // bloom moments are multipliers on whichever bloom the live chain
+  // carries; ?post=1&postBloom=0 leaves BOTH refs null (bloomBase null).
+  if (moments.bloomBase !== null) {
+    if (engine.postChainEnabled) engine.bloomEffect.intensity = moments.bloomBase * out.bloom;
+    else engine.bloomPass.strength = moments.bloomBase * out.bloom;
+  }
+};
 const createToonMaterial = (color, options = {}) => {
   // B3: `rim: true` opts a material into the hero fresnel rim; it is a
   // helper flag, not a THREE.Material property, so it must not reach the
@@ -3045,6 +3102,29 @@ const createScene = ({
     composer.addPass(new OutputPass());
   }
 
+  // B2: per-lap palette moments — resolved ONCE per race into decoded lerp
+  // endpoints (see paletteMoments.js); null when the track has no moments
+  // key so the per-frame hook is a single truthy check. No track ships a
+  // moments key yet (owner pick pending in moments-lab.html) — today this
+  // only activates through the ?momentsLab=1 dev hook. The rimTint base
+  // mirrors the TOON_RIM_SHARED_TINT line above (the ACTIVE rim tint, lab
+  // override included); bloomBase snapshots whichever bloom the live chain
+  // carries so moment bloom values stay chain-agnostic multipliers.
+  const labMoments = momentsLabConfig();
+  const momentsSource = labMoments !== undefined ? labMoments : palette.moments;
+  let paletteMoments = null;
+  if (Array.isArray(momentsSource) && momentsSource.length) {
+    const bloomRef = postChainEnabled ? bloomEffect : bloomPass;
+    paletteMoments = {
+      bloomBase: bloomRef ? (postChainEnabled ? bloomRef.intensity : bloomRef.strength) : null,
+      resolved: resolveMoments(
+        { ...palette, moments: momentsSource },
+        { rimTint: activeHeroRim?.tint || palette.rimLightColor || '#4fd8ff' }
+      ),
+      sample: createMomentSample(),
+    };
+  }
+
   const sampler = makeSampler(trackDef);
   const trackVisuals = resolveTrackVisuals(trackDef, { enabled: trackVisualsEnabled });
   const trackVisualPropCount = addTrack(world, sampler, trackDef, trackVisuals);
@@ -3440,6 +3520,9 @@ const createScene = ({
     // fog/hemi/sun/rim at runtime (scene.fog is reachable via scene).
     hemi,
     itemBoxes,
+    // B2: precompiled per-lap palette moments (null = none for this race);
+    // consumed by applyPaletteMoments in the frame loop.
+    paletteMoments,
     playerModel,
     propCount,
     renderer,
@@ -3610,6 +3693,7 @@ const publishTelemetry = (
     lap: race.lap,
     miniTurbo: Number(race.driftState.miniTurboTimer.toFixed(2)),
     miniTurboTier: race.driftState.miniTurboTier,
+    paletteMomentsEnabled: Boolean(runtimeStats.paletteMoments),
     position: race.position,
     propCount,
     postChainEnabled: Boolean(runtimeStats.postChainEnabled),
@@ -4720,6 +4804,9 @@ export const ComebackCityThreeKartRace = ({
       engine.sun.position.set(playerSample.point.x - 95, playerSample.point.y + 110, playerSample.point.z - 45);
       engine.sun.target.position.copy(playerSample.point);
       engine.sun.target.updateMatrixWorld();
+      // B2: per-lap palette moments (no-op unless the race precompiled a
+      // moments set — no track ships one until the owner picks).
+      applyPaletteMoments(engine, race.progress);
       // pmndrs composer takes the frame delta (seconds) for time-based effects.
       if (engine.postChainEnabled) engine.composer.render(dt);
       else engine.composer.render();
@@ -4728,6 +4815,7 @@ export const ComebackCityThreeKartRace = ({
       publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey, {
         bakedBuildings: engine.bakedBuildings,
         bakedSpike: engine.bakedSpike,
+        paletteMoments: engine.paletteMoments,
         postChainEnabled: engine.postChainEnabled,
         frameElapsedMs: rollingAverage(frameElapsedSamples),
         frameWorkMs: rollingAverage(frameWorkSamples),
