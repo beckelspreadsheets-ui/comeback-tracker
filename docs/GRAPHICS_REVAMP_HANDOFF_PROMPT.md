@@ -1,6 +1,6 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-**Updated 2026-07-06** (supersedes the 2026-07-03 version: M2 is now IN PROGRESS — B1 part 1 (palette-driven atmosphere wiring + Penguin Village palette lab) is COMPLETE, code-audited at HEAD; B1 part 2 is blocked on the owner's palette pick. Adds the B1 state block, the lab-lesson constraints, and corrected owner-gate bookkeeping: PRD §9 is standing/strategic gates only — per-task gates live in the execution plan).
+**Updated 2026-07-06 (second update today)** (supersedes the morning version: B1 is COMPLETE — owner picked V8 "storm front" from the palette lab and the values landed in penguinVillage.js — and B4 is COMPLETE behind ?post=1 with BOTH per-task gates signed (parity + vignette; vignette defaults ON inside the chain). M2 remaining: B3 → B2, then the benchmark review where the owner signs/declines the §9 post-ban supersession. New owner feedback logged: Comeback City's procedural skyline reads "cheap" → Phase C pulled to top priority after M2; Penguin Village outer dressing wants gambling/trading tribute props — ideas list started, see ordinals memory).
 
 **Purpose:** paste the block below into a new agent session to continue the graphics revamp with zero context loss. It is file-anchored — everything it references is committed — so it works for an agent with no memory of prior sessions.
 
@@ -65,8 +65,27 @@ a9b7c202..1ab5e660):
   chain gets ~200 KiB gzip JS. Telemetry now exposes frameElapsedMs/
   frameWorkMs/rendererStats/bakedBuildings/trackVisualsEnabled/
   proofCameraMode; race:proof (capture+compare) PASSES at HEAD.
-- M2 IN PROGRESS — B1 PART 1 COMPLETE (f2347c22 wiring + 1ab5e660 lab
-  cleanup; every claim below re-verified against the code at HEAD).
+- M2 IN PROGRESS — B1 COMPLETE, B4 COMPLETE (gated). Ledger:
+  B1: owner picked V8 "storm front" (2026-07-06) from palette-lab.html;
+  values landed as additive keys in penguinVillage.js palette (fog
+  '#4a6478' 150/680, hemi '#689bb8'/'#0f273f' @3.0, sun '#e8c9a0', rim
+  '#00d5ff'). Comeback City untouched by construction (no palette keys).
+  Full verification battery green at the landing commit (see its message).
+  B4 (47b38a2c): pmndrs chain behind ?post=1 — mipmap bloom (radius 0.7,
+  knee 0.22 — tuned for parity; legacy bloom ran on a 30%-res target which
+  oversized halos) + SMAA MEDIUM + vignette + ACES in ONE EffectPass;
+  renderer.toneMapping locally NoToneMapping; createRaceScene.js zero
+  edits; every effect toggleable (&postBloom/postSmaa/postTone/
+  postVignette=0). Owner signed BOTH per-task gates 2026-07-06 ("every
+  change in the post lab is amazing"): parity + vignette (defaults ON
+  inside the chain). Bundle +72.9 KiB gzip on the race chunk (under the
+  ~120 SMAA budget; SMAA kept, no FXAA fallback); ?post=1 FPS 144 both
+  tracks, no regression. Evidence: post-lab.html + tmp/m2-b4-post-chain/;
+  phase5 gained PHASE5_URL_EXTRA + postChainEnabled sampling.
+  STILL PENDING for M2 close: B3, B2, then the benchmark review (owner
+  signs/declines the §9 post-ban supersession there — B4 stays URL-gated
+  until then).
+  Historical detail of the B1 part-1 wiring (verified by code audit):
   createScene (src/game/ComebackCityThreeKartRace.jsx ~L2864-2921) reads
   atmosphere from trackDef.palette — fog color/near/far, hemi sky/ground/
   intensity, sunColor, rimLightColor — with fallbacks IDENTICAL to the old
@@ -96,17 +115,9 @@ a9b7c202..1ab5e660):
   artifacts are local-only and a fresh clone re-runs race:proof instead of
   reading old results — pre-existing design, same as the M1-exit
   re-capture (2ba807a9).
-  B1 REMAINING = PART 2, BLOCKED ON OWNER: owner picks a lab number (or
-  two to blend) from palette-lab.html; the winner lands as ADDITIVE keys
-  in src/game/race/tracks/penguinVillage.js palette (after `bridge`,
-  ~L120); then satisfy B1's two open acceptance boxes (Penguin Village
-  haze reads icy blue, not purple, at progress ~0.3; owner has seen the
-  diff) and run its verification list: test:track-visuals,
-  test:kart-playable, build + race:proof capture/compare — Comeback City
-  must stay ZERO-diff — plus the two-track A/B capture. Optional finalist
-  step (promised in the capture-script header, NOT yet implemented): a
-  routeProgress 0.84 return-bend tile for the two finalists' warm/cool
-  balance.
+  (B1 part 2 landed per the ledger above — the pick was V8, no finalist
+  blend round was needed, so the capture-script header's promised 0.84
+  return-bend tile was never implemented; ignore that stale comment.)
 - KNOWN-RED, PRE-EXISTING, DOCUMENTED (do not chase; do not silently
   accept new failures on top): (a) test:race:browser fails ONLY on
   blocker #10 (no-minimap 0.444<0.45, legacy-route harness) — run it with
@@ -117,24 +128,35 @@ a9b7c202..1ab5e660):
   dep-cache ping-pongs and CPU contention produces phantom knife-edge
   failures (kart-height, readiness timeouts). One at a time.
 
-YOUR TASK NOW: Milestone M2 (IN PROGRESS) — the pure-code cinematic pass.
-Position: B1 part 1 is DONE (state block above); B1 part 2 is BLOCKED on
-the owner's palette-lab pick. What you can start WITHOUT the owner:
-- B4 (pmndrs post chain) — fully unblocked: no B1 dependency, and its
-  Amendment-6 deps (A1/A2/A3) are all complete. Ships behind ?post=1
-  until the owner signs the ban supersession at the M2 benchmark review.
-  Run test:race:browser (extended timeout) per Amendment 10.
-- B3 (toon rim helper) — mechanically startable: its B1 dependency is the
-  rimLightColor key plumbing, which landed in part 1 (Comeback City uses
-  the '#4fd8ff' fallback either way). But its two-track A/B wants the
-  Penguin Village rim value landed to show different tints, so prefer B4
-  first and B3 after the palette pick.
-- B2 (palette moments) — needs FULL B1 (the landed Penguin Village values
-  are its lerp endpoints) + B4. Do not start early.
+YOUR TASK NOW: Milestone M2 (IN PROGRESS) — B1 and B4 are COMPLETE (see
+state ledger above). Remaining, in order:
+- B3 (toon rim via the single shader-injection helper) — fully unblocked
+  (B1 landed; Penguin Village rim '#00d5ff' vs Comeback City fallback
+  '#4fd8ff' gives the two-track A/B different tints as intended). Build
+  the composable onBeforeCompile helper per Amendment 7 — D1/E6 must
+  route through it later; never assign onBeforeCompile directly. Owner
+  gate: A/B approval of rim strength/power/tint (variant-lab it).
+- B2 (per-lap palette moments) — unblocked (needs B1+B4, both landed).
+  Penguin Village's four road ribbons get 3-4 atmosphere lerps per lap
+  via the exposed hemi/rimLight/sun/scene.fog handles; resolveMoments
+  fills optional fields from the landed B1 base values. Owner gate:
+  approve the four moment values (capture strip).
+- M2 BENCHMARK REVIEW closes the milestone: full A/B walk-through with
+  the owner; he signs or declines the §9 post-ban supersession there
+  (B4 default-on vs stays URL-gated); scorecard re-rating; proofs
+  re-captured; PRD §7 M1-style milestone notes written.
 B3b is HARD-GATED — do not start without explicit owner opt-in. Satisfy
 every PRD §7 M2 acceptance criterion; A/B pairs per task; FPS medians must
 hold (re-run the canonical protocol); re-capture race:proof after every
 approved merge.
+AFTER M2 (owner-steered 2026-07-06): Phase C jumps the queue — the owner
+called Comeback City's procedural skyline "cheap" and wants authored city
+visuals ("truly make it look like a city"; he LOVES the road). Kick off
+with a city-block variant lab (silhouettes/density/signage/window
+emissives) — the lab workflow is how he likes to decide. Penguin Village
+outer dressing: gambling/trading tribute props (group culture — see
+session memory ordinals-community-context) + a better "THE ICE IS NICE"
+gantry presentation; concepts go through a lab too.
 
 DESIGN-CHOICE WORKFLOW (owner-agreed 2026-07-03): for parameter picks
 (B1 palette values, B2 moment colors, B3 rim strength/tint, B4 vignette),
@@ -173,12 +195,12 @@ HARD RULES (each has burned this project before):
   project).
 
 OWNER GATES PENDING (do not self-sign. Bookkeeping rule, per the PRD §9
-footnote: §9 tracks STANDING/STRATEGIC gates only; per-task A/B gates —
-like the B1 palette pick — live in each task's Owner-gate field in the
-execution plan and are settled at that task's review, NOT as §9 rows):
-- B1 Penguin Village palette pick (per-task gate) — pick a number from
-  palette-lab.html via approvals-hub (reply "V<n>", or two numbers to
-  blend). Unblocks B1 part 2, which unblocks B2 and de-risks B3's A/B.
+footnote: §9 tracks STANDING/STRATEGIC gates only; per-task A/B gates
+live in each task's Owner-gate field in the execution plan and are
+settled at that task's review, NOT as §9 rows. SETTLED 2026-07-06: B1
+palette pick = V8; B4 parity + vignette = approved, vignette ON in-chain):
+- B3 rim look A/B (per-task gate, upcoming) and B2 moment values
+  (per-task gate, upcoming).
 - M0/M1 scorecard re-rating from approvals-hub captures.
 - ?trackVisuals=1 default-on (A/B pairs already in approvals-hub).
 - A3 sharpness pair ack (0.58 vs 0.85, committed).

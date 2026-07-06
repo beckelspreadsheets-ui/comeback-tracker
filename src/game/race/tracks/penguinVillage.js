@@ -118,6 +118,15 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // Ice-bridge structure: frosted deck skirts, bright cyan glow underline,
     // pale ice pillars.
     bridge: { skirt: '#1a3a4a', glow: '#00E5FF', pillar: '#a8d4e8', pillarEmissive: '#3a6a7a', beam: '#2a4a5a' },
+    // B1 atmosphere — owner-picked V8 "storm front" from palette-lab.html
+    // (2026-07-06): close grey-blue haze, moody. Values are the lab's
+    // luma-normalized set (hemi luminance must match the shared defaults or
+    // snow crosses the bloom threshold and the frame cascades to white-out).
+    // fog.far must stay <= 840 (camera far 860 silently no-ops the haze).
+    fog: { color: '#4a6478', near: 150, far: 680 },
+    hemi: { sky: '#689bb8', ground: '#0f273f', intensity: 3 },
+    sunColor: '#e8c9a0',
+    rimLightColor: '#00d5ff',
   },
   // Arctic dressing: giant ordinal-penguin ice statues, igloos, snow + ice.
   // customStartArch: skip the default finish gantry (the ICE IS NICE arch
