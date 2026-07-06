@@ -91,6 +91,7 @@ import {
 import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
+import { applyToonRim, TOON_RIM_SHARED_TINT } from './race/render/toonRimShader.js';
 import {
   buildVisualPlacementAnchors,
   resolveTrackVisuals,
@@ -784,8 +785,36 @@ const getToonGradient = () => {
   sharedToonGradient = texture;
   return texture;
 };
-const createToonMaterial = (color, options = {}) =>
-  new THREE.MeshToonMaterial({ color, gradientMap: getToonGradient(), ...options });
+// B3 rim (owner gate pending): palette-tinted fresnel rim on the hero set —
+// karts, drivers, marchers, item boxes; scenery stays rim-free (rim-on-
+// everything cheapens the read). URL-gated OFF until the owner picks a
+// candidate from rim-lab.html; the pick then lands as the shipped default
+// with proof baselines regenerated in that same commit.
+// Dev hook (same pattern as ?paletteLab=1): ?rimLab=1 enables the rim at
+// plan-default strength/power; window.__rimLabOverrides = { strength,
+// power, tint } selects a lab candidate without touching shipped defaults.
+const heroRimConfig = () => {
+  if (typeof window === 'undefined') return null;
+  if (new URLSearchParams(window.location.search).get('rimLab') !== '1') return null;
+  const overrides = window.__rimLabOverrides || {};
+  return {
+    power: Number.isFinite(overrides.power) ? overrides.power : 2.6,
+    strength: Number.isFinite(overrides.strength) ? overrides.strength : 0.32,
+    tint: typeof overrides.tint === 'string' ? overrides.tint : null,
+  };
+};
+const applyHeroRim = (material) => {
+  const rim = heroRimConfig();
+  return rim ? applyToonRim(material, rim) : material;
+};
+const createToonMaterial = (color, options = {}) => {
+  // B3: `rim: true` opts a material into the hero fresnel rim; it is a
+  // helper flag, not a THREE.Material property, so it must not reach the
+  // constructor (setValues warns on unknown keys).
+  const { rim = false, ...materialOptions } = options;
+  const material = new THREE.MeshToonMaterial({ color, gradientMap: getToonGradient(), ...materialOptions });
+  return rim ? applyHeroRim(material) : material;
+};
 
 // ---- Authored models (Kenney Toy Car Kit v1.2, CC0) ------------------------
 // The procedural kart builds instantly as a fallback; the authored body is
@@ -885,10 +914,12 @@ const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height 
   const rig = driverScene.clone(true);
   rig.traverse((node) => {
     if (node.isMesh) {
-      node.material = new THREE.MeshToonMaterial({
-        gradientMap: getToonGradient(),
-        map: node.material?.map || null,
-      });
+      node.material = applyHeroRim(
+        new THREE.MeshToonMaterial({
+          gradientMap: getToonGradient(),
+          map: node.material?.map || null,
+        })
+      );
       node.castShadow = castsShadow;
     }
   });
@@ -914,10 +945,12 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow) => {
   const rig = tripoScene.clone(true);
   rig.traverse((node) => {
     if (node.isMesh) {
-      node.material = new THREE.MeshToonMaterial({
-        gradientMap: getToonGradient(),
-        map: node.material?.map || null,
-      });
+      node.material = applyHeroRim(
+        new THREE.MeshToonMaterial({
+          gradientMap: getToonGradient(),
+          map: node.material?.map || null,
+        })
+      );
       node.castShadow = castsShadow;
     }
   });
@@ -941,7 +974,7 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow) => {
 
 const attachAuthoredKartBody = (kartModel, racerScene, texture, castsShadow, fitLength = 15.6) => {
   const rig = racerScene.clone(true);
-  const material = new THREE.MeshToonMaterial({ gradientMap: getToonGradient(), map: texture });
+  const material = applyHeroRim(new THREE.MeshToonMaterial({ gradientMap: getToonGradient(), map: texture }));
   rig.traverse((node) => {
     if (node.isMesh) {
       node.material = material;
@@ -2936,6 +2969,10 @@ const createScene = ({
   const rimLight = new THREE.DirectionalLight(palette.rimLightColor || '#4fd8ff', 2.0);
   rimLight.position.set(92, 56, 74);
   scene.add(rimLight);
+  // B3: one shared tint drives every rimmed hero material — per-track from
+  // the palette (Penguin Village '#00d5ff' vs the Comeback City fallback),
+  // with the rim lab's tint candidates riding the same dev-only hook.
+  TOON_RIM_SHARED_TINT.value.set(heroRimConfig()?.tint || palette.rimLightColor || '#4fd8ff');
 
   // Post-processing: bloom is what makes the neon dusk actually glow.
   let composer;
@@ -3438,6 +3475,9 @@ const estimateSceneRenderStats = (world, renderer) => {
     drawCalls,
     geometries: geometries.size,
     meshCount,
+    // B3 acceptance check: the rim must add exactly one shared program
+    // variant (merged customProgramCacheKey), never one per material.
+    programs: renderer.info.programs?.length ?? null,
     shadowMapEnabled: renderer.shadowMap.enabled,
     textures: renderer.info.memory.textures,
     triangles,
@@ -3792,10 +3832,12 @@ export const ComebackCityThreeKartRace = ({
           const rig = scene.clone(true);
           rig.traverse((node) => {
             if (node.isMesh) {
-              node.material = new THREE.MeshToonMaterial({
-                gradientMap: getToonGradient(),
-                map: node.material?.map || null,
-              });
+              node.material = applyHeroRim(
+                new THREE.MeshToonMaterial({
+                  gradientMap: getToonGradient(),
+                  map: node.material?.map || null,
+                })
+              );
               node.castShadow = false;
             }
           });
@@ -3809,10 +3851,12 @@ export const ComebackCityThreeKartRace = ({
           if (fallback) marcher.inner.remove(fallback);
           marcher.inner.add(rig);
         });
-        const itemMaterial = new THREE.MeshToonMaterial({
-          gradientMap: getToonGradient(),
-          map: makeKartPaletteTexture(colormapImage),
-        });
+        const itemMaterial = applyHeroRim(
+          new THREE.MeshToonMaterial({
+            gradientMap: getToonGradient(),
+            map: makeKartPaletteTexture(colormapImage),
+          })
+        );
         engine.itemBoxes.forEach((box) => {
           [...box.children]
             .filter(

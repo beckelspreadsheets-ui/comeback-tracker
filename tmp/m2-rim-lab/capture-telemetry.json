@@ -1,0 +1,348 @@
+[
+  {
+    "base": "comeback-city-v0-off",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] [.WebGL-0x13c001c1e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "[warning] [.WebGL-0x13c001c2400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] [.WebGL-0x13c001c6c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+      "[warning] [.WebGL-0x13c001c6c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 11,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v0-off"
+  },
+  {
+    "base": "comeback-city-v1-whisper",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 14,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v1-whisper"
+  },
+  {
+    "base": "comeback-city-v2-plan-default",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 13,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v2-plan-default"
+  },
+  {
+    "base": "comeback-city-v3-bold",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 13,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v3-bold"
+  },
+  {
+    "base": "comeback-city-v4-halo-tight",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 14,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v4-halo-tight"
+  },
+  {
+    "base": "comeback-city-v5-sheen-wide",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 15,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v5-sheen-wide"
+  },
+  {
+    "base": "comeback-city-v6-ice-white",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 17,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v6-ice-white"
+  },
+  {
+    "base": "comeback-city-v7-electric",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 16,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v7-electric"
+  },
+  {
+    "base": "comeback-city-v2-post",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 480,
+      "fpsEstimate": 9,
+      "postChainEnabled": true,
+      "programs": 22,
+      "routeProgress": 0.303
+    },
+    "track": "comeback-city",
+    "variantKey": "v2-post"
+  },
+  {
+    "base": "penguin-village-v0-off",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 18,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v0-off"
+  },
+  {
+    "base": "penguin-village-v1-whisper",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 19,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v1-whisper"
+  },
+  {
+    "base": "penguin-village-v2-plan-default",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 13,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v2-plan-default"
+  },
+  {
+    "base": "penguin-village-v3-bold",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 18,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v3-bold"
+  },
+  {
+    "base": "penguin-village-v4-halo-tight",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 19,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v4-halo-tight"
+  },
+  {
+    "base": "penguin-village-v5-sheen-wide",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 12,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v5-sheen-wide"
+  },
+  {
+    "base": "penguin-village-v6-ice-white",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 20,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v6-ice-white"
+  },
+  {
+    "base": "penguin-village-v7-electric",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 14,
+      "postChainEnabled": false,
+      "programs": 25,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v7-electric"
+  },
+  {
+    "base": "penguin-village-v2-post",
+    "consoleErrors": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.",
+      "[warning] THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed."
+    ],
+    "telemetry": {
+      "bakedBuildings": "active",
+      "drawCalls": 782,
+      "fpsEstimate": 10,
+      "postChainEnabled": true,
+      "programs": 22,
+      "routeProgress": 0.302
+    },
+    "track": "penguin-village",
+    "variantKey": "v2-post"
+  }
+]

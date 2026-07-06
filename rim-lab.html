@@ -1,0 +1,155 @@
+<!-- B3 rim lab: hero fresnel-rim candidates on both tracks at routeProgress 0.30.
+     Regen: node tmp/m2-rim-lab/capture-rim-variants.mjs -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Rim Lab — hero fresnel rim (B3)</title>
+<style>
+body { margin: 0; padding: 20px; background: #0c1020; color: #dfe8ff; font: 14px/1.5 -apple-system, sans-serif; }
+h1 { font-size: 18px; }
+h2 { font-size: 15px; margin-top: 28px; }
+p.hint { color: #93a3c8; max-width: 72ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 18px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+figure { margin: 0; background: #131a30; border: 1px solid #2a3450; border-radius: 8px; overflow: hidden; }
+img { width: 100%; display: block; }
+img.crop { border-bottom: 1px solid #2a3450; }
+figcaption { padding: 10px 12px; }
+code { display: block; margin-top: 6px; font-size: 10px; color: #7f90b8; word-break: break-all; }
+</style>
+</head>
+<body>
+  <h1>Rim lab — B3 hero fresnel rim (karts / drivers / marchers / item boxes)</h1>
+  <p class="hint">Every tile is the same autoplay moment (telemetry routeProgress 0.30). Top image =
+  kart close-up crop (judge the rim here — it should lift the kart and driver off the dark road
+  without reading as an outline sticker); bottom = full frame (scenery must stay untouched — the rim
+  is hero-only). V0 is today's shipped look. Pick a number, or name a blend (e.g. "V2 strength with
+  V6's tint"). The pick lands as the shipped default; until then the game is unchanged.</p>
+    <section>
+      <h2>Comeback City — neon dusk (palette tint #4fd8ff unless the candidate overrides it)</h2>
+      <p class="hint">Cyan rim against the purple dusk. Watch the kart hood and the driver head/shoulders.</p>
+      <div class="grid">
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v0-off-crop.png" alt="V0 — rim OFF (shipped default, control) — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/comeback-city-v0-off-p0p30.png" alt="V0 — rim OFF (shipped default, control) — full frame" loading="lazy" />
+        <figcaption><strong>V0</strong> — rim OFF (shipped default, control)<br />
+        <code>no rim (shipped default)</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v1-whisper-crop.png" alt="V1 — whisper: subtle edge, tight falloff — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/comeback-city-v1-whisper-p0p30.png" alt="V1 — whisper: subtle edge, tight falloff — full frame" loading="lazy" />
+        <figcaption><strong>V1</strong> — whisper: subtle edge, tight falloff<br />
+        <code>{"power":3.2,"strength":0.22}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v2-plan-default-crop.png" alt="V2 — plan default: the execution-plan starting values — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/comeback-city-v2-plan-default-p0p30.png" alt="V2 — plan default: the execution-plan starting values — full frame" loading="lazy" />
+        <figcaption><strong>V2</strong> — plan default: the execution-plan starting values<br />
+        <code>{"power":2.6,"strength":0.32}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v3-bold-crop.png" alt="V3 — bold: stronger, wider edge — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/comeback-city-v3-bold-p0p30.png" alt="V3 — bold: stronger, wider edge — full frame" loading="lazy" />
+        <figcaption><strong>V3</strong> — bold: stronger, wider edge<br />
+        <code>{"power":2.2,"strength":0.45}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v4-halo-tight-crop.png" alt="V4 — tight halo: brightest rim squeezed onto the last pixels of the silhouette — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/comeback-city-v4-halo-tight-p0p30.png" alt="V4 — tight halo: brightest rim squeezed onto the last pixels of the silhouette — full frame" loading="lazy" />
+        <figcaption><strong>V4</strong> — tight halo: brightest rim squeezed onto the last pixels of the silhouette<br />
+        <code>{"power":4.5,"strength":0.55}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v5-sheen-wide-crop.png" alt="V5 — wide sheen: soft broad wrap, almost a second fill — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/comeback-city-v5-sheen-wide-p0p30.png" alt="V5 — wide sheen: soft broad wrap, almost a second fill — full frame" loading="lazy" />
+        <figcaption><strong>V5</strong> — wide sheen: soft broad wrap, almost a second fill<br />
+        <code>{"power":1.7,"strength":0.24}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v6-ice-white-crop.png" alt="V6 — V2 strength, neutral ice-white tint (reads as backlight, not neon) — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/comeback-city-v6-ice-white-p0p30.png" alt="V6 — V2 strength, neutral ice-white tint (reads as backlight, not neon) — full frame" loading="lazy" />
+        <figcaption><strong>V6</strong> — V2 strength, neutral ice-white tint (reads as backlight, not neon)<br />
+        <code>{"power":2.6,"strength":0.32,"tint":{"comeback-city":"#eaf6ff","penguin-village":"#eaf6ff"}}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v7-electric-crop.png" alt="V7 — hotter, per-track electric tint (CC violet neon / PV aurora teal) — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/comeback-city-v7-electric-p0p30.png" alt="V7 — hotter, per-track electric tint (CC violet neon / PV aurora teal) — full frame" loading="lazy" />
+        <figcaption><strong>V7</strong> — hotter, per-track electric tint (CC violet neon / PV aurora teal)<br />
+        <code>{"power":2.8,"strength":0.38,"tint":{"comeback-city":"#7c5cff","penguin-village":"#00ffd5"}}</code></figcaption>
+      </figure>
+      </div>
+    </section>
+    <section>
+      <h2>Penguin Village — storm front (palette tint #00d5ff unless the candidate overrides it)</h2>
+      <p class="hint">Ice-cyan rim against the grey-blue haze. Snow is bright — the rim has to read on edges, not add glow to faces.</p>
+      <div class="grid">
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v0-off-crop.png" alt="V0 — rim OFF (shipped default, control) — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/penguin-village-v0-off-p0p30.png" alt="V0 — rim OFF (shipped default, control) — full frame" loading="lazy" />
+        <figcaption><strong>V0</strong> — rim OFF (shipped default, control)<br />
+        <code>no rim (shipped default)</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v1-whisper-crop.png" alt="V1 — whisper: subtle edge, tight falloff — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/penguin-village-v1-whisper-p0p30.png" alt="V1 — whisper: subtle edge, tight falloff — full frame" loading="lazy" />
+        <figcaption><strong>V1</strong> — whisper: subtle edge, tight falloff<br />
+        <code>{"power":3.2,"strength":0.22}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v2-plan-default-crop.png" alt="V2 — plan default: the execution-plan starting values — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/penguin-village-v2-plan-default-p0p30.png" alt="V2 — plan default: the execution-plan starting values — full frame" loading="lazy" />
+        <figcaption><strong>V2</strong> — plan default: the execution-plan starting values<br />
+        <code>{"power":2.6,"strength":0.32}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v3-bold-crop.png" alt="V3 — bold: stronger, wider edge — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/penguin-village-v3-bold-p0p30.png" alt="V3 — bold: stronger, wider edge — full frame" loading="lazy" />
+        <figcaption><strong>V3</strong> — bold: stronger, wider edge<br />
+        <code>{"power":2.2,"strength":0.45}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v4-halo-tight-crop.png" alt="V4 — tight halo: brightest rim squeezed onto the last pixels of the silhouette — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/penguin-village-v4-halo-tight-p0p30.png" alt="V4 — tight halo: brightest rim squeezed onto the last pixels of the silhouette — full frame" loading="lazy" />
+        <figcaption><strong>V4</strong> — tight halo: brightest rim squeezed onto the last pixels of the silhouette<br />
+        <code>{"power":4.5,"strength":0.55}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v5-sheen-wide-crop.png" alt="V5 — wide sheen: soft broad wrap, almost a second fill — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/penguin-village-v5-sheen-wide-p0p30.png" alt="V5 — wide sheen: soft broad wrap, almost a second fill — full frame" loading="lazy" />
+        <figcaption><strong>V5</strong> — wide sheen: soft broad wrap, almost a second fill<br />
+        <code>{"power":1.7,"strength":0.24}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v6-ice-white-crop.png" alt="V6 — V2 strength, neutral ice-white tint (reads as backlight, not neon) — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/penguin-village-v6-ice-white-p0p30.png" alt="V6 — V2 strength, neutral ice-white tint (reads as backlight, not neon) — full frame" loading="lazy" />
+        <figcaption><strong>V6</strong> — V2 strength, neutral ice-white tint (reads as backlight, not neon)<br />
+        <code>{"power":2.6,"strength":0.32,"tint":{"comeback-city":"#eaf6ff","penguin-village":"#eaf6ff"}}</code></figcaption>
+      </figure>
+      <figure>
+        <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v7-electric-crop.png" alt="V7 — hotter, per-track electric tint (CC violet neon / PV aurora teal) — kart close-up" loading="lazy" />
+        <img src="/tmp/m2-rim-lab/penguin-village-v7-electric-p0p30.png" alt="V7 — hotter, per-track electric tint (CC violet neon / PV aurora teal) — full frame" loading="lazy" />
+        <figcaption><strong>V7</strong> — hotter, per-track electric tint (CC violet neon / PV aurora teal)<br />
+        <code>{"power":2.8,"strength":0.38,"tint":{"comeback-city":"#7c5cff","penguin-village":"#00ffd5"}}</code></figcaption>
+      </figure>
+      </div>
+    </section>
+    <section>
+      <h2>Interplay reference — V2 under the B4 post chain (?post=1)</h2>
+      <p class="hint">Not a gate tile. Shows how the picked rim will behave if the post-ban
+      supersession signs at the M2 benchmark review (bloom picks up the brightest rim pixels).</p>
+      <div class="pair">
+        <figure>
+          <img class="crop" src="/tmp/m2-rim-lab/comeback-city-v2-post-crop.png" alt="comeback-city V2 under post chain — close-up" loading="lazy" />
+          <img src="/tmp/m2-rim-lab/comeback-city-v2-post-p0p30.png" alt="comeback-city V2 under post chain" loading="lazy" />
+          <figcaption><strong>comeback-city</strong> — V2 + ?post=1<br /><code>{"power":2.6,"strength":0.32}</code></figcaption>
+        </figure>
+        <figure>
+          <img class="crop" src="/tmp/m2-rim-lab/penguin-village-v2-post-crop.png" alt="penguin-village V2 under post chain — close-up" loading="lazy" />
+          <img src="/tmp/m2-rim-lab/penguin-village-v2-post-p0p30.png" alt="penguin-village V2 under post chain" loading="lazy" />
+          <figcaption><strong>penguin-village</strong> — V2 + ?post=1<br /><code>{"power":2.6,"strength":0.32}</code></figcaption>
+        </figure>
+      </div>
+    </section>
+</body>
+</html>

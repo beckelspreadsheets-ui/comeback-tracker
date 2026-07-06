@@ -1,6 +1,6 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-**Updated 2026-07-06 (second update today)** (supersedes the morning version: B1 is COMPLETE — owner picked V8 "storm front" from the palette lab and the values landed in penguinVillage.js — and B4 is COMPLETE behind ?post=1 with BOTH per-task gates signed (parity + vignette; vignette defaults ON inside the chain). M2 remaining: B3 → B2, then the benchmark review where the owner signs/declines the §9 post-ban supersession. New owner feedback logged: Comeback City's procedural skyline reads "cheap" → Phase C pulled to top priority after M2; Penguin Village outer dressing wants gambling/trading tribute props — ideas list started, see ordinals memory).
+**Updated 2026-07-06 (third update today)** (supersedes the EOD version: B3 construction is DONE and WAITING ON THE OWNER PICK — the composable shader-injection helper (Amendment 7 home) + fresnel rim landed opt-in behind dev-only `?rimLab=1`, the rim lab is live at rim-lab.html (8 candidates × 2 tracks, kart-crop gate tiles), the shipped default is provably unchanged (race:proof pass errors=0), and rim-on FPS holds 144 on both tracks. B1/B4 state unchanged from the EOD version (B1 V8 "storm front" landed; B4 approved behind ?post=1). M2 remaining: owner picks the rim → land pick + regen baselines; B2; then the benchmark review where the owner signs/declines the §9 post-ban supersession. Phase C (authored CC skyline) still jumps the queue after M2).
 
 **Purpose:** paste the block below into a new agent session to continue the graphics revamp with zero context loss. It is file-anchored — everything it references is committed — so it works for an agent with no memory of prior sessions.
 
@@ -67,7 +67,39 @@ full battery and pushed):
   exposes frameElapsedMs/frameWorkMs/rendererStats/bakedBuildings/
   trackVisualsEnabled/proofCameraMode/postChainEnabled; race:proof
   (capture+compare) PASSES at HEAD.
-- M2 IN PROGRESS — B1 COMPLETE, B4 COMPLETE (gated). Ledger:
+- M2 IN PROGRESS — B1 COMPLETE, B4 COMPLETE (gated), B3 BUILT (owner pick
+  pending). Ledger:
+  B3 (built + verified 2026-07-06, third session): composable
+  shader-injection helper src/game/race/render/toonRimShader.js is the
+  Amendment 7 single home (addShaderInjection registry + merged
+  customProgramCacheKey — D1 sway and E6 hull MUST route through it; the
+  explicit merged key matters because three's default key stringifies
+  onBeforeCompile and the composed callback has identical source across
+  materials with different registries). Fresnel rim chunk verified against
+  the INSTALLED r184 meshtoon sources: anchor `#include <opaque_fragment>`,
+  reuses in-scope geometryNormal/geometryViewDir from lights_fragment_begin.
+  Rim wired OPT-IN at the five hero sites (mountDriverAvatar,
+  attachTripoKartBody, attachAuthoredKartBody, marcher swap-in,
+  itemMaterial) via applyHeroRim; scenery untouched. DEV-ONLY gate:
+  ?rimLab=1 + window.__rimLabOverrides={strength,power,tint} (paletteLab
+  pattern); shipped default is rim-OFF and provably unchanged (race:proof
+  status=pass errors=0 at the landing commit — baselines NOT regenerated,
+  by design). Shared tint TOON_RIM_SHARED_TINT set per-track in createScene
+  from palette.rimLightColor (PV '#00d5ff' / CC fallback '#4fd8ff'); B2 can
+  lerp it. Rim lab live: rim-lab.html (regen: node
+  tmp/m2-rim-lab/capture-rim-variants.mjs) — V0 control + 7 candidates ×
+  both tracks, kart-centered crop gate tiles at routeProgress 0.30, + 2
+  visual-only ?post=1 interplay tiles; linked from approvals-hub. Evidence:
+  extreme-value probe (tmp/m2-rim-lab/probe-rim-extreme.mjs) proves the
+  injection end-to-end (magenta heroes, scenery pixel-untouched);
+  program-sharing delta 0 vs control (rim variant REPLACES the hero
+  toon+map program one-for-one — every toon+map material in scene is a
+  hero material; telemetry rendererStats gained `programs` for this);
+  rim-on phase5 headed medians 144 both tracks (worst sample 143.47, work
+  1.15-1.54ms). NEXT for B3: owner picks from rim-lab.html (or names a
+  blend) → land the pick as shipped default (rim always-on at the hero
+  sites) + regen proof baselines in that same commit, approval noted in
+  the commit message.
   B1: owner picked V8 "storm front" (2026-07-06) from palette-lab.html;
   values landed as additive keys in penguinVillage.js palette (fog
   '#4a6478' 150/680, hemi '#689bb8'/'#0f273f' @3.0, sun '#e8c9a0', rim
@@ -84,9 +116,9 @@ full battery and pushed):
   ~120 SMAA budget; SMAA kept, no FXAA fallback); ?post=1 FPS 144 both
   tracks, no regression. Evidence: post-lab.html + tmp/m2-b4-post-chain/;
   phase5 gained PHASE5_URL_EXTRA + postChainEnabled sampling.
-  STILL PENDING for M2 close: B3, B2, then the benchmark review (owner
-  signs/declines the §9 post-ban supersession there — B4 stays URL-gated
-  until then).
+  STILL PENDING for M2 close: B3 owner pick + landing, B2, then the
+  benchmark review (owner signs/declines the §9 post-ban supersession
+  there — B4 stays URL-gated until then).
   Historical detail of the B1 part-1 wiring (verified by code audit):
   createScene (src/game/ComebackCityThreeKartRace.jsx ~L2864-2921) reads
   atmosphere from trackDef.palette — fog color/near/far, hemi sky/ground/
@@ -141,18 +173,17 @@ full battery and pushed):
   before long capture batches. A palette/color change can never affect
   physics — don't chase speed failures into color commits.
 
-YOUR TASK NOW: Milestone M2 (IN PROGRESS) — B1 and B4 are COMPLETE (see
-state ledger above). Remaining, in order:
-- B3 (toon rim via the single shader-injection helper) — fully unblocked
-  (B1 landed; Penguin Village rim '#00d5ff' vs Comeback City fallback
-  '#4fd8ff' gives the two-track A/B different tints as intended). Build
-  the composable onBeforeCompile helper per Amendment 7 — D1/E6 must
-  route through it later; never assign onBeforeCompile directly (a second
-  assignment silently overwrites the first); merge customProgramCacheKey.
-  Context: MeshToonMaterial has NO envMap in r184 — shader-injected rim
-  IS the character-pop lever (not IBL). Owner gate: A/B approval of rim
-  strength/power/tint — build a rim lab (5-10 candidates, both tracks,
-  same telemetry-keyed capture pattern as tmp/m2-palette-lab/).
+YOUR TASK NOW: Milestone M2 (IN PROGRESS) — B1 and B4 are COMPLETE, B3 is
+BUILT and waiting on the owner pick (see state ledger above). Remaining,
+in order:
+- B3 CLOSE-OUT (owner pick pending): the rim lab is live at rim-lab.html
+  (helper, wiring, evidence all landed — see ledger). When the owner picks
+  a candidate (or names a blend), land the picked strength/power/tint as
+  the shipped default (rim always-on at the five hero sites — drop the
+  ?rimLab=1 gate from the default path, keep the override hook for QA),
+  regenerate the race:proof baselines IN THAT SAME COMMIT with the
+  approval quoted in the commit message, and re-run the full battery.
+  Until the pick, the shipped game is rim-OFF and unchanged.
 - B2 (per-lap palette moments) — unblocked (needs B1+B4, both landed).
   Penguin Village's four road ribbons get 3-4 atmosphere lerps per lap
   via the exposed hemi/rimLight/sun/scene.fog handles; resolveMoments
@@ -216,8 +247,9 @@ footnote: §9 tracks STANDING/STRATEGIC gates only; per-task A/B gates
 live in each task's Owner-gate field in the execution plan and are
 settled at that task's review, NOT as §9 rows. SETTLED 2026-07-06: B1
 palette pick = V8; B4 parity + vignette = approved, vignette ON in-chain):
-- B3 rim look A/B (per-task gate, upcoming) and B2 moment values
-  (per-task gate, upcoming).
+- B3 rim look pick (per-task gate, LAB LIVE: rim-lab.html — judge the
+  kart-crop tiles; V0 = rim off = today's shipped look; rim ships OFF
+  until picked) and B2 moment values (per-task gate, upcoming).
 - M0/M1 scorecard re-rating from approvals-hub captures.
 - ?trackVisuals=1 default-on (A/B pairs already in approvals-hub).
 - A3 sharpness pair ack (0.58 vs 0.85, committed).
@@ -243,7 +275,7 @@ gates green, proofs re-captured, work committed and pushed.
 
 ## Not in the prompt but useful to know
 
-- **Evidence trails:** canonical FPS runs live in `.agent/runs/kart-racer-production-readiness/evidence/phase5-capture-*`; A/B captures in `tmp/m0-trackvisuals-proof/` and `tmp/m1-render-scale/`; B1 palette-lab tiles + capture scripts in `tmp/m2-palette-lab/` (contact sheet: `palette-lab.html`). The race:proof "ledger" in git is only the pointer `asset-pipeline/proof/latest-proof-run.json` — the run artifacts under `asset-pipeline/proof/runs/` are gitignored and local-only.
+- **Evidence trails:** canonical FPS runs live in `.agent/runs/kart-racer-production-readiness/evidence/phase5-capture-*`; A/B captures in `tmp/m0-trackvisuals-proof/` and `tmp/m1-render-scale/`; B1 palette-lab tiles + capture scripts in `tmp/m2-palette-lab/` (contact sheet: `palette-lab.html`); B3 rim-lab tiles + capture/probe scripts in `tmp/m2-rim-lab/` (contact sheet: `rim-lab.html`; the extreme-value probe images are the injection/scenery-untouched proof). The race:proof "ledger" in git is only the pointer `asset-pipeline/proof/latest-proof-run.json` — the run artifacts under `asset-pipeline/proof/runs/` are gitignored and local-only.
 - **Session memory** (Claude Code auto-memory) mirrors this doc — `kart-project-state.md` is the READ-FIRST memory entry and was updated 2026-07-06.
 - **The owner reviews at** `http://localhost:5173/approvals-hub.html` (dev server usually already running).
 - Owner-call bookkeeping: the PRD's decision log (§9) records STANDING/STRATEGIC gates; per-task A/B gates (like the B1 palette pick) are tracked in the execution plan's per-task Owner-gate fields — the §9 footnote scopes the table this way on purpose. Update those docs, not chat history.
