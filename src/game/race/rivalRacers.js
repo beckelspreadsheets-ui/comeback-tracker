@@ -2,9 +2,11 @@
 // no Three.js. Each rival runs an independent progress/lane/speed loop with a
 // corner-aware speed governor (same centrifugal model as the player), a simple
 // racing line toward the apex, boost-pad usage, MK-style rubber-banding, and
-// radial kart-vs-kart bumps. Personalities follow the avatar sheets.
-// Phase 3 adds fish-bone hits + spin-outs + deterministic item gates; Phase
-// 3.5 adds ballistic ramp/crest launches (rivals jump, but don't trick).
+// full kart-vs-kart contact (KART_CONTACT: per-frame push-apart separation +
+// cooldown-gated bumps + symmetric rear-hit spin-outs, owner 2026-07-06).
+// Personalities follow the avatar sheets. Phase 3 added fish-bone hits +
+// item spin-outs + deterministic item gates; Phase 3.5 added ballistic
+// ramp/crest launches (rivals jump, but don't trick).
 import {
   BLIZZARD,
   dropFishBone,
@@ -69,6 +71,44 @@ export const RUBBER_BAND = {
   catchUpBoost: 1.12,
   finalLapCatchUp: 1.03,
   slowDown: 0.93,
+};
+
+// Kart-vs-kart contact tuning (owner-requested 2026-07-06: karts must not
+// render through each other, and a faster kart square in a slower kart's
+// back spins it out — symmetric, player included).
+// Box: 9 wu long x 7.5 wu lat matches the kart footprint (15.6 wu long,
+// ~10 wu wide) with arcade forgiveness — same numbers the original bump
+// shipped with. Separation slides overlapping karts apart every frame
+// (7.5 wu resolves in ~0.3 s); impulses stay cooldown-gated so packs
+// don't machine-gun bumps.
+export const KART_CONTACT = {
+  boxLatUnits: 7.5,
+  boxLongUnits: 9,
+  bumpCooldown: 0.7,
+  bumpLanePush: 0.12,
+  frontSpeedScale: 0.96,
+  rearSpeedScale: 0.9,
+  // Separation must beat steering authority (~30-50 wu/s at laneScale ~26)
+  // or a passing kart steer-locks into a tailgate on the shared racing line
+  // — right where rivals drop fish bones (probe 2026-07-06: 5 item hits per
+  // autoplay race at 26 wu/s vs 0 at baseline). 55 resolves a full overlap
+  // in ~0.14 s: an MK-style snappy shove, and passes stay passes.
+  separationRate: 55, // wu/s of lateral push-apart while overlapping
+  // Covers the FULL victim recovery: spin 0.95 s + re-accel from the 46
+  // floor past ~180 at ~118 wu/s² ≈ 2.1 s. Every spin start (contact OR
+  // item/march/avalanche) must set bumpCooldown to this — otherwise the
+  // frame a spin ends the victim sits at 46 and anything behind trivially
+  // clears the rear-hit differential, chaining spins forever.
+  spinCooldown: 2.4,
+  spinLanePush: 0.16,
+  spinLatUnits: 3.5, // "perfect in the back" — much tighter than the box
+  // Boost-grade differential: a spin needs a deliberate ram (mini-turbo /
+  // boost-pad hit, or a target already slowed by a hit or hard corner) —
+  // NOT routine pack traffic. At 60 a rubber-banded boosted rival spun the
+  // autoplay player twice per lap (probe 2026-07-06); at 85 max-speed
+  // deltas (284 boost vs ~228 cruise = 56) stay under it.
+  spinSpeedDiff: 85, // closing wu/s the rear kart needs to trigger the spin
+  spinSpeedScale: 0.5, // matches a projectile hit's speed penalty
 };
 
 export const createRivalRacers = (rivals, { gridProgress = 0 } = {}) =>
@@ -271,14 +311,24 @@ export const updateRivalRacers = (field, ctx) => {
       // Fish bones, snowballs and the penguin march only catch grounded
       // karts.
       if (!rival.air.airborne) {
+        // Every spin start also grants contact immunity for the recovery
+        // window (see KART_CONTACT.spinCooldown) so contact spins can't
+        // chain onto item spins.
         const hit = fishBoneHitFor(fishBones, rival.name, rival.progress, rival.lane, trackLength);
-        if (hit) rival.spinTimer = ITEM_FEEL.spinDuration;
+        if (hit) {
+          rival.spinTimer = ITEM_FEEL.spinDuration;
+          rival.bumpCooldown = KART_CONTACT.spinCooldown;
+        }
         if (ctx.projectiles && rival.spinTimer <= 0) {
           const struck = projectileHitFor(ctx.projectiles, rival.name, rival.progress, rival.lane, trackLength);
-          if (struck) rival.spinTimer = ITEM_FEEL.spinDuration;
+          if (struck) {
+            rival.spinTimer = ITEM_FEEL.spinDuration;
+            rival.bumpCooldown = KART_CONTACT.spinCooldown;
+          }
         }
         if (ctx.march && rival.spinTimer <= 0 && marchHitFor(ctx.march, rival.progress, rival.lane, trackLength)) {
           rival.spinTimer = ITEM_FEEL.spinDuration;
+          rival.bumpCooldown = KART_CONTACT.spinCooldown;
           rival.speed = Math.max(46, rival.speed * 0.45);
         }
       }
@@ -326,57 +376,145 @@ export const updateRivalRacers = (field, ctx) => {
     updateAir(rival.air, { actionHeld: false, dt });
   });
 
-  // Kart-vs-kart radial bumps (no spinouts yet — Phase 3 adds those). The
-  // rear kart eats the bigger penalty; both get knocked apart laterally.
-  // Per-kart cooldowns stop side-by-side packs from machine-gunning bumps.
+  // Kart-vs-kart contact, two layers with different gating:
+  // 1) SEPARATION runs every frame two grounded karts overlap — never
+  //    cooldown-gated — so a kart can no longer render through another one
+  //    (the old one-shot 0.12 lane push left karts interpenetrating for the
+  //    whole 0.7 s cooldown; owner issue 2026-07-06).
+  // 2) IMPULSES are cooldown-gated per kart: the rear-hit SPIN-OUT when a
+  //    clearly faster kart lands square in a slower kart's back (victim
+  //    twirls, attacker barely slows — symmetric, player included), else
+  //    the plain radial bump (glancing/slow contact — the rear kart eats
+  //    the bigger penalty, both get knocked apart).
   field.forEach((rival) => {
     rival.bumpCooldown = Math.max(0, rival.bumpCooldown - dt);
   });
   let playerBump = null;
+  let playerNudgeLane = 0;
+  let playerSpin = false;
   const karts = [
-    { cooldown: player.bumpCooldown || 0, lane: player.lane, ref: null, total: player.total },
+    {
+      cooldown: player.bumpCooldown || 0,
+      grounded: !player.airborne,
+      lane: player.lane,
+      ref: null,
+      speed: player.speed,
+      spinning: Boolean(player.spinning),
+      total: player.total,
+    },
     ...field.map((rival) => ({
       cooldown: rival.bumpCooldown,
+      grounded: !rival.air.airborne,
       lane: rival.lane,
       ref: rival,
+      speed: rival.speed,
+      spinning: rival.spinTimer > 0,
       total: totalProgressOf(rival),
     })),
   ];
+  // Move a kart laterally now so later pairs in the same frame see the
+  // post-separation lane; player motion is accumulated for the caller.
+  const nudge = (kart, laneDelta) => {
+    if (kart.ref) kart.ref.lane = clamp(kart.ref.lane + laneDelta, -wallLane, wallLane);
+    else playerNudgeLane += laneDelta;
+    kart.lane = clamp(kart.lane + laneDelta, -wallLane, wallLane);
+  };
   for (let a = 0; a < karts.length; a += 1) {
     for (let b = a + 1; b < karts.length; b += 1) {
-      if (karts[a].cooldown > 0 || karts[b].cooldown > 0) continue;
+      // Airborne karts fly over contact entirely (also fixes the old
+      // phantom mid-air bumps).
+      if (!karts[a].grounded || !karts[b].grounded) continue;
       const longUnits = Math.abs(karts[a].total - karts[b].total) * trackLength;
+      if (longUnits > KART_CONTACT.boxLongUnits) continue;
       const latUnits = (karts[a].lane - karts[b].lane) * laneScale;
-      if (longUnits > 9 || Math.abs(latUnits) > 7.5) continue;
+      if (Math.abs(latUnits) > KART_CONTACT.boxLatUnits) continue;
       const apart = latUnits >= 0 ? 1 : -1;
-      const rearFirst = karts[a].total < karts[b].total;
-      karts[a].cooldown = 0.7;
-      karts[b].cooldown = 0.7;
+
+      // Layer 1: slide the overlapping pair apart (rate-limited, split
+      // between both karts, capped so they never over-separate).
+      const overlap = KART_CONTACT.boxLatUnits - Math.abs(latUnits);
+      const step = Math.min(overlap * 0.5, KART_CONTACT.separationRate * dt) / laneScale;
+      nudge(karts[a], apart * step);
+      nudge(karts[b], -apart * step);
+
+      // Layer 2: impulses.
+      if (karts[a].cooldown > 0 || karts[b].cooldown > 0) continue;
       // Aurora Boost: the player plows through kart contact — the rival
       // spins out and gets shoved aside, the player doesn't even wobble.
       if (player.aurora && (!karts[a].ref || !karts[b].ref)) {
         const other = karts[a].ref || karts[b].ref;
         if (other) {
-          other.bumpCooldown = 0.7;
+          karts[a].cooldown = KART_CONTACT.spinCooldown;
+          karts[b].cooldown = KART_CONTACT.spinCooldown;
+          other.bumpCooldown = KART_CONTACT.spinCooldown;
           other.spinTimer = ITEM_FEEL.spinDuration;
           other.lane = clamp(other.lane + (karts[a].ref ? apart : -apart) * 0.2, -wallLane, wallLane);
           other.speed *= 0.55;
         }
         continue;
       }
+      const rearFirst = karts[a].total < karts[b].total;
+      const rear = rearFirst ? karts[a] : karts[b];
+      const front = rearFirst ? karts[b] : karts[a];
+      const square = Math.abs(latUnits) < KART_CONTACT.spinLatUnits;
+      const closing = rear.speed - front.speed;
+      if (square && closing > KART_CONTACT.spinSpeedDiff && !front.spinning && !rear.spinning) {
+        // Perfect rear hit: the front kart spins out; the attacker keeps
+        // nearly all its speed. The longer spin cooldown stops the same
+        // pair from chaining spins while the victim recovers.
+        const frontApart = front === karts[a] ? apart : -apart;
+        rear.cooldown = KART_CONTACT.spinCooldown;
+        front.cooldown = KART_CONTACT.spinCooldown;
+        if (front.ref) {
+          front.ref.bumpCooldown = KART_CONTACT.spinCooldown;
+          front.ref.spinTimer = ITEM_FEEL.spinDuration;
+          front.ref.speed = Math.max(46, front.ref.speed * KART_CONTACT.spinSpeedScale);
+          front.ref.lane = clamp(front.ref.lane + frontApart * KART_CONTACT.spinLanePush, -wallLane, wallLane);
+        } else {
+          // The caller applies the spin (shield/aurora rules live there);
+          // speedScale 1 — the spin itself carries the speed penalty.
+          playerSpin = true;
+          playerBump = {
+            cooldown: KART_CONTACT.spinCooldown,
+            lanePush: frontApart * KART_CONTACT.spinLanePush,
+            speedScale: 1,
+          };
+        }
+        if (rear.ref) {
+          rear.ref.bumpCooldown = KART_CONTACT.spinCooldown;
+          rear.ref.speed *= KART_CONTACT.frontSpeedScale;
+        } else {
+          playerBump = {
+            cooldown: KART_CONTACT.spinCooldown,
+            lanePush: -frontApart * 0.06,
+            speedScale: KART_CONTACT.frontSpeedScale,
+          };
+        }
+        continue;
+      }
+      karts[a].cooldown = KART_CONTACT.bumpCooldown;
+      karts[b].cooldown = KART_CONTACT.bumpCooldown;
       [
-        { kart: karts[a], lanePush: apart * 0.12, speedScale: rearFirst ? 0.9 : 0.96 },
-        { kart: karts[b], lanePush: -apart * 0.12, speedScale: rearFirst ? 0.96 : 0.9 },
+        {
+          kart: karts[a],
+          lanePush: apart * KART_CONTACT.bumpLanePush,
+          speedScale: rearFirst ? KART_CONTACT.rearSpeedScale : KART_CONTACT.frontSpeedScale,
+        },
+        {
+          kart: karts[b],
+          lanePush: -apart * KART_CONTACT.bumpLanePush,
+          speedScale: rearFirst ? KART_CONTACT.frontSpeedScale : KART_CONTACT.rearSpeedScale,
+        },
       ].forEach(({ kart, lanePush, speedScale }) => {
         if (kart.ref) {
-          kart.ref.bumpCooldown = 0.7;
+          kart.ref.bumpCooldown = KART_CONTACT.bumpCooldown;
           kart.ref.lane = clamp(kart.ref.lane + lanePush, -wallLane, wallLane);
           kart.ref.speed *= speedScale;
         } else {
-          playerBump = { cooldown: 0.7, lanePush, speedScale };
+          playerBump = { cooldown: KART_CONTACT.bumpCooldown, lanePush, speedScale };
         }
       });
     }
   }
-  return { avalancheBy, playerBump };
+  return { avalancheBy, playerBump, playerNudgeLane, playerSpin };
 };

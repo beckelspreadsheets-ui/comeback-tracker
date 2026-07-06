@@ -46,6 +46,7 @@ import {
 } from './race/driftFeel.js';
 import {
   createRivalRacers,
+  KART_CONTACT,
   playerPositionOf,
   rivalPositionsOf,
   totalProgressOf,
@@ -3517,12 +3518,38 @@ const trackCurvatureAt = (sampler, progress) => {
 const cornerPushFor = (kappa, speed) =>
   -Math.sign(kappa) * Math.min(4, Math.pow(Math.abs(kappa), 0.7) * speed * speed * 0.00052);
 
+// Autoplay item sense: the demo driver dodges what a human sees — fish
+// bones sitting ahead on its line and rival snowballs closing from behind.
+// Deterministic, progress-space windows (~0.02 of a lap ≈ 50-60 wu) so it
+// stays track-size agnostic. Without this, kart-vs-kart contact keeps the
+// autoplay kart in real traffic where rival item gates connect (the old
+// ghost-through overtakes dodged items by accident, not by skill).
+const autoplayDodgeBias = (race) => {
+  let bias = 0;
+  const away = (threatLane) =>
+    threatLane === race.lane ? (threatLane >= 0 ? -1 : 1) : Math.sign(race.lane - threatLane);
+  race.fishBones?.forEach((bone) => {
+    const aheadBy = wrap01(bone.progress - race.progress);
+    if (aheadBy < 0.022 && Math.abs(bone.lane - race.lane) < 0.34) {
+      bias += away(bone.lane) * (1 - aheadBy / 0.022);
+    }
+  });
+  race.projectiles?.forEach((ball) => {
+    const behindBy = wrap01(race.progress - ball.progress);
+    if (ball.owner !== 'player' && behindBy < 0.025 && Math.abs(ball.lane - race.lane) < 0.3) {
+      bias += away(ball.lane) * (1 - behindBy / 0.025);
+    }
+  });
+  return clamp(bias, -1, 1);
+};
+
 const readInput = (input, autoplay, race, cornerPush = 0) => {
   if (!autoplay) return input.current;
   // Steer against the centrifugal push (into the corner) plus a pull back
-  // toward road center; drift the demanding bends, brake for the hairpin,
-  // trick when airborne, fire held items on straights. Deterministic.
-  const desired = clamp(-cornerPush * 1.4 - race.lane * 0.9, -1, 1);
+  // toward road center, with the item-dodge bias strong enough to beat the
+  // center pull; drift the demanding bends, brake for the hairpin, trick
+  // when airborne, fire held items on straights. Deterministic.
+  const desired = clamp(-cornerPush * 1.4 - race.lane * 0.9 + autoplayDodgeBias(race) * 1.2, -1, 1);
   return {
     brake: Math.abs(cornerPush) > 1.5,
     drift: (Math.abs(cornerPush) > 0.55 && race.speed > 80) || race.airState.airborne,
@@ -4050,6 +4077,7 @@ export const ComebackCityThreeKartRace = ({
               race.landSquashTimer = 0.18;
               if (flight.failed) {
                 race.spinTimer = trackDef.shortcut.failSpin;
+                race.bumpCooldown = KART_CONTACT.spinCooldown;
                 race.spinOuts += 1;
                 race.speed = trackDef.shortcut.failSpeed;
               } else if (race.shortcut.styled) {
@@ -4145,7 +4173,10 @@ export const ComebackCityThreeKartRace = ({
               slapFishHitsFor(race.rivals, 'player', race.progress, race.lane, engine.sampler.length).forEach(
                 (name) => {
                   const struck = race.rivals.find((rival) => rival.name === name);
-                  if (struck) struck.spinTimer = ITEM_FEEL.spinDuration;
+                  if (struck) {
+                    struck.spinTimer = ITEM_FEEL.spinDuration;
+                    struck.bumpCooldown = KART_CONTACT.spinCooldown;
+                  }
                 }
               );
             } else if (race.heldItem === 'avalanche') {
@@ -4280,6 +4311,7 @@ export const ComebackCityThreeKartRace = ({
               race.shieldActive = false;
             } else {
               race.spinTimer = ITEM_FEEL.spinDuration;
+              race.bumpCooldown = KART_CONTACT.spinCooldown;
               race.spinOuts += 1;
               race.speed *= 0.45;
             }
@@ -4293,6 +4325,7 @@ export const ComebackCityThreeKartRace = ({
                 race.shieldActive = false;
               } else {
                 race.spinTimer = ITEM_FEEL.spinDuration;
+                race.bumpCooldown = KART_CONTACT.spinCooldown;
                 race.spinOuts += 1;
                 race.speed *= 0.5;
               }
@@ -4305,6 +4338,7 @@ export const ComebackCityThreeKartRace = ({
                 race.shieldActive = false;
               } else {
                 race.spinTimer = ITEM_FEEL.spinDuration;
+                race.bumpCooldown = KART_CONTACT.spinCooldown;
                 race.spinOuts += 1;
                 race.speed *= 0.5;
                 driftState.active = false;
@@ -4314,10 +4348,11 @@ export const ComebackCityThreeKartRace = ({
             }
           }
           }
-          // Rivals run their own race; bumps knock both karts.
+          // Rivals run their own race; contact separates karts every frame
+          // and a square rear hit spins the slower kart (both directions).
           race.bumpCooldown = Math.max(0, race.bumpCooldown - dt);
           const playerTotal = (race.finished ? race.laps : race.lap - 1) + race.progress;
-          const { avalancheBy, playerBump } = updateRivalRacers(race.rivals, {
+          const { avalancheBy, playerBump, playerNudgeLane, playerSpin } = updateRivalRacers(race.rivals, {
             boostPads: trackDef.course.boostPads,
             boostSpeed: BOOST_SPEED,
             cornerPushFor,
@@ -4333,21 +4368,51 @@ export const ComebackCityThreeKartRace = ({
             ramps: trackDef.ramps,
             projectiles: race.projectiles,
             player: {
+              // Shortcut flight never touches airState — it must still
+              // count as airborne or the sim spins rivals the player is
+              // flying 26 wu above (and vice versa).
+              airborne: race.airState.airborne || race.shortcut.active,
               aurora: race.auroraTimer > 0,
               bumpCooldown: race.bumpCooldown,
               lane: race.lane,
               progress: race.progress,
               speed: race.speed,
+              spinning: race.spinTimer > 0,
               total: playerTotal,
             },
             raceTime: race.raceTime,
             trackLength: engine.sampler.length,
             wallLane: 0.95,
           });
+          // Separation is continuous (karts never render through each
+          // other); the bump impulse stays cooldown-gated.
+          if (playerNudgeLane) race.lane = clamp(race.lane + playerNudgeLane, -0.95, 0.95);
           if (playerBump) {
             race.bumpCooldown = playerBump.cooldown;
             race.lane = clamp(race.lane + playerBump.lanePush, -0.95, 0.95);
             race.speed *= playerBump.speedScale;
+          }
+          // A rival landed a perfect rear hit on the player. The ice shield
+          // holds against a physical shove (and is NOT consumed — unlike
+          // item hits); aurora invulnerability is handled in the sim.
+          // Never mid-flight (airState or shortcut) and never on/after the
+          // finish frame (race.finished parks the player at speed 0, which
+          // would read as an easy rear-hit target).
+          if (
+            playerSpin &&
+            race.spinTimer <= 0 &&
+            !race.finished &&
+            !race.airState.airborne &&
+            !race.shortcut.active &&
+            !race.shieldActive
+          ) {
+            race.spinTimer = ITEM_FEEL.spinDuration;
+            race.bumpCooldown = KART_CONTACT.spinCooldown;
+            race.spinOuts += 1;
+            race.speed *= KART_CONTACT.spinSpeedScale;
+            race.driftState.active = false;
+            race.driftState.charge = 0;
+            race.driftState.tier = 0;
           }
           race.position = playerPositionOf(playerTotal, race.rivals);
           // A desperate last-place rival just fired the leader-killer.
@@ -4368,6 +4433,7 @@ export const ComebackCityThreeKartRace = ({
             if (race.avalanche.timer <= 0) {
               if (race.avalanche.target === 'player') {
                 race.spinTimer = AVALANCHE.spinDuration;
+                race.bumpCooldown = KART_CONTACT.spinCooldown;
                 race.spinOuts += 1;
                 race.speed *= AVALANCHE.speedScale;
                 race.driftState.active = false;
@@ -4377,6 +4443,7 @@ export const ComebackCityThreeKartRace = ({
                 const buried = race.rivals.find((rival) => rival.name === race.avalanche.target);
                 if (buried) {
                   buried.spinTimer = AVALANCHE.spinDuration;
+                  buried.bumpCooldown = KART_CONTACT.spinCooldown;
                   buried.speed = Math.max(46, buried.speed * AVALANCHE.speedScale);
                 }
               }

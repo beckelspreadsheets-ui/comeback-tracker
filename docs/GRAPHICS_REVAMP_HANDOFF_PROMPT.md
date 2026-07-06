@@ -173,7 +173,10 @@ full battery and pushed):
   change hits vite dep re-optimization mid-run and misses progress-by-time
   checkpoints (log shows "Re-optimizing dependencies"); (b) kart-playable
   mobile-autoplay can catch a rival hazard near a checkpoint ("did not
-  sustain race speed" with healthy frameElapsedMs); (c) headed phase5/
+  sustain race speed" with healthy frameElapsedMs) — structurally RARER
+  since the kart-contact landing (autoplay now dodges fish bones/snowballs
+  and fresh bones have a 0.3 s arm delay; probe went 5 hits/race → 0), but
+  the rerun-once rule still applies; (c) headed phase5/
   capture Chromium windows appear on the owner's desktop and he may close
   one ("Target page, context or browser has been closed") — TELL HIM
   before long capture batches. A palette/color change can never affect

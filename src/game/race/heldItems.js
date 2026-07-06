@@ -164,6 +164,12 @@ export const projectileHitFor = (projectiles, kartName, progress, lane, trackLen
 };
 
 export const ITEM_FEEL = {
+  // A fresh bone can't hit ANYONE until it has sat this long: with solid
+  // kart-vs-kart contact (2026-07-06) a trailing kart really occupies the
+  // 14 wu drop zone, and an instant hit there is a 4-frame unreactable —
+  // a tailgater at speed passes over the unarmed bone; a kart ~70+ wu back
+  // meets it armed, as a normal readable hazard.
+  fishBoneArmDelay: 0.3,
   fishBoneDropBack: 14, // world units behind the dropper
   fishBoneHitLane: 0.16, // lane distance that counts as a hit
   fishBoneHitProgress: 9, // world units that count as a hit
@@ -202,12 +208,14 @@ export const ageFishBones = (fishBones, dt) => {
 };
 
 // Returns the fish bone hit by the kart (and removes it), or null. A kart's
-// own fish bone only becomes dangerous to them once its grace expires —
-// everyone else can hit it immediately.
+// own fish bone only becomes dangerous to them once its grace expires;
+// everyone else must wait out the short arm delay (see fishBoneArmDelay) —
+// grace counts DOWN from 1.4, so armed = grace <= 1.4 - armDelay.
 export const fishBoneHitFor = (fishBones, kartName, progress, lane, trackLength) => {
   for (let index = 0; index < fishBones.length; index += 1) {
     const bone = fishBones[index];
     if (bone.owner === kartName && bone.grace > 0) continue;
+    if (bone.grace > 1.4 - ITEM_FEEL.fishBoneArmDelay) continue;
     if (
       shortDelta(progress, bone.progress) * trackLength < ITEM_FEEL.fishBoneHitProgress &&
       Math.abs(lane - bone.lane) < ITEM_FEEL.fishBoneHitLane

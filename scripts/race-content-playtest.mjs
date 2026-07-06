@@ -282,6 +282,13 @@ import {
   applyRaceVehicleModeRuntime,
   createRaceVehicleRuntime,
 } from '../src/game/race/raceVehicleRuntime.js';
+// Shipped V2 kart runtime (ComebackCityThreeKartRace) rival sim — first
+// pure-node coverage of that family: kart-vs-kart contact rules.
+import {
+  createRivalRacers,
+  KART_CONTACT,
+  updateRivalRacers,
+} from '../src/game/race/rivalRacers.js';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import * as THREE from 'three';
@@ -9694,8 +9701,171 @@ const simulateRace = (track, raceIndex, mode) => {
   return finishOrder;
 };
 
+// Kart-vs-kart contact (shipped V2 kart runtime, rivalRacers.js): overlap
+// separation runs every frame (the render-through fix), a square rear hit
+// from a clearly faster kart spins the front kart (symmetric — the player
+// spins too), slow/glancing contact stays a plain bump, and airborne karts
+// skip contact entirely.
+const validateKartContactHelpers = () => {
+  const makeContactCtx = (player = {}) => ({
+    boostPads: [],
+    boostSpeed: 284,
+    cornerPushFor: () => 0,
+    curvatureAt: () => 0,
+    dt: 1 / 60,
+    finalLap: false,
+    laneScale: 24,
+    maxSpeed: 228,
+    player: {
+      airborne: false,
+      aurora: false,
+      bumpCooldown: 0,
+      lane: -0.9,
+      progress: 0.5,
+      speed: 0,
+      spinning: false,
+      total: 0.5,
+      ...player,
+    },
+    raceTime: 0,
+    trackLength: 2900,
+    wallLane: 0.95,
+  });
+  const makePair = () => {
+    const field = createRivalRacers(
+      [
+        { lane: 0, name: 'Blue Speed' },
+        { lane: 0, name: 'Purple Lab' },
+      ],
+      { gridProgress: 0.3 }
+    );
+    field.forEach((rival) => {
+      rival.lane = 0;
+      rival.previousProgress = 0.3;
+      rival.progress = 0.3;
+      rival.speed = 150;
+    });
+    return field;
+  };
+
+  // 1) Separation: overlapping karts slide apart even while bump cooldowns
+  //    are hot — impulses are gated, separation never is.
+  const sepField = makePair();
+  sepField[0].lane = 0.02;
+  sepField[0].bumpCooldown = 0.7;
+  sepField[1].bumpCooldown = 0.7;
+  const sepBefore = sepField[0].lane - sepField[1].lane;
+  updateRivalRacers(sepField, makeContactCtx());
+  const sepAfter = sepField[0].lane - sepField[1].lane;
+
+  // 2) Rear-hit spin-out between rivals: fast kart square behind spins the
+  //    slower front kart; the attacker keeps nearly all its speed.
+  const spinField = makePair();
+  spinField[0].speed = 220;
+  spinField[1].previousProgress = 0.3 + 6 / 2900;
+  spinField[1].progress = 0.3 + 6 / 2900;
+  spinField[1].speed = 90;
+  updateRivalRacers(spinField, makeContactCtx());
+
+  // 3) Symmetric: a clearly faster rival square behind the player reports a
+  //    player spin (the caller applies shield/aurora rules).
+  const playerField = makePair();
+  playerField[0].previousProgress = 0.5 - 6 / 2900;
+  playerField[0].progress = 0.5 - 6 / 2900;
+  playerField[0].speed = 210;
+  playerField[1].previousProgress = 0.9;
+  playerField[1].progress = 0.9;
+  const playerResult = updateRivalRacers(
+    playerField,
+    makeContactCtx({ lane: 0, progress: 0.5, speed: 80, total: 0.5 })
+  );
+
+  // 4) Below the closing-speed threshold the same geometry is a plain bump.
+  const bumpField = makePair();
+  bumpField[0].speed = 130;
+  bumpField[1].previousProgress = 0.3 + 6 / 2900;
+  bumpField[1].progress = 0.3 + 6 / 2900;
+  bumpField[1].speed = 110;
+  updateRivalRacers(bumpField, makeContactCtx());
+
+  // 5) Airborne karts fly over contact entirely.
+  const airField = makePair();
+  airField[0].speed = 220;
+  airField[1].air.airborne = true;
+  airField[1].air.height = 3;
+  airField[1].previousProgress = 0.3 + 6 / 2900;
+  airField[1].progress = 0.3 + 6 / 2900;
+  airField[1].speed = 90;
+  updateRivalRacers(airField, makeContactCtx());
+
+  // 6) An airborne PLAYER (ballistic or shortcut flight — the caller ORs
+  //    race.shortcut.active into ctx.player.airborne) reports no contact.
+  const flightField = makePair();
+  flightField[0].previousProgress = 0.5 - 6 / 2900;
+  flightField[0].progress = 0.5 - 6 / 2900;
+  flightField[0].speed = 210;
+  flightField[1].previousProgress = 0.9;
+  flightField[1].progress = 0.9;
+  const flightResult = updateRivalRacers(
+    flightField,
+    makeContactCtx({ airborne: true, lane: 0, progress: 0.5, speed: 80, total: 0.5 })
+  );
+
+  const fieldsFinite = [sepField, spinField, playerField, bumpField, airField].every((field) =>
+    field.every((rival) => Number.isFinite(rival.lane) && Number.isFinite(rival.speed))
+  );
+  if (
+    // Autoplay-protecting invariant: a boosted rival (BOOST_SPEED 284) must
+    // NOT clear the rear-hit differential against the slowest cruising kart
+    // (MAX_SPEED 228 * worst topSpeed 0.96) — the kart-playable proof's
+    // instant speed floors depend on it.
+    !(KART_CONTACT.spinSpeedDiff > 284 - 228 * 0.96) ||
+    !(sepAfter > sepBefore + 0.02) ||
+    !(spinField[1].spinTimer > 0) ||
+    !(spinField[1].speed <= 90 * KART_CONTACT.spinSpeedScale + 8) ||
+    spinField[0].spinTimer !== 0 ||
+    !(spinField[0].speed > 200) ||
+    spinField[0].bumpCooldown !== KART_CONTACT.spinCooldown ||
+    playerResult.playerSpin !== true ||
+    !playerResult.playerBump ||
+    playerResult.playerBump.speedScale !== 1 ||
+    playerResult.playerNudgeLane === 0 ||
+    bumpField[1].spinTimer !== 0 ||
+    bumpField[0].bumpCooldown !== KART_CONTACT.bumpCooldown ||
+    airField[1].spinTimer !== 0 ||
+    airField[1].bumpCooldown !== 0 ||
+    flightResult.playerSpin !== false ||
+    flightResult.playerBump !== null ||
+    flightResult.playerNudgeLane !== 0 ||
+    !fieldsFinite
+  ) {
+    fail('Kart contact should separate overlaps, spin square rear hits both ways, keep slow contact a bump, and skip airborne karts', {
+      airCooldown: airField[1].bumpCooldown,
+      airSpin: airField[1].spinTimer,
+      attackerCooldown: spinField[0].bumpCooldown,
+      attackerSpeed: spinField[0].speed,
+      attackerSpin: spinField[0].spinTimer,
+      bumpCooldown: bumpField[0].bumpCooldown,
+      bumpSpin: bumpField[1].spinTimer,
+      fieldsFinite,
+      flightBump: flightResult.playerBump,
+      flightNudge: flightResult.playerNudgeLane,
+      flightSpin: flightResult.playerSpin,
+      playerBump: playerResult.playerBump,
+      playerNudgeLane: playerResult.playerNudgeLane,
+      playerSpin: playerResult.playerSpin,
+      spinSpeedDiff: KART_CONTACT.spinSpeedDiff,
+      sepAfter,
+      sepBefore,
+      victimSpeed: spinField[1].speed,
+      victimSpin: spinField[1].spinTimer,
+    });
+  }
+};
+
 await validateAssetManifest();
 validateItems();
+validateKartContactHelpers();
 validateKartPhysicsHelpers();
 validateRaceProgressHelpers();
 validateChaseCameraHelpers();
