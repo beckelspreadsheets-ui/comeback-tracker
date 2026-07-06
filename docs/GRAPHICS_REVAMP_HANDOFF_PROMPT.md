@@ -32,8 +32,9 @@ READ IN THIS ORDER (do not start work before 1 and 2):
    docs/KART_FACE_ART_INTAKE.md + docs/CHARACTER_EXPRESSION_SHEET_BRIEF.md
    (Phase E art intake; format locked by E1).
 
-STATE YOU INHERIT (verified 2026-07-06 by code audit at HEAD; commits
-a9b7c202..1ab5e660):
+STATE YOU INHERIT (verified 2026-07-06; commits a9b7c202..15599b98 —
+B4 landed at 47b38a2c, B1 completed at 15599b98, both verified by the
+full battery and pushed):
 - M0 COMPLETE. Everything is committed; a fresh clone passes `npm ci &&
   npm run build && npm run test:race && npm run test:kart-playable &&
   npm run assets:check` (verified end-to-end; only post-clone step is
@@ -59,12 +60,13 @@ a9b7c202..1ab5e660):
   in src/game/race/render/createRaceScene.js); the legacy ArcadeRace3D stack
   is pinned to 0.58 via RACE_RENDER_SCALE_LEGACY (its suite's pixel
   thresholds are resolution-calibrated). Bundle budget re-baselined and
-  GREEN (test:bundle, both presets): total 12.30 MiB vs 15.0 threshold.
+  GREEN (test:bundle, both presets): total 12.45 MiB vs 15.0 threshold
+  (12.30 pre-B4; B4 spent 72.9 KiB gzip of its ~200 KiB JS allowance).
   PUBLISHED HEADROOM (PRD §8): Phase C gets 2.14 MiB of WebP bake textures
-  (images gate) within 2.70 MiB total raw / 1237 KiB gzip; B4's pmndrs
-  chain gets ~200 KiB gzip JS. Telemetry now exposes frameElapsedMs/
-  frameWorkMs/rendererStats/bakedBuildings/trackVisualsEnabled/
-  proofCameraMode; race:proof (capture+compare) PASSES at HEAD.
+  (images gate) within 2.70 MiB total raw / 1237 KiB gzip. Telemetry now
+  exposes frameElapsedMs/frameWorkMs/rendererStats/bakedBuildings/
+  trackVisualsEnabled/proofCameraMode/postChainEnabled; race:proof
+  (capture+compare) PASSES at HEAD.
 - M2 IN PROGRESS — B1 COMPLETE, B4 COMPLETE (gated). Ledger:
   B1: owner picked V8 "storm front" (2026-07-06) from palette-lab.html;
   values landed as additive keys in penguinVillage.js palette (fog
@@ -100,7 +102,8 @@ a9b7c202..1ab5e660):
   runtime-gated, not build-stripped). The Penguin Village palette lab is
   live: palette-lab.html (repo root) = V0 shipped-default control + 8
   candidates captured at telemetry routeProgress 0.30 (pond sweep), linked
-  from approvals-hub.html as "PICK NEEDED"; tiles, debug isolates, and
+  from approvals-hub.html (now marked PICKED: V8; kept for reference,
+  alongside post-lab.html for B4); tiles, debug isolates, and
   capture scripts committed in tmp/m2-palette-lab/ (regen: node
   tmp/m2-palette-lab/capture-palette-variants.mjs). LAB LESSONS, encoded
   in that script: (1) hemi candidates are luma-normalized to the defaults —
@@ -127,6 +130,16 @@ a9b7c202..1ab5e660):
 - NEVER run two vite-spawning suites/captures concurrently: the dev-server
   dep-cache ping-pongs and CPU contention produces phantom knife-edge
   failures (kart-height, readiness timeouts). One at a time.
+- FLAKE TRIAGE LEARNED 2026-07-06 (rerun ONCE on these signatures before
+  investigating): (a) the FIRST dev-spawning suite after any npm dep
+  change hits vite dep re-optimization mid-run and misses progress-by-time
+  checkpoints (log shows "Re-optimizing dependencies"); (b) kart-playable
+  mobile-autoplay can catch a rival hazard near a checkpoint ("did not
+  sustain race speed" with healthy frameElapsedMs); (c) headed phase5/
+  capture Chromium windows appear on the owner's desktop and he may close
+  one ("Target page, context or browser has been closed") — TELL HIM
+  before long capture batches. A palette/color change can never affect
+  physics — don't chase speed failures into color commits.
 
 YOUR TASK NOW: Milestone M2 (IN PROGRESS) — B1 and B4 are COMPLETE (see
 state ledger above). Remaining, in order:
@@ -134,8 +147,12 @@ state ledger above). Remaining, in order:
   (B1 landed; Penguin Village rim '#00d5ff' vs Comeback City fallback
   '#4fd8ff' gives the two-track A/B different tints as intended). Build
   the composable onBeforeCompile helper per Amendment 7 — D1/E6 must
-  route through it later; never assign onBeforeCompile directly. Owner
-  gate: A/B approval of rim strength/power/tint (variant-lab it).
+  route through it later; never assign onBeforeCompile directly (a second
+  assignment silently overwrites the first); merge customProgramCacheKey.
+  Context: MeshToonMaterial has NO envMap in r184 — shader-injected rim
+  IS the character-pop lever (not IBL). Owner gate: A/B approval of rim
+  strength/power/tint — build a rim lab (5-10 candidates, both tracks,
+  same telemetry-keyed capture pattern as tmp/m2-palette-lab/).
 - B2 (per-lap palette moments) — unblocked (needs B1+B4, both landed).
   Penguin Village's four road ribbons get 3-4 atmosphere lerps per lap
   via the exposed hemi/rimLight/sun/scene.fog handles; resolveMoments
