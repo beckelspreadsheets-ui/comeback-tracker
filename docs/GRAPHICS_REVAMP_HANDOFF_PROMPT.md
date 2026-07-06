@@ -96,10 +96,16 @@ full battery and pushed):
   toon+map program one-for-one — every toon+map material in scene is a
   hero material; telemetry rendererStats gained `programs` for this);
   rim-on phase5 headed medians 144 both tracks (worst sample 143.47, work
-  1.15-1.54ms). NEXT for B3: owner picks from rim-lab.html (or names a
-  blend) → land the pick as shipped default (rim always-on at the hero
-  sites) + regen proof baselines in that same commit, approval noted in
-  the commit message.
+  1.15-1.54ms). SETTLED (same day, part 2): owner picked V6 "ice white"
+  FOR PENGUIN VILLAGE ("V6 for the penguin track is looking best") —
+  landed as palette.heroRim in penguinVillage.js (0.32/2.6/'#eaf6ff'),
+  resolved per race in createScene (lab URL hook still overrides; new
+  ?rimLab=0 forces off). CC kept rim-off BY OWNER CHOICE ("keep CC rim
+  off for now") — its pick remains open. Verified at the part-2 commit:
+  race:proof pass errors=0 (proof route is CC, untouched), kart-playable
+  green both tracks, test:race green, shipped-default PV crop matches the
+  V6 tile (tmp/m2-rim-lab/penguin-village-shipped-default-v6-crop.png),
+  shipped-default PV phase5 headed 144.03/143.27 worst / 1.37ms.
   B1: owner picked V8 "storm front" (2026-07-06) from palette-lab.html;
   values landed as additive keys in penguinVillage.js palette (fog
   '#4a6478' 150/680, hemi '#689bb8'/'#0f273f' @3.0, sun '#e8c9a0', rim
@@ -174,16 +180,14 @@ full battery and pushed):
   physics — don't chase speed failures into color commits.
 
 YOUR TASK NOW: Milestone M2 (IN PROGRESS) — B1 and B4 are COMPLETE, B3 is
-BUILT and waiting on the owner pick (see state ledger above). Remaining,
-in order:
-- B3 CLOSE-OUT (owner pick pending): the rim lab is live at rim-lab.html
-  (helper, wiring, evidence all landed — see ledger). When the owner picks
-  a candidate (or names a blend), land the picked strength/power/tint as
-  the shipped default (rim always-on at the five hero sites — drop the
-  ?rimLab=1 gate from the default path, keep the override hook for QA),
-  regenerate the race:proof baselines IN THAT SAME COMMIT with the
-  approval quoted in the commit message, and re-run the full battery.
-  Until the pick, the shipped game is rim-OFF and unchanged.
+LANDED FOR PENGUIN VILLAGE (owner picked V6 "ice white" 2026-07-06: "V6
+for the penguin track is looking best"; ships ON via palette.heroRim —
+strength 0.32 / power 2.6 / tint '#eaf6ff'). Comeback City DELIBERATELY
+ships rim-off (owner: "keep CC rim off for now") — its pick stays open in
+rim-lab.html; when it comes, add a heroRim key to comebackCity.js palette
+(same battery + proof re-capture). ?rimLab=1 forces a candidate,
+?rimLab=0 forces off (the lab's off-control on PV, whose default is now
+rim-on). Remaining, in order:
 - B2 (per-lap palette moments) — unblocked (needs B1+B4, both landed).
   Penguin Village's four road ribbons get 3-4 atmosphere lerps per lap
   via the exposed hemi/rimLight/sun/scene.fog handles; resolveMoments
@@ -247,9 +251,10 @@ footnote: §9 tracks STANDING/STRATEGIC gates only; per-task A/B gates
 live in each task's Owner-gate field in the execution plan and are
 settled at that task's review, NOT as §9 rows. SETTLED 2026-07-06: B1
 palette pick = V8; B4 parity + vignette = approved, vignette ON in-chain):
-- B3 rim look pick (per-task gate, LAB LIVE: rim-lab.html — judge the
-  kart-crop tiles; V0 = rim off = today's shipped look; rim ships OFF
-  until picked) and B2 moment values (per-task gate, upcoming).
+- B3 rim: PV SETTLED 2026-07-06 (V6 "ice white" landed, ships ON);
+  Comeback City pick still OPEN (owner chose to keep CC rim-off for now —
+  rim-lab.html stays live for it). B2 moment values (per-task gate,
+  upcoming).
 - M0/M1 scorecard re-rating from approvals-hub captures.
 - ?trackVisuals=1 default-on (A/B pairs already in approvals-hub).
 - A3 sharpness pair ack (0.58 vs 0.85, committed).

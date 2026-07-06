@@ -127,6 +127,13 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     hemi: { sky: '#689bb8', ground: '#0f273f', intensity: 3 },
     sunColor: '#e8c9a0',
     rimLightColor: '#00d5ff',
+    // B3 hero fresnel rim — owner-picked V6 "ice white" from rim-lab.html
+    // (2026-07-06, "V6 for the penguin track is looking best"): neutral
+    // ice-white shader rim on karts/drivers/marchers/item boxes so the
+    // heroes read as backlit, not neon-edged. tint overrides the shader
+    // rim only; the rimLight DirectionalLight above keeps #00d5ff.
+    // Comeback City has no heroRim key — it ships rim-off pending its pick.
+    heroRim: { power: 2.6, strength: 0.32, tint: '#eaf6ff' },
   },
   // Arctic dressing: giant ordinal-penguin ice statues, igloos, snow + ice.
   // customStartArch: skip the default finish gantry (the ICE IS NICE arch

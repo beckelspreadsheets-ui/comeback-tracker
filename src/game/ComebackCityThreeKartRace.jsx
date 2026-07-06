@@ -785,17 +785,22 @@ const getToonGradient = () => {
   sharedToonGradient = texture;
   return texture;
 };
-// B3 rim (owner gate pending): palette-tinted fresnel rim on the hero set —
-// karts, drivers, marchers, item boxes; scenery stays rim-free (rim-on-
-// everything cheapens the read). URL-gated OFF until the owner picks a
-// candidate from rim-lab.html; the pick then lands as the shipped default
-// with proof baselines regenerated in that same commit.
-// Dev hook (same pattern as ?paletteLab=1): ?rimLab=1 enables the rim at
-// plan-default strength/power; window.__rimLabOverrides = { strength,
-// power, tint } selects a lab candidate without touching shipped defaults.
+// B3 rim: palette-tinted fresnel rim on the hero set — karts, drivers,
+// marchers, item boxes; scenery stays rim-free (rim-on-everything cheapens
+// the read). SHIPPED per track via palette.heroRim: Penguin Village carries
+// the owner-picked V6 "ice white" (2026-07-06); Comeback City has no
+// heroRim key and ships rim-off pending its own pick from rim-lab.html.
+// Dev hook (same pattern as ?paletteLab=1): ?rimLab=1 + optional
+// window.__rimLabOverrides = { strength, power, tint } forces a candidate
+// look; ?rimLab=0 forces the rim OFF (the lab's control tile on a track
+// whose shipped default is rim-on). The URL hook overrides the shipped
+// palette config so the lab can keep exploring on either track. Returns
+// undefined when the param is absent (no opinion — palette decides).
 const heroRimConfig = () => {
-  if (typeof window === 'undefined') return null;
-  if (new URLSearchParams(window.location.search).get('rimLab') !== '1') return null;
+  if (typeof window === 'undefined') return undefined;
+  const param = new URLSearchParams(window.location.search).get('rimLab');
+  if (param === '0') return null;
+  if (param !== '1') return undefined;
   const overrides = window.__rimLabOverrides || {};
   return {
     power: Number.isFinite(overrides.power) ? overrides.power : 2.6,
@@ -803,10 +808,12 @@ const heroRimConfig = () => {
     tint: typeof overrides.tint === 'string' ? overrides.tint : null,
   };
 };
-const applyHeroRim = (material) => {
-  const rim = heroRimConfig();
-  return rim ? applyToonRim(material, rim) : material;
-};
+// Resolved by createScene per race (lab hook wins over palette.heroRim);
+// hero materials are created after createScene within the same mount, so
+// every applyHeroRim call sees the active track's config.
+let activeHeroRim = null;
+const applyHeroRim = (material) =>
+  activeHeroRim ? applyToonRim(material, activeHeroRim) : material;
 const createToonMaterial = (color, options = {}) => {
   // B3: `rim: true` opts a material into the hero fresnel rim; it is a
   // helper flag, not a THREE.Material property, so it must not reach the
@@ -2969,10 +2976,14 @@ const createScene = ({
   const rimLight = new THREE.DirectionalLight(palette.rimLightColor || '#4fd8ff', 2.0);
   rimLight.position.set(92, 56, 74);
   scene.add(rimLight);
-  // B3: one shared tint drives every rimmed hero material — per-track from
-  // the palette (Penguin Village '#00d5ff' vs the Comeback City fallback),
-  // with the rim lab's tint candidates riding the same dev-only hook.
-  TOON_RIM_SHARED_TINT.value.set(heroRimConfig()?.tint || palette.rimLightColor || '#4fd8ff');
+  // B3: resolve the hero fresnel rim for this race — the dev lab hook wins,
+  // else the track's shipped palette.heroRim (PV V6 "ice white"; CC has no
+  // key = rim off). One shared tint drives every rimmed hero material; a
+  // heroRim.tint overrides the palette rimLightColor for the shader rim
+  // only (the rimLight above keeps its own color).
+  const labRim = heroRimConfig();
+  activeHeroRim = labRim !== undefined ? labRim : palette.heroRim || null;
+  TOON_RIM_SHARED_TINT.value.set(activeHeroRim?.tint || palette.rimLightColor || '#4fd8ff');
 
   // Post-processing: bloom is what makes the neon dusk actually glow.
   let composer;

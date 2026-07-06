@@ -43,7 +43,9 @@ const CROP = { height: 270, width: 480, x: 560, y: 330 };
 // Village '#00d5ff', Comeback City fallback '#4fd8ff'); otherwise a
 // per-track hex map so each track keeps a tint that belongs to its dusk.
 const VARIANTS = [
-  { key: 'v0-off', label: 'V0 — rim OFF (shipped default, control)', overrides: null },
+  // V0 forces the rim OFF via ?rimLab=0 — since the V6 pick landed, Penguin
+  // Village SHIPS rim-on, so "no param" is no longer the off-control there.
+  { key: 'v0-off', label: 'V0 — rim OFF (control)', overrides: null },
   { key: 'v1-whisper', label: 'V1 — whisper: subtle edge, tight falloff', overrides: { power: 3.2, strength: 0.22 } },
   { key: 'v2-plan-default', label: 'V2 — plan default: the execution-plan starting values', overrides: { power: 2.6, strength: 0.32 } },
   { key: 'v3-bold', label: 'V3 — bold: stronger, wider edge', overrides: { power: 2.2, strength: 0.45 } },
@@ -102,7 +104,7 @@ const captureShot = async (browser, { track, variant, extraQuery = '' }) => {
       }
     );
   }
-  const rimQuery = variant.overrides ? '&rimLab=1' : '';
+  const rimQuery = variant.overrides ? '&rimLab=1' : '&rimLab=0';
   await page.goto(`http://127.0.0.1:${PORT}/?playableAutoplay=1&track=${track}${rimQuery}${extraQuery}#race`, {
     waitUntil: 'domcontentloaded',
   });
