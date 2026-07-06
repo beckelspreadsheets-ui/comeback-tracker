@@ -1,6 +1,6 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-**Updated 2026-07-06 (third update today)** (supersedes the EOD version: B3 construction is DONE and WAITING ON THE OWNER PICK — the composable shader-injection helper (Amendment 7 home) + fresnel rim landed opt-in behind dev-only `?rimLab=1`, the rim lab is live at rim-lab.html (8 candidates × 2 tracks, kart-crop gate tiles), the shipped default is provably unchanged (race:proof pass errors=0), and rim-on FPS holds 144 on both tracks. B1/B4 state unchanged from the EOD version (B1 V8 "storm front" landed; B4 approved behind ?post=1). M2 remaining: owner picks the rim → land pick + regen baselines; B2; then the benchmark review where the owner signs/declines the §9 post-ban supersession. Phase C (authored CC skyline) still jumps the queue after M2).
+**Updated 2026-07-06 (fourth update today — the "start B2 here" version)** (supersedes the third update: B3 is SETTLED FOR PENGUIN VILLAGE — owner picked V6 "ice white" from rim-lab.html, landed as `palette.heroRim`, ships ON at 144 FPS; Comeback City ships rim-off BY OWNER CHOICE, its pick stays open. ALSO LANDED same day, gameplay: kart-vs-kart collision (solid karts, symmetric rear-hit spin-outs) + fish-bone arm delay + autoplay item sense — commit 6a016533; race timelines shifted, all suites re-verified green. NEXT SESSION STARTS AT: B2 (per-lap palette moments, kickoff brief below) → M2 benchmark review → Phase C city-visuals kickoff).
 
 **Purpose:** paste the block below into a new agent session to continue the graphics revamp with zero context loss. It is file-anchored — everything it references is committed — so it works for an agent with no memory of prior sessions.
 
@@ -122,9 +122,31 @@ full battery and pushed):
   ~120 SMAA budget; SMAA kept, no FXAA fallback); ?post=1 FPS 144 both
   tracks, no regression. Evidence: post-lab.html + tmp/m2-b4-post-chain/;
   phase5 gained PHASE5_URL_EXTRA + postChainEnabled sampling.
-  STILL PENDING for M2 close: B3 owner pick + landing, B2, then the
-  benchmark review (owner signs/declines the §9 post-ban supersession
-  there — B4 stays URL-gated until then).
+  STILL PENDING for M2 close: B2, then the benchmark review (owner
+  signs/declines the §9 post-ban supersession there — B4 stays URL-gated
+  until then). B3's Comeback City rim pick is OPEN but does NOT block M2
+  (owner explicitly kept CC rim-off for now).
+- GAMEPLAY LANDED 2026-07-06 (commit 6a016533, outside the graphics plan
+  but it changes race timelines — know it exists): kart-vs-kart collision.
+  rivalRacers.js KART_CONTACT = per-frame lateral push-apart separation
+  (55 wu/s; must exceed steering authority or passes steer-lock into
+  tailgates), cooldown-gated bumps, SYMMETRIC rear-hit spin-outs at
+  closing speed > 85 wu/s (boost-grade: 284 boost vs 228*0.96 worst
+  cruise = 65 stays under), airborne + dare-shortcut flight skip contact,
+  and EVERY spin start (contact or item) sets bumpCooldown =
+  spinCooldown 2.4 s so spins can't chain at the 46-speed floor.
+  Companions that keep autoplay QA at baseline (probe: 5 item-hit
+  spins/race → 0, finish time 30.2 s = baseline): heldItems.js fish bones
+  arm 0.3 s for everyone (point-blank drops became 4-frame unreactables
+  once karts got solid), and the autoplay driver dodges armed bones ahead
+  + snowballs behind (autoplayDodgeBias in the JSX). Tunables live in
+  KART_CONTACT; the owner was told spinSpeedDiff is the one number to
+  retune if crashes feel too strict/loose. Diagnosis instrument:
+  tmp/kart-contact-probe.mjs (telemetry trace of PV autoplay; patch the
+  sample count for longer runs). Pure-node coverage:
+  validateKartContactHelpers in scripts/race-content-playtest.mjs — the
+  FIRST test coverage of the shipped V2 rival sim; extend it when you
+  touch contact rules.
   Historical detail of the B1 part-1 wiring (verified by code audit):
   createScene (src/game/ComebackCityThreeKartRace.jsx ~L2864-2921) reads
   atmosphere from trackDef.palette — fog color/near/far, hemi sky/ground/
@@ -182,28 +204,82 @@ full battery and pushed):
   before long capture batches. A palette/color change can never affect
   physics — don't chase speed failures into color commits.
 
-YOUR TASK NOW: Milestone M2 (IN PROGRESS) — B1 and B4 are COMPLETE, B3 is
-LANDED FOR PENGUIN VILLAGE (owner picked V6 "ice white" 2026-07-06: "V6
-for the penguin track is looking best"; ships ON via palette.heroRim —
-strength 0.32 / power 2.6 / tint '#eaf6ff'). Comeback City DELIBERATELY
-ships rim-off (owner: "keep CC rim off for now") — its pick stays open in
-rim-lab.html; when it comes, add a heroRim key to comebackCity.js palette
-(same battery + proof re-capture). ?rimLab=1 forces a candidate,
-?rimLab=0 forces off (the lab's off-control on PV, whose default is now
-rim-on). Remaining, in order:
-- B2 (per-lap palette moments) — unblocked (needs B1+B4, both landed).
-  Penguin Village's four road ribbons get 3-4 atmosphere lerps per lap
-  via the exposed hemi/rimLight/sun/scene.fog handles; resolveMoments
-  fills optional fields from the landed B1 base values. Owner gate:
-  approve the four moment values (capture strip).
-- M2 BENCHMARK REVIEW closes the milestone: full A/B walk-through with
-  the owner; he signs or declines the §9 post-ban supersession there
-  (B4 default-on vs stays URL-gated); scorecard re-rating; proofs
-  re-captured; PRD §7 M1-style milestone notes written.
-B3b is HARD-GATED — do not start without explicit owner opt-in. Satisfy
-every PRD §7 M2 acceptance criterion; A/B pairs per task; FPS medians must
-hold (re-run the canonical protocol); re-capture race:proof after every
-approved merge.
+YOUR TASK NOW: B2 (per-lap palette moments) — the LAST construction task
+of M2. B1/B3/B4 are landed (B3: PV ships the V6 "ice white" heroRim; CC
+ships rim-off by owner choice — its pick stays open in rim-lab.html and
+does NOT block you; ?rimLab=1 forces a candidate, ?rimLab=0 forces off).
+
+B2 KICKOFF BRIEF (full task detail: execution plan B2 section — read it;
+deltas since it was written are folded in here):
+- WHAT: Penguin Village's four authored road ribbons (main street 0.02,
+  pond sweep 0.30, fish market 0.55, return bend 0.84 — align to
+  penguinVillage.js roadRibbons) become 3-4 atmosphere lerps per lap
+  driven by race.progress. Comeback City has no moments key → null path,
+  pixel-untouched by construction (same trick as B1/B3).
+- BUILD: src/game/race/paletteMoments.js — PURE (no THREE import, node-
+  importable, deterministic): resolveMoments(palette) fills every
+  optional field from the landed B1 V8 base values (fog '#4a6478'
+  150/680, hemi '#689bb8'/'#0f273f' @3.0, sun '#e8c9a0') so lerp
+  endpoints are always fully specified; sampleMoments(resolved, progress,
+  out) does wrap-aware segment lerp (last→first across 1.0→0.0) with
+  smoothstep easing. Data shape = additive palette.moments key:
+  [{ progress, fog: {color,near,far}, hemi: {sky,ground}, sun:
+  {color,intensity}, rim }].
+- WIRE: in createScene, if palette.moments?.length, precompile via
+  resolveMoments into THREE.Color pairs ONCE onto engine.paletteMoments
+  (else null). Per-frame hook applyPaletteMoments(engine, race.progress)
+  immediately before engine.composer.render(), after the sun-follow
+  block. Handles ALREADY exposed on the engine return: hemi, rimLight,
+  sun, scene.fog via scene. NEW since the exec plan: (a) the rim tint —
+  lerp TOON_RIM_SHARED_TINT.value (toonRimShader.js; one Color.set
+  retints every rimmed hero material, comment in createScene says B2 may
+  lerp it); (b) bloom — branch on engine.postChainEnabled: legacy
+  UnrealBloomPass ref is engine.bloomPass (.strength), pmndrs ?post=1 ref
+  is engine.bloomEffect (.intensity); exactly one is non-null. ZERO
+  per-frame allocations (scratch Colors made in createScene).
+- GUARDS: fog.far stays <= 840 in every moment (camera far 860 no-ops
+  beyond); hemi moment colors LUMA-NORMALIZED to the V8 base (vary hue,
+  never brightness — the white-out lesson; copy matchLuma from
+  tmp/m2-palette-lab/capture-palette-variants.mjs); moments must start/
+  end near the V8 base so the lap wrap (0.95→0.05) has no color pop.
+- OWNER GATE (design-choice workflow): build a MOMENTS LAB before
+  landing — tmp/m2-moments-lab/ capture script (copy the rim-lab pattern:
+  vite dev port 531x, headless, telemetry routeProgress-keyed shots at
+  each moment progress 0.05/0.30/0.55/0.84, console-error collection) ×
+  2-3 candidate moment SETS (e.g. subtle/journey/dramatic), page
+  moments-lab.html at repo root, entry in approvals-hub.html Labs list,
+  ?momentsLab=1 + window.__momentsLabOverrides dev hook in createScene
+  (clone the paletteLab hook — overrides replace palette.moments).
+  Shipped default stays moment-LESS until the owner picks a set; the pick
+  lands as the palette.moments key + proof recapture in that commit.
+- TESTS: node assert for sampleMoments at segment boundaries, mid-
+  segment, and the wrap seam (0.95→0.05) — add a
+  validatePaletteMomentHelpers to scripts/race-content-playtest.mjs
+  (import from ../src/game/race/paletteMoments.js, follow
+  validateKartContactHelpers right above the call list).
+- VERIFY (serial, never two vite suites at once): npm run test:race ·
+  test:track-visuals · test:kart-playable · test:race-proof (CC proof
+  route must pass UNCHANGED — moments are PV-only) · full-lap PV capture
+  checking the wrap seam · phase5 headed both tracks (144 must hold; a
+  handful of lerps is free) · test:visual (panel-2 known-red only).
+
+THEN: M2 BENCHMARK REVIEW closes the milestone. Checklist:
+- Full A/B walk-through with the owner from approvals-hub: B1 palette
+  (landed), B3 rim on/off per track (?rimLab=0 vs default), B2 moments
+  (picked set vs none), B4 ?post=1 on/off + per-effect toggles.
+- Owner SIGNS or DECLINES the §9 post-ban supersession: B4 default-on
+  (flip postChainEnabled default + re-tune if needed + proof re-baseline)
+  vs stays URL-gated. Record in PRD §9 either way.
+- Owner re-rates the 7-category scorecard (targets: Post 4→7, Materials
+  3→5); write PRD §7 M2 milestone notes in the M1 style (numbers, dates,
+  evidence paths); re-run canonical FPS medians (median of 3, headed,
+  both tracks) and re-capture race:proof at the closing commit.
+- Settle any deferred picks the owner wants to batch here: CC rim
+  (rim-lab.html still live), M0/M1 scorecard re-rating, ?trackVisuals=1
+  default-on, A3 sharpness ack, excluded stash patches.
+B3b (hero-kart PBR/PMREM) stays HARD-GATED — only on explicit owner
+opt-in. Satisfy every PRD §7 M2 acceptance criterion; A/B pairs per task;
+FPS medians must hold; re-capture race:proof after every approved merge.
 AFTER M2 (owner-steered 2026-07-06): Phase C jumps the queue — the owner
 called Comeback City's procedural skyline "cheap" and wants authored city
 visuals ("truly make it look like a city"; he LOVES the road). Kick off
