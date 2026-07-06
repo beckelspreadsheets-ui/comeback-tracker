@@ -1,0 +1,52 @@
+{
+  "comeback-city-default": {
+    "postChainEnabled": false,
+    "frameWorkMs": 0.87,
+    "drawCalls": 480,
+    "routeProgress": 0.303,
+    "bakedBuildings": "active",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  "comeback-city-post": {
+    "postChainEnabled": true,
+    "frameWorkMs": 0.94,
+    "drawCalls": 480,
+    "routeProgress": 0.303,
+    "bakedBuildings": "active",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  "penguin-village-default": {
+    "postChainEnabled": false,
+    "frameWorkMs": 1.11,
+    "drawCalls": 782,
+    "routeProgress": 0.302,
+    "bakedBuildings": "active",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  "penguin-village-post": {
+    "postChainEnabled": true,
+    "frameWorkMs": 1.06,
+    "drawCalls": 782,
+    "routeProgress": 0.302,
+    "bakedBuildings": "active",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  },
+  "comeback-city-post-vignette": {
+    "postChainEnabled": true,
+    "frameWorkMs": 1,
+    "drawCalls": 480,
+    "routeProgress": 0.303,
+    "bakedBuildings": "active",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ]
+  }
+}

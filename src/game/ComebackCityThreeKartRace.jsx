@@ -7,6 +7,20 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+// B4: pmndrs chain rides behind ?post=1 until the owner signs the post-ban
+// supersession at the M2 benchmark review; the three-examples chain above
+// stays the shipped default until then.
+import {
+  BloomEffect,
+  EffectComposer as PmndrsEffectComposer,
+  EffectPass,
+  RenderPass as PmndrsRenderPass,
+  SMAAEffect,
+  SMAAPreset,
+  ToneMappingEffect,
+  ToneMappingMode,
+  VignetteEffect,
+} from 'postprocessing';
 import racerModelUrl from '../assets/game/models/toy-car-kit/vehicle-drag-racer.glb?url';
 import itemBoxModelUrl from '../assets/game/models/toy-car-kit/item-box.glb?url';
 import kartColormapUrl from '../assets/game/models/toy-car-kit/colormap.png';
@@ -2860,6 +2874,7 @@ const createScene = ({
   canvas,
   onUnavailable,
   playerCharacter = characterByKey(DEFAULT_CHARACTER_KEY),
+  postChainEnabled = false,
   rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY),
   trackDef = trackByKey(DEFAULT_TRACK_KEY),
   trackVisualsEnabled = false,
@@ -2923,11 +2938,63 @@ const createScene = ({
   scene.add(rimLight);
 
   // Post-processing: bloom is what makes the neon dusk actually glow.
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloomPass = new UnrealBloomPass(new THREE.Vector2(640, 360), 0.55, 0.45, 1.0);
-  composer.addPass(bloomPass);
-  composer.addPass(new OutputPass());
+  let composer;
+  let bloomPass = null;
+  let bloomEffect = null;
+  if (postChainEnabled) {
+    // B4 (?post=1): mipmap bloom + SMAA + vignette + ACES merged in ONE
+    // EffectPass. Each effect is individually toggleable for the M2
+    // benchmark review: ?post=1&postBloom=0 / &postSmaa=0 / &postTone=0 /
+    // &postVignette=0.
+    const postParams = new URLSearchParams(window.location.search);
+    const wantBloom = postParams.get('postBloom') !== '0';
+    const wantSmaa = postParams.get('postSmaa') !== '0';
+    const wantTone = postParams.get('postTone') !== '0';
+    // Vignette ships ON inside the chain — owner signed the gate-2 on/off
+    // pair 2026-07-06 ("every change in the post lab is amazing").
+    const wantVignette = postParams.get('postVignette') !== '0';
+    // The pmndrs chain owns tone mapping (ToneMappingEffect below), so the
+    // renderer must hand over linear HDR frames. LOCAL override only: the
+    // shared configureRaceRenderer (createRaceScene.js) still sets ACES for
+    // the legacy ArcadeRace3D stack and must not be edited. Exposure: the
+    // old chain applied toneMappingExposure 1.05 via OutputPass; whether
+    // pmndrs ToneMappingEffect honors it is judged by the step-1 parity
+    // A/B capture — if the frame reads dim, scale hemi/sun by 1.05 instead.
+    renderer.toneMapping = THREE.NoToneMapping;
+    composer = new PmndrsEffectComposer(renderer, { frameBufferType: THREE.HalfFloatType });
+    composer.addPass(new PmndrsRenderPass(scene, camera));
+    const effects = [];
+    if (wantBloom) {
+      // pmndrs radius/intensity semantics differ from UnrealBloomPass —
+      // these values were tuned for parity with the old chain (0.55/0.45/1.0),
+      // judged by the step-1 A/B capture, not by matching numbers.
+      bloomEffect = new BloomEffect({
+        mipmapBlur: true,
+        intensity: 0.55,
+        // radius 0.7 / smoothing 0.22 (up from the planned 0.45 / 0.08):
+        // the legacy chain ran UnrealBloom on a 30%-resolution target, which
+        // oversizes its halos; mipmap bloom is resolution-independent, so it
+        // needs a wider radius and softer knee to reproduce the approved glow
+        // on Penguin Village's near-threshold snow. Neon sits above threshold
+        // and is unaffected. Judged by the step-1 parity captures.
+        radius: 0.7,
+        luminanceThreshold: 1.0,
+        luminanceSmoothing: 0.22,
+      });
+      effects.push(bloomEffect);
+    }
+    if (wantSmaa) effects.push(new SMAAEffect({ preset: SMAAPreset.MEDIUM }));
+    if (wantVignette) effects.push(new VignetteEffect({ offset: 0.32, darkness: 0.45 }));
+    // LUT3DEffect goes here, before ToneMappingEffect, when owner supplies a LUT texture.
+    if (wantTone) effects.push(new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC }));
+    if (effects.length) composer.addPass(new EffectPass(camera, ...effects));
+  } else {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(640, 360), 0.55, 0.45, 1.0);
+    composer.addPass(bloomPass);
+    composer.addPass(new OutputPass());
+  }
 
   const sampler = makeSampler(trackDef);
   const trackVisuals = resolveTrackVisuals(trackDef, { enabled: trackVisualsEnabled });
@@ -3308,7 +3375,11 @@ const createScene = ({
     marchers,
     marchRig,
     blizzardPool,
+    // Exactly one of bloomPass (legacy chain) / bloomEffect (?post=1 pmndrs
+    // chain) is non-null; branch on postChainEnabled before touching either.
     bloomPass,
+    bloomEffect,
+    postChainEnabled: Boolean(postChainEnabled),
     boostPads,
     fishBonePool,
     projectilePool,
@@ -3463,6 +3534,7 @@ const publishTelemetry = (
     miniTurboTier: race.driftState.miniTurboTier,
     position: race.position,
     propCount,
+    postChainEnabled: Boolean(runtimeStats.postChainEnabled),
     proofCameraMode: runtimeStats.proofCameraMode || 'chase',
     raceTime: Number(race.raceTime.toFixed(2)),
     renderer: 'three-kart',
@@ -3541,6 +3613,12 @@ export const ComebackCityThreeKartRace = ({
     if (typeof window === 'undefined') return 'chase';
     return new URLSearchParams(window.location.search).get('proofCamera') === 'top' ? 'top' : 'chase';
   }, []);
+  const postChainEnabled = useMemo(() => {
+    // B4 pmndrs post chain: default OFF everywhere until the owner signs
+    // the post-ban supersession at the M2 benchmark review (PRD §7).
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('post') === '1';
+  }, []);
   const trackDef = trackByKey(trackKey);
 
   useEffect(() => {
@@ -3553,6 +3631,7 @@ export const ComebackCityThreeKartRace = ({
       canvas,
       onUnavailable: (error) => setWebglError(error?.message || 'WebGL unavailable'),
       playerCharacter,
+      postChainEnabled,
       rivalSeats,
       trackDef,
       trackVisualsEnabled,
@@ -3633,10 +3712,25 @@ export const ComebackCityThreeKartRace = ({
         raceViewport: viewport,
         renderer: engine.renderer,
       });
-      engine.composer.setPixelRatio(viewport.dpr);
-      engine.composer.setSize(viewport.width, viewport.height);
-      // Bloom is gaussian-blurred anyway — run it at low resolution.
-      engine.bloomPass.setSize(viewport.width * viewport.dpr * 0.3, viewport.height * viewport.dpr * 0.3);
+      if (engine.postChainEnabled) {
+        // pmndrs composer has no setPixelRatio; third arg false keeps the
+        // canvas CSS that fitRaceRendererToCanvas just set. The legacy 30%
+        // bloom-target hack is obsolete under mipmapBlur.
+        const dbw = canvas.width;
+        const dbh = canvas.height;
+        engine.composer.setSize(viewport.width, viewport.height, false);
+        if (import.meta.env.DEV && (canvas.width !== dbw || canvas.height !== dbh)) {
+          console.warn('[kart] pmndrs composer.setSize changed the drawing buffer', {
+            before: { width: dbw, height: dbh },
+            after: { width: canvas.width, height: canvas.height },
+          });
+        }
+      } else {
+        engine.composer.setPixelRatio(viewport.dpr);
+        engine.composer.setSize(viewport.width, viewport.height);
+        // Bloom is gaussian-blurred anyway — run it at low resolution.
+        engine.bloomPass.setSize(viewport.width * viewport.dpr * 0.3, viewport.height * viewport.dpr * 0.3);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -4504,12 +4598,15 @@ export const ComebackCityThreeKartRace = ({
       engine.sun.position.set(playerSample.point.x - 95, playerSample.point.y + 110, playerSample.point.z - 45);
       engine.sun.target.position.copy(playerSample.point);
       engine.sun.target.updateMatrixWorld();
-      engine.composer.render();
+      // pmndrs composer takes the frame delta (seconds) for time-based effects.
+      if (engine.postChainEnabled) engine.composer.render(dt);
+      else engine.composer.render();
       frameWorkSamples.push(performance.now() - now);
       while (frameWorkSamples.length > 40) frameWorkSamples.shift();
       publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey, {
         bakedBuildings: engine.bakedBuildings,
         bakedSpike: engine.bakedSpike,
+        postChainEnabled: engine.postChainEnabled,
         frameElapsedMs: rollingAverage(frameElapsedSamples),
         frameWorkMs: rollingAverage(frameWorkSamples),
         proofCameraMode,
@@ -4566,7 +4663,7 @@ export const ComebackCityThreeKartRace = ({
         delete window.__comebackCityKartTrackVisualsEnabled;
       }
     };
-  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, proofCameraMode, reducedMotion, runId, trackVisualsEnabled]);
+  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, postChainEnabled, proofCameraMode, reducedMotion, runId, trackVisualsEnabled]);
 
   const setTouch = (key, value) => {
     inputRef.current = { ...inputRef.current, [key]: value };

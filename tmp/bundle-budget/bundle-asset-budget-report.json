@@ -1,31 +1,31 @@
 {
   "artifactDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/bundle-budget",
-  "capturedAt": "2026-07-03T04:20:33.101Z",
+  "capturedAt": "2026-07-06T15:10:33.441Z",
   "budget": {
     "checks": [
       {
-        "actual": 12.296,
+        "actual": 12.451,
         "label": "total built artifact size",
         "limit": 15,
         "unit": "MiB",
         "status": "pass"
       },
       {
-        "actual": 7263.29,
+        "actual": 7335.2,
         "label": "total built artifact gzip size",
         "limit": 8500,
         "unit": "KiB",
         "status": "pass"
       },
       {
-        "actual": 4.791,
+        "actual": 4.946,
         "label": "total JavaScript size",
         "limit": 5.25,
         "unit": "MiB",
         "status": "pass"
       },
       {
-        "actual": 1199.36,
+        "actual": 1271.27,
         "label": "total JavaScript gzip size",
         "limit": 1400,
         "unit": "KiB",
@@ -46,7 +46,7 @@
         "status": "pass"
       },
       {
-        "actual": 623.79,
+        "actual": 623.8,
         "label": "largest JavaScript gzip size",
         "limit": 900,
         "unit": "KiB",
@@ -67,8 +67,8 @@
   },
   "headroom": {
     "imagesMiB": 2.142,
-    "totalGzipKiB": 1236.71,
-    "totalMiB": 2.704
+    "totalGzipKiB": 1164.8,
+    "totalMiB": 2.549
   },
   "categories": {
     "css": {
@@ -82,11 +82,11 @@
       "sizeMiB": 0.1
     },
     "html": {
-      "brotliBytes": 549,
+      "brotliBytes": 541,
       "fileCount": 1,
-      "gzipBytes": 738,
+      "gzipBytes": 736,
       "sizeBytes": 1690,
-      "brotliKiB": 0.54,
+      "brotliKiB": 0.53,
       "gzipKiB": 0.72,
       "sizeKiB": 1.65,
       "sizeMiB": 0.002
@@ -102,14 +102,14 @@
       "sizeMiB": 1.858
     },
     "javascript": {
-      "brotliBytes": 895512,
+      "brotliBytes": 960131,
       "fileCount": 25,
-      "gzipBytes": 1228141,
-      "sizeBytes": 5024118,
-      "brotliKiB": 874.52,
-      "gzipKiB": 1199.36,
-      "sizeKiB": 4906.37,
-      "sizeMiB": 4.791
+      "gzipBytes": 1301782,
+      "sizeBytes": 5186114,
+      "brotliKiB": 937.63,
+      "gzipKiB": 1271.27,
+      "sizeKiB": 5064.56,
+      "sizeMiB": 4.946
     },
     "metadata": {
       "brotliBytes": 261,
@@ -136,19 +136,19 @@
   "gateStatus": "bundle-budget-pass",
   "git": {
     "branch": "codex/release-v1-comebacktracker-kart-racer",
-    "commit": "4870f26852e47326de2c8c4c2bee155c9e55131c",
+    "commit": "be589d6e0318532ca45c60e63bbec431cd6f48cd",
     "dirty": true
   },
   "largestFiles": [
     {
-      "brotliBytes": 404866,
-      "brotliKiB": 395.38,
+      "brotliBytes": 401485,
+      "brotliKiB": 392.08,
       "category": "javascript",
-      "gzipBytes": 638765,
-      "gzipKiB": 623.79,
-      "path": "assets/comebackCityVisualTokens-CKVOG94o.js",
-      "sizeBytes": 2880340,
-      "sizeKiB": 2812.83
+      "gzipBytes": 638771,
+      "gzipKiB": 623.8,
+      "path": "assets/comebackCityVisualTokens-V84cR0zl.js",
+      "sizeBytes": 2880351,
+      "sizeKiB": 2812.84
     },
     {
       "brotliBytes": 1421501,
@@ -181,14 +181,14 @@
       "sizeKiB": 917.35
     },
     {
-      "brotliBytes": 121144,
-      "brotliKiB": 118.3,
+      "brotliBytes": 121185,
+      "brotliKiB": 118.34,
       "category": "javascript",
-      "gzipBytes": 146593,
-      "gzipKiB": 143.16,
-      "path": "assets/district-facade-lab-CEVOhli4.js",
-      "sizeBytes": 587014,
-      "sizeKiB": 573.26
+      "gzipBytes": 146662,
+      "gzipKiB": 143.22,
+      "path": "assets/district-facade-lab-BlCg_xJ3.js",
+      "sizeBytes": 587211,
+      "sizeKiB": 573.45
     },
     {
       "brotliBytes": 265096,
@@ -219,6 +219,16 @@
       "path": "assets/esm-BftMnPUS.js",
       "sizeBytes": 436410,
       "sizeKiB": 426.18
+    },
+    {
+      "brotliBytes": 124900,
+      "brotliKiB": 121.97,
+      "category": "javascript",
+      "gzipBytes": 139227,
+      "gzipKiB": 135.96,
+      "path": "assets/ComebackCityThreeKartRace-B61uhJ_C.js",
+      "sizeBytes": 376131,
+      "sizeKiB": 367.32
     },
     {
       "brotliBytes": 81117,
@@ -271,16 +281,6 @@
       "sizeKiB": 223.86
     },
     {
-      "brotliBytes": 56827,
-      "brotliKiB": 55.5,
-      "category": "javascript",
-      "gzipBytes": 65640,
-      "gzipKiB": 64.1,
-      "path": "assets/ComebackCityThreeKartRace-B9h0sqgN.js",
-      "sizeBytes": 214343,
-      "sizeKiB": 209.32
-    },
-    {
       "brotliBytes": 177472,
       "brotliKiB": 173.31,
       "category": "images",
@@ -296,26 +296,26 @@
     "cssFileCount": 3,
     "cssTotalKiB": 101.95,
     "javascriptFileCount": 25,
-    "javascriptTotalKiB": 4906.37,
+    "javascriptTotalKiB": 5064.56,
     "largestFile": {
-      "brotliBytes": 404866,
-      "brotliKiB": 395.38,
+      "brotliBytes": 401485,
+      "brotliKiB": 392.08,
       "category": "javascript",
-      "gzipBytes": 638765,
-      "gzipKiB": 623.79,
-      "path": "assets/comebackCityVisualTokens-CKVOG94o.js",
-      "sizeBytes": 2880340,
-      "sizeKiB": 2812.83
+      "gzipBytes": 638771,
+      "gzipKiB": 623.8,
+      "path": "assets/comebackCityVisualTokens-V84cR0zl.js",
+      "sizeBytes": 2880351,
+      "sizeKiB": 2812.84
     },
     "total": {
-      "brotliBytes": 6749318,
+      "brotliBytes": 6813929,
       "fileCount": 62,
-      "gzipBytes": 7437610,
-      "sizeBytes": 12893747,
-      "brotliKiB": 6591.13,
-      "gzipKiB": 7263.29,
-      "sizeKiB": 12591.55,
-      "sizeMiB": 12.296
+      "gzipBytes": 7511249,
+      "sizeBytes": 13055743,
+      "brotliKiB": 6654.23,
+      "gzipKiB": 7335.2,
+      "sizeKiB": 12749.75,
+      "sizeMiB": 12.451
     }
   }
 }

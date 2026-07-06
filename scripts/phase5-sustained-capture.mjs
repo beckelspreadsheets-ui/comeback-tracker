@@ -20,6 +20,10 @@
  *   PHASE5_CAPTURE_DURATION_MS   default 20000 (autoplay race lasts minutes;
  *                                20s post-countdown sits inside laps 1-2)
  *   PHASE5_CAPTURE_PORT          default 5195
+ *   PHASE5_URL_EXTRA             extra query params appended to the shipped
+ *                                route (e.g. "post=1" for the B4 pmndrs
+ *                                chain). One instrument, many variants —
+ *                                never a second FPS harness (Amendment 5).
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -106,14 +110,16 @@ const summarizeShippedSamples = (samples) => {
     speed: stats(numericOf(samples, 'speed')),
     bakedBuildings: latest.bakedBuildings ?? null,
     trackVisualsEnabled: latest.trackVisualsEnabled ?? null,
+    postChainEnabled: latest.postChainEnabled ?? null,
   };
 };
 
 const captureShipped = async (page) => {
+  const urlExtra = process.env.PHASE5_URL_EXTRA ? `&${process.env.PHASE5_URL_EXTRA}` : '';
   const routePath =
     target === 'shipped-dev'
-      ? `/kart-playtest.html?raceAutoplay=1&track=${trackKey}`
-      : `/?raceAutoplay=1&track=${trackKey}#race`;
+      ? `/kart-playtest.html?raceAutoplay=1&track=${trackKey}${urlExtra}`
+      : `/?raceAutoplay=1&track=${trackKey}${urlExtra}#race`;
   const url = `${baseUrl}${routePath}`;
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(
@@ -138,6 +144,7 @@ const captureShipped = async (page) => {
       return t
         ? {
             bakedBuildings: t.bakedBuildings,
+            postChainEnabled: t.postChainEnabled,
             fpsEstimate: t.fpsEstimate,
             frameElapsedMs: t.frameElapsedMs,
             frameWorkMs: t.frameWorkMs,
