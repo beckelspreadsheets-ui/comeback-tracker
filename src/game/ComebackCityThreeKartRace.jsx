@@ -3941,9 +3941,10 @@ const publishTelemetry = (
 };
 
 // One icon source for every held-item surface (top badge, throw button,
-// held-item chip). Lucide stand-ins until the W5/H5 generated icon set —
-// icons are a similarity trap, owner review per icon when that lands.
-const HELD_ITEM_ICONS = {
+// held-item chip, intro item guide). Lucide stand-ins until the W5/H5
+// generated icon set — icons are a similarity trap, owner review per icon
+// when that lands. Exported so the intro guide ALWAYS matches the HUD.
+export const HELD_ITEM_ICONS = {
   aurora: Rainbow,
   avalanche: MountainSnow,
   blizzard: CloudSnow,
@@ -3955,7 +3956,7 @@ const HELD_ITEM_ICONS = {
   slapfish: FishSymbol,
 };
 
-const HeldItemIcon = ({ heldItem, projectileSkin, size = 15 }) => {
+export const HeldItemIcon = ({ heldItem, projectileSkin, size = 15 }) => {
   if (heldItem === 'snowball') {
     // The snowball slot wears the character's projectile skin.
     return projectileSkin === 'carrot' ? <Carrot size={size} /> : <Snowflake size={size} />;

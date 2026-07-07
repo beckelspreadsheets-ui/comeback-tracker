@@ -4,12 +4,10 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  Banana,
-  Snowflake,
+  BookOpen,
   Car,
   Fish,
   Flag,
-  Mountain,
   Gauge,
   Medal,
   Rocket,
@@ -31,6 +29,7 @@ import { ArcadeRace3D } from './ArcadeRace3D.jsx';
 import {
   ComebackCityThreeKartRace,
   DEFAULT_CHARACTER_KEY,
+  HeldItemIcon,
   KART_CHARACTERS,
   KART_OPTIONS,
 } from './ComebackCityThreeKartRace.jsx';
@@ -1756,18 +1755,21 @@ const KartIntroScreen = ({ onStart }) => (
         </div>
         <div className="border border-white/12 bg-white/[0.03] p-4">
           <div className="mb-2 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd34f]">Items</div>
+          {/* Icons come from the SAME map as the in-race HUD chip (HeldItemIcon),
+              so what you read here is exactly what you'll see next to the
+              throw button when you're holding it. */}
           <ul className="space-y-2 text-[13px] leading-snug text-white/80">
-            <li className="flex items-start gap-2"><Zap size={15} className="mt-0.5 shrink-0 text-[#ffd34f]" /> <span><span className="text-white">Hot Cocoa</span> — chug it for an instant mini-turbo.</span></li>
-            <li className="flex items-start gap-2"><Shield size={15} className="mt-0.5 shrink-0 text-[#49d9ff]" /> <span><span className="text-white">Ice Shield</span> — a crystal dome that eats the next hit.</span></li>
-            <li className="flex items-start gap-2"><Banana size={15} className="mt-0.5 shrink-0 text-[#f2ecd9]" /> <span><span className="text-white">Fish Bone</span> — drops behind you; spins out whoever runs it over.</span></li>
-            <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#9fdcff]" /> <span><span className="text-white">Snowball</span> — throws forward; first kart it catches spins out. Bunny throws carrots, penguins throw ice shards. You get these when you're behind.</span></li>
-            <li className="flex items-start gap-2"><Fish size={15} className="mt-0.5 shrink-0 text-[#cfe8f4]" /> <span><span className="text-white">Slap Fish</span> — swings a big fish; spins anyone riding alongside.</span></li>
-            <li className="flex items-start gap-2"><Rocket size={15} className="mt-0.5 shrink-0 text-[#ffb066]" /> <span><span className="text-white">Rocket Sardine</span> — homes in on the kart directly ahead. A shield blocks it.</span></li>
-            <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#dff3ff]" /> <span><span className="text-white">Blizzard Cloud</span> — parks a fog dome on the road for 8s; everyone inside crawls. Yours slows you too.</span></li>
-            <li className="flex items-start gap-2"><Mountain size={15} className="mt-0.5 shrink-0 text-[#f4fbff]" /> <span><span className="text-white">Avalanche</span> — last place, final lap only: buries whoever is in 1st. Watch for the rumble.</span></li>
-            <li className="flex items-start gap-2"><Sparkles size={15} className="mt-0.5 shrink-0 text-[#9ff5d0]" /> <span><span className="text-white">Aurora Boost</span> — last place, final lap only: 3s of invincible speed. Everything you touch spins; you don't.</span></li>
-            <li className="flex items-start gap-2"><Snowflake size={15} className="mt-0.5 shrink-0 text-[#f4f8ff]" /> <span><span className="text-white">Penguin March</span> — last place, final lap only: a waddle-train of ordinal penguins crosses the road ahead. Hit the line and you spin.</span></li>
-            <li>Question boxes hand you one — watch the slot in the HUD.</li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#ffd34f]"><HeldItemIcon heldItem="cocoa" /></span> <span><span className="text-white">Hot Cocoa</span> — chug it for an instant mini-turbo.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#49d9ff]"><HeldItemIcon heldItem="iceshield" /></span> <span><span className="text-white">Ice Shield</span> — a crystal dome that eats the next hit.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#f2ecd9]"><HeldItemIcon heldItem="fishbone" /></span> <span><span className="text-white">Fish Bone</span> — drops behind you and arms after a beat; spins out whoever runs it over.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#9fdcff]"><HeldItemIcon heldItem="snowball" projectileSkin="snowball" /></span> <span><span className="text-white">Snowball</span> — throws forward; first kart it catches spins out. Bunny throws carrots, penguins throw ice shards. You get these when you're behind.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#cfe8f4]"><HeldItemIcon heldItem="slapfish" /></span> <span><span className="text-white">Slap Fish</span> — swings a big fish; spins anyone riding alongside.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#ffb066]"><HeldItemIcon heldItem="sardine" /></span> <span><span className="text-white">Rocket Sardine</span> — homes in on the kart directly ahead. A shield blocks it.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#dff3ff]"><HeldItemIcon heldItem="blizzard" /></span> <span><span className="text-white">Blizzard Cloud</span> — parks a fog dome on the road for 8s; everyone inside crawls. Yours slows you too.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#f4fbff]"><HeldItemIcon heldItem="avalanche" /></span> <span><span className="text-white">Avalanche</span> — last place, final lap only: buries whoever is in 1st. Watch for the rumble.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#9ff5d0]"><HeldItemIcon heldItem="aurora" /></span> <span><span className="text-white">Aurora Boost</span> — last place, final lap only: 3s of invincible speed. Everything you touch spins; you don't.</span></li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#f4f8ff]"><HeldItemIcon heldItem="march" /></span> <span><span className="text-white">Penguin March</span> — last place, final lap only: a waddle-train of ordinal penguins crosses the road ahead. Hit the line and you spin.</span></li>
+            <li>Question boxes hand you one — the icon shows next to the throw button while you hold it.</li>
           </ul>
         </div>
       </div>
@@ -1800,7 +1802,7 @@ const KartStatBar = ({ label, value }) => (
 // Pre-race garage: pick your racer AND your kart (karts carry light stat
 // spreads). The remaining characters take the rival seats in their signature
 // rides. Shown every visit after the one-time intro; QA automation skips it.
-const KartCharacterSelect = ({ kartKey, onStart, selectedKey, setKartKey, setSelectedKey, setTrackKey, trackKey }) => (
+const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, selectedKey, setKartKey, setSelectedKey, setTrackKey, trackKey }) => (
   <div
     className="absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
     data-testid="race-character-select"
@@ -1810,6 +1812,17 @@ const KartCharacterSelect = ({ kartKey, onStart, selectedKey, setKartKey, setSel
         <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City Grand Prix</div>
         <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Race Setup</h2>
         <p className="mt-1 text-[12px] text-white/50">Pick your track, your racer, and your kart.</p>
+        {/* W2 (owner): the intro's full item guide must be reachable every
+            visit, not just the first — "so people are not just guessing". */}
+        <button
+          type="button"
+          className="mt-2 inline-flex items-center gap-2 border border-white/20 bg-white/[0.04] px-4 py-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-white/75 transition-colors hover:border-[#7eefff]/60 hover:text-[#7eefff]"
+          data-testid="race-open-item-guide"
+          onClick={onShowGuide}
+        >
+          <BookOpen size={13} />
+          How to race &amp; item guide
+        </button>
       </div>
       <div className="text-center">
         <h3 className="font-mono text-sm font-black uppercase tracking-[0.14em] text-white">Pick Your Track</h3>
@@ -2190,6 +2203,7 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
       ) : !characterReady ? (
         <KartCharacterSelect
           kartKey={kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart}
+          onShowGuide={() => setIntroSeen(false)}
           onStart={confirmCharacter}
           selectedKey={characterKey}
           setKartKey={setKartKey}
