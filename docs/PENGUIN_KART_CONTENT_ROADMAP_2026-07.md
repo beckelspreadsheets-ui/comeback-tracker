@@ -35,7 +35,7 @@ Full checklist lives in `docs/GRAPHICS_REVAMP_HANDOFF_PROMPT.md` (JOB 1). Headli
 
 Owner feedback verbatim: "The boost aren't very clear. It's hard to tell and sometimes the fish doesn't spin you out so I feel like we just need to re-look over all the items. Make sure they work and actually add in a couple different item boxes and way for when you pick up an item you know what it is maybe a little icon underneath near the item throw."
 
-1. **Boost pads** — clarity lab: 3-4 treatments (bigger, brighter, animated chevron scroll, edge glow) captured in-game, owner picks.
+1. **Boost pads** — clarity lab: 3-4 treatments captured in-game, owner picks. Owner 2026-07-07: boost (and drift) "should also get 3d renders" — so candidates include generated-3D pad geometry (raised chevron ramp, glowing arrow slab) alongside brighter/animated texture options; drift feedback assets (spark/trail/mini-turbo tier visuals) get a render pass in W5.
 2. **Item audit** — pure-node validators in race-content-playtest proving EVERY heldItems.js item applies its effect + every rival/player interaction path. **Fish-bone no-spin suspect:** the 0.3s arm delay added with kart-contact (6a016533) — point-blank hits inside the window never arm. Decide the feel fix with the owner (shorter arm / armed-state visual / arm-on-throw-clear).
 3. **Item box variety** — 2-3 new box designs via the tripo_3d pipeline; keep the `?` readability rule (oversize + glow, race-speed legible).
 4. **Held-item HUD icon** — icon near the item/throw button (mobile + desktop) showing the held item. Ties into H5: generated `ITEM_ICON_URLS` sprite map replacing the lucide ternary chain (~:4500s). Icons are a similarity trap — owner review per icon, original shapes only.
@@ -53,11 +53,22 @@ Same pipeline that built Miami (tripo_3d text-to-3D → diet-mesh.sh → turntab
 
 1. **5 new karts.** Kart bodies are player-selectable (hero-adjacent). Plan: generate candidates cheap via tripo_3d (quality=detailed) in a kart-lab turntable; owner judges against the V2 trait-card bar (chunky tires, wide low body, empty cockpit with driverMount headrest). Any that miss the bar fall back to the owner's Tripo Studio multi-view flow. Each kart: orientation lab (authored yaw), stat spread in KART_OPTIONS, select-screen portrait capture, wheel nodes optional (Kenney-style spin/steer only if the mesh has them).
 2. **New penguin characters from owner character sheets.** Owner has JPEGs/sheets ready (currently in `~/Downloads/3d animations/`). Per character: sheet → owner Tripo Studio (seated driving pose, no held props — docs/TRIPO_AVATAR_HANDOFF.md) → GLB intake → meshopt diet → orientation lab → KART_CHARACTERS + rival seat + select portrait. **outplayasians** already has an owner 3D render — goes straight to intake, doubles as the W3 crosser and (owner call) a playable character.
-3. **Intake convention (answers "where should I put all these penguin renders"):** drop everything in **`3d generations/character sheets/`** (the existing intake folder) — character sheets as `<character-key>-sheet.jpg/png`, expression sheets as `<character-key>-expressions.png` (E1 contract), ready GLBs as `<character-key>.glb` (e.g. `outplayasians.glb`). Files can stay in `~/Downloads/3d animations/` as the working copy — just say which filenames are the intended ones per character and they get pulled in from there. Nothing in that folder ships directly; every mesh passes diet + orientation lab + manifest first.
+3. **Intake DELIVERED 2026-07-07** — `3d generations:character sheets/fresh add ons/` (in-repo path, kept UNTRACKED like the rest of the raw-art folder; this inventory is the record). Owner: "all ordinal penguins besides lifo and lifoladen." Per-file pipeline:
 
-## W5 — Item 3D renders (after W2)
+| File | Character key | What it is | Next step |
+|---|---|---|---|
+| `AK-47-pengu.png` (927 B) | `ak47` | tiny ordinal pixel source | needs a multi-view character sheet first — OWNER ChatGPT flow (H1 default; do NOT upload ordinal art to Higgsfield — §2.2 license gate still open) → owner Tripo Studio → GLB |
+| `Denomad-pengu.png` (748 B) | `denomad` | tiny ordinal pixel source | same as ak47 |
+| `georgefx.png` (709 B) | `georgefx` | tiny ordinal pixel source | same as ak47 |
+| `Lifo.jpg` (42 KB) | `lifo` | small art (NOT ordinal) | sheet needed; non-ordinal so EITHER owner ChatGPT or Higgsfield image tools are allowed for the sheet; then Tripo Studio |
+| `lifoladen-charactersheet.png` (2.9 MB) | `lifoladen` | ready character sheet (NOT ordinal) | straight to owner Tripo Studio (seated driving pose, TRIPO_AVATAR_HANDOFF.md) |
+| `Outplayasians 3d pengu.png` (1.7 MB) | `outplayasians` | render IMAGE of the owner's existing 3D model | **need the actual GLB** — owner said "can share"; drop as `outplayasians.glb` in the same folder. Doubles as the W3 finish-line crosser |
 
-Once the audit proves behavior, re-skin item props (fish bone, snowball, cocoa, shield bubble, sardine rocket, blizzard cloud, avalanche marker) via the same generated-3D pipeline, one lab round, oversized + glowing per the race-speed readability rule. Held-item HUD icons (W2.4) reuse these renders for visual consistency.
+   Every delivered GLB: meshopt diet → orientation lab → KART_CHARACTERS roster + rival seat + select portrait + manifest.
+
+## W5 — Item + feel 3D renders (after W2)
+
+Once the audit proves behavior, re-skin item props (fish bone, snowball, cocoa, shield bubble, sardine rocket, blizzard cloud, avalanche marker) via the same generated-3D pipeline, one lab round, oversized + glowing per the race-speed readability rule. Held-item HUD icons (W2.4) reuse these renders for visual consistency. **Also in scope (owner 2026-07-07): boost pad geometry and drift feel assets** — 3D pad ramps/arrows (picked in the W2 lab) and drift spark/trail/mini-turbo tier visuals, so the core feel effects match the new asset quality bar ("now that we have the pipeline down we can really improve assets").
 
 ---
 
