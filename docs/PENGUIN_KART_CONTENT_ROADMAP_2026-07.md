@@ -17,6 +17,7 @@
 | W4 | **Roster expansion** (5 new karts + new penguin characters) | 2-4 days | owner character sheets/GLB intake |
 | W5 | **Item 3D renders** (item props get the same generated-3D treatment) | 1-2 days | W2 (audit first, then beautify) |
 | W6 | **Menu/UI beauty pass** (How-to-Race + Race Setup screens) | 1-2 days | END-STAGE by owner call — after W3–W5 content lock |
+| W7 | **Controls & UX backlog** (WASD-friendly item key, chip revision, mobile pass) | ~1 day | none — batch with W6 or pull forward |
 
 ---
 
@@ -72,9 +73,17 @@ Same pipeline that built Miami (tripo_3d text-to-3D → diet-mesh.sh → turntab
 
    Every delivered GLB: meshopt diet → orientation lab → KART_CHARACTERS roster + rival seat + select portrait + manifest.
 
+   **Delivery re-confirmed by owner 2026-07-07 pm** ("outplayasians jpeg is inside the folder ... as well as about 5 other photos I added") — folder contents verified identical to the table above (outplayasians render + 5 others). STILL OUTSTANDING for W4: the **outplayasians GLB export** (the PNG is a render of his model, not the model — "can share" stands), the 3 ordinal multi-view sheets via the owner-ChatGPT flow, and lifoladen through Tripo Studio.
+
 ## W5 — Item + feel 3D renders (after W2)
 
 Once the audit proves behavior, re-skin item props (fish bone, snowball, cocoa, shield bubble, sardine rocket, blizzard cloud, avalanche marker) via the same generated-3D pipeline, one lab round, oversized + glowing per the race-speed readability rule. Held-item HUD icons (W2.4) reuse these renders for visual consistency. **Also in scope (owner 2026-07-07): boost pad geometry and drift feel assets** — 3D pad ramps/arrows (picked in the W2 lab) and drift spark/trail/mini-turbo tier visuals, so the core feel effects match the new asset quality bar ("now that we have the pipeline down we can really improve assets").
+
+## W7 — Controls & UX backlog (owner adds 2026-07-07, "just things to add to the list")
+
+1. **Item fire during WASD** — "we will have to change controls so item can be sent while your using WASD": today item = SHIFT/ENTER; pick a key that doesn't break WASD hand position (candidates: E, F, or left-click), keep SHIFT/ENTER working, update the intro guide's Drive card + the `?` copy. Small, do with W6 or earlier if it bugs him.
+2. **Held-item chip revision** — owner: "the item held chip is okay but needs to be changed" (no direction given yet — ASK what he wants changed when it comes up; likely ties into the W5 generated icons + W6 UI pass).
+3. **Mobile optimization pass** — owner: "we will need to optimize for mobile": touch layout/ergonomics + perf review on a real phone (the 30-FPS floor is untested on reference mobile hardware since the miami ship).
 
 ## W6 — Menu/UI beauty pass (END-STAGE, after content lock — owner 2026-07-07)
 

@@ -37,6 +37,8 @@ import miamiDecoHotelUrl from '../assets/game/models/miami/deco-hotel.glb?url';
 import miamiLifeguardUrl from '../assets/game/models/miami/lifeguard-tower.glb?url';
 import miamiPalmClusterUrl from '../assets/game/models/miami/palm-cluster.glb?url';
 import miamiRetroDinerUrl from '../assets/game/models/miami/retro-diner.glb?url';
+import itemBoxCcCoinUrl from '../assets/game/models/items/item-box-cc-coin.glb?url';
+import itemBoxPvIceUrl from '../assets/game/models/items/item-box-pv-ice.glb?url';
 import backdropCcFarUrl from '../assets/game/generated/backdrops/cc-far.webp';
 import backdropCcNearUrl from '../assets/game/generated/backdrops/cc-near.webp';
 import backdropPvFarUrl from '../assets/game/generated/backdrops/pv-far.webp';
@@ -1692,29 +1694,7 @@ const addPad = (world, sampler, pad, index) => {
   group.userData.progress = pad.progress;
   group.userData.index = index;
   const variant = boostLabVariant();
-  if (variant === 'v1') {
-    // V1 "hot chevrons": bigger footprint, amber-hot palette (pops against
-    // the teal track identity), five oversized sweeping chevrons.
-    group.add(makeBox({ x: 19.6, y: 0.42, z: 13.2 }, { y: 0.04 }, createBasicMaterial('#1a0e04')));
-    const glowPanel = new THREE.Mesh(
-      new THREE.BoxGeometry(18, 0.2, 11.4),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff8c1f').multiplyScalar(1.7) })
-    );
-    glowPanel.position.y = 0.34;
-    group.add(glowPanel);
-    [-4.4, -2.2, 0, 2.2, 4.4].forEach((z, order) => {
-      const arrow = new THREE.Mesh(
-        new THREE.ConeGeometry(2.9, 3.4, 3),
-        new THREE.MeshBasicMaterial({ color: '#fff3d9', transparent: true })
-      );
-      arrow.position.set(0, 0.58, z - 0.4);
-      arrow.rotation.set(Math.PI / 2, 0, Math.PI);
-      arrow.scale.set(2.2, 1, 0.34);
-      arrow.userData.chevronOrder = order;
-      group.add(arrow);
-    });
-    addGlowSprite(group, '#ffab3d', 20, 0.55, 1.8);
-  } else if (variant === 'v2') {
+  if (variant === 'v2') {
     // V2 "raised ramp slab": a visibly RAISED wedge with a bright lip bar —
     // reads as 3D road furniture from distance, not paint.
     const slab = new THREE.Mesh(new THREE.BoxGeometry(16.4, 1.7, 11.4), createBasicMaterial('#132033'));
@@ -1781,25 +1761,31 @@ const addPad = (world, sampler, pad, index) => {
     group.add(crossbar);
     addGlowSprite(group, '#2cd8f6', 22, 0.5, 7.4);
   } else {
-    group.add(makeBox({ x: 16.4, y: 0.42, z: 10.6 }, { y: 0.04 }, createBasicMaterial('#0d1726')));
+    // SHIPPED DEFAULT since the W2 pick (owner 2026-07-07: "boost lab-
+    // v1"): V1 "hot chevrons" — bigger footprint, amber-hot palette that
+    // pops against the teal track identity, five oversized sweeping
+    // chevrons. (?boostLab=1 variant 'v1' falls through here too — same
+    // look; v2/v3 stay reachable for future rounds. The old flat cyan
+    // pad retired with this pick.)
+    group.add(makeBox({ x: 19.6, y: 0.42, z: 13.2 }, { y: 0.04 }, createBasicMaterial('#1a0e04')));
     const glowPanel = new THREE.Mesh(
-      new THREE.BoxGeometry(14.8, 0.2, 9),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color('#0fa9cc').multiplyScalar(1.6) })
+      new THREE.BoxGeometry(18, 0.2, 11.4),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff8c1f').multiplyScalar(1.7) })
     );
     glowPanel.position.y = 0.34;
     group.add(glowPanel);
-    [-2.9, 0, 2.9].forEach((z, order) => {
+    [-4.4, -2.2, 0, 2.2, 4.4].forEach((z, order) => {
       const arrow = new THREE.Mesh(
-        new THREE.ConeGeometry(2.3, 2.7, 3),
-        new THREE.MeshBasicMaterial({ color: '#ecfeff', transparent: true })
+        new THREE.ConeGeometry(2.9, 3.4, 3),
+        new THREE.MeshBasicMaterial({ color: '#fff3d9', transparent: true })
       );
-      arrow.position.set(0, 0.56, z - 0.4);
+      arrow.position.set(0, 0.58, z - 0.4);
       arrow.rotation.set(Math.PI / 2, 0, Math.PI);
-      arrow.scale.set(1.7, 1, 0.3);
+      arrow.scale.set(2.2, 1, 0.34);
       arrow.userData.chevronOrder = order;
       group.add(arrow);
     });
-    addGlowSprite(group, '#2cd8f6', 15, 0.4, 1.6);
+    addGlowSprite(group, '#ffab3d', 20, 0.55, 1.8);
   }
   world.add(group);
   return group;
@@ -1856,6 +1842,34 @@ const makeWinterItemCrate = (accent = '#00E5FF') => {
     n.castShadow = true;
   });
   return crate;
+};
+
+// W2 owner picks (2026-07-07: "keep the bottom two in the game ... the
+// icebox one for penguin city and the other for comeback city"): generated
+// bitcoin item boxes, per track. The procedural winter crate mounts first
+// and stays as the VISIBLE fallback until (unless) the GLB template
+// resolves; load failures count into the same telemetry mounts guard the
+// Miami set uses, so kart-playable fails loud on a 404.
+const ITEM_BOX_ASSETS = {
+  'comeback-city': itemBoxCcCoinUrl,
+  'penguin-village': itemBoxPvIceUrl,
+};
+const itemBoxTemplateCache = new Map();
+const loadItemBoxTemplate = (url) => {
+  if (!itemBoxTemplateCache.has(url)) {
+    itemBoxTemplateCache.set(
+      url,
+      new Promise((resolve) => {
+        createGameGltfLoader().load(
+          url,
+          (gltf) => resolve(gltf.scene),
+          undefined,
+          () => resolve(null)
+        );
+      })
+    );
+  }
+  return itemBoxTemplateCache.get(url);
 };
 
 const addItemBox = (world, sampler, box, index, questionTexture) => {
@@ -4243,37 +4257,68 @@ export const ComebackCityThreeKartRace = ({
           if (fallback) marcher.inner.remove(fallback);
           marcher.inner.add(rig);
         });
+        // W2 owner picks (2026-07-07): per-track GENERATED item boxes —
+        // the golden ₿ coin on Comeback City, the ₿-frozen-in-ice cube on
+        // Penguin Village ("keep the bottom two ... the icebox one for
+        // penguin city and the other for comeback city"). The Kenney cube
+        // stays as the fallback if the generated GLB fails (visible, not
+        // silent) and the load counts into the telemetry mounts guard.
         const itemMaterial = applyHeroRim(
           new THREE.MeshToonMaterial({
             gradientMap: getToonGradient(),
             map: makeKartPaletteTexture(colormapImage),
           })
         );
-        engine.itemBoxes.forEach((box) => {
-          [...box.children]
-            .filter(
-              (child) =>
-                child.userData.kind === 'item-cube-fallback' || child.userData.kind === 'item-question'
-            )
-            .forEach((child) => {
-              child.geometry?.dispose?.();
-              child.material?.dispose?.();
-              box.remove(child);
-            });
-          const rig = itemBoxScene.clone(true);
-          rig.traverse((node) => {
-            if (node.isMesh) {
-              node.material = itemMaterial;
-              node.castShadow = true;
+        const generatedBoxUrl = ITEM_BOX_ASSETS[trackDef.key];
+        if (generatedBoxUrl) miamiMountStats.requested += 1;
+        (generatedBoxUrl ? loadItemBoxTemplate(generatedBoxUrl) : Promise.resolve(null)).then((boxTemplate) => {
+          if (disposed || engineRef.current !== engine) return;
+          if (generatedBoxUrl) {
+            if (boxTemplate) miamiMountStats.mounted += 1;
+            else {
+              miamiMountStats.failed += 1;
+              console.warn(`[kart] generated item box failed to load — Kenney fallback (track ${trackDef.key})`);
             }
+          }
+          engine.itemBoxes.forEach((box) => {
+            [...box.children]
+              .filter(
+                (child) =>
+                  child.userData.kind === 'item-cube-fallback' || child.userData.kind === 'item-question'
+              )
+              .forEach((child) => {
+                child.geometry?.dispose?.();
+                child.material?.dispose?.();
+                box.remove(child);
+              });
+            const rig = (boxTemplate || itemBoxScene).clone(true);
+            rig.traverse((node) => {
+              if (node.isMesh) {
+                // Generated boxes keep their own baked texture inside the
+                // hero toon+rim family (marcher pattern); the Kenney
+                // fallback keeps the shared kart palette.
+                node.material = boxTemplate
+                  ? applyHeroRim(
+                      new THREE.MeshToonMaterial({
+                        gradientMap: getToonGradient(),
+                        map: node.material?.map || null,
+                      })
+                    )
+                  : itemMaterial;
+                node.castShadow = true;
+              }
+            });
+            const bounds = new THREE.Box3().setFromObject(rig);
+            const size = bounds.getSize(new THREE.Vector3());
+            rig.scale.setScalar(7.4 / Math.max(size.x, size.y, size.z));
+            rig.updateMatrixWorld(true);
+            const fitted = new THREE.Box3().setFromObject(rig);
+            rig.position.sub(fitted.getCenter(new THREE.Vector3()));
+            // The coin spins upright on the group's Y rotation (faces on
+            // ±X); the ice cube takes a playful tilt like the old crate.
+            if (boxTemplate && trackDef.key === 'penguin-village') rig.rotation.z = 0.2;
+            box.add(rig);
           });
-          const bounds = new THREE.Box3().setFromObject(rig);
-          const size = bounds.getSize(new THREE.Vector3());
-          rig.scale.setScalar(7.4 / Math.max(size.x, size.y, size.z));
-          rig.updateMatrixWorld(true);
-          const fitted = new THREE.Box3().setFromObject(rig);
-          rig.position.sub(fitted.getCenter(new THREE.Vector3()));
-          box.add(rig);
         });
       })
       .catch(() => {

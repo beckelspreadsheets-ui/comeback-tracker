@@ -275,6 +275,18 @@
       "assetId": "miami.retro-diner",
       "class": "trackside-building",
       "role": "runtime-trackside-building"
+    },
+    {
+      "path": "src/assets/game/models/items/item-box-cc-coin.glb",
+      "assetId": "itembox.cc-coin",
+      "class": "item-box",
+      "role": "runtime-item-box"
+    },
+    {
+      "path": "src/assets/game/models/items/item-box-pv-ice.glb",
+      "assetId": "itembox.pv-ice",
+      "class": "item-box",
+      "role": "runtime-item-box"
     }
   ]
 }

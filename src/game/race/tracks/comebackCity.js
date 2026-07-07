@@ -35,11 +35,13 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
   dressing: { openingFacades: true, roadsideProps: true },
   // Additive palette: ONLY heroRim — every other atmosphere key stays
   // undefined so the track keeps running on the createScene fallbacks
-  // (the original hardcoded neon dusk). B3 hero fresnel rim — owner pick
-  // 2026-07-07 at the W2 review ("v7 for the rimlab comeback city"):
-  // V7 "electric", hotter rim in CC's violet neon.
+  // (the original hardcoded neon dusk). B3 hero fresnel rim — owner
+  // RE-PICK 2026-07-07 after seeing V7 live: V1 "whisper" ("v1 looks
+  // cleanest for comeback city") — subtle tight edge in the track's
+  // shared cyan (V1 carries no tint override; #4fd8ff is CC's fallback
+  // rim tint).
   palette: {
-    heroRim: { power: 2.8, strength: 0.38, tint: '#7c5cff' },
+    heroRim: { power: 3.2, strength: 0.22, tint: '#4fd8ff' },
   },
   visual: {
     schemaVersion: TRACK_VISUAL_SCHEMA_VERSION,

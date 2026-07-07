@@ -127,13 +127,13 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     hemi: { sky: '#689bb8', ground: '#0f273f', intensity: 3 },
     sunColor: '#e8c9a0',
     rimLightColor: '#00d5ff',
-    // B3 hero fresnel rim — owner RE-PICK 2026-07-07 at the W2 review:
-    // V5 "wide sheen" ("v5 on penguin village") replaces the 2026-07-06
-    // V6 ice white — soft broad wrap (power 1.7 / strength 0.24) in the
-    // track's own aurora tint (V5 carries no tint override, so the shader
+    // B3 hero fresnel rim — owner RE-PICK 2026-07-07 after seeing V5
+    // live: V3 "bold" ("v3 for penguin") — stronger, wider edge in the
+    // track's own aurora tint (V3 carries no tint override, so the shader
     // rim uses this palette's rimLightColor #00d5ff). tint overrides the
     // shader rim only; the rimLight DirectionalLight above keeps #00d5ff.
-    heroRim: { power: 1.7, strength: 0.24, tint: '#00d5ff' },
+    // History: V6 ice white (07-06) → V5 wide sheen (07-07 am) → V3 bold.
+    heroRim: { power: 2.2, strength: 0.45, tint: '#00d5ff' },
   },
   // Arctic dressing: giant ordinal-penguin ice statues, igloos, snow + ice.
   // customStartArch: skip the default finish gantry (the ICE IS NICE arch

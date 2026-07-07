@@ -526,5 +526,43 @@
       "promotedAt": "2026-07-07",
       "labEvidence": "tmp/m3-sky-lab/ + sky-lab.html"
     }
+  },
+  {
+    "filePath": "src/assets/game/models/items/item-box-cc-coin.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId da7bdf92-3772-4f5e-aa7e-8c32db8f4a37 (re-roll of 48cdfdca for the reverse face), 2026-07-07; COMPOSITE: two instances of the same mesh baked back-to-back, each clean \u20bf face outward (tripo mirror-mangles one face of every roll \u2014 build script tmp/w2-item-boxes/build-coin-composite.mjs)",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); the bitcoin \u20bf mark is deliberate owner-directed art (\"they could actually just be bitcoins\") \u2014 recorded exception to the no-text rule",
+    "role": "Runtime item box, Comeback City (W2 owner pick: \"the other for comeback city\") \u2014 ITEM_BOX_ASSETS mount replacing the procedural crate",
+    "sizeBudget": "item-box class (2026-07-07 revision: target 2500/hard 5000 tris, 160KB hard); shipped 4828 tris / 64KB sha256:594bb7aca7ff0b6194ace23a804c510af23ca8a0423b4d8f815788244e02c469",
+    "fallback": "the procedural winter crate stays mounted until the GLB template resolves and remains if it fails (visible fallback, not silent); load failures count into the telemetry mounts guard",
+    "assetId": "itembox.cc-coin",
+    "assetClass": "item-box",
+    "status": "runtime-promoted-w2-boxes",
+    "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.02/0.08 -> resize 256 -> back-to-back composite -> meshopt",
+    "sourceHash": "sha256:59398d378340c59ac390809df56dee37547bf1297adf5a56e222c26476856513",
+    "outputHash": "sha256:594bb7aca7ff0b6194ace23a804c510af23ca8a0423b4d8f815788244e02c469",
+    "promotion": {
+      "approval": "Owner pick 2026-07-07: \"I want to keep the bottom two in the game ... the other for comeback city\" (item-box-lab.html round 2)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/w2-item-boxes/shipped-boxes-turntable.png (both faces clean post-composite)"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/items/item-box-pv-ice.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId d49b9b54-02fb-4513-9de5-c533921aeb63, 2026-07-07 (golden \u20bf coin frozen in a frosted ice cube, with a surprise generator penguin)",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); the bitcoin \u20bf mark is deliberate owner-directed art (\"they could actually just be bitcoins\") \u2014 recorded exception to the no-text rule",
+    "role": "Runtime item box, Penguin Village (W2 owner pick: \"the icebox one for penguin city\") \u2014 ITEM_BOX_ASSETS mount replacing the procedural crate",
+    "sizeBudget": "item-box class (2026-07-07 revision: target 2500/hard 5000 tris, 160KB hard); shipped 1946 tris / 46KB sha256:3f34311c9430216f40ae8023612c81cfe21d8b807b092f532b9dd78891419e2d",
+    "fallback": "the procedural winter crate stays mounted until the GLB template resolves and remains if it fails (visible fallback, not silent); load failures count into the telemetry mounts guard",
+    "assetId": "itembox.pv-ice",
+    "assetClass": "item-box",
+    "status": "runtime-promoted-w2-boxes",
+    "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.05/0.02 -> resize 256 -> meshopt",
+    "sourceHash": "sha256:57e9c4922bb0073b0f3fda0e8d14b07518fd2ff024935e16d9d9b437d1527178",
+    "outputHash": "sha256:3f34311c9430216f40ae8023612c81cfe21d8b807b092f532b9dd78891419e2d",
+    "promotion": {
+      "approval": "Owner pick 2026-07-07: \"can use the icebox one for penguin city\" (item-box-lab.html round 2)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/w2-item-boxes/shipped-boxes-turntable.png"
+    }
   }
 ]

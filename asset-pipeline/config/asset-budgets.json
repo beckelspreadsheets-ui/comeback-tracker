@@ -100,16 +100,16 @@
     },
     "item-box": {
       "triangles": {
-        "target": 1000,
-        "hard": 2000
+        "target": 2500,
+        "hard": 5000
       },
       "encodedBytes": {
-        "target": 80000,
-        "hard": 120000
+        "target": 100000,
+        "hard": 160000
       },
       "materials": {
         "target": 1,
-        "hard": 1
+        "hard": 2
       },
       "maxTextureDimension": 512
     },
