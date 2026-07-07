@@ -3080,9 +3080,14 @@ const createScene = ({
         far: '/tmp/m3-sky-lab/production/cc-far-a.webp',
         near: '/tmp/m3-sky-lab/production/cc-near-a.webp',
       },
+      // PV defaults to the b-takes: the a-take ice row keyed out DARK
+      // (teal + gold cracks) and read like CC's dark tower skyline — the
+      // owner flagged the two tracks as "the same exact background". The
+      // b-takes carry the pale GLOWING shelf from the picked concept, so
+      // the arctic horizon is unmistakably ice.
       'penguin-village': {
-        far: '/tmp/m3-sky-lab/production/pv-far-a.webp',
-        near: '/tmp/m3-sky-lab/production/pv-near-a.webp',
+        far: '/tmp/m3-sky-lab/production/pv-far-b.webp',
+        near: '/tmp/m3-sky-lab/production/pv-near-b.webp',
       },
     };
     const strips = SKY_LAB_STRIPS[trackDef.key] || {};

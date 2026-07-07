@@ -38,13 +38,15 @@ const RUNS = [
     track: 'comeback-city',
   },
   { key: 'control', overrides: null, skyLab: false, track: 'penguin-village' },
-  { key: 'take-a', overrides: null, skyLab: true, track: 'penguin-village' },
+  // PV default flipped to the b-takes (see SKY_LAB_STRIPS comment) — so
+  // take-b here is the no-override default and take-a is the override.
   {
-    key: 'take-b',
-    overrides: { far: '/tmp/m3-sky-lab/production/pv-far-b.webp', near: '/tmp/m3-sky-lab/production/pv-near-b.webp' },
+    key: 'take-a',
+    overrides: { far: '/tmp/m3-sky-lab/production/pv-far-a.webp', near: '/tmp/m3-sky-lab/production/pv-near-a.webp' },
     skyLab: true,
     track: 'penguin-village',
   },
+  { key: 'take-b', overrides: null, skyLab: true, track: 'penguin-village' },
 ];
 
 const waitForServer = async () => {
