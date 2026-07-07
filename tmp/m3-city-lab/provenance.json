@@ -122,6 +122,12 @@
         "jobId": "9c7f509e-8e46-444f-9188-7a10fb887722"
       }
     ],
-    "evidence": "motel-replacement-ab.png"
+    "evidence": "motel-replacement-ab.png",
+    "ownerVerdict": "retro-diner PICKED 2026-07-07 (\"I love the second ice cream truck looking one is perfect vibes\"); compact-motel unused (kept as candidate)"
+  },
+  "inGameMount": {
+    "date": "2026-07-07",
+    "where": "ComebackCityThreeKartRace.jsx miami mode (behind ?skyLab=1): MIAMI_OPENING_RUN (5 slots on the old facade anchors), MIAMI_DISTRICT_ASSETS (5 district slots behind the neon portals), MIAMI_ROADSIDE (10 palm/lifeguard/diner spots)",
+    "notes": "loads via createGameGltfLoader (single-loader rule holds, grep=1), cached template + clone per placement, unlit MeshBasicMaterial like the baked swaps; Tripo +X facing confirmed in-game. PROMOTION TODO: move GLBs to src/assets + manifest + similarity review; scrub the arcade neon squiggles that read letter-like; consider harder diet (ratio 0.01) \u2014 ~20 rigs x ~30k tris adds ~600k tris vs the 900k proof gate (which runs flag-off today); FPS check at promotion."
   }
 }

@@ -847,6 +847,112 @@ const skyLabConfig = () => {
   };
 };
 
+// H8 Miami trackside set (city-lab, owner-approved 2026-07-07: hotel /
+// condo tower / corner arcade / palms / lifeguard tower + retro diner —
+// "perfect vibes"). Dev-stage: mounts behind ?skyLab=1 from dev-served
+// tmp/m3-city-lab GLBs; promotion moves the files to src/assets +
+// manifest. Every load goes through createGameGltfLoader (house rule),
+// one cached template per URL, cloned per placement, converted unlit
+// (MeshBasicMaterial + baked map) like the baked-building swaps. Tripo
+// rigs natively face +X (orientation-lab ground truth for every Tripo
+// asset so far); the facade/district group convention puts the road on
+// the group's -Z side, so MIAMI_FRONT_YAW turns +X onto -Z.
+const MIAMI_ASSETS = {
+  condoTower: '/tmp/m3-city-lab/condo-tower-diet.glb',
+  cornerArcade: '/tmp/m3-city-lab/corner-arcade-diet.glb',
+  decoHotel: '/tmp/m3-city-lab/deco-hotel-tripo-diet.glb',
+  lifeguard: '/tmp/m3-city-lab/lifeguard-tower-diet.glb',
+  palmCluster: '/tmp/m3-city-lab/palm-cluster-diet.glb',
+  retroDiner: '/tmp/m3-city-lab/retro-diner-diet.glb',
+};
+const MIAMI_FRONT_YAW = Math.PI / 2;
+const miamiMeshCache = new Map();
+const loadMiamiAsset = (url) => {
+  if (!miamiMeshCache.has(url)) {
+    miamiMeshCache.set(
+      url,
+      new Promise((resolve) => {
+        createGameGltfLoader().load(
+          url,
+          (gltf) => resolve(gltf.scene),
+          undefined,
+          () => resolve(null)
+        );
+      })
+    );
+  }
+  return miamiMeshCache.get(url);
+};
+const mountMiamiAsset = (target, assetKey, { footprint, yaw = MIAMI_FRONT_YAW, z = 0 }) => {
+  loadMiamiAsset(MIAMI_ASSETS[assetKey]).then((template) => {
+    if (!template) return;
+    const rig = template.clone(true);
+    rig.traverse((node) => {
+      if (node.isMesh) {
+        node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
+        node.castShadow = false;
+        node.receiveShadow = false;
+      }
+    });
+    rig.rotation.y = yaw;
+    const bounds = new THREE.Box3().setFromObject(rig);
+    const size = bounds.getSize(new THREE.Vector3());
+    rig.scale.setScalar(footprint / Math.max(size.x, size.z));
+    const fitted = new THREE.Box3().setFromObject(rig);
+    const center = fitted.getCenter(new THREE.Vector3());
+    rig.position.x -= center.x;
+    rig.position.z -= center.z - z;
+    rig.position.y -= fitted.min.y;
+    target.add(rig);
+  });
+};
+// Opening straight (same anchors as OPENING_FACADES) + roadside dressing.
+// Footprints follow the old slots (50-ish opening, 36 districts); the
+// condo tower gets a smaller footprint because footprint scales the
+// horizontal bounds and the tower is ~3x taller than wide.
+const MIAMI_OPENING_RUN = [
+  { asset: 'retroDiner', footprint: 34, progress: 0.072, side: -1 },
+  { asset: 'decoHotel', footprint: 52, progress: 0.092, side: -1 },
+  { asset: 'condoTower', footprint: 36, progress: 0.112, side: 1 },
+  { asset: 'cornerArcade', footprint: 48, progress: 0.136, side: 1 },
+  { asset: 'decoHotel', footprint: 52, progress: 0.16, side: 1 },
+];
+const MIAMI_DISTRICT_ASSETS = ['decoHotel', 'condoTower', 'cornerArcade', 'retroDiner', 'decoHotel'];
+const MIAMI_ROADSIDE = [
+  { asset: 'palmCluster', footprint: 18, progress: 0.05, side: 1 },
+  { asset: 'palmCluster', footprint: 16, progress: 0.21, side: -1 },
+  { asset: 'lifeguard', footprint: 14, progress: 0.3, side: 1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.4, side: 1 },
+  { asset: 'palmCluster', footprint: 16, progress: 0.52, side: -1 },
+  { asset: 'retroDiner', footprint: 26, progress: 0.6, side: -1 },
+  { asset: 'palmCluster', footprint: 17, progress: 0.68, side: 1 },
+  { asset: 'lifeguard', footprint: 14, progress: 0.78, side: -1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.88, side: 1 },
+  { asset: 'palmCluster', footprint: 16, progress: 0.95, side: -1 },
+];
+const addMiamiTrackside = (world, sampler, roadWidth) => {
+  MIAMI_OPENING_RUN.forEach((entry) => {
+    const { normal, point, tangent } = sampler.pointAt(entry.progress);
+    const placement = clearBuildingPlacement(sampler, point, normal, entry.side, 64);
+    if (!placement) return;
+    const group = new THREE.Group();
+    group.position.copy(placement);
+    group.rotation.y = Math.atan2(tangent.x, tangent.z) + (entry.side > 0 ? -Math.PI / 2 : Math.PI / 2);
+    mountMiamiAsset(group, entry.asset, { footprint: entry.footprint });
+    world.add(group);
+  });
+  MIAMI_ROADSIDE.forEach((entry) => {
+    const { normal, point, tangent } = sampler.pointAt(entry.progress);
+    const position = point.clone().addScaledVector(normal, entry.side * (sampler.widthAt(entry.progress) * 0.85 + 8));
+    if (minCenterlineDistance(sampler, position.x, position.z) < roadWidth * 0.62) return;
+    const group = new THREE.Group();
+    group.position.copy(position);
+    group.rotation.y = Math.atan2(tangent.x, tangent.z) + (entry.side > 0 ? -Math.PI / 2 : Math.PI / 2);
+    mountMiamiAsset(group, entry.asset, { footprint: entry.footprint });
+    world.add(group);
+  });
+};
+
 // B2: wrap-aware atmosphere lerp driven by per-lap race.progress, called
 // once per frame right before the composer renders. No-op unless
 // createScene precompiled engine.paletteMoments. Zero per-frame
@@ -1932,15 +2038,17 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
     tire: createBasicMaterial('#151923'),
   };
   let propCount = 0;
+  // H8 "miami mode": while the generated backdrop is active the old boxy
+  // buildings/facade sprites stay out and the owner-approved city-lab set
+  // mounts instead (owner 2026-07-07: "these 2d building look horrible
+  // compared to the background" → Miami-vice trackside).
+  const miamiMode = Boolean(skyLabConfig());
   // The hand-placed opening facade run is comeback-city dressing — opt-in.
-  // H8: hidden while the generated backdrop is active (owner 2026-07-07:
-  // "these 2d building look horrible compared to the background") — the
-  // Miami-vice trackside set from city-lab replaces them at promotion.
-  if (trackDef.dressing?.openingFacades && !skyLabConfig()) {
+  if (trackDef.dressing?.openingFacades && !miamiMode) {
     addOpeningFacadeRun(world, sampler, loader, buildingSwaps);
   }
 
-  trackDef.course.districtAnchors.forEach((district) => {
+  trackDef.course.districtAnchors.forEach((district, districtIndex) => {
     const { normal, point, tangent } = sampler.pointAt(district.progress);
     const placement = clearBuildingPlacement(sampler, point, normal, district.side, district.setback * 0.82);
     if (!placement) return;
@@ -1951,14 +2059,13 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
     const base = createBasicMaterial(district.base, { emissive: district.base, emissiveIntensity: 0.08 });
     const dark = createBasicMaterial(district.dark);
     const accent = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 1.25 });
-    // H8: while the generated backdrop is active the boxy district bodies
-    // (and their baked-GLB swap-ins) stay out of the scene — only the neon
-    // portal/beacon gameplay cues remain until the Miami-vice trackside
-    // set lands. buildingSwaps stays empty then; the bake loader no-ops
+    // H8: in miami mode the boxy district bodies (and their baked-GLB
+    // swap-ins) stay out — the owner-approved city-lab building mounts in
+    // the slot instead, behind the neon portal (the road is on the group's
+    // -Z side). buildingSwaps stays empty then; the bake loader no-ops
     // over it and still reaches bakedBuildings === 'active' (proof gate
     // reads load state, not visibility — and it runs flag-off anyway).
-    const skyLabHidesBuildings = Boolean(skyLabConfig());
-    if (!skyLabHidesBuildings) {
+    if (!miamiMode) {
       buildingSwaps.push({ footprint: 36, group, rotate: Math.PI });
       [
         makeRoundedBox({ x: 34, y: 24, z: 18 }, { y: 12 }, base, 1.6),
@@ -1967,6 +2074,11 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
       ].forEach((mesh) => {
         mesh.userData.kind = 'procedural-building';
         group.add(mesh);
+      });
+    } else {
+      mountMiamiAsset(group, MIAMI_DISTRICT_ASSETS[districtIndex % MIAMI_DISTRICT_ASSETS.length], {
+        footprint: 40,
+        z: 6,
       });
     }
     // Standing neon arch doorway, like the portal modules on the district card
@@ -1992,11 +2104,11 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
     group.add(doorway);
     addGlowSprite(group, district.accent, 30, 0.5, 8.6).position.z = -10.9;
     const beacon = new THREE.Mesh(new THREE.DodecahedronGeometry(3.2, 0), accent);
-    // With the buildings hidden the beacon hovers where the roofline was —
-    // bring it down over the portal so it still marks the district.
-    beacon.position.set(0, skyLabHidesBuildings ? 15 : 31, 0);
+    // In miami mode the beacon drops to hover over the portal instead of
+    // the old roofline height.
+    beacon.position.set(0, miamiMode ? 15 : 31, 0);
     group.add(beacon);
-    if (!skyLabHidesBuildings) {
+    if (!miamiMode) {
       const facade = createAssetPlane(loader, DISTRICT_FACADE_URLS[district.key], 54, 54, {
         colorKeyMagenta: true,
         kind: `district-${district.key}-facade-sprite`,
@@ -2121,6 +2233,13 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
       }
     }
   });
+
+  // H8 miami mode: the owner-approved city-lab set fills the opening
+  // straight (old facade-run anchors) and dresses the roadside with palms,
+  // lifeguard towers, and the diner. CC-only (openingFacades dressing).
+  if (miamiMode && trackDef.dressing?.openingFacades) {
+    addMiamiTrackside(world, sampler, roadWidth);
+  }
 
   return propCount;
 };
