@@ -271,8 +271,44 @@ city visuals, not more parameter picks). Owner-steered kickoff order:
    emissives — as capturable variants; he called the procedural skyline
    "cheap" and wants it to "truly make it look like a city" (he LOVES the
    road — do not touch road treatment). Copy the moments-lab capture
-   pattern (PORT 531x, telemetry routeProgress-keyed shots, fail-loud
-   gates, contact sheet at repo root + approvals-hub entry).
+   pattern (PORT 531x — next free is 5316; telemetry routeProgress-keyed
+   shots, fail-loud gates, contact sheet at repo root + approvals-hub
+   entry). SCOUTED ANCHORS (2026-07-06, verbatim-verified — the lab's
+   levers, all in src/game/ComebackCityThreeKartRace.jsx):
+   - THE "CHEAP" SKYLINE IS :2062-2084, inside the sceneryAnchors loop
+     (kind === 'skyline'): 14 flat untextured boxes in ONE straight row —
+     width 16+(i%3)*7, height 28+(i%5)*10, depth fixed 18, x-spacing
+     fixed 39, base '#1b2342', emissive alternating '#38d7ff'/'#b14fd8'
+     at 0.3/0.12, NO windows, NO z variation, 14 separate meshes (no
+     instancing). anchor.color and anchor.d are read but UNUSED; 'bridge'
+     and 'roundabout' anchor kinds are silently ignored. This loop is the
+     lab's primary target.
+   - Lab lever ideas grounded in what exists: layered rows with z-offset
+     (parallax depth), silhouette variety (per-index setbacks, rooftop
+     caps, width/height jitter), density (count/spacing/gaps), INSTANCED
+     window quads (InstancedMesh = 1 draw call in
+     estimateSceneRenderStats :3540-3580 — the excluded legacy patch
+     tmp/m0-trackvisuals-proof/excluded-createRaceScenery-look-perf.patch
+     has the frustum-culling + window-density technique to transplant,
+     NOT apply, it patches the legacy file), emissive-window cadence,
+     rooftop neon sign bars (the opening facades' accent-bar pattern
+     :1890-1896). NO text billboards exist in the V2 runtime (only legacy
+     has createBillboardText) — canvas-texture signage would be new.
+   - DO NOT touch: the 10 buildingSwaps buildings (5 opening facades
+     :1826-1908 + 5 district anchors :1910-2005) — they are the baked-GLB
+     swap targets and kart-playable FAILS unless telemetry.bakedBuildings
+     reaches 'active'; the skyline row is NOT in buildingSwaps, so the
+     lab can rebuild it freely without touching the proof gate. Roadside
+     scatter (24 props + 7 tire stacks :2007-2060) is separate dressing —
+     leave it out of round 1.
+   - Perf guard: CC currently ~480 draw calls vs the 650 race-proof gate;
+     skyline variants must use InstancedMesh for repeated geometry
+     (windows especially) and stay under the gate; verify with race:proof
+     + phase5 headed.
+   - Hook naming: follow the house pattern — ?cityLab=1 +
+     window.__cityLabOverrides (init-script), ?cityLab=0 force-off,
+     overrides REPLACE the skyline build parameters; shipped default
+     unchanged until the owner picks.
 2. C1..C8 pipeline per the execution plan (track sampler extraction →
    whole-loop bake exporter → Cycles scripts → assets:bake driver → road/
    village/buildings wiring behind flags → AO splat → guards). Read the
