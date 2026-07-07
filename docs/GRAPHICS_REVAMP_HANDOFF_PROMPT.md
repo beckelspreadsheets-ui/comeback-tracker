@@ -315,6 +315,15 @@ filenames end the same-URL browser-cache confusion), manifest +
 similarity review, longer far-band top fade, webp workbox globPattern,
 retire hidden dressing for good, full battery + proof re-baseline.
 
+THE QUEUE NOW LIVES IN docs/PENGUIN_KART_CONTENT_ROADMAP_2026-07.md
+(owner-scoped 2026-07-07: W1 track-select bugfix -> W0 ship -> W2 item
+clarity -> W3 Penguin Village revamp incl. ICE IS NICE + outplayasians
+finish-line crosser -> W4 roster (5 karts + new penguins) -> W5 item
+renders). START WITH W1: the ?track= URL param unconditionally overrides
+the cup-select pick (trackKey useMemo ~:3972) — verified root cause of
+the owner's "penguin village is loading the miami vice vibes" report;
+fix = param seeds initial selection only. Then JOB 1 below = roadmap W0.
+
 YOUR TASK NOW — TWO QUEUED JOBS, IN ORDER (owner 2026-07-07: "you can
 ship this First"):
 
