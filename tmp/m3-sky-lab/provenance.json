@@ -69,7 +69,7 @@
   "note": "Original 2560x1080 PNGs live on the Higgsfield CDN under each jobId (job_status returns rawUrl); committed copies are WebP q85 for repo weight. Seeds recorded for regeneration continuity.",
   "round1Picks": {
     "comeback-city": "v2 sunset boulevard (owner: \"v2a\")",
-    "penguin-village": "v2 storm front (owner: \"v2a\" / earlier \"p2\")",
+    "penguin-village": "v2a \u2014 the arctic SUNSET over the glowing ice shelf (owner: \"that was the sunset looking one on both tracks\"); first storm-only production batch missed the sun and was superseded",
     "date": "2026-07-07"
   },
   "round2ProductionStrips": {
@@ -117,6 +117,33 @@
       },
       {
         "note": "first CC production batch (neon-metropolis direction, superseded by the v2a correction) jobs: 803b957f/14921c23/4366410d/765d2e71 \u2014 kept on CDN only"
+      },
+      {
+        "file": "production/pv-far-a.webp",
+        "jobId": "838448ef-7496-4236-91b5-c4733df5f4d0",
+        "seed": 314753,
+        "note": "arctic-sunset correction"
+      },
+      {
+        "file": "production/pv-far-b.webp",
+        "jobId": "07fc4fa8-26e0-408f-8b48-c5fc2c6436d7",
+        "seed": 973939,
+        "note": "arctic-sunset correction"
+      },
+      {
+        "file": "production/pv-near-a.webp",
+        "jobId": "f1ad25c8-5d32-475c-a38f-8a7d984ec2ce",
+        "seed": 78697,
+        "note": "arctic-sunset correction"
+      },
+      {
+        "file": "production/pv-near-b.webp",
+        "jobId": "70e8661f-90c2-4d04-aac1-9eded088fb07",
+        "seed": 470250,
+        "note": "arctic-sunset correction"
+      },
+      {
+        "note": "superseded storm-only PV batch jobs: 0093bd75/9d44099d/9751f2e9/4ba10049 \u2014 kept on CDN only"
       }
     ]
   }
