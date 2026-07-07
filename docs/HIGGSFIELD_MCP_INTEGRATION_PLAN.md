@@ -22,6 +22,8 @@
 
 ## 3. H0 — Governance amendment (REQUIRED FIRST; blocks all other H-tasks)
 
+> **SIGNED 2026-07-07** (owner, in-session, choosing "Sign H0, build the sky lab"): clauses 1-2 in force, SCOPED to text-prompt generation — the §2.2 ordinal-input upload decision remains OPEN and separately gates H1-via-Higgsfield. Clause 3 (video class scan patterns) lands with the first shipped video/animated asset. Recorded in race-visual-target-brief.md (both rule sites) and PRD §9. First approved use: track backdrop art (sky lab — a new H8-class use, same rails as H2/H3: WebP, manifest, owner review, bundle budget).
+
 The current rule (verbatim at `race-visual-target-brief.md:18` and `:52`): *"Production bitmap assets must be custom ChatGPT Image Gen 2 outputs; repo-native/code-native/procedural assets are allowed; external stock/game assets are not approved."* Video/animated content has **zero** governance coverage today (no scan patterns, no manifest precedent). Precedent exists for extending the rule: Kenney CC0 and Tripo were both accepted in practice without doc updates — this amendment codifies the real rule instead of adding a third silent exception.
 
 **One dated owner decision, recorded in the audit's owner-decision pattern, with three clauses:**
