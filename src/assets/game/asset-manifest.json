@@ -336,5 +336,195 @@
     "role": "Runtime promoted asset for item-cone-candidate-gltf-transform-simple-prop-v1",
     "sizeBudget": "Promoted candidate hash sha256:b7fcd99e0afa8e45639e637638438ab139b271d7413246ad99597a8be85587ac",
     "source": "Approved optimized candidate from src/assets/game/models/toy-car-kit/item-cone.glb"
+  },
+  {
+    "filePath": "src/assets/game/models/miami/deco-hotel.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId a000823b-e223-4e12-9a4b-4588bbd8c472, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.decoHotel mount in ComebackCityThreeKartRace.jsx",
+    "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:89ba210add205a43ebd7b987e3ec6f8f7fbfca72d1bdb3c5d0363235608c6068",
+    "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
+    "assetId": "miami.deco-hotel",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "weld -> simplify 0.02/err 0.001 -> simplify 0.35/err 0.01 (W0 hard diet, A/B tmp/w0-ship/diet-ab-*.png) -> resize 512 -> meshopt (gltf-transform individual verbs, compression LAST)",
+    "sourceHash": "sha256:a35cedab7ef32e91d471a037884fca0f0bd5f3e4fe91b6c3de8f61a6b3c4a190",
+    "outputHash": "sha256:89ba210add205a43ebd7b987e3ec6f8f7fbfca72d1bdb3c5d0363235608c6068",
+    "promotion": {
+      "approval": "Owner similarity review 2026-07-07 (miami-set-turntable.png): \"love all of them except for the 4th one down ... the rest are amazing\" (4th = strip-motel, rejected + replaced)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-city-lab/ (turntables, in-game shots on city-lab.html)"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/miami/condo-tower.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 30cefda6-db99-4a5d-9993-076938b83091, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.condoTower mount in ComebackCityThreeKartRace.jsx",
+    "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:76cb6aaf3e2a348728c5772677974092abcefcd30dd31846788293d94d636544",
+    "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
+    "assetId": "miami.condo-tower",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "weld -> simplify 0.02/err 0.001 -> simplify 0.35/err 0.01 (W0 hard diet, A/B tmp/w0-ship/diet-ab-*.png) -> resize 512 -> meshopt (gltf-transform individual verbs, compression LAST)",
+    "sourceHash": "sha256:1416770385d4bb82026d2bf5a0353700ea0df31f225dc60f8d9d57eedab28f94",
+    "outputHash": "sha256:76cb6aaf3e2a348728c5772677974092abcefcd30dd31846788293d94d636544",
+    "promotion": {
+      "approval": "Owner similarity review 2026-07-07 (miami-set-turntable.png): \"love all of them except for the 4th one down ... the rest are amazing\" (4th = strip-motel, rejected + replaced)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-city-lab/ (turntables, in-game shots on city-lab.html)"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/miami/corner-arcade.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 3eb890c1-48bf-44ce-a682-193af14ba8a2, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.cornerArcade mount in ComebackCityThreeKartRace.jsx",
+    "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:cc8d6a40376ac90a9bd027ad55cd0e87855f034d8a59b943b50e9b965069d107",
+    "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
+    "assetId": "miami.corner-arcade",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "weld -> simplify 0.02/err 0.001 -> simplify 0.35/err 0.01 (W0 hard diet, A/B tmp/w0-ship/diet-ab-*.png) -> resize 512 -> meshopt (gltf-transform individual verbs, compression LAST)",
+    "sourceHash": "sha256:354f8d5acde82c301adbc3154d684ebdcd0037baa5da35e80fc5390aef5c8ed7",
+    "outputHash": "sha256:cc8d6a40376ac90a9bd027ad55cd0e87855f034d8a59b943b50e9b965069d107",
+    "promotion": {
+      "approval": "Massing approved in the 2026-07-07 turntable review (original job 81d3bf54); W0 no-text compliance regen v3 (job 3eb890c1, detailed quality) keeps the approved two-story deco massing with ABSTRACT-ONLY neon (circles/dots/bars) - the original neon read letter-like; A/B evidence tmp/w0-ship/arcade-regen-v3-ab.png; regen v2 (job 640dc6be) rejected: single-story massing + chevron letterforms",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-city-lab/ (turntables, in-game shots on city-lab.html)"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/miami/lifeguard-tower.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId f5ef8246-f0ef-4632-8dc2-3a4f2b805481, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.lifeguard mount in ComebackCityThreeKartRace.jsx",
+    "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:3df6243285e92f2f3102ec877ed1340d8916c07af5ef4c837b84e83a2a513517",
+    "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
+    "assetId": "miami.lifeguard-tower",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "weld -> simplify 0.02/err 0.001 -> simplify 0.35/err 0.01 (W0 hard diet, A/B tmp/w0-ship/diet-ab-*.png) -> resize 512 -> meshopt (gltf-transform individual verbs, compression LAST)",
+    "sourceHash": "sha256:a13ab8ac00d8df3d4ce7b0f204c8ee749407e38e02c75897ada2da7a27b3f77f",
+    "outputHash": "sha256:3df6243285e92f2f3102ec877ed1340d8916c07af5ef4c837b84e83a2a513517",
+    "promotion": {
+      "approval": "Owner similarity review 2026-07-07 (miami-set-turntable.png): \"love all of them except for the 4th one down ... the rest are amazing\" (4th = strip-motel, rejected + replaced)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-city-lab/ (turntables, in-game shots on city-lab.html)"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/miami/palm-cluster.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 0649fa46-0219-4ee5-a088-71b5f4d02da6, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.palmCluster mount in ComebackCityThreeKartRace.jsx",
+    "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:a0c11bfb8a5c7bcbc134af324533030251f6b4875ea046fb298f3fab7f5426eb",
+    "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
+    "assetId": "miami.palm-cluster",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "weld -> simplify 0.02/err 0.001 -> simplify 0.35/err 0.01 (W0 hard diet, A/B tmp/w0-ship/diet-ab-*.png) -> resize 512 -> meshopt (gltf-transform individual verbs, compression LAST)",
+    "sourceHash": "sha256:dba24f8196cb4adf5b6f0b90c099534f5a1ad156eb70a24e61b628e549b144e8",
+    "outputHash": "sha256:a0c11bfb8a5c7bcbc134af324533030251f6b4875ea046fb298f3fab7f5426eb",
+    "promotion": {
+      "approval": "Owner similarity review 2026-07-07 (miami-set-turntable.png): \"love all of them except for the 4th one down ... the rest are amazing\" (4th = strip-motel, rejected + replaced)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-city-lab/ (turntables, in-game shots on city-lab.html)"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/miami/retro-diner.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 9c7f509e-8e46-444f-9188-7a10fb887722, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.retroDiner mount in ComebackCityThreeKartRace.jsx",
+    "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:ec387ba1fb46bfe7e9544f45d003d4a7e98c9af1d7ddc808892da809972c2705",
+    "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
+    "assetId": "miami.retro-diner",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "weld -> simplify 0.02/err 0.001 -> simplify 0.35/err 0.01 (W0 hard diet, A/B tmp/w0-ship/diet-ab-*.png) -> resize 512 -> meshopt (gltf-transform individual verbs, compression LAST)",
+    "sourceHash": "sha256:a9d26aee717a2382a70cb37ececa929f56d3416bdd52b2c28b5ce0aa4a140840",
+    "outputHash": "sha256:ec387ba1fb46bfe7e9544f45d003d4a7e98c9af1d7ddc808892da809972c2705",
+    "promotion": {
+      "approval": "Owner pick 2026-07-07 (motel-replacement-ab.png): \"I love the second ice cream truck looking one is perfect vibes\"",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-city-lab/ (turntables, in-game shots on city-lab.html)"
+    }
+  },
+  {
+    "filePath": "src/assets/game/generated/backdrops/cc-far.webp",
+    "source": "Higgsfield soul_location 2560x1080, jobId dfa46ac2-47b0-4474-a2d7-d4905a192c89, seed 413922, 2026-07-07; Claude-authored prompt under owner direction; far band, W0 reprocess: crop 2560x1072 + top-35% linear alpha fade (was 16% - hard seam), webp q85; provenance tmp/m3-sky-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"comeback-city\"] parallax ring",
+    "sizeBudget": "images gate (bundle report); shipped sha256:8d1a65d539c81d8ad9626b1dff3d78493c646f5b31f2ee587023399f26e21435",
+    "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
+    "assetId": "backdrop.cc-far",
+    "assetClass": "backdrop-strip",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "PIL crop/fade/key + webp q85 (steps in the manifest source field)",
+    "sourceHash": "sha256:cdn-original-per-jobId-dfa46ac2-47b0-4474-a2d7-d4905a192c89",
+    "outputHash": "sha256:8d1a65d539c81d8ad9626b1dff3d78493c646f5b31f2ee587023399f26e21435",
+    "promotion": {
+      "approval": "Owner sky-lab round 2 picks 2026-07-07: sunset direction both tracks (\"that was the sunset looking one on both tracks\"); PV b-takes verified live on the owner 5173 server after he flagged the a-take dark ice row",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-sky-lab/ + sky-lab.html"
+    }
+  },
+  {
+    "filePath": "src/assets/game/generated/backdrops/cc-near.webp",
+    "source": "Higgsfield soul_location 2560x1080, jobId 185dfe08-1fe6-439d-a7c6-c9ced2e8820b, seed 906461, 2026-07-07; Claude-authored prompt under owner direction; near silhouette row, magenta-keyed + despilled (PIL, cwebp -exact); provenance tmp/m3-sky-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"comeback-city\"] parallax ring",
+    "sizeBudget": "images gate (bundle report); shipped sha256:4abf37d64e0a24e9dc2aa17219b3543921bae3d092c75d36ed0cd45a6a8d20be",
+    "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
+    "assetId": "backdrop.cc-near",
+    "assetClass": "backdrop-strip",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "PIL crop/fade/key + webp q85 (steps in the manifest source field)",
+    "sourceHash": "sha256:cdn-original-per-jobId-185dfe08-1fe6-439d-a7c6-c9ced2e8820b",
+    "outputHash": "sha256:4abf37d64e0a24e9dc2aa17219b3543921bae3d092c75d36ed0cd45a6a8d20be",
+    "promotion": {
+      "approval": "Owner sky-lab round 2 picks 2026-07-07: sunset direction both tracks (\"that was the sunset looking one on both tracks\"); PV b-takes verified live on the owner 5173 server after he flagged the a-take dark ice row",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-sky-lab/ + sky-lab.html"
+    }
+  },
+  {
+    "filePath": "src/assets/game/generated/backdrops/pv-far.webp",
+    "source": "Higgsfield soul_location 2560x1080, jobId 07fc4fa8-26e0-408f-8b48-c5fc2c6436d7, seed 973939, 2026-07-07; Claude-authored prompt under owner direction; far band (arctic-sunset correction b-take), W0 reprocess: top-35% fade, webp q85; provenance tmp/m3-sky-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"penguin-village\"] parallax ring",
+    "sizeBudget": "images gate (bundle report); shipped sha256:30367685a6386c260240f1965d87e5c2182ca0ae7a8ef238a6c48305c1959b75",
+    "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
+    "assetId": "backdrop.pv-far",
+    "assetClass": "backdrop-strip",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "PIL crop/fade/key + webp q85 (steps in the manifest source field)",
+    "sourceHash": "sha256:cdn-original-per-jobId-07fc4fa8-26e0-408f-8b48-c5fc2c6436d7",
+    "outputHash": "sha256:30367685a6386c260240f1965d87e5c2182ca0ae7a8ef238a6c48305c1959b75",
+    "promotion": {
+      "approval": "Owner sky-lab round 2 picks 2026-07-07: sunset direction both tracks (\"that was the sunset looking one on both tracks\"); PV b-takes verified live on the owner 5173 server after he flagged the a-take dark ice row",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-sky-lab/ + sky-lab.html"
+    }
+  },
+  {
+    "filePath": "src/assets/game/generated/backdrops/pv-near.webp",
+    "source": "Higgsfield soul_location 2560x1080, jobId 70e8661f-90c2-4d04-aac1-9eded088fb07, seed 470250, 2026-07-07; Claude-authored prompt under owner direction; near silhouette row (arctic-sunset correction b-take), magenta-keyed + despilled; provenance tmp/m3-sky-lab/provenance.json",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"penguin-village\"] parallax ring",
+    "sizeBudget": "images gate (bundle report); shipped sha256:7fc6b2419bc3f652ceb96b119cf55c60c616245c54e1310a0c02ada6be9fd498",
+    "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
+    "assetId": "backdrop.pv-near",
+    "assetClass": "backdrop-strip",
+    "status": "runtime-promoted-w0-miami",
+    "runtimeTransform": "PIL crop/fade/key + webp q85 (steps in the manifest source field)",
+    "sourceHash": "sha256:cdn-original-per-jobId-70e8661f-90c2-4d04-aac1-9eded088fb07",
+    "outputHash": "sha256:7fc6b2419bc3f652ceb96b119cf55c60c616245c54e1310a0c02ada6be9fd498",
+    "promotion": {
+      "approval": "Owner sky-lab round 2 picks 2026-07-07: sunset direction both tracks (\"that was the sunset looking one on both tracks\"); PV b-takes verified live on the owner 5173 server after he flagged the a-take dark ice row",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/m3-sky-lab/ + sky-lab.html"
+    }
   }
 ]

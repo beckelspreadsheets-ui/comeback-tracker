@@ -31,11 +31,16 @@ import iceSledUrl from '../assets/game/models/tripo/ice-sled.glb?url';
 import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
 import tclowModelUrl from '../assets/game/models/avatars/tclow-penguin.glb?url';
 import layer23ModelUrl from '../assets/game/models/avatars/layer23-penguin.glb?url';
-import clinicFacadeUrl from '../assets/game/generated/district-facade-clinic.png';
-import foodFacadeUrl from '../assets/game/generated/district-facade-food.png';
-import garageFacadeUrl from '../assets/game/generated/district-facade-garage.png';
-import gymFacadeUrl from '../assets/game/generated/district-facade-gym.png';
-import labFacadeUrl from '../assets/game/generated/district-facade-lab.png';
+import miamiCondoTowerUrl from '../assets/game/models/miami/condo-tower.glb?url';
+import miamiCornerArcadeUrl from '../assets/game/models/miami/corner-arcade.glb?url';
+import miamiDecoHotelUrl from '../assets/game/models/miami/deco-hotel.glb?url';
+import miamiLifeguardUrl from '../assets/game/models/miami/lifeguard-tower.glb?url';
+import miamiPalmClusterUrl from '../assets/game/models/miami/palm-cluster.glb?url';
+import miamiRetroDinerUrl from '../assets/game/models/miami/retro-diner.glb?url';
+import backdropCcFarUrl from '../assets/game/generated/backdrops/cc-far.webp';
+import backdropCcNearUrl from '../assets/game/generated/backdrops/cc-near.webp';
+import backdropPvFarUrl from '../assets/game/generated/backdrops/pv-far.webp';
+import backdropPvNearUrl from '../assets/game/generated/backdrops/pv-near.webp';
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import {
   DRIFT_FEEL,
@@ -172,13 +177,6 @@ const rivalSeatsFor = (playerKey) => {
 const ordinal = (position) => ['1st', '2nd', '3rd', '4th'][position - 1] || `${position}th`;
 const PROP_COUNT = 36;
 const VISUAL_ASSET_SET = 'comeback-city-v2-three-runtime';
-const DISTRICT_FACADE_URLS = {
-  clinic: clinicFacadeUrl,
-  food: foodFacadeUrl,
-  garage: garageFacadeUrl,
-  gym: gymFacadeUrl,
-  lab: labFacadeUrl,
-};
 
 // Spawn offset past the finish line lives in the track def (startOffset).
 const startProgressFor = (trackDef) =>
@@ -833,13 +831,16 @@ const momentsLabConfig = () => {
   return Array.isArray(window.__momentsLabOverrides) ? window.__momentsLabOverrides : null;
 };
 
-// H8 sky lab (generated backdrops, dev-only) hook: ?skyLab=1 mounts the
-// generated far/near backdrop rings (per-track default strips resolved in
-// createScene); window.__skyLabOverrides = { far, near } swaps candidate
-// strip URLs. Absent param = shipped look untouched.
+// Miami mode (generated backdrops + owner-approved trackside set) is the
+// SHIPPED DEFAULT since the W0 promotion (owner-approved behind ?skyLab=1
+// through 2026-07-07, then flipped). ?skyLab=0 is the diagnostic escape
+// hatch: no backdrop rings, no trackside set, camera.far back to 860 —
+// NOT the old look (the old skyline/facade/boxy dressing is deleted for
+// good). window.__skyLabOverrides = { far, near } still swaps candidate
+// strip URLs for lab work.
 const skyLabConfig = () => {
   if (typeof window === 'undefined') return null;
-  if (new URLSearchParams(window.location.search).get('skyLab') !== '1') return null;
+  if (new URLSearchParams(window.location.search).get('skyLab') === '0') return null;
   const overrides = window.__skyLabOverrides || {};
   return {
     far: typeof overrides.far === 'string' ? overrides.far : null,
@@ -858,13 +859,17 @@ const skyLabConfig = () => {
 // asset so far); the facade/district group convention puts the road on
 // the group's -Z side, so MIAMI_FRONT_YAW turns +X onto -Z.
 const MIAMI_ASSETS = {
-  condoTower: '/tmp/m3-city-lab/condo-tower-diet.glb',
-  cornerArcade: '/tmp/m3-city-lab/corner-arcade-diet.glb',
-  decoHotel: '/tmp/m3-city-lab/deco-hotel-tripo-diet.glb',
-  lifeguard: '/tmp/m3-city-lab/lifeguard-tower-diet.glb',
-  palmCluster: '/tmp/m3-city-lab/palm-cluster-diet.glb',
-  retroDiner: '/tmp/m3-city-lab/retro-diner-diet.glb',
+  condoTower: miamiCondoTowerUrl,
+  cornerArcade: miamiCornerArcadeUrl,
+  decoHotel: miamiDecoHotelUrl,
+  lifeguard: miamiLifeguardUrl,
+  palmCluster: miamiPalmClusterUrl,
+  retroDiner: miamiRetroDinerUrl,
 };
+// Loud-failure counters (same job the retired bakedBuildings==='active'
+// proof gate did for the old bakes): kart-playable asserts every requested
+// Miami mount actually resolved a template.
+const miamiMountStats = { failed: 0, mounted: 0, requested: 0 };
 const MIAMI_FRONT_YAW = Math.PI / 2;
 const miamiMeshCache = new Map();
 const loadMiamiAsset = (url) => {
@@ -884,8 +889,14 @@ const loadMiamiAsset = (url) => {
   return miamiMeshCache.get(url);
 };
 const mountMiamiAsset = (target, assetKey, { footprint, yaw = MIAMI_FRONT_YAW, z = 0 }) => {
+  miamiMountStats.requested += 1;
   loadMiamiAsset(MIAMI_ASSETS[assetKey]).then((template) => {
-    if (!template) return;
+    if (!template) {
+      miamiMountStats.failed += 1;
+      console.warn(`[kart] miami asset '${assetKey}' failed to load — slot left empty`);
+      return;
+    }
+    miamiMountStats.mounted += 1;
     const rig = template.clone(true);
     rig.traverse((node) => {
       if (node.isMesh) {
@@ -1943,14 +1954,6 @@ const addFinishGate = (world, sampler, trackDef, trackVisuals = resolveTrackVisu
   return group;
 };
 
-const OPENING_FACADES = [
-  { accent: '#7ee06b', base: '#23503a', key: 'gym', progress: 0.072, scale: 1.08, side: -1 },
-  { accent: '#ffac32', base: '#5a3a16', key: 'food', progress: 0.092, scale: 1.02, side: -1 },
-  { accent: '#d45cff', base: '#3a2356', key: 'lab', progress: 0.112, scale: 1, side: 1 },
-  { accent: '#ff5d68', base: '#5c2230', key: 'clinic', progress: 0.136, scale: 1.03, side: 1 },
-  { accent: '#38d7ff', base: '#1d3c5e', key: 'garage', progress: 0.16, scale: 1.08, side: 1 },
-];
-
 // Buildings are anchored relative to one road point, but the route curves
 // back on itself — a setback that clears its own road section can still sit
 // on another one. Push outward along the anchor normal until the position
@@ -1980,54 +1983,7 @@ const clearBuildingPlacement = (sampler, basePoint, normal, side, startOffset, c
   return null;
 };
 
-const addOpeningFacadeRun = (world, sampler, loader, buildingSwaps) => {
-  OPENING_FACADES.forEach((entry) => {
-    const { normal, point, tangent } = sampler.pointAt(entry.progress);
-    const placement = clearBuildingPlacement(sampler, point, normal, entry.side, 64);
-    if (!placement) return;
-    const group = new THREE.Group();
-    buildingSwaps.push({ footprint: 50 * entry.scale, group, rotate: 0 });
-    group.position.copy(placement);
-    group.position.y += 1.5;
-    group.rotation.y = Math.atan2(tangent.x, tangent.z) + (entry.side > 0 ? -Math.PI / 2 : Math.PI / 2);
-    const baseMat = createBasicMaterial(entry.base, { emissive: entry.base, emissiveIntensity: 0.06 });
-    const body = makeRoundedBox(
-      { x: 50 * entry.scale, y: 50 * entry.scale, z: 14 },
-      { y: 25 * entry.scale, z: 7.6 },
-      baseMat,
-      2.2
-    );
-    body.userData.kind = 'procedural-building';
-    group.add(setFlatTransform(body));
-    const roof = makeRoundedBox(
-      { x: 54 * entry.scale, y: 3.4, z: 17 },
-      { y: 51 * entry.scale, z: 7.6 },
-      createBasicMaterial('#141d29'),
-      1.1
-    );
-    roof.userData.kind = 'procedural-building';
-    group.add(setFlatTransform(roof));
-    const sign = makeBox(
-      { x: 16 * entry.scale, y: 2.2, z: 1.2 },
-      { y: 53.4 * entry.scale, z: 7.6 },
-      createBasicMaterial(entry.accent, { emissive: entry.accent, emissiveIntensity: 0.7 })
-    );
-    sign.userData.kind = 'procedural-building';
-    group.add(setFlatTransform(sign));
-    const facade = createAssetPlane(loader, DISTRICT_FACADE_URLS[entry.key], 58 * entry.scale, 58 * entry.scale, {
-      colorKeyMagenta: true,
-      kind: `opening-${entry.key}-facade`,
-      renderOrder: 24,
-    });
-    facade.position.y = 28;
-    facade.rotation.y = Math.PI;
-    group.add(facade);
-    addGlowDisc(group, entry.accent, 1.35);
-    world.add(group);
-  });
-};
-
-const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
+const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const roadWidth = trackDef.course.mainRoadWidth || 50;
   const propMat = {
     cone: createBasicMaterial('#ff8b21', { emissive: '#ff8b21', emissiveIntensity: 0.18 }),
@@ -2038,15 +1994,12 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
     tire: createBasicMaterial('#151923'),
   };
   let propCount = 0;
-  // H8 "miami mode": while the generated backdrop is active the old boxy
-  // buildings/facade sprites stay out and the owner-approved city-lab set
-  // mounts instead (owner 2026-07-07: "these 2d building look horrible
-  // compared to the background" → Miami-vice trackside).
+  // Miami mode (shipped default; ?skyLab=0 = diagnostic escape hatch). The
+  // old boxy buildings / facade sprites / procedural skyline were DELETED
+  // at the W0 promotion (owner 2026-07-07: "get rid of the old building so
+  // we just keep the new theme") — the escape hatch renders bare districts
+  // (portals + beacons only), not the old look.
   const miamiMode = Boolean(skyLabConfig());
-  // The hand-placed opening facade run is comeback-city dressing — opt-in.
-  if (trackDef.dressing?.openingFacades && !miamiMode) {
-    addOpeningFacadeRun(world, sampler, loader, buildingSwaps);
-  }
 
   trackDef.course.districtAnchors.forEach((district, districtIndex) => {
     const { normal, point, tangent } = sampler.pointAt(district.progress);
@@ -2056,26 +2009,11 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
     group.position.copy(placement);
     group.rotation.y = Math.atan2(tangent.x, tangent.z) + (district.side > 0 ? -Math.PI / 2 : Math.PI / 2);
     group.userData.kind = `district-${district.key}`;
-    const base = createBasicMaterial(district.base, { emissive: district.base, emissiveIntensity: 0.08 });
-    const dark = createBasicMaterial(district.dark);
     const accent = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 1.25 });
-    // H8: in miami mode the boxy district bodies (and their baked-GLB
-    // swap-ins) stay out — the owner-approved city-lab building mounts in
-    // the slot instead, behind the neon portal (the road is on the group's
-    // -Z side). buildingSwaps stays empty then; the bake loader no-ops
-    // over it and still reaches bakedBuildings === 'active' (proof gate
-    // reads load state, not visibility — and it runs flag-off anyway).
-    if (!miamiMode) {
-      buildingSwaps.push({ footprint: 36, group, rotate: Math.PI });
-      [
-        makeRoundedBox({ x: 34, y: 24, z: 18 }, { y: 12 }, base, 1.6),
-        makeRoundedBox({ x: 39, y: 4, z: 21 }, { y: 26 }, createBasicMaterial(district.roof), 1.2),
-        makeRoundedBox({ x: 18, y: 14, z: 1.4 }, { y: 10, z: -9.8 }, dark, 0.4),
-      ].forEach((mesh) => {
-        mesh.userData.kind = 'procedural-building';
-        group.add(mesh);
-      });
-    } else {
+    // The owner-approved city-lab building mounts in the slot behind the
+    // neon portal (the road is on the group's -Z side). The old boxy
+    // district bodies + their baked-GLB swap-ins are gone (W0 promotion).
+    if (miamiMode) {
       mountMiamiAsset(group, MIAMI_DISTRICT_ASSETS[districtIndex % MIAMI_DISTRICT_ASSETS.length], {
         footprint: 40,
         z: 6,
@@ -2104,20 +2042,10 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
     group.add(doorway);
     addGlowSprite(group, district.accent, 30, 0.5, 8.6).position.z = -10.9;
     const beacon = new THREE.Mesh(new THREE.DodecahedronGeometry(3.2, 0), accent);
-    // In miami mode the beacon drops to hover over the portal instead of
-    // the old roofline height.
-    beacon.position.set(0, miamiMode ? 15 : 31, 0);
+    // The beacon hovers over the portal (the old roofline height went with
+    // the boxy bodies; the facade sprites are deleted too — W0 promotion).
+    beacon.position.set(0, 15, 0);
     group.add(beacon);
-    if (!miamiMode) {
-      const facade = createAssetPlane(loader, DISTRICT_FACADE_URLS[district.key], 54, 54, {
-        colorKeyMagenta: true,
-        kind: `district-${district.key}-facade-sprite`,
-        renderOrder: 16,
-      });
-      facade.position.set(0, 21, -12.5);
-      facade.rotation.y = Math.PI;
-      group.add(facade);
-    }
     addGlowDisc(group, district.accent, 1.25).position.set(0, 0.16, -14);
     world.add(group);
     propCount += 1;
@@ -2212,26 +2140,10 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
       water.position.set(anchor.x, -0.01, anchor.z);
       world.add(setFlatTransform(water));
     }
-    if (anchor.kind === 'skyline') {
-      // H8: the generated painted backdrop REPLACES this old 14-box
-      // procedural skyline row — the boxes would stand in front of the
-      // backdrop rings and clash with the new theme (owner 2026-07-07:
-      // "get rid of the old building so we just keep the new theme").
-      // The row still builds when the backdrop is off, so the shipped
-      // default look is unchanged until the sky-lab pick is promoted.
-      if (skyLabConfig()) return;
-      for (let index = 0; index < 14; index += 1) {
-        const building = new THREE.Mesh(
-          new THREE.BoxGeometry(16 + (index % 3) * 7, 28 + (index % 5) * 10, 18),
-          createBasicMaterial('#1b2342', {
-            emissive: index % 2 === 0 ? '#38d7ff' : '#b14fd8',
-            emissiveIntensity: index % 3 === 0 ? 0.3 : 0.12,
-          })
-        );
-        building.position.set(anchor.x - anchor.w / 2 + index * 39, building.geometry.parameters.height / 2, anchor.z);
-        world.add(setFlatTransform(building));
-      }
-    }
+    // 'skyline' anchors are ignored since the W0 promotion: the painted
+    // backdrop rings replaced the old 14-box procedural skyline row for
+    // good (owner 2026-07-07: "get rid of the old building so we just
+    // keep the new theme").
   });
 
   // H8 miami mode: the owner-approved city-lab set fills the opening
@@ -3201,30 +3113,30 @@ const createScene = ({
   activeHeroRim = labRim !== undefined ? labRim : palette.heroRim || null;
   TOON_RIM_SHARED_TINT.value.set(activeHeroRim?.tint || palette.rimLightColor || '#4fd8ff');
 
-  // H8 sky lab (dev-only, owner gate open): ?skyLab=1 mounts the generated
-  // backdrop as two parallax billboard rings — an opaque far band (its own
-  // sky + horizon glow, top edge alpha-faded into the procedural gradient)
-  // and an alpha-keyed nearer silhouette row. Strips are dev-served from
-  // tmp/m3-sky-lab/production/ (NOT in the production bundle); an approved
-  // pick moves to src/assets/game/generated/ + manifest at promotion.
+  // Generated backdrop (SHIPPED DEFAULT since W0): two parallax billboard
+  // rings — an opaque far band (its own sky + horizon glow, top 35%
+  // alpha-faded into the procedural gradient) and an alpha-keyed nearer
+  // silhouette row, bundled from src/assets/game/generated/backdrops/.
   // Rings are fog-exempt (the art is pre-hazed) and never write depth, so
-  // the world always overdraws them; camera.far is raised for the lab only
-  // (shipped far stays 860 — the fog.far <= 840 rule is about FOG).
+  // the world always overdraws them; camera.far 1800 is the shipped value
+  // when the backdrop is on (?skyLab=0 diagnostic drops back to 860 — the
+  // fog.far <= 840 rule is about FOG and is unaffected either way).
   const skyLab = skyLabConfig();
   if (skyLab) {
     const SKY_LAB_STRIPS = {
       'comeback-city': {
-        far: '/tmp/m3-sky-lab/production/cc-far-a.webp',
-        near: '/tmp/m3-sky-lab/production/cc-near-a.webp',
+        far: backdropCcFarUrl,
+        near: backdropCcNearUrl,
       },
-      // PV defaults to the b-takes: the a-take ice row keyed out DARK
-      // (teal + gold cracks) and read like CC's dark tower skyline — the
-      // owner flagged the two tracks as "the same exact background". The
-      // b-takes carry the pale GLOWING shelf from the picked concept, so
-      // the arctic horizon is unmistakably ice.
+      // PV ships the b-takes: the a-take ice row keyed out DARK (teal +
+      // gold cracks) and read like CC's dark tower skyline — the owner
+      // flagged the two tracks as "the same exact background". The b-takes
+      // carry the pale GLOWING shelf from the picked concept, so the
+      // arctic horizon is unmistakably ice. Far bands carry the W0
+      // fade_frac 0.35 top fade (the 0.16 band showed a hard seam).
       'penguin-village': {
-        far: '/tmp/m3-sky-lab/production/pv-far-b.webp',
-        near: '/tmp/m3-sky-lab/production/pv-near-b.webp',
+        far: backdropPvFarUrl,
+        near: backdropPvNearUrl,
       },
     };
     const strips = SKY_LAB_STRIPS[trackDef.key] || {};
@@ -3524,8 +3436,7 @@ const createScene = ({
     world.add(kicker);
   }
   addFinishGate(world, sampler, trackDef, trackVisuals);
-  const buildingSwaps = [];
-  const propCount = addDistrictsAndProps(world, sampler, loader, buildingSwaps, trackDef, trackVisuals) + trackVisualPropCount;
+  const propCount = addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals) + trackVisualPropCount;
   if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef);
 
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
@@ -3706,12 +3617,11 @@ const createScene = ({
     avalancheGlow,
     avalancheMarker,
     avalancheRing,
-    // Baked-GLB load state machines (pending -> active | missing |
-    // loaded-but-empty). Surfaced in telemetry; the kart-playable proof
-    // FAILS the comeback-city run unless bakedBuildings reaches 'active' —
-    // the 404-into-silent-procedural-fallback regression may never recur
-    // silently (2026-07-02 incident).
-    bakedBuildings: 'pending',
+    // Baked-GLB load state machine (pending -> active | missing). The
+    // bakedBuildings machine retired with the W0 promotion — buildings
+    // come from the Miami GLBs now, guarded by miamiMountStats in
+    // telemetry (kart-playable FAILS if any requested mount doesn't
+    // resolve — the 2026-07-02 silent-404 lesson carries over).
     bakedSpike: 'inactive',
     marchers,
     marchRig,
@@ -3725,7 +3635,6 @@ const createScene = ({
     fishBonePool,
     projectilePool,
     slapFishRig,
-    buildingSwaps,
     camera,
     composer,
     // B1: atmosphere handles exposed so B2's palette moments can lerp
@@ -3879,8 +3788,11 @@ const publishTelemetry = (
     airborne: race.airState.airborne,
     auroraActive: race.auroraTimer > 0,
     avalanchePending: Boolean(race.avalanche),
-    bakedBuildings: runtimeStats.bakedBuildings ?? null,
     bakedSpike: runtimeStats.bakedSpike ?? null,
+    // W0 loud-failure guard: kart-playable asserts mounted === requested
+    // and failed === 0 on comeback-city (module-level counters — they
+    // accumulate across scene rebuilds, growing in lockstep).
+    miamiMounts: runtimeStats.miamiMounts ?? null,
     marchActive: Boolean(race.march),
     avalancheTarget: race.avalanche?.target || race.avalancheTarget || null,
     blizzardsOnTrack: race.blizzards.length,
@@ -4246,57 +4158,11 @@ export const ComebackCityThreeKartRace = ({
       );
     }
 
-    // Baked building family (Blender, owner-approved direction): swap the
-    // procedural district/facade boxes for clean lightmapped buildings.
-    // Procedural boxes remain the fallback if the GLB is missing.
-    createGameGltfLoader().load(
-      '/baked-buildings.glb',
-      (gltf) => {
-        if (disposed || engineRef.current !== engine) return;
-        const variants = ['bldg-tower', 'bldg-block', 'bldg-arcade']
-          .map((name) => gltf.scene.getObjectByName(name))
-          .filter(Boolean);
-        if (!variants.length) {
-          console.warn('[kart] /baked-buildings.glb loaded but contains no known building variants — procedural fallback active');
-          engine.bakedBuildings = 'loaded-but-empty';
-          return;
-        }
-        engine.buildingSwaps.forEach((swap, index) => {
-          const rig = variants[index % variants.length].clone(true);
-          rig.traverse((node) => {
-            if (node.isMesh) {
-              node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
-              node.castShadow = false;
-              node.receiveShadow = false;
-            }
-          });
-          rig.rotation.y = swap.rotate || 0;
-          const bounds = new THREE.Box3().setFromObject(rig);
-          const size = bounds.getSize(new THREE.Vector3());
-          rig.scale.setScalar(swap.footprint / Math.max(size.x, size.z));
-          rig.updateMatrixWorld(true);
-          const fitted = new THREE.Box3().setFromObject(rig);
-          const center = fitted.getCenter(new THREE.Vector3());
-          rig.position.x -= center.x;
-          rig.position.z -= center.z;
-          rig.position.y -= fitted.min.y;
-          swap.group.children
-            .filter((child) => child.userData.kind === 'procedural-building')
-            .forEach((child) => {
-              child.geometry?.dispose?.();
-              child.material?.dispose?.();
-              swap.group.remove(child);
-            });
-          swap.group.add(rig);
-        });
-        engine.bakedBuildings = 'active';
-      },
-      undefined,
-      (error) => {
-        console.warn('[kart] /baked-buildings.glb failed to load — procedural fallback active', error);
-        engine.bakedBuildings = 'missing';
-      }
-    );
+    // The /baked-buildings.glb loader retired with the W0 promotion: the
+    // buildings it swapped in were the old procedural boxes' bakes, and
+    // both are gone — trackside buildings are the Miami GLBs, mounted in
+    // addDistrictsAndProps/addMiamiTrackside with miamiMountStats as the
+    // loud-failure guard.
 
     const restartRace = () => {
       Object.assign(race, createInitialRace(rivalSeats));
@@ -5019,8 +4885,8 @@ export const ComebackCityThreeKartRace = ({
       frameWorkSamples.push(performance.now() - now);
       while (frameWorkSamples.length > 40) frameWorkSamples.shift();
       publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey, {
-        bakedBuildings: engine.bakedBuildings,
         bakedSpike: engine.bakedSpike,
+        miamiMounts: { ...miamiMountStats },
         paletteMoments: engine.paletteMoments,
         postChainEnabled: engine.postChainEnabled,
         frameElapsedMs: rollingAverage(frameElapsedSamples),

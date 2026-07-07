@@ -189,23 +189,25 @@ const waitForRaceActive = async (page) => {
   });
 };
 
-// The 2026-07-02 incident: /baked-buildings.glb 404'd into a silent empty
-// error callback and the shipped track quietly downgraded to procedural
-// boxes. The GLB loads async after mount, so wait out 'pending', then require
-// 'active' — anything else ('missing', 'loaded-but-empty') fails the proof.
-const assertBakedBuildingsActive = async (page, label) => {
+// The 2026-07-02 lesson (a 404 quietly downgraded the shipped track)
+// carried over to the W0 Miami promotion: every requested Miami trackside
+// mount must resolve its GLB template. The loads are async after mount, so
+// wait until requested > 0 and all requests settled, then require zero
+// failures. (Replaces the retired bakedBuildings==='active' gate — the
+// baked-GLB pipeline died with the old procedural boxes.)
+const assertMiamiMountsHealthy = async (page, label) => {
   await page.waitForFunction(
     () => {
-      const state = window.__comebackCityKartTelemetry?.bakedBuildings;
-      return state && state !== 'pending';
+      const mounts = window.__comebackCityKartTelemetry?.miamiMounts;
+      return mounts && mounts.requested > 0 && mounts.mounted + mounts.failed >= mounts.requested;
     },
     null,
     { timeout: 15000 }
   );
-  const state = await page.evaluate(() => window.__comebackCityKartTelemetry?.bakedBuildings || null);
-  if (state !== 'active') {
-    fail(`${label}: baked buildings are not active (state=${state}) — procedural fallback would ship silently`, {
-      bakedBuildings: state,
+  const mounts = await page.evaluate(() => window.__comebackCityKartTelemetry?.miamiMounts || null);
+  if (!mounts || mounts.failed > 0 || mounts.mounted !== mounts.requested) {
+    fail(`${label}: miami trackside mounts unhealthy — a GLB 404 would ship silently`, {
+      miamiMounts: mounts,
     });
   }
 };
@@ -245,7 +247,7 @@ const runManualDesktopControls = async (browser) => {
   const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
   await page.goto(`${baseUrl}/#race`, { waitUntil: 'networkidle' });
   const facts = await assertPlayableShell(page, 'desktop');
-  await assertBakedBuildingsActive(page, 'desktop manual');
+  await assertMiamiMountsHealthy(page, 'desktop manual');
   await waitForRaceActive(page);
   await page.waitForTimeout(300);
   const idle = await readTelemetry(page, 'desktop idle');

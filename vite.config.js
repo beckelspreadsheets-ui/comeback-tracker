@@ -41,7 +41,9 @@ export default defineConfig({
         categories: ['health', 'fitness', 'lifestyle'],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // webp added at the W0 miami promotion (first runtime webp: the
+        // generated backdrop strips) — M3 acceptance note.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,webp}'],
         globIgnores: [
           '**/comeback-city-kart-proof-*',
           '**/comeback-city-race-backdrop-*',

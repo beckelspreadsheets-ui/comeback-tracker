@@ -239,6 +239,42 @@
       "assetIdPrefix": "kart.kenney",
       "class": "rival-kart",
       "role": "runtime-vehicle"
+    },
+    {
+      "path": "src/assets/game/models/miami/condo-tower.glb",
+      "assetId": "miami.condo-tower",
+      "class": "trackside-building",
+      "role": "runtime-trackside-building"
+    },
+    {
+      "path": "src/assets/game/models/miami/corner-arcade.glb",
+      "assetId": "miami.corner-arcade",
+      "class": "trackside-building",
+      "role": "runtime-trackside-building"
+    },
+    {
+      "path": "src/assets/game/models/miami/deco-hotel.glb",
+      "assetId": "miami.deco-hotel",
+      "class": "trackside-building",
+      "role": "runtime-trackside-building"
+    },
+    {
+      "path": "src/assets/game/models/miami/lifeguard-tower.glb",
+      "assetId": "miami.lifeguard-tower",
+      "class": "trackside-building",
+      "role": "runtime-trackside-building"
+    },
+    {
+      "path": "src/assets/game/models/miami/palm-cluster.glb",
+      "assetId": "miami.palm-cluster",
+      "class": "trackside-building",
+      "role": "runtime-trackside-building"
+    },
+    {
+      "path": "src/assets/game/models/miami/retro-diner.glb",
+      "assetId": "miami.retro-diner",
+      "class": "trackside-building",
+      "role": "runtime-trackside-building"
     }
   ]
 }

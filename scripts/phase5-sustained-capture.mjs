@@ -108,7 +108,7 @@ const summarizeShippedSamples = (samples) => {
     lapAtEnd: latest.lap ?? null,
     rendererStats: { drawCalls: stats(drawCalls), triangles: stats(triangles) },
     speed: stats(numericOf(samples, 'speed')),
-    bakedBuildings: latest.bakedBuildings ?? null,
+    miamiMounts: latest.miamiMounts ?? null,
     trackVisualsEnabled: latest.trackVisualsEnabled ?? null,
     postChainEnabled: latest.postChainEnabled ?? null,
   };
@@ -143,7 +143,7 @@ const captureShipped = async (page) => {
       const t = window.__comebackCityKartTelemetry;
       return t
         ? {
-            bakedBuildings: t.bakedBuildings,
+            miamiMounts: t.miamiMounts,
             postChainEnabled: t.postChainEnabled,
             fpsEstimate: t.fpsEstimate,
             frameElapsedMs: t.frameElapsedMs,

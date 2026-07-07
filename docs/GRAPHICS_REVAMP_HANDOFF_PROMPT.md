@@ -324,7 +324,13 @@ track/character/kart — all three param traps deleted; RaceScreen seeds
 select state from the URL once per mount; kart-playtest.html harness
 passes params as props; probe tmp/w1-track-select/probe-track-select.mjs
 + test:race + test:kart-playable both tracks all green — see roadmap W1
-for the full record). START WITH JOB 1 below = roadmap W0.
+for the full record). W0 / JOB 1 IS DONE TOO (same day: MIAMI MODE
+SHIPPED AS THE DEFAULT — full record + numbers in the roadmap W0
+section; ?skyLab=0 = bare-districts diagnostic; bakedBuildings gate
+replaced by the miamiMounts telemetry gate; proof gates re-baselined
+650→800 calls / 12→8 headless minFps with owner sign-off PENDING;
+phase5 headed 144 both tracks; deploy = owner-triggered). NEXT = JOB 2
+below = roadmap W2 (item/track clarity).
 
 YOUR TASK NOW — TWO QUEUED JOBS, IN ORDER (owner 2026-07-07: "you can
 ship this First"):

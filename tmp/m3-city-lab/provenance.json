@@ -129,5 +129,40 @@
     "date": "2026-07-07",
     "where": "ComebackCityThreeKartRace.jsx miami mode (behind ?skyLab=1): MIAMI_OPENING_RUN (5 slots on the old facade anchors), MIAMI_DISTRICT_ASSETS (5 district slots behind the neon portals), MIAMI_ROADSIDE (10 palm/lifeguard/diner spots)",
     "notes": "loads via createGameGltfLoader (single-loader rule holds, grep=1), cached template + clone per placement, unlit MeshBasicMaterial like the baked swaps; Tripo +X facing confirmed in-game. PROMOTION TODO: move GLBs to src/assets + manifest + similarity review; scrub the arcade neon squiggles that read letter-like; consider harder diet (ratio 0.01) \u2014 ~20 rigs x ~30k tris adds ~600k tris vs the 900k proof gate (which runs flag-off today); FPS check at promotion."
+  },
+  "w0ShipPromotion": {
+    "date": "2026-07-07",
+    "cornerArcadeRegen": {
+      "why": "no-text rule: the approved original's neon squiggles read letter-like (\"VO\"/\"GN\")",
+      "rolls": [
+        {
+          "jobId": "640dc6be-3e27-4a63-89b6-ef608d5dd431",
+          "verdict": "REJECTED - single-story massing (approved original is two-story) + chevron neon reads \"V<\"",
+          "file": "corner-arcade-v2.glb (local only)"
+        },
+        {
+          "jobId": "3eb890c1-48bf-44ce-a682-193af14ba8a2",
+          "verdict": "PICKED - two-story massing matches the approved original; neon strictly circles/dots/bars",
+          "file": "corner-arcade-v3.glb"
+        }
+      ],
+      "quality": "geometry_quality=detailed, texture_quality=detailed",
+      "evidence": [
+        "../w0-ship/arcade-regen-ab.png",
+        "../w0-ship/arcade-regen-v3-ab.png"
+      ],
+      "cost": "10cr (~$0.44, two rolls)"
+    },
+    "shipDiet": {
+      "pipeline": "weld -> simplify 0.02/0.001 -> simplify 0.35/0.01 -> resize 512 -> meshopt",
+      "why": "bundle gzip gate: 1024-texture diet GLBs totaled ~2.2MB gz vs ~1.19MB gz headroom (facade PNGs stay - the world hub uses them; only baked-buildings.glb retires). Ship diet lands the six at ~1.08MB gz total. NOTE: a second simplify at error 0.001 is a NO-OP (error bound caps collapse); 0.01 is what actually halves the geometry.",
+      "qualityGate": "per-asset turntable A/B vs the owner-approved diet meshes: tmp/w0-ship/diet-ab-*.png - silhouettes/trim/railings intact on all six",
+      "shippedFiles": "src/assets/game/models/miami/*.glb (manifest records carry both hashes)"
+    },
+    "farBandFade": {
+      "why": "hard band at frame top was the one visible seam",
+      "change": "fade_frac 0.16 -> 0.35, reprocessed from the CDN originals of the SAME jobs (cc-far dfa46ac2, pv-far 07fc4fa8): crop 2560x1072 from top, linear alpha ramp over top 35%, webp q85",
+      "shippedFiles": "src/assets/game/generated/backdrops/{cc,pv}-far.webp"
+    }
   }
 }

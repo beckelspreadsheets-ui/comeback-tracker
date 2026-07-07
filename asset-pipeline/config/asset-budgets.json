@@ -1,76 +1,208 @@
 {
   "schemaVersion": 1,
   "source": {
-    "encodedBytes": { "warn": 20000000, "hard": 50000000 },
-    "triangles": { "warn": 600000, "hard": 1500000 },
-    "uploadVertices": { "warn": 600000, "hard": 1500000 },
-    "maxTextureDimension": { "warn": 4096, "hard": 8192 },
-    "materials": { "warn": 8, "hard": 16 }
+    "encodedBytes": {
+      "warn": 20000000,
+      "hard": 50000000
+    },
+    "triangles": {
+      "warn": 600000,
+      "hard": 1500000
+    },
+    "uploadVertices": {
+      "warn": 600000,
+      "hard": 1500000
+    },
+    "maxTextureDimension": {
+      "warn": 4096,
+      "hard": 8192
+    },
+    "materials": {
+      "warn": 8,
+      "hard": 16
+    }
   },
   "runtime": {
     "hero-kart": {
-      "triangles": { "target": 18000, "hard": 25000 },
-      "encodedBytes": { "target": 750000, "hard": 1250000 },
-      "materials": { "target": 1, "hard": 2 },
+      "triangles": {
+        "target": 18000,
+        "hard": 25000
+      },
+      "encodedBytes": {
+        "target": 750000,
+        "hard": 1250000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 2
+      },
       "maxTextureDimension": 1024
     },
     "rival-kart": {
-      "triangles": { "target": 12000, "hard": 18000 },
-      "encodedBytes": { "target": 550000, "hard": 900000 },
-      "materials": { "target": 1, "hard": 2 },
+      "triangles": {
+        "target": 12000,
+        "hard": 18000
+      },
+      "encodedBytes": {
+        "target": 550000,
+        "hard": 900000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 2
+      },
       "maxTextureDimension": 1024
     },
     "seated-character": {
-      "triangles": { "target": 16000, "hard": 25000 },
-      "encodedBytes": { "target": 700000, "hard": 1250000 },
-      "materials": { "target": 1, "hard": 2 },
+      "triangles": {
+        "target": 16000,
+        "hard": 25000
+      },
+      "encodedBytes": {
+        "target": 700000,
+        "hard": 1250000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 2
+      },
       "maxTextureDimension": 1024
     },
     "simple-prop": {
-      "triangles": { "target": 500, "hard": 1500 },
-      "encodedBytes": { "target": 40000, "hard": 100000 },
-      "materials": { "target": 1, "hard": 1 },
+      "triangles": {
+        "target": 500,
+        "hard": 1500
+      },
+      "encodedBytes": {
+        "target": 40000,
+        "hard": 100000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 1
+      },
       "maxTextureDimension": 256
     },
     "complex-prop": {
-      "triangles": { "target": 4000, "hard": 8000 },
-      "encodedBytes": { "target": 250000, "hard": 500000 },
-      "materials": { "target": 1, "hard": 3 },
+      "triangles": {
+        "target": 4000,
+        "hard": 8000
+      },
+      "encodedBytes": {
+        "target": 250000,
+        "hard": 500000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 3
+      },
       "maxTextureDimension": 512
     },
     "item-box": {
-      "triangles": { "target": 1000, "hard": 2000 },
-      "encodedBytes": { "target": 80000, "hard": 120000 },
-      "materials": { "target": 1, "hard": 1 },
+      "triangles": {
+        "target": 1000,
+        "hard": 2000
+      },
+      "encodedBytes": {
+        "target": 80000,
+        "hard": 120000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 1
+      },
       "maxTextureDimension": 512
     },
     "boost-pad": {
-      "triangles": { "target": 500, "hard": 1000 },
-      "encodedBytes": { "target": 50000, "hard": 80000 },
-      "materials": { "target": 1, "hard": 1 },
+      "triangles": {
+        "target": 500,
+        "hard": 1000
+      },
+      "encodedBytes": {
+        "target": 50000,
+        "hard": 80000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 1
+      },
       "maxTextureDimension": 512
     },
     "track-module": {
-      "triangles": { "target": 3000, "hard": 6000 },
-      "encodedBytes": { "target": 250000, "hard": 400000 },
-      "materials": { "target": 1, "hard": 2 },
+      "triangles": {
+        "target": 3000,
+        "hard": 6000
+      },
+      "encodedBytes": {
+        "target": 250000,
+        "hard": 400000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 2
+      },
+      "maxTextureDimension": 512
+    },
+    "trackside-building": {
+      "triangles": {
+        "target": 45000,
+        "hard": 60000
+      },
+      "encodedBytes": {
+        "target": 500000,
+        "hard": 750000
+      },
+      "materials": {
+        "target": 1,
+        "hard": 2
+      },
       "maxTextureDimension": 512
     }
   },
   "scene": {
     "mobile": {
-      "triangles": { "target": 400000, "hard": 500000 },
-      "drawCalls": { "target": 100, "hard": 120 },
-      "estimatedAssetGpuBytes": { "target": 96000000, "hard": 128000000 },
-      "raceAssetTransferBytes": { "target": 8000000, "hard": 10000000 },
-      "fpsMedian": { "target": 50, "hard": 34 }
+      "triangles": {
+        "target": 400000,
+        "hard": 500000
+      },
+      "drawCalls": {
+        "target": 100,
+        "hard": 120
+      },
+      "estimatedAssetGpuBytes": {
+        "target": 96000000,
+        "hard": 128000000
+      },
+      "raceAssetTransferBytes": {
+        "target": 8000000,
+        "hard": 10000000
+      },
+      "fpsMedian": {
+        "target": 50,
+        "hard": 34
+      }
     },
     "desktop": {
-      "triangles": { "target": 600000, "hard": 750000 },
-      "drawCalls": { "target": 150, "hard": 180 },
-      "estimatedAssetGpuBytes": { "target": 192000000, "hard": 256000000 },
-      "raceAssetTransferBytes": { "target": 12000000, "hard": 15000000 },
-      "fpsMedian": { "target": 60, "hard": 34 }
+      "triangles": {
+        "target": 600000,
+        "hard": 750000
+      },
+      "drawCalls": {
+        "target": 150,
+        "hard": 180
+      },
+      "estimatedAssetGpuBytes": {
+        "target": 192000000,
+        "hard": 256000000
+      },
+      "raceAssetTransferBytes": {
+        "target": 12000000,
+        "hard": 15000000
+      },
+      "fpsMedian": {
+        "target": 60,
+        "hard": 34
+      }
     }
   }
 }
