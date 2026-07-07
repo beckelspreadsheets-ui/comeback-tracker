@@ -1,0 +1,118 @@
+[
+  {
+    "consoleErrors": 8,
+    "run": "comeback-city/control",
+    "shots": [
+      {
+        "file": "composite-comeback-city-control-p0p15.png",
+        "telemetry": {
+          "fpsEstimate": 12,
+          "frameWorkMs": 1.16,
+          "routeProgress": 0.151
+        }
+      }
+    ]
+  },
+  {
+    "consoleErrors": 4,
+    "run": "comeback-city/take-a",
+    "shots": [
+      {
+        "file": "composite-comeback-city-take-a-p0p15.png",
+        "telemetry": {
+          "fpsEstimate": 11,
+          "frameWorkMs": 1.09,
+          "routeProgress": 0.151
+        }
+      },
+      {
+        "file": "composite-comeback-city-take-a-p0p55.png",
+        "telemetry": {
+          "fpsEstimate": 12,
+          "frameWorkMs": 1.06,
+          "routeProgress": 0.552
+        }
+      }
+    ]
+  },
+  {
+    "consoleErrors": 4,
+    "run": "comeback-city/take-b",
+    "shots": [
+      {
+        "file": "composite-comeback-city-take-b-p0p15.png",
+        "telemetry": {
+          "fpsEstimate": 12,
+          "frameWorkMs": 1.06,
+          "routeProgress": 0.151
+        }
+      },
+      {
+        "file": "composite-comeback-city-take-b-p0p55.png",
+        "telemetry": {
+          "fpsEstimate": 10,
+          "frameWorkMs": 1.07,
+          "routeProgress": 0.552
+        }
+      }
+    ]
+  },
+  {
+    "consoleErrors": 4,
+    "run": "penguin-village/control",
+    "shots": [
+      {
+        "file": "composite-penguin-village-control-p0p15.png",
+        "telemetry": {
+          "fpsEstimate": 11,
+          "frameWorkMs": 1.52,
+          "routeProgress": 0.152
+        }
+      }
+    ]
+  },
+  {
+    "consoleErrors": 4,
+    "run": "penguin-village/take-a",
+    "shots": [
+      {
+        "file": "composite-penguin-village-take-a-p0p15.png",
+        "telemetry": {
+          "fpsEstimate": 11,
+          "frameWorkMs": 1.46,
+          "routeProgress": 0.152
+        }
+      },
+      {
+        "file": "composite-penguin-village-take-a-p0p55.png",
+        "telemetry": {
+          "fpsEstimate": 11,
+          "frameWorkMs": 1.32,
+          "routeProgress": 0.552
+        }
+      }
+    ]
+  },
+  {
+    "consoleErrors": 4,
+    "run": "penguin-village/take-b",
+    "shots": [
+      {
+        "file": "composite-penguin-village-take-b-p0p15.png",
+        "telemetry": {
+          "fpsEstimate": 10,
+          "frameWorkMs": 1.55,
+          "routeProgress": 0.152
+        }
+      },
+      {
+        "file": "composite-penguin-village-take-b-p0p55.png",
+        "telemetry": {
+          "fpsEstimate": 10,
+          "frameWorkMs": 1.43,
+          "routeProgress": 0.552
+        }
+      }
+    ]
+  }
+]

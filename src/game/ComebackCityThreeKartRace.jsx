@@ -833,6 +833,20 @@ const momentsLabConfig = () => {
   return Array.isArray(window.__momentsLabOverrides) ? window.__momentsLabOverrides : null;
 };
 
+// H8 sky lab (generated backdrops, dev-only) hook: ?skyLab=1 mounts the
+// generated far/near backdrop rings (per-track default strips resolved in
+// createScene); window.__skyLabOverrides = { far, near } swaps candidate
+// strip URLs. Absent param = shipped look untouched.
+const skyLabConfig = () => {
+  if (typeof window === 'undefined') return null;
+  if (new URLSearchParams(window.location.search).get('skyLab') !== '1') return null;
+  const overrides = window.__skyLabOverrides || {};
+  return {
+    far: typeof overrides.far === 'string' ? overrides.far : null,
+    near: typeof overrides.near === 'string' ? overrides.near : null,
+  };
+};
+
 // B2: wrap-aware atmosphere lerp driven by per-lap race.progress, called
 // once per frame right before the composer renders. No-op unless
 // createScene precompiled engine.paletteMoments. Zero per-frame
@@ -3042,6 +3056,55 @@ const createScene = ({
   const labRim = heroRimConfig();
   activeHeroRim = labRim !== undefined ? labRim : palette.heroRim || null;
   TOON_RIM_SHARED_TINT.value.set(activeHeroRim?.tint || palette.rimLightColor || '#4fd8ff');
+
+  // H8 sky lab (dev-only, owner gate open): ?skyLab=1 mounts the generated
+  // backdrop as two parallax billboard rings — an opaque far band (its own
+  // sky + horizon glow, top edge alpha-faded into the procedural gradient)
+  // and an alpha-keyed nearer silhouette row. Strips are dev-served from
+  // tmp/m3-sky-lab/production/ (NOT in the production bundle); an approved
+  // pick moves to src/assets/game/generated/ + manifest at promotion.
+  // Rings are fog-exempt (the art is pre-hazed) and never write depth, so
+  // the world always overdraws them; camera.far is raised for the lab only
+  // (shipped far stays 860 — the fog.far <= 840 rule is about FOG).
+  const skyLab = skyLabConfig();
+  if (skyLab) {
+    const SKY_LAB_STRIPS = {
+      'comeback-city': {
+        far: '/tmp/m3-sky-lab/production/cc-far-a.webp',
+        near: '/tmp/m3-sky-lab/production/cc-near-a.webp',
+      },
+      'penguin-village': {
+        far: '/tmp/m3-sky-lab/production/pv-far-a.webp',
+        near: '/tmp/m3-sky-lab/production/pv-near-a.webp',
+      },
+    };
+    const strips = SKY_LAB_STRIPS[trackDef.key] || {};
+    camera.far = 1800;
+    camera.updateProjectionMatrix();
+    const addBackdropRing = (url, { height, order, radius, repeats, y }) => {
+      if (!url) return;
+      loader.load(url, (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.wrapS = THREE.MirroredRepeatWrapping;
+        texture.repeat.x = repeats;
+        const ring = new THREE.Mesh(
+          new THREE.CylinderGeometry(radius, radius, height, 64, 1, true),
+          new THREE.MeshBasicMaterial({
+            depthWrite: false,
+            fog: false,
+            map: texture,
+            side: THREE.BackSide,
+            transparent: true,
+          })
+        );
+        ring.position.y = y;
+        ring.renderOrder = order;
+        scene.add(ring);
+      });
+    };
+    addBackdropRing(skyLab.far || strips.far, { height: 380, order: -20, radius: 780, repeats: 5, y: 140 });
+    addBackdropRing(skyLab.near || strips.near, { height: 210, order: -19, radius: 590, repeats: 7, y: 78 });
+  }
 
   // Post-processing: bloom is what makes the neon dusk actually glow.
   let composer;

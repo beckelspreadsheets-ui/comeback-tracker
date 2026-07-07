@@ -1,22 +1,123 @@
 {
-  "purpose": "Sky-lab round 1: ART-DIRECTION candidates for generated track backdrops (concept gate — NOT runtime assets; the picked direction gets regenerated as production layered strips, which then receive asset-manifest entries + owner similarity review per H0 mechanics).",
-  "h0": "SIGNED 2026-07-07, scoped to text-prompt generation (no ordinal uploads). Recorded in race-visual-target-brief.md, PRD §9, HIGGSFIELD_MCP_INTEGRATION_PLAN.md §3.",
+  "purpose": "Sky-lab round 1: ART-DIRECTION candidates for generated track backdrops (concept gate \u2014 NOT runtime assets; the picked direction gets regenerated as production layered strips, which then receive asset-manifest entries + owner similarity review per H0 mechanics).",
+  "h0": "SIGNED 2026-07-07, scoped to text-prompt generation (no ordinal uploads). Recorded in race-visual-target-brief.md, PRD \u00a79, HIGGSFIELD_MCP_INTEGRATION_PLAN.md \u00a73.",
   "tool": "Higgsfield MCP, model soul_location, aspect 21:9 (2560x1080), ~0.12 credits/image",
   "date": "2026-07-07",
   "promptAuthorship": "Claude-drafted under owner direction (owner steer: 'major background overhauls on both tracks ... for the backgrounds to be top tier'), palette-locked to the shipped tracks",
   "candidates": [
-    { "file": "cc-v1-neon-metropolis-a.webp", "jobId": "cf17434b-ff8f-4e4d-af4e-272eae72f717", "seed": 57707 },
-    { "file": "cc-v1-neon-metropolis-b.webp", "jobId": "8fdc2b1c-1b94-4fab-b1fe-fe02f2fd35d3", "seed": 345016 },
-    { "file": "cc-v2-sunset-boulevard-a.webp", "jobId": "9aa33e83-5ed8-4d37-b094-929814dd65b4", "seed": 686809 },
-    { "file": "cc-v2-sunset-boulevard-b.webp", "jobId": "ba47bf43-aa9c-4b54-978b-c3b4bb645fde", "seed": 459098 },
-    { "file": "cc-v3-synthwave-a.webp", "jobId": "8246939e-385c-4580-a39f-d52d729bb7e0", "seed": 615667 },
-    { "file": "cc-v3-synthwave-b.webp", "jobId": "6099d133-bd8b-41e2-b31a-3d6e4bd78966", "seed": 776198 },
-    { "file": "pv-v1-aurora-night-a.webp", "jobId": "8fa1e29e-87f1-476d-b02a-4ff0d08b6eaa", "seed": 118531 },
-    { "file": "pv-v1-aurora-night-b.webp", "jobId": "2966f6ea-0762-488a-b5cb-2cc5d62dffd4", "seed": 98083 },
-    { "file": "pv-v2-storm-front-a.webp", "jobId": "cae6c7c6-896a-4b14-a1f3-6417cd147c86", "seed": 601045 },
-    { "file": "pv-v2-storm-front-b.webp", "jobId": "aced4c93-d366-4746-b6ce-fd3014ab8e03", "seed": 498912 },
-    { "file": "pv-v3-pastel-twilight-a.webp", "jobId": "d048f164-fdfe-4165-bdef-d5630ba97e86", "seed": 72642 },
-    { "file": "pv-v3-pastel-twilight-b.webp", "jobId": "0d872bf5-87cd-41ad-b989-e6256356cbdc", "seed": 515876 }
+    {
+      "file": "cc-v1-neon-metropolis-a.webp",
+      "jobId": "cf17434b-ff8f-4e4d-af4e-272eae72f717",
+      "seed": 57707
+    },
+    {
+      "file": "cc-v1-neon-metropolis-b.webp",
+      "jobId": "8fdc2b1c-1b94-4fab-b1fe-fe02f2fd35d3",
+      "seed": 345016
+    },
+    {
+      "file": "cc-v2-sunset-boulevard-a.webp",
+      "jobId": "9aa33e83-5ed8-4d37-b094-929814dd65b4",
+      "seed": 686809
+    },
+    {
+      "file": "cc-v2-sunset-boulevard-b.webp",
+      "jobId": "ba47bf43-aa9c-4b54-978b-c3b4bb645fde",
+      "seed": 459098
+    },
+    {
+      "file": "cc-v3-synthwave-a.webp",
+      "jobId": "8246939e-385c-4580-a39f-d52d729bb7e0",
+      "seed": 615667
+    },
+    {
+      "file": "cc-v3-synthwave-b.webp",
+      "jobId": "6099d133-bd8b-41e2-b31a-3d6e4bd78966",
+      "seed": 776198
+    },
+    {
+      "file": "pv-v1-aurora-night-a.webp",
+      "jobId": "8fa1e29e-87f1-476d-b02a-4ff0d08b6eaa",
+      "seed": 118531
+    },
+    {
+      "file": "pv-v1-aurora-night-b.webp",
+      "jobId": "2966f6ea-0762-488a-b5cb-2cc5d62dffd4",
+      "seed": 98083
+    },
+    {
+      "file": "pv-v2-storm-front-a.webp",
+      "jobId": "cae6c7c6-896a-4b14-a1f3-6417cd147c86",
+      "seed": 601045
+    },
+    {
+      "file": "pv-v2-storm-front-b.webp",
+      "jobId": "aced4c93-d366-4746-b6ce-fd3014ab8e03",
+      "seed": 498912
+    },
+    {
+      "file": "pv-v3-pastel-twilight-a.webp",
+      "jobId": "d048f164-fdfe-4165-bdef-d5630ba97e86",
+      "seed": 72642
+    },
+    {
+      "file": "pv-v3-pastel-twilight-b.webp",
+      "jobId": "0d872bf5-87cd-41ad-b989-e6256356cbdc",
+      "seed": 515876
+    }
   ],
-  "note": "Original 2560x1080 PNGs live on the Higgsfield CDN under each jobId (job_status returns rawUrl); committed copies are WebP q85 for repo weight. Seeds recorded for regeneration continuity."
+  "note": "Original 2560x1080 PNGs live on the Higgsfield CDN under each jobId (job_status returns rawUrl); committed copies are WebP q85 for repo weight. Seeds recorded for regeneration continuity.",
+  "round1Picks": {
+    "comeback-city": "v2 sunset boulevard (owner: \"v2a\")",
+    "penguin-village": "v2 storm front (owner: \"v2a\" / earlier \"p2\")",
+    "date": "2026-07-07"
+  },
+  "round2ProductionStrips": {
+    "note": "Picked directions regenerated as layered production strips: far = opaque sky band (top 16% alpha-faded), near = magenta-keyed silhouette row (keyed+despilled offline in PIL, cwebp -exact). Mounted as parallax cylinder rings behind ?skyLab=1 (H8 block in ComebackCityThreeKartRace.jsx).",
+    "jobs": [
+      {
+        "file": "production/cc-far-a.webp",
+        "jobId": "dfa46ac2-47b0-4474-a2d7-d4905a192c89",
+        "seed": 413922
+      },
+      {
+        "file": "production/cc-far-b.webp",
+        "jobId": "c29ee6c4-f43d-42a1-9927-8f6aa158b30a",
+        "seed": 391255
+      },
+      {
+        "file": "production/cc-near-a.webp",
+        "jobId": "185dfe08-1fe6-439d-a7c6-c9ced2e8820b",
+        "seed": 906461
+      },
+      {
+        "file": "production/cc-near-b.webp",
+        "jobId": "01b9c732-f15f-4924-a207-59c466cc3d0a",
+        "seed": 681553
+      },
+      {
+        "file": "production/pv-far-a.webp",
+        "jobId": "0093bd75-bad8-4122-be55-a8822dec4337",
+        "seed": 389564
+      },
+      {
+        "file": "production/pv-far-b.webp",
+        "jobId": "9d44099d-6a1a-425d-81fa-b0a87dbdfb8f",
+        "seed": 160524
+      },
+      {
+        "file": "production/pv-near-a.webp",
+        "jobId": "9751f2e9-b490-4cb4-9517-a85ee2c73a25",
+        "seed": 361230
+      },
+      {
+        "file": "production/pv-near-b.webp",
+        "jobId": "4ba10049-5b19-4ded-b512-90790bea7aac",
+        "seed": 21042
+      },
+      {
+        "note": "first CC production batch (neon-metropolis direction, superseded by the v2a correction) jobs: 803b957f/14921c23/4366410d/765d2e71 \u2014 kept on CDN only"
+      }
+    ]
+  }
 }
