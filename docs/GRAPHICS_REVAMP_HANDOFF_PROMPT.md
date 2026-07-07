@@ -263,6 +263,29 @@ M2 IS CLOSED (2026-07-06 fast-close review; outcomes in the header above
 and PRD §7 M2 milestone notes — B4 default-on signed, B2 no-pick/
 moment-less, CC rim + scorecard re-ratings deferred).
 
+OWNER STEER 2026-07-07 (supersedes the kickoff order below where they
+conflict): "major background overhauls on both tracks ... backgrounds to
+be top tier" via GENERATED ART — the owner explicitly does not believe
+building-geometry variants will get there ("we tried to use those
+buildings and I just dont think they are going to come out great"). H0
+was SIGNED the same day (scoped: text-prompt only, no ordinal uploads —
+see PRD §9) and SKY LAB ROUND 1 IS LIVE: sky-lab.html — 12 Higgsfield
+soul_location candidates (3 art directions x 2 takes per track, 21:9,
+provenance + seeds in tmp/m3-sky-lab/provenance.json). PENDING: owner
+picks a direction per track. AFTER THE PICK: regenerate the winner as
+production layers (one sky band + 2-3 silhouette strips per track,
+remove_background for cutouts, WebP within the §8 2.14 MiB images
+headroom — measured cost ~60-130KB per 2560px strip at q85, so the
+budget is comfortable; add 'webp' to vite.config workbox globPatterns
+with the FIRST runtime webp), manifest entries + owner similarity
+review, then wire scene.background sky + parallax billboard rings
+behind ?skyLab=1 (house hook pattern) and judge the composite in-game
+before shipping + proof re-baseline. The city-block GEOMETRY lab below
+is DEMOTED to mid-ground support (a silhouette row between track and
+backdrop) — judged only after the backdrop layers are in. Fog rule
+still applies: scene.background is fog-exempt; generated skies must
+harmonize with each track's fog color.
+
 YOUR TASK NOW: PHASE C — this is the milestone the owner is waiting on
 ("we are not improving majorly" — the answer is baked lighting + authored
 city visuals, not more parameter picks). Owner-steered kickoff order:
