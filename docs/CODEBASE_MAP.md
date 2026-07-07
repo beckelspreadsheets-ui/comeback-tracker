@@ -127,7 +127,7 @@ Three race components coexist:
 
 `RaceScreen.jsx` (the cup-select hub) and `RacePlaytestHarness.jsx` (standalone QA entry) sit above these.
 
-**Debug URL params** (on `ComebackCityThreeKartRace`): `?track=` `?character=` `?kart=` `?giveItem=<key>` `?itemShowcase=1` `?playableAutoplay=1` (`?raceAutoplay=1` for ArcadeRace3D path) `?kenneyKart=1`. Invaluable for QA/captures.
+**Debug URL params**: `?track=` `?character=` `?kart=` SEED the cup-select initial state in `RaceScreen` (one-shot — stripped from the URL once consumed; also passed as props by the `kart-playtest.html` harness) — since the W1 fix (2026-07-07) they never override a cup-select pick; the race component is prop-only for these. Component-read params: `?giveItem=<key>` `?itemShowcase=1` `?playableAutoplay=1` (`?raceAutoplay=1` for ArcadeRace3D path) `?kenneyKart=1`. Invaluable for QA/captures.
 
 > ⚠️ Two telemetry-publishing race components write the **same** `window.__comebackCityKartTelemetry` global with different shapes — last render wins.
 

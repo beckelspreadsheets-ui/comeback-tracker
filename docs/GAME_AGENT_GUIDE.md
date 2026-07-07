@@ -55,8 +55,8 @@ Note: `RaceScreen` and `SettingsScreen` both render a "garage/upgrade" UI driven
 ## How to run / see the game
 
 - `npm run dev` → open the app, enter the City hub, drive into the **Raceway** portal (or use the `#race` hash).
-- **Debug URL params** (on the race) — invaluable for QA/captures:
-  `?track=` `?character=` `?kart=` `?giveItem=<key>` `?itemShowcase=1` `?playableAutoplay=1`
+- **Debug URL params** — invaluable for QA/captures:
+  `?track=` `?character=` `?kart=` SEED the cup-select in `RaceScreen` (one-shot: consumed + stripped after mount; a select pick always wins — W1 fix 2026-07-07) and are passed as props by the `kart-playtest.html` harness; `?giveItem=<key>` `?itemShowcase=1` `?playableAutoplay=1` are read by the race component itself
 - Tests (Node + Playwright): `npm run test:kart-proof` (fast static guard), `npm run test:kart-playable`, `npm run test:race` (content playtest). These read `window.__racePlaytestResult` / telemetry globals.
 - Build gate: `npm run build` must stay green.
 

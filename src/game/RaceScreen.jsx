@@ -1921,6 +1921,17 @@ const KartCharacterSelect = ({ kartKey, onStart, selectedKey, setKartKey, setSel
   </div>
 );
 
+// W1: share/QA URLs may carry ?character/?kart/?track. They SEED the select
+// state here (visible as the preselected entry) and never override a later
+// pick — the race component is prop-only, so whatever the cup select
+// confirms is what races. While the param stays in the URL, a fresh visit
+// to this screen re-seeds from it; the pick always wins for the race run.
+const urlSeededKey = (name, isValid) => {
+  if (typeof window === 'undefined') return null;
+  const param = new URLSearchParams(window.location.search).get(name);
+  return param && isValid(param) ? param : null;
+};
+
 export const RaceScreen = ({ onExit = null, readOnly = false, setState, state }) => {
   const profile = useMemo(() => deriveGameProfile(state), [state]);
   const raceStageRef = useRef(null);
@@ -1954,6 +1965,8 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
     return params.get('playableAutoplay') === '1' || params.get('raceAutoplay') === '1';
   });
   const [characterKey, setCharacterKey] = useState(() => {
+    const seeded = urlSeededKey('character', (key) => KART_CHARACTERS.some((entry) => entry.key === key));
+    if (seeded) return seeded;
     if (typeof window === 'undefined') return DEFAULT_CHARACTER_KEY;
     try {
       const saved = window.localStorage?.getItem('cc-kart-character');
@@ -1963,6 +1976,8 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
     }
   });
   const [kartKey, setKartKey] = useState(() => {
+    const seeded = urlSeededKey('kart', (key) => KART_OPTIONS.some((entry) => entry.key === key));
+    if (seeded) return seeded;
     if (typeof window === 'undefined') return null;
     try {
       const saved = window.localStorage?.getItem('cc-kart-kart');
@@ -1972,6 +1987,8 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
     }
   });
   const [kartTrackKey, setKartTrackKey] = useState(() => {
+    const seeded = urlSeededKey('track', (key) => KART_TRACKS.some((entry) => entry.key === key));
+    if (seeded) return seeded;
     if (typeof window === 'undefined') return DEFAULT_TRACK_KEY;
     try {
       const saved = window.localStorage?.getItem('cc-kart-track');
@@ -1990,6 +2007,25 @@ export const RaceScreen = ({ onExit = null, readOnly = false, setState, state })
     }
     setCharacterReady(true);
   }, [characterKey, kartKey, kartTrackKey]);
+  useEffect(() => {
+    // W1: the URL seed is ONE-SHOT. Strip the select params once the
+    // initializers above have consumed them, so a stale share/lab URL can't
+    // keep re-seeding over the owner's saved pick on every re-entry (the
+    // app-shell router deliberately preserves location.search). Idempotent;
+    // QA contexts are fresh page loads, so their seeded mount is unaffected.
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('track') && !params.has('character') && !params.has('kart')) return;
+    params.delete('track');
+    params.delete('character');
+    params.delete('kart');
+    const query = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`
+    );
+  }, []);
   const [raceProfile, setRaceProfile] = useState(null);
   const [command, setCommand] = useState(null);
   const [lastResult, setLastResult] = useState(null);

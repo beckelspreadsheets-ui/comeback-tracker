@@ -319,10 +319,12 @@ THE QUEUE NOW LIVES IN docs/PENGUIN_KART_CONTENT_ROADMAP_2026-07.md
 (owner-scoped 2026-07-07: W1 track-select bugfix -> W0 ship -> W2 item
 clarity -> W3 Penguin Village revamp incl. ICE IS NICE + outplayasians
 finish-line crosser -> W4 roster (5 karts + new penguins) -> W5 item
-renders). START WITH W1: the ?track= URL param unconditionally overrides
-the cup-select pick (trackKey useMemo ~:3972) — verified root cause of
-the owner's "penguin village is loading the miami vice vibes" report;
-fix = param seeds initial selection only. Then JOB 1 below = roadmap W0.
+renders). W1 IS DONE (2026-07-07: race component is prop-only for
+track/character/kart — all three param traps deleted; RaceScreen seeds
+select state from the URL once per mount; kart-playtest.html harness
+passes params as props; probe tmp/w1-track-select/probe-track-select.mjs
++ test:race + test:kart-playable both tracks all green — see roadmap W1
+for the full record). START WITH JOB 1 below = roadmap W0.
 
 YOUR TASK NOW — TWO QUEUED JOBS, IN ORDER (owner 2026-07-07: "you can
 ship this First"):

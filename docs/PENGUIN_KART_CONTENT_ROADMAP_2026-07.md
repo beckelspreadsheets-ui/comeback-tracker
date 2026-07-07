@@ -10,7 +10,7 @@
 
 | # | Workstream | Size | Blocked on |
 |---|---|---|---|
-| W1 | **BUGFIX: track select ignored when `?track=` is in the URL** | hours | nothing — do first |
+| W1 | **BUGFIX: track select ignored when `?track=` is in the URL** — ✅ DONE 2026-07-07 | hours | nothing — do first |
 | W0 | **Ship miami mode** (promotion; handoff JOB 1 checklist) | 1-2 days | W1 (so the owner can verify both tracks properly) |
 | W2 | **Item/track clarity revamp** (boost pads, item audit, item boxes, held-item HUD icon) | 2-3 days | W0 shipped |
 | W3 | **Penguin Village visual revamp** (arctic 3D set + ICE IS NICE + outplayasians crosser) | 2-4 days | owner asset intake (partial); W0 pipeline reuse |
@@ -26,6 +26,8 @@
 **Fix:** the URL param must SEED the initial selection, not override the pick. Preferred: RaceScreen reads `?track=` once to preselect the cup-select entry; the race component trusts its `track` prop (delete the param branch from trackKey, keep `?character`/`?kart` QA behavior consistent — audit them for the same trap while in there). QA capture URLs keep working because they never touch the select flow.
 
 **Verify:** manual — load `/?track=comeback-city&skyLab=1#race`, back out, select Penguin Village, confirm arctic map; suites — test:race, test:kart-playable (both tracks use ?track and must keep working).
+
+**✅ FIXED 2026-07-07.** As specced: the race component is now PROP-ONLY for track/character/kart (all three had the identical trap — param branches deleted from the `trackKey`/`characterKey`/`kartKey` useMemos); `RaceScreen` seeds its select state from `?track`/`?character`/`?kart` (param → localStorage → default, visible as the preselected tile) and the seed is ONE-SHOT — a RaceScreen effect strips the three params via `history.replaceState` once consumed, so a stale share/lab URL can't re-seed over the saved pick on later re-entries (the app router deliberately preserves `location.search`; without the strip, a stale param would shadow the owner's saved pick on every remount — adversarial-review finding); `KartPlaytestHarness` (kart-playtest.html — prop-less mount used by phase5) now reads the params itself and passes them as props. Verified: `tmp/w1-track-select/probe-track-select.mjs` (4 scenarios: owner repro with webdriver spoofed off — stale `?track=comeback-city` + Penguin Village pick → races penguin-village with the seed visibly preselecting CC; one-shot strip + SPA re-entry preselects the SAVED pick; `#race` QA seed path; harness prop path — ALL PASS), test:race green, test:kart-playable green both tracks (PV leg's `?track=penguin-village` exercises the seed path, `passed: true`, bakedBuildings active). A 3-lens adversarial review swept EVERY repo consumer of these params (scripts/, tmp/ lab captures, docs, CI — all Playwright consumers are webdriver contexts that skip the select, so the seed reaches the race as props) — all compatible. Known accepted change: the `#race-3d-spike` route (prop-less App.jsx mounts) no longer honors `?track=` — no committed script used it (kart-3d-spike-test.mjs passes only `?playableAutoplay=1`); seed props in App.jsx if ever wanted again. Pre-existing, untouched, noted for later: the race component's main scene effect omits `trackKey` from its dep array (unreachable today — no caller swaps the track prop while mounted), and `data-race-track` on the RaceScreen shell still reflects the legacy 2D `RACE_TRACKS` state, not the kart track raced.
 
 ## W0 — Ship miami mode (promotion)
 

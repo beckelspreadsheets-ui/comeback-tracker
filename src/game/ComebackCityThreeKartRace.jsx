@@ -3947,35 +3947,26 @@ export const ComebackCityThreeKartRace = ({
     const params = new URLSearchParams(window.location.search);
     return params.get('playableAutoplay') === '1' || params.get('raceAutoplay') === '1';
   }, []);
-  // ?character= overrides the picker — used by QA captures to exercise any
-  // seat assignment without the select UI.
-  const characterKey = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const param = new URLSearchParams(window.location.search).get('character');
-      if (param && KART_CHARACTERS.some((entry) => entry.key === param)) return param;
-    }
-    return KART_CHARACTERS.some((entry) => entry.key === character) ? character : DEFAULT_CHARACTER_KEY;
-  }, [character]);
+  // Seat/kart/track come from props ONLY. The old ?character/?kart/?track
+  // URL overrides let a stale param (e.g. a shared lab link) silently beat
+  // the cup-select pick (roadmap W1: "penguin village is loading the miami
+  // vice vibes"). QA keeps the params: RaceScreen seeds its select state
+  // from the URL on mount, and kart-playtest.html passes them as props.
+  const characterKey = useMemo(
+    () => (KART_CHARACTERS.some((entry) => entry.key === character) ? character : DEFAULT_CHARACTER_KEY),
+    [character]
+  );
   const playerCharacter = characterByKey(characterKey);
   // Kart is picked separately; defaults to the character's signature ride.
-  // ?kart= override mirrors ?character= for QA.
   const kartKey = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const param = new URLSearchParams(window.location.search).get('kart');
-      if (param && KART_OPTIONS.some((entry) => entry.key === param)) return param;
-    }
     if (kart && KART_OPTIONS.some((entry) => entry.key === kart)) return kart;
     return playerCharacter.kart;
   }, [kart, playerCharacter]);
   const playerKart = kartByKey(kartKey);
-  // Track is a registry pick; ?track= override mirrors the other QA params.
-  const trackKey = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const param = new URLSearchParams(window.location.search).get('track');
-      if (param && KART_TRACKS.some((entry) => entry.key === param)) return param;
-    }
-    return KART_TRACKS.some((entry) => entry.key === track) ? track : DEFAULT_TRACK_KEY;
-  }, [track]);
+  const trackKey = useMemo(
+    () => (KART_TRACKS.some((entry) => entry.key === track) ? track : DEFAULT_TRACK_KEY),
+    [track]
+  );
   const trackVisualsEnabled = useMemo(() => {
     // Opt-in experiment (PRD P0-3b): default OFF everywhere until the owner
     // signs the §9 trackVisualSchema default-on gate.
