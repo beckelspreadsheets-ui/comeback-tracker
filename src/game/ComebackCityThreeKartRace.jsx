@@ -1933,7 +1933,12 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
   };
   let propCount = 0;
   // The hand-placed opening facade run is comeback-city dressing — opt-in.
-  if (trackDef.dressing?.openingFacades) addOpeningFacadeRun(world, sampler, loader, buildingSwaps);
+  // H8: hidden while the generated backdrop is active (owner 2026-07-07:
+  // "these 2d building look horrible compared to the background") — the
+  // Miami-vice trackside set from city-lab replaces them at promotion.
+  if (trackDef.dressing?.openingFacades && !skyLabConfig()) {
+    addOpeningFacadeRun(world, sampler, loader, buildingSwaps);
+  }
 
   trackDef.course.districtAnchors.forEach((district) => {
     const { normal, point, tangent } = sampler.pointAt(district.progress);
@@ -1946,15 +1951,24 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
     const base = createBasicMaterial(district.base, { emissive: district.base, emissiveIntensity: 0.08 });
     const dark = createBasicMaterial(district.dark);
     const accent = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 1.25 });
-    buildingSwaps.push({ footprint: 36, group, rotate: Math.PI });
-    [
-      makeRoundedBox({ x: 34, y: 24, z: 18 }, { y: 12 }, base, 1.6),
-      makeRoundedBox({ x: 39, y: 4, z: 21 }, { y: 26 }, createBasicMaterial(district.roof), 1.2),
-      makeRoundedBox({ x: 18, y: 14, z: 1.4 }, { y: 10, z: -9.8 }, dark, 0.4),
-    ].forEach((mesh) => {
-      mesh.userData.kind = 'procedural-building';
-      group.add(mesh);
-    });
+    // H8: while the generated backdrop is active the boxy district bodies
+    // (and their baked-GLB swap-ins) stay out of the scene — only the neon
+    // portal/beacon gameplay cues remain until the Miami-vice trackside
+    // set lands. buildingSwaps stays empty then; the bake loader no-ops
+    // over it and still reaches bakedBuildings === 'active' (proof gate
+    // reads load state, not visibility — and it runs flag-off anyway).
+    const skyLabHidesBuildings = Boolean(skyLabConfig());
+    if (!skyLabHidesBuildings) {
+      buildingSwaps.push({ footprint: 36, group, rotate: Math.PI });
+      [
+        makeRoundedBox({ x: 34, y: 24, z: 18 }, { y: 12 }, base, 1.6),
+        makeRoundedBox({ x: 39, y: 4, z: 21 }, { y: 26 }, createBasicMaterial(district.roof), 1.2),
+        makeRoundedBox({ x: 18, y: 14, z: 1.4 }, { y: 10, z: -9.8 }, dark, 0.4),
+      ].forEach((mesh) => {
+        mesh.userData.kind = 'procedural-building';
+        group.add(mesh);
+      });
+    }
     // Standing neon arch doorway, like the portal modules on the district card
     const portal = new THREE.Mesh(new THREE.TorusGeometry(7.8, 1.05, 8, 22, Math.PI), accent);
     portal.position.set(0, 8.2, -10.9);
@@ -1978,16 +1992,20 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
     group.add(doorway);
     addGlowSprite(group, district.accent, 30, 0.5, 8.6).position.z = -10.9;
     const beacon = new THREE.Mesh(new THREE.DodecahedronGeometry(3.2, 0), accent);
-    beacon.position.set(0, 31, 0);
+    // With the buildings hidden the beacon hovers where the roofline was —
+    // bring it down over the portal so it still marks the district.
+    beacon.position.set(0, skyLabHidesBuildings ? 15 : 31, 0);
     group.add(beacon);
-    const facade = createAssetPlane(loader, DISTRICT_FACADE_URLS[district.key], 54, 54, {
-      colorKeyMagenta: true,
-      kind: `district-${district.key}-facade-sprite`,
-      renderOrder: 16,
-    });
-    facade.position.set(0, 21, -12.5);
-    facade.rotation.y = Math.PI;
-    group.add(facade);
+    if (!skyLabHidesBuildings) {
+      const facade = createAssetPlane(loader, DISTRICT_FACADE_URLS[district.key], 54, 54, {
+        colorKeyMagenta: true,
+        kind: `district-${district.key}-facade-sprite`,
+        renderOrder: 16,
+      });
+      facade.position.set(0, 21, -12.5);
+      facade.rotation.y = Math.PI;
+      group.add(facade);
+    }
     addGlowDisc(group, district.accent, 1.25).position.set(0, 0.16, -14);
     world.add(group);
     propCount += 1;

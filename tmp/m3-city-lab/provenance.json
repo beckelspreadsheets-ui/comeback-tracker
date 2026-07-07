@@ -1,0 +1,14 @@
+{
+  "purpose": "City-lab round 1: Miami-vice trackside building CONCEPTS for Comeback City (concept gate; winners go image -> Tripo -> Blender -> orientation lab -> GLB into the buildingSwaps slots). Owner steer 2026-07-07: sunset/Miami-vice vibe for 'all the side things'; flat buildings hidden behind ?skyLab=1 pending this replacement set.",
+  "tool": "Higgsfield MCP, model soul_location, 4:3 (2048x1536), ~0.12 credits/image; H0-signed pipeline",
+  "date": "2026-07-07",
+  "note": "Generator added small sign lettering on some takes despite the no-text prompt — scrub via inpaint/Blender before production (no-text/no-trade-dress rule).",
+  "candidates": [
+    { "file": "deco-hotel-a.webp", "jobId": "8ff68b38-3f18-4307-b896-6de1e2571a99", "seed": 318515 },
+    { "file": "deco-hotel-b.webp", "jobId": "996725bd-876a-4745-84f1-2d2a781ed81a", "seed": 492685 },
+    { "file": "condo-tower-a.webp", "jobId": "6ea3fc81-c187-40ce-800e-705892adcb0e", "seed": 623739 },
+    { "file": "condo-tower-b.webp", "jobId": "584e2327-511e-47e3-ad3e-b8b97151f9d7", "seed": 626427 },
+    { "file": "corner-arcade-a.webp", "jobId": "f03755bd-6500-43b3-adc4-b243a2f9db58", "seed": 527509 },
+    { "file": "corner-arcade-b.webp", "jobId": "af27225c-1c8b-4f0c-ab84-fbe46dd8c0b2", "seed": 973747 }
+  ]
+}
