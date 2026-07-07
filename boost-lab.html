@@ -61,5 +61,38 @@ code { font-size: 11px; color: #7f90b8; }
   <p class="hint">Note for the pick: these are procedural stand-ins to settle the DIRECTION —
   the winning treatment gets the generated-3D render pass in W5 (pad ramps/arrows with the
   Miami-grade asset quality), so judge shape/height/color, not surface polish.</p>
+
+  <h1 style="margin-top:34px;">Round 2 — small camera adjustments × pad (owner ask: see it on approach)</h1>
+  <p class="hint">Owner 2026-07-07: "im worried about seeing it better on the approach so you can hit
+  them — how can we fix that even if small camera adjustments." Every tile below is the SAME far
+  moment (reaction distance, lap 2+, full speed). Rows = camera candidates (all small: eye height
+  and/or look-ahead only — the kart stays framed); columns = today's flat pad vs the V3 light gate.
+  Force a camera in-game with <code>?camLab=1</code> +
+  <code>window.__camLabOverrides={height:12.5, lookAhead:40, lookUp:5}</code>. Nothing ships until
+  you name a row + column combo.</p>
+
+  <h2>Stock camera (h 10.5 / look-ahead 30)</h2>
+  <div class="row" style="grid-template-columns:1fr 1fr;">
+    <figure><img src="tmp/w2-boost-lab/cam-stock-pad-v0-far.png" /><figcaption>stock cam × flat pad (today)</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/cam-stock-pad-v3-far.png" /><figcaption>stock cam × V3 light gate</figcaption></figure>
+  </div>
+  <h2>Higher eye (h 13.5)</h2>
+  <div class="row" style="grid-template-columns:1fr 1fr;">
+    <figure><img src="tmp/w2-boost-lab/cam-higher-pad-v0-far.png" /><figcaption>higher cam × flat pad</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/cam-higher-pad-v3-far.png" /><figcaption>higher cam × V3 light gate</figcaption></figure>
+  </div>
+  <h2>Look further (look-ahead 44 / up 5.5)</h2>
+  <div class="row" style="grid-template-columns:1fr 1fr;">
+    <figure><img src="tmp/w2-boost-lab/cam-look-further-pad-v0-far.png" /><figcaption>look-further × flat pad</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/cam-look-further-pad-v3-far.png" /><figcaption>look-further × V3 light gate</figcaption></figure>
+  </div>
+  <h2>Combo (h 12.5 / look-ahead 40 / up 5)</h2>
+  <div class="row" style="grid-template-columns:1fr 1fr;">
+    <figure><img src="tmp/w2-boost-lab/cam-combo-pad-v0-far.png" /><figcaption>combo cam × flat pad</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/cam-combo-pad-v3-far.png" /><figcaption>combo cam × V3 light gate</figcaption></figure>
+  </div>
+  <p class="hint">Camera caution for the pick: a higher/longer view changes the feel of EVERY corner,
+  not just pads — if a camera row wins, it goes through its own quick feel pass (drift framing, bridge
+  climb, underpass duck) before shipping. (regen: <code>node tmp/w2-boost-lab/capture-cam-pad-matrix.mjs</code>)</p>
 </body>
 </html>

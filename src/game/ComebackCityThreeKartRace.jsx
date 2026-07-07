@@ -1664,6 +1664,24 @@ const boostLabVariant = () => {
   return variant === 'v1' || variant === 'v2' || variant === 'v3' ? variant : null;
 };
 
+// W2 camera lab (dev-only, house hook pattern): ?camLab=1 +
+// window.__camLabOverrides = { back, height, lookAhead, lookUp } replaces
+// the chase-camera framing numbers — built to answer the owner's "see the
+// boost pads earlier on approach" ask with SMALL camera adjustments.
+// Shipped framing untouched without the param.
+const camLabConfig = () => {
+  if (typeof window === 'undefined') return null;
+  if (new URLSearchParams(window.location.search).get('camLab') !== '1') return null;
+  const overrides = window.__camLabOverrides || {};
+  const num = (value) => (Number.isFinite(value) ? value : null);
+  return {
+    back: num(overrides.back),
+    height: num(overrides.height),
+    lookAhead: num(overrides.lookAhead),
+    lookUp: num(overrides.lookUp),
+  };
+};
+
 const addPad = (world, sampler, pad, index) => {
   const group = new THREE.Group();
   const { point, tangent } = sampler.pointAt(pad.progress, pad.side || 0);
@@ -4022,6 +4040,8 @@ export const ComebackCityThreeKartRace = ({
     if (typeof window === 'undefined') return 'chase';
     return new URLSearchParams(window.location.search).get('proofCamera') === 'top' ? 'top' : 'chase';
   }, []);
+  // Resolved once — the chase block runs per frame and must not parse URLs.
+  const camLab = useMemo(() => camLabConfig(), []);
   const postChainEnabled = useMemo(() => {
     // B4 pmndrs post chain: DEFAULT ON — owner signed the §9 post-ban
     // supersession at the M2 close (2026-07-06; post-lab gates were
@@ -4974,10 +4994,10 @@ export const ComebackCityThreeKartRace = ({
         const underpass = race.progress > 0.15 && race.progress < 0.24;
         // After the finish, pull up slightly for a results tableau centered on
         // the kart (staying short of the gate behind it).
-        const cameraBackUnits = race.finished ? 30 : viewport.mobile ? 43 : 38;
+        const cameraBackUnits = race.finished ? 30 : camLab?.back ?? (viewport.mobile ? 43 : 38);
         const cameraHeight = race.finished
           ? 13
-          : (viewport.mobile ? 12.5 : 10.5) * (underpass ? 0.62 : 1);
+          : (camLab?.height ?? (viewport.mobile ? 12.5 : 10.5)) * (underpass ? 0.62 : 1);
         const cameraProgress = wrap01(race.progress - cameraBackUnits / engine.sampler.length);
         const cameraSample = engine.sampler.pointAt(cameraProgress, race.lane * 0.6);
         const desiredCamera = cameraSample.point
@@ -4991,8 +5011,8 @@ export const ComebackCityThreeKartRace = ({
           ? playerSample.point.clone().add(new THREE.Vector3(0, 6, 0))
           : playerSample.point
               .clone()
-              .addScaledVector(playerSample.tangent, viewport.mobile ? 26 : 30)
-              .add(new THREE.Vector3(0, viewport.mobile ? 5.5 : 4.5, 0));
+              .addScaledVector(playerSample.tangent, camLab?.lookAhead ?? (viewport.mobile ? 26 : 30))
+              .add(new THREE.Vector3(0, camLab?.lookUp ?? (viewport.mobile ? 5.5 : 4.5), 0));
         engine.camera.lookAt(lookAt);
         // Mini-turbo gets a small extra FOV kick on top of the speed widening.
         targetFov =

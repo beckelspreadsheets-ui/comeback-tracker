@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 5326;
-const MODELS = '/tmp/w2-item-boxes/box-ice-gift-diet.glb,/tmp/w2-item-boxes/box-aurora-gem-diet.glb,/tmp/w2-item-boxes/box-snow-lantern-diet.glb';
+const MODELS = process.env.BOX_MODELS || '/tmp/w2-item-boxes/box-ice-gift-diet.glb,/tmp/w2-item-boxes/box-aurora-gem-diet.glb,/tmp/w2-item-boxes/box-snow-lantern-diet.glb';
 const waitForServer = async (url, timeoutMs = 60000) => {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
@@ -23,6 +23,6 @@ try {
   await page.waitForFunction(() => Array.isArray(window.__bakeoffStats), null, { timeout: 60000 });
   await page.waitForTimeout(800);
   console.log(JSON.stringify(await page.evaluate(() => window.__bakeoffStats)));
-  await page.screenshot({ path: path.join(__dirname, 'item-box-candidates.png') });
+  await page.screenshot({ path: path.join(__dirname, process.env.BOX_OUT || 'item-box-candidates.png') });
   await browser.close();
 } finally { server.kill('SIGTERM'); }
