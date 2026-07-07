@@ -57,5 +57,42 @@
       "tripo": "a000823b-e223-4e12-9a4b-4588bbd8c472"
     },
     "verdict": "Background-grade meshes: tripo_3d text-to-3D through Higgsfield, Claude-driven end-to-end (prompt -> GLB -> diet -> orientation lab), ~$0.22/building on existing credits, owner time zero. Hero-grade (characters/karts) stays owner-run Tripo Studio multi-view. Next: owner picks concepts, fleet-generate. Note tripo_3d is text-only \u2014 concept images guide the PROMPT, not the mesh; if image-exact match matters, Meshy is the image-conditioned fallback."
+  },
+  "meshFleet": {
+    "date": "2026-07-07",
+    "note": "Owner: \"lets do all of them and then we can see how we like the renders\". tripo_3d text-to-3D fleet, 5cr each (~25cr total); raw GLBs on CDN (gitignored locally), dieted GLBs committed pending owner render review. Diet: weld -> simplify 0.02 -> resize 1024 via diet-mesh.sh.",
+    "assets": [
+      {
+        "file": "deco-hotel-tripo-diet.glb",
+        "jobId": "a000823b-e223-4e12-9a4b-4588bbd8c472",
+        "tris": 28088
+      },
+      {
+        "file": "condo-tower-diet.glb",
+        "jobId": "30cefda6-db99-4a5d-9993-076938b83091",
+        "tris": 42812
+      },
+      {
+        "file": "corner-arcade-diet.glb",
+        "jobId": "81d3bf54-251b-4b7c-9012-a89387c229c9",
+        "tris": 29362
+      },
+      {
+        "file": "strip-motel-diet.glb",
+        "jobId": "833b8e70-82fc-4fa2-a0d1-a899055f2b0a",
+        "tris": 29188
+      },
+      {
+        "file": "palm-cluster-diet.glb",
+        "jobId": "0649fa46-0219-4ee5-a088-71b5f4d02da6",
+        "tris": 30718
+      },
+      {
+        "file": "lifeguard-tower-diet.glb",
+        "jobId": "f5ef8246-f0ef-4632-8dc2-3a4f2b805481",
+        "tris": 28042
+      }
+    ],
+    "evidence": "miami-set-turntable.png"
   }
 }

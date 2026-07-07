@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MODELS = '/tmp/m3-city-lab/deco-hotel-tripo.glb,/tmp/m3-city-lab/deco-hotel-tripo-diet.glb';
+const MODELS = '/tmp/m3-city-lab/deco-hotel-tripo-diet.glb,/tmp/m3-city-lab/condo-tower-diet.glb,/tmp/m3-city-lab/corner-arcade-diet.glb,/tmp/m3-city-lab/strip-motel-diet.glb,/tmp/m3-city-lab/palm-cluster-diet.glb,/tmp/m3-city-lab/lifeguard-tower-diet.glb';
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { height: 900, width: 1440 } });
@@ -17,6 +17,6 @@ await page.goto(`http://127.0.0.1:5173/tmp/m3-city-lab/mesh-bakeoff.html?models=
 await page.waitForFunction(() => Array.isArray(window.__bakeoffStats), null, { timeout: 60000 });
 await page.waitForTimeout(800);
 const stats = await page.evaluate(() => window.__bakeoffStats);
-await page.screenshot({ path: path.join(__dirname, 'mesh-diet-ab.png') });
+await page.screenshot({ path: path.join(__dirname, 'miami-set-turntable.png') });
 console.log(JSON.stringify(stats));
 await browser.close();
