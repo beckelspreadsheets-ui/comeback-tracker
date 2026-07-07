@@ -16,6 +16,7 @@
 | W3 | **Penguin Village visual revamp** (arctic 3D set + ICE IS NICE + outplayasians crosser) | 2-4 days | owner asset intake (partial); W0 pipeline reuse |
 | W4 | **Roster expansion** (5 new karts + new penguin characters) | 2-4 days | owner character sheets/GLB intake |
 | W5 | **Item 3D renders** (item props get the same generated-3D treatment) | 1-2 days | W2 (audit first, then beautify) |
+| W6 | **Menu/UI beauty pass** (How-to-Race + Race Setup screens) | 1-2 days | END-STAGE by owner call — after W3–W5 content lock |
 
 ---
 
@@ -74,6 +75,17 @@ Same pipeline that built Miami (tripo_3d text-to-3D → diet-mesh.sh → turntab
 ## W5 — Item + feel 3D renders (after W2)
 
 Once the audit proves behavior, re-skin item props (fish bone, snowball, cocoa, shield bubble, sardine rocket, blizzard cloud, avalanche marker) via the same generated-3D pipeline, one lab round, oversized + glowing per the race-speed readability rule. Held-item HUD icons (W2.4) reuse these renders for visual consistency. **Also in scope (owner 2026-07-07): boost pad geometry and drift feel assets** — 3D pad ramps/arrows (picked in the W2 lab) and drift spark/trail/mini-turbo tier visuals, so the core feel effects match the new asset quality bar ("now that we have the pipeline down we can really improve assets").
+
+## W6 — Menu/UI beauty pass (END-STAGE, after content lock — owner 2026-07-07)
+
+Owner (with a screenshot of the How-to-Race screen): "we need to make this way more visually appealing as well as the front screen where you pick characters ... things to refine at the end when we lock down everything." Deliberately parked until W3–W5 land so the menus are styled around FINAL content (roster size, item renders, box designs all change what these screens show).
+
+Scope when it unparks — the intro/guide screen AND the Race Setup (track/racer/kart select):
+1. **Diagnosis from the screenshot:** three skinny columns adrift in empty navy at desktop widths; Drive/Drift columns two-thirds empty while Items overflows; zero art on screens that gate a game whose art is now the selling point.
+2. **Free ammunition already in the bundle** (a strong first pass costs ~zero new bytes): the sunset backdrop strips (`src/assets/game/generated/backdrops/`) as menu backdrops; character select portraits + kart portraits already imported; the W5 item renders become guide thumbnails (replacing lucide) and the held-item HUD icons — one visual language across guide → select → race.
+3. Layout: balance the guide into a 2-col item grid with bigger type; select screen gets the portraits presented as proper cards over the backdrop art; mobile pass on both.
+4. Keep every existing testid (`race-intro-*`, `race-track-*`, `race-character-*`, `race-kart-*`, `race-open-item-guide`) — smoke suites and the select-flow probes key on them.
+5. Owner review via before/after captures (frontend pass, no generation cost expected; any generated flourish art goes through the normal manifest/similarity flow).
 
 ---
 
