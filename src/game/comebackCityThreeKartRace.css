@@ -131,6 +131,45 @@
   color: #ffd34f;
 }
 
+/* W2 held-item slot: the throw button + a chip naming the held item. */
+.three-kart-race__item-slot {
+  display: inline-flex;
+  position: relative;
+}
+
+.three-kart-race__item-chip {
+  align-items: center;
+  animation: kart-item-chip-pop 0.22s ease-out;
+  background: rgba(12, 16, 29, 0.9);
+  border: 1px solid rgba(255, 211, 79, 0.55);
+  border-radius: 6px;
+  bottom: calc(100% + 7px);
+  color: #ffd34f;
+  display: inline-flex;
+  font: 900 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  gap: 5px;
+  left: 50%;
+  padding: 5px 8px;
+  pointer-events: none;
+  position: absolute;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+@keyframes kart-item-chip-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+}
+
+.three-kart-race__touch button.three-kart-race__item-button--armed {
+  background: rgba(255, 211, 79, 0.16);
+  border-color: #ffd34f;
+  box-shadow: 0 0 16px rgba(255, 211, 79, 0.45);
+}
+
 .three-kart-race__fallback {
   align-items: center;
   background: #10151d;

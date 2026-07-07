@@ -313,11 +313,15 @@ export const updateRivalRacers = (field, ctx) => {
       if (!rival.air.airborne) {
         // Every spin start also grants contact immunity for the recovery
         // window (see KART_CONTACT.spinCooldown) so contact spins can't
-        // chain onto item spins.
-        const hit = fishBoneHitFor(fishBones, rival.name, rival.progress, rival.lane, trackLength);
-        if (hit) {
-          rival.spinTimer = ITEM_FEEL.spinDuration;
-          rival.bumpCooldown = KART_CONTACT.spinCooldown;
+        // chain onto item spins. All three hazards gate on spinTimer <= 0:
+        // an already-spinning rival must not CONSUME a bone for zero
+        // effect (W2 audit — the bone now waits for the recovery instead).
+        if (rival.spinTimer <= 0) {
+          const hit = fishBoneHitFor(fishBones, rival.name, rival.progress, rival.lane, trackLength);
+          if (hit) {
+            rival.spinTimer = ITEM_FEEL.spinDuration;
+            rival.bumpCooldown = KART_CONTACT.spinCooldown;
+          }
         }
         if (ctx.projectiles && rival.spinTimer <= 0) {
           const struck = projectileHitFor(ctx.projectiles, rival.name, rival.progress, rival.lane, trackLength);

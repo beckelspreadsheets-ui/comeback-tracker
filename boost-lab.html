@@ -1,0 +1,65 @@
+<!-- W2 boost-pad clarity lab: pad treatments at race speed on the CC
+     bridge-climb pad (progress 0.435), lap 2+.
+     Regen: node tmp/w2-boost-lab/capture-boost-variants.mjs -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Boost Lab — pad clarity (W2)</title>
+<style>
+body { margin: 0; padding: 20px; background: #0c1020; color: #dfe8ff; font: 14px/1.5 -apple-system, sans-serif; }
+h1 { font-size: 18px; }
+h2 { font-size: 15px; margin-top: 28px; }
+p.hint { color: #93a3c8; max-width: 72ch; }
+.row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+figure { margin: 0; background: #131a30; border: 1px solid #2a3450; border-radius: 8px; overflow: hidden; }
+img { width: 100%; display: block; }
+figcaption { padding: 10px 12px; }
+strong.v { color: #ffd34f; }
+code { font-size: 11px; color: #7f90b8; }
+</style>
+</head>
+<body>
+  <h1>Boost lab — pad clarity (W2, owner: "The boost aren't very clear")</h1>
+  <p class="hint">Every row is the same pad (Comeback City bridge-climb, telemetry routeProgress
+  0.435) at full race speed on lap 2+. Column 1 = FAR (~120 world units — your reaction distance
+  at top speed; this is the shot that matters), column 2 = NEAR (~36 wu, commit distance),
+  column 3 = ON the pad. V0 is today's shipped look. The far column is the test: today's flat
+  pad vanishes at distance no matter the color — height is what survives the low camera angle.
+  Pick a number or name a blend (e.g. "V2 slab with V1's amber"). Force looks in-game with
+  <code>?boostLab=1</code> + <code>window.__boostLabOverrides={variant:'v1'}</code>; shipped
+  default is unchanged until a pick lands.</p>
+
+  <h2>V0 — control (shipped): flat cyan panel, 3 small chevrons</h2>
+  <div class="row">
+    <figure><img src="tmp/w2-boost-lab/control-far.png" /><figcaption><strong class="v">V0 FAR</strong> — find the pad. (You can't.)</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/control-near.png" /><figcaption>V0 NEAR</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/control-at-pad.png" /><figcaption>V0 ON PAD</figcaption></figure>
+  </div>
+
+  <h2>V1 — hot chevrons: bigger amber pad, 5 oversized sweeping arrows</h2>
+  <div class="row">
+    <figure><img src="tmp/w2-boost-lab/v1-hot-chevrons-far.png" /><figcaption><strong class="v">V1 FAR</strong> — warm color pops more, still flat</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/v1-hot-chevrons-near.png" /><figcaption>V1 NEAR</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/v1-hot-chevrons-at-pad.png" /><figcaption>V1 ON PAD</figcaption></figure>
+  </div>
+
+  <h2>V2 — raised ramp slab: 3D wedge + bright lip bar</h2>
+  <div class="row">
+    <figure><img src="tmp/w2-boost-lab/v2-raised-slab-far.png" /><figcaption><strong class="v">V2 FAR</strong> — the raised face catches the eye earlier</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/v2-raised-slab-near.png" /><figcaption>V2 NEAR</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/v2-raised-slab-at-pad.png" /><figcaption>V2 ON PAD</figcaption></figure>
+  </div>
+
+  <h2>V3 — light gate: shipped pad + pylons + glowing crossbar overhead</h2>
+  <div class="row">
+    <figure><img src="tmp/w2-boost-lab/v3-light-gate-far.png" /><figcaption><strong class="v">V3 FAR</strong> — the gate reads from the bottom of the climb</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/v3-light-gate-near.png" /><figcaption>V3 NEAR</figcaption></figure>
+    <figure><img src="tmp/w2-boost-lab/v3-light-gate-at-pad.png" /><figcaption>V3 ON PAD</figcaption></figure>
+  </div>
+
+  <p class="hint">Note for the pick: these are procedural stand-ins to settle the DIRECTION —
+  the winning treatment gets the generated-3D render pass in W5 (pad ramps/arrows with the
+  Miami-grade asset quality), so judge shape/height/color, not surface polish.</p>
+</body>
+</html>

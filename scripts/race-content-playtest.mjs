@@ -193,6 +193,36 @@ import {
   createRaceRuntimeSetup,
   defaultRaceVehicleFor,
 } from '../src/game/race/raceRuntimeSetup.js';
+import {
+  AURORA,
+  AVALANCHE,
+  BLIZZARD,
+  ITEM_KEYS,
+  ITEM_LABELS,
+  ITEM_FEEL,
+  MARCH,
+  SARDINE,
+  SLAP_FISH,
+  SNOWBALL,
+  ageFishBones,
+  createFishBoneField,
+  dropBlizzard,
+  dropFishBone,
+  fishBoneHitFor,
+  insideBlizzard,
+  itemForPickup,
+  marchHitFor,
+  projectileHitFor,
+  rivalItemActionAt,
+  sardineTargetFor,
+  slapFishHitsFor,
+  startMarch,
+  throwSardine,
+  throwSnowball,
+  updateBlizzards,
+  updateMarch,
+  updateProjectiles,
+} from '../src/game/race/heldItems.js';
 import { createRaceCameraRuntime } from '../src/game/race/raceCameraRuntime.js';
 import { createRaceMotionRuntime } from '../src/game/race/raceMotionRuntime.js';
 import { createRaceRuntimeScene } from '../src/game/race/raceSceneRuntime.js';
@@ -10019,8 +10049,185 @@ const validatePaletteMomentHelpers = () => {
   }
 };
 
+// W2 item audit: every held item's PURE semantics proven in node. The JSX
+// wiring (spin/boost/shield application, aurora immunity, avalanche bury)
+// was read-audited the same day — see the roadmap W2 record.
+const validateHeldItemHelpers = () => {
+  const TRACK_LENGTH = 3000;
+
+  // -- pickup tables: comeback tiering, determinism, ultimates gate --------
+  ITEM_KEYS.forEach((key) => {
+    if (!ITEM_LABELS[key]) fail('held item missing HUD label', { key });
+  });
+  for (let position = 0; position <= 5; position += 1) {
+    for (let boxIndex = 0; boxIndex < 6; boxIndex += 1) {
+      for (const finalLap of [false, true]) {
+        const pick = itemForPickup(boxIndex, 2, position, finalLap);
+        if (!ITEM_KEYS.includes(pick)) fail('itemForPickup returned unknown key', { boxIndex, finalLap, pick, position });
+        if (pick !== itemForPickup(boxIndex, 2, position, finalLap)) fail('itemForPickup not deterministic', { boxIndex, position });
+      }
+    }
+  }
+  const leaderPicks = new Set([0, 1, 2, 3].map((boxIndex) => itemForPickup(boxIndex, 1, 1, false)));
+  if (![...leaderPicks].every((pick) => pick === 'fishbone' || pick === 'iceshield')) {
+    fail('P1 table must be defense-only', { leaderPicks: [...leaderPicks] });
+  }
+  const ultimatePicks = new Set([0, 1, 2, 3].map((boxIndex) => itemForPickup(boxIndex, 3, 4, true)));
+  if (!ultimatePicks.has('avalanche') || !ultimatePicks.has('aurora') || !ultimatePicks.has('march')) {
+    fail('P4 final lap must reach the ultimates', { ultimatePicks: [...ultimatePicks] });
+  }
+  const nonFinalP4 = new Set([0, 1, 2, 3].map((boxIndex) => itemForPickup(boxIndex, 1, 4, false)));
+  if (nonFinalP4.has('avalanche') || nonFinalP4.has('aurora') || nonFinalP4.has('march')) {
+    fail('ultimates leaked outside P4 final lap', { nonFinalP4: [...nonFinalP4] });
+  }
+
+  // -- fish bone: drop-back, cap, grace, ARM DELAY --------------------------
+  const bones = createFishBoneField();
+  dropFishBone(bones, 'player', 0.5, 0.2, TRACK_LENGTH);
+  if (bones.length !== 1) fail('fish bone did not drop', { count: bones.length });
+  const dropBack = (0.5 - bones[0].progress) * TRACK_LENGTH;
+  if (Math.abs(dropBack - ITEM_FEEL.fishBoneDropBack) > 0.01) {
+    fail('fish bone drop-back wrong', { dropBack });
+  }
+  // arm delay: a FRESH bone must hit NOBODY (not even non-owners)...
+  if (fishBoneHitFor(bones, 'rival-a', bones[0].progress, 0.2, TRACK_LENGTH)) {
+    fail('fresh fish bone hit inside the arm delay (unreactable point-blank)');
+  }
+  // ...but arms after fishBoneArmDelay seconds...
+  ageFishBones(bones, ITEM_FEEL.fishBoneArmDelay + 0.01);
+  const armedHit = fishBoneHitFor(bones, 'rival-a', bones[0].progress, 0.2, TRACK_LENGTH);
+  if (!armedHit) fail('armed fish bone did not hit a non-owner in the window');
+  if (bones.length !== 0) fail('fish bone not consumed on hit', { count: bones.length });
+  // ...the owner stays immune for the full grace, then their own bone bites.
+  dropFishBone(bones, 'player', 0.5, 0.2, TRACK_LENGTH);
+  ageFishBones(bones, 1.3);
+  if (fishBoneHitFor(bones, 'player', bones[0].progress, 0.2, TRACK_LENGTH)) {
+    fail('owner hit their own bone inside the grace window');
+  }
+  ageFishBones(bones, 0.2);
+  if (!fishBoneHitFor(bones, 'player', bones[0].progress, 0.2, TRACK_LENGTH)) {
+    fail('owner immune to their own bone after grace expired');
+  }
+  // lane window: a bone one lane-widths off must miss.
+  dropFishBone(bones, 'player', 0.5, 0.2, TRACK_LENGTH);
+  ageFishBones(bones, 0.5);
+  if (fishBoneHitFor(bones, 'rival-a', bones[0].progress, 0.2 + ITEM_FEEL.fishBoneHitLane + 0.01, TRACK_LENGTH)) {
+    fail('fish bone hit outside the lane window');
+  }
+  // per-kart cap: a third drop evicts the OLDEST of that owner only.
+  bones.length = 0;
+  dropFishBone(bones, 'player', 0.2, 0, TRACK_LENGTH);
+  dropFishBone(bones, 'rival-a', 0.4, 0, TRACK_LENGTH);
+  dropFishBone(bones, 'player', 0.6, 0, TRACK_LENGTH);
+  dropFishBone(bones, 'player', 0.8, 0, TRACK_LENGTH);
+  const playerBones = bones.filter((bone) => bone.owner === 'player');
+  if (playerBones.length !== ITEM_FEEL.fishBonePerKartCap) fail('per-kart bone cap broken', { count: playerBones.length });
+  if (bones.filter((bone) => bone.owner === 'rival-a').length !== 1) fail('cap evicted another kart\'s bone');
+  if (playerBones.some((bone) => Math.abs((0.2 - ITEM_FEEL.fishBoneDropBack / TRACK_LENGTH) - bone.progress) < 1e-9)) {
+    fail('cap kept the oldest bone instead of evicting it');
+  }
+
+  // -- snowball: spawn-ahead, owner immunity, ttl, wrap ----------------------
+  const projectiles = [];
+  throwSnowball(projectiles, 'player', 0.5, 0.1, 200, 'carrot');
+  if (projectiles[0].skin !== 'carrot') fail('snowball lost its character skin');
+  if (projectiles[0].speed !== 200 + SNOWBALL.relSpeed) fail('snowball relative speed wrong');
+  if (projectileHitFor(projectiles, 'player', projectiles[0].progress, 0.1, TRACK_LENGTH)) {
+    fail('own snowball hit its thrower');
+  }
+  const rivalStruck = projectileHitFor(projectiles, 'rival-a', projectiles[0].progress, 0.1, TRACK_LENGTH);
+  if (!rivalStruck) fail('snowball missed a kart dead in its window');
+  if (projectiles.length !== 0) fail('snowball not consumed on hit');
+  throwSnowball(projectiles, 'player', 0.5, 0.1, 200);
+  updateProjectiles(projectiles, SNOWBALL.ttl + 0.1, TRACK_LENGTH);
+  if (projectiles.length !== 0) fail('snowball outlived its ttl');
+  // wrap-aware hit: ball just past 1.0, kart just after 0.
+  throwSnowball(projectiles, 'player', 0.999, 0, 200);
+  if (!projectileHitFor(projectiles, 'rival-a', 0.0005, 0, TRACK_LENGTH)) fail('projectile window not wrap-aware');
+  projectiles.length = 0;
+
+  // -- sardine: target selection + homing steer ------------------------------
+  const racers = [
+    { lane: 0.4, lap: 1, name: 'ahead-near', progress: 0.6 },
+    { lane: -0.2, lap: 1, name: 'ahead-far', progress: 0.9 },
+    { lane: 0, lap: 1, name: 'behind', progress: 0.3 },
+  ];
+  if (sardineTargetFor(racers, 0.5) !== 'ahead-near') fail('sardine must target the NEAREST kart ahead');
+  if (sardineTargetFor(racers, 0.95) !== null) fail('sardine found a target with nobody ahead');
+  throwSardine(projectiles, 'player', 0.5, -0.4, 200, 'ahead-near');
+  const sardineBall = projectiles[0];
+  if (sardineBall.homing !== 'ahead-near' || sardineBall.skin !== 'sardine') fail('sardine projectile malformed');
+  const laneBefore = sardineBall.lane;
+  updateProjectiles(projectiles, 0.1, TRACK_LENGTH, racers);
+  const steered = sardineBall.lane - laneBefore;
+  if (!(steered > 0 && steered <= SARDINE.laneSteer * 0.1 + 1e-9)) {
+    fail('sardine homing steer out of spec', { steered });
+  }
+  projectiles.length = 0;
+
+  // -- slap fish: alongside window, never self -------------------------------
+  const scrum = [
+    { lane: 0.3, name: 'alongside', progress: 0.5 },
+    { lane: 0.3, name: 'far-ahead', progress: 0.5 + (SLAP_FISH.hitProgress + 2) / TRACK_LENGTH },
+    { lane: 0.3 + SLAP_FISH.hitLane + 0.01, name: 'wide', progress: 0.5 },
+    { lane: 0.3, name: 'player', progress: 0.5 },
+  ];
+  const slapped = slapFishHitsFor(scrum, 'player', 0.5, 0.3, TRACK_LENGTH);
+  if (slapped.length !== 1 || slapped[0] !== 'alongside') fail('slap fish window wrong', { slapped });
+
+  // -- blizzard: trap placement, no owner immunity, expiry --------------------
+  const blizzards = [];
+  dropBlizzard(blizzards, 'player', 0.5, 0, TRACK_LENGTH);
+  const blizzardBack = (0.5 - blizzards[0].progress) * TRACK_LENGTH;
+  if (Math.abs(blizzardBack - BLIZZARD.dropBack) > 0.01) fail('blizzard drop-back wrong', { blizzardBack });
+  if (!insideBlizzard(blizzards, blizzards[0].progress, 0, TRACK_LENGTH)) fail('blizzard dome not detected');
+  // no owner immunity by design — your own fog slows you too.
+  if (!insideBlizzard(blizzards, blizzards[0].progress, 0.5, TRACK_LENGTH)) fail('blizzard lane window too small');
+  if (insideBlizzard(blizzards, blizzards[0].progress, BLIZZARD.hitLane + 0.01, TRACK_LENGTH)) {
+    fail('blizzard caught a kart outside the dome');
+  }
+  updateBlizzards(blizzards, BLIZZARD.duration + 0.1);
+  if (blizzards.length !== 0) fail('blizzard outlived its duration');
+
+  // -- penguin march: spawn ahead, sweep, band hit ----------------------------
+  const march = startMarch(0.5, TRACK_LENGTH);
+  const aheadUnits = (march.progress - 0.5) * TRACK_LENGTH;
+  if (Math.abs(aheadUnits - MARCH.aheadUnits) > 0.01) fail('march crossing point wrong', { aheadUnits });
+  if (march.head !== MARCH.startLane) fail('march head must start off-road');
+  if (marchHitFor(march, march.progress, 0, TRACK_LENGTH)) fail('march hit before the train reached the road');
+  let marchDone = false;
+  for (let step = 0; step < 200 && !marchDone; step += 1) marchDone = updateMarch(march, 0.05);
+  if (!marchDone) fail('march never cleared the far edge');
+  const midMarch = startMarch(0.5, TRACK_LENGTH);
+  updateMarch(midMarch, (0 - MARCH.startLane) / MARCH.laneSpeed); // head reaches lane 0
+  if (!marchHitFor(midMarch, midMarch.progress, 0, TRACK_LENGTH)) fail('march missed a kart on the train line');
+  if (marchHitFor(midMarch, midMarch.progress, 0.2, TRACK_LENGTH)) fail('march hit ahead of the train head');
+
+  // -- aurora / avalanche constants (applied in the JSX; shape-checked here) --
+  if (!(AURORA.duration > 0 && AURORA.speedKick > 0)) fail('aurora constants malformed', AURORA);
+  if (!(AVALANCHE.warningDuration > 0 && AVALANCHE.spinDuration > 0 && AVALANCHE.speedScale < 1)) {
+    fail('avalanche constants malformed', AVALANCHE);
+  }
+
+  // -- rival gates: crossing detection, per-rival offsets ---------------------
+  for (let rivalIndex = 0; rivalIndex < 3; rivalIndex += 1) {
+    const boneGate = (0.31 + rivalIndex * 0.07) % 1;
+    const cocoaGate = (0.66 + rivalIndex * 0.07) % 1;
+    if (rivalItemActionAt(rivalIndex, boneGate - 0.01, boneGate + 0.01) !== 'fishbone') {
+      fail('rival fishbone gate did not fire', { rivalIndex });
+    }
+    if (rivalItemActionAt(rivalIndex, cocoaGate - 0.01, cocoaGate + 0.01) !== 'cocoa') {
+      fail('rival cocoa gate did not fire', { rivalIndex });
+    }
+    if (rivalItemActionAt(rivalIndex, boneGate + 0.02, boneGate + 0.04) !== null) {
+      fail('rival gate fired without a crossing', { rivalIndex });
+    }
+  }
+};
+
 await validateAssetManifest();
 validateItems();
+validateHeldItemHelpers();
 validateKartContactHelpers();
 validateKartPhysicsHelpers();
 validatePaletteMomentHelpers();

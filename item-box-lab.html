@@ -1,0 +1,35 @@
+<!-- W2 item-box variety lab: 3 tripo_3d candidates, dieted, 4-yaw turntable.
+     Regen: node tmp/w2-item-boxes/capture-boxes.mjs -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Item Box Lab — variety candidates (W2)</title>
+<style>
+body { margin: 0; padding: 20px; background: #0c1020; color: #dfe8ff; font: 14px/1.5 -apple-system, sans-serif; }
+h1 { font-size: 18px; }
+p.hint { color: #93a3c8; max-width: 76ch; }
+img { max-width: 100%; display: block; border: 1px solid #2a3450; border-radius: 8px; }
+ul { max-width: 76ch; }
+code { font-size: 11px; color: #7f90b8; }
+</style>
+</head>
+<body>
+  <h1>Item box lab — variety candidates (W2, owner: "add in a couple different item boxes")</h1>
+  <p class="hint">Three generated candidates (tripo_3d, detailed quality, dieted) next to nothing —
+  the shipped box today is the procedural ice crate. Pick ANY SUBSET (variety is the goal — picked
+  designs rotate across the item-box rows, oversize + glow per the race-speed readability rule).
+  Winners get the 512+meshopt ship diet, orientation lab, manifest + mount.</p>
+  <ul>
+    <li><strong>Row 1 — ice gift:</strong> frosted ice present, blue ribbon + bow.</li>
+    <li><strong>Row 2 — aurora gem:</strong> faceted ice crystal, teal/pink aurora core — the generator
+    sealed a tiny cartoon penguin in a kart inside it (visible at yaws 180/270; generic penguin, not an
+    ordinal likeness).</li>
+    <li><strong>Row 3 — snow lantern:</strong> hex ice lantern, warm golden core, snowflake cutouts —
+    warm-vs-cool contrast reads at speed.</li>
+  </ul>
+  <img src="tmp/w2-item-boxes/item-box-candidates.png" alt="Item box candidates turntable" />
+  <p class="hint">Provenance: jobs b78cff48 / a93cbedd / 5c3d5da7 (2026-07-07, 15cr total), prompts in
+  <code>tmp/w2-item-boxes/</code> job records; raw GLBs local-only, diets committed.</p>
+</body>
+</html>

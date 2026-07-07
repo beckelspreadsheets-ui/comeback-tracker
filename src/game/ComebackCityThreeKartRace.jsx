@@ -1653,6 +1653,17 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   return visualPropCount;
 };
 
+// W2 boost-pad clarity lab (dev-only, house hook pattern): ?boostLab=1 +
+// window.__boostLabOverrides = { variant: 'v1'|'v2'|'v3' } REPLACES the pad
+// treatment; ?boostLab=0 or absent = shipped default untouched until the
+// owner picks (owner 2026-07-07: "The boost aren't very clear").
+const boostLabVariant = () => {
+  if (typeof window === 'undefined') return null;
+  if (new URLSearchParams(window.location.search).get('boostLab') !== '1') return null;
+  const variant = window.__boostLabOverrides?.variant;
+  return variant === 'v1' || variant === 'v2' || variant === 'v3' ? variant : null;
+};
+
 const addPad = (world, sampler, pad, index) => {
   const group = new THREE.Group();
   const { point, tangent } = sampler.pointAt(pad.progress, pad.side || 0);
@@ -1662,25 +1673,116 @@ const addPad = (world, sampler, pad, index) => {
   group.userData.kind = 'boost-pad';
   group.userData.progress = pad.progress;
   group.userData.index = index;
-  group.add(makeBox({ x: 16.4, y: 0.42, z: 10.6 }, { y: 0.04 }, createBasicMaterial('#0d1726')));
-  const glowPanel = new THREE.Mesh(
-    new THREE.BoxGeometry(14.8, 0.2, 9),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color('#0fa9cc').multiplyScalar(1.6) })
-  );
-  glowPanel.position.y = 0.34;
-  group.add(glowPanel);
-  [-2.9, 0, 2.9].forEach((z, order) => {
-    const arrow = new THREE.Mesh(
-      new THREE.ConeGeometry(2.3, 2.7, 3),
-      new THREE.MeshBasicMaterial({ color: '#ecfeff', transparent: true })
+  const variant = boostLabVariant();
+  if (variant === 'v1') {
+    // V1 "hot chevrons": bigger footprint, amber-hot palette (pops against
+    // the teal track identity), five oversized sweeping chevrons.
+    group.add(makeBox({ x: 19.6, y: 0.42, z: 13.2 }, { y: 0.04 }, createBasicMaterial('#1a0e04')));
+    const glowPanel = new THREE.Mesh(
+      new THREE.BoxGeometry(18, 0.2, 11.4),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff8c1f').multiplyScalar(1.7) })
     );
-    arrow.position.set(0, 0.56, z - 0.4);
-    arrow.rotation.set(Math.PI / 2, 0, Math.PI);
-    arrow.scale.set(1.7, 1, 0.3);
-    arrow.userData.chevronOrder = order;
-    group.add(arrow);
-  });
-  addGlowSprite(group, '#2cd8f6', 15, 0.4, 1.6);
+    glowPanel.position.y = 0.34;
+    group.add(glowPanel);
+    [-4.4, -2.2, 0, 2.2, 4.4].forEach((z, order) => {
+      const arrow = new THREE.Mesh(
+        new THREE.ConeGeometry(2.9, 3.4, 3),
+        new THREE.MeshBasicMaterial({ color: '#fff3d9', transparent: true })
+      );
+      arrow.position.set(0, 0.58, z - 0.4);
+      arrow.rotation.set(Math.PI / 2, 0, Math.PI);
+      arrow.scale.set(2.2, 1, 0.34);
+      arrow.userData.chevronOrder = order;
+      group.add(arrow);
+    });
+    addGlowSprite(group, '#ffab3d', 20, 0.55, 1.8);
+  } else if (variant === 'v2') {
+    // V2 "raised ramp slab": a visibly RAISED wedge with a bright lip bar —
+    // reads as 3D road furniture from distance, not paint.
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(16.4, 1.7, 11.4), createBasicMaterial('#132033'));
+    slab.rotation.x = -0.13;
+    slab.position.y = 0.6;
+    group.add(slab);
+    const face = new THREE.Mesh(
+      new THREE.BoxGeometry(15.2, 0.24, 10),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#19c8e8').multiplyScalar(1.7) })
+    );
+    face.rotation.x = -0.13;
+    face.position.y = 1.52;
+    group.add(face);
+    const lip = new THREE.Mesh(
+      new THREE.BoxGeometry(15.6, 0.5, 0.7),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#eafcff').multiplyScalar(1.9) })
+    );
+    lip.position.set(0, 1.35, -5.2);
+    group.add(lip);
+    [-2.6, 0.4, 3.4].forEach((z, order) => {
+      const arrow = new THREE.Mesh(
+        new THREE.ConeGeometry(2.7, 3.2, 3),
+        new THREE.MeshBasicMaterial({ color: '#ecfeff', transparent: true })
+      );
+      arrow.position.set(0, 1.66 - (z + 0.4) * 0.128, z);
+      arrow.rotation.set(Math.PI / 2 - 0.13, 0, Math.PI);
+      arrow.scale.set(2, 1, 0.32);
+      arrow.userData.chevronOrder = order;
+      group.add(arrow);
+    });
+    addGlowSprite(group, '#2cd8f6', 18, 0.5, 2.2);
+  } else if (variant === 'v3') {
+    // V3 "light gate": the shipped pad plus side pylons and a glowing
+    // crossbar overhead — visible over kart roofs and from far upstream.
+    group.add(makeBox({ x: 16.4, y: 0.42, z: 10.6 }, { y: 0.04 }, createBasicMaterial('#0d1726')));
+    const glowPanel = new THREE.Mesh(
+      new THREE.BoxGeometry(14.8, 0.2, 9),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#0fa9cc').multiplyScalar(1.6) })
+    );
+    glowPanel.position.y = 0.34;
+    group.add(glowPanel);
+    [-2.9, 0, 2.9].forEach((z, order) => {
+      const arrow = new THREE.Mesh(
+        new THREE.ConeGeometry(2.3, 2.7, 3),
+        new THREE.MeshBasicMaterial({ color: '#ecfeff', transparent: true })
+      );
+      arrow.position.set(0, 0.56, z - 0.4);
+      arrow.rotation.set(Math.PI / 2, 0, Math.PI);
+      arrow.scale.set(1.7, 1, 0.3);
+      arrow.userData.chevronOrder = order;
+      group.add(arrow);
+    });
+    [-8.6, 8.6].forEach((x) => {
+      const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.7, 7.2, 8), createBasicMaterial('#16283e'));
+      pylon.position.set(x, 3.6, 0);
+      group.add(pylon);
+    });
+    const crossbar = new THREE.Mesh(
+      new THREE.BoxGeometry(18.4, 0.7, 1.1),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#38e8ff').multiplyScalar(1.8) })
+    );
+    crossbar.position.y = 7.4;
+    crossbar.userData.chevronOrder = 1; // rides the shipped pulse animation
+    group.add(crossbar);
+    addGlowSprite(group, '#2cd8f6', 22, 0.5, 7.4);
+  } else {
+    group.add(makeBox({ x: 16.4, y: 0.42, z: 10.6 }, { y: 0.04 }, createBasicMaterial('#0d1726')));
+    const glowPanel = new THREE.Mesh(
+      new THREE.BoxGeometry(14.8, 0.2, 9),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#0fa9cc').multiplyScalar(1.6) })
+    );
+    glowPanel.position.y = 0.34;
+    group.add(glowPanel);
+    [-2.9, 0, 2.9].forEach((z, order) => {
+      const arrow = new THREE.Mesh(
+        new THREE.ConeGeometry(2.3, 2.7, 3),
+        new THREE.MeshBasicMaterial({ color: '#ecfeff', transparent: true })
+      );
+      arrow.position.set(0, 0.56, z - 0.4);
+      arrow.rotation.set(Math.PI / 2, 0, Math.PI);
+      arrow.scale.set(1.7, 1, 0.3);
+      arrow.userData.chevronOrder = order;
+      group.add(arrow);
+    });
+    addGlowSprite(group, '#2cd8f6', 15, 0.4, 1.6);
+  }
   world.add(group);
   return group;
 };
@@ -3838,6 +3940,35 @@ const publishTelemetry = (
   };
 };
 
+// One icon source for every held-item surface (top badge, throw button,
+// held-item chip). Lucide stand-ins until the W5/H5 generated icon set —
+// icons are a similarity trap, owner review per icon when that lands.
+const HELD_ITEM_ICONS = {
+  aurora: Rainbow,
+  avalanche: MountainSnow,
+  blizzard: CloudSnow,
+  cocoa: Coffee,
+  fishbone: Fish,
+  iceshield: Shield,
+  march: Footprints,
+  sardine: Rocket,
+  slapfish: FishSymbol,
+};
+
+const HeldItemIcon = ({ heldItem, projectileSkin, size = 15 }) => {
+  if (heldItem === 'snowball') {
+    // The snowball slot wears the character's projectile skin.
+    return projectileSkin === 'carrot' ? <Carrot size={size} /> : <Snowflake size={size} />;
+  }
+  const Icon = HELD_ITEM_ICONS[heldItem] || Snowflake;
+  return <Icon size={size} />;
+};
+
+const heldItemLabel = (heldItem, projectileSkin) => {
+  if (heldItem === 'snowball') return projectileSkin === 'carrot' ? 'CARROT' : 'ICE SHARD';
+  return ITEM_LABELS[heldItem] || heldItem.toUpperCase();
+};
+
 export const ComebackCityThreeKartRace = ({
   character = DEFAULT_CHARACTER_KEY,
   kart = null,
@@ -4997,40 +5128,19 @@ export const ComebackCityThreeKartRace = ({
           <span>{snapshot.itemPickups}</span>
         </div>
         <div className="three-kart-race__badge" data-testid="race-held-item" data-held-item={snapshot.heldItem || 'none'}>
-          {snapshot.heldItem === 'fishbone' ? (
-            <Fish size={15} />
-          ) : snapshot.heldItem === 'slapfish' ? (
-            <FishSymbol size={15} />
-          ) : snapshot.heldItem === 'avalanche' ? (
-            <MountainSnow size={15} />
-          ) : snapshot.heldItem === 'sardine' ? (
-            <Rocket size={15} />
-          ) : snapshot.heldItem === 'blizzard' ? (
-            <CloudSnow size={15} />
-          ) : snapshot.heldItem === 'aurora' ? (
-            <Rainbow size={15} />
-          ) : snapshot.heldItem === 'march' ? (
-            <Footprints size={15} />
-          ) : snapshot.heldItem === 'snowball' ? (
-            // The snowball slot wears the character's projectile skin.
-            playerCharacter.projectileSkin === 'carrot' ? <Carrot size={15} /> : <Snowflake size={15} />
-          ) : snapshot.heldItem === 'cocoa' ? (
-            <Coffee size={15} />
-          ) : snapshot.heldItem === 'iceshield' || snapshot.shieldActive ? (
+          {snapshot.heldItem ? (
+            <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} />
+          ) : snapshot.shieldActive ? (
             <Shield size={15} />
           ) : (
             <Snowflake size={15} />
           )}
           <span>
-            {snapshot.heldItem === 'snowball'
-              ? playerCharacter.projectileSkin === 'carrot'
-                ? 'CARROT'
-                : 'ICE SHARD'
-              : snapshot.heldItem
-                ? ITEM_LABELS[snapshot.heldItem] || snapshot.heldItem.toUpperCase()
-                : snapshot.shieldActive
-                  ? 'ON'
-                  : '—'}
+            {snapshot.heldItem
+              ? heldItemLabel(snapshot.heldItem, playerCharacter.projectileSkin)
+              : snapshot.shieldActive
+                ? 'ON'
+                : '—'}
           </span>
         </div>
       </div>
@@ -5090,15 +5200,33 @@ export const ComebackCityThreeKartRace = ({
         >
           <Sparkles size={18} />
         </button>
-        <button
-          type="button"
-          aria-label="Fire held item"
-          onPointerDown={() => setTouch('item', true)}
-          onPointerLeave={() => setTouch('item', false)}
-          onPointerUp={() => setTouch('item', false)}
-        >
-          {playerCharacter.projectileSkin === 'carrot' ? <Carrot size={18} /> : <Snowflake size={18} />}
-        </button>
+        <div className="three-kart-race__item-slot">
+          {/* W2: "when you pick up an item you know what it is — a little
+              icon near the item throw" (owner). The chip + the button icon
+              both track the held item; upgrades to generated H5 icons in W5. */}
+          {snapshot.heldItem ? (
+            <div className="three-kart-race__item-chip" data-testid="race-held-item-chip">
+              <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} size={13} />
+              <span>{heldItemLabel(snapshot.heldItem, playerCharacter.projectileSkin)}</span>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            aria-label="Fire held item"
+            className={snapshot.heldItem ? 'three-kart-race__item-button--armed' : undefined}
+            onPointerDown={() => setTouch('item', true)}
+            onPointerLeave={() => setTouch('item', false)}
+            onPointerUp={() => setTouch('item', false)}
+          >
+            {snapshot.heldItem ? (
+              <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} size={18} />
+            ) : playerCharacter.projectileSkin === 'carrot' ? (
+              <Carrot size={18} />
+            ) : (
+              <Snowflake size={18} />
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
