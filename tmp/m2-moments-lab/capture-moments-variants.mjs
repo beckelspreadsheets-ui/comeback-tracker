@@ -249,8 +249,11 @@ const captureVariant = async (browser, variant) => {
         `${variant.key}/${shot.key}: paletteMomentsEnabled=${telemetry.paletteMomentsEnabled}, expected ${expectMoments}`
       );
     }
-    if (telemetry.postChainEnabled !== false) {
-      throw new Error(`${variant.key}/${shot.key}: postChainEnabled=${telemetry.postChainEnabled}, expected false`);
+    // Shipped default since the 2026-07-06 §9 supersession: post chain ON
+    // (tiles committed before the flip were captured post-off; a regen
+    // reflects the new shipped look).
+    if (telemetry.postChainEnabled !== true) {
+      throw new Error(`${variant.key}/${shot.key}: postChainEnabled=${telemetry.postChainEnabled}, expected true`);
     }
     await shoot(shot.key, telemetry);
   }

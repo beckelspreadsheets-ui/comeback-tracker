@@ -3776,10 +3776,13 @@ export const ComebackCityThreeKartRace = ({
     return new URLSearchParams(window.location.search).get('proofCamera') === 'top' ? 'top' : 'chase';
   }, []);
   const postChainEnabled = useMemo(() => {
-    // B4 pmndrs post chain: default OFF everywhere until the owner signs
-    // the post-ban supersession at the M2 benchmark review (PRD §7).
-    if (typeof window === 'undefined') return false;
-    return new URLSearchParams(window.location.search).get('post') === '1';
+    // B4 pmndrs post chain: DEFAULT ON — owner signed the §9 post-ban
+    // supersession at the M2 close (2026-07-06; post-lab gates were
+    // "every change in the post lab is amazing"). ?post=0 keeps the legacy
+    // UnrealBloom chain reachable for A/B and diagnosis; ?post=1 stays a
+    // no-op for older capture URLs.
+    if (typeof window === 'undefined') return true;
+    return new URLSearchParams(window.location.search).get('post') !== '0';
   }, []);
   const trackDef = trackByKey(trackKey);
 

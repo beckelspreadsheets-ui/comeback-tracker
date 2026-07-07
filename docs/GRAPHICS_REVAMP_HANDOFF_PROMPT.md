@@ -1,6 +1,6 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-**Updated 2026-07-06 (fifth update today — the "B2 is built, start the M2 benchmark review here" version)** (supersedes the fourth update: B2 per-lap palette moments is BUILT AND VERIFIED — pure module + createScene wiring + node tests + moments lab landed; the shipped default stays moment-LESS on every track until the owner picks a set from moments-lab.html, so both tracks are pixel-unchanged by construction (race:proof pass errors=0 at the landing commit, 144 FPS holds on both). M2 construction is DONE (B1/B2/B3/B4 all built); the milestone now waits only on owner picks + the benchmark review. NEXT SESSION STARTS AT: M2 benchmark review (checklist below; batch the open picks — B2 moment set, CC rim — into it) → Phase C city-visuals kickoff).
+**Updated 2026-07-06 (sixth update today — the "M2 IS CLOSED, start Phase C here" version)** (supersedes the fifth update: the owner ran a fast-close review in-session. OUTCOMES: (1) §9 post-ban supersession SIGNED — B4 pmndrs chain is DEFAULT-ON on the shipped route, `?post=0` = legacy chain escape hatch, `?post=1` = no-op for old capture URLs; kart-playable's desktop finish budget went 45s→150s because headless SwiftShader renders the post chain at ~11 FPS and the dt clamp dilates sim time ~2.3× (headed holds 144 — headless stays non-quotable). (2) B2 moments: owner reviewed moments-lab.html and DECLINED a pick ("all the moments are just super hard to tell a difference from") — the game ships moment-LESS everywhere; engine/lab/tests stay landed for a future pick at zero cost. (3) CC rim pick DEFERRED until Phase C re-dresses the city. (4) Scorecard re-ratings deferred to the next review. STRATEGIC STEER, verbatim intent: the owner said the incremental parameter-lab picks are not producing major visual improvement — the needle-movers are Phase C baked lighting + authored city visuals + Phase E characters, so PHASE C STARTS NOW. Closing numbers are in PRD §7 M2 milestone notes; proof re-captured post-flip, pass errors=0. NEXT SESSION STARTS AT: Phase C kickoff, city-block variant lab first (owner-steered), then C1..C8 per the execution plan).
 
 **Purpose:** paste the block below into a new agent session to continue the graphics revamp with zero context loss. It is file-anchored — everything it references is committed — so it works for an agent with no memory of prior sessions.
 
@@ -259,14 +259,37 @@ full battery and pushed):
   before long capture batches. A palette/color change can never affect
   physics — don't chase speed failures into color commits.
 
-YOUR TASK NOW: M2 BENCHMARK REVIEW — construction is done (B1/B2/B3/B4
-all built; B2 landed 2026-07-06 with the moments lab live and the shipped
-default moment-less; B3: PV ships the V6 "ice white" heroRim, CC ships
-rim-off by owner choice). Two picks are OPEN and batch naturally into the
-review: B2 moment set (moments-lab.html — if the owner picks, land the
-printed literals as penguinVillage.js palette.moments + full battery +
-proof recapture in that commit) and CC rim (rim-lab.html — lands as a
-heroRim key in comebackCity.js + battery + proof recapture). Checklist:
+M2 IS CLOSED (2026-07-06 fast-close review; outcomes in the header above
+and PRD §7 M2 milestone notes — B4 default-on signed, B2 no-pick/
+moment-less, CC rim + scorecard re-ratings deferred).
+
+YOUR TASK NOW: PHASE C — this is the milestone the owner is waiting on
+("we are not improving majorly" — the answer is baked lighting + authored
+city visuals, not more parameter picks). Owner-steered kickoff order:
+1. CITY-BLOCK VARIANT LAB first (the owner decides through labs): candidate
+   Comeback City block treatments — silhouettes/density/signage/window
+   emissives — as capturable variants; he called the procedural skyline
+   "cheap" and wants it to "truly make it look like a city" (he LOVES the
+   road — do not touch road treatment). Copy the moments-lab capture
+   pattern (PORT 531x, telemetry routeProgress-keyed shots, fail-loud
+   gates, contact sheet at repo root + approvals-hub entry).
+2. C1..C8 pipeline per the execution plan (track sampler extraction →
+   whole-loop bake exporter → Cycles scripts → assets:bake driver → road/
+   village/buildings wiring behind flags → AO splat → guards). Read the
+   C-task Files/Steps in the execution plan before writing code; Amendment
+   3 (bakes never write public/ directly; promotion-only) and the WebP-not-
+   KTX2 rule apply throughout. Phase C budget (PRD §8): 2.14 MiB WebP bake
+   textures within 2.70 MiB raw / 1237 KiB gzip images headroom.
+3. PV outer dressing concepts (gambling/trading tribute props, better "THE
+   ICE IS NICE" gantry) go through a lab too — see session memory
+   ordinals-community-context for why quality bar = "would the group play
+   it".
+Note the shipped default now renders the pmndrs post chain — captures no
+longer need ?post=1, legacy comparisons need ?post=0, and any new capture
+script asserting postChainEnabled should expect true unless the URL
+carries post=0.
+
+The old M2 benchmark-review checklist (kept only for the deferred items):
 - Full A/B walk-through with the owner from approvals-hub: B1 palette
   (landed), B3 rim on/off per track (?rimLab=0 vs default), B2 moments
   (picked set vs none), B4 ?post=1 on/off + per-effect toggles.
@@ -334,17 +357,17 @@ live in each task's Owner-gate field in the execution plan and are
 settled at that task's review, NOT as §9 rows. SETTLED 2026-07-06: B1
 palette pick = V8; B4 parity + vignette = approved, vignette ON in-chain):
 - B3 rim: PV SETTLED 2026-07-06 (V6 "ice white" landed, ships ON);
-  Comeback City pick still OPEN (owner chose to keep CC rim-off for now —
-  rim-lab.html stays live for it). B2 moment set: OPEN (moments-lab.html
-  live, 3 candidate sets + control; shipped default stays moment-less
-  until the pick).
+  Comeback City pick DEFERRED BY OWNER until Phase C re-dresses the city
+  (rim-lab.html stays live for it). B2 moment set: SETTLED 2026-07-06 as
+  NO PICK ("super hard to tell a difference") — ships moment-less; a
+  future pick just lands the printed literals from moments-lab.html.
 - M0/M1 scorecard re-rating from approvals-hub captures.
 - ?trackVisuals=1 default-on (A/B pairs already in approvals-hub).
 - A3 sharpness pair ack (0.58 vs 0.85, committed).
 - E1 face-art format ack (docs/KART_FACE_ART_INTAKE.md §7).
 - The two excluded stash patches (audio silencing / scenery density).
-- H0 generated-art amendment; B3b opt-in; B4 post-chain supersession
-  (signs at M2 benchmark review).
+- H0 generated-art amendment; B3b opt-in. (B4 post-chain supersession:
+  SIGNED 2026-07-06 — default-on shipped, see §9.)
 - Expression sheets: owner delivering 5 PNGs to
   "3d generations:character sheets/<key>-expressions.png"
   (keys: crrt-bunny, tclow, seth-penguin, mizzle, layer23). Checked

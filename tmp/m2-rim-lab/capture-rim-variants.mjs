@@ -125,7 +125,9 @@ const captureShot = async (browser, { track, variant, extraQuery = '' }) => {
       routeProgress: t.routeProgress,
     };
   });
-  const expectPost = extraQuery.includes('post=1');
+  // Since the 2026-07-06 §9 supersession the post chain is DEFAULT-ON;
+  // only an explicit ?post=0 turns it off (no shot here does).
+  const expectPost = !extraQuery.includes('post=0');
   if (telemetry.postChainEnabled !== expectPost) {
     throw new Error(`${track}/${variant.key}: postChainEnabled=${telemetry.postChainEnabled}, expected ${expectPost}`);
   }

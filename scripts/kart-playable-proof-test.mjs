@@ -293,9 +293,15 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
   let finish = null;
   if (mode === 'desktop') {
     // The 2026-06-12 track upscale (1.35×, owner-requested) makes a full
-    // 3-lap race ~47s with cornering slowdowns — budget accordingly.
+    // 3-lap race ~47s with cornering slowdowns. Since the 2026-07-06 §9
+    // supersession the shipped default renders the pmndrs post chain, and
+    // HEADLESS Chromium (SwiftShader) drops to ~11 FPS on it (91ms frames,
+    // frameWorkMs still ~1ms — software-GL pass cost, not JS; headed holds
+    // 144). Frames beyond the 0.04s dt clamp dilate sim time ~2.3×, so the
+    // same race takes ~107s of wall clock here. Event-driven wait — the
+    // budget only costs time on genuine failures.
     await page.waitForFunction(() => window.__comebackCityKartTelemetry?.finished === true, null, {
-      timeout: 45000,
+      timeout: 150000,
     });
     finish = await readTelemetry(page, `${mode} autoplay finish`);
     await page.screenshot({ path: path.join(outputDir, `${mode}-finish.png`), fullPage: false });

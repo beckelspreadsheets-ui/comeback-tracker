@@ -29,10 +29,13 @@ const CROP = { x: 40, y: 560, width: 480, height: 270 };
 // Vignette defaults ON inside ?post=1 since the 2026-07-06 gate-2 approval;
 // the parity shots pin it OFF so regen reproduces the as-approved gate-1
 // evidence, and the vignette shot pins it ON explicitly.
+// Since the 2026-07-06 §9 supersession the post chain is DEFAULT-ON, so
+// the legacy-chain arm now needs an explicit &post=0 (an empty query no
+// longer reproduces the as-approved gate-1 "before" side).
 const SHOTS = [
-  { key: 'comeback-city-default', track: 'comeback-city', query: '', crop: true },
+  { key: 'comeback-city-default', track: 'comeback-city', query: '&post=0', crop: true },
   { key: 'comeback-city-post', track: 'comeback-city', query: '&post=1&postVignette=0', crop: true },
-  { key: 'penguin-village-default', track: 'penguin-village', query: '', crop: true },
+  { key: 'penguin-village-default', track: 'penguin-village', query: '&post=0', crop: true },
   { key: 'penguin-village-post', track: 'penguin-village', query: '&post=1&postVignette=0', crop: true },
   { key: 'comeback-city-post-vignette', track: 'comeback-city', query: '&post=1&postVignette=1', crop: false },
 ];
@@ -89,7 +92,7 @@ try {
         bakedBuildings: t.bakedBuildings,
       };
     });
-    const expectedPost = shot.query.includes('post=1');
+    const expectedPost = !shot.query.includes('post=0');
     if (telemetry.postChainEnabled !== expectedPost) {
       throw new Error(`${shot.key}: telemetry postChainEnabled=${telemetry.postChainEnabled}, expected ${expectedPost}`);
     }
