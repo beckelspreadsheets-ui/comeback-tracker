@@ -2083,6 +2083,13 @@ const addDistrictsAndProps = (world, sampler, loader, buildingSwaps, trackDef, t
       world.add(setFlatTransform(water));
     }
     if (anchor.kind === 'skyline') {
+      // H8: the generated painted backdrop REPLACES this old 14-box
+      // procedural skyline row — the boxes would stand in front of the
+      // backdrop rings and clash with the new theme (owner 2026-07-07:
+      // "get rid of the old building so we just keep the new theme").
+      // The row still builds when the backdrop is off, so the shipped
+      // default look is unchanged until the sky-lab pick is promoted.
+      if (skyLabConfig()) return;
       for (let index = 0; index < 14; index += 1) {
         const building = new THREE.Mesh(
           new THREE.BoxGeometry(16 + (index % 3) * 7, 28 + (index % 5) * 10, 18),

@@ -6,8 +6,8 @@
       {
         "file": "composite-comeback-city-control-p0p15.png",
         "telemetry": {
-          "fpsEstimate": 12,
-          "frameWorkMs": 1.16,
+          "fpsEstimate": 7,
+          "frameWorkMs": 1.7,
           "routeProgress": 0.151
         }
       }
@@ -20,16 +20,16 @@
       {
         "file": "composite-comeback-city-take-a-p0p15.png",
         "telemetry": {
-          "fpsEstimate": 11,
-          "frameWorkMs": 1.09,
+          "fpsEstimate": 7,
+          "frameWorkMs": 1.57,
           "routeProgress": 0.151
         }
       },
       {
         "file": "composite-comeback-city-take-a-p0p55.png",
         "telemetry": {
-          "fpsEstimate": 12,
-          "frameWorkMs": 1.06,
+          "fpsEstimate": 8,
+          "frameWorkMs": 1.17,
           "routeProgress": 0.552
         }
       }
@@ -42,16 +42,16 @@
       {
         "file": "composite-comeback-city-take-b-p0p15.png",
         "telemetry": {
-          "fpsEstimate": 12,
-          "frameWorkMs": 1.06,
+          "fpsEstimate": 9,
+          "frameWorkMs": 1.23,
           "routeProgress": 0.151
         }
       },
       {
         "file": "composite-comeback-city-take-b-p0p55.png",
         "telemetry": {
-          "fpsEstimate": 10,
-          "frameWorkMs": 1.07,
+          "fpsEstimate": 11,
+          "frameWorkMs": 1.25,
           "routeProgress": 0.552
         }
       }
@@ -65,7 +65,7 @@
         "file": "composite-penguin-village-control-p0p15.png",
         "telemetry": {
           "fpsEstimate": 11,
-          "frameWorkMs": 1.52,
+          "frameWorkMs": 1.56,
           "routeProgress": 0.152
         }
       }
@@ -79,15 +79,15 @@
         "file": "composite-penguin-village-take-a-p0p15.png",
         "telemetry": {
           "fpsEstimate": 11,
-          "frameWorkMs": 1.46,
+          "frameWorkMs": 1.45,
           "routeProgress": 0.152
         }
       },
       {
         "file": "composite-penguin-village-take-a-p0p55.png",
         "telemetry": {
-          "fpsEstimate": 11,
-          "frameWorkMs": 1.32,
+          "fpsEstimate": 10,
+          "frameWorkMs": 1.38,
           "routeProgress": 0.552
         }
       }
@@ -100,16 +100,16 @@
       {
         "file": "composite-penguin-village-take-b-p0p15.png",
         "telemetry": {
-          "fpsEstimate": 10,
-          "frameWorkMs": 1.55,
+          "fpsEstimate": 11,
+          "frameWorkMs": 1.58,
           "routeProgress": 0.152
         }
       },
       {
         "file": "composite-penguin-village-take-b-p0p55.png",
         "telemetry": {
-          "fpsEstimate": 10,
-          "frameWorkMs": 1.43,
+          "fpsEstimate": 12,
+          "frameWorkMs": 1.24,
           "routeProgress": 0.552
         }
       }
