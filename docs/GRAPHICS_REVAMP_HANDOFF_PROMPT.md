@@ -1,6 +1,6 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-**Updated 2026-07-06 (sixth update today — the "M2 IS CLOSED, start Phase C here" version)** (supersedes the fifth update: the owner ran a fast-close review in-session. OUTCOMES: (1) §9 post-ban supersession SIGNED — B4 pmndrs chain is DEFAULT-ON on the shipped route, `?post=0` = legacy chain escape hatch, `?post=1` = no-op for old capture URLs; kart-playable's desktop finish budget went 45s→150s because headless SwiftShader renders the post chain at ~11 FPS and the dt clamp dilates sim time ~2.3× (headed holds 144 — headless stays non-quotable). (2) B2 moments: owner reviewed moments-lab.html and DECLINED a pick ("all the moments are just super hard to tell a difference from") — the game ships moment-LESS everywhere; engine/lab/tests stay landed for a future pick at zero cost. (3) CC rim pick DEFERRED until Phase C re-dresses the city. (4) Scorecard re-ratings deferred to the next review. STRATEGIC STEER, verbatim intent: the owner said the incremental parameter-lab picks are not producing major visual improvement — the needle-movers are Phase C baked lighting + authored city visuals + Phase E characters, so PHASE C STARTS NOW. Closing numbers are in PRD §7 M2 milestone notes; proof re-captured post-flip, pass errors=0. NEXT SESSION STARTS AT: Phase C kickoff, city-block variant lab first (owner-steered), then C1..C8 per the execution plan).
+**Updated 2026-07-07 EOD (seventh update — the "SHIP MIAMI MODE, then item clarity" version)** (supersedes the sixth: the entire visual overhaul is DONE AND OWNER-APPROVED behind ?skyLab=1 — painted sunset backdrops on BOTH tracks (CC sunset boulevard / PV arctic-sunset glowing shelf), old boxy skyline+facades hidden, and the owner-approved Miami-vice 3D set (deco hotel, condo tower, corner arcade, palm clusters, lifeguard towers, retro diner — "perfect vibes") mounted across 20 trackside slots. Mesh pipeline settled by bake-off: tripo_3d text-to-3D via Higgsfield MCP (~$0.22/asset, zero owner minutes) + diet-mesh.sh; heroes stay owner-run Tripo Studio. All evidence/provenance in tmp/m3-sky-lab/ + tmp/m3-city-lab/, in-game shots on city-lab.html. NEXT SESSION: JOB 1 = promotion/ship (checklist below — mind the BUNDLE MATH, ~7.6MB of new assets vs ~2.5MiB headroom), JOB 2 = item/track clarity revamp (boost pads, item audit incl. fish-bone arm-delay suspect, item box variety, held-item HUD icon), then PV 3D additions, then Phase C bakes.)
 
 **Purpose:** paste the block below into a new agent session to continue the graphics revamp with zero context loss. It is file-anchored — everything it references is committed — so it works for an agent with no memory of prior sessions.
 
@@ -315,7 +315,79 @@ filenames end the same-URL browser-cache confusion), manifest +
 similarity review, longer far-band top fade, webp workbox globPattern,
 retire hidden dressing for good, full battery + proof re-baseline.
 
-YOUR TASK NOW: PHASE C — this is the milestone the owner is waiting on
+YOUR TASK NOW — TWO QUEUED JOBS, IN ORDER (owner 2026-07-07: "you can
+ship this First"):
+
+JOB 1: SHIP MIAMI MODE (promote ?skyLab=1 to the shipped default look).
+Everything is owner-approved and verified in-game behind the flag
+(commits bdf37f0d..c358f093). Checklist:
+1. BUNDLE MATH FIRST — this is the hard part. The six approved GLBs
+   (tmp/m3-city-lab/*-diet.glb) total ~7.3MB + ~0.3MB sky strips, but
+   test:bundle headroom is only ~2.5MiB total (15.0 threshold vs 12.458
+   measured). Options to combine: re-diet textures to 512 (resize verb;
+   textures dominate these GLBs), meshopt-compress (compression LAST,
+   individual verbs — the avatar pipeline precedent), drop duplicate
+   mounts sharing one template (already shared via cache — file count is
+   what matters: 6 files), and/or exclude dressing GLBs from the workbox
+   precache (offline fallback = props absent; mountMiamiAsset already
+   no-ops on load failure) — but test:bundle counts dist bytes
+   regardless, so if 512+meshopt still busts the threshold, present the
+   owner a threshold re-baseline decision (A4-style, §8) — do NOT
+   silently raise it.
+2. Move strips (cc-far-a, cc-near-a, pv-far-b, pv-near-b .webp) +
+   6 GLBs into src/assets/game/generated/ (or models/miami/), switch
+   MIAMI_ASSETS + SKY_LAB_STRIPS to hashed ES-import URLs, add 'webp'
+   to vite.config workbox globPatterns (FIRST runtime webp — M3
+   acceptance note), asset-manifest.json entries (six fields, source =
+   Higgsfield tripo_3d/soul_location + jobId + date + prompt authorship
+   — all jobIds in tmp/m3-city-lab/provenance.json and
+   tmp/m3-sky-lab/provenance.json), SHA-256 fingerprints, assets:check
+   green. Owner similarity review: he has visually approved every asset
+   in the labs — record that as the review with dates/quotes.
+3. Regenerate corner-arcade once (5cr) with "purely abstract geometric
+   neon, zigzags and circles only" — its current neon squiggles read
+   letter-like (no-text rule); re-diet, swap file.
+4. Lengthen the far-band top fade (fade_frac 0.16 → ~0.35 in the strip
+   processing — regenerate from CDN originals, PIL steps in the sky-lab
+   capture script comments) — the hard band at frame top was the one
+   visible seam.
+5. Flip defaults: skyLab config default ON (miami mode + backdrops),
+   ?skyLab=0 as escape hatch; camera.far 1800 becomes shipped; DELETE
+   the old skyline row / facade run / boxy district bodies + facade
+   sprites for good; retire the baked-buildings.glb loader + its
+   kart-playable bakedBuildings==='active' assertion DELIBERATELY in
+   the same commit (update the proof test — the gate protected the old
+   bakes; buildings no longer come from public/baked-buildings.glb).
+   KEEP PV dressing + statues untouched.
+6. Battery: test:race · test:kart-playable both tracks · test:bundle ·
+   race:proof RE-BASELINE (visuals change by design — capture becomes
+   the new reference; check drawCalls/triangles vs the 650/900k proof
+   gates — ~20 Miami rigs ≈ +600k tris, may need the harder diet or
+   gate re-baseline with owner note) · phase5 headed both tracks
+   (144 floor) · deploy is owner-triggered per repo deploy rules.
+
+JOB 2 (after ship): ITEM/TRACK CLARITY REVAMP (owner feedback verbatim:
+"The boost aren't very clear. It's hard to tell and sometimes the fish
+doesn't spin you out so I feel like we just need to re-look over all the
+items. Make sure they work and actually add in a couple different item
+boxes and way for when you pick up an item you know what it is maybe a
+little icon underneath near the item throw"):
+- Boost pads: visual clarity pass (bigger/brighter/animated chevrons —
+  lab it: 3-4 pad treatments, in-game A/B tiles).
+- Item audit: pure-node checks that EVERY item in heldItems.js applies
+  its effect (extend race-content-playtest validators). Fish-bone
+  no-spin: check the 0.3s ARM DELAY first (added with kart-contact,
+  6a016533) — point-blank hits inside the window are likely the cause;
+  decide feel fix with owner (shorter arm? visual armed-state?).
+- Item box variety: 2-3 new box designs (tripo_3d pipeline, cheap).
+- Held-item HUD icon near the throw button (mobile + desktop) — ties
+  into H5 (generated ITEM_ICON_URLS replacing the lucide ternary at the
+  HUD; icons are a similarity trap — owner review per icon).
+- THEN: Penguin Village gets the same 3D-render revamp + additions
+  (owner: "same revamps with 3-D renders and add some things to
+  pengui"), and items likely get 3D renders too.
+
+AFTER THOSE: PHASE C — this is the milestone the owner is waiting on
 ("we are not improving majorly" — the answer is baked lighting + authored
 city visuals, not more parameter picks). Owner-steered kickoff order:
 1. CITY-BLOCK VARIANT LAB first (the owner decides through labs): candidate
