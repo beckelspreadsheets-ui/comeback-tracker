@@ -286,6 +286,31 @@ backdrop) — judged only after the backdrop layers are in. Fog rule
 still applies: scene.background is fog-exempt; generated skies must
 harmonize with each track's fog color.
 
+SKY/CITY STATE AS OF 2026-07-07 EOD (supersedes older lines where they
+conflict): H0 signed; sky-lab ROUND 2 shipped-behind-flag — CC = sunset
+boulevard strips (cc-far/near-a defaults), PV = arctic-sunset glowing
+shelf (pv-far/near-B defaults — the a-take ice row keyed out dark and
+read identical to CC's towers; owner flagged it, b-takes fixed it,
+verified live on his 5173 server via tmp/m3-sky-lab/probe-5173.mjs).
+Behind ?skyLab=1 Comeback City ALSO hides: the old 14-box skyline row,
+the opening-facade run, and the district building bodies + facade
+sprites (neon portals + lowered beacons stay as gameplay cues;
+buildingSwaps left empty — the bake loader no-ops and still reaches
+bakedBuildings='active'; the proof gate runs flag-off regardless).
+TRACKSIDE DIRECTION (owner): "miami vice vibe ... for all the side
+things" — city-lab.html round 1 live (deco hotel / condo tower / corner
+arcade × 2 takes, style-locked to the sunset, isolated on magenta;
+concept picks pending). PIPELINE LAW (owner, absolute): Tripo is the
+ONLY 3D path — Higgsfield is 2D-only, never generate_3d, never in the
+mesh pipeline ("that makes a ton of steps for me"); winners get clean
+cutouts + a Tripo handoff brief (TRIPO_AVATAR_HANDOFF.md pattern), the
+owner runs Tripo, GLBs come back for gltf-transform diet + orientation
+lab + mount into the buildingSwaps slots. PROMOTION (on owner take/
+concept confirmation): strips + building GLBs to real assets (hashed
+filenames end the same-URL browser-cache confusion), manifest +
+similarity review, longer far-band top fade, webp workbox globPattern,
+retire hidden dressing for good, full battery + proof re-baseline.
+
 YOUR TASK NOW: PHASE C — this is the milestone the owner is waiting on
 ("we are not improving majorly" — the answer is baked lighting + authored
 city visuals, not more parameter picks). Owner-steered kickoff order:

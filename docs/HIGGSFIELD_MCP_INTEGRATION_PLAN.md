@@ -84,7 +84,7 @@ The current rule (verbatim at `race-visual-target-brief.md:18` and `:52`): *"Pro
 **Where (verified):** every hub sign is a runtime canvas texture (`WorldScene.jsx:756-794`); the double-sided frame/halo rig is reusable — swap `makeLabelTexture(...)` for a loaded image per sign. Hub is budget-disciplined (`data-texture-count="0"` by design) — keep it to a few small WebPs, unlit materials only.
 
 ### Explicit non-uses (keep the tool in its lane)
-- **No 3D generation** — Tripo + Blender remains the model pipeline.
+- **No 3D generation — ABSOLUTE (owner re-affirmed 2026-07-07 post-H0: "Tripo 3d is going to be the only way to do 3d assets, nothing with higgsfield will help this pipeline")** — Tripo (owner-run) + Blender remains the model pipeline; Higgsfield never touches the mesh path, including its `generate_3d` tool.
 - **No select-portrait replacement** — portraits are 3D captures from the real GLBs (`scripts/select-portraits-capture.mjs`); replacing them with stylized AI art diverges from the model-derived pipeline (owner decision if ever).
 - **Never a substitute for Phases A–D** — no generated image fixes lighting, resolution, or animation.
 
