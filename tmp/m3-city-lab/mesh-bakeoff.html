@@ -1,0 +1,100 @@
+<!doctype html>
+<!-- Mesh bake-off viewer (city-lab 3D pipeline evaluation): renders each
+     candidate GLB at yaw 0/90/180/270, orientation-lab pattern. Served by
+     vite dev; captured by tmp/m3-city-lab/capture-mesh-bakeoff.mjs.
+     Rows are read from ?models=<comma-separated GLB urls> (defaults below). -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mesh Bake-off — city-lab 3D pipeline evaluation</title>
+    <style>
+      body { margin: 0; background: #10142a; }
+      canvas { display: block; }
+      #labels { position: fixed; left: 0; top: 0; color: #cfe3ff; font: 12px monospace; padding: 6px 10px; white-space: pre; }
+    </style>
+    <script type="importmap">
+      { "imports": { "three": "/node_modules/three/build/three.module.js", "three/examples/jsm/": "/node_modules/three/examples/jsm/" } }
+    </script>
+  </head>
+  <body>
+    <div id="labels"></div>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+      import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+
+      const params = new URLSearchParams(window.location.search);
+      const MODELS = (params.get('models') || '/tmp/m3-city-lab/deco-hotel-meshy.glb,/tmp/m3-city-lab/deco-hotel-sam.glb,/tmp/m3-city-lab/deco-hotel-tripo.glb')
+        .split(',')
+        .filter(Boolean);
+      const YAWS = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+
+      document.getElementById('labels').textContent =
+        `columns: yaw 0 | 90 | 180 | 270\nrows: ${MODELS.map((m) => m.split('/').pop()).join(', ')}`;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#10142a');
+      scene.add(new THREE.HemisphereLight('#cdd9ff', '#2a2440', 2.6));
+      const sun = new THREE.DirectionalLight('#ffffff', 2.4);
+      sun.position.set(30, 60, 80);
+      scene.add(sun);
+
+      const SPACING_X = 11;
+      const SPACING_Y = 10;
+      const loader = new GLTFLoader();
+      loader.setMeshoptDecoder(MeshoptDecoder);
+      let loaded = 0;
+      const stats = [];
+      MODELS.forEach((url, row) => {
+        loader.load(
+          url,
+          (gltf) => {
+            let triangles = 0;
+            gltf.scene.traverse((node) => {
+              if (node.isMesh && node.geometry) {
+                const index = node.geometry.getIndex();
+                triangles += (index ? index.count : node.geometry.getAttribute('position').count) / 3;
+              }
+            });
+            stats.push({ triangles: Math.round(triangles), url });
+            YAWS.forEach((yaw, col) => {
+              const rig = gltf.scene.clone(true);
+              const bounds = new THREE.Box3().setFromObject(rig);
+              const size = bounds.getSize(new THREE.Vector3());
+              const fit = 7.5 / Math.max(size.x, size.y, size.z);
+              rig.scale.setScalar(fit);
+              const fitted = new THREE.Box3().setFromObject(rig);
+              const center = fitted.getCenter(new THREE.Vector3());
+              rig.position.sub(center);
+              const holder = new THREE.Group();
+              holder.add(rig);
+              holder.rotation.y = yaw;
+              holder.position.set((col - (YAWS.length - 1) / 2) * SPACING_X, ((MODELS.length - 1) / 2 - row) * SPACING_Y, 0);
+              scene.add(holder);
+            });
+            loaded += 1;
+            if (loaded === MODELS.length) window.__bakeoffStats = stats;
+          },
+          undefined,
+          () => {
+            stats.push({ error: 'load failed', url });
+            loaded += 1;
+            if (loaded === MODELS.length) window.__bakeoffStats = stats;
+          }
+        );
+      });
+
+      const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 400);
+      camera.position.set(0, 0, MODELS.length * 14 + 22);
+      camera.lookAt(0, 0, 0);
+      const frame = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(frame);
+      };
+      frame();
+    </script>
+  </body>
+</html>

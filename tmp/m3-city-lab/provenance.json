@@ -2,13 +2,60 @@
   "purpose": "City-lab round 1: Miami-vice trackside building CONCEPTS for Comeback City (concept gate; winners go image -> Tripo -> Blender -> orientation lab -> GLB into the buildingSwaps slots). Owner steer 2026-07-07: sunset/Miami-vice vibe for 'all the side things'; flat buildings hidden behind ?skyLab=1 pending this replacement set.",
   "tool": "Higgsfield MCP, model soul_location, 4:3 (2048x1536), ~0.12 credits/image; H0-signed pipeline",
   "date": "2026-07-07",
-  "note": "Generator added small sign lettering on some takes despite the no-text prompt — scrub via inpaint/Blender before production (no-text/no-trade-dress rule).",
+  "note": "Generator added small sign lettering on some takes despite the no-text prompt \u2014 scrub via inpaint/Blender before production (no-text/no-trade-dress rule).",
   "candidates": [
-    { "file": "deco-hotel-a.webp", "jobId": "8ff68b38-3f18-4307-b896-6de1e2571a99", "seed": 318515 },
-    { "file": "deco-hotel-b.webp", "jobId": "996725bd-876a-4745-84f1-2d2a781ed81a", "seed": 492685 },
-    { "file": "condo-tower-a.webp", "jobId": "6ea3fc81-c187-40ce-800e-705892adcb0e", "seed": 623739 },
-    { "file": "condo-tower-b.webp", "jobId": "584e2327-511e-47e3-ad3e-b8b97151f9d7", "seed": 626427 },
-    { "file": "corner-arcade-a.webp", "jobId": "f03755bd-6500-43b3-adc4-b243a2f9db58", "seed": 527509 },
-    { "file": "corner-arcade-b.webp", "jobId": "af27225c-1c8b-4f0c-ab84-fbe46dd8c0b2", "seed": 973747 }
-  ]
+    {
+      "file": "deco-hotel-a.webp",
+      "jobId": "8ff68b38-3f18-4307-b896-6de1e2571a99",
+      "seed": 318515
+    },
+    {
+      "file": "deco-hotel-b.webp",
+      "jobId": "996725bd-876a-4745-84f1-2d2a781ed81a",
+      "seed": 492685
+    },
+    {
+      "file": "condo-tower-a.webp",
+      "jobId": "6ea3fc81-c187-40ce-800e-705892adcb0e",
+      "seed": 623739
+    },
+    {
+      "file": "condo-tower-b.webp",
+      "jobId": "584e2327-511e-47e3-ad3e-b8b97151f9d7",
+      "seed": 626427
+    },
+    {
+      "file": "corner-arcade-a.webp",
+      "jobId": "f03755bd-6500-43b3-adc4-b243a2f9db58",
+      "seed": 527509
+    },
+    {
+      "file": "corner-arcade-b.webp",
+      "jobId": "af27225c-1c8b-4f0c-ab84-fbe46dd8c0b2",
+      "seed": 973747
+    }
+  ],
+  "meshPipelineBakeoff": {
+    "date": "2026-07-07",
+    "question": "owner: manual Tripo = ~20 min/item \u2014 cheaper/faster path? inclined to spend existing Higgsfield credits",
+    "contestants": {
+      "sam_3_3d (Meta)": "FAILED twice on the building concept (object detection) \u2014 2 credits total, eliminated",
+      "image_to_3d (Meshy, image-conditioned)": "30 credits (~$1.29): matched the concept composition but lumpy/smeared \u2014 usable only at far distance",
+      "tripo_3d (Tripo, text-to-3D via Higgsfield)": "5 credits (~$0.22): WINNER \u2014 clean deco massing, crisp trim, palms, consistent all 4 yaws; raw 1.4M tris/41MB dieted to 28k tris/1.11MB with zero visible loss (house verbs: weld -> simplify 0.02 -> resize 1024)"
+    },
+    "evidence": [
+      "mesh-bakeoff.png (meshy vs tripo raw)",
+      "mesh-diet-ab.png (tripo raw vs dieted)",
+      "deco-hotel-tripo-diet.glb"
+    ],
+    "jobs": {
+      "meshy": "e61eb1cd-e2e8-4995-af52-a5f8d2c7a009",
+      "sam_failed": [
+        "76ef2326-19be-46a1-aaee-f3b9bfe5e9d9",
+        "702d5391-2045-4fc9-9e30-8c82de1bd144"
+      ],
+      "tripo": "a000823b-e223-4e12-9a4b-4588bbd8c472"
+    },
+    "verdict": "Background-grade meshes: tripo_3d text-to-3D through Higgsfield, Claude-driven end-to-end (prompt -> GLB -> diet -> orientation lab), ~$0.22/building on existing credits, owner time zero. Hero-grade (characters/karts) stays owner-run Tripo Studio multi-view. Next: owner picks concepts, fleet-generate. Note tripo_3d is text-only \u2014 concept images guide the PROMPT, not the mesh; if image-exact match matters, Meshy is the image-conditioned fallback."
+  }
 }
