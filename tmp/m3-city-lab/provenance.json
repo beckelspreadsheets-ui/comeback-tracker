@@ -93,6 +93,35 @@
         "tris": 28042
       }
     ],
-    "evidence": "miami-set-turntable.png"
+    "evidence": "miami-set-turntable.png",
+    "ownerVerdict": {
+      "date": "2026-07-07",
+      "approved": [
+        "deco-hotel-tripo-diet.glb",
+        "condo-tower-diet.glb",
+        "corner-arcade-diet.glb",
+        "palm-cluster-diet.glb",
+        "lifeguard-tower-diet.glb"
+      ],
+      "rejected": {
+        "strip-motel-diet.glb": "owner: \"too many rooms and not detailed\" \u2014 replacement round fired (compact 4-room motel retake + retro diner alternate, geometry/texture quality=detailed)"
+      },
+      "quote": "love all of them except for the 4th one down ... the rest are amazing"
+    }
+  },
+  "motelReplacementRound": {
+    "date": "2026-07-07",
+    "quality": "geometry_quality=detailed, texture_quality=detailed (raws ~54MB, dieted ~1.5MB/37k tris)",
+    "assets": [
+      {
+        "file": "compact-motel-diet.glb",
+        "jobId": "cb35943a-ff9c-414c-a3a8-9464c64c93f6"
+      },
+      {
+        "file": "retro-diner-diet.glb",
+        "jobId": "9c7f509e-8e46-444f-9188-7a10fb887722"
+      }
+    ],
+    "evidence": "motel-replacement-ab.png"
   }
 }
