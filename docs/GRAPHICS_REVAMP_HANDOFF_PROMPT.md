@@ -300,12 +300,16 @@ bakedBuildings='active'; the proof gate runs flag-off regardless).
 TRACKSIDE DIRECTION (owner): "miami vice vibe ... for all the side
 things" — city-lab.html round 1 live (deco hotel / condo tower / corner
 arcade × 2 takes, style-locked to the sunset, isolated on magenta;
-concept picks pending). PIPELINE LAW (owner, absolute): Tripo is the
-ONLY 3D path — Higgsfield is 2D-only, never generate_3d, never in the
-mesh pipeline ("that makes a ton of steps for me"); winners get clean
-cutouts + a Tripo handoff brief (TRIPO_AVATAR_HANDOFF.md pattern), the
-owner runs Tripo, GLBs come back for gltf-transform diet + orientation
-lab + mount into the buildingSwaps slots. PROMOTION (on owner take/
+concept picks pending). MESH PIPELINE (2026-07-07, OPEN QUESTION — do not treat as settled):
+manual Tripo costs the owner ~20 min/item and he asked for something
+quicker. Candidates: (a) Higgsfield generate_3d — Claude-drivable
+end-to-end, zero owner minutes, quality UNPROVEN (first call was
+permission-blocked; needs a quality A/B on one building + owner review;
+plausible for background-grade meshes, heroes stay Tripo), (b) Tripo
+API scripting (trusted quality, zero owner minutes, needs owner API
+key), (c) batched manual Tripo handoffs (fallback). Whichever wins:
+gltf-transform diet (individual verbs) + orientation lab + owner review
+before any mesh mounts into the buildingSwaps slots. PROMOTION (on owner take/
 concept confirmation): strips + building GLBs to real assets (hashed
 filenames end the same-URL browser-cache confusion), manifest +
 similarity review, longer far-band top fade, webp workbox globPattern,
