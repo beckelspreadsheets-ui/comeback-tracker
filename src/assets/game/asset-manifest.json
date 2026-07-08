@@ -548,21 +548,21 @@
   },
   {
     "filePath": "src/assets/game/models/items/item-box-pv-ice.glb",
-    "source": "Higgsfield tripo_3d text-to-3D, jobId d49b9b54-02fb-4513-9de5-c533921aeb63, 2026-07-07 (golden \u20bf coin frozen in a frosted ice cube, with a surprise generator penguin)",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 48c793ef-d3b3-471f-bfaa-202d5ec67dc2, 2026-07-07 (PENGUIN-FREE re-roll of d49b9b54 under the no-generic-penguins standing rule - the original had a generator-added generic penguin; owner: \"yeah we should change that\")",
     "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); the bitcoin \u20bf mark is deliberate owner-directed art (\"they could actually just be bitcoins\") \u2014 recorded exception to the no-text rule",
     "role": "Runtime item box, Penguin Village (W2 owner pick: \"the icebox one for penguin city\") \u2014 ITEM_BOX_ASSETS mount replacing the procedural crate",
-    "sizeBudget": "item-box class (2026-07-07 revision: target 2500/hard 5000 tris, 160KB hard); shipped 1946 tris / 46KB sha256:3f34311c9430216f40ae8023612c81cfe21d8b807b092f532b9dd78891419e2d",
+    "sizeBudget": "item-box class (target 2500/hard 5000 tris, 160KB hard); shipped 1900 tris / 43KB sha256:16a0076f9563adf5fb7d5c244ffb8c4046bd18117a9dbdaa311f329ee72fe0c0",
     "fallback": "the procedural winter crate stays mounted until the GLB template resolves and remains if it fails (visible fallback, not silent); load failures count into the telemetry mounts guard",
     "assetId": "itembox.pv-ice",
     "assetClass": "item-box",
     "status": "runtime-promoted-w2-boxes",
     "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.05/0.02 -> resize 256 -> meshopt",
-    "sourceHash": "sha256:57e9c4922bb0073b0f3fda0e8d14b07518fd2ff024935e16d9d9b437d1527178",
-    "outputHash": "sha256:3f34311c9430216f40ae8023612c81cfe21d8b807b092f532b9dd78891419e2d",
+    "sourceHash": "sha256:c7f14bb4dc3d6a7eeee03ec983f07d6cee3d82f4a9021918229843960160688b",
+    "outputHash": "sha256:16a0076f9563adf5fb7d5c244ffb8c4046bd18117a9dbdaa311f329ee72fe0c0",
     "promotion": {
-      "approval": "Owner pick 2026-07-07: \"can use the icebox one for penguin city\" (item-box-lab.html round 2)",
+      "approval": "Owner pick 2026-07-07 (\"the icebox one for penguin city\") + penguin-free re-roll approved same day (\"yeah we should change that great catch\")",
       "promotedAt": "2026-07-07",
-      "labEvidence": "tmp/w2-item-boxes/shipped-boxes-turntable.png"
+      "labEvidence": "tmp/w2-item-boxes/ice-box-v2-ab.png (old-with-penguin vs penguin-free A/B)"
     }
   }
 ]
