@@ -287,6 +287,42 @@
       "assetId": "itembox.pv-ice",
       "class": "item-box",
       "role": "runtime-item-box"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-craps.glb",
+      "assetId": "pvtribute.craps",
+      "class": "trackside-building",
+      "role": "runtime-trackside-prop"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-blackjack.glb",
+      "assetId": "pvtribute.blackjack",
+      "class": "trackside-building",
+      "role": "runtime-trackside-prop"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-bitcoin-monument.glb",
+      "assetId": "pvtribute.bitcoin-monument",
+      "class": "trackside-building",
+      "role": "runtime-trackside-prop"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-runestone.glb",
+      "assetId": "pvtribute.runestone",
+      "class": "trackside-building",
+      "role": "runtime-trackside-prop"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-odds-board.glb",
+      "assetId": "pvtribute.odds-board",
+      "class": "trackside-building",
+      "role": "runtime-trackside-prop"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-token-cluster.glb",
+      "assetId": "pvtribute.token-cluster",
+      "class": "trackside-building",
+      "role": "runtime-trackside-prop"
     }
   ]
 }

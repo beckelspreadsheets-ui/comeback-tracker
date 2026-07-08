@@ -37,6 +37,12 @@ import miamiDecoHotelUrl from '../assets/game/models/miami/deco-hotel.glb?url';
 import miamiLifeguardUrl from '../assets/game/models/miami/lifeguard-tower.glb?url';
 import miamiPalmClusterUrl from '../assets/game/models/miami/palm-cluster.glb?url';
 import miamiRetroDinerUrl from '../assets/game/models/miami/retro-diner.glb?url';
+import pvCrapsUrl from '../assets/game/models/pv-tribute/pv-craps.glb?url';
+import pvBlackjackUrl from '../assets/game/models/pv-tribute/pv-blackjack.glb?url';
+import pvBitcoinMonumentUrl from '../assets/game/models/pv-tribute/pv-bitcoin-monument.glb?url';
+import pvRunestoneUrl from '../assets/game/models/pv-tribute/pv-runestone.glb?url';
+import pvOddsBoardUrl from '../assets/game/models/pv-tribute/pv-odds-board.glb?url';
+import pvTokenClusterUrl from '../assets/game/models/pv-tribute/pv-token-cluster.glb?url';
 import itemBoxCcCoinUrl from '../assets/game/models/items/item-box-cc-coin.glb?url';
 import itemBoxPvIceUrl from '../assets/game/models/items/item-box-pv-ice.glb?url';
 import backdropCcFarUrl from '../assets/game/generated/backdrops/cc-far.webp';
@@ -873,6 +879,45 @@ const MIAMI_ASSETS = {
 // Miami mount actually resolved a template.
 const miamiMountStats = { failed: 0, mounted: 0, requested: 0 };
 const MIAMI_FRONT_YAW = Math.PI / 2;
+// W3 Penguin Village tribute set (owner list + "I love the assets",
+// 2026-07-07): casino/crypto trackside props, all penguin-free empty
+// furniture per the no-generic-penguins rule — real ordinal penguins get
+// posed at them in a later round. Shares the mount machinery + template
+// cache + telemetry mounts guard with the Miami set.
+const PV_TRIBUTE_ASSETS = {
+  pvBitcoinMonument: pvBitcoinMonumentUrl,
+  pvBlackjack: pvBlackjackUrl,
+  pvCraps: pvCrapsUrl,
+  pvOddsBoard: pvOddsBoardUrl,
+  pvRunestone: pvRunestoneUrl,
+  pvTokenCluster: pvTokenClusterUrl,
+};
+Object.assign(MIAMI_ASSETS, PV_TRIBUTE_ASSETS);
+// Placements chosen off the PV course markers (pads 0.12/0.33/0.58/0.85,
+// box rows 0.06-0.74) so nothing crowds a pickup; clearBuildingPlacement /
+// centerline checks still guard the racing line at mount time. The casino
+// corner (craps + blackjack) sits on the market row.
+const PV_TRIBUTE_TRACKSIDE = [
+  { asset: 'pvBitcoinMonument', footprint: 22, progress: 0.08, side: 1 },
+  { asset: 'pvTokenCluster', footprint: 10, progress: 0.22, side: -1 },
+  { asset: 'pvRunestone', footprint: 14, progress: 0.38, side: 1 },
+  { asset: 'pvCraps', footprint: 16, progress: 0.5, side: -1 },
+  { asset: 'pvBlackjack', footprint: 14, progress: 0.54, side: -1 },
+  { asset: 'pvOddsBoard', footprint: 20, progress: 0.66, side: 1 },
+  { asset: 'pvTokenCluster', footprint: 11, progress: 0.9, side: 1 },
+];
+const addPvTributeTrackside = (world, sampler, roadWidth) => {
+  PV_TRIBUTE_TRACKSIDE.forEach((entry) => {
+    const { normal, point, tangent } = sampler.pointAt(entry.progress);
+    const position = point.clone().addScaledVector(normal, entry.side * (sampler.widthAt(entry.progress) * 0.85 + 10));
+    if (minCenterlineDistance(sampler, position.x, position.z) < roadWidth * 0.62) return;
+    const group = new THREE.Group();
+    group.position.copy(position);
+    group.rotation.y = Math.atan2(tangent.x, tangent.z) + (entry.side > 0 ? -Math.PI / 2 : Math.PI / 2);
+    mountMiamiAsset(group, entry.asset, { footprint: entry.footprint });
+    world.add(group);
+  });
+};
 const miamiMeshCache = new Map();
 const loadMiamiAsset = (url) => {
   if (!miamiMeshCache.has(url)) {
@@ -2285,6 +2330,11 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
   // lifeguard towers, and the diner. CC-only (openingFacades dressing).
   if (miamiMode && trackDef.dressing?.openingFacades) {
     addMiamiTrackside(world, sampler, roadWidth);
+  }
+  // W3: the Penguin Village tribute set rides the same gate — ?skyLab=0
+  // strips it with the rest of the generated dressing.
+  if (miamiMode && trackDef.dressing?.penguinVillage) {
+    addPvTributeTrackside(world, sampler, roadWidth);
   }
 
   return propCount;

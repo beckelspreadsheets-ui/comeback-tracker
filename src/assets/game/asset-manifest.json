@@ -564,5 +564,119 @@
       "promotedAt": "2026-07-07",
       "labEvidence": "tmp/w2-item-boxes/ice-box-v2-ab.png (old-with-penguin vs penguin-free A/B)"
     }
+  },
+  {
+    "filePath": "src/assets/game/models/pv-tribute/pv-craps.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 58b33775-5ebb-4eed-815a-56eca971ae31, 2026-07-07 - penguin-free empty craps table (re-roll of 190f5980); owner tribute list: \"crypto tokens and polymarket betting ... craps ... blackjack, bitcoin mostly, BRC tokens, runes\"",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only); bitcoin mark = owner-directed art (recorded exception); NO-GENERIC-PENGUINS rule enforced (empty furniture, ordinal penguins posed later)",
+    "role": "Runtime Penguin Village tribute trackside prop (W3 round 1, owner: \"I love the assets\") - PV_TRACKSIDE mount",
+    "sizeBudget": "trackside-building class; shipped sha256:096c5b5394ed8ddc7139080044c41bd1a1dd192e7d20c166117b00b42f22fa35",
+    "fallback": "mount slot stays empty on load failure; kart-playable fails via the telemetry mounts guard",
+    "assetId": "pvtribute.craps",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w3-tribute",
+    "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.1-0.08/0.015 (bundle-fit hard diet) -> resize 256/192 -> meshopt",
+    "sourceHash": "sha256:0cd9c89d9704da6f169245c424e407195bce0e81a1df3ad23ded06ca82611339",
+    "outputHash": "sha256:096c5b5394ed8ddc7139080044c41bd1a1dd192e7d20c166117b00b42f22fa35",
+    "promotion": {
+      "approval": "Owner 2026-07-07: \"I love the assets\" (pv-props-lab.html, penguin-free rework sheet)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/w3-pv-props/tribute-props-rework.png + ship-diet-check-*.png"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/pv-tribute/pv-blackjack.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 9666bc11-54f5-406e-a176-b596f88940ff, 2026-07-07 - penguin-free empty blackjack table (re-roll of a66f80dc); owner tribute list: \"crypto tokens and polymarket betting ... craps ... blackjack, bitcoin mostly, BRC tokens, runes\"",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only); bitcoin mark = owner-directed art (recorded exception); NO-GENERIC-PENGUINS rule enforced (empty furniture, ordinal penguins posed later)",
+    "role": "Runtime Penguin Village tribute trackside prop (W3 round 1, owner: \"I love the assets\") - PV_TRACKSIDE mount",
+    "sizeBudget": "trackside-building class; shipped sha256:faa5348c2c0ce8e8ffd1d2ace13c4ee92a035f160f62631043a1cfb42ebb00a0",
+    "fallback": "mount slot stays empty on load failure; kart-playable fails via the telemetry mounts guard",
+    "assetId": "pvtribute.blackjack",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w3-tribute",
+    "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.1-0.08/0.015 (bundle-fit hard diet) -> resize 256/192 -> meshopt",
+    "sourceHash": "sha256:66ef4d77d09b1958f791b9830ced27e57a63e7ced070726bdcbb13207af05e65",
+    "outputHash": "sha256:faa5348c2c0ce8e8ffd1d2ace13c4ee92a035f160f62631043a1cfb42ebb00a0",
+    "promotion": {
+      "approval": "Owner 2026-07-07: \"I love the assets\" (pv-props-lab.html, penguin-free rework sheet)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/w3-pv-props/tribute-props-rework.png + ship-diet-check-*.png"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/pv-tribute/pv-bitcoin-monument.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 8ed95cc0-c89e-4b83-a152-f05021531a1e, 2026-07-07 - penguin-free bitcoin monument v2; reverse face blank (systematic generator mirror) - mounted clean-face-to-road; owner tribute list: \"crypto tokens and polymarket betting ... craps ... blackjack, bitcoin mostly, BRC tokens, runes\"",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only); bitcoin mark = owner-directed art (recorded exception); NO-GENERIC-PENGUINS rule enforced (empty furniture, ordinal penguins posed later)",
+    "role": "Runtime Penguin Village tribute trackside prop (W3 round 1, owner: \"I love the assets\") - PV_TRACKSIDE mount",
+    "sizeBudget": "trackside-building class; shipped sha256:28d457675aba5a4f077054a79fec44def3c8b939eeb6fe2c76d765b8e7af3811",
+    "fallback": "mount slot stays empty on load failure; kart-playable fails via the telemetry mounts guard",
+    "assetId": "pvtribute.bitcoin-monument",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w3-tribute",
+    "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.1-0.08/0.015 (bundle-fit hard diet) -> resize 256/192 -> meshopt",
+    "sourceHash": "sha256:60b5a83be572f07828987150e8cb2a0835c2e40eef584d63cc719ea0779d0beb",
+    "outputHash": "sha256:28d457675aba5a4f077054a79fec44def3c8b939eeb6fe2c76d765b8e7af3811",
+    "promotion": {
+      "approval": "Owner 2026-07-07: \"I love the assets\" (pv-props-lab.html, penguin-free rework sheet)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/w3-pv-props/tribute-props-rework.png + ship-diet-check-*.png"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/pv-tribute/pv-runestone.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId bc4a0b3d-23c8-4f8f-ada4-ce5af1365770, 2026-07-07 - Runes tribute - abstract glowing carvings; owner tribute list: \"crypto tokens and polymarket betting ... craps ... blackjack, bitcoin mostly, BRC tokens, runes\"",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only); bitcoin mark = owner-directed art (recorded exception); NO-GENERIC-PENGUINS rule enforced (empty furniture, ordinal penguins posed later)",
+    "role": "Runtime Penguin Village tribute trackside prop (W3 round 1, owner: \"I love the assets\") - PV_TRACKSIDE mount",
+    "sizeBudget": "trackside-building class; shipped sha256:d3a498cb31d05a45a7089760849b89d36dd8f0f796cf24f61090b9ea5380e26f",
+    "fallback": "mount slot stays empty on load failure; kart-playable fails via the telemetry mounts guard",
+    "assetId": "pvtribute.runestone",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w3-tribute",
+    "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.1-0.08/0.015 (bundle-fit hard diet) -> resize 256/192 -> meshopt",
+    "sourceHash": "sha256:5fd733c92c62172883b853b6b2166607564a4bcbc9c0ab69091897f247734720",
+    "outputHash": "sha256:d3a498cb31d05a45a7089760849b89d36dd8f0f796cf24f61090b9ea5380e26f",
+    "promotion": {
+      "approval": "Owner 2026-07-07: \"I love the assets\" (pv-props-lab.html, penguin-free rework sheet)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/w3-pv-props/tribute-props-rework.png + ship-diet-check-*.png"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/pv-tribute/pv-odds-board.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId dca5f6aa-b83b-46ee-bbfd-b7d554b5cc6d, 2026-07-07 - prediction-market board - abstract chart, zero text, no brand marks; owner tribute list: \"crypto tokens and polymarket betting ... craps ... blackjack, bitcoin mostly, BRC tokens, runes\"",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only); bitcoin mark = owner-directed art (recorded exception); NO-GENERIC-PENGUINS rule enforced (empty furniture, ordinal penguins posed later)",
+    "role": "Runtime Penguin Village tribute trackside prop (W3 round 1, owner: \"I love the assets\") - PV_TRACKSIDE mount",
+    "sizeBudget": "trackside-building class; shipped sha256:05577ba873c5375e58c1c76596f9dfead5af567bdafbc8e5cc775db461ac5be4",
+    "fallback": "mount slot stays empty on load failure; kart-playable fails via the telemetry mounts guard",
+    "assetId": "pvtribute.odds-board",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w3-tribute",
+    "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.1-0.08/0.015 (bundle-fit hard diet) -> resize 256/192 -> meshopt",
+    "sourceHash": "sha256:98f9e2190d179821c98dcba829a0498cc476b9c95ac3c03e03d439af051a998d",
+    "outputHash": "sha256:05577ba873c5375e58c1c76596f9dfead5af567bdafbc8e5cc775db461ac5be4",
+    "promotion": {
+      "approval": "Owner 2026-07-07: \"I love the assets\" (pv-props-lab.html, penguin-free rework sheet)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/w3-pv-props/tribute-props-rework.png + ship-diet-check-*.png"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/pv-tribute/pv-token-cluster.glb",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId 16106dbf-89cf-434c-8996-9ad54b8f98f2, 2026-07-07 - BRC/runes token pile; owner tribute list: \"crypto tokens and polymarket betting ... craps ... blackjack, bitcoin mostly, BRC tokens, runes\"",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only); bitcoin mark = owner-directed art (recorded exception); NO-GENERIC-PENGUINS rule enforced (empty furniture, ordinal penguins posed later)",
+    "role": "Runtime Penguin Village tribute trackside prop (W3 round 1, owner: \"I love the assets\") - PV_TRACKSIDE mount",
+    "sizeBudget": "trackside-building class; shipped sha256:686ed70d8ae6bd12f495b3842f5400a8305038ae01b1d08527a623e8dd93a25c",
+    "fallback": "mount slot stays empty on load failure; kart-playable fails via the telemetry mounts guard",
+    "assetId": "pvtribute.token-cluster",
+    "assetClass": "trackside-building",
+    "status": "runtime-promoted-w3-tribute",
+    "runtimeTransform": "weld -> simplify 0.02/0.001 -> simplify 0.1-0.08/0.015 (bundle-fit hard diet) -> resize 256/192 -> meshopt",
+    "sourceHash": "sha256:ead39eeb440cf2bb7067b474e3839ac589350f40c8bb2d76c3ec558ae14e35f2",
+    "outputHash": "sha256:686ed70d8ae6bd12f495b3842f5400a8305038ae01b1d08527a623e8dd93a25c",
+    "promotion": {
+      "approval": "Owner 2026-07-07: \"I love the assets\" (pv-props-lab.html, penguin-free rework sheet)",
+      "promotedAt": "2026-07-07",
+      "labEvidence": "tmp/w3-pv-props/tribute-props-rework.png + ship-diet-check-*.png"
+    }
   }
 ]
