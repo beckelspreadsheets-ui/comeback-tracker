@@ -373,7 +373,11 @@ const run = async () => {
   }
 
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const server = spawn(npm, ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
+  // K1: the kart battery points this at the kart build via
+  // KART_PLAYABLE_PROOF_SERVER_SCRIPT=preview:kart (or dev:kart for source);
+  // unset = the fitness dev server, byte-for-byte the pre-K1 behavior.
+  const serverScript = process.env.KART_PLAYABLE_PROOF_SERVER_SCRIPT || 'dev';
+  const server = spawn(npm, ['run', serverScript, '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
     cwd: root,
     env: { ...process.env, BROWSER: 'none' },
     stdio: ['ignore', 'pipe', 'pipe'],

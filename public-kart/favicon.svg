@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- K1 PLACEHOLDER icon (owner delivers the real name + art later).
+       Deliberate geometric motif only: gold kart wheel + cyan speed streaks
+       on ink — no lettering, no penguins (standing rules). -->
+  <rect width="512" height="512" rx="96" fill="#10151d"/>
+  <rect x="52" y="196" width="128" height="26" rx="13" fill="#7eefff" opacity="0.85"/>
+  <rect x="84" y="254" width="96" height="26" rx="13" fill="#7eefff" opacity="0.55"/>
+  <rect x="116" y="312" width="64" height="26" rx="13" fill="#7eefff" opacity="0.35"/>
+  <circle cx="326" cy="268" r="128" fill="#0c1124" stroke="#ffd34f" stroke-width="26"/>
+  <circle cx="326" cy="268" r="34" fill="#ffd34f"/>
+  <g stroke="#ffd34f" stroke-width="22" stroke-linecap="round">
+    <line x1="326" y1="230" x2="326" y2="162"/>
+    <line x1="326" y1="306" x2="326" y2="374"/>
+    <line x1="288" y1="268" x2="220" y2="268"/>
+    <line x1="364" y1="268" x2="432" y2="268"/>
+  </g>
+</svg>

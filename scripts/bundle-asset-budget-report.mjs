@@ -4,25 +4,62 @@ import { brotliCompressSync, gzipSync } from 'node:zlib';
 import { execSync } from 'node:child_process';
 
 const repoRoot = process.cwd();
-const distDir = process.env.BUNDLE_BUDGET_DIST_DIR || join(repoRoot, 'dist');
-const artifactDir = process.env.BUNDLE_BUDGET_ARTIFACT_DIR || join(repoRoot, 'tmp', 'bundle-budget');
-// Re-baselined 2026-07-02 (A4, graphics V2 PRD) against the honest post-fix
-// build: QA proof PNGs no longer ship (comebackCityVisualTokens split), the
-// dead 2D ComebackCityKartRace import is gone, meshopt avatar re-promotions
-// landed, and public/baked-*.glb count as shipped content. Measured: total
-// 12.30 MiB / 7263 KiB gzip, images 1.86 MiB, JS 4.79 MiB (1199 KiB gzip),
-// largest file 2.75 MiB (the shared three.js world chunk). Supersedes the
-// 2026-06-01 delegated 8.5 MiB baseline, which predates the 3D kart content
-// (GLBs alone are 5.5 MiB). Threshold minus measured = the published Phase C
-// headroom — see the report's headroom block.
+// K1: BUNDLE_BUDGET_MODE=kart audits the kart-only build (dist-kart, its own
+// thresholds, its own artifact dir so the fitness JSON is never clobbered).
+// Default stays the fitness build, byte-for-byte the pre-K1 behavior.
+const budgetMode = process.env.BUNDLE_BUDGET_MODE === 'kart' ? 'kart' : 'fitness';
+const distDir =
+  process.env.BUNDLE_BUDGET_DIST_DIR || join(repoRoot, budgetMode === 'kart' ? 'dist-kart' : 'dist');
+const artifactDir =
+  process.env.BUNDLE_BUDGET_ARTIFACT_DIR ||
+  join(repoRoot, 'tmp', budgetMode === 'kart' ? 'bundle-budget-kart' : 'bundle-budget');
+// Fitness: re-baselined 2026-07-02 (A4, graphics V2 PRD) against the honest
+// post-fix build: QA proof PNGs no longer ship (comebackCityVisualTokens
+// split), the dead 2D ComebackCityKartRace import is gone, meshopt avatar
+// re-promotions landed, and public/baked-*.glb count as shipped content.
+// Measured: total 12.30 MiB / 7263 KiB gzip, images 1.86 MiB, JS 4.79 MiB
+// (1199 KiB gzip), largest file 2.75 MiB (the shared three.js world chunk).
+// Supersedes the 2026-06-01 delegated 8.5 MiB baseline, which predates the 3D
+// kart content (GLBs alone are 5.5 MiB). Threshold minus measured = the
+// published Phase C headroom — see the report's headroom block.
+const fitnessThresholdDefaults = {
+  imageTotalMiB: 4.0,
+  javascriptTotalGzipKiB: 1400,
+  javascriptTotalMiB: 5.25,
+  largestFileMiB: 3.0,
+  largestJavaScriptGzipKiB: 900,
+  totalGzipKiB: 8500,
+  totalMiB: 15.0,
+};
+// Kart: set at K1 exit from the first dist-kart measurement (2026-07-11,
+// PENDING owner ack — PRD §5). Measured at the split: total 8.781 MiB /
+// 6722.8 KiB gzip, JS 1.098 MiB (338.85 KiB gzip, largest chunk 280.79),
+// images 1.352 MiB, largest file 1.507 MiB (baked-spike.glb). JS thresholds
+// are deliberately TIGHT — JS is what blocks first paint, and keeping the
+// fitness app out of this build is the whole point of K1. Total thresholds
+// leave ~3 MiB raw / ~1.3 MB gzip for the K4-K7 content wave (runtime-fetched
+// GLBs/portraits land in dist too); growth beyond that should ride per-asset
+// lazy loading + the SW runtime cache, not a threshold raise (V1-beta PRD §1).
+const kartThresholdDefaults = {
+  imageTotalMiB: 2.5,
+  javascriptTotalGzipKiB: 500,
+  javascriptTotalMiB: 2.0,
+  largestFileMiB: 3.0,
+  largestJavaScriptGzipKiB: 400,
+  totalGzipKiB: 8000,
+  totalMiB: 12.0,
+};
+const thresholdDefaults = budgetMode === 'kart' ? kartThresholdDefaults : fitnessThresholdDefaults;
 const budgetThresholds = {
-  imageTotalMiB: Number(process.env.BUNDLE_BUDGET_IMAGE_TOTAL_MIB || 4.0),
-  javascriptTotalGzipKiB: Number(process.env.BUNDLE_BUDGET_JS_GZIP_KIB || 1400),
-  javascriptTotalMiB: Number(process.env.BUNDLE_BUDGET_JS_TOTAL_MIB || 5.25),
-  largestFileMiB: Number(process.env.BUNDLE_BUDGET_LARGEST_FILE_MIB || 3.0),
-  largestJavaScriptGzipKiB: Number(process.env.BUNDLE_BUDGET_LARGEST_JS_GZIP_KIB || 900),
-  totalGzipKiB: Number(process.env.BUNDLE_BUDGET_TOTAL_GZIP_KIB || 8500),
-  totalMiB: Number(process.env.BUNDLE_BUDGET_TOTAL_MIB || 15.0),
+  imageTotalMiB: Number(process.env.BUNDLE_BUDGET_IMAGE_TOTAL_MIB || thresholdDefaults.imageTotalMiB),
+  javascriptTotalGzipKiB: Number(process.env.BUNDLE_BUDGET_JS_GZIP_KIB || thresholdDefaults.javascriptTotalGzipKiB),
+  javascriptTotalMiB: Number(process.env.BUNDLE_BUDGET_JS_TOTAL_MIB || thresholdDefaults.javascriptTotalMiB),
+  largestFileMiB: Number(process.env.BUNDLE_BUDGET_LARGEST_FILE_MIB || thresholdDefaults.largestFileMiB),
+  largestJavaScriptGzipKiB: Number(
+    process.env.BUNDLE_BUDGET_LARGEST_JS_GZIP_KIB || thresholdDefaults.largestJavaScriptGzipKiB
+  ),
+  totalGzipKiB: Number(process.env.BUNDLE_BUDGET_TOTAL_GZIP_KIB || thresholdDefaults.totalGzipKiB),
+  totalMiB: Number(process.env.BUNDLE_BUDGET_TOTAL_MIB || thresholdDefaults.totalMiB),
 };
 
 const fail = (message, detail = {}) => {
@@ -190,12 +227,15 @@ const run = async () => {
   const budgetFailures = budgetChecks.filter((check) => check.status === 'fail');
   const report = {
     artifactDir,
+    budgetMode,
     capturedAt: new Date().toISOString(),
     budget: {
       checks: budgetChecks,
       failures: budgetFailures,
       note:
-        'Re-baselined 2026-07-02 (graphics V2 PRD task A4) against the honest post-fix build: QA proof PNGs excluded from production, dead 2D-kart import removed, meshopt avatars landed, baked GLBs counted. Supersedes the 2026-06-01 owner-delegated 8.5 MiB baseline, which predates the 3D kart content. Threshold minus measured = the published Phase C headroom (see headroom block).',
+        budgetMode === 'kart'
+          ? 'Kart-only build (dist-kart, K1 split). Thresholds set from the first kart-only measurement 2026-07-11; owner ack pending (V1-beta PRD §5). First-load budget only — per-asset lazy loading + SW runtime caching carry post-split content growth.'
+          : 'Re-baselined 2026-07-02 (graphics V2 PRD task A4) against the honest post-fix build: QA proof PNGs excluded from production, dead 2D-kart import removed, meshopt avatars landed, baked GLBs counted. Supersedes the 2026-06-01 owner-delegated 8.5 MiB baseline, which predates the 3D kart content. Threshold minus measured = the published Phase C headroom (see headroom block).',
       thresholds: budgetThresholds,
     },
     // Phase C consumes this: bake textures ship as WebP (images category), so
@@ -216,7 +256,9 @@ const run = async () => {
     },
     largestFiles: files.slice(0, 15),
     note:
-      'This records local built artifact sizes against the 2026-07-02 A4 re-baseline (default VITE_USER_PRESET build is the budget contract until the kart game gets its own Pages project budget). Preview and production release evidence still need deployed smoke and sign-off.',
+      budgetMode === 'kart'
+        ? 'This records local kart-only (dist-kart) artifact sizes — the budget contract for the comeback-city-kart Pages project since K1. Preview and production release evidence still need deployed smoke and sign-off.'
+        : 'This records local built artifact sizes against the 2026-07-02 A4 re-baseline (default VITE_USER_PRESET build is the budget contract until the kart game gets its own Pages project budget). Preview and production release evidence still need deployed smoke and sign-off.',
     summary: {
       cssFileCount: cssFiles.length,
       cssTotalKiB: kib(cssFiles.reduce((sum, file) => sum + file.sizeBytes, 0)),

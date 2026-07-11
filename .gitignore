@@ -1,5 +1,6 @@
 node_modules
 dist
+dist-kart
 dist-ssr
 .DS_Store
 *.local

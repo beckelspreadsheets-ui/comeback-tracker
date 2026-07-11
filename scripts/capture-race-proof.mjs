@@ -13,7 +13,13 @@ const startedAt = new Date().toISOString();
 const runId = `${startedAt.replace(/[:.]/g, '-') }__race-proof`;
 const runDir = path.join(root, 'asset-pipeline', 'proof', 'runs', runId);
 const configPath = path.join(root, 'asset-pipeline', 'config', 'proof-scenarios.json');
-const serverMode = process.env.RACE_PROOF_SERVER_MODE === 'dev' ? 'dev' : 'preview';
+// The env value IS the npm script that serves the app. K1 adds the kart-build
+// variants (preview:kart serves dist-kart, dev:kart the kart entry from
+// source); unset = fitness preview, byte-for-byte the pre-K1 behavior.
+const SERVER_MODES = new Set(['preview', 'dev', 'preview:kart', 'dev:kart']);
+const serverMode = SERVER_MODES.has(process.env.RACE_PROOF_SERVER_MODE)
+  ? process.env.RACE_PROOF_SERVER_MODE
+  : 'preview';
 
 const fail = (message, detail = {}) => {
   const error = new Error(message);

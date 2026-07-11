@@ -52,14 +52,14 @@ Practical note: GLBs are ALREADY runtime-fetched (not in the JS bundle's critica
 - `package.json` (`build:kart`, `deploy:kart` → `dist-kart` to `comeback-city-kart`)
 - `scripts/bundle-asset-budget-report.mjs` (kart-budget mode over `dist-kart` with NEW thresholds set from measurement)
 **Steps:** build the entry shell → wire config/manifest/CSP → local results store + migration → build + measure → set kart budgets → point the proof/battery suites' preview at the kart build where applicable (kart-playable and race:proof exercise `/#race` — they must run against `dist-kart` for the kart deploy; keep a fitness-mode escape hatch) → deploy on owner go → `node tmp/w0-ship/verify-live-deploy.mjs` + `tmp/live-coin-probe.mjs`.
-**Acceptance criteria:**
-- [ ] `npm run build:kart` produces `dist-kart` with NO recharts/zxing/fitness-screen/visualTokens chunks (verify by chunk list).
-- [ ] Kart-only artifact ≤ predicted +10% (≈9.7 MiB raw / ≈7.4 MB gz worst case); new thresholds committed with owner ack.
-- [ ] `npm run build` (fitness) output is byte-identical to pre-K1 (hash compare) — K1 adds, never mutates.
-- [ ] Deep links + QA contract intact on the kart build: `#race`, one-shot `?track/?character/?kart` seeds, `playableAutoplay=1`, `raceAutoplay=1`, telemetry globals.
-- [ ] Full battery green against `dist-kart`; live-verify + coin probe green after deploy.
-- [ ] Installed-PWA upgrade path proven: a client with the old (fitness) SW on comeback-city-kart.pages.dev receives the kart shell on next visit (manual check with a kept profile).
-- [ ] Offline replay works after one online race (GLB caching in effect).
+**Acceptance criteria (evidence 2026-07-11):**
+- [x] `npm run build:kart` produces `dist-kart` with NO recharts/zxing/fitness-screen/visualTokens chunks — chunk list = react-vendor + icons + index.kart only.
+- [x] Kart-only artifact ≤ predicted +10%: measured **8.781 MiB raw / 6722.8 KiB gz** (prediction ≈8.8/≈6700 — on the nose); thresholds committed in bundle-asset-budget-report.mjs kart mode (⏳ owner ack, §5).
+- [x] `npm run build` (fitness) byte-identical to pre-K1: 79/79 dist file hashes match (shasum manifest compare).
+- [x] Deep links + QA contract intact on the kart build: 26/26 checks in tmp/k1-kart-shell-smoke/ (intro→select→race testids, one-shot seeds + URL strip, autoplay skips, telemetry globals, legacy-atom migration one-shot + read-only, fitness atom never written).
+- [x] Battery green against `dist-kart`: test:race · test:kart-playable:kart (passed:true both tracks, mounts clean) · test:bundle (fitness, unchanged) · test:bundle:kart · assets:check · race:proof at the K1 commit (pointer updated). Live-verify + coin probe: after deploy (owner-gated).
+- [x] Installed-PWA upgrade path proven locally (tmp/k1-pwa-upgrade-smoke/: fitness SW installed → dist-kart served → next visit self-swaps to the kart shell, title "Penguin Kart"); re-confirm on the live origin with a kept profile at deploy.
+- [x] Offline replay works after one online race: REAL offline (server killed) reload races with mounts 22/22 failed 0 (same smoke, K1 glb/webp CacheFirst route in effect).
 **Perf gate:** none beyond battery (no runtime changes) — but capture one headed phase5 pair as the kart-build baseline label.
 
 ---
@@ -180,8 +180,8 @@ Practical note: GLBs are ALREADY runtime-fetched (not in the JS bundle's critica
 | Decision | Status |
 |---|---|
 | Game NAME + PWA title/icon text | ⏳ OWNER — candidates to react to (no Nintendo trade dress; avoid "Pengu" = Pudgy Penguins token): Penguin Grand Prix · Waddle Wheels · Ordinal Rush · Sub-Zero Circuit · Penguin Kart (plain) · Blockchain Blizzard |
-| Kart-only budget thresholds (set at K1 exit) | ⏳ measure → owner ack |
-| Bundle 8500→9500 raise | 🔄 LIKELY SUPERSEDED by K1 (~1.8 MB gz freed) — decide on real K1 numbers |
+| Kart-only budget thresholds (set at K1 exit) | 📏 MEASURED 2026-07-11: dist-kart 8.781 MiB raw / 6722.8 KiB gz. Committed defaults (bundle-asset-budget-report.mjs kart mode): total 12.0 MiB / 8000 KiB gz, JS 2.0 MiB / 500 KiB gz (tight on purpose — keeps fitness out), images 2.5 MiB, largest file 3.0 MiB, largest JS chunk 400 KiB gz → ⏳ OWNER ACK (queued in approvals-hub) |
+| Bundle 8500→9500 raise | ✅ SUPERSEDED by K1 real numbers (kart deploy = 6723 KiB gz vs its own 8000 budget, ~1.3 MB headroom; fitness keeps 8500 untouched) — row closed in approvals-hub unless owner objects |
 | Economy (credits/garage/shop) stays shelved | ⏳ confirm before K2 deletes its dead UI |
 | fpsWarmupMs 2500→4000 gatesNote | ⏳ carried from 2026-07-11 (approvals-hub top) |
 | Chip revision direction (W7.2) | ⏳ ASK at K7 with the icon set in hand |

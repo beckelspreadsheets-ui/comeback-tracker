@@ -1,5 +1,37 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
+## ⚡ K1 LANDED (2026-07-11 pm — newest state, read before the block below)
+
+**K1 (kart-only build target) is BUILT + verified locally, NOT yet
+deployed (owner-gated).** `npm run build:kart` → `dist-kart` via
+`vite.config.kart.js` + `index.kart.html` + `src/kart/` (main.jsx /
+KartApp.jsx / kartLocalStore.js) + `public-kart/` (kart CSP `_headers` —
+food-API entries dropped; placeholder "Penguin Kart" icons). Measured:
+**8.781 MiB raw / 6722.8 KiB gzip** (combined build: 13.486/8490; JS
+4.79→1.10 MiB — the fitness app is fully out). Kart budget thresholds
+committed in `scripts/bundle-asset-budget-report.mjs`
+(`BUNDLE_BUDGET_MODE=kart`): total 12 MiB / 8000 KiB gz, JS 2 MiB /
+500 KiB gz — **owner ack pending (PRD §5)**; the queued 8500→9500 raise
+is SUPERSEDED (row updated in approvals-hub). Fitness `npm run build`
+verified **byte-identical** (79/79 hashes). Verified on `dist-kart`:
+kart-playable BOTH tracks (passed:true, mounts clean), 26/26 shell-smoke
+checks (intro→select→race testids, one-shot `?character/?kart/?track`
+seeds + strip, `playableAutoplay`/`raceAutoplay`, telemetry globals,
+legacy-atom best-time migration one-shot + read-only, fitness atom never
+written), test:race, assets:check, test:bundle (fitness mode unchanged).
+KartApp.jsx is a VERBATIM lift of RaceScreen's live intro/select shell —
+RaceScreen cannot be imported (its `ArcadeRace3D` import drags the
+2.71 MB dead chain); **mirror intro/select edits into both files until
+K2+ deletes the fitness copy**. Suites point at the kart build via
+`KART_PLAYABLE_PROOF_SERVER_SCRIPT=preview:kart` /
+`RACE_PROOF_SERVER_MODE=preview:kart` (npm shortcuts:
+`test:kart-playable:kart`, `test:race-proof:kart`, `test:bundle:kart`;
+deploy = `deploy:kart`, serves `dist-kart` to the same
+comeback-city-kart project). SW now runtime-caches GLBs/backdrops
+(CacheFirst) — offline replay works after one online race; manifest is
+landscape. Owner items queued in approvals-hub: kart threshold ack +
+"deploy the kart build" go.
+
 ## ⚡ FABLE SWITCHOVER CHECKPOINT (2026-07-10 — read this block first)
 
 The owner switched the session model to Fable 5 mid-stream and asked for a
@@ -103,18 +135,21 @@ STATE YOU INHERIT (2026-07-11 EOD):
   6c0a4a37); headed phase5 = vsync-144 median-of-3 BOTH tracks (CC
   144.04 / PV 144.03, evidence phase5-capture-2026-07-11*); fpsWarmupMs
   2500→4000 (minFps 8 unchanged) PENDING owner sign-off.
-- Bundle: 13.486 MiB raw / 8490.01 KiB gz vs 15.0/8500 — ~10 KiB spare.
-  ADD NO BUNDLED BYTES BEFORE K1 LANDS. K1 (the split) is predicted to
-  free ~1.8 MB gz, making the queued 8500→9500 raise likely unnecessary
-  — kart-only budgets get set from real numbers at K1 exit.
+- Bundle: K1 LANDED — the kart deploy is now its own artifact:
+  dist-kart 8.781 MiB raw / 6722.8 KiB gz vs kart budgets 12.0/8000
+  (JS capped 2 MiB / 500 KiB gz; owner ack pending). The fitness build
+  (dist, 13.486/8490 vs 15.0/8500) no longer carries kart content
+  growth; the 8500→9500 raise is superseded. New kart content still
+  prefers per-asset lazy loading + SW runtime cache over bundled bytes.
 
-YOUR TASK: execute the V1-beta PRD in order, starting at K1 (kart-only
-build target — second entry index.kart.html + vite.config.kart.js +
-src/kart/ shell → dist-kart → the existing comeback-city-kart Pages
-project; the shipped runtime is verified fitness-state-free; placeholder
-name "Penguin Kart" until the owner delivers the real one; the fitness
-build must stay byte-identical — K1 adds, never mutates). Then K2, K3,
-… per the PRD. Each K-task ends at its Owner-gate.
+YOUR TASK: execute the V1-beta PRD in order. K1 is DONE (built +
+locally verified; deploy + threshold ack are owner-gated — see the
+K1 LANDED block at the top of this doc). Next is K2 (fitness race-path
+diet — GATED on the owner confirming the credits/garage/shop economy
+stays shelved), then K3, … per the PRD. Each K-task ends at its
+Owner-gate. NOTE: KartApp.jsx mirrors RaceScreen's live intro/select
+shell verbatim — apply intro/select edits to BOTH files until the
+fitness copy is deleted.
 
 OWNER-PENDING (never block on these; surface when relevant — all queued
 in approvals-hub top + PRD §5): the game NAME · fpsWarmupMs gatesNote
