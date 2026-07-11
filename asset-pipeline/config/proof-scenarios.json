@@ -58,12 +58,12 @@
     "maxTransferBytes": 52000000,
     "minChangedRatio": 0.045,
     "minFps": 8,
-    "fpsWarmupMs": 2500,
+    "fpsWarmupMs": 4000,
     "minLuminanceRange": 8,
     "minPropCount": 20,
     "minRouteProgressDelta": 0.08,
     "requiredRenderer": "three-kart",
     "requiredVisualAssetSet": "comeback-city-v2-three-runtime"
   },
-  "gatesNote": "W0 miami promotion re-baseline (2026-07-07, owner note): camera.far 860 -> 1800 ships (backdrop rings) so the top-down proof camera un-culls distant props - measured 746 draw calls vs the old 650 gate; maxDrawCalls -> 800. minFps 12 -> 8: the proof runs HEADLESS (SwiftShader diagnostic, scales with draw calls - measured 10); the canonical HEADED truth post-promotion is vsync-locked 144 median-of-3 BOTH tracks (CC 143.75 work 1.3-1.8ms calls 461; PV 143.88 work 2.1-2.2ms calls 783 - evidence .agent/runs/kart-racer-production-readiness/evidence/phase5-capture-2026-07-07*). maxTriangles 900k UNCHANGED and holds (499k after the W0 hard diet). SIGNED by owner 2026-07-07 (\"fixes make sense to me\")."
+  "gatesNote": "W0 miami promotion re-baseline (2026-07-07, owner note): camera.far 860 -> 1800 ships (backdrop rings) so the top-down proof camera un-culls distant props - measured 746 draw calls vs the old 650 gate; maxDrawCalls -> 800. minFps 12 -> 8: the proof runs HEADLESS (SwiftShader diagnostic, scales with draw calls - measured 10); the canonical HEADED truth post-promotion is vsync-locked 144 median-of-3 BOTH tracks (CC 143.75 work 1.3-1.8ms calls 461; PV 143.88 work 2.1-2.2ms calls 783 - evidence .agent/runs/kart-racer-production-readiness/evidence/phase5-capture-2026-07-07*). maxTriangles 900k UNCHANGED and holds (499k after the W0 hard diet). SIGNED by owner 2026-07-07 (\"fixes make sense to me\"). || Coin-gate settle (2026-07-11, PENDING owner sign-off - same pattern as the W0 move): the per-coin clones (+24 draw calls, one per coin) sank the headless desktop proof to minFps 6 (2026-07-08 run); the coin field now draws as ONE InstancedMesh (24 instances, 1 call) - draw calls back at the pre-coin baseline (469 vs 468 at scenario start) and headless steady-state RECOVERED to 9-11 (pre-coin green run held 9-10). Headed truth at HEAD with coins: vsync-144 median-of-3 BOTH tracks (CC 143.97 / PV 143.98 - evidence phase5-capture-2026-07-11*). Residual red was ONLY the SwiftShader warmup ramp crossing the 2500ms sample boundary (crosses 8 at ~2.5-2.6s, run-to-run coin flip: 6@2508 fail vs 8@2530 pass). fpsWarmupMs 2500 -> 4000 so the floor reads sustained samples, not the compile ramp; minFps stays 8 UNCHANGED (post-4s min: desktop 9-10, mobile 19+)."
 }

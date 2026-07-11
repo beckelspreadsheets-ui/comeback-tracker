@@ -1910,6 +1910,13 @@ const ITEM_BOX_ASSETS = {
   'penguin-village': itemBoxPvIceUrl,
 };
 const itemBoxTemplateCache = new Map();
+// Scratch transforms for the instanced coin field — one compose per face
+// per frame, zero per-frame allocation. Collected coins park on a
+// zero-scale pose (degenerate triangles rasterize nothing).
+const coinPoseScratch = new THREE.Matrix4();
+const COIN_UNIT_SCALE = new THREE.Vector3(1, 1, 1);
+const COIN_COLLECTED_POSE = new THREE.Matrix4().makeScale(0, 0, 0);
+
 const loadItemBoxTemplate = (url) => {
   if (!itemBoxTemplateCache.has(url)) {
     itemBoxTemplateCache.set(
@@ -3465,34 +3472,66 @@ const createScene = ({
     world.add(group);
     return group;
   });
+  // The whole coin field draws as ONE InstancedMesh. children[0] picks
+  // the composite's FRONT face node (its 'coin-flip' back-face sibling
+  // sits at the scene root and has never rendered — the clones used the
+  // same children[0]), so the field is coins × 1 face = 24 instances in
+  // one draw call. The per-coin clones this replaces cost 1 call each —
+  // that +24-call bill is what sank the HEADLESS SwiftShader proof to
+  // minFps 6 while headed truth stayed vsync-144 both tracks (median-of-3
+  // evidence phase5-capture-2026-07-11*). The groups above stay as
+  // per-coin transform + visibility proxies so collect/respawn/spin
+  // logic is untouched.
+  const coinInstanced = { faceMatrices: null, mesh: null };
   if (coinField.length) {
     miamiMountStats.requested += 1;
     loadItemBoxTemplate(itemBoxCcCoinUrl).then((template) => {
-      if (!template) {
+      const source = template && (template.children[0] || template);
+      // Fit rig — same math as the retired per-coin clones (scale to 2.7
+      // world units, recenter on the scaled bounds); never added to the
+      // scene, only sampled for matrices.
+      const rig = source ? source.clone(true) : null;
+      const faces = [];
+      rig?.traverse((node) => {
+        if (node.isMesh && node.geometry) faces.push(node);
+      });
+      const sharedFaces = faces.filter((face) => face.geometry === faces[0]?.geometry);
+      if (sharedFaces.length !== faces.length) {
+        console.warn('[kart] coin template faces stopped sharing one geometry — extra faces dropped');
+      }
+      if (!sharedFaces.length) {
         miamiMountStats.failed += 1;
         console.warn('[kart] coin template failed to load — collectible coins invisible');
         return;
       }
       miamiMountStats.mounted += 1;
-      const source = template.children[0] || template;
-      coinMeshes.forEach((group, index) => {
-        const rig = source.clone(true);
-        rig.traverse((node) => {
-          if (node.isMesh) {
-            node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
-            node.castShadow = false;
-            node.receiveShadow = false;
-          }
-        });
-        const bounds = new THREE.Box3().setFromObject(rig);
-        const size = bounds.getSize(new THREE.Vector3());
-        rig.scale.setScalar(2.7 / Math.max(size.x, size.y, size.z));
-        rig.updateMatrixWorld(true);
-        const fitted = new THREE.Box3().setFromObject(rig);
-        rig.position.sub(fitted.getCenter(new THREE.Vector3()));
+      const bounds = new THREE.Box3().setFromObject(rig);
+      const size = bounds.getSize(new THREE.Vector3());
+      rig.scale.setScalar(2.7 / Math.max(size.x, size.y, size.z));
+      rig.updateMatrixWorld(true);
+      const fitted = new THREE.Box3().setFromObject(rig);
+      rig.position.sub(fitted.getCenter(new THREE.Vector3()));
+      // Bake the clone-era per-coin yaw (index * 1.3) into per-face rig
+      // matrices; the frame loop composes group pose × baked face matrix,
+      // keeping the instanced field transform-identical to the clones.
+      coinInstanced.faceMatrices = coinMeshes.map((group, index) => {
         rig.rotation.y = index * 1.3;
-        group.add(rig);
+        rig.updateMatrixWorld(true);
+        return sharedFaces.map((face) => face.matrixWorld.clone());
       });
+      const instanced = new THREE.InstancedMesh(
+        sharedFaces[0].geometry,
+        new THREE.MeshBasicMaterial({ map: sharedFaces[0].material?.map || null }),
+        coinMeshes.length * sharedFaces.length
+      );
+      instanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      // Instances span the whole track; the shared geometry's bounding
+      // sphere is one coin face — never let three.js cull the field by it.
+      instanced.frustumCulled = false;
+      instanced.castShadow = false;
+      instanced.receiveShadow = false;
+      world.add(instanced);
+      coinInstanced.mesh = instanced;
     });
   }
   trackDef.ramps.forEach((ramp) => addRamp(world, sampler, ramp));
@@ -3874,6 +3913,7 @@ const createScene = ({
     projectilePool,
     slapFishRig,
     coinField,
+    coinInstanced,
     coinMeshes,
     camera,
     composer,
@@ -5139,6 +5179,22 @@ export const ComebackCityThreeKartRace = ({
         group.rotation.y += dt * 2.6;
         group.position.y += Math.sin(race.raceTime * 3 + index * 0.7) * 0.01;
       });
+      if (engine.coinInstanced?.mesh) {
+        const { faceMatrices, mesh: coinFieldMesh } = engine.coinInstanced;
+        engine.coinMeshes.forEach((group, index) => {
+          const perFace = faceMatrices[index];
+          for (let face = 0; face < perFace.length; face += 1) {
+            const slot = index * perFace.length + face;
+            if (group.visible) {
+              coinPoseScratch.compose(group.position, group.quaternion, COIN_UNIT_SCALE).multiply(perFace[face]);
+              coinFieldMesh.setMatrixAt(slot, coinPoseScratch);
+            } else {
+              coinFieldMesh.setMatrixAt(slot, COIN_COLLECTED_POSE);
+            }
+          }
+        });
+        coinFieldMesh.instanceMatrix.needsUpdate = true;
+      }
       engine.boostPads.forEach((pad, index) => {
         pad.children.forEach((child) => {
           if (child.userData.chevronOrder !== undefined) {
@@ -5276,6 +5332,9 @@ export const ComebackCityThreeKartRace = ({
       window.removeEventListener('resize', handleResize);
       engine.composer.dispose?.();
       engine.renderer.dispose();
+      // Scene traversal below handles geometry/material; the instance
+      // matrix attribute needs the InstancedMesh's own dispose.
+      engine.coinInstanced?.mesh?.dispose();
       engine.scene.traverse((object) => {
         object.geometry?.dispose?.();
         if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
