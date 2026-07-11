@@ -11,6 +11,8 @@
 - Explicitly deferred: share polish (*"not worried about the share polish YET"*), track improvements (*"tracks need some improvements"* → V2).
 - Open: the game's NAME (*"I need to come up with a name for lol"*) — see §5.
 
+**Owner mobile playtest of the live K1 deploy (2026-07-11 eve — full verbatim in roadmap W7 additions):** overall *"experience on mobile is great"*; item HUD *"doesn't work"* on phone (→ K3 size/layout, K7 icons); *"impossible to drift on mobile"* + wants *"something made to smash on the screen"* for items and *"maybe a joystick to drive with"* (→ K3, spec amended below); *"wish the graphics could just be improved slightly"* (→ K3 measure-first render policy); CC *"flying in the air"* invisible-launch bug, *"it does it twice on you"* (→ NEW K2.5).
+
 ---
 
 ## §1 The web-app "ceiling" — settled understanding
@@ -21,7 +23,7 @@ Practical note: GLBs are ALREADY runtime-fetched (not in the JS bundle's critica
 
 ## §2 Scope
 
-**V1-beta (this PRD, in order):** K1 kart-only build target → K2 fitness race-path diet → K3 mobile controls V2 → K4 outplayasians crosser → K5 five karts (W4.1) → K6 new characters (W4.2, owner-delivery-gated) → K7 item + feel renders (W5) → K8 menu/UI beauty pass (W6, end-stage by owner call) → K9 release cut + share.
+**V1-beta (this PRD, in order):** K1 kart-only build target ✅ (deployed + live-verified 2026-07-11) → K2 fitness race-path diet → K2.5 CC launch-readability fix (owner bug 2026-07-11; ungated start — may run while K2 waits on its gate) → K3 mobile controls V2 → K4 outplayasians crosser → K5 five karts (W4.1) → K6 new characters (W4.2, owner-delivery-gated) → K7 item + feel renders (W5) → K8 menu/UI beauty pass (W6, end-stage by owner call) → K9 release cut + share.
 
 **V2 (after group feedback):** track improvements (owner), ICE IS NICE gantry revamp (3-direction lab), casino-table ordinal posing round (needs owner JPEGs), start-line haunt figures (Lifo), share polish (og-image/social card), whatever the group surfaces.
 
@@ -77,20 +79,42 @@ Practical note: GLBs are ALREADY runtime-fetched (not in the JS bundle's critica
 
 ---
 
+### K2.5 — Comeback City launch-readability fix (owner bug, 2026-07-11)
+
+**Why:** owner, first mobile playtest of the live deploy (verbatim): *"you go through one of the turns left then you go up a ramp and all of a sudden you go flying in the air and it doesn't show you the ramp that you're going up and over so we do need to fix that it does it twice on you and so you just look like you're flying in the air so it looks super weird."*
+**Mechanism (VERIFIED at file:line 2026-07-11 — scout claims re-checked by hand):**
+- `launchAir` flight is enormous at race speed: `verticalVel = speed × 0.155`, gravity 58 (`airTricks.js:6-13, 65-76`) → at ~250 u/s: **~1.3 s airtime, ~13 units peak, ~330 world units downrange**. The visible ramp wedge is 19 units long (`addRamp`, `ComebackCityThreeKartRace.jsx:2006`) — the cause leaves the frame almost instantly, and NO landing marker exists anywhere.
+- **Trigger is ~50% wider than the visual:** `rampHitLane: 0.22` vs wedge half-width ≈0.15 lane (15 units on a 50-wide road) — karts launch having visibly MISSED the wedge (`ComebackCityThreeKartRace.jsx:4624-4632`).
+- The bridge crest fires a **big** launch (lift ×1.3, ~1.7 s air) at progress ~0.467, right after the south-carousel LEFT turn (0.2–0.4) + climb — while the road dives away below. Its "kicker" visual is a thin strip + arrow (`jsx:3677-3713` — added once before for THIS same complaint; still under-reads at speed). Crest 0.467 + ramp 0.685 = **two launches back-to-back every lap** = "does it twice on you."
+- **NOT the cause (disproven):** the shipped road mesh DOES follow elevation (`addTrack` → elevation-aware `sampler.pointAt`, `jsx:1271-1287`) and the bridge deck has skirts + pillars (`jsx:1582-1650`). The flat-Y `createTrackMesh.js` is a non-shipped path. The hill is visible; the LAUNCHES read wrong.
+**Effort:** ~½–1 day · **Depends on:** nothing (ungated start; runs while K2 waits on the economy confirm) · **Owner gate:** before/after clips per launch spot; his call whether any launch is REMOVED outright vs made readable.
+**Steps:**
+1. Reproduce + capture headed clips at all three launch sites (ramp 0.075 · crest 0.467 · ramp 0.685) via `?raceAutoplay=1` + capture tooling → owner confirms which spot(s) he means.
+2. Fix menu, ONE VARIABLE PER CHANGE, owner picks from clips: (a) align `rampHitLane` 0.22 → wedge's true ~0.15 coverage (fairness fix — no launch without visibly touching the ramp); (b) landing-zone marker (glow ring/chevron strip at the computed landing progress — the biggest "am I supposed to be flying?" killer); (c) bigger wedge + painted approach chevrons on the road; (d) crest kicker → full-width unmissable jump-gate dressing; (e) LAST RESORT, feel change needing explicit owner sign-off: trim `launchLift` so airtime shortens.
+**Acceptance criteria:**
+- [ ] Owner reviews clips: every airborne moment has a visible cause AND a visible landing target (or the launch is gone, his call).
+- [ ] No physics/feel change without explicit owner sign-off (trigger-to-visual alignment counts as a fairness fix, allowed).
+- [ ] Battery green; race:proof re-baseline (designed visual change); kart-playable both tracks.
+**Perf gate:** phase5 headed CC pair (new always-rendered meshes on track).
+
+---
+
 ### K3 — Mobile controls V2 + real-device perf sign-off
 
-**Why:** owner: controls "need to be better and more intuitive." Today's touch UI is one center row of six 52 px hold-buttons: accel is a HOLD button (not auto), steering is two adjacent digital buttons, drift+throttle+steer needs three fingers, no safe-area inset, no pointer capture/cancel, cluster renders on desktop too. All input flows through `inputRef` booleans (`ComebackCityThreeKartRace.jsx:4164`) read once per frame — physics never touches DOM events, so this is a UI-layer rewrite plus one small analog hook.
+**Why:** owner: controls "need to be better and more intuitive"; after his 2026-07-11 live-deploy playtest, sharpened to: *"it's impossible to drift on mobile"* and *"improve the UI so it's easier to use an item like something made to smash on the screen maybe a joystick to drive with … that would be a major upgrade."* Today's touch UI is one center row of six 52 px hold-buttons: accel is a HOLD button (not auto), steering is two adjacent digital buttons, **drift+throttle+steer needs three simultaneous holds — physically impossible with two thumbs (this IS the drift bug)**, the held-item chip is 9 px (`comebackCityThreeKartRace.css:140`) and the HUD badge drops its label under 760 px (`css:211`) — the *"current one doesn't work"* item readability complaint. No safe-area inset, no pointer capture/cancel, cluster renders on desktop too. All input flows through `inputRef` booleans (`ComebackCityThreeKartRace.jsx:4164`) read once per frame — physics never touches DOM events, so this is a UI-layer rewrite plus one small analog hook.
 **Effort:** 1–2 days · **Depends on:** K1 (ship on the kart build) · **Owner gate:** feel pass on his phone (before/after clips); layout A/B if contested.
 **Spec (each maps to the existing input path):**
 1. **Auto-accel on touch devices** — default `throttle=true` for coarse-pointer sessions (precedent: autoplay bot, line 4044); brake button stays for hairpins; drops the row to 4 targets.
-2. **Analog steer zone, left half of canvas** — drag zone (virtual stick): add `inputRef.steerAxis` float; `targetSteer = steerAxis ?? (right−left)` at ~4599. Proven in-repo pattern: world hub `gestureDrive` (`WorldScene.jsx:393, 3422-3443`, `steer = clamp(dx/90,-1,1)`). `driftFeel` already consumes float steer (`minSteer 0.18`) — no physics change.
-3. **Right-thumb cluster:** DRIFT (big, hold-to-drift is already the model — hop→commit needs steer held at landing, which analog steer satisfies) + ITEM (the 0.35 s cooldown already debounces; keep armed-glow + chip). Optional: swipe-up in right zone = same `drift` key for tricks (mid-air `actionHeld` reuses it).
-4. **Layout hygiene:** split clusters bottom-left/bottom-right, ≥64 px targets, `env(safe-area-inset-bottom)` (world hub does it right at `WorldScene.jsx:4371`), `touch-action:none; user-select:none` (copy `.world-touch-button` rules `index.css:277-292`), `setPointerCapture` + `onPointerCancel` (reuse `applyRaceTouchPatch` pattern `raceControlsBase.js:232-242`), gate the whole cluster behind `pointer: coarse` (kills desktop phantom buttons), aria-labels on all controls.
-5. **Perf:** extend the mobile render-scale heuristic beyond `aspect < 0.74` so landscape phones stop getting the 0.85 desktop scale (`createRaceScene.js:71-73`); `RACE_RENDER_SCALE.mobile` is the knob if the real-device pass misses the floor.
+2. **VISIBLE virtual joystick, left half of canvas** (owner: *"maybe a joystick to drive with"*) — rendered base + thumb puck, not an invisible drag zone: add `inputRef.steerAxis` float; `targetSteer = steerAxis ?? (right−left)` at ~4599. Proven in-repo pattern: world hub `gestureDrive` (`WorldScene.jsx:393, 3422-3443`, `steer = clamp(dx/90,-1,1)`). `driftFeel` already consumes float steer (`minSteer 0.18`) — no physics change.
+3. **Right-thumb cluster:** DRIFT (big, hold-to-drift is already the model — hop→commit needs steer held at landing, which analog steer satisfies) + **ITEM as the BIG SMASH button** (owner: *"something made to smash on the screen"*): ≥88 px, high-contrast armed state, brief press-flash, `navigator.vibrate(30)` where supported; the 0.35 s cooldown already debounces. Optional: swipe-up in right zone = same `drift` key for tricks (mid-air `actionHeld` reuses it).
+4. **Layout hygiene + item readability:** split clusters bottom-left/bottom-right, ≥64 px targets, `env(safe-area-inset-bottom)` (world hub does it right at `WorldScene.jsx:4371`), `touch-action:none; user-select:none` (copy `.world-touch-button` rules `index.css:277-292`), `setPointerCapture` + `onPointerCancel` (reuse `applyRaceTouchPatch` pattern `raceControlsBase.js:232-242`), gate the whole cluster behind `pointer: coarse` (kills desktop phantom buttons), aria-labels on all controls. **Held-item display becomes phone-readable**: retire the 9 px chip on coarse-pointer layouts — the smash button itself shows the held item's icon at full button size (guide ↔ button always agree via the exported `HeldItemIcon` map); final generated icon ART stays K7, the size/layout fix lands HERE per owner ("the current one doesn't work").
+5. **Graphics, measure-first (owner: "wish the graphics could just be improved slightly"):** landscape phones ALREADY get the desktop 0.85 render scale — the `aspect < 0.74` mobile detect only catches portrait (`createRaceScene.js:14, 71-74`; `RACE_RENDER_SCALE.mobile: 0.6` is portrait-only). So on the real-device pass: measure at current settings FIRST; if ≥30 FPS holds with headroom, do NOT downscale anything, and offer ONE quality bump as a lab A/B (candidates, one variable each: DPR cap 2 → 2.35 · shadow map 384 → 512 `jsx:3295` · SMAA MEDIUM → HIGH `jsx:3417`); only if the floor FAILS does a proper coarse-pointer mobile scale knob come in as the fallback. Never trade below the 30-FPS floor for prettiness — floor first, then beauty.
 6. **QA:** testids on every control + a synthetic-pointer smoke (390×844) mirroring the select-flow probes; keep `?playableAutoplay=1` untouched.
 - Tilt steering: OUT of V1-beta (iOS permission prompt + net-new plumbing; revisit on group feedback).
 **Acceptance criteria:**
 - [ ] One-thumb-per-hand play: steer with left thumb, drift+item with right, never >2 simultaneous touches required.
+- [ ] **Drift is comfortably possible on phone** (owner: "impossible to drift on mobile" — dies with auto-accel + analog steer + big right-thumb drift hold) — owner confirms in the feel pass.
+- [ ] **Held item readable at a glance on his phone** (owner: item display "doesn't work" today) — owner confirms in the feel pass.
 - [ ] Slide-across-steer retargets (pointer capture), no stuck inputs on `pointercancel`.
 - [ ] Desktop shows no touch cluster; keyboard unchanged (W7.1 WASD item key folded in here: add E/F while keeping Shift/Enter, update guide copy).
 - [ ] Synthetic-pointer smoke green; kart-playable both tracks green.
@@ -187,7 +211,8 @@ Practical note: GLBs are ALREADY runtime-fetched (not in the JS bundle's critica
 | Chip revision direction (W7.2) | ⏳ ASK at K7 with the icon set in hand |
 | Outplayasians roster seat | ⏳ separate from crosser (K4 ships regardless) |
 | Deliveries: 3 ordinal ChatGPT sheets · lifoladen Tripo run | ⏳ OWNER — each unblocks its K6 character independently |
-| Mobile controls feel pass | ⏳ at K3 on his phone |
+| Mobile controls feel pass | ⏳ at K3 on his phone (now also covers: drift-works confirm · item-readability confirm · graphics-bump A/B if the 30-FPS floor holds with headroom) |
+| K2.5 launch-spot clips: readable-fix pick per spot (or remove a launch) | ⏳ at K2.5 with before/after clips in hand |
 
 ## §6 Where owner reviews land
 

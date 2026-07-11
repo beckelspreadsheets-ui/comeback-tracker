@@ -85,6 +85,18 @@ Once the audit proves behavior, re-skin item props (fish bone, snowball, cocoa, 
 2. **Held-item chip revision** — owner: "the item held chip is okay but needs to be changed" (no direction given yet — ASK what he wants changed when it comes up; likely ties into the W5 generated icons + W6 UI pass).
 3. **Mobile optimization pass** — owner: "we will need to optimize for mobile": touch layout/ergonomics + perf review on a real phone (the 30-FPS floor is untested on reference mobile hardware since the miami ship).
 
+### W7 additions — owner mobile playtest of the live K1 deploy (2026-07-11 eve, verbatim)
+
+First real-device session on the deployed standalone kart build. Every quote maps to a V1-beta PRD task:
+
+- **Overall:** "Overall experience on mobile is great." (baseline sentiment — the beta works on phone)
+- **Item HUD unreadable:** "on mobile it's like [im]possible to read the items and everything I know we're still gonna revamp and make that better but the current one doesn't work so I don't think we should mess with that until we adjust it" → size/layout lands in **K3** (chip is 9px today), final icon art stays **K7**. No piecemeal band-aids before K3 per his "don't mess with that until we adjust it".
+- **Controls:** "controls need to be better but i know we have that in the plan" + "it's impossible to drift on mobile" → **K3** (verified root cause: drift needs three simultaneous holds — steer + throttle + drift buttons — physically impossible with two thumbs).
+- **Item/steer UI direction:** "improve the UI so it's easier to use an item like something made to smash on the screen maybe a joystick to drive with I don't know what other mobile games used for [karts], but that would be a major upgrade" → **K3**: VISIBLE virtual joystick left + big smash item button right.
+- **Graphics:** "Wish the graphics could just be [im]proved slightly, but I understand if they can't" → **K3** render policy: measure-first on his iPhone 16 Pro; bump quality if the 30-FPS floor holds with headroom (levers verified: DPR cap, shadow map 384px, SMAA preset — note landscape phones already get the desktop 0.85 render scale; the mobile 0.6 only hits portrait).
+- **CC invisible-launch bug:** "on comeback city one problem we still have is you go through one of the turns left then you go up a ramp and all of a sudden you go flying in the air and it doesn't show you the ramp that you're going up and over so we do need to fix that it does it twice on you and so you just look like you're flying in the air so it looks super weird" → NEW **K2.5** (mechanism verified at file:line in the PRD).
+- **Process:** "We should probably write out some more PR's or detailed plan so that we can continue working on This." → this record + the PRD amendments of the same date.
+
 ## W6 — Menu/UI beauty pass (END-STAGE, after content lock — owner 2026-07-07)
 
 Owner (with a screenshot of the How-to-Race screen): "we need to make this way more visually appealing as well as the front screen where you pick characters ... things to refine at the end when we lock down everything." Deliberately parked until W3–W5 land so the menus are styled around FINAL content (roster size, item renders, box designs all change what these screens show).
