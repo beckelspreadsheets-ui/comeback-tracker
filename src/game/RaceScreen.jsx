@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  Bitcoin,
   BookOpen,
   Car,
   Fish,
@@ -1770,6 +1771,7 @@ const KartIntroScreen = ({ onStart }) => (
             <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#9ff5d0]"><HeldItemIcon heldItem="aurora" /></span> <span><span className="text-white">Aurora Boost</span> — last place, final lap only: 3s of invincible speed. Everything you touch spins; you don't.</span></li>
             <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#f4f8ff]"><HeldItemIcon heldItem="march" /></span> <span><span className="text-white">Penguin March</span> — last place, final lap only: a waddle-train of ordinal penguins crosses the road ahead. Hit the line and you spin.</span></li>
             <li>Question boxes hand you one — the icon shows next to the throw button while you hold it.</li>
+            <li className="flex items-start gap-2"><span className="mt-0.5 shrink-0 text-[#ffb52e]"><Bitcoin size={15} /></span> <span><span className="text-white">₿ Coins</span> — collect them off the road; every coin nudges your top speed (up to 10). Spin out and a few shake loose. Rows come back each lap.</span></li>
           </ul>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Carrot, CloudSnow, Coffee, Fish, FishSymbol, Flag, Footprints, Gauge, MountainSnow, Rainbow, Rocket, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bitcoin, Carrot, CloudSnow, Coffee, Fish, FishSymbol, Flag, Footprints, Gauge, MountainSnow, Rainbow, Rocket, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -49,6 +49,13 @@ import backdropCcFarUrl from '../assets/game/generated/backdrops/cc-far.webp';
 import backdropCcNearUrl from '../assets/game/generated/backdrops/cc-near.webp';
 import backdropPvFarUrl from '../assets/game/generated/backdrops/pv-far.webp';
 import backdropPvNearUrl from '../assets/game/generated/backdrops/pv-near.webp';
+import {
+  buildCoinField,
+  coinSpeedMultiplier,
+  coinsAfterSpin,
+  collectCoinsForFrame,
+  respawnCoins,
+} from './race/raceCoins.js';
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import {
   DRIFT_FEEL,
@@ -232,6 +239,9 @@ const createInitialRace = (
   speed: 0,
   spinOuts: 0,
   spinTimer: 0,
+  // ₿ coins carried this race (owner concept: "bitcoins you collect").
+  coins: 0,
+  wasSpinning: false,
   squash: 1,
   steer: 0,
   shieldActive: false,
@@ -3441,6 +3451,50 @@ const createScene = ({
   const itemBoxes = trackDef.course.itemBoxes.map((box, index) =>
     addItemBox(world, sampler, box, index, questionTexture)
   );
+  // ₿ collectible coins (owner concept 2026-07-07): rows from the pure
+  // module; the visual clones ONE face-node of the shipped CC coin box
+  // template at small scale — zero new bundle bytes, one draw call per
+  // coin. Coins pop in when the shared template resolves (same loud-
+  // failure mounts guard as every generated mount).
+  const coinField = buildCoinField(trackDef.key);
+  const coinMeshes = coinField.map((coin) => {
+    const group = new THREE.Group();
+    const sample = sampler.pointAt(coin.progress, coin.lane);
+    group.position.copy(sample.point);
+    group.position.y += 2.3;
+    world.add(group);
+    return group;
+  });
+  if (coinField.length) {
+    miamiMountStats.requested += 1;
+    loadItemBoxTemplate(itemBoxCcCoinUrl).then((template) => {
+      if (!template) {
+        miamiMountStats.failed += 1;
+        console.warn('[kart] coin template failed to load — collectible coins invisible');
+        return;
+      }
+      miamiMountStats.mounted += 1;
+      const source = template.children[0] || template;
+      coinMeshes.forEach((group, index) => {
+        const rig = source.clone(true);
+        rig.traverse((node) => {
+          if (node.isMesh) {
+            node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
+            node.castShadow = false;
+            node.receiveShadow = false;
+          }
+        });
+        const bounds = new THREE.Box3().setFromObject(rig);
+        const size = bounds.getSize(new THREE.Vector3());
+        rig.scale.setScalar(2.7 / Math.max(size.x, size.y, size.z));
+        rig.updateMatrixWorld(true);
+        const fitted = new THREE.Box3().setFromObject(rig);
+        rig.position.sub(fitted.getCenter(new THREE.Vector3()));
+        rig.rotation.y = index * 1.3;
+        group.add(rig);
+      });
+    });
+  }
   trackDef.ramps.forEach((ramp) => addRamp(world, sampler, ramp));
   if (trackDef.shortcut) {
     addRamp(world, sampler, { progress: trackDef.shortcut.launchProgress, side: trackDef.shortcut.side }, { dare: true });
@@ -3819,6 +3873,8 @@ const createScene = ({
     fishBonePool,
     projectilePool,
     slapFishRig,
+    coinField,
+    coinMeshes,
     camera,
     composer,
     // B1: atmosphere handles exposed so B2's palette moments can lerp
@@ -3988,6 +4044,7 @@ const publishTelemetry = (
     slapping: race.slapTimer > 0,
     fishBonesOnTrack: race.fishBones.length,
     boostHits: race.boostHits,
+    coins: race.coins,
     countdown: Number(race.countdown.toFixed(2)),
     drift: race.drift,
     driftCharge: Number(race.driftCharge.toFixed(2)),
@@ -4413,6 +4470,13 @@ export const ComebackCityThreeKartRace = ({
 
     const restartRace = () => {
       Object.assign(race, createInitialRace(rivalSeats));
+      // Coin rows reset with the race (carried count already zeroed above).
+      if (engine.coinField) {
+        respawnCoins(engine.coinField);
+        engine.coinMeshes.forEach((mesh) => {
+          mesh.visible = true;
+        });
+      }
       finishReportedRef.current = false;
       onRestart?.();
     };
@@ -4617,9 +4681,12 @@ export const ComebackCityThreeKartRace = ({
           const auroraActive = race.auroraTimer > 0;
           // Kart stats: top speed cap, throttle accel, and steering rate all
           // scale with the chosen kart (hero = 1/1/1, the gate baseline).
+          // Carried ₿ coins nudge the cap a little (classic kart-coin rule;
+          // capped in coinSpeedMultiplier).
           const maxSpeed =
             (race.boostTimer > 0 || driftState.miniTurboTimer > 0 || auroraActive ? BOOST_SPEED : MAX_SPEED) *
-            playerKart.stats.topSpeed;
+            playerKart.stats.topSpeed *
+            coinSpeedMultiplier(race.coins);
           const accel = throttle && !spinning ? 118 * playerKart.stats.accel : spinning ? -150 : -48;
           const miniTurboAccel = driftState.miniTurboTimer > 0 ? 150 : auroraActive ? 130 : 0;
           const brakeDrag = brake ? -180 : 0;
@@ -4666,7 +4733,28 @@ export const ComebackCityThreeKartRace = ({
               race.finished = true;
               race.speed = 0;
             }
+            // Coin rows respawn every lap (carried coins keep their bonus).
+            if (engine.coinField) {
+              respawnCoins(engine.coinField);
+              engine.coinMeshes.forEach((mesh) => {
+                mesh.visible = true;
+              });
+            }
           }
+          // ₿ coins: grab on drive-through; a spin-out START shakes a few
+          // loose (single detection point so every spin source counts).
+          if (engine.coinField && !airState.airborne) {
+            collectCoinsForFrame(engine.coinField, race.progress, race.lane, engine.sampler.length).forEach(
+              (id) => {
+                race.coins += 1;
+                const mesh = engine.coinMeshes[id];
+                if (mesh) mesh.visible = false;
+              }
+            );
+          }
+          const spinningNow = race.spinTimer > 0;
+          if (spinningNow && !race.wasSpinning) race.coins = coinsAfterSpin(race.coins);
+          race.wasSpinning = spinningNow;
           trackDef.course.boostPads.forEach((pad) => {
             const key = `boost-${pad.key}`;
             if (shortProgressDelta(race.progress, pad.progress) < 0.012 && Math.abs(race.lane - (pad.side || 0)) < 0.36) {
@@ -5046,6 +5134,11 @@ export const ComebackCityThreeKartRace = ({
           if (child.userData.kind === 'item-question') child.lookAt(engine.camera.position);
         });
       });
+      engine.coinMeshes.forEach((group, index) => {
+        if (!group.visible) return;
+        group.rotation.y += dt * 2.6;
+        group.position.y += Math.sin(race.raceTime * 3 + index * 0.7) * 0.01;
+      });
       engine.boostPads.forEach((pad, index) => {
         pad.children.forEach((child) => {
           if (child.userData.chevronOrder !== undefined) {
@@ -5146,6 +5239,7 @@ export const ComebackCityThreeKartRace = ({
         snapshotTimer = 0;
         setSnapshot({
           boostHits: race.boostHits,
+          coins: race.coins,
           countdown: race.countdown,
           drift: race.drift,
           finished: race.finished,
@@ -5242,6 +5336,10 @@ export const ComebackCityThreeKartRace = ({
         <div className="three-kart-race__badge">
           <Sparkles size={15} />
           <span>{snapshot.itemPickups}</span>
+        </div>
+        <div className="three-kart-race__badge" data-testid="race-coins" data-coins={snapshot.coins}>
+          <Bitcoin size={15} />
+          <span>{snapshot.coins}</span>
         </div>
         <div className="three-kart-race__badge" data-testid="race-held-item" data-held-item={snapshot.heldItem || 'none'}>
           {snapshot.heldItem ? (

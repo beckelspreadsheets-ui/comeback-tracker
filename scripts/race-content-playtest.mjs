@@ -223,6 +223,15 @@ import {
   updateMarch,
   updateProjectiles,
 } from '../src/game/race/heldItems.js';
+import {
+  COIN_FEEL,
+  COIN_ROWS,
+  buildCoinField,
+  coinSpeedMultiplier,
+  coinsAfterSpin,
+  collectCoinsForFrame,
+  respawnCoins,
+} from '../src/game/race/raceCoins.js';
 import { createRaceCameraRuntime } from '../src/game/race/raceCameraRuntime.js';
 import { createRaceMotionRuntime } from '../src/game/race/raceMotionRuntime.js';
 import { createRaceRuntimeScene } from '../src/game/race/raceSceneRuntime.js';
@@ -10225,9 +10234,64 @@ const validateHeldItemHelpers = () => {
   }
 };
 
+// ₿ collectible coins (owner concept, shipped 2026-07-07): pure semantics.
+const validateRaceCoinHelpers = () => {
+  const TRACK_LENGTH = 3000;
+  for (const [trackKey, rows] of Object.entries(COIN_ROWS)) {
+    const field = buildCoinField(trackKey);
+    if (field.length !== rows.length * 3) fail('coin field size wrong', { count: field.length, trackKey });
+    const ids = new Set(field.map((coin) => coin.id));
+    if (ids.size !== field.length) fail('coin ids not unique', { trackKey });
+  }
+  if (buildCoinField('unknown-track').length !== 0) fail('unknown track must have no coins');
+
+  const field = buildCoinField('comeback-city');
+  const first = field[1]; // center coin of row 0
+  const grabbed = collectCoinsForFrame(field, first.progress, 0, TRACK_LENGTH);
+  if (!grabbed.includes(first.id)) fail('center coin not grabbed dead-on');
+  if (collectCoinsForFrame(field, first.progress, 0, TRACK_LENGTH).includes(first.id)) {
+    fail('collected coin grabbed twice before respawn');
+  }
+  if (
+    collectCoinsForFrame(field, first.progress, COIN_FEEL.laneSpread + COIN_FEEL.hitLane + 0.01, TRACK_LENGTH).length
+  ) {
+    fail('coin grabbed outside the lane window');
+  }
+  respawnCoins(field);
+  if (field.some((coin) => coin.collected)) fail('respawn left coins collected');
+  if (!collectCoinsForFrame(field, first.progress, 0, TRACK_LENGTH).includes(first.id)) {
+    fail('respawned coin not grabbable');
+  }
+  // wrap-aware grab across the lap seam
+  const wrapField = [{ collected: false, id: 0, lane: 0, progress: 0.999 }];
+  if (!collectCoinsForFrame(wrapField, 0.0005, 0, TRACK_LENGTH).length) fail('coin window not wrap-aware');
+
+  if (coinSpeedMultiplier(0) !== 1) fail('zero coins must be multiplier 1');
+  const capped = coinSpeedMultiplier(COIN_FEEL.maxSpeedCoins);
+  if (coinSpeedMultiplier(99) !== capped) fail('coin speed bonus must cap', { capped });
+  if (coinSpeedMultiplier(-5) !== 1) fail('negative coins must clamp to 1');
+  if (coinsAfterSpin(10) !== 10 - COIN_FEEL.spinLoss) fail('spin loss wrong');
+  if (coinsAfterSpin(1) !== 0) fail('spin loss must floor at zero');
+
+  // Placement discipline: every row clear of its track's pads and boxes.
+  const MARKERS = {
+    'comeback-city': [0.055, 0.205, 0.435, 0.875, 0.025, 0.115, 0.225, 0.36, 0.5, 0.6, 0.74, 0.86],
+    'penguin-village': [0.12, 0.33, 0.58, 0.85, 0.06, 0.18, 0.3, 0.46, 0.6, 0.74],
+  };
+  for (const [trackKey, rows] of Object.entries(COIN_ROWS)) {
+    for (const row of rows) {
+      for (const marker of MARKERS[trackKey]) {
+        const delta = Math.min(Math.abs(row - marker), 1 - Math.abs(row - marker));
+        if (delta < 0.02) fail('coin row crowds a pickup marker', { marker, row, trackKey });
+      }
+    }
+  }
+};
+
 await validateAssetManifest();
 validateItems();
 validateHeldItemHelpers();
+validateRaceCoinHelpers();
 validateKartContactHelpers();
 validateKartPhysicsHelpers();
 validatePaletteMomentHelpers();
