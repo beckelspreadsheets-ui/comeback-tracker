@@ -89,7 +89,7 @@ win queued in the roadmap: a kart-only build target (the fitness app's
 
 ---
 
-**Updated 2026-07-11 (ninth update — the "V1-beta / K-plan" version).** Supersedes the eighth: the coin gate is settled and the coins are LIVE; the work queue is now docs/PENGUIN_KART_V1_BETA_PRD.md (K1–K9, owner-approved); the prompt below is the CURRENT handover.
+**Updated 2026-07-11 pm (tenth update — the "K1 done" version).** Supersedes the ninth: K1 (the kart-only split) is BUILT + verified + pushed (88a349b5) but NOT deployed (owner gate); the prompt below is the CURRENT handover and starts the next agent at the K1 owner gates / K2.
 
 **Purpose:** paste the block below into a new agent session to continue the graphics revamp with zero context loss. It is file-anchored — everything it references is committed — so it works for an agent with no memory of prior sessions.
 
@@ -101,11 +101,13 @@ win queued in the roadmap: a kart-only build target (the fitness app's
 You are working in the comeback-tracker repo on the Penguin Kart racing
 game (React + Vite PWA; Three.js r184 game in src/game/; shipped runtime
 = src/game/ComebackCityThreeKartRace.jsx). Branch:
-codex/release-v1-comebacktracker-kart-racer (HEAD == origin). Live demo:
-https://comeback-city-kart.pages.dev/#race — everything committed
-through HEAD is deployed and live-verified; git tag
-`pre-fable-revert-point` (+ its GitHub prerelease) is the owner's
-revert point. Do not force-push over it.
+codex/release-v1-comebacktracker-kart-racer (HEAD == origin, K1 done at
+88a349b5). Live demo: https://comeback-city-kart.pages.dev/#race —
+still serving the LAST PRE-K1 deploy (the combined fitness+kart build,
+coins live-verified there); the K1 kart-only build is committed and
+locally verified but NOT deployed — that deploy is an owner gate, not
+yours to trigger. Git tag `pre-fable-revert-point` (+ its GitHub
+prerelease) is the owner's revert point. Do not force-push over it.
 
 READ IN THIS ORDER before working:
 1. docs/PENGUIN_KART_V1_BETA_PRD.md — THE work queue (K1–K9,
@@ -122,7 +124,18 @@ READ IN THIS ORDER before working:
 4. docs/PENGUIN_KART_GRAPHICS_V2_PRD.md §8/§9 when a task touches
    budgets or standing gates.
 
-STATE YOU INHERIT (2026-07-11 EOD):
+STATE YOU INHERIT (2026-07-11 EOD, post-K1):
+- K1 DONE (commits 8989c3a5 + 88a349b5): `npm run build:kart` →
+  dist-kart via vite.config.kart.js + index.kart.html + src/kart/
+  (main.jsx / KartApp.jsx / kartLocalStore.js) + public-kart/ (kart CSP
+  _headers, placeholder "Penguin Kart" icons). 8.781 MiB raw /
+  6722.8 KiB gz. Fitness `npm run build` verified BYTE-IDENTICAL.
+  Kart-local results in cc-kart-results + one-shot read-only migration
+  from any legacy fitness atom. SW runtime-caches GLBs/backdrops —
+  offline replay + fitness→kart SW self-swap both PROVEN locally
+  (tmp/k1-pwa-upgrade-smoke, runs on loopback alias 127.10.42.67; LAN
+  IP is firewalled, plain localhost skips SW registration by design).
+  Shell QA contract proven 26/26 (tmp/k1-kart-shell-smoke).
 - LIVE + verified (owner approvals in asset-manifest + approvals-hub):
   miami mode default both tracks; W2 clarity set (held-item chip, item
   guide, per-track ₿ item boxes, boost pad V1, rims CC V1 / PV V3); W3
@@ -131,9 +144,11 @@ STATE YOU INHERIT (2026-07-11 EOD):
   line collects nothing (validator asserts it), field = ONE
   InstancedMesh, HUD ₿ counter; tmp/live-coin-probe.mjs re-verifies
   live any time.
-- Proof/perf ground truth: race:proof GREEN at HEAD (pointer committed
-  6c0a4a37); headed phase5 = vsync-144 median-of-3 BOTH tracks (CC
-  144.04 / PV 144.03, evidence phase5-capture-2026-07-11*); fpsWarmupMs
+- Proof/perf ground truth: race:proof GREEN at the K1 code twice
+  (committed pointer 2026-07-11T19-54-29, captured at load1=2.90;
+  run against dist-kart via RACE_PROOF_SERVER_MODE=preview:kart);
+  headed phase5 = vsync-144 median-of-3 BOTH tracks (CC 144.04 /
+  PV 144.03, evidence phase5-capture-2026-07-11*); fpsWarmupMs
   2500→4000 (minFps 8 unchanged) PENDING owner sign-off.
 - Bundle: K1 LANDED — the kart deploy is now its own artifact:
   dist-kart 8.781 MiB raw / 6722.8 KiB gz vs kart budgets 12.0/8000
@@ -144,22 +159,37 @@ STATE YOU INHERIT (2026-07-11 EOD):
 
 YOUR TASK: execute the V1-beta PRD in order. K1 is DONE (built +
 locally verified; deploy + threshold ack are owner-gated — see the
-K1 LANDED block at the top of this doc). Next is K2 (fitness race-path
-diet — GATED on the owner confirming the credits/garage/shop economy
-stays shelved), then K3, … per the PRD. Each K-task ends at its
-Owner-gate. NOTE: KartApp.jsx mirrors RaceScreen's live intro/select
-shell verbatim — apply intro/select edits to BOTH files until the
-fitness copy is deleted.
+K1 LANDED block at the top of this doc). When the owner says "deploy
+the kart build": `npm run deploy:kart` (ships dist-kart to the same
+comeback-city-kart project), then verify-live-deploy + live-coin-probe,
+and re-confirm the fitness→kart SW swap on the live origin with a kept
+browser profile. Next work item is K2 (fitness race-path diet — GATED
+on the owner confirming the credits/garage/shop economy stays shelved:
+deletes RaceScreen's dead second return + the ArcadeRace3D import +
+orphaned pixi.js; K2 also lets KartApp import the intro/select from
+one shared place, ending the mirror rule), then K3 mobile controls V2
+(spec in PRD, ends with the 30-FPS iPhone 16 Pro sign-off), then K4…
+per the PRD. Each K-task ends at its Owner-gate.
 
 OWNER-PENDING (never block on these; surface when relevant — all queued
-in approvals-hub top + PRD §5): the game NAME · fpsWarmupMs gatesNote
-sign-off · economy-stays-shelved confirm (REQUIRED before K2 deletes
-its dead UI) · kart budget ack at K1 exit · 3 ordinal ChatGPT sheets +
+in approvals-hub top + PRD §5): "deploy the kart build" go (K1) · kart
+budget thresholds ack (12 MiB / 8000 KiB gz, JS 2 MiB / 500 KiB gz) ·
+the game NAME + real icon (placeholder "Penguin Kart" + wheel icon ship
+meanwhile; regen via scripts/render-kart-placeholder-icons.mjs) ·
+fpsWarmupMs gatesNote sign-off · economy-stays-shelved confirm
+(REQUIRED before K2 deletes its dead UI) · 3 ordinal ChatGPT sheets +
 lifoladen Tripo run (each unblocks its K6 character independently) ·
 chip-revision direction (ask at K7 with icons in hand) · outplayasians
 roster seat (K4 crosser ships regardless).
 
 HARD RULES (each has burned this project):
+- MIRROR RULE (new at K1): src/kart/KartApp.jsx duplicates RaceScreen's
+  live intro/select shell VERBATIM (RaceScreen is unimportable from the
+  kart build — its static ArcadeRace3D import drags the 2.71 MB dead
+  visualTokens chain, and editing RaceScreen breaks fitness
+  byte-identity). Any intro/select/testid change goes in BOTH files
+  until K2+ deletes the fitness copy. The kart shell must NEVER touch
+  the 'comeback-tracker-v1' localStorage key (kart state = cc-kart-*).
 - NO GENERIC PENGUINS in generated content — prompts carry "NO people,
   NO animals, NO penguins"; penguin likenesses come only from the
   owner's ordinal collection with his per-file opt-in.
@@ -177,25 +207,30 @@ HARD RULES (each has burned this project):
 - Every generated mount goes through the telemetry mounts guard
   (miamiMountStats) — kart-playable fails loud on a 404. Keep it that
   way; it has caught two real deploy breakages.
-- Deploy = owner-triggered. Command in the cloudflare memory:
-  CLOUDFLARE_ACCOUNT_ID=9f01a1b31a298b112c22c3e00fe70a45 npx wrangler
-  pages deploy dist --project-name=comeback-city-kart --branch=main
-  --commit-dirty=true (deploy dist-kart instead once K1 lands). ALWAYS
-  run node tmp/w0-ship/verify-live-deploy.mjs after (both tracks +
-  mounts; it reads at raceTime>4 and can show one requested mount short
-  — tmp/live-coin-probe.mjs reads at raceTime>20 and settles it); the
+- Deploy = owner-triggered. Kart game (post-K1): `npm run deploy:kart`
+  (= build:kart + wrangler pages deploy dist-kart
+  --project-name=comeback-city-kart; CLOUDFLARE_ACCOUNT_ID in the
+  cloudflare memory: 9f01a1b31a298b112c22c3e00fe70a45). NEVER deploy
+  the fitness `dist` to comeback-city-kart again. ALWAYS run node
+  tmp/w0-ship/verify-live-deploy.mjs after (both tracks + mounts; it
+  reads at raceTime>4 and can show one requested mount short —
+  tmp/live-coin-probe.mjs reads at raceTime>20 and settles it); the
   pages.dev alias serves stale for ~30-60s — re-probe before
   diagnosing. CSP gotchas (both live-only): connect-src needs blob:,
-  script-src needs 'wasm-unsafe-eval' (meshopt).
+  script-src needs 'wasm-unsafe-eval' (meshopt) — both preserved in
+  public-kart/_headers.
 - Never run two vite-spawning suites/captures concurrently. Headless
   FPS is never quotable — headed phase5 is the only FPS truth. Before
   diagnosing a RED headless proof as real, check `sysctl -n vm.loadavg`:
   the owner's VM/Codex sessions at load1 > ~5 fake minFps/route-progress
   failures (proven 2026-07-11; wait for load1 < 3 and re-run).
-- One variable per change; battery before every ship: test:race ·
-  kart-playable both tracks · test:bundle · assets:check · race:proof
-  (re-baseline only when visuals change by design) · phase5 headed
-  when perf could move.
+- One variable per change; battery before every ship — kart variants
+  since K1: test:race · test:kart-playable:kart (both tracks, runs over
+  dist-kart) · test:bundle:kart AND test:bundle (fitness must stay
+  green too) · assets:check · test:race-proof:kart (re-baseline only
+  when visuals change by design) · phase5 headed when perf could move.
+  The plain suites (no :kart suffix) still exercise the fitness build —
+  run those when a change touches shared src/game/ code.
 - Owner decisions go through labs + approvals-hub.html ("Decisions
   waiting on you" section at top — keep it current). He answers fast
   and tersely; record every pick verbatim in the roadmap + manifest.
@@ -210,6 +245,6 @@ memory current at every stop.
 ## Not in the prompt but useful to know
 
 - **Evidence trails:** canonical FPS runs live in `.agent/runs/kart-racer-production-readiness/evidence/phase5-capture-*`; A/B captures in `tmp/m0-trackvisuals-proof/` and `tmp/m1-render-scale/`; B1 palette-lab tiles + capture scripts in `tmp/m2-palette-lab/` (contact sheet: `palette-lab.html`); B3 rim-lab tiles + capture/probe scripts in `tmp/m2-rim-lab/` (contact sheet: `rim-lab.html`; the extreme-value probe images are the injection/scenery-untouched proof); B2 moments-lab tiles + capture/seam-probe scripts in `tmp/m2-moments-lab/` (contact sheet: `moments-lab.html`; `seam-lap-*.webm` are the frame-by-frame wrap-seam evidence, `seam-probe.json` the lerps-are-free A/B). The race:proof "ledger" in git is only the pointer `asset-pipeline/proof/latest-proof-run.json` — the run artifacts under `asset-pipeline/proof/runs/` are gitignored and local-only.
-- **Session memory** (Claude Code auto-memory) mirrors this doc — `kart-project-state.md` is the READ-FIRST memory entry and was updated 2026-07-11 (coins live + V1-beta PRD).
+- **Session memory** (Claude Code auto-memory) mirrors this doc — `kart-project-state.md` is the READ-FIRST memory entry and was updated 2026-07-11 pm (K1 done).
 - **The owner reviews at** `http://localhost:5173/approvals-hub.html` (dev server usually already running).
 - Owner-call bookkeeping: the PRD's decision log (§9) records STANDING/STRATEGIC gates; per-task A/B gates (like the B1 palette pick) are tracked in the execution plan's per-task Owner-gate fields — the §9 footnote scopes the table this way on purpose. Update those docs, not chat history.
