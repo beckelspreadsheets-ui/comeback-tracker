@@ -19,23 +19,29 @@ comeback-city-kart.pages.dev):**
   runestone / odds board / token clusters ×2 / empty casino corner) ·
   no-generic-penguins standing rule enforced everywhere.
 
-**COIN GATE SETTLED 2026-07-11 (commit 5ac085d0, NOT YET DEPLOYED —
-blocked only on the owner's go):** headed truth at HEAD with coins =
-vsync-144 median-of-3 BOTH tracks (CC 144.04 calls 500→477 / PV 144.03
-calls 821→798 vs pre-coin 143.75/143.88 — zero real cost; evidence
-phase5-capture-2026-07-11*). The red gate was headless-only: +24 clone
-draw calls + the SwiftShader compile ramp crossing the 2500ms warmup
-boundary. Fix shipped in 5ac085d0: coin field = ONE InstancedMesh (24
-instances, 1 draw call; groups stay as transform/visibility proxies —
-collect/respawn/spin logic untouched; adversarial 3-lens review, zero
-confirmed defects, transform parity 3.6e-15) + fpsWarmupMs 2500→4000
-(minFps 8 UNCHANGED, floor now reads sustained samples — steady-state
-recovered to 9-11 vs pre-coin 9-10). race:proof PASS errors=0 (pointer
-→ 2026-07-11T04-22-36 run); full battery green. **TWO ITEMS FOR THE
-OWNER: (1) sign off the fpsWarmupMs 2500→4000 gatesNote (W0 pattern),
-(2) say "deploy the coins" — dist is built at 5ac085d0, deploy+live-
-verify is the only remaining step. Deploy command in the deploy rules
-below; ALWAYS run node tmp/w0-ship/verify-live-deploy.mjs after.**
+**₿ COINS LIVE 2026-07-11 (owner: "deploy the coins"; deployed at
+879021dc, live-verified both tracks — mounts 22/22 CC + 9/9 PV, zero
+CSP errors, autoplay live-probe collected 8 coins by lap 2 + HUD badge
+renders):** rows are TWO coins at ±laneSpread — owner call same day,
+verbatim "there should only be 2 in a row not 3 through 3 makes it too
+easy to get them" — the center coin is GONE (center-line driving
+collects nothing; validator in test:race now asserts this). Gate
+history: settled at 5ac085d0 — headed truth vsync-144 median-of-3 BOTH
+tracks (CC 144.04 calls 500→477 / PV 144.03 calls 821→798 vs pre-coin
+143.75/143.88; evidence phase5-capture-2026-07-11*); the red gate was
+headless-only (+24 clone draw calls + SwiftShader compile ramp crossing
+the 2500ms warmup boundary). Coin field = ONE InstancedMesh (now 16
+instances, 1 draw call; groups stay transform/visibility proxies;
+3-lens adversarial review zero confirmed defects) + fpsWarmupMs
+2500→4000 (minFps 8 UNCHANGED). race:proof green pointer =
+2026-07-11T04-22-36 (at 5ac085d0). KNOWN DEBT: the proof re-run at
+879021dc (2-coin rows, render strictly lighter) is pending an IDLE
+machine — the owner's VM/Codex sessions held load1 at 6-11 and headless
+SwiftShader fails on load artifacts (minFps + dt-dilated route
+progress) at draw calls identical to the green run; capture+compare+
+commit the pointer next idle window. **ONE ITEM FOR THE OWNER: sign
+off the fpsWarmupMs 2500→4000 gatesNote (W0 pattern; queued in
+approvals-hub top).**
 
 **Owner calls settled at the switchover:** outplayasians likeness
 APPROVED ("asians looked great") — crosser wiring + optional roster
@@ -89,24 +95,26 @@ STATE YOU INHERIT (2026-07-10):
   tribute props (₿ monument, runestone, odds board, token clusters,
   empty casino corner). Owner approvals for all of it are recorded in
   asset-manifest records + approvals-hub.html.
-- COMMITTED, NOT DEPLOYED (36306b2d + settle 5ac085d0): the collectible
-  bitcoin COIN system — src/game/race/raceCoins.js (pure; validators in
-  test:race), runtime wiring + HUD ₿ counter. GATE SETTLED 2026-07-11:
-  field instanced (24 clones → 1 InstancedMesh draw call), fpsWarmupMs
-  2500→4000 (minFps 8 unchanged, note PENDING owner sign-off), race:proof
-  PASS, headed 144.04/144.03 median-of-3, full battery green. Deploy +
-  live-verify is the ONLY remaining step (owner-triggered).
+- LIVE (deployed 879021dc, 2026-07-11): the collectible bitcoin COIN
+  system — src/game/race/raceCoins.js (pure; validators in test:race),
+  runtime wiring + HUD ₿ counter, ONE InstancedMesh field. Rows = TWO
+  coins at ±laneSpread (owner: "only 2 in a row not 3"), center line
+  collects nothing. fpsWarmupMs 2500→4000 gatesNote PENDING owner
+  sign-off; proof pointer green at 2026-07-11T04-22-36; a re-proof at
+  879021dc awaits an idle machine (headless fails under the owner's
+  VM/Codex load — load artifact, documented in the commit).
 - Bundle: 13.482 MiB raw / 8488.79 KiB gz vs 15.0/8500 thresholds —
   11 KiB gzip spare. ADD NO BUNDLED BYTES until the owner signs the
   queued 8500→9500 threshold proposal (approvals-hub top). The coin
   system added zero bytes (it clones the shipped CC coin template).
 
 YOUR TASK QUEUE, IN ORDER:
-1. DEPLOY THE COINS (gate settled 2026-07-11, commit 5ac085d0 — see
-   checkpoint block): on the owner's go, wrangler deploy per the deploy
-   rules → node tmp/w0-ship/verify-live-deploy.mjs → the owner wants to
-   feel the coins on his phone. Also collect his sign-off on the
-   fpsWarmupMs 2500→4000 gatesNote (queued in approvals-hub top).
+1. COIN LEFTOVERS: (a) land the green race:proof pointer for 879021dc —
+   capture+compare on an IDLE machine (load1 < 3; tmp/live-coin-probe.mjs
+   re-verifies live any time), commit the pointer; (b) collect the
+   owner's sign-off on the fpsWarmupMs 2500→4000 gatesNote (queued in
+   approvals-hub top); (c) owner feedback from his phone test may queue
+   coin tuning (spread/count/bonus all live in raceCoins.js COIN_FEEL).
 2. OUTPLAYASIANS CROSSER (likeness APPROVED 2026-07-10): the dieted
    mesh is tmp/w3-pv-props/outplayasians-diet.glb. Orientation lab
    FIRST (orientation-lab.html — never guess facing), then wire him as
