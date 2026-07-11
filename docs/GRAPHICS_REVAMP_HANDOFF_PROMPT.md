@@ -1,6 +1,30 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ K1 LANDED (2026-07-11 pm — newest state, read before the block below)
+## ⚡ K1 DEPLOYED (2026-07-11 eve — newest state, supersedes "NOT deployed" below)
+
+**The K1 kart-only build is LIVE on comeback-city-kart.pages.dev** (owner
+gave the deploy go; `npm run deploy:kart`, deploy 562cd020). Full live
+battery GREEN: verify-live-deploy both tracks (mounts 22/22 CC + 9/9 PV,
+zero CSP errors, postChain on) · live-coin-probe 8 ₿ by lap 2, HUD badge
+agrees, 477 draw calls · live `/sw.js` byte-identical to `dist-kart/sw.js`
+and served `no-cache, no-store` (registerSW.js too) · fresh visitor
+installs the kart SW and is controlled in <5s · **fitness→kart SW swap
+re-proven ON THE LIVE ORIGIN** (tmp/k1-live-sw-swap/live-sw-swap-smoke.mjs,
+4/4: seeds the pre-K1 fitness SW against the real origin via Playwright
+request interception — needs `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`
+— then the client updates itself into the kart shell from the real live
+deploy) · full OFFLINE reload still races with all mounts (CacheFirst
+runtime cache working on live). One nuance, documented in the smoke:
+Chrome only forces the sw.js update check on navigation when the
+registration is stale (>24h) — a seconds-old seeded registration needs an
+explicit `registration.update()` (that's the exact fetch a real returning
+user's navigation performs; real clients are always stale by the time a
+deploy matters). `/index.html` 308-redirects to `/` on Pages — workbox
+precache handles it (fresh-install proof), don't chase it as a bug.
+**Deploy gate CLOSED in approvals-hub; budget-ack row remains open.**
+NEXT = K2, still gated on the owner's economy-stays-shelved confirm.
+
+## ⚡ K1 LANDED (2026-07-11 pm — read before the block below)
 
 **K1 (kart-only build target) is BUILT + verified locally, NOT yet
 deployed (owner-gated).** `npm run build:kart` → `dist-kart` via
