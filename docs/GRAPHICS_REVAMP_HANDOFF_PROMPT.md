@@ -1,5 +1,51 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
+## ⚡ FABLE SWITCHOVER CHECKPOINT (2026-07-10 — read this block first)
+
+The owner switched the session model to Fable 5 mid-stream and asked for a
+stop + checkpoint. **Revert point: git tag `pre-fable-revert-point`**
+(= commit 4549a8db, pushed to GitHub with an annotated note; a GitHub
+prerelease carries the same checklist). `git reset --hard
+pre-fable-revert-point` discards everything after the switchover.
+
+**SHIPPED + DEPLOYED + VERIFIED at the tag (live on
+comeback-city-kart.pages.dev):**
+- W1 track-select fix · W0 miami mode default (+ CSP `wasm-unsafe-eval`
+  fix — first deploy carrying meshopt assets) · W2 item audit +
+  validators + rival fishbone fix + held-item chip + item guide
+  reachable every visit · bitcoin item boxes per track (CC ₿ coin
+  composite / PV ₿-in-ice, penguin-free re-roll) · boost pad V1 default ·
+  rims CC V1 / PV V3 · W3 round-1 tribute set mounted on PV (monument /
+  runestone / odds board / token clusters ×2 / empty casino corner) ·
+  no-generic-penguins standing rule enforced everywhere.
+
+**COMMITTED AFTER the tag, NOT deployed (36306b2d):** the collectible
+bitcoin coin system (owner concept). Green: build, test:race incl. new
+validators, kart-playable both tracks, live-probe 18 coins/race + HUD
+badge. **ONE RED GATE: race:proof desktop minFps 6 < 8 (headless
+SwiftShader run 2026-07-08T03-17-48-280Z)** — the committed proof
+pointer stays at the last green run. Next session: run phase5 HEADED
+both tracks; if 144 holds, instance the 24 coin meshes or write the
+gate note; if headed regressed, profile the coin loop. DO NOT deploy
+coins until this gate is settled.
+
+**Owner calls settled at the switchover:** outplayasians likeness
+APPROVED ("asians looked great") — crosser wiring + optional roster
+seat is the queued next W3 step (not started). Fish-bone arm delay
+stays. Camera question closed ("v1 far").
+
+**Open owner decisions (all listed in approvals-hub.html top section):**
+bundle gzip threshold 8500→9500 proposal (11 KiB spare — REQUIRED
+before W4/W5 bundled content) · chip-revision direction (W7) · standing
+PRD §9 gates (trackVisuals default-on, scorecards, acks, stash patches).
+
+**Bundle state: 13.482 MiB raw / 8488.79 KiB gz vs 15.0/8500 — do not
+add bundled bytes before the threshold decision.** Biggest structural
+win queued in the roadmap: a kart-only build target (the fitness app's
+~4-5 MB rides in the game deploy today).
+
+---
+
 **Updated 2026-07-07 EOD (seventh update — the "SHIP MIAMI MODE, then item clarity" version)** (supersedes the sixth: the entire visual overhaul is DONE AND OWNER-APPROVED behind ?skyLab=1 — painted sunset backdrops on BOTH tracks (CC sunset boulevard / PV arctic-sunset glowing shelf), old boxy skyline+facades hidden, and the owner-approved Miami-vice 3D set (deco hotel, condo tower, corner arcade, palm clusters, lifeguard towers, retro diner — "perfect vibes") mounted across 20 trackside slots. Mesh pipeline settled by bake-off: tripo_3d text-to-3D via Higgsfield MCP (~$0.22/asset, zero owner minutes) + diet-mesh.sh; heroes stay owner-run Tripo Studio. All evidence/provenance in tmp/m3-sky-lab/ + tmp/m3-city-lab/, in-game shots on city-lab.html. NEXT SESSION: JOB 1 = promotion/ship (checklist below — mind the BUNDLE MATH, ~7.6MB of new assets vs ~2.5MiB headroom), JOB 2 = item/track clarity revamp (boost pads, item audit incl. fish-bone arm-delay suspect, item box variety, held-item HUD icon), then PV 3D additions, then Phase C bakes.)
 
 **Purpose:** paste the block below into a new agent session to continue the graphics revamp with zero context loss. It is file-anchored — everything it references is committed — so it works for an agent with no memory of prior sessions.
