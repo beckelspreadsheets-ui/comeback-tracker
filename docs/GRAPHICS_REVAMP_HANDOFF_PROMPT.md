@@ -105,7 +105,11 @@ STATE YOU INHERIT (2026-07-10):
   queued 8500→9500 threshold proposal (approvals-hub top). The coin
   system added zero bytes (it clones the shipped CC coin template).
 
-YOUR TASK QUEUE, IN ORDER:
+YOUR TASK QUEUE, IN ORDER (2026-07-11: superseded by
+docs/PENGUIN_KART_V1_BETA_PRD.md — the K1–K9 plan the owner approved:
+split the fitness app out into the standalone penguin kart game, mobile
+controls V2, roster/item content, menu pass, then share as a beta. Work
+from that PRD; the items below are folded into it):
 1. COIN LEFTOVERS: (a) collect the owner's sign-off on the fpsWarmupMs
    2500→4000 gatesNote (queued in approvals-hub top); (b) owner feedback
    from his phone test may queue coin tuning (spread/count/bonus all
