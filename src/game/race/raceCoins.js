@@ -1,8 +1,11 @@
 // Collectible ₿ coins — pure math, deterministic (owner concept
 // 2026-07-07: "they could actually just be bitcoins you collect that
 // would be a super cool concept"). Classic kart-coin rules: coins sit in
-// rows on the racing line, each carried coin nudges top speed a little
-// (capped), a spin-out shakes a few loose, rows respawn every lap.
+// rows flanking the racing line, each carried coin nudges top speed a
+// little (capped), a spin-out shakes a few loose, rows respawn every
+// lap. Rows are TWO coins at ±laneSpread — no center coin, so cruising
+// the middle line collects nothing (owner 2026-07-11: "there should
+// only be 2 in a row not 3 ... 3 makes it too easy to get them").
 // The visual reuses the shipped CC ₿ item-box mesh at small scale —
 // zero new bundle bytes.
 
@@ -16,7 +19,7 @@ const shortDelta = (a, b) => {
 export const COIN_FEEL = {
   hitLane: 0.2, // lane distance that counts as a grab
   hitProgress: 8, // world units fore/aft that count as a grab
-  laneSpread: 0.3, // rows are three coins at -spread / 0 / +spread
+  laneSpread: 0.3, // rows are two coins at -spread / +spread (center dropped, owner 2026-07-11)
   maxSpeedCoins: 10, // the speed bonus stops growing here
   perCoinSpeedBonus: 0.004, // +0.4% top speed per carried coin
   spinLoss: 3, // coins shaken loose by a spin-out
@@ -31,9 +34,9 @@ export const COIN_ROWS = {
 
 export const buildCoinField = (trackKey) =>
   (COIN_ROWS[trackKey] || []).flatMap((progress, rowIndex) =>
-    [-COIN_FEEL.laneSpread, 0, COIN_FEEL.laneSpread].map((lane, laneIndex) => ({
+    [-COIN_FEEL.laneSpread, COIN_FEEL.laneSpread].map((lane, laneIndex) => ({
       collected: false,
-      id: rowIndex * 3 + laneIndex,
+      id: rowIndex * 2 + laneIndex,
       lane,
       progress,
     }))

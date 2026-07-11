@@ -10239,17 +10239,24 @@ const validateRaceCoinHelpers = () => {
   const TRACK_LENGTH = 3000;
   for (const [trackKey, rows] of Object.entries(COIN_ROWS)) {
     const field = buildCoinField(trackKey);
-    if (field.length !== rows.length * 3) fail('coin field size wrong', { count: field.length, trackKey });
+    // Two per row — owner 2026-07-11: "only 2 in a row not 3, 3 makes it
+    // too easy to get them".
+    if (field.length !== rows.length * 2) fail('coin field size wrong', { count: field.length, trackKey });
     const ids = new Set(field.map((coin) => coin.id));
     if (ids.size !== field.length) fail('coin ids not unique', { trackKey });
   }
   if (buildCoinField('unknown-track').length !== 0) fail('unknown track must have no coins');
 
   const field = buildCoinField('comeback-city');
-  const first = field[1]; // center coin of row 0
-  const grabbed = collectCoinsForFrame(field, first.progress, 0, TRACK_LENGTH);
-  if (!grabbed.includes(first.id)) fail('center coin not grabbed dead-on');
-  if (collectCoinsForFrame(field, first.progress, 0, TRACK_LENGTH).includes(first.id)) {
+  const first = field[1]; // +spread coin of row 0
+  // The center line must collect NOTHING — that's the owner's difficulty
+  // call; a coin requires committing to a side.
+  if (collectCoinsForFrame(field, first.progress, 0, TRACK_LENGTH).length) {
+    fail('center line grabbed a coin — rows must leave the middle empty');
+  }
+  const grabbed = collectCoinsForFrame(field, first.progress, COIN_FEEL.laneSpread, TRACK_LENGTH);
+  if (!grabbed.includes(first.id)) fail('side coin not grabbed dead-on');
+  if (collectCoinsForFrame(field, first.progress, COIN_FEEL.laneSpread, TRACK_LENGTH).includes(first.id)) {
     fail('collected coin grabbed twice before respawn');
   }
   if (
@@ -10259,7 +10266,7 @@ const validateRaceCoinHelpers = () => {
   }
   respawnCoins(field);
   if (field.some((coin) => coin.collected)) fail('respawn left coins collected');
-  if (!collectCoinsForFrame(field, first.progress, 0, TRACK_LENGTH).includes(first.id)) {
+  if (!collectCoinsForFrame(field, first.progress, COIN_FEEL.laneSpread, TRACK_LENGTH).includes(first.id)) {
     fail('respawned coin not grabbable');
   }
   // wrap-aware grab across the lap seam
