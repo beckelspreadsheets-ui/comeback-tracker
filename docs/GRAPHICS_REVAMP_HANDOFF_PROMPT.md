@@ -33,15 +33,12 @@ headless-only (+24 clone draw calls + SwiftShader compile ramp crossing
 the 2500ms warmup boundary). Coin field = ONE InstancedMesh (now 16
 instances, 1 draw call; groups stay transform/visibility proxies;
 3-lens adversarial review zero confirmed defects) + fpsWarmupMs
-2500→4000 (minFps 8 UNCHANGED). race:proof green pointer =
-2026-07-11T04-22-36 (at 5ac085d0). KNOWN DEBT: the proof re-run at
-879021dc (2-coin rows, render strictly lighter) is pending an IDLE
-machine — the owner's VM/Codex sessions held load1 at 6-11 and headless
-SwiftShader fails on load artifacts (minFps + dt-dilated route
-progress) at draw calls identical to the green run; capture+compare+
-commit the pointer next idle window. **ONE ITEM FOR THE OWNER: sign
-off the fpsWarmupMs 2500→4000 gatesNote (W0 pattern; queued in
-approvals-hub top).**
+2500→4000 (minFps 8 UNCHANGED). race:proof GREEN at the deployed code:
+pointer = 2026-07-11T17-21-18 run (desktop steady 11 fps headless,
+pass errors=0; the earlier same-day red re-runs were load artifacts —
+owner's VM/Codex sessions at load1 6-11; landed once load1 < 3).
+**ONE ITEM FOR THE OWNER: sign off the fpsWarmupMs 2500→4000 gatesNote
+(W0 pattern; queued in approvals-hub top).**
 
 **Owner calls settled at the switchover:** outplayasians likeness
 APPROVED ("asians looked great") — crosser wiring + optional roster
@@ -109,12 +106,11 @@ STATE YOU INHERIT (2026-07-10):
   system added zero bytes (it clones the shipped CC coin template).
 
 YOUR TASK QUEUE, IN ORDER:
-1. COIN LEFTOVERS: (a) land the green race:proof pointer for 879021dc —
-   capture+compare on an IDLE machine (load1 < 3; tmp/live-coin-probe.mjs
-   re-verifies live any time), commit the pointer; (b) collect the
-   owner's sign-off on the fpsWarmupMs 2500→4000 gatesNote (queued in
-   approvals-hub top); (c) owner feedback from his phone test may queue
-   coin tuning (spread/count/bonus all live in raceCoins.js COIN_FEEL).
+1. COIN LEFTOVERS: (a) collect the owner's sign-off on the fpsWarmupMs
+   2500→4000 gatesNote (queued in approvals-hub top); (b) owner feedback
+   from his phone test may queue coin tuning (spread/count/bonus all
+   live in raceCoins.js COIN_FEEL; tmp/live-coin-probe.mjs re-verifies
+   live any time).
 2. OUTPLAYASIANS CROSSER (likeness APPROVED 2026-07-10): the dieted
    mesh is tmp/w3-pv-props/outplayasians-diet.glb. Orientation lab
    FIRST (orientation-lab.html — never guess facing), then wire him as
