@@ -19,15 +19,23 @@ comeback-city-kart.pages.dev):**
   runestone / odds board / token clusters ×2 / empty casino corner) ·
   no-generic-penguins standing rule enforced everywhere.
 
-**COMMITTED AFTER the tag, NOT deployed (36306b2d):** the collectible
-bitcoin coin system (owner concept). Green: build, test:race incl. new
-validators, kart-playable both tracks, live-probe 18 coins/race + HUD
-badge. **ONE RED GATE: race:proof desktop minFps 6 < 8 (headless
-SwiftShader run 2026-07-08T03-17-48-280Z)** — the committed proof
-pointer stays at the last green run. Next session: run phase5 HEADED
-both tracks; if 144 holds, instance the 24 coin meshes or write the
-gate note; if headed regressed, profile the coin loop. DO NOT deploy
-coins until this gate is settled.
+**COIN GATE SETTLED 2026-07-11 (commit 5ac085d0, NOT YET DEPLOYED —
+blocked only on the owner's go):** headed truth at HEAD with coins =
+vsync-144 median-of-3 BOTH tracks (CC 144.04 calls 500→477 / PV 144.03
+calls 821→798 vs pre-coin 143.75/143.88 — zero real cost; evidence
+phase5-capture-2026-07-11*). The red gate was headless-only: +24 clone
+draw calls + the SwiftShader compile ramp crossing the 2500ms warmup
+boundary. Fix shipped in 5ac085d0: coin field = ONE InstancedMesh (24
+instances, 1 draw call; groups stay as transform/visibility proxies —
+collect/respawn/spin logic untouched; adversarial 3-lens review, zero
+confirmed defects, transform parity 3.6e-15) + fpsWarmupMs 2500→4000
+(minFps 8 UNCHANGED, floor now reads sustained samples — steady-state
+recovered to 9-11 vs pre-coin 9-10). race:proof PASS errors=0 (pointer
+→ 2026-07-11T04-22-36 run); full battery green. **TWO ITEMS FOR THE
+OWNER: (1) sign off the fpsWarmupMs 2500→4000 gatesNote (W0 pattern),
+(2) say "deploy the coins" — dist is built at 5ac085d0, deploy+live-
+verify is the only remaining step. Deploy command in the deploy rules
+below; ALWAYS run node tmp/w0-ship/verify-live-deploy.mjs after.**
 
 **Owner calls settled at the switchover:** outplayasians likeness
 APPROVED ("asians looked great") — crosser wiring + optional roster
@@ -81,28 +89,24 @@ STATE YOU INHERIT (2026-07-10):
   tribute props (₿ monument, runestone, odds board, token clusters,
   empty casino corner). Owner approvals for all of it are recorded in
   asset-manifest records + approvals-hub.html.
-- COMMITTED, NOT DEPLOYED (36306b2d): the collectible bitcoin COIN
-  system — src/game/race/raceCoins.js (pure; validators in test:race),
-  runtime wiring + HUD ₿ counter. Green everywhere EXCEPT race:proof
-  desktop minFps 6 < 8 (HEADLESS SwiftShader — never quotable as real
-  FPS). The committed proof pointer stays at the last green run.
+- COMMITTED, NOT DEPLOYED (36306b2d + settle 5ac085d0): the collectible
+  bitcoin COIN system — src/game/race/raceCoins.js (pure; validators in
+  test:race), runtime wiring + HUD ₿ counter. GATE SETTLED 2026-07-11:
+  field instanced (24 clones → 1 InstancedMesh draw call), fpsWarmupMs
+  2500→4000 (minFps 8 unchanged, note PENDING owner sign-off), race:proof
+  PASS, headed 144.04/144.03 median-of-3, full battery green. Deploy +
+  live-verify is the ONLY remaining step (owner-triggered).
 - Bundle: 13.482 MiB raw / 8488.79 KiB gz vs 15.0/8500 thresholds —
   11 KiB gzip spare. ADD NO BUNDLED BYTES until the owner signs the
   queued 8500→9500 threshold proposal (approvals-hub top). The coin
   system added zero bytes (it clones the shipped CC coin template).
 
 YOUR TASK QUEUE, IN ORDER:
-1. SETTLE THE COIN GATE: run phase5 HEADED both tracks (median of 3;
-   PHASE5_HEADED=1 PHASE5_TRACK=<key> node
-   scripts/phase5-sustained-capture.mjs; this Mac mini M4 = reference
-   hardware; expect ~144 vsync). If headed holds: either instance the
-   24 coin meshes (InstancedMesh, one draw call) or re-baseline the
-   proof minFps gate with a dated note in proof-scenarios.json
-   gatesNote (owner signed the same pattern for the W0 gate move —
-   flag it for his sign-off either way). If headed REGRESSED: profile
-   the coin animation loop before anything else. Then race:proof
-   capture+compare green → deploy (see deploy rules) → live-verify →
-   the owner wants to feel the coins on his phone.
+1. DEPLOY THE COINS (gate settled 2026-07-11, commit 5ac085d0 — see
+   checkpoint block): on the owner's go, wrangler deploy per the deploy
+   rules → node tmp/w0-ship/verify-live-deploy.mjs → the owner wants to
+   feel the coins on his phone. Also collect his sign-off on the
+   fpsWarmupMs 2500→4000 gatesNote (queued in approvals-hub top).
 2. OUTPLAYASIANS CROSSER (likeness APPROVED 2026-07-10): the dieted
    mesh is tmp/w3-pv-props/outplayasians-diet.glb. Orientation lab
    FIRST (orientation-lab.html — never guess facing), then wire him as
