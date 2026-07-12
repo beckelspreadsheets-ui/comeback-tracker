@@ -131,12 +131,13 @@ Practical note: GLBs are ALREADY runtime-fetched (not in the JS bundle's critica
 **Why:** likeness APPROVED 2026-07-10 ("asians looked great"); dieted mesh in-repo at `tmp/w3-pv-props/outplayasians-diet.glb`; the bundle blocker dissolves with K1 headroom.
 **Effort:** ~½ day · **Depends on:** K1 (headroom) · **Owner gate:** in-game look check (clip); roster seat = SEPARATE owner call (K6).
 **Spec (per handoff):** orientation lab FIRST (never guess facing) → wire as PV finish-line SLOW crosser via `raceCrossers.js` template (penguin-march at progress 0.82 is the model) near progress ~0.0, partial-width, tuned so a driving line ALWAYS exists; autoplay dodge must handle him.
-**Acceptance criteria:**
-- [ ] Orientation lab capture archived; manifest record with both hashes + approval quote.
-- [ ] kart-playable BOTH tracks green (the gate — autoplay must survive him).
-- [ ] Mounts guard covers the new GLB (loud 404).
-- [ ] race:proof re-baseline (designed visual change) + battery green.
-**Perf gate:** phase5 headed PV pair (new always-rendered mesh on track).
+**Acceptance criteria (DONE 2026-07-12, commit 04887305 — bonus: the crosser SYSTEM was legacy-only and is now integrated into the shipped runtime):**
+- [x] Orientation lab capture archived (tmp/k4-crosser/yaw-*.png, Meshy front=+Z → yaw 0); manifest full-schema record with both hashes + approval quote; asset-profiles classification (seated-character); ship diet 2.98MB→842KB preserving the crown/visor.
+- [x] kart-playable BOTH tracks green — autoplay survives him (probe: 3 laps, ZERO spin-outs; dodge bias added).
+- [x] Mounts guard covers the new GLB (PV 10/10).
+- [x] race:proof pass errors=0 (metric gates held, no re-baseline needed) + full battery green both builds.
+- [ ] Owner in-game look check on next deploy (evidence now: tmp/k4-crosser/finish-crossing.png).
+**Perf gate:** phase5 headed PV pair — owed at next quiet-load window (loadavg 7-10 all day).
 
 ---
 
