@@ -208,10 +208,11 @@ try {
   const page3b = await phone3.newPage();
   await page3b.goto(`${BASE}/?touchControls=1&track=comeback-city#race`, { waitUntil: 'domcontentloaded' });
   await page3b.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, { timeout: 45000 });
-  await page3b.getByTestId('race-touch-tilt').click();
   await page3b.waitForTimeout(400);
   const softLocked = await page3b.evaluate(() => document.querySelector('.three-kart-race--soft-landscape') !== null);
-  check('tilt ON in portrait → soft landscape lock engages (counter-rotated game)', softLocked);
+  check('portrait touch race ALWAYS presents landscape (soft lock, no tilt needed)', softLocked);
+  await page3b.getByTestId('race-touch-tilt').click();
+  await page3b.waitForTimeout(400);
   const canvasDims = await page3b.evaluate(() => {
     const canvas = document.querySelector('canvas[data-race-renderer="three-kart"]');
     return { layoutW: canvas.clientWidth, layoutH: canvas.clientHeight, backingW: canvas.width, backingH: canvas.height };

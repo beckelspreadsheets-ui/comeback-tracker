@@ -57,10 +57,10 @@ const KART_PORTRAITS = {
 
 const KartIntroScreen = ({ onStart }) => (
   <div
-    className="absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
+    className="absolute inset-0 z-40 flex justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
     data-testid="race-intro-screen"
   >
-    <div className="w-full max-w-3xl space-y-5 py-6">
+    <div className="my-auto w-full max-w-3xl space-y-5 py-6">
       <div className="text-center">
         <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City</div>
         <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Grand Prix — How to Race</h2>
@@ -137,10 +137,10 @@ const KartStatBar = ({ label, value }) => (
 // rides. Shown every visit after the one-time intro; QA automation skips it.
 const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, selectedKey, setKartKey, setSelectedKey, setTrackKey, trackKey }) => (
   <div
-    className="absolute inset-0 z-40 flex items-center justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
+    className="absolute inset-0 z-40 flex justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
     data-testid="race-character-select"
   >
-    <div className="w-full max-w-4xl space-y-5 py-6">
+    <div className="my-auto w-full max-w-4xl space-y-5 py-6">
       <div className="text-center">
         <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City Grand Prix</div>
         <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Race Setup</h2>

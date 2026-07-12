@@ -4382,13 +4382,15 @@ export const ComebackCityThreeKartRace = ({
     });
   };
   // Soft lock (owner 2026-07-12: "my phone starts changing the landscape so
-  // it was hard to test"): while tilt is on and the OS flips to portrait,
-  // counter-rotate the whole game 90° so it STAYS visually landscape. The
-  // drag/flick axes and the tilt roll mapping swap with it.
+  // it was hard to test" + "it should be played widescreen for better
+  // experience so make it happen"): on touch devices the RACE always
+  // presents landscape — a portrait viewport gets the whole game
+  // counter-rotated 90°. The drag/flick axes and tilt roll mapping swap
+  // with it. iPhone has no web orientation lock, so this IS the lock.
   const [softLandscape, setSoftLandscape] = useState(false);
   const softLandscapeRef = useRef(false);
   useEffect(() => {
-    if (!tiltEnabled || typeof window === 'undefined') {
+    if (!touchControls || typeof window === 'undefined') {
       softLandscapeRef.current = false;
       setSoftLandscape(false);
       return undefined;
@@ -4409,7 +4411,7 @@ export const ComebackCityThreeKartRace = ({
       softLandscapeRef.current = false;
       setSoftLandscape(false);
     };
-  }, [tiltEnabled]);
+  }, [touchControls]);
   // Entering/leaving the soft lock re-lays-out the canvas without any
   // window resize — nudge the engine's fit handler after the class lands.
   useEffect(() => {
@@ -5553,12 +5555,16 @@ export const ComebackCityThreeKartRace = ({
         // the kart — the camera rides the road, so corners can never put it
         // inside walls or buildings. Slight duck under the bridge.
         const underpass = race.progress > 0.15 && race.progress < 0.24;
+        // Owner 2026-07-12: "you look tiny and hard to control when it goes
+        // widescreen" — landscape PHONES were getting the desktop framing.
+        // Third tier: closer + narrower so the kart fills a small screen.
+        const phoneWide = touchControls && !viewport.mobile;
         // After the finish, pull up slightly for a results tableau centered on
         // the kart (staying short of the gate behind it).
-        const cameraBackUnits = race.finished ? 30 : camLab?.back ?? (viewport.mobile ? 43 : 38);
+        const cameraBackUnits = race.finished ? 30 : camLab?.back ?? (viewport.mobile ? 43 : phoneWide ? 33 : 38);
         const cameraHeight = race.finished
           ? 13
-          : (camLab?.height ?? (viewport.mobile ? 12.5 : 10.5)) * (underpass ? 0.62 : 1);
+          : (camLab?.height ?? (viewport.mobile ? 12.5 : phoneWide ? 10 : 10.5)) * (underpass ? 0.62 : 1);
         const cameraProgress = wrap01(race.progress - cameraBackUnits / engine.sampler.length);
         const cameraSample = engine.sampler.pointAt(cameraProgress, race.lane * 0.6);
         const desiredCamera = cameraSample.point
@@ -5572,12 +5578,12 @@ export const ComebackCityThreeKartRace = ({
           ? playerSample.point.clone().add(new THREE.Vector3(0, 6, 0))
           : playerSample.point
               .clone()
-              .addScaledVector(playerSample.tangent, camLab?.lookAhead ?? (viewport.mobile ? 26 : 30))
+              .addScaledVector(playerSample.tangent, camLab?.lookAhead ?? (viewport.mobile ? 26 : phoneWide ? 28 : 30))
               .add(new THREE.Vector3(0, camLab?.lookUp ?? (viewport.mobile ? 5.5 : 4.5), 0));
         engine.camera.lookAt(lookAt);
         // Mini-turbo gets a small extra FOV kick on top of the speed widening.
         targetFov =
-          (viewport.mobile ? 68 : 70) +
+          (viewport.mobile ? 68 : phoneWide ? 63 : 70) +
           clamp(race.speed / MAX_SPEED, 0, 1.15) * 7 +
           (miniTurboActive ? 3.5 : 0);
       }
