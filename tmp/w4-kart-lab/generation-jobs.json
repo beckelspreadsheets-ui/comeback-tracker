@@ -1,0 +1,12 @@
+{
+  "round": "K5 kart concepts round 1 (2026-07-12)",
+  "model": "nano_banana_2 (nano_banana_pro alias), 1:1, 1k, 2cr each",
+  "note": "tripo_3d text-to-3D is GONE from the Higgsfield catalog — K5 pipeline is now concept image -> meshy image_to_3d (symmetry on, should_texture true). Meshy was the lumpy-fallback for BUILDINGS but did well on outplayasians; vehicles TBD, owner Tripo Studio stays the miss-fallback.",
+  "jobs": {
+    "cyber-lowrider": "df68794b-d1a5-4f1c-b9da-21a85f2e52b6",
+    "snow-buggy": "16f272f4-bd76-470d-a2c6-dd131d0fe343",
+    "gold-gp": "2f8b0f9b-0c03-4724-a07d-30a83400bb65",
+    "miami-cruiser": "c065d336-0b93-4e45-83ef-07d7062df906",
+    "stealth-speedster": "2eea107e-8ab9-4a06-8efb-0a8cb4ee662b"
+  }
+}
