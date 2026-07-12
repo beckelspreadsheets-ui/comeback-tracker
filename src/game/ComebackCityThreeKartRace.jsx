@@ -2005,10 +2005,13 @@ const makeRampFaceTexture = (base, chevron) => {
 // a visibly different decision.
 const addRamp = (world, sampler, ramp, { dare = false } = {}) => {
   const accent = dare ? '#c879ff' : '#38d7ff';
-  const scale = dare ? 1.4 : 1;
-  const W = 15 * scale;
-  const L = 19 * scale;
-  const H = 5.2 * scale;
+  // K2.5 owner pick (c) 2026-07-11: trick ramps grow to cover the FULL
+  // launch trigger (rampHitLane 0.22 ≈ 22 world units on a 50-wide road) —
+  // you can no longer launch without visibly driving onto a wedge. The dare
+  // ramp keeps its original footprint (it was already scaled up).
+  const W = dare ? 21 : 22;
+  const L = dare ? 26.6 : 24;
+  const H = dare ? 7.28 : 5.8;
   const { point, tangent } = sampler.pointAt(ramp.progress, ramp.side);
   const group = new THREE.Group();
   group.position.copy(point);
@@ -2060,9 +2063,74 @@ const addRamp = (world, sampler, ramp, { dare = false } = {}) => {
     tip.position.set(side * (half + 1.2), H + 4.6, L / 2 - 0.4);
     group.add(tip);
   });
-  addGlowSprite(group, accent, 16 * scale, 0.45, H + 1);
+  addGlowSprite(group, accent, dare ? 22.4 : 17, 0.45, H + 1);
   world.add(group);
   return group;
+};
+
+// K2.5 owner pick (c): painted chevrons on the asphalt leading into every
+// trick ramp — the launch cause must read BEFORE the kart is on it. All
+// decals for a track merge into ONE mesh (PV runs one draw call from its
+// 800 budget: 798 → 799).
+const makeRoadChevronTexture = (accent) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 26;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(20, 96);
+  ctx.lineTo(64, 40);
+  ctx.lineTo(108, 96);
+  ctx.stroke();
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+};
+
+const addRampApproachChevrons = (world, sampler, ramps) => {
+  if (!ramps?.length) return;
+  const positions = [];
+  const uvs = [];
+  const indices = [];
+  const SIZE = 7.5;
+  ramps.forEach((ramp) => {
+    [26, 46, 66].forEach((backUnits) => {
+      const progress = (ramp.progress - backUnits / sampler.length + 1) % 1;
+      const { point, tangent } = sampler.pointAt(progress, ramp.side);
+      const forward = tangent.clone().normalize().multiplyScalar(SIZE / 2);
+      const right = new THREE.Vector3(forward.z, 0, -forward.x).normalize().multiplyScalar((SIZE / 2) * 0.9);
+      const y = point.y + 0.42;
+      const base = positions.length / 3;
+      positions.push(
+        point.x - right.x - forward.x, y, point.z - right.z - forward.z,
+        point.x + right.x - forward.x, y, point.z + right.z - forward.z,
+        point.x + right.x + forward.x, y, point.z + right.z + forward.z,
+        point.x - right.x + forward.x, y, point.z - right.z + forward.z
+      );
+      uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
+      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    });
+  });
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  const decals = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({
+      depthWrite: false,
+      map: makeRoadChevronTexture('#7ff4ff'),
+      side: THREE.DoubleSide,
+      transparent: true,
+    })
+  );
+  decals.renderOrder = 2;
+  decals.userData.kind = 'ramp-approach-chevrons';
+  world.add(decals);
 };
 
 const addFinishGate = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
@@ -3535,6 +3603,7 @@ const createScene = ({
     });
   }
   trackDef.ramps.forEach((ramp) => addRamp(world, sampler, ramp));
+  addRampApproachChevrons(world, sampler, trackDef.ramps);
   if (trackDef.shortcut) {
     addRamp(world, sampler, { progress: trackDef.shortcut.launchProgress, side: trackDef.shortcut.side }, { dare: true });
   }

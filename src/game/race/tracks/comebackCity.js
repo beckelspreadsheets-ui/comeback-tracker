@@ -41,6 +41,12 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
   // shared cyan (V1 carries no tint override; #4fd8ff is CC's fallback
   // rim tint).
   palette: {
+    // K2.5 owner 2026-07-11: "the bridge is not visable ... it doesnt look
+    // like you launch over it" — CC never set bridge colors, so the skirts/
+    // pillars rendered in the near-black defaults and silhouetted into the
+    // dusk. Gold underline = the finish-gate halo / ₿ accent language;
+    // structure lifted to a readable steel-blue.
+    bridge: { beam: '#3a4a70', glow: '#ffd34f', pillar: '#55688f', pillarEmissive: '#3a4a70', skirt: '#2e3d6e' },
     heroRim: { power: 3.2, strength: 0.22, tint: '#4fd8ff' },
   },
   visual: {

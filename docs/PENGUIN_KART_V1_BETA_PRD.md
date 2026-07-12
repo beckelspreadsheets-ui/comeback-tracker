@@ -91,11 +91,13 @@ Practical note: GLBs are ALREADY runtime-fetched (not in the JS bundle's critica
 **Steps:**
 1. Reproduce + capture headed clips at all three launch sites (ramp 0.075 · crest 0.467 · ramp 0.685) via `?raceAutoplay=1` + capture tooling → owner confirms which spot(s) he means.
 2. Fix menu, ONE VARIABLE PER CHANGE, owner picks from clips: (a) align `rampHitLane` 0.22 → wedge's true ~0.15 coverage (fairness fix — no launch without visibly touching the ramp); (b) landing-zone marker (glow ring/chevron strip at the computed landing progress — the biggest "am I supposed to be flying?" killer); (c) bigger wedge + painted approach chevrons on the road; (d) crest kicker → full-width unmissable jump-gate dressing; (e) LAST RESORT, feel change needing explicit owner sign-off: trim `launchLift` so airtime shortens.
+**PICKED + BUILT 2026-07-11 (owner verbatim: "option C and E the bridge is not visable is the issue as well it doesnt look like you launch over it"):** (c) ramps grown to full trigger coverage + merged approach-chevron decals (+1 draw call/track, PV 799/800) · (e) launchLift 0.155→0.105 (owner sign-off = the pick itself) · bridge visibility via CC `palette.bridge` (gold underline + steel-blue structure; CC had silhouette-black defaults). (a)(b)(d) NOT picked. Evidence + before/after: launch-lab.html.
 **Acceptance criteria:**
-- [ ] Owner reviews clips: every airborne moment has a visible cause AND a visible landing target (or the launch is gone, his call).
-- [ ] No physics/feel change without explicit owner sign-off (trigger-to-visual alignment counts as a fairness fix, allowed).
-- [ ] Battery green; race:proof re-baseline (designed visual change); kart-playable both tracks.
-**Perf gate:** phase5 headed CC pair (new always-rendered meshes on track).
+- [x] Every airborne moment has a visible cause: ramps cover the full trigger + chevron lead-ins; the bridge structure reads (landing markers NOT picked — owner chose shorter flights instead).
+- [x] Feel change (e) carried explicit owner sign-off (his pick).
+- [x] Battery green both builds; race:proof pass errors=0 (metric gates absorbed +1 draw call, no re-baseline flagged); kart-playable both tracks.
+- [ ] Owner look-check of the landed fixes (launch-lab before/afters now; in-game feel on the next deploy).
+**Perf gate:** phase5 headed CC pair at next quiet-load window (new always-rendered meshes; headless proof already green).
 
 ---
 

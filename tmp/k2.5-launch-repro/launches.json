@@ -1,75 +1,65 @@
 {
-  "capturedAt": "2026-07-12T00:32:53.216Z",
+  "capturedAt": "2026-07-12T01:32:46.643Z",
   "launches": [
     {
       "run": "autoplay",
       "site": "crest",
       "lap": 1,
       "raceTime": 6.04,
-      "progress": 0.472,
-      "lane": 0.226,
+      "progress": 0.471,
+      "lane": 0.208,
       "speed": 287,
-      "videoSec": 23.7
-    },
-    {
-      "run": "autoplay",
-      "site": "ramp-B",
-      "lap": 1,
-      "raceTime": 8.48,
-      "progress": 0.688,
-      "lane": 0.222,
-      "speed": 289,
-      "videoSec": 29.1
+      "videoSec": 28.3
     },
     {
       "run": "autoplay",
       "site": "crest",
       "lap": 2,
-      "raceTime": 17.04,
-      "progress": 0.472,
-      "lane": 0.28,
+      "raceTime": 17.28,
+      "progress": 0.474,
+      "lane": 0.206,
       "speed": 292,
-      "videoSec": 48.1
-    },
-    {
-      "run": "autoplay",
-      "site": "ramp-B",
-      "lap": 2,
-      "raceTime": 19.44,
-      "progress": 0.688,
-      "lane": 0.293,
-      "speed": 293,
-      "videoSec": 53.1
+      "videoSec": 58.7
     },
     {
       "run": "autoplay",
       "site": "crest",
       "lap": 3,
-      "raceTime": 30.04,
+      "raceTime": 28.32,
       "progress": 0.474,
-      "lane": -0.17,
-      "speed": 292,
-      "videoSec": 76.6
+      "lane": 0.417,
+      "speed": 295,
+      "videoSec": 89.7
+    },
+    {
+      "run": "autoplay",
+      "site": "ramp-B",
+      "lap": 3,
+      "raceTime": 30.56,
+      "progress": 0.688,
+      "lane": 0.264,
+      "speed": 295,
+      "videoSec": 96.1
+    },
+    {
+      "run": "driver",
+      "site": "ramp-A",
+      "lap": 1,
+      "raceTime": 1.36,
+      "progress": 0.08,
+      "lane": -0.144,
+      "speed": 150,
+      "videoSec": 15.2
     },
     {
       "run": "driver",
       "site": "crest",
       "lap": 1,
-      "raceTime": 6.24,
-      "progress": 0.478,
-      "lane": 0.038,
-      "speed": 289,
-      "videoSec": 21.9
-    },
-    {
-      "run": "driver",
-      "site": "ramp-A",
-      "lap": 2,
-      "raceTime": 13.36,
-      "progress": 0.078,
-      "lane": -0.372,
-      "speed": 273,
-      "videoSec": 36.2
+      "raceTime": 6.28,
+      "progress": 0.471,
+      "lane": 0.661,
+      "speed": 230,
+      "videoSec": 28.9
     }
   ]
 }

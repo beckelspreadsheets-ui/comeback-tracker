@@ -5,7 +5,12 @@
 
 export const TRICK_FEEL = {
   gravity: 58,
-  launchLift: 0.155, // vertical velocity = speed * lift
+  // K2.5 owner pick (e) 2026-07-11 ("option C and E"): 0.155 threw ~330
+  // world units over 1.3-1.7 s — the ramp left the frame instantly and the
+  // whole flight read as unexplained floating. 0.105 lands ~0.9 s / ~225
+  // units at race speed (crest big launch ~1.2 s); a full trick spin
+  // (2π at 8.5 rad/s = 0.74 s) still completes on a normal launch.
+  launchLift: 0.105, // vertical velocity = speed * lift
   minLaunchSpeed: 90,
   rampHitLane: 0.22,
   rampHitProgress: 9, // world units
