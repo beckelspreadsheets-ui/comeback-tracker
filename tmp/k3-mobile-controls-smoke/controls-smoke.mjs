@@ -59,9 +59,7 @@ try {
     .then(() => check('auto-accel: speed > 80 with zero input', true))
     .catch(async () => check('auto-accel: speed > 80 with zero input', false, JSON.stringify(await telemetry(page))));
 
-  // Tour-style drag steer: press anywhere on the zone (center of screen
-  // here), drag right, hold — steer goes positive and the floating
-  // indicator appears under the pointer.
+  // Tour grammar: SLOW drag = steer only (must NOT read as a flick).
   const box = await joystick.boundingBox();
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
@@ -69,10 +67,14 @@ try {
   await page.mouse.down();
   const indicatorShown = await page.locator('.three-kart-race__steer-indicator').evaluate((el) => getComputedStyle(el).display !== 'none');
   check('floating steer indicator appears under the touch', indicatorShown);
-  await page.mouse.move(cx + 55, cy, { steps: 6 });
+  for (let step = 1; step <= 8; step += 1) {
+    await page.mouse.move(cx + step * 7, cy);
+    await page.waitForTimeout(40);
+  }
   await page.waitForFunction(() => window.__comebackCityKartTelemetry?.steer > 0.3, null, { timeout: 2500 })
-    .then(() => check('joystick drag-right → analog steer > 0.3', true))
-    .catch(async () => check('joystick drag-right → analog steer > 0.3', false, JSON.stringify(await telemetry(page))));
+    .then(() => check('slow drag-right → analog steer > 0.3', true))
+    .catch(async () => check('slow drag-right → analog steer > 0.3', false, JSON.stringify(await telemetry(page))));
+  check('slow drag does NOT accidentally flick-drift', (await telemetry(page)).drift === false);
 
   // One-thumb drift while steering: hold the drift button with a second pointer.
   await driftBtn.dispatchEvent('pointerdown', { pointerId: 7, isPrimary: false });
@@ -90,6 +92,33 @@ try {
     .then(() => check('joystick release → steer decays to center (no stuck input)', true))
     .catch(async () => check('joystick release → steer decays to center', false, JSON.stringify(await telemetry(page))));
 
+  // FLICK = drift: one fast horizontal move engages drift until release.
+  // First unstick the kart — earlier steering tests park it against the
+  // right wall (lane ~0.95, speed ~70, below the drift machine's engage
+  // threshold). Slow-steer left until it's off the wall and back to speed.
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  for (let step = 1; step <= 8; step += 1) {
+    await page.mouse.move(cx - step * 6, cy);
+    await page.waitForTimeout(40);
+  }
+  await page.waitForFunction(() => Math.abs(window.__comebackCityKartTelemetry?.lane ?? 1) < 0.5, null, { timeout: 15000 }).catch(() => {});
+  await page.mouse.up();
+  await page.waitForFunction(() => {
+    const w = window.__comebackCityKartTelemetry;
+    return w && w.airborne === false && w.speed > 120 && Math.abs(w.lane) < 0.7;
+  }, null, { timeout: 20000 });
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 52, cy);
+  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.drift === true, null, { timeout: 2000 })
+    .then(() => check('FLICK engages drift (one-thumb, MKT-style)', true))
+    .catch(async () => check('FLICK engages drift', false, JSON.stringify(await telemetry(page))));
+  await page.mouse.up();
+  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.drift === false, null, { timeout: 2000 })
+    .then(() => check('flick release ends the drift (mini-turbo path)', true))
+    .catch(async () => check('flick release ends the drift', false, JSON.stringify(await telemetry(page))));
+
   // Smash button: held item shows on the button, tap fires it.
   await page.waitForFunction(() => window.__comebackCityKartTelemetry?.heldItem === 'slapfish', null, { timeout: 10000 });
   const label = (await page.getByTestId('race-held-item-chip').textContent()) || '';
@@ -101,6 +130,20 @@ try {
   await page.waitForFunction(() => window.__comebackCityKartTelemetry?.slapping === true, null, { timeout: 3000 })
     .then(() => check('smash button fires the item (slapfish swings)', true))
     .catch(async () => check('smash button fires the item', false, JSON.stringify(await telemetry(page))));
+
+  // TAP = throw: wait for the slot to refill and the last swing to end,
+  // then a movement-free quick tap on the steer zone fires the item.
+  await page.waitForFunction(() => {
+    const w = window.__comebackCityKartTelemetry;
+    return w && w.heldItem === 'slapfish' && w.slapping === false;
+  }, null, { timeout: 15000 });
+  await page.mouse.move(cx, cy - 40);
+  await page.mouse.down();
+  await page.waitForTimeout(60);
+  await page.mouse.up();
+  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.slapping === true, null, { timeout: 3000 })
+    .then(() => check('TAP throws the held item (MKT-style)', true))
+    .catch(async () => check('TAP throws the held item', false, JSON.stringify(await telemetry(page))));
 
   await page.screenshot({ path: 'tmp/k3-mobile-controls-smoke/phone-landscape.png' });
   await phone.close();

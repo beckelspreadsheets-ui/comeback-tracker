@@ -209,6 +209,16 @@
   width: 46px;
 }
 
+/* Flick-drift engaged: the ring + puck go gold until the thumb lifts. */
+.three-kart-race__steer-indicator--drifting {
+  border-color: rgba(255, 211, 79, 0.6);
+}
+
+.three-kart-race__steer-indicator--drifting .three-kart-race__joystick-puck {
+  background: rgba(255, 211, 79, 0.9);
+  box-shadow: 0 0 18px rgba(255, 211, 79, 0.6);
+}
+
 .three-kart-race__touch button.three-kart-race__item-button--armed {
   background: rgba(255, 211, 79, 0.16);
   border-color: #ffd34f;

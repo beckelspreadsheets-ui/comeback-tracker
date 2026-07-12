@@ -5502,30 +5502,49 @@ export const ComebackCityThreeKartRace = ({
     if (snapshot.heldItem) navigator.vibrate?.(30);
     setTouch('item', true);
   };
-  // Tour-style steering (owner 2026-07-12: "mario kart tour style is
-  // probably going to be the easiest for most people"): the whole canvas
-  // left of the button column is the drag surface. Same floating-origin
-  // analog math as before — only the presentation changed; a soft
-  // ring+puck appears under the thumb while dragging.
-  const joystickStateRef = useRef({ active: false, originX: 0, pointerId: null });
+  // Tour-style one-thumb grammar (owner 2026-07-12: "mario kart does that
+  // all with touch right"): DRAG steers (floating origin, analog), a fast
+  // FLICK during the drag engages drift (held until the thumb lifts —
+  // release pays the mini-turbo exactly like the button), and a TAP throws
+  // the held item. The buttons stay as redundant fallbacks.
+  const joystickStateRef = useRef({ active: false, flicked: false, lastT: 0, lastX: 0, maxDist: 0, originX: 0, originY: 0, pointerId: null, startT: 0 });
   const joystickPuckRef = useRef(null);
   const steerIndicatorRef = useRef(null);
   const JOYSTICK_RANGE_PX = 64;
+  const FLICK_SPEED_PX_MS = 0.55; // horizontal thumb speed that reads as a deliberate flick
+  const TAP_MAX_MS = 220;
+  const TAP_MAX_PX = 12;
   const joystickDown = (event) => {
     event.preventDefault();
     capturePointer(event);
-    joystickStateRef.current = { active: true, originX: event.clientX, pointerId: event.pointerId };
+    const now = performance.now();
+    joystickStateRef.current = {
+      active: true, flicked: false, lastT: now, lastX: event.clientX, maxDist: 0,
+      originX: event.clientX, originY: event.clientY, pointerId: event.pointerId, startT: now,
+    };
     const indicator = steerIndicatorRef.current;
     if (indicator) {
       const zone = event.currentTarget.getBoundingClientRect();
       indicator.style.left = `${Math.round(event.clientX - zone.left)}px`;
       indicator.style.top = `${Math.round(event.clientY - zone.top)}px`;
       indicator.style.display = 'flex';
+      indicator.classList.remove('three-kart-race__steer-indicator--drifting');
     }
   };
   const joystickMove = (event) => {
     const stick = joystickStateRef.current;
     if (!stick.active || event.pointerId !== stick.pointerId) return;
+    const now = performance.now();
+    const stepX = event.clientX - stick.lastX;
+    const stepMs = Math.max(1, now - stick.lastT);
+    stick.lastX = event.clientX;
+    stick.lastT = now;
+    stick.maxDist = Math.max(stick.maxDist, Math.hypot(event.clientX - stick.originX, event.clientY - stick.originY));
+    if (!stick.flicked && Math.abs(stepX) >= 8 && Math.abs(stepX) / stepMs >= FLICK_SPEED_PX_MS) {
+      stick.flicked = true;
+      setTouch('drift', true);
+      steerIndicatorRef.current?.classList.add('three-kart-race__steer-indicator--drifting');
+    }
     const axis = clamp((event.clientX - stick.originX) / JOYSTICK_RANGE_PX, -1, 1);
     inputRef.current = { ...inputRef.current, steerAxis: axis };
     if (joystickPuckRef.current) joystickPuckRef.current.style.transform = `translateX(${Math.round(axis * 34)}px)`;
@@ -5533,10 +5552,17 @@ export const ComebackCityThreeKartRace = ({
   const joystickEnd = (event) => {
     const stick = joystickStateRef.current;
     if (!stick.active || event.pointerId !== stick.pointerId) return;
-    joystickStateRef.current = { active: false, originX: 0, pointerId: null };
+    const wasTap = !stick.flicked && performance.now() - stick.startT < TAP_MAX_MS && stick.maxDist < TAP_MAX_PX;
+    joystickStateRef.current = { ...stick, active: false, pointerId: null };
     inputRef.current = { ...inputRef.current, steerAxis: null };
+    if (stick.flicked) setTouch('drift', false); // release pays the mini-turbo
     if (joystickPuckRef.current) joystickPuckRef.current.style.transform = '';
     if (steerIndicatorRef.current) steerIndicatorRef.current.style.display = 'none';
+    if (wasTap && event.type !== 'pointercancel') {
+      if (snapshot.heldItem) navigator.vibrate?.(30);
+      setTouch('item', true);
+      window.setTimeout(() => setTouch('item', false), 90);
+    }
   };
   const restart = () => {
     inputRef.current = { ...inputRef.current, restart: true };
