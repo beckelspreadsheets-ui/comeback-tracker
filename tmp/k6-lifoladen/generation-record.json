@@ -1,0 +1,13 @@
+{
+  "round": "K6 lifoladen render (2026-07-12)",
+  "ownerGo": "verbatim: 'we have all the sheets we just need to do the renders right' — treated as the render go for every sheet ON DISK. Sheet inventory finding: lifoladen-charactersheet.png (2.9MB, REAL multi-view sheet) is the only ready sheet; AK-47-pengu.png (927B) / Denomad-pengu.png (748B) / georgefx.png (709B) are raw ordinal pixel art, still need the owner's ChatGPT sheet step (standing rule: ordinal art never uploads to Higgsfield/Meshy).",
+  "views": "360-turnaround row cropped: front(676,8) front34(676,150) side(676,294) back(672,572) at ~148x195 each",
+  "mediaIds": {
+    "front": "257b5d61-ded2-4fc5-bdcc-d50b55b9e861",
+    "front34": "6bbefa0e-2c97-4a0c-9250-f4e6395503ae",
+    "side": "bb402019-0de6-4659-9808-a8992c8818ac",
+    "back": "49b841c7-3569-48be-b727-ab816f6cc533"
+  },
+  "liftJob": "6afd7358-9f6b-4847-bf65-79b438dbfe71 (meshy multi_image_to_3d, 4 views, textured, symmetry auto, 30k tris)",
+  "note": "lifoladen = NON-ordinal owner art (no ToS concern). Sheet pose is STANDING — robe should drape acceptably in the kart cockpit; verify seated look in-game before promotion."
+}
