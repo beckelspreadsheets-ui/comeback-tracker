@@ -111,14 +111,15 @@ Practical note: GLBs are ALREADY runtime-fetched (not in the JS bundle's critica
 5. **Graphics, measure-first (owner: "wish the graphics could just be improved slightly"):** landscape phones ALREADY get the desktop 0.85 render scale — the `aspect < 0.74` mobile detect only catches portrait (`createRaceScene.js:14, 71-74`; `RACE_RENDER_SCALE.mobile: 0.6` is portrait-only). So on the real-device pass: measure at current settings FIRST; if ≥30 FPS holds with headroom, do NOT downscale anything, and offer ONE quality bump as a lab A/B (candidates, one variable each: DPR cap 2 → 2.35 · shadow map 384 → 512 `jsx:3295` · SMAA MEDIUM → HIGH `jsx:3417`); only if the floor FAILS does a proper coarse-pointer mobile scale knob come in as the fallback. Never trade below the 30-FPS floor for prettiness — floor first, then beauty.
 6. **QA:** testids on every control + a synthetic-pointer smoke (390×844) mirroring the select-flow probes; keep `?playableAutoplay=1` untouched.
 - Tilt steering: OUT of V1-beta (iOS permission prompt + net-new plumbing; revisit on group feedback).
-**Acceptance criteria:**
-- [ ] One-thumb-per-hand play: steer with left thumb, drift+item with right, never >2 simultaneous touches required.
-- [ ] **Drift is comfortably possible on phone** (owner: "impossible to drift on mobile" — dies with auto-accel + analog steer + big right-thumb drift hold) — owner confirms in the feel pass.
-- [ ] **Held item readable at a glance on his phone** (owner: item display "doesn't work" today) — owner confirms in the feel pass.
-- [ ] Slide-across-steer retargets (pointer capture), no stuck inputs on `pointercancel`.
-- [ ] Desktop shows no touch cluster; keyboard unchanged (W7.1 WASD item key folded in here: add E/F while keeping Shift/Enter, update guide copy).
-- [ ] Synthetic-pointer smoke green; kart-playable both tracks green.
-- [ ] **Real-device sign-off: iPhone 16 Pro Safari, plugged in, ≥30 FPS medians on both tracks** — first mobile reference measurement since miami; record in evidence + PRD §8.
+**Acceptance criteria (core BUILT 2026-07-11 late, commit e5a7868a — device items open):**
+- [x] One-thumb-per-hand play: steer with left thumb, drift+item with right, never >2 simultaneous touches required (synthetic proof: drift engaged with joystick + drift button only, no throttle touch — auto-accel).
+- [ ] **Drift is comfortably possible on phone** — mechanics proven synthetically; owner confirms FEEL in the device pass.
+- [ ] **Held item readable at a glance on his phone** — built (96px smash button carries icon + name, "SLAP FISH" legible in evidence screenshot); owner confirms on device.
+- [x] Slide-across-steer retargets (pointer capture + failure-safe), no stuck inputs on `pointercancel` (smoke: steer decays to center on release).
+- [x] Desktop shows no touch cluster (kart-playable now asserts ZERO touch buttons on fine pointers); keyboard unchanged + E/F item keys, guide copy updated in BOTH mirror files.
+- [x] Synthetic-pointer smoke green (tmp/k3-mobile-controls-smoke, 14/14 incl. on-screen-layout regression guard — found + fixed: `min-height: 620px` buried all controls below the fold on landscape phones); kart-playable both tracks green; race:proof pass errors=0; both bundles green.
+- [ ] **Real-device sign-off: iPhone 16 Pro Safari, plugged in, ≥30 FPS medians on both tracks** — first mobile reference measurement since miami; record in evidence + PRD §8. NEEDS the owner's deploy go (K3 build is local-only until then). Graphics measure-first A/B happens in the same session.
+- [ ] phase5 headed desktop pair at K3 exit (expect no movement — desktop rendering untouched).
 **Perf gate:** the 30-FPS floor above; phase5 headed desktop pair to confirm no regression from input changes (expect none — UI layer only).
 
 ---

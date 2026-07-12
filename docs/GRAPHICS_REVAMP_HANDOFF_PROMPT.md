@@ -1,6 +1,31 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ K1 DEPLOYED (2026-07-11 eve — newest state, supersedes "NOT deployed" below)
+## ⚡ K2.5 PHASE 1 + K3 CORE (2026-07-11 late — newest state)
+
+Post-deploy the owner playtested on his phone (verbatim record: roadmap W7
+additions; PRD amended with NEW K2.5 + expanded K3). Since then, SAME DAY:
+- **K2.5 phase 1 DONE (9878622b):** the CC "flying in the air" bug is
+  reproduced + measured — crest 0.472 + ramp-B 0.688 fire ~2.4 s apart
+  EVERY lap ("does it twice"); trigger rampHitLane 0.22 vs ~0.15 visible
+  wedge; flights ~330 units/1.3-1.7 s, no landing marker. Evidence + fix
+  menu: **launch-lab.html** (hub row live). ⏳ OWNER picks fixes per site
+  (recommended: crest d+b · ramps a+b). Telemetry gained `lane`.
+- **K3 CORE BUILT (e5a7868a):** coarse-pointer-gated joystick (analog
+  steerAxis) + auto-accel + brake/DRIFT/96px smash-item cluster (button IS
+  the held-item display; 9px chip retired on touch, testid lives on the
+  label); desktop = ZERO touch buttons (kart-playable asserts it);
+  E/F item keys + guide copy (BOTH mirror files). REAL BUG FIXED:
+  min-height:620px buried all touch controls below the fold on landscape
+  phones. QA override `?touchControls=1/0`. Smoke 14/14
+  (tmp/k3-mobile-controls-smoke). Battery FULLY GREEN incl. race:proof
+  pass errors=0 (at load1=6.97 — green under load is trustworthy) and both
+  bundles (kart 6723.31/8000, fitness 8489.99/8500). ⏳ OWNER deploy go →
+  his phone session = feel pass + 30-FPS measure + graphics A/B; phase5
+  headed pair at K3 exit.
+- Still ⏳: K2 economy-shelved confirm (K2 not started) · kart budget ack ·
+  NAME · fpsWarmupMs gatesNote.
+
+## ⚡ K1 DEPLOYED (2026-07-11 eve — supersedes "NOT deployed" below)
 
 **The K1 kart-only build is LIVE on comeback-city-kart.pages.dev** (owner
 gave the deploy go; `npm run deploy:kart`, deploy 562cd020). Full live
