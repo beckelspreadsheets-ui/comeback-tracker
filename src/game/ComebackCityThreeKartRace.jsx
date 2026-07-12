@@ -5846,13 +5846,14 @@ export const ComebackCityThreeKartRace = ({
           </button>
         </div>
       ) : null}
-      {touchControls ? (
+      {touchControls && !snapshot.finished ? (
         <>
           {/* K3 mobile controls V2 (owner: "maybe a joystick to drive with" +
               "something made to smash on the screen"). Coarse pointers only —
               desktop plays keyboard with zero phantom buttons. Auto-accel is
               on (autoThrottle), so the layout is: analog steer left thumb,
-              brake/drift/item right thumb. */}
+              brake/drift/item right thumb. Hidden once the race finishes —
+              the results panel owns the screen (UI sweep 2026-07-12). */}
           <div
             aria-label="Drag anywhere to steer"
             className="three-kart-race__steer-zone"
