@@ -8,6 +8,15 @@
   width: 100%;
 }
 
+/* K3: on touch devices the container must never exceed the visible
+   viewport — min-height: 620px buried the controls below the fold on
+   landscape phones (~390pt tall). Desktop keeps its floor. */
+@media (pointer: coarse) {
+  .three-kart-race {
+    min-height: 0;
+  }
+}
+
 .three-kart-race__canvas {
   display: block;
   height: 100%;
@@ -106,62 +115,100 @@
   text-transform: uppercase;
 }
 
-.three-kart-race__touch {
-  bottom: 16px;
+/* K3 mobile controls V2: analog joystick bottom-left, brake/drift/item
+   cluster bottom-right; coarse pointers only (the JSX gates rendering).
+   Safe-area insets keep everything clear of notches/home indicators. */
+.three-kart-race__touch--cluster {
+  align-items: flex-end;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   display: flex;
-  gap: 10px;
-  justify-content: space-between;
-  left: 50%;
-  max-width: 430px;
+  gap: 12px;
   position: absolute;
-  transform: translateX(-50%);
-  width: min(430px, calc(100vw - 28px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
   z-index: 4;
 }
 
 .three-kart-race__touch button {
   border-color: rgba(56, 215, 255, 0.28);
-  min-height: 52px;
-  min-width: 52px;
+  border-radius: 16px;
+  flex-direction: column;
+  gap: 3px;
   padding: 0;
+  touch-action: none;
 }
 
-.three-kart-race__touch button:last-child {
+.three-kart-race__touch button.three-kart-race__cluster-brake {
+  border-color: rgba(255, 107, 107, 0.4);
+  color: #ff8f8f;
+  min-height: 64px;
+  min-width: 64px;
+}
+
+.three-kart-race__touch button.three-kart-race__cluster-drift {
+  color: #7ff4ff;
+  min-height: 84px;
+  min-width: 84px;
+}
+
+/* The smash button (owner: "something made to smash on the screen") — the
+   biggest target on screen, and the held-item display on touch layouts. */
+.three-kart-race__touch button.three-kart-race__cluster-item {
   border-color: rgba(255, 211, 79, 0.42);
   color: #ffd34f;
+  min-height: 96px;
+  min-width: 96px;
 }
 
-/* W2 held-item slot: the throw button + a chip naming the held item. */
-.three-kart-race__item-slot {
-  display: inline-flex;
-  position: relative;
-}
-
-.three-kart-race__item-chip {
-  align-items: center;
-  animation: kart-item-chip-pop 0.22s ease-out;
-  background: rgba(12, 16, 29, 0.9);
-  border: 1px solid rgba(255, 211, 79, 0.55);
-  border-radius: 6px;
-  bottom: calc(100% + 7px);
-  color: #ffd34f;
-  display: inline-flex;
-  font: 900 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  gap: 5px;
-  left: 50%;
-  padding: 5px 8px;
-  pointer-events: none;
-  position: absolute;
-  text-transform: uppercase;
-  transform: translateX(-50%);
+.three-kart-race__cluster-item-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-@keyframes kart-item-chip-pop {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(5px);
-  }
+.three-kart-race__joystick {
+  align-items: flex-end;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  height: 190px;
+  justify-content: flex-start;
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  position: absolute;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  width: min(44vw, 300px);
+  z-index: 4;
+}
+
+.three-kart-race__joystick-base {
+  align-items: center;
+  background: rgba(12, 16, 29, 0.55);
+  border: 1px solid rgba(56, 215, 255, 0.35);
+  border-radius: 50%;
+  display: flex;
+  height: 112px;
+  justify-content: center;
+  margin: 0 0 8px 12px;
+  pointer-events: none;
+  width: 112px;
+}
+
+.three-kart-race__joystick-puck {
+  background: rgba(56, 215, 255, 0.85);
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(56, 215, 255, 0.55);
+  height: 54px;
+  pointer-events: none;
+  transition: transform 0.05s linear;
+  width: 54px;
 }
 
 .three-kart-race__touch button.three-kart-race__item-button--armed {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bitcoin, Carrot, CloudSnow, Coffee, Fish, FishSymbol, Flag, Footprints, Gauge, MountainSnow, Rainbow, Rocket, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
+import { ArrowDown, Bitcoin, Carrot, CloudSnow, Coffee, Fish, FishSymbol, Flag, Footprints, Gauge, MountainSnow, Rainbow, Rocket, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -4162,7 +4162,9 @@ export const ComebackCityThreeKartRace = ({
 }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
-  const inputRef = useRef({ brake: false, drift: false, item: false, left: false, restart: false, right: false, throttle: false });
+  // steerAxis: analog float from the touch joystick (null = digital keys
+  // rule); autoThrottle: coarse-pointer sessions accelerate by default (K3).
+  const inputRef = useRef({ autoThrottle: false, brake: false, drift: false, item: false, left: false, restart: false, right: false, steerAxis: null, throttle: false });
   const finishReportedRef = useRef(false);
   const [snapshot, setSnapshot] = useState(createInitialRace);
   const [webglError, setWebglError] = useState(null);
@@ -4171,6 +4173,19 @@ export const ComebackCityThreeKartRace = ({
     const params = new URLSearchParams(window.location.search);
     return params.get('playableAutoplay') === '1' || params.get('raceAutoplay') === '1';
   }, []);
+  // K3 touch controls gate: coarse pointers get the joystick + cluster and
+  // auto-accel; fine pointers (desktop) get NO touch UI (keyboard only).
+  // ?touchControls=1/0 forces either way (QA + synthetic-pointer smoke).
+  const touchControls = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const forced = new URLSearchParams(window.location.search).get('touchControls');
+    if (forced === '1') return true;
+    if (forced === '0') return false;
+    return window.matchMedia?.('(pointer: coarse)')?.matches === true;
+  }, []);
+  useEffect(() => {
+    inputRef.current = { ...inputRef.current, autoThrottle: touchControls && !autoplay };
+  }, [touchControls, autoplay]);
   // Seat/kart/track come from props ONLY. The old ?character/?kart/?track
   // URL overrides let a stale param (e.g. a shared lab link) silently beat
   // the cup-select pick (roadmap W1: "penguin village is loading the miami
@@ -4280,6 +4295,8 @@ export const ComebackCityThreeKartRace = ({
       Enter: 'item',
       KeyA: 'left',
       KeyD: 'right',
+      KeyE: 'item',
+      KeyF: 'item',
       KeyR: 'restart',
       KeyS: 'brake',
       KeyW: 'throttle',
@@ -4595,9 +4612,11 @@ export const ComebackCityThreeKartRace = ({
               }
             }
           } else {
-          const throttle = input.throttle ? 1 : 0;
+          // Touch sessions auto-accelerate (brake overrides); the joystick's
+          // analog steerAxis wins over the digital left/right keys when live.
+          const throttle = (input.autoThrottle ? !input.brake : input.throttle) ? 1 : 0;
           const brake = input.brake ? 1 : 0;
-          const targetSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+          const targetSteer = input.steerAxis ?? ((input.right ? 1 : 0) - (input.left ? 1 : 0));
           race.steer = lerp(race.steer, targetSteer, 1 - Math.pow(0.001, dt));
           const driftState = race.driftState;
           const airState = race.airState;
@@ -5351,6 +5370,50 @@ export const ComebackCityThreeKartRace = ({
   const setTouch = (key, value) => {
     inputRef.current = { ...inputRef.current, [key]: value };
   };
+  // K3 touch scheme: hold-buttons capture their pointer (slide-off never
+  // sticks an input — pointerup/cancel always reach the button), and the
+  // joystick steers analog from a floating origin (where the thumb lands).
+  const capturePointer = (event) => {
+    // Throws on already-released or synthetic pointers — never let a failed
+    // capture eat the input itself.
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* capture is an optimization, not a requirement */
+    }
+  };
+  const holdTouch = (key) => (event) => {
+    capturePointer(event);
+    setTouch(key, true);
+  };
+  const releaseTouch = (key) => () => setTouch(key, false);
+  const itemTouchDown = (event) => {
+    capturePointer(event);
+    if (snapshot.heldItem) navigator.vibrate?.(30);
+    setTouch('item', true);
+  };
+  const joystickStateRef = useRef({ active: false, originX: 0, pointerId: null });
+  const joystickPuckRef = useRef(null);
+  const JOYSTICK_RANGE_PX = 64;
+  const joystickDown = (event) => {
+    event.preventDefault();
+    capturePointer(event);
+    joystickStateRef.current = { active: true, originX: event.clientX, pointerId: event.pointerId };
+  };
+  const joystickMove = (event) => {
+    const stick = joystickStateRef.current;
+    if (!stick.active || event.pointerId !== stick.pointerId) return;
+    const axis = clamp((event.clientX - stick.originX) / JOYSTICK_RANGE_PX, -1, 1);
+    inputRef.current = { ...inputRef.current, steerAxis: axis };
+    if (joystickPuckRef.current) joystickPuckRef.current.style.transform = `translateX(${Math.round(axis * 34)}px)`;
+  };
+  const joystickEnd = (event) => {
+    const stick = joystickStateRef.current;
+    if (!stick.active || event.pointerId !== stick.pointerId) return;
+    joystickStateRef.current = { active: false, originX: 0, pointerId: null };
+    inputRef.current = { ...inputRef.current, steerAxis: null };
+    if (joystickPuckRef.current) joystickPuckRef.current.style.transform = '';
+  };
   const restart = () => {
     inputRef.current = { ...inputRef.current, restart: true };
   };
@@ -5433,75 +5496,76 @@ export const ComebackCityThreeKartRace = ({
           </button>
         </div>
       ) : null}
-      <div className="three-kart-race__touch" aria-label="Race touch controls">
-        <button
-          type="button"
-          onPointerDown={() => setTouch('left', true)}
-          onPointerLeave={() => setTouch('left', false)}
-          onPointerUp={() => setTouch('left', false)}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <button
-          type="button"
-          onPointerDown={() => setTouch('right', true)}
-          onPointerLeave={() => setTouch('right', false)}
-          onPointerUp={() => setTouch('right', false)}
-        >
-          <ArrowRight size={18} />
-        </button>
-        <button
-          type="button"
-          onPointerDown={() => setTouch('brake', true)}
-          onPointerLeave={() => setTouch('brake', false)}
-          onPointerUp={() => setTouch('brake', false)}
-        >
-          <ArrowDown size={18} />
-        </button>
-        <button
-          type="button"
-          onPointerDown={() => setTouch('throttle', true)}
-          onPointerLeave={() => setTouch('throttle', false)}
-          onPointerUp={() => setTouch('throttle', false)}
-        >
-          <ArrowUp size={18} />
-        </button>
-        <button
-          type="button"
-          onPointerDown={() => setTouch('drift', true)}
-          onPointerLeave={() => setTouch('drift', false)}
-          onPointerUp={() => setTouch('drift', false)}
-        >
-          <Sparkles size={18} />
-        </button>
-        <div className="three-kart-race__item-slot">
-          {/* W2: "when you pick up an item you know what it is — a little
-              icon near the item throw" (owner). The chip + the button icon
-              both track the held item; upgrades to generated H5 icons in W5. */}
-          {snapshot.heldItem ? (
-            <div className="three-kart-race__item-chip" data-testid="race-held-item-chip">
-              <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} size={13} />
-              <span>{heldItemLabel(snapshot.heldItem, playerCharacter.projectileSkin)}</span>
-            </div>
-          ) : null}
-          <button
-            type="button"
-            aria-label="Fire held item"
-            className={snapshot.heldItem ? 'three-kart-race__item-button--armed' : undefined}
-            onPointerDown={() => setTouch('item', true)}
-            onPointerLeave={() => setTouch('item', false)}
-            onPointerUp={() => setTouch('item', false)}
+      {touchControls ? (
+        <>
+          {/* K3 mobile controls V2 (owner: "maybe a joystick to drive with" +
+              "something made to smash on the screen"). Coarse pointers only —
+              desktop plays keyboard with zero phantom buttons. Auto-accel is
+              on (autoThrottle), so the layout is: analog steer left thumb,
+              brake/drift/item right thumb. */}
+          <div
+            aria-label="Steering joystick — drag left or right"
+            className="three-kart-race__joystick"
+            data-testid="race-touch-joystick"
+            onPointerCancel={joystickEnd}
+            onPointerDown={joystickDown}
+            onPointerMove={joystickMove}
+            onPointerUp={joystickEnd}
           >
-            {snapshot.heldItem ? (
-              <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} size={18} />
-            ) : playerCharacter.projectileSkin === 'carrot' ? (
-              <Carrot size={18} />
-            ) : (
-              <Snowflake size={18} />
-            )}
-          </button>
-        </div>
-      </div>
+            <div className="three-kart-race__joystick-base">
+              <div className="three-kart-race__joystick-puck" ref={joystickPuckRef} />
+            </div>
+          </div>
+          <div aria-label="Race touch controls" className="three-kart-race__touch three-kart-race__touch--cluster">
+            <button
+              aria-label="Brake"
+              className="three-kart-race__cluster-brake"
+              data-testid="race-touch-brake"
+              onPointerCancel={releaseTouch('brake')}
+              onPointerDown={holdTouch('brake')}
+              onPointerUp={releaseTouch('brake')}
+              type="button"
+            >
+              <ArrowDown size={22} />
+            </button>
+            <button
+              aria-label="Hold to drift"
+              className="three-kart-race__cluster-drift"
+              data-testid="race-touch-drift"
+              onPointerCancel={releaseTouch('drift')}
+              onPointerDown={holdTouch('drift')}
+              onPointerUp={releaseTouch('drift')}
+              type="button"
+            >
+              <Sparkles size={26} />
+              <span>Drift</span>
+            </button>
+            {/* The smash button IS the held-item display on touch (W2 chip
+                retired here — 9px was unreadable on phones, owner 2026-07-11).
+                The label keeps the race-held-item-chip contract. */}
+            <button
+              aria-label="Fire held item"
+              className={`three-kart-race__cluster-item${snapshot.heldItem ? ' three-kart-race__item-button--armed' : ''}`}
+              data-testid="race-touch-item"
+              onPointerCancel={releaseTouch('item')}
+              onPointerDown={itemTouchDown}
+              onPointerUp={releaseTouch('item')}
+              type="button"
+            >
+              {snapshot.heldItem ? (
+                <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} size={38} />
+              ) : playerCharacter.projectileSkin === 'carrot' ? (
+                <Carrot size={38} />
+              ) : (
+                <Snowflake size={38} />
+              )}
+              <span className="three-kart-race__cluster-item-label" data-testid="race-held-item-chip">
+                {snapshot.heldItem ? heldItemLabel(snapshot.heldItem, playerCharacter.projectileSkin) : 'Item'}
+              </span>
+            </button>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 };

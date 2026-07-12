@@ -236,7 +236,10 @@ const assertPlayableShell = async (page, mode) => {
     facts.oldFallbackCanvasCount !== 0 ||
     facts.propCount < 20 ||
     !facts.shellVisible ||
-    facts.touchButtonCount < 4
+    // K3: touch controls are coarse-pointer-gated. Every proof context is a
+    // fine pointer, so ANY touch button here is a phantom-button regression.
+    // The coarse-pointer layout contract lives in tmp/k3-mobile-controls-smoke.
+    facts.touchButtonCount !== 0
   ) {
     fail(`${mode} Three kart race shell is incomplete or old renderer mounted`, facts);
   }
