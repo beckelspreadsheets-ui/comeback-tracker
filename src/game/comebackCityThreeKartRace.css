@@ -17,6 +17,20 @@
   }
 }
 
+/* Tilt soft lock: iPhone gives web games no orientation lock, so when the
+   OS flips to portrait mid-tilt the whole game counter-rotates 90° and
+   stays visually landscape (drag/flick/tilt axes remap in JS). */
+.three-kart-race.three-kart-race--soft-landscape {
+  height: 100svw;
+  left: 100vw;
+  min-height: 0;
+  position: fixed;
+  top: 0;
+  transform: rotate(90deg);
+  transform-origin: left top;
+  width: 100svh;
+}
+
 .three-kart-race__canvas {
   display: block;
   height: 100%;

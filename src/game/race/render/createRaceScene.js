@@ -66,8 +66,11 @@ export const fitRaceRendererToCanvas = ({
   windowRef = globalThis.window,
 } = {}) => {
   const rect = canvas.getBoundingClientRect();
-  raceViewport.width = Math.max(1, rect.width || 1);
-  raceViewport.height = Math.max(1, rect.height || 1);
+  // Layout size, NOT the transformed bounding box: under the tilt soft
+  // lock the whole game is rotated 90° and the bbox reports swapped dims —
+  // the renderer must keep painting the canvas's own (landscape) aspect.
+  raceViewport.width = Math.max(1, canvas.clientWidth || rect.width || 1);
+  raceViewport.height = Math.max(1, canvas.clientHeight || rect.height || 1);
   raceViewport.mobile = raceViewport.width / raceViewport.height < 0.74;
   const rawDpr = Math.min(windowRef?.devicePixelRatio || 1, 2);
   const renderScale = raceViewport.mobile ? scaleTable.mobile : scaleTable.desktop;

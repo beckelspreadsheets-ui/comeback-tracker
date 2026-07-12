@@ -108,7 +108,9 @@ First real-device session on the deployed standalone kart build. Every quote map
 - **Alt-scheme sketch RECORDED, not built** (side-press steer + double-tap-to-drift + item button) — the fallback variant if the group doesn't take to flick-drift; revisit on beta feedback.
 - **Karts:** K5 still queued (his "we still need to work on the karts").
 - **PFP → playable character microtransaction → V2 FLAGSHIP** (see V2 bucket): upload a pic (usually a crypto pfp) → 3D render → play it, "for a small cost. could pay in crypto to start". Honest feasibility notes recorded with the V2 entry.
-- **"we could get it in beta today!"** — beta-scope call surfaced to owner: share-now vs the K4–K7 content-first plan he set on 2026-07-11 ("add in all the roster expansion item renders ect before sharing").
+- **"we could get it in beta today!"** — beta-scope resolved next message: "deploy , Oh i still want all those items in just thnk we can make it possible today" = content sprint same day.
+
+**Round-5 (2026-07-12, verbatim):** "okay we need a way to lock the screen when it goes in gyro mode cause my phone starts changing the landscape so it was hard to test" → landed same day, two layers: (1) REAL lock where the platform allows — tilt-enable now requests fullscreen + `screen.orientation.lock('landscape')` (Android Chrome full fix; iPhone Safari supports neither, calls reject harmlessly); (2) SOFT LOCK for iPhone — while tilt is on, an OS flip to portrait counter-rotates the whole game 90° (`--soft-landscape` class) so it stays visually landscape; drag/flick axes remap to viewport-Y, tilt roll = beta signed by gamma (physically-landscape detection), and the renderer sizes from canvas clientWidth/Height (layout) instead of getBoundingClientRect — the rotated bbox was portrait-squishing the render (real bug found by the smoke). Smoke 25/25. NOTE: race:proof red at load1=18.7 (minFps 1 / stalled route / missing screenshots = the documented load-artifact trio) — re-run owed at load1<3, everything else green.
 
 ## W6 — Menu/UI beauty pass (END-STAGE, after content lock — owner 2026-07-07)
 

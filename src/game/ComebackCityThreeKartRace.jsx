@@ -4349,6 +4349,28 @@ export const ComebackCityThreeKartRace = ({
         return;
       }
     }
+    // Real orientation lock where the platform allows it (Android Chrome:
+    // fullscreen first, then lock). iPhone Safari supports neither — the
+    // soft-lock effect below covers it. Both calls reject harmlessly.
+    if (!tiltEnabled) {
+      try {
+        await document.documentElement.requestFullscreen?.();
+      } catch {
+        /* iOS: fullscreen is video-only */
+      }
+      try {
+        await window.screen?.orientation?.lock?.('landscape');
+      } catch {
+        /* unsupported outside fullscreen / on iOS */
+      }
+    } else {
+      try {
+        window.screen?.orientation?.unlock?.();
+        if (document.fullscreenElement) document.exitFullscreen?.();
+      } catch {
+        /* nothing to release */
+      }
+    }
     setTiltEnabled((value) => {
       const next = !value;
       try {
@@ -4359,16 +4381,57 @@ export const ComebackCityThreeKartRace = ({
       return next;
     });
   };
+  // Soft lock (owner 2026-07-12: "my phone starts changing the landscape so
+  // it was hard to test"): while tilt is on and the OS flips to portrait,
+  // counter-rotate the whole game 90° so it STAYS visually landscape. The
+  // drag/flick axes and the tilt roll mapping swap with it.
+  const [softLandscape, setSoftLandscape] = useState(false);
+  const softLandscapeRef = useRef(false);
+  useEffect(() => {
+    if (!tiltEnabled || typeof window === 'undefined') {
+      softLandscapeRef.current = false;
+      setSoftLandscape(false);
+      return undefined;
+    }
+    const evaluate = () => {
+      const locked = Boolean(window.screen?.orientation?.type?.startsWith('landscape') && document.fullscreenElement);
+      const portrait = window.innerHeight > window.innerWidth;
+      const next = portrait && !locked;
+      softLandscapeRef.current = next;
+      setSoftLandscape(next);
+    };
+    evaluate();
+    window.addEventListener('resize', evaluate);
+    window.addEventListener('orientationchange', evaluate);
+    return () => {
+      window.removeEventListener('resize', evaluate);
+      window.removeEventListener('orientationchange', evaluate);
+      softLandscapeRef.current = false;
+      setSoftLandscape(false);
+    };
+  }, [tiltEnabled]);
+  // Entering/leaving the soft lock re-lays-out the canvas without any
+  // window resize — nudge the engine's fit handler after the class lands.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const raf = window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    return () => window.cancelAnimationFrame(raf);
+  }, [softLandscape]);
   useEffect(() => {
     if (!tiltEnabled || typeof window === 'undefined') return undefined;
     const onOrientation = (event) => {
       if (joystickStateRef.current.active) return; // an active drag always wins
       // Portrait steering roll = gamma; landscape = ±beta (device axes are
-      // defined in portrait frame, so remap by the screen angle).
+      // defined in portrait frame, so remap by the screen angle). Under the
+      // soft lock the OS *reports* portrait but the phone is physically
+      // landscape — roll is beta, signed by which way round it's held
+      // (gamma's sign tells landscape-left from landscape-right).
       const angle = window.screen?.orientation?.angle ?? window.orientation ?? 0;
       const beta = event.beta ?? 0;
       const gamma = event.gamma ?? 0;
-      const roll = angle === 90 ? beta : angle === 270 || angle === -90 ? -beta : gamma;
+      const roll = softLandscapeRef.current
+        ? beta * (gamma >= 0 ? 1 : -1)
+        : angle === 90 ? beta : angle === 270 || angle === -90 ? -beta : gamma;
       const axis = Math.abs(roll) < 2.5 ? 0 : clamp(roll / 22, -1, 1);
       inputRef.current = { ...inputRef.current, steerAxis: axis };
     };
@@ -5631,7 +5694,7 @@ export const ComebackCityThreeKartRace = ({
   // FLICK during the drag engages drift (held until the thumb lifts —
   // release pays the mini-turbo exactly like the button), and a TAP throws
   // the held item. The buttons stay as redundant fallbacks.
-  const joystickStateRef = useRef({ active: false, flicked: false, lastT: 0, lastX: 0, maxDist: 0, originX: 0, originY: 0, pointerId: null, startT: 0 });
+  const joystickStateRef = useRef({ active: false, flicked: false, lastT: 0, lastX: 0, lastY: 0, maxDist: 0, originX: 0, originY: 0, pointerId: null, startT: 0 });
   const joystickPuckRef = useRef(null);
   const steerIndicatorRef = useRef(null);
   const JOYSTICK_RANGE_PX = 64;
@@ -5643,7 +5706,7 @@ export const ComebackCityThreeKartRace = ({
     capturePointer(event);
     const now = performance.now();
     joystickStateRef.current = {
-      active: true, flicked: false, lastT: now, lastX: event.clientX, maxDist: 0,
+      active: true, flicked: false, lastT: now, lastX: event.clientX, lastY: event.clientY, maxDist: 0,
       originX: event.clientX, originY: event.clientY, pointerId: event.pointerId, startT: now,
     };
     const indicator = steerIndicatorRef.current;
@@ -5659,9 +5722,16 @@ export const ComebackCityThreeKartRace = ({
     const stick = joystickStateRef.current;
     if (!stick.active || event.pointerId !== stick.pointerId) return;
     const now = performance.now();
-    const stepX = event.clientX - stick.lastX;
+    // Under the soft landscape lock the game is rotated 90° — the VISUAL
+    // horizontal is the viewport's Y axis.
+    const soft = softLandscapeRef.current;
+    const horizontal = soft ? event.clientY : event.clientX;
+    const lastHorizontal = soft ? stick.lastY : stick.lastX;
+    const originHorizontal = soft ? stick.originY : stick.originX;
+    const stepX = horizontal - lastHorizontal;
     const stepMs = Math.max(1, now - stick.lastT);
     stick.lastX = event.clientX;
+    stick.lastY = event.clientY;
     stick.lastT = now;
     stick.maxDist = Math.max(stick.maxDist, Math.hypot(event.clientX - stick.originX, event.clientY - stick.originY));
     if (!stick.flicked && Math.abs(stepX) >= 8 && Math.abs(stepX) / stepMs >= FLICK_SPEED_PX_MS) {
@@ -5669,7 +5739,7 @@ export const ComebackCityThreeKartRace = ({
       setTouch('drift', true);
       steerIndicatorRef.current?.classList.add('three-kart-race__steer-indicator--drifting');
     }
-    const axis = clamp((event.clientX - stick.originX) / JOYSTICK_RANGE_PX, -1, 1);
+    const axis = clamp((horizontal - originHorizontal) / JOYSTICK_RANGE_PX, -1, 1);
     inputRef.current = { ...inputRef.current, steerAxis: axis };
     if (joystickPuckRef.current) joystickPuckRef.current.style.transform = `translateX(${Math.round(axis * 34)}px)`;
   };
@@ -5694,7 +5764,7 @@ export const ComebackCityThreeKartRace = ({
 
   return (
     <div
-      className="three-kart-race"
+      className={`three-kart-race${softLandscape ? ' three-kart-race--soft-landscape' : ''}`}
       data-prop-count={PROP_COUNT}
       data-race-renderer="three-kart"
       data-testid="comeback-city-3d-kart-race"

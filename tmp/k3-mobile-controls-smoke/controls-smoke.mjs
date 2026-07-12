@@ -202,6 +202,40 @@ try {
   check('?touchControls=0 override renders no touch UI', (await page2.getByTestId('race-touch-joystick').count()) === 0);
   await phone2.close();
 
+  // ---------- Tilt soft lock: portrait viewport + tilt ON → the game
+  // counter-rotates to visual landscape; vertical drags steer.
+  const phone3 = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+  const page3b = await phone3.newPage();
+  await page3b.goto(`${BASE}/?touchControls=1&track=comeback-city#race`, { waitUntil: 'domcontentloaded' });
+  await page3b.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, { timeout: 45000 });
+  await page3b.getByTestId('race-touch-tilt').click();
+  await page3b.waitForTimeout(400);
+  const softLocked = await page3b.evaluate(() => document.querySelector('.three-kart-race--soft-landscape') !== null);
+  check('tilt ON in portrait → soft landscape lock engages (counter-rotated game)', softLocked);
+  const canvasDims = await page3b.evaluate(() => {
+    const canvas = document.querySelector('canvas[data-race-renderer="three-kart"]');
+    return { layoutW: canvas.clientWidth, layoutH: canvas.clientHeight, backingW: canvas.width, backingH: canvas.height };
+  });
+  check(
+    'soft-locked canvas keeps landscape layout + backing aspect',
+    canvasDims.layoutW > canvasDims.layoutH && canvasDims.backingW > canvasDims.backingH,
+    JSON.stringify(canvasDims)
+  );
+  // Visual-horizontal drag = viewport-vertical drag when rotated.
+  await page3b.waitForFunction(() => window.__comebackCityKartTelemetry?.speed > 60, null, { timeout: 15000 });
+  await page3b.mouse.move(195, 400);
+  await page3b.mouse.down();
+  for (let step = 1; step <= 8; step += 1) {
+    await page3b.mouse.move(195, 400 + step * 7);
+    await page3b.waitForTimeout(40);
+  }
+  await page3b.waitForFunction(() => Math.abs(window.__comebackCityKartTelemetry?.steer ?? 0) > 0.3, null, { timeout: 2500 })
+    .then(() => check('soft-locked drag along viewport-Y steers', true))
+    .catch(async () => check('soft-locked drag along viewport-Y steers', false, JSON.stringify(await telemetry(page3b))));
+  await page3b.mouse.up();
+  await page3b.screenshot({ path: 'tmp/k3-mobile-controls-smoke/soft-landscape.png' });
+  await phone3.close();
+
   // ---------- Desktop context ----------
   const desktop = await browser.newContext({ viewport: { width: 1365, height: 768 } });
   const page3 = await desktop.newPage();
