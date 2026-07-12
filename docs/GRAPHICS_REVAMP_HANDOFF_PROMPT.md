@@ -1,6 +1,78 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ K2.5 PHASE 1 + K3 CORE (2026-07-11 late — newest state)
+## ⚡ V1-BETA SPRINT CHECKPOINT (2026-07-12 EOD — NEWEST, supersedes every block below)
+
+**LIVE at comeback-city-kart.pages.dev (deploy acf0c6f9, verified):** the
+full 2026-07-12 sprint — K2.5 launch fixes (short flights, full-trigger
+ramps + chevrons, gold bridge rails + crest chevrons) · K3 mobile controls
+V2 COMPLETE (drag/flick/tap one-thumb grammar + buttons as fallbacks, TILT
+opt-in with counter-rotation soft lock — NO fullscreen/lock attempts, they
+thrashed iOS, REMOVED — race is ALWAYS visually landscape on phones,
+100dvh container, camera PINNED per race: phoneWide=touchControls back 33
+/ height 10 / lookAhead 28 / FOV 63, controls hide on finish, select/intro
+top-clip fixed via my-auto BOTH mirror files) · K4 outplayasians
+finish-line crosser (crosser system now live in the shipped runtime,
+footprint 8) · K5 partial: Ice Racer + Miami Cruiser selectable
+(owner-picked; cyber-lowrider/gold-gp/stealth-speedster REJECTED, re-roll
+offered) · coins/rails/all prior content.
+
+**Owner verdicts on record (roadmap rounds 5-8, verbatim):** mechanics
+"amazing"; camera was "wild" in fullscreen → fixed by removing fullscreen;
+"hard to see asians" → footprint bump (re-check on his next pass).
+
+**NEXT TASK (fresh context starts HERE): wire lifoladen as a playable
+racer.** The lift is DONE and the likeness is excellent (crown, skull
+face, ₿ staff): raw mesh at tmp/k6-lifoladen/raw-lifoladen.glb (9.7MB,
+committed; front = +Z, Meshy convention; generation-record.json has all
+ids). Steps: diet to seated-character class (weld → resize 512 → meshopt,
+NO simplify if likeness suffers — the crosser precedent; target ≤900KB)
+→ src/assets/game/models/avatars/lifoladen.glb → KART_CHARACTERS entry
+(pick accent/color; signature kart = one of the new K5 karts fits; he is
+a HUMAN wizard so projectileSkin 'snowball' not penguin 'iceshard' —
+judgment call, note it; tune driverHeight/driverYaw via in-game probe;
+driver mounts via mountDriverAvatar) → rival-seat auto-fills → portrait
+via http://localhost:5173/select-portraits.html?model=...&yaw=<PI/2+0.55>
+(use the RUNNING dev server — scripts/select-portraits-capture.mjs spawns
+a SECOND vite dev and dep-cache-ping-pongs; the page needed+now has the
+meshopt decoder) → CHARACTER_PORTRAITS in BOTH src/kart/KartApp.jsx AND
+src/game/RaceScreen.jsx (MIRROR RULE) → manifest + asset-profiles
+classifications (BOTH files or assets:check fails on 'unknown class') →
+full battery → commit; deploy on owner word. THEN: K7 item render
+concepts (7 props + boost pad → item-lab; ask the chip direction WITH
+icons in hand).
+
+**OWNER OWES (hub top lists all):** 3 ordinal ChatGPT sheets (ak47/
+denomad/georgefx — the PNGs in "fresh add ons/" are 700-930 BYTE pixel
+sources, NOT sheets; ordinal art never uploads to Higgsfield/Meshy) ·
+economy word (K2 still gated) · game NAME · kart budget ack (REVISED
+2026-07-12: totals 13 MiB / 9800 KiB gz, JS caps unchanged) · phone
+re-check of the camera round + crosser size.
+
+**NEW GOTCHAS from 2026-07-12 (additive to the standing rules below):**
+- Load-artifact reds now proven at load1 ≥7 (not just >5): dt-dilated
+  countdown = "acceleration did not increase speed" kart-playable fake;
+  race:proof green at load 5.8-7.9 repeatedly. GREENS under load count;
+  reds = retry.
+- verify-live-deploy's FIRST attempt after "Deployment complete" can
+  catch alias propagation mid-swap (crosser showed failed:1 once) —
+  re-probe before diagnosing, the standing rule works.
+- Meshy meshes face −X, Tripo face +X: KART_NOSE_YAW map in the runtime;
+  crosser mounts yaw 0 (+Z front after its own convention). Orientation
+  lab BEFORE promotion, always (tmp/k4-crosser/orientation.html?glb=).
+- navigator.webdriver auto-skips the intro AND seeded ?track= deep-links
+  skip intro+select entirely (kart-shell QA contract) — to see the real
+  user flow in Playwright, override navigator.webdriver to false.
+- The fitness dist is byte-stable (8489.99 KiB gz) even as kart assets
+  land — new GLB imports do NOT enter the fitness artifact (empirical,
+  unexplained; do not rely on it without re-checking test:bundle).
+- Higgsfield: tripo_3d text-to-3D is GONE from the catalog. Pipeline =
+  nano_banana concepts (2cr) → meshy image_to_3d (30cr) / multi_image
+  (4-view sheets). media_upload → presigned PUT from Bash → media_confirm
+  works for local files. Balance ~790cr.
+- phase5 headed pairs owed (CC: K2.5 meshes · PV: crosser) at a genuinely
+  quiet machine — the only perf debt.
+
+## ⚡ K2.5 PHASE 1 + K3 CORE (2026-07-11 late — superseded)
 
 Post-deploy the owner playtested on his phone (verbatim record: roadmap W7
 additions; PRD amended with NEW K2.5 + expanded K3). Since then, SAME DAY:
