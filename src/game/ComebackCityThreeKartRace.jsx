@@ -3599,7 +3599,8 @@ const createScene = ({
   // front = +Z per the orientation lab -> yaw 0).
   const crosserRigs = (trackDef.crossers || []).map((entry) => {
     const group = new THREE.Group();
-    mountMiamiAsset(group, 'outplayasiansCrosser', { footprint: 6, yaw: 0 });
+    // footprint 6 → 8 (owner 2026-07-12: "hard to see asians at the end").
+    mountMiamiAsset(group, 'outplayasiansCrosser', { footprint: 8, yaw: 0 });
     world.add(group);
     return { group, key: entry.key };
   });
@@ -4366,28 +4367,11 @@ export const ComebackCityThreeKartRace = ({
         return;
       }
     }
-    // Real orientation lock where the platform allows it (Android Chrome:
-    // fullscreen first, then lock). iPhone Safari supports neither — the
-    // soft-lock effect below covers it. Both calls reject harmlessly.
-    if (!tiltEnabled) {
-      try {
-        await document.documentElement.requestFullscreen?.();
-      } catch {
-        /* iOS: fullscreen is video-only */
-      }
-      try {
-        await window.screen?.orientation?.lock?.('landscape');
-      } catch {
-        /* unsupported outside fullscreen / on iOS */
-      }
-    } else {
-      try {
-        window.screen?.orientation?.unlock?.();
-        if (document.fullscreenElement) document.exitFullscreen?.();
-      } catch {
-        /* nothing to release */
-      }
-    }
+    // NO fullscreen/orientation.lock attempts (owner 2026-07-12: "the
+    // camera changes when it goes into fullscreen mode and looks wild") —
+    // iOS half-supports the pair and the transitions thrashed the viewport
+    // mid-race. The counter-rotation soft lock below is THE mechanism on
+    // every platform: stable, no mode switches.
     setTiltEnabled((value) => {
       const next = !value;
       try {
@@ -4413,11 +4397,9 @@ export const ComebackCityThreeKartRace = ({
       return undefined;
     }
     const evaluate = () => {
-      const locked = Boolean(window.screen?.orientation?.type?.startsWith('landscape') && document.fullscreenElement);
       const portrait = window.innerHeight > window.innerWidth;
-      const next = portrait && !locked;
-      softLandscapeRef.current = next;
-      setSoftLandscape(next);
+      softLandscapeRef.current = portrait;
+      setSoftLandscape(portrait);
     };
     evaluate();
     window.addEventListener('resize', evaluate);
@@ -5572,16 +5554,18 @@ export const ComebackCityThreeKartRace = ({
         // the kart — the camera rides the road, so corners can never put it
         // inside walls or buildings. Slight duck under the bridge.
         const underpass = race.progress > 0.15 && race.progress < 0.24;
-        // Owner 2026-07-12: "you look tiny and hard to control when it goes
-        // widescreen" — landscape PHONES were getting the desktop framing.
-        // Third tier: closer + narrower so the kart fills a small screen.
-        const phoneWide = touchControls && !viewport.mobile;
+        // Owner 2026-07-12: "you look tiny ... hard to control" + "the
+        // camera changes ... and looks wild" — phones get ONE pinned
+        // framing (closer + narrower), never re-evaluated: the soft lock
+        // guarantees a landscape view, and viewport-aspect flips from
+        // browser-chrome collapse must not change the camera mid-race.
+        const phoneWide = touchControls;
         // After the finish, pull up slightly for a results tableau centered on
         // the kart (staying short of the gate behind it).
-        const cameraBackUnits = race.finished ? 30 : camLab?.back ?? (viewport.mobile ? 43 : phoneWide ? 33 : 38);
+        const cameraBackUnits = race.finished ? 30 : camLab?.back ?? (phoneWide ? 33 : viewport.mobile ? 43 : 38);
         const cameraHeight = race.finished
           ? 13
-          : (camLab?.height ?? (viewport.mobile ? 12.5 : phoneWide ? 10 : 10.5)) * (underpass ? 0.62 : 1);
+          : (camLab?.height ?? (phoneWide ? 10 : viewport.mobile ? 12.5 : 10.5)) * (underpass ? 0.62 : 1);
         const cameraProgress = wrap01(race.progress - cameraBackUnits / engine.sampler.length);
         const cameraSample = engine.sampler.pointAt(cameraProgress, race.lane * 0.6);
         const desiredCamera = cameraSample.point
@@ -5595,12 +5579,12 @@ export const ComebackCityThreeKartRace = ({
           ? playerSample.point.clone().add(new THREE.Vector3(0, 6, 0))
           : playerSample.point
               .clone()
-              .addScaledVector(playerSample.tangent, camLab?.lookAhead ?? (viewport.mobile ? 26 : phoneWide ? 28 : 30))
-              .add(new THREE.Vector3(0, camLab?.lookUp ?? (viewport.mobile ? 5.5 : 4.5), 0));
+              .addScaledVector(playerSample.tangent, camLab?.lookAhead ?? (phoneWide ? 28 : viewport.mobile ? 26 : 30))
+              .add(new THREE.Vector3(0, camLab?.lookUp ?? (viewport.mobile && !phoneWide ? 5.5 : 4.5), 0));
         engine.camera.lookAt(lookAt);
         // Mini-turbo gets a small extra FOV kick on top of the speed widening.
         targetFov =
-          (viewport.mobile ? 68 : phoneWide ? 63 : 70) +
+          (phoneWide ? 63 : viewport.mobile ? 68 : 70) +
           clamp(race.speed / MAX_SPEED, 0, 1.15) * 7 +
           (miniTurboActive ? 3.5 : 0);
       }

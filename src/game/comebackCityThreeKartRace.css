@@ -2,6 +2,10 @@
   background: #10151d;
   color: #f8fbff;
   height: 100svh;
+  /* dvh grows with the collapsing browser chrome — "browser mode" uses the
+     whole screen instead of leaving toolbar-sized dead space (owner
+     2026-07-12: "hard to play when just in browser mode"). */
+  height: 100dvh;
   min-height: 620px;
   overflow: hidden;
   position: relative;
