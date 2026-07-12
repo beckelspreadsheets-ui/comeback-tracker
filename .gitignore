@@ -29,3 +29,4 @@ asset-pipeline/**/thumbnails/
 asset-pipeline/**/*.webm
 asset-pipeline/**/*.mp4
 asset-pipeline/manifests/latest-*.json
+tmp/w4-kart-lab/raw-*.glb

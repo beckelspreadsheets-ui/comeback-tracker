@@ -17,5 +17,13 @@
     "gold-gp": "0bd413e7-d264-434b-8ed6-0e2de36b9988",
     "miami-cruiser": "17907f8c-18b7-419d-9c26-0e6ecf4cf0ed",
     "stealth-speedster": "e328a53b-e5b3-46b4-a385-f0f014d0bab7"
-  }
+  },
+  "liftResults": {
+    "cyber-lowrider": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/81a1fc5c-aca3-4ff7-8fc3-de183551dbca.glb",
+    "ice-racer-v2": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/8bae4cd0-8319-4443-9a81-c449293bec32.glb",
+    "gold-gp": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/441f753c-d60d-482b-8740-d9bfbc0eb8f9.glb",
+    "miami-cruiser": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/19300f0d-5550-44b9-8d4b-f91332adf4cf.glb",
+    "stealth-speedster": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/d55f388c-cacc-4ba3-8670-9bb9d78d2c04.glb"
+  },
+  "rawNote": "raw GLBs 7.5-9MB each, kept LOCAL in tmp/w4-kart-lab/raw-*.glb (gitignored; refetchable from liftResults); only dieted promotions get committed"
 }
