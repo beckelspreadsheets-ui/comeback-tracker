@@ -1,12 +1,21 @@
 {
-  "round": "K5 kart concepts round 1 (2026-07-12)",
-  "model": "nano_banana_2 (nano_banana_pro alias), 1:1, 1k, 2cr each",
-  "note": "tripo_3d text-to-3D is GONE from the Higgsfield catalog — K5 pipeline is now concept image -> meshy image_to_3d (symmetry on, should_texture true). Meshy was the lumpy-fallback for BUILDINGS but did well on outplayasians; vehicles TBD, owner Tripo Studio stays the miss-fallback.",
-  "jobs": {
+  "round": "K5 kart pipeline (2026-07-12)",
+  "model": "concepts: nano_banana_2 1:1 1k, 2cr each · lifts: meshy image_to_3d, textured, symmetry on, 30k tris, 30cr each",
+  "pipelineNote": "tripo_3d text-to-3D is GONE from the Higgsfield catalog — route is concept render -> meshy image_to_3d. Owner Tripo Studio stays the miss-fallback.",
+  "ownerPick": "2026-07-12 verbatim: 'I love the carts besides the ice blue one is still way too massive' -> 4/5 approved, snow-buggy re-rolled as compact low-slung ice-racer-v2 (silhouette matched to the gold GP family).",
+  "concepts": {
     "cyber-lowrider": "df68794b-d1a5-4f1c-b9da-21a85f2e52b6",
-    "snow-buggy": "16f272f4-bd76-470d-a2c6-dd131d0fe343",
+    "snow-buggy-REJECTED-too-massive": "16f272f4-bd76-470d-a2c6-dd131d0fe343",
+    "ice-racer-v2": "ffd947c4-5e86-4b81-9e7d-077e4259fca0",
     "gold-gp": "2f8b0f9b-0c03-4724-a07d-30a83400bb65",
     "miami-cruiser": "c065d336-0b93-4e45-83ef-07d7062df906",
     "stealth-speedster": "2eea107e-8ab9-4a06-8efb-0a8cb4ee662b"
+  },
+  "lifts3d": {
+    "cyber-lowrider": "9fd9cb88-8b9d-426f-ba85-f0672112f36d",
+    "ice-racer-v2": "71c10781-4cb9-41f1-a51e-638bde68d752",
+    "gold-gp": "0bd413e7-d264-434b-8ed6-0e2de36b9988",
+    "miami-cruiser": "17907f8c-18b7-419d-9c26-0e6ecf4cf0ed",
+    "stealth-speedster": "e328a53b-e5b3-46b4-a385-f0f014d0bab7"
   }
 }
