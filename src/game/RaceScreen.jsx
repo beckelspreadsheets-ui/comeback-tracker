@@ -1742,7 +1742,7 @@ const KartIntroScreen = ({ onStart }) => (
             <li><span className="text-white">← → / A D</span> — steer</li>
             <li><span className="text-white">↓ / S</span> — brake</li>
             <li><span className="text-white">SHIFT / ENTER / E / F</span> — fire item</li>
-            <li>On mobile you auto-accelerate: joystick steers, big buttons drift + fire.</li>
+            <li>On mobile you auto-accelerate: drag anywhere to steer, big buttons drift + fire.</li>
           </ul>
         </div>
         <div className="border border-white/12 bg-white/[0.03] p-4">

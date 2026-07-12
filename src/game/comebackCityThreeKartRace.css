@@ -172,43 +172,41 @@
   white-space: nowrap;
 }
 
-.three-kart-race__joystick {
-  align-items: flex-end;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  height: 190px;
-  justify-content: flex-start;
-  left: calc(10px + env(safe-area-inset-left, 0px));
+/* Tour-style steer surface: everything left of the button column steers by
+   drag (floating origin — the ring appears wherever the thumb lands). */
+.three-kart-race__steer-zone {
+  inset: 0 calc(env(safe-area-inset-right, 0px) + 285px) 0 0;
+  overflow: hidden;
   position: absolute;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  width: min(44vw, 300px);
-  z-index: 4;
+  z-index: 3;
 }
 
-.three-kart-race__joystick-base {
+.three-kart-race__steer-indicator {
   align-items: center;
-  background: rgba(12, 16, 29, 0.55);
-  border: 1px solid rgba(56, 215, 255, 0.35);
+  background: rgba(12, 16, 29, 0.35);
+  border: 1px solid rgba(56, 215, 255, 0.3);
   border-radius: 50%;
-  display: flex;
-  height: 112px;
+  display: none;
+  height: 96px;
   justify-content: center;
-  margin: 0 0 8px 12px;
+  margin: -48px 0 0 -48px;
   pointer-events: none;
-  width: 112px;
+  position: absolute;
+  width: 96px;
 }
 
 .three-kart-race__joystick-puck {
   background: rgba(56, 215, 255, 0.85);
   border-radius: 50%;
   box-shadow: 0 0 16px rgba(56, 215, 255, 0.55);
-  height: 54px;
+  height: 46px;
   pointer-events: none;
   transition: transform 0.05s linear;
-  width: 54px;
+  width: 46px;
 }
 
 .three-kart-race__touch button.three-kart-race__item-button--armed {

@@ -1657,6 +1657,40 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
     }
   }
 
+  // K2.5 round 2 (owner 2026-07-12: "bridge still did not read sadly") —
+  // skirts/pillars/beams all face outward or down, so the DRIVER on the
+  // deck never sees any of it. Rails are the from-the-deck read: a glowing
+  // band along both deck edges through the span, merged into ONE mesh.
+  // Palette-gated (bridge.rail) so PV's 799/800 draw budget is untouched.
+  if (bridgeCfg.rail) {
+    const railMat = createBasicMaterial(bridgeCfg.rail, { emissive: bridgeCfg.rail, emissiveIntensity: 1.15 });
+    railMat.side = THREE.DoubleSide;
+    const positions = [];
+    const indices = [];
+    const RAIL_STEPS = 30;
+    const RAIL_TOP = 1.5;
+    const RAIL_BAND = 0.45;
+    [-1, 1].forEach((side) => {
+      const base = positions.length / 3;
+      for (let step = 0; step <= RAIL_STEPS; step += 1) {
+        const p = bridgeBand.from + (bridgeBand.to - bridgeBand.from) * (step / RAIL_STEPS);
+        const { point } = sampler.pointAt(p, side);
+        positions.push(point.x, point.y + RAIL_TOP, point.z, point.x, point.y + RAIL_TOP - RAIL_BAND, point.z);
+      }
+      for (let step = 0; step < RAIL_STEPS; step += 1) {
+        const a = base + step * 2;
+        indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
+    });
+    const railGeometry = new THREE.BufferGeometry();
+    railGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    railGeometry.setIndex(indices);
+    railGeometry.computeVertexNormals();
+    const rails = new THREE.Mesh(railGeometry, railMat);
+    rails.userData.kind = 'bridge-rails';
+    world.add(rails);
+  }
+
   const arrowMat = new THREE.MeshBasicMaterial({ color: '#2cc4e8' });
   for (let index = 0; index < 11; index += 1) {
     const progress = (0.04 + index * 0.085) % 1;
@@ -3603,7 +3637,14 @@ const createScene = ({
     });
   }
   trackDef.ramps.forEach((ramp) => addRamp(world, sampler, ramp));
-  addRampApproachChevrons(world, sampler, trackDef.ramps);
+  // K2.5 round 2 (owner 2026-07-12: "bridge still did not read") — the
+  // chevron trail now MEANS "launch ahead"; run it up the climb into the
+  // crest too so the bridge jump gets the same lead-in as the ramps.
+  // Same merged mesh, zero extra draw calls.
+  const chevronSites = trackDef.elevation.crestLaunch
+    ? [...trackDef.ramps, { progress: crestProgressFor(trackDef), side: 0 }]
+    : trackDef.ramps;
+  addRampApproachChevrons(world, sampler, chevronSites);
   if (trackDef.shortcut) {
     addRamp(world, sampler, { progress: trackDef.shortcut.launchProgress, side: trackDef.shortcut.side }, { dare: true });
   }
@@ -5461,13 +5502,26 @@ export const ComebackCityThreeKartRace = ({
     if (snapshot.heldItem) navigator.vibrate?.(30);
     setTouch('item', true);
   };
+  // Tour-style steering (owner 2026-07-12: "mario kart tour style is
+  // probably going to be the easiest for most people"): the whole canvas
+  // left of the button column is the drag surface. Same floating-origin
+  // analog math as before — only the presentation changed; a soft
+  // ring+puck appears under the thumb while dragging.
   const joystickStateRef = useRef({ active: false, originX: 0, pointerId: null });
   const joystickPuckRef = useRef(null);
+  const steerIndicatorRef = useRef(null);
   const JOYSTICK_RANGE_PX = 64;
   const joystickDown = (event) => {
     event.preventDefault();
     capturePointer(event);
     joystickStateRef.current = { active: true, originX: event.clientX, pointerId: event.pointerId };
+    const indicator = steerIndicatorRef.current;
+    if (indicator) {
+      const zone = event.currentTarget.getBoundingClientRect();
+      indicator.style.left = `${Math.round(event.clientX - zone.left)}px`;
+      indicator.style.top = `${Math.round(event.clientY - zone.top)}px`;
+      indicator.style.display = 'flex';
+    }
   };
   const joystickMove = (event) => {
     const stick = joystickStateRef.current;
@@ -5482,6 +5536,7 @@ export const ComebackCityThreeKartRace = ({
     joystickStateRef.current = { active: false, originX: 0, pointerId: null };
     inputRef.current = { ...inputRef.current, steerAxis: null };
     if (joystickPuckRef.current) joystickPuckRef.current.style.transform = '';
+    if (steerIndicatorRef.current) steerIndicatorRef.current.style.display = 'none';
   };
   const restart = () => {
     inputRef.current = { ...inputRef.current, restart: true };
@@ -5573,15 +5628,15 @@ export const ComebackCityThreeKartRace = ({
               on (autoThrottle), so the layout is: analog steer left thumb,
               brake/drift/item right thumb. */}
           <div
-            aria-label="Steering joystick — drag left or right"
-            className="three-kart-race__joystick"
+            aria-label="Drag anywhere to steer"
+            className="three-kart-race__steer-zone"
             data-testid="race-touch-joystick"
             onPointerCancel={joystickEnd}
             onPointerDown={joystickDown}
             onPointerMove={joystickMove}
             onPointerUp={joystickEnd}
           >
-            <div className="three-kart-race__joystick-base">
+            <div className="three-kart-race__steer-indicator" ref={steerIndicatorRef}>
               <div className="three-kart-race__joystick-puck" ref={joystickPuckRef} />
             </div>
           </div>

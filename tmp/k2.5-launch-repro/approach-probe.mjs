@@ -7,9 +7,9 @@ const page = await browser.newPage({ viewport: { width: 1365, height: 768 } });
 await page.goto('http://localhost:5333/?raceAutoplay=1&track=comeback-city#race', { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, { timeout: 45000 });
 const shots = [
-  { key: 'under-bridge', window: [0.178, 0.195] },
-  { key: 'crest-flight', window: [0.475, 0.5] },
-  { key: 'bridge-side-view', window: [0.375, 0.395] },
+  { key: 'rails-climb', window: [0.425, 0.445] },
+  { key: 'rails-deck', window: [0.448, 0.462] },
+  { key: 'rails-descent', window: [0.49, 0.51] },
 ];
 const done = new Set();
 const t0 = Date.now();

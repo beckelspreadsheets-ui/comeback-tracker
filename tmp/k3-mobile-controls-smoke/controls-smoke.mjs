@@ -59,12 +59,16 @@ try {
     .then(() => check('auto-accel: speed > 80 with zero input', true))
     .catch(async () => check('auto-accel: speed > 80 with zero input', false, JSON.stringify(await telemetry(page))));
 
-  // Analog joystick: press center, drag right, hold — steer goes positive.
+  // Tour-style drag steer: press anywhere on the zone (center of screen
+  // here), drag right, hold — steer goes positive and the floating
+  // indicator appears under the pointer.
   const box = await joystick.boundingBox();
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
   await page.mouse.move(cx, cy);
   await page.mouse.down();
+  const indicatorShown = await page.locator('.three-kart-race__steer-indicator').evaluate((el) => getComputedStyle(el).display !== 'none');
+  check('floating steer indicator appears under the touch', indicatorShown);
   await page.mouse.move(cx + 55, cy, { steps: 6 });
   await page.waitForFunction(() => window.__comebackCityKartTelemetry?.steer > 0.3, null, { timeout: 2500 })
     .then(() => check('joystick drag-right → analog steer > 0.3', true))

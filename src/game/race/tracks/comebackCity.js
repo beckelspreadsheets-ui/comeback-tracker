@@ -46,7 +46,10 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
     // pillars rendered in the near-black defaults and silhouetted into the
     // dusk. Gold underline = the finish-gate halo / ₿ accent language;
     // structure lifted to a readable steel-blue.
-    bridge: { beam: '#3a4a70', glow: '#ffd34f', pillar: '#55688f', pillarEmissive: '#3a4a70', skirt: '#2e3d6e' },
+    // rail added round 2 (2026-07-12, "bridge still did not read sadly"):
+    // the only element the DRIVER sees from the deck — gold guard band
+    // along both edges of the span.
+    bridge: { beam: '#3a4a70', glow: '#ffd34f', pillar: '#55688f', pillarEmissive: '#3a4a70', rail: '#ffd34f', skirt: '#2e3d6e' },
     heroRim: { power: 3.2, strength: 0.22, tint: '#4fd8ff' },
   },
   visual: {
