@@ -38,7 +38,9 @@
       loader.setMeshoptDecoder(MeshoptDecoder);
       const holder = new THREE.Group();
       scene.add(holder);
-      loader.load('/tmp/w3-pv-props/outplayasians-diet.glb', (gltf) => {
+      // ?glb=<path> overrides the subject (default: the K4 crosser).
+      const glbPath = new URLSearchParams(window.location.search).get('glb') || '/tmp/w3-pv-props/outplayasians-diet.glb';
+      loader.load(glbPath, (gltf) => {
         const model = gltf.scene;
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());

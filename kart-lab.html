@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- K5 kart lab: five generated kart meshes, turntable views, owner picks.
+     Served by vite dev: `npx vite` then http://localhost:5173/kart-lab.html -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kart Lab — K5 roster picks</title>
+    <style>
+      body { margin: 0; background: #10142a; color: #cfe3ff; font: 14px/1.55 system-ui, sans-serif; padding: 28px 36px 60px; }
+      h1 { font-size: 20px; color: #fff; }
+      h2 { font-size: 15px; margin: 26px 0 8px; color: #9fe7ff; border-bottom: 1px solid #263258; padding-bottom: 4px; }
+      .card { background: #161b38; border: 1px solid #263258; border-radius: 10px; padding: 14px 16px; margin: 14px 0; }
+      .strip { display: flex; gap: 8px; flex-wrap: wrap; }
+      .strip img { width: 200px; border-radius: 6px; border: 1px solid #263258; }
+      .concept { width: 240px !important; border-color: #3a4a7a !important; }
+      .hint { color: #7f8db4; font-size: 12.5px; }
+      code { background: #1a2142; padding: 1px 6px; border-radius: 4px; font-size: 12.5px; color: #ffd34f; }
+      .rec { background: #14251a; border: 1px solid #2c5236; border-radius: 8px; padding: 10px 14px; color: #b8f0c5; }
+    </style>
+  </head>
+  <body>
+    <h1>Kart Lab — the five new karts (K5)</h1>
+    <p>Concepts you approved 2026-07-12 ("I love the carts", ice re-rolled compact per "way too massive"), lifted to 3D (Meshy, symmetry enforced). Left image = the approved concept; the rest = the actual 3D mesh turning. Picks land with stat spreads + select portraits; misses get re-rolled or go to your Tripo Studio.</p>
+
+    <h2>1 — Cyber Lowrider (neon cyan/magenta)</h2>
+    <div class="card"><div class="strip">
+      <img class="concept" src="/tmp/w4-kart-lab/concept-cyber-lowrider.png" />
+      <img src="/tmp/w4-kart-lab/turn-cyber-lowrider-30.png" /><img src="/tmp/w4-kart-lab/turn-cyber-lowrider-120.png" /><img src="/tmp/w4-kart-lab/turn-cyber-lowrider-210.png" /><img src="/tmp/w4-kart-lab/turn-cyber-lowrider-300.png" />
+    </div></div>
+
+    <h2>2 — Ice Racer (arctic crystal)</h2>
+    <div class="card"><div class="strip">
+      <img class="concept" src="/tmp/w4-kart-lab/concept-ice-racer-v2.png" />
+      <img src="/tmp/w4-kart-lab/turn-ice-racer-30.png" /><img src="/tmp/w4-kart-lab/turn-ice-racer-120.png" /><img src="/tmp/w4-kart-lab/turn-ice-racer-210.png" /><img src="/tmp/w4-kart-lab/turn-ice-racer-300.png" />
+    </div></div>
+
+    <h2>3 — Gold GP (gold/black luxury)</h2>
+    <div class="card"><div class="strip">
+      <img class="concept" src="/tmp/w4-kart-lab/concept-gold-gp.png" />
+      <img src="/tmp/w4-kart-lab/turn-gold-gp-30.png" /><img src="/tmp/w4-kart-lab/turn-gold-gp-120.png" /><img src="/tmp/w4-kart-lab/turn-gold-gp-210.png" /><img src="/tmp/w4-kart-lab/turn-gold-gp-300.png" />
+    </div></div>
+
+    <h2>4 — Miami Cruiser (pastel pink/teal fins)</h2>
+    <div class="card"><div class="strip">
+      <img class="concept" src="/tmp/w4-kart-lab/concept-miami-cruiser.png" />
+      <img src="/tmp/w4-kart-lab/turn-miami-cruiser-30.png" /><img src="/tmp/w4-kart-lab/turn-miami-cruiser-120.png" /><img src="/tmp/w4-kart-lab/turn-miami-cruiser-210.png" /><img src="/tmp/w4-kart-lab/turn-miami-cruiser-300.png" />
+    </div></div>
+
+    <h2>5 — Stealth Speedster (purple/black carbon)</h2>
+    <div class="card"><div class="strip">
+      <img class="concept" src="/tmp/w4-kart-lab/concept-stealth-speedster.png" />
+      <img src="/tmp/w4-kart-lab/turn-stealth-speedster-30.png" /><img src="/tmp/w4-kart-lab/turn-stealth-speedster-120.png" /><img src="/tmp/w4-kart-lab/turn-stealth-speedster-210.png" /><img src="/tmp/w4-kart-lab/turn-stealth-speedster-300.png" />
+    </div></div>
+
+    <h2>Your call</h2>
+    <div class="card">
+      <p class="rec"><strong>Answer format:</strong> <code>karts: all five</code> · or a subset like <code>karts: 1 2 3 5</code> · or <code>re-roll 4</code> with what bugs you. Every pick gets: ship diet → stat spread (speed/accel/handling personality per theme) → select portrait → manifest record → battery.</p>
+      <p class="hint">Evidence: tmp/w4-kart-lab/ (concepts, turntables, generation-jobs.json with all job ids + mesh URLs). Raw meshes are local-only until picked (7.5-9MB each pre-diet).</p>
+    </div>
+  </body>
+</html>
