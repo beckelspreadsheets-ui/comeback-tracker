@@ -104,17 +104,41 @@ try {
   }
   await page.waitForFunction(() => Math.abs(window.__comebackCityKartTelemetry?.lane ?? 1) < 0.5, null, { timeout: 15000 }).catch(() => {});
   await page.mouse.up();
-  await page.waitForFunction(() => {
-    const w = window.__comebackCityKartTelemetry;
-    return w && w.airborne === false && w.speed > 120 && Math.abs(w.lane) < 0.7;
-  }, null, { timeout: 20000 });
-  await page.mouse.move(cx, cy);
-  await page.mouse.down();
-  await page.mouse.move(cx + 52, cy);
-  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.drift === true, null, { timeout: 2000 })
-    .then(() => check('FLICK engages drift (one-thumb, MKT-style)', true))
-    .catch(async () => check('FLICK engages drift', false, JSON.stringify(await telemetry(page))));
-  await page.mouse.up();
+  // A launch (crest/ramp) between the guard and the flick makes the drift
+  // machine correctly refuse mid-air — retry around flights.
+  let flickOk = false;
+  for (let attempt = 0; attempt < 4 && !flickOk; attempt += 1) {
+    // Re-center if a prior attempt parked us on a wall (failed flicks hold
+    // hard steer, which grinds the kart into the barrier at low speed).
+    let state = await telemetry(page);
+    if (Math.abs(state.lane) > 0.5) {
+      const centerDir = state.lane > 0 ? -1 : 1;
+      await page.mouse.move(cx, cy);
+      await page.mouse.down();
+      for (let step = 1; step <= 8; step += 1) {
+        await page.mouse.move(cx + centerDir * step * 6, cy);
+        await page.waitForTimeout(40);
+      }
+      await page.waitForFunction(() => Math.abs(window.__comebackCityKartTelemetry?.lane ?? 1) < 0.4, null, { timeout: 12000 }).catch(() => {});
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+    }
+    await page.waitForFunction(() => {
+      const w = window.__comebackCityKartTelemetry;
+      return w && w.airborne === false && w.speed > 120;
+    }, null, { timeout: 20000 }).catch(() => {});
+    state = await telemetry(page);
+    const flickDir = state.lane > 0.2 ? -1 : 1; // flick away from the near wall
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + flickDir * 52, cy);
+    flickOk = await page.waitForFunction(() => window.__comebackCityKartTelemetry?.drift === true, null, { timeout: 2500 })
+      .then(() => true)
+      .catch(() => false);
+    await page.mouse.up();
+    if (!flickOk) await page.waitForTimeout(500);
+  }
+  check('FLICK engages drift (one-thumb, MKT-style)', flickOk, flickOk ? '' : JSON.stringify(await telemetry(page)));
   await page.waitForFunction(() => window.__comebackCityKartTelemetry?.drift === false, null, { timeout: 2000 })
     .then(() => check('flick release ends the drift (mini-turbo path)', true))
     .catch(async () => check('flick release ends the drift', false, JSON.stringify(await telemetry(page))));
@@ -144,6 +168,27 @@ try {
   await page.waitForFunction(() => window.__comebackCityKartTelemetry?.slapping === true, null, { timeout: 3000 })
     .then(() => check('TAP throws the held item (MKT-style)', true))
     .catch(async () => check('TAP throws the held item', false, JSON.stringify(await telemetry(page))));
+
+  // TILT opt-in: toggle on (no iOS prompt in Chromium — feature-detected),
+  // synthesize deviceorientation, steer follows; toggle off releases it.
+  const tiltBtn = page.getByTestId('race-touch-tilt');
+  check('tilt toggle renders on touch layout', await tiltBtn.isVisible());
+  await tiltBtn.click();
+  // Pump events (the listener attaches on a React effect, one-shot races
+  // it); beta AND gamma both 16 so the check is orientation-agnostic.
+  await page.evaluate(() => {
+    window.__tiltPump = setInterval(() => {
+      window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', { alpha: 0, beta: 16, gamma: 16 }));
+    }, 50);
+  });
+  await page.waitForFunction(() => Math.abs(window.__comebackCityKartTelemetry?.steer ?? 0) > 0.3, null, { timeout: 3000 })
+    .then(() => check('tilt ON: deviceorientation roll steers', true))
+    .catch(async () => check('tilt ON: deviceorientation roll steers', false, JSON.stringify(await telemetry(page))));
+  await page.evaluate(() => clearInterval(window.__tiltPump));
+  await tiltBtn.click();
+  await page.waitForFunction(() => Math.abs(window.__comebackCityKartTelemetry?.steer ?? 1) < 0.15, null, { timeout: 2500 })
+    .then(() => check('tilt OFF: steer released back to touch', true))
+    .catch(async () => check('tilt OFF: steer released back to touch', false, JSON.stringify(await telemetry(page))));
 
   await page.screenshot({ path: 'tmp/k3-mobile-controls-smoke/phone-landscape.png' });
   await phone.close();

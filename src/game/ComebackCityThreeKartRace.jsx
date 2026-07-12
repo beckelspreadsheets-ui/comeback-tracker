@@ -4296,6 +4296,54 @@ export const ComebackCityThreeKartRace = ({
   useEffect(() => {
     inputRef.current = { ...inputRef.current, autoThrottle: touchControls && !autoplay };
   }, [touchControls, autoplay]);
+  // Gyro steering opt-in (owner 2026-07-12: "how possible would a gyro
+  // mobile option be"): tilt maps to the same analog steerAxis; the thumb
+  // always wins while a drag is active. iOS requires a user-gesture
+  // permission prompt, which is why this is a toggle, not a default.
+  const [tiltEnabled, setTiltEnabled] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && window.localStorage?.getItem('cc-kart-tilt') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleTilt = async () => {
+    if (!tiltEnabled && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        if ((await DeviceOrientationEvent.requestPermission()) !== 'granted') return;
+      } catch {
+        return;
+      }
+    }
+    setTiltEnabled((value) => {
+      const next = !value;
+      try {
+        window.localStorage?.setItem('cc-kart-tilt', next ? '1' : '0');
+      } catch {
+        /* private mode */
+      }
+      return next;
+    });
+  };
+  useEffect(() => {
+    if (!tiltEnabled || typeof window === 'undefined') return undefined;
+    const onOrientation = (event) => {
+      if (joystickStateRef.current.active) return; // an active drag always wins
+      // Portrait steering roll = gamma; landscape = ±beta (device axes are
+      // defined in portrait frame, so remap by the screen angle).
+      const angle = window.screen?.orientation?.angle ?? window.orientation ?? 0;
+      const beta = event.beta ?? 0;
+      const gamma = event.gamma ?? 0;
+      const roll = angle === 90 ? beta : angle === 270 || angle === -90 ? -beta : gamma;
+      const axis = Math.abs(roll) < 2.5 ? 0 : clamp(roll / 22, -1, 1);
+      inputRef.current = { ...inputRef.current, steerAxis: axis };
+    };
+    window.addEventListener('deviceorientation', onOrientation);
+    return () => {
+      window.removeEventListener('deviceorientation', onOrientation);
+      if (!joystickStateRef.current.active) inputRef.current = { ...inputRef.current, steerAxis: null };
+    };
+  }, [tiltEnabled]);
   // Seat/kart/track come from props ONLY. The old ?character/?kart/?track
   // URL overrides let a stale param (e.g. a shared lab link) silently beat
   // the cup-select pick (roadmap W1: "penguin village is loading the miami
@@ -5666,6 +5714,16 @@ export const ComebackCityThreeKartRace = ({
               <div className="three-kart-race__joystick-puck" ref={joystickPuckRef} />
             </div>
           </div>
+          <button
+            aria-label="Toggle tilt steering"
+            aria-pressed={tiltEnabled}
+            className={`three-kart-race__tilt-toggle${tiltEnabled ? ' three-kart-race__tilt-toggle--on' : ''}`}
+            data-testid="race-touch-tilt"
+            onClick={toggleTilt}
+            type="button"
+          >
+            Tilt {tiltEnabled ? 'on' : 'off'}
+          </button>
           <div aria-label="Race touch controls" className="three-kart-race__touch three-kart-race__touch--cluster">
             <button
               aria-label="Brake"

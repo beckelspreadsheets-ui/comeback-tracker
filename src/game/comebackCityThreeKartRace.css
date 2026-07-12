@@ -209,6 +209,29 @@
   width: 46px;
 }
 
+/* Gyro opt-in pill — top-right, clear of both thumb zones. */
+.three-kart-race__tilt-toggle {
+  background: rgba(12, 16, 29, 0.7);
+  border: 1px solid rgba(56, 215, 255, 0.28);
+  border-radius: 999px;
+  color: #9fc2d8;
+  font: 900 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  min-height: 40px;
+  padding: 0 14px;
+  position: absolute;
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  text-transform: uppercase;
+  top: calc(54px + env(safe-area-inset-top, 0px));
+  touch-action: none;
+  z-index: 4;
+}
+
+.three-kart-race__tilt-toggle--on {
+  border-color: #ffd34f;
+  box-shadow: 0 0 12px rgba(255, 211, 79, 0.35);
+  color: #ffd34f;
+}
+
 /* Flick-drift engaged: the ring + puck go gold until the thumb lifts. */
 .three-kart-race__steer-indicator--drifting {
   border-color: rgba(255, 211, 79, 0.6);
