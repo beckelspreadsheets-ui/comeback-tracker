@@ -340,7 +340,7 @@
   {
     "filePath": "src/assets/game/models/miami/deco-hotel.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId a000823b-e223-4e12-9a4b-4588bbd8c472, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.decoHotel mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:89ba210add205a43ebd7b987e3ec6f8f7fbfca72d1bdb3c5d0363235608c6068",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -359,7 +359,7 @@
   {
     "filePath": "src/assets/game/models/miami/condo-tower.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 30cefda6-db99-4a5d-9993-076938b83091, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.condoTower mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:76cb6aaf3e2a348728c5772677974092abcefcd30dd31846788293d94d636544",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -378,7 +378,7 @@
   {
     "filePath": "src/assets/game/models/miami/corner-arcade.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 3eb890c1-48bf-44ce-a682-193af14ba8a2, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.cornerArcade mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:cc8d6a40376ac90a9bd027ad55cd0e87855f034d8a59b943b50e9b965069d107",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -397,7 +397,7 @@
   {
     "filePath": "src/assets/game/models/miami/lifeguard-tower.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId f5ef8246-f0ef-4632-8dc2-3a4f2b805481, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.lifeguard mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:3df6243285e92f2f3102ec877ed1340d8916c07af5ef4c837b84e83a2a513517",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -416,7 +416,7 @@
   {
     "filePath": "src/assets/game/models/miami/palm-cluster.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 0649fa46-0219-4ee5-a088-71b5f4d02da6, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.palmCluster mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:a0c11bfb8a5c7bcbc134af324533030251f6b4875ea046fb298f3fab7f5426eb",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -435,7 +435,7 @@
   {
     "filePath": "src/assets/game/models/miami/retro-diner.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 9c7f509e-8e46-444f-9188-7a10fb887722, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.retroDiner mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:ec387ba1fb46bfe7e9544f45d003d4a7e98c9af1d7ddc808892da809972c2705",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -454,7 +454,7 @@
   {
     "filePath": "src/assets/game/generated/backdrops/cc-far.webp",
     "source": "Higgsfield soul_location 2560x1080, jobId dfa46ac2-47b0-4474-a2d7-d4905a192c89, seed 413922, 2026-07-07; Claude-authored prompt under owner direction; far band, W0 reprocess: crop 2560x1072 + top-35% linear alpha fade (was 16% - hard seam), webp q85; provenance tmp/m3-sky-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"comeback-city\"] parallax ring",
     "sizeBudget": "images gate (bundle report); shipped sha256:8d1a65d539c81d8ad9626b1dff3d78493c646f5b31f2ee587023399f26e21435",
     "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
@@ -473,7 +473,7 @@
   {
     "filePath": "src/assets/game/generated/backdrops/cc-near.webp",
     "source": "Higgsfield soul_location 2560x1080, jobId 185dfe08-1fe6-439d-a7c6-c9ced2e8820b, seed 906461, 2026-07-07; Claude-authored prompt under owner direction; near silhouette row, magenta-keyed + despilled (PIL, cwebp -exact); provenance tmp/m3-sky-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"comeback-city\"] parallax ring",
     "sizeBudget": "images gate (bundle report); shipped sha256:4abf37d64e0a24e9dc2aa17219b3543921bae3d092c75d36ed0cd45a6a8d20be",
     "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
@@ -492,7 +492,7 @@
   {
     "filePath": "src/assets/game/generated/backdrops/pv-far.webp",
     "source": "Higgsfield soul_location 2560x1080, jobId 07fc4fa8-26e0-408f-8b48-c5fc2c6436d7, seed 973939, 2026-07-07; Claude-authored prompt under owner direction; far band (arctic-sunset correction b-take), W0 reprocess: top-35% fade, webp q85; provenance tmp/m3-sky-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"penguin-village\"] parallax ring",
     "sizeBudget": "images gate (bundle report); shipped sha256:30367685a6386c260240f1965d87e5c2182ca0ae7a8ef238a6c48305c1959b75",
     "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
@@ -511,7 +511,7 @@
   {
     "filePath": "src/assets/game/generated/backdrops/pv-near.webp",
     "source": "Higgsfield soul_location 2560x1080, jobId 70e8661f-90c2-4d04-aac1-9eded088fb07, seed 470250, 2026-07-07; Claude-authored prompt under owner direction; near silhouette row (arctic-sunset correction b-take), magenta-keyed + despilled; provenance tmp/m3-sky-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
     "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"penguin-village\"] parallax ring",
     "sizeBudget": "images gate (bundle report); shipped sha256:7fc6b2419bc3f652ceb96b119cf55c60c616245c54e1310a0c02ada6be9fd498",
     "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
@@ -529,9 +529,9 @@
   },
   {
     "filePath": "src/assets/game/models/items/item-box-cc-coin.glb",
-    "source": "Higgsfield tripo_3d text-to-3D, jobId da7bdf92-3772-4f5e-aa7e-8c32db8f4a37 (re-roll of 48cdfdca for the reverse face), 2026-07-07; COMPOSITE: two instances of the same mesh baked back-to-back, each clean \u20bf face outward (tripo mirror-mangles one face of every roll \u2014 build script tmp/w2-item-boxes/build-coin-composite.mjs)",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); the bitcoin \u20bf mark is deliberate owner-directed art (\"they could actually just be bitcoins\") \u2014 recorded exception to the no-text rule",
-    "role": "Runtime item box, Comeback City (W2 owner pick: \"the other for comeback city\") \u2014 ITEM_BOX_ASSETS mount replacing the procedural crate",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId da7bdf92-3772-4f5e-aa7e-8c32db8f4a37 (re-roll of 48cdfdca for the reverse face), 2026-07-07; COMPOSITE: two instances of the same mesh baked back-to-back, each clean ₿ face outward (tripo mirror-mangles one face of every roll — build script tmp/w2-item-boxes/build-coin-composite.mjs)",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); the bitcoin ₿ mark is deliberate owner-directed art (\"they could actually just be bitcoins\") — recorded exception to the no-text rule",
+    "role": "Runtime item box, Comeback City (W2 owner pick: \"the other for comeback city\") — ITEM_BOX_ASSETS mount replacing the procedural crate",
     "sizeBudget": "item-box class (2026-07-07 revision: target 2500/hard 5000 tris, 160KB hard); shipped 4828 tris / 64KB sha256:594bb7aca7ff0b6194ace23a804c510af23ca8a0423b4d8f815788244e02c469",
     "fallback": "the procedural winter crate stays mounted until the GLB template resolves and remains if it fails (visible fallback, not silent); load failures count into the telemetry mounts guard",
     "assetId": "itembox.cc-coin",
@@ -549,8 +549,8 @@
   {
     "filePath": "src/assets/game/models/items/item-box-pv-ice.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 48c793ef-d3b3-471f-bfaa-202d5ec67dc2, 2026-07-07 (PENGUIN-FREE re-roll of d49b9b54 under the no-generic-penguins standing rule - the original had a generator-added generic penguin; owner: \"yeah we should change that\")",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); the bitcoin \u20bf mark is deliberate owner-directed art (\"they could actually just be bitcoins\") \u2014 recorded exception to the no-text rule",
-    "role": "Runtime item box, Penguin Village (W2 owner pick: \"the icebox one for penguin city\") \u2014 ITEM_BOX_ASSETS mount replacing the procedural crate",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); the bitcoin ₿ mark is deliberate owner-directed art (\"they could actually just be bitcoins\") — recorded exception to the no-text rule",
+    "role": "Runtime item box, Penguin Village (W2 owner pick: \"the icebox one for penguin city\") — ITEM_BOX_ASSETS mount replacing the procedural crate",
     "sizeBudget": "item-box class (target 2500/hard 5000 tris, 160KB hard); shipped 1900 tris / 43KB sha256:16a0076f9563adf5fb7d5c244ffb8c4046bd18117a9dbdaa311f329ee72fe0c0",
     "fallback": "the procedural winter crate stays mounted until the GLB template resolves and remains if it fails (visible fallback, not silent); load failures count into the telemetry mounts guard",
     "assetId": "itembox.pv-ice",
@@ -677,6 +677,26 @@
       "approval": "Owner 2026-07-07: \"I love the assets\" (pv-props-lab.html, penguin-free rework sheet)",
       "promotedAt": "2026-07-07",
       "labEvidence": "tmp/w3-pv-props/tribute-props-rework.png + ship-diet-check-*.png"
+    }
+  },
+  {
+    "filePath": "src/assets/game/models/pv-tribute/outplayasians-crosser.glb",
+    "source": "Meshy image-to-3D from the owner-supplied outplayasians PNG (owner 2026-07-07: 'I have the PNG only, turn it into 3d' = per-asset H0 §2.2 opt-in, recorded); likeness-judge diet source sha256:56f0c4e086b789230206743e0b187fb6b2069a623cf8310635298f1e107b7ef3 (tmp/w3-pv-props/outplayasians-diet.glb), ship diet 2026-07-12: weld -> resize 512 -> meshopt LAST (individual verbs)",
+    "license": "Owner-supplied likeness under H0 §2.2 per-file opt-in; community-member likeness with owner authorization",
+    "role": "K4 Penguin Village finish-line SLOW crosser (first live crosser in the shipped runtime); owner likeness approval 2026-07-10 verbatim: 'asians looked great'; orientation lab 2026-07-12: front = +Z, mount yaw 0 (tmp/k4-crosser/yaw-*.png)",
+    "sizeBudget": "character crosser class; 842KB shipped (2.98MB judge copy dieted); shipped sha256:9c5ebc6175eb0b9afc46c9eab41ccf8d741a0b24e0357d50dac33d3d21376e9b",
+    "fallback": "mount slot stays empty on load failure; kart-playable fails loud via the miamiMounts telemetry guard",
+    "assetId": "pvtribute.outplayasiansCrosser",
+    "assetClass": "seated-character",
+    "status": "runtime-promoted-k4-crosser",
+    "runtimeTransform": "weld -> resize 512 -> meshopt LAST (individual verbs; simplify skipped to preserve the crown/visor likeness at 20k tris)",
+    "sourceHash": "sha256:56f0c4e086b789230206743e0b187fb6b2069a623cf8310635298f1e107b7ef3",
+    "outputHash": "sha256:9c5ebc6175eb0b9afc46c9eab41ccf8d741a0b24e0357d50dac33d3d21376e9b",
+    "proof": "tmp/k4-crosser/ (orientation yaw-*.png, finish-crossing.png, crosser-probe.mjs: mounts 10/10, autoplay 0 spin-outs)",
+    "promotion": {
+      "approval": "Owner 2026-07-10 likeness: \"asians looked great\"; crosser wiring = PRD K4 (ships regardless of the roster-seat call)",
+      "promotedAt": "2026-07-12",
+      "labEvidence": "tmp/k4-crosser/yaw-0.png .. yaw-270.png + finish-crossing.png"
     }
   }
 ]

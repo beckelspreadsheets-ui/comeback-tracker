@@ -42,6 +42,15 @@ export const CROSSER_TYPES = Object.freeze({
     laneFrequency: 0.7,
     speedMultiplier: 0.76,
   },
+  // K4 (2026-07-12): steady straight-line walker for ordinal-likeness
+  // crossers (outplayasians at the PV finish line is the first).
+  ordinalWalker: {
+    hitSeverity: 1,
+    label: 'Ordinal Walker',
+    laneAmplitude: 0,
+    laneFrequency: 0,
+    speedMultiplier: 0.7,
+  },
 })
 
 export const CROSSER_DEFAULTS = Object.freeze({

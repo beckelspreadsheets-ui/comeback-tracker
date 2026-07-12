@@ -1,0 +1,65 @@
+<!doctype html>
+<!-- K4 orientation lab: outplayasians-diet.glb yaw turntable. Served by the
+     vite dev server (node_modules importmap, no build). Automation drives
+     window.__setYaw and reads window.__orientationReady. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>body { margin: 0; background: #10142a; } #tag { position: fixed; top: 10px; left: 12px; color: #ffd34f; font: 700 20px monospace; }</style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/node_modules/three/build/three.module.js",
+          "three/addons/": "/node_modules/three/examples/jsm/",
+          "meshoptimizer": "/node_modules/meshoptimizer/meshopt_decoder.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="tag">yaw 0</div>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { MeshoptDecoder } from 'meshoptimizer';
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color('#10142a');
+      const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+      scene.add(new THREE.AmbientLight('#ffffff', 1.4));
+      const sun = new THREE.DirectionalLight('#ffffff', 1.6);
+      sun.position.set(3, 6, 4);
+      scene.add(sun);
+
+      const loader = new GLTFLoader();
+      loader.setMeshoptDecoder(MeshoptDecoder);
+      const holder = new THREE.Group();
+      scene.add(holder);
+      loader.load('/tmp/w3-pv-props/outplayasians-diet.glb', (gltf) => {
+        const model = gltf.scene;
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        model.position.sub(center);
+        holder.add(model);
+        const radius = Math.max(size.x, size.y, size.z);
+        camera.position.set(0, radius * 0.35, radius * 1.7);
+        camera.lookAt(0, 0, 0);
+        window.__orientationReady = true;
+      });
+
+      window.__setYaw = (degrees) => {
+        holder.rotation.y = (degrees * Math.PI) / 180;
+        document.getElementById('tag').textContent = `yaw ${degrees}`;
+      };
+      const tick = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(tick);
+      };
+      tick();
+    </script>
+  </body>
+</html>

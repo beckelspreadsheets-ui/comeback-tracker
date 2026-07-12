@@ -289,6 +289,12 @@
       "role": "runtime-item-box"
     },
     {
+      "path": "src/assets/game/models/pv-tribute/outplayasians-crosser.glb",
+      "assetId": "pvtribute.outplayasiansCrosser",
+      "class": "seated-character",
+      "role": "runtime-crosser"
+    },
+    {
       "path": "src/assets/game/models/pv-tribute/pv-craps.glb",
       "assetId": "pvtribute.craps",
       "class": "trackside-building",

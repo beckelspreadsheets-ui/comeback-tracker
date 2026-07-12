@@ -37,6 +37,7 @@ import miamiDecoHotelUrl from '../assets/game/models/miami/deco-hotel.glb?url';
 import miamiLifeguardUrl from '../assets/game/models/miami/lifeguard-tower.glb?url';
 import miamiPalmClusterUrl from '../assets/game/models/miami/palm-cluster.glb?url';
 import miamiRetroDinerUrl from '../assets/game/models/miami/retro-diner.glb?url';
+import outplayasiansCrosserUrl from '../assets/game/models/pv-tribute/outplayasians-crosser.glb?url';
 import pvCrapsUrl from '../assets/game/models/pv-tribute/pv-craps.glb?url';
 import pvBlackjackUrl from '../assets/game/models/pv-tribute/pv-blackjack.glb?url';
 import pvBitcoinMonumentUrl from '../assets/game/models/pv-tribute/pv-bitcoin-monument.glb?url';
@@ -97,6 +98,11 @@ import {
   updateMarch,
   updateProjectiles,
 } from './race/heldItems.js';
+import {
+  createCrossers,
+  crosserHitFor,
+  updateCrossersForFrame,
+} from './race/raceCrossers.js';
 import {
   airPitchFor,
   createAirState,
@@ -235,6 +241,10 @@ const createInitialRace = (
   raceTime: 0,
   // Independent rival sim (Phase 2) — player starts at the back of the grid.
   rivals: createRivalRacers(rivalSeats, { gridProgress: startProgressFor(trackDef) }),
+  // K4: crosser hazards (pure sim state; rivals already know how to dodge
+  // them — rivalRacers has consumed `crossers` since Phase 0.4).
+  crossers: trackDef.crossers?.length ? createCrossers(trackDef) : null,
+  crosserGraceTimer: 0,
   shortcut: createShortcutState(),
   speed: 0,
   spinOuts: 0,
@@ -895,6 +905,9 @@ const MIAMI_FRONT_YAW = Math.PI / 2;
 // posed at them in a later round. Shares the mount machinery + template
 // cache + telemetry mounts guard with the Miami set.
 const PV_TRIBUTE_ASSETS = {
+  // K4: Meshy mesh (not Tripo) — front is +Z, so its mounts pass yaw: 0
+  // instead of MIAMI_FRONT_YAW (orientation lab tmp/k4-crosser/).
+  outplayasiansCrosser: outplayasiansCrosserUrl,
   pvBitcoinMonument: pvBitcoinMonumentUrl,
   pvBlackjack: pvBlackjackUrl,
   pvCraps: pvCrapsUrl,
@@ -3562,6 +3575,18 @@ const createScene = ({
   );
   // ₿ collectible coins (owner concept 2026-07-07): rows from the pure
   // module; the visual clones ONE face-node of the shipped CC coin box
+  // K4: crosser rigs — one positioned group per track crosser, loaded via
+  // the guarded miami mount machinery (loud 404, telemetry mounts guard).
+  // The frame loop drives position/facing from the pure crosser sim. Only
+  // the ordinalWalker visual exists so far (outplayasians, Meshy mesh:
+  // front = +Z per the orientation lab -> yaw 0).
+  const crosserRigs = (trackDef.crossers || []).map((entry) => {
+    const group = new THREE.Group();
+    mountMiamiAsset(group, 'outplayasiansCrosser', { footprint: 6, yaw: 0 });
+    world.add(group);
+    return { group, key: entry.key };
+  });
+
   // template at small scale — zero new bundle bytes, one draw call per
   // coin. Coins pop in when the shared template resolves (same loud-
   // failure mounts guard as every generated mount).
@@ -4025,6 +4050,7 @@ const createScene = ({
     coinField,
     coinInstanced,
     coinMeshes,
+    crosserRigs,
     camera,
     composer,
     // B1: atmosphere handles exposed so B2's palette moments can lerp
@@ -4132,6 +4158,14 @@ const autoplayDodgeBias = (race) => {
     const behindBy = wrap01(race.progress - ball.progress);
     if (ball.owner !== 'player' && behindBy < 0.025 && Math.abs(ball.lane - race.lane) < 0.3) {
       bias += away(ball.lane) * (1 - behindBy / 0.025);
+    }
+  });
+  // K4: dodge crossers the same way rivals do — they're slow and partial
+  // width, so a lane change always clears them (kart-playable's gate).
+  race.crossers?.instances?.forEach((crosser) => {
+    const aheadBy = wrap01(crosser.progress - race.progress);
+    if (aheadBy < 0.03 && Math.abs(crosser.lane - race.lane) < 0.5) {
+      bias += away(crosser.lane) * (1 - aheadBy / 0.03) * 1.4;
     }
   });
   return clamp(bias, -1, 1);
@@ -5025,6 +5059,47 @@ export const ComebackCityThreeKartRace = ({
               race.speed *= 0.45;
             }
           }
+          // K4: crosser hazards — advance the pure sim, drive the rigs, and
+          // hit the player march-style (grace timer stops per-frame re-hits
+          // while overlapping the same slow walker).
+          if (race.crossers) {
+            updateCrossersForFrame({ crossers: race.crossers, dt });
+            race.crosserGraceTimer = Math.max(0, race.crosserGraceTimer - dt);
+            engine.crosserRigs.forEach((rig, index) => {
+              const instance = race.crossers.instances[index];
+              if (!instance) return;
+              const sample = engine.sampler.pointAt(instance.progress, instance.lane);
+              rig.group.position.copy(sample.point);
+              // Face the walk direction: +normal is the +lane axis; the
+              // mesh fronts +Z, so yaw comes straight from the walk vector.
+              const walkX = sample.normal.x * instance.direction;
+              const walkZ = sample.normal.z * instance.direction;
+              rig.group.rotation.y = Math.atan2(walkX, walkZ);
+            });
+            if (
+              !airState.airborne &&
+              race.spinTimer <= 0 &&
+              race.auroraTimer <= 0 &&
+              race.crosserGraceTimer <= 0 &&
+              crosserHitFor({
+                crossers: race.crossers,
+                lane: race.lane,
+                progress: race.progress,
+                trackLength: engine.sampler.length,
+              })
+            ) {
+              if (race.shieldActive) {
+                race.shieldActive = false;
+                race.crosserGraceTimer = 1.2;
+              } else {
+                race.spinTimer = ITEM_FEEL.spinDuration;
+                race.bumpCooldown = KART_CONTACT.spinCooldown;
+                race.spinOuts += 1;
+                race.speed *= 0.45;
+                race.crosserGraceTimer = 1.6;
+              }
+            }
+          }
           if (!airState.airborne && !spinning && race.spinTimer <= 0) {
             const struck = projectileHitFor(race.projectiles, 'player', race.progress, race.lane, engine.sampler.length);
             if (struck && race.auroraTimer <= 0) {
@@ -5066,6 +5141,7 @@ export const ComebackCityThreeKartRace = ({
             boostSpeed: BOOST_SPEED,
             cornerPushFor,
             blizzards: race.blizzards,
+            crossers: race.crossers,
             march: race.march,
             crestProgress: crestProgress,
             curvatureAt: (progress) => trackCurvatureAt(engine.sampler, progress),

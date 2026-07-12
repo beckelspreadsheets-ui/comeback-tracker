@@ -89,8 +89,13 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     { key: 'ice-pillar-pond-2', type: 'icePillar', progress: 0.36, side: -0.86 },
   ],
   crossers: [
-    { key: 'fish-cart-market', progress: 0.55, direction: 1, speed: 0.45, width: 0.28, modelType: 'fishCart' },
-    { key: 'penguin-march-return', progress: 0.82, direction: -1, speed: 0.38, width: 0.35, modelType: 'penguinMarch' },
+    // K4 (2026-07-12): first crosser LIVE in the shipped runtime —
+    // outplayasians strolls across the finish straight (likeness approved
+    // 2026-07-10 "asians looked great"). SLOW + partial width so a driving
+    // line always exists. The old fish-cart/penguin-march entries were
+    // legacy-only dead data (the shipped runtime never consumed crossers
+    // before K4) — revive them in V2 once they have shipped visuals.
+    { key: 'outplayasians-finish', progress: 0.015, direction: 1, speed: 0.16, width: 0.34, modelType: 'ordinalWalker' },
   ],
   // Arctic-neon palette: snow ground, icy dusk sky, ice-blue edges. Road
   // asphalt stays dark (readability rule — Sherbet Land does the same).
