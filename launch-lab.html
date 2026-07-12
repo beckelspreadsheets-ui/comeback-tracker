@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- K2.5 launch-readability lab: repro evidence + fix menu for the owner's
+     "flying in the air" Comeback City bug (2026-07-11). Served by vite dev:
+     `npx vite` then open http://localhost:5173/launch-lab.html -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Launch Lab — CC "flying in the air" (K2.5)</title>
+    <style>
+      body { margin: 0; background: #10142a; color: #cfe3ff; font: 14px/1.55 system-ui, sans-serif; padding: 28px 36px 60px; }
+      h1 { font-size: 20px; color: #fff; }
+      h2 { font-size: 16px; margin: 30px 0 8px; color: #9fe7ff; border-bottom: 1px solid #263258; padding-bottom: 4px; }
+      .quote { border-left: 3px solid #ffd34f; padding: 6px 12px; color: #ffe9a8; background: #1a1f3d; margin: 10px 0; }
+      .card { background: #161b38; border: 1px solid #263258; border-radius: 10px; padding: 16px 18px; margin: 14px 0; }
+      .card h3 { margin: 0 0 6px; color: #fff; font-size: 15px; }
+      video { width: 100%; max-width: 860px; border-radius: 8px; border: 1px solid #263258; display: block; margin: 8px 0; }
+      .strip { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+      .strip figure { margin: 0; flex: 1 1 240px; max-width: 300px; }
+      .strip img { width: 100%; border-radius: 6px; border: 1px solid #263258; }
+      .strip figcaption { font-size: 11.5px; color: #7f8db4; margin-top: 2px; }
+      code { background: #1a2142; padding: 1px 6px; border-radius: 4px; font-size: 12.5px; color: #ffd34f; }
+      .fix { margin: 6px 0; }
+      .fix b { color: #9fe7ff; }
+      .hint { color: #7f8db4; font-size: 12.5px; }
+      .rec { background: #14251a; border: 1px solid #2c5236; border-radius: 8px; padding: 10px 14px; color: #b8f0c5; }
+    </style>
+  </head>
+  <body>
+    <h1>Launch Lab — the "flying in the air" bug (K2.5)</h1>
+    <div class="quote">"you go through one of the turns left then you go up a ramp and all of a sudden you go flying in the air and it doesn't show you the ramp that you're going up and over … it does it twice on you and so you just look like you're flying in the air so it looks super weird."</div>
+
+    <p><strong>What's actually happening (reproduced + measured):</strong> Comeback City has THREE scripted launch spots. At race speed a launch throws the kart <strong>~330 world units over ~1.3 seconds</strong> — the ramp that caused it is out of frame in a fraction of a second, and there is <strong>no landing marker anywhere</strong>, so mid-air there is zero visual explanation. The "does it twice" is real and it's every lap: the <strong>bridge-crest launch</strong> (right after the left carousel + climb) and <strong>ramp&nbsp;B</strong> fire ~2.4 seconds apart on the normal racing line. Bonus problem: the launch trigger is ~50% wider than the visible ramp, so you can fly having visibly missed the wedge.</p>
+
+    <h2>Site 1 — Bridge crest (fires EVERY lap, the big one)</h2>
+    <div class="card">
+      <h3>After the left carousel, up the climb, then BOOM — biggest launch in the game off a thin strip you never see</h3>
+      <video controls loop muted src="/tmp/k2.5-launch-repro/clip-crest-autoplay.webm"></video>
+      <div class="strip">
+        <figure><img src="/tmp/k2.5-launch-repro/crest-autoplay-lap1-launch.png" /><figcaption>launch — cause already behind the camera</figcaption></figure>
+        <figure><img src="/tmp/k2.5-launch-repro/crest-autoplay-lap1-apex.png" /><figcaption>apex — kart at the TOP of the screen, road curving below, nothing explains it</figcaption></figure>
+        <figure><img src="/tmp/k2.5-launch-repro/crest-autoplay-lap1-landing.png" /><figcaption>landing — no marker ever said where</figcaption></figure>
+      </div>
+      <p class="hint">Fires at any lane, ~1.7&nbsp;s airtime (it's the "big" launch). The current "kicker" visual is a thin strip + arrow added once before for this exact complaint — still invisible at 290&nbsp;speed.</p>
+    </div>
+
+    <h2>Site 2 — Ramp B, progress 0.685 (fires MOST laps — it sits on the racing line out of the east loop)</h2>
+    <div class="card">
+      <h3>~2.4s after the crest launch — this is the second half of "it does it twice"</h3>
+      <video controls loop muted src="/tmp/k2.5-launch-repro/clip-ramp-B-autoplay.webm"></video>
+      <div class="strip">
+        <figure><img src="/tmp/k2.5-launch-repro/ramp-B-autoplay-lap1-launch.png" /><figcaption>first airborne frame — flat empty road, ramp long gone</figcaption></figure>
+        <figure><img src="/tmp/k2.5-launch-repro/ramp-B-autoplay-lap1-apex.png" /><figcaption>apex</figcaption></figure>
+        <figure><img src="/tmp/k2.5-launch-repro/ramp-B-autoplay-lap1-landing.png" /><figcaption>landing</figcaption></figure>
+      </div>
+      <p class="hint">Both captured hits launched at the wedge's inner EDGE (lane 0.22–0.29 vs wedge center 0.35) — the trigger reaches ~50% past the visible ramp, so corner-exit lines clip it constantly without reading as "I drove onto a ramp."</p>
+    </div>
+
+    <h2>Site 3 — Ramp A, progress 0.075 (deliberate line choice only — the bot never hit it in 3 laps)</h2>
+    <div class="card">
+      <video controls loop muted src="/tmp/k2.5-launch-repro/clip-ramp-A-driver.webm"></video>
+      <div class="strip">
+        <figure><img src="/tmp/k2.5-launch-repro/ramp-A-driver-lap2-launch.png" /><figcaption>dead-center wedge hit (scripted driver)</figcaption></figure>
+        <figure><img src="/tmp/k2.5-launch-repro/ramp-A-driver-lap2-apex.png" /><figcaption>apex — even a CLEAN hit reads as random flying</figcaption></figure>
+        <figure><img src="/tmp/k2.5-launch-repro/ramp-A-driver-lap2-landing.png" /><figcaption>landing</figcaption></figure>
+      </div>
+    </div>
+
+    <h2>The fix menu — pick per site (one variable per change, each lands separately)</h2>
+    <div class="card">
+      <div class="fix"><b>(a) Trigger matches the visual</b> — you only launch if you visibly drove onto the wedge (tighten <code>rampHitLane 0.22 → 0.15</code>). Fairness fix, kills the "launched from nowhere" cases. <span class="hint">Applies: ramps A + B.</span></div>
+      <div class="fix"><b>(b) Landing-zone marker</b> — a glowing ring / chevron strip on the road where the flight puts you down, visible from the launch. The single biggest "oh, this is a JUMP" signal mid-air. <span class="hint">Applies: all three sites.</span></div>
+      <div class="fix"><b>(c) Bigger ramp + approach chevrons</b> — beefier wedge, painted arrows on the asphalt leading in, so the cause reads BEFORE you hit it. <span class="hint">Applies: ramps A + B.</span></div>
+      <div class="fix"><b>(d) Crest jump-gate</b> — replace the thin strip with a full-width, unmissable jump-gate dressing at the bridge top (glow arch / launch lights), so the big launch has a big cause. <span class="hint">Applies: crest.</span></div>
+      <div class="fix"><b>(e) Shorten the flights</b> — trim launch power so airtime drops (feel change — needs your explicit sign-off, changes how the jumps play). <span class="hint">Last resort.</span></div>
+      <div class="fix"><b>(remove)</b> — any site can just be deleted instead (say which).</div>
+      <p class="rec"><strong>My recommendation:</strong> <code>crest: d + b</code> · <code>ramp B: a + b</code> · <code>ramp A: a + b</code> — visible causes and visible landings everywhere, zero feel changes. Answer in that shorthand and I'll build exactly that.</p>
+    </div>
+
+    <p class="hint">Evidence: tmp/k2.5-launch-repro/ (full-run webms, telemetry samples, launches.json). Task: PRD K2.5. Raw numbers: launches at speed 273–293, verticalVel = speed × 0.155 vs gravity 58 → 1.3–1.7 s air, ~330 units downrange.</p>
+  </body>
+</html>

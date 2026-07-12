@@ -1,0 +1,75 @@
+{
+  "capturedAt": "2026-07-12T00:32:53.216Z",
+  "launches": [
+    {
+      "run": "autoplay",
+      "site": "crest",
+      "lap": 1,
+      "raceTime": 6.04,
+      "progress": 0.472,
+      "lane": 0.226,
+      "speed": 287,
+      "videoSec": 23.7
+    },
+    {
+      "run": "autoplay",
+      "site": "ramp-B",
+      "lap": 1,
+      "raceTime": 8.48,
+      "progress": 0.688,
+      "lane": 0.222,
+      "speed": 289,
+      "videoSec": 29.1
+    },
+    {
+      "run": "autoplay",
+      "site": "crest",
+      "lap": 2,
+      "raceTime": 17.04,
+      "progress": 0.472,
+      "lane": 0.28,
+      "speed": 292,
+      "videoSec": 48.1
+    },
+    {
+      "run": "autoplay",
+      "site": "ramp-B",
+      "lap": 2,
+      "raceTime": 19.44,
+      "progress": 0.688,
+      "lane": 0.293,
+      "speed": 293,
+      "videoSec": 53.1
+    },
+    {
+      "run": "autoplay",
+      "site": "crest",
+      "lap": 3,
+      "raceTime": 30.04,
+      "progress": 0.474,
+      "lane": -0.17,
+      "speed": 292,
+      "videoSec": 76.6
+    },
+    {
+      "run": "driver",
+      "site": "crest",
+      "lap": 1,
+      "raceTime": 6.24,
+      "progress": 0.478,
+      "lane": 0.038,
+      "speed": 289,
+      "videoSec": 21.9
+    },
+    {
+      "run": "driver",
+      "site": "ramp-A",
+      "lap": 2,
+      "raceTime": 13.36,
+      "progress": 0.078,
+      "lane": -0.372,
+      "speed": 273,
+      "videoSec": 36.2
+    }
+  ]
+}

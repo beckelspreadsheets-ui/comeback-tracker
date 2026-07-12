@@ -4095,6 +4095,7 @@ const publishTelemetry = (
     heldItem: race.heldItem,
     fpsEstimate: Math.round(fpsEstimate),
     itemPickups: race.itemPickups,
+    lane: Number(race.lane.toFixed(3)),
     lap: race.lap,
     miniTurbo: Number(race.driftState.miniTurboTimer.toFixed(2)),
     miniTurboTier: race.driftState.miniTurboTier,
