@@ -27,7 +27,9 @@ import kartColormapUrl from '../assets/game/models/toy-car-kit/colormap.png';
 import crrtBunnyModelUrl from '../assets/game/models/avatars/crrt-bunny.glb?url';
 import sethPenguinModelUrl from '../assets/game/models/avatars/seth-penguin.glb?url';
 import heroKartTripoUrl from '../assets/game/models/tripo/hero-kart-tripo.glb?url';
+import iceRacerKartUrl from '../assets/game/models/karts/ice-racer.glb?url';
 import iceSledUrl from '../assets/game/models/tripo/ice-sled.glb?url';
+import miamiCruiserKartUrl from '../assets/game/models/karts/miami-cruiser.glb?url';
 import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
 import tclowModelUrl from '../assets/game/models/avatars/tclow-penguin.glb?url';
 import layer23ModelUrl from '../assets/game/models/avatars/layer23-penguin.glb?url';
@@ -171,7 +173,18 @@ export const KART_OPTIONS = [
   { key: 'hero', name: 'Hero Kart', stats: { accel: 1.0, handling: 1.0, topSpeed: 1.0 }, tagline: 'Balanced' },
   { key: 'icesled', name: 'Ice Sled', stats: { accel: 0.94, handling: 0.92, topSpeed: 1.05 }, tagline: 'Fast & slippery' },
   { key: 'kenney', name: 'Dragster', stats: { accel: 1.08, handling: 1.04, topSpeed: 0.96 }, tagline: 'Quick off the line' },
+  // K5 owner picks 2026-07-12 ("i meant the ice racer and miami cruser"):
+  { key: 'iceracer', name: 'Ice Racer', stats: { accel: 0.96, handling: 0.9, topSpeed: 1.08 }, tagline: 'Frozen top end' },
+  { key: 'miamicruiser', name: 'Miami Cruiser', stats: { accel: 1.05, handling: 1.07, topSpeed: 0.94 }, tagline: 'Grips the neon' },
 ];
+// Generated kart bodies arrive in two facing conventions: Tripo = nose +X
+// (mount -π/2), Meshy = nose -X (mount +π/2). Lab-verified per kart.
+const KART_NOSE_YAW = {
+  hero: -Math.PI / 2,
+  icesled: -Math.PI / 2,
+  iceracer: Math.PI / 2,
+  miamicruiser: Math.PI / 2,
+};
 const kartByKey = (key) => KART_OPTIONS.find((entry) => entry.key === key) || KART_OPTIONS[0];
 export const DEFAULT_CHARACTER_KEY = 'crrt-bunny';
 const characterByKey = (key) =>
@@ -1110,7 +1123,9 @@ const loadKartAssets = () => {
       gltfLoader.loadAsync(iceSledUrl).catch(() => null),
       gltfLoader.loadAsync(tclowModelUrl).catch(() => null),
       gltfLoader.loadAsync(layer23ModelUrl).catch(() => null),
-    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf]) => ({
+      gltfLoader.loadAsync(iceRacerKartUrl).catch(() => null),
+      gltfLoader.loadAsync(miamiCruiserKartUrl).catch(() => null),
+    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, iceRacerGltf, miamiCruiserGltf]) => ({
       colormapImage,
       // Keyed by KART_CHARACTERS entries — seats are assigned at race start.
       driverScenes: {
@@ -1124,6 +1139,8 @@ const loadKartAssets = () => {
       kartScenes: {
         hero: tripoKartGltf?.scene || null,
         icesled: iceSledGltf?.scene || null,
+        iceracer: iceRacerGltf?.scene || null,
+        miamicruiser: miamiCruiserGltf?.scene || null,
       },
       racerScene: racerGltf.scene,
     }));
@@ -1207,7 +1224,7 @@ const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height 
 
 // A/B variant: AI-generated kart body with its own baked texture. One fused
 // mesh — no wheel nodes, so wheels are static (acceptable for the visual A/B).
-const attachTripoKartBody = (kartModel, tripoScene, castsShadow) => {
+const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math.PI / 2) => {
   const rig = tripoScene.clone(true);
   rig.traverse((node) => {
     if (node.isMesh) {
@@ -1222,10 +1239,10 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow) => {
   });
   const bounds = new THREE.Box3().setFromObject(rig);
   const size = bounds.getSize(new THREE.Vector3());
-  // The Tripo hero kart arrives facing +X (long axis); -π/2 brings its nose
-  // onto +Z, our driving direction. The old +π/2 guess had it driving
-  // backward — owner-reported, probe-confirmed.
-  rig.rotation.y = -Math.PI / 2;
+  // Per-kart nose yaw (KART_NOSE_YAW): Tripo bodies face +X (-π/2 to put
+  // the nose on +Z, our driving direction — the old +π/2 guess drove
+  // backward, owner-reported), Meshy K5 bodies face -X (+π/2).
+  rig.rotation.y = noseYaw;
   const fit = 15.6 / Math.max(size.x, size.z);
   rig.scale.setScalar(fit);
   rig.updateMatrixWorld(true);
@@ -4622,7 +4639,7 @@ export const ComebackCityThreeKartRace = ({
           const authoredKart =
             kartKind !== 'kenney' && !(isPlayer && wantsKenneyKart) ? kartScenes[kartKind] : null;
           if (authoredKart) {
-            attachTripoKartBody(model, authoredKart, isPlayer);
+            attachTripoKartBody(model, authoredKart, isPlayer, KART_NOSE_YAW[kartKind] ?? -Math.PI / 2);
           } else {
             // Drag-racer silhouette is long and slim — fit it larger than
             // the hero body so every kart reads the same mass.

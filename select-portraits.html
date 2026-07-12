@@ -18,6 +18,7 @@
     <script type="module">
       import * as THREE from 'three';
       import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+      import { MeshoptDecoder } from 'meshoptimizer';
 
       const params = new URLSearchParams(window.location.search);
       const modelUrl = params.get('model');
@@ -34,7 +35,10 @@
       sun.position.set(30, 60, 80);
       scene.add(sun);
 
-      new GLTFLoader().load(modelUrl, (gltf) => {
+      // K5 karts (and the meshopt-recompressed avatars) need the decoder.
+      const loader = new GLTFLoader();
+      loader.setMeshoptDecoder(MeshoptDecoder);
+      loader.load(modelUrl, (gltf) => {
         const rig = gltf.scene;
         const bounds = new THREE.Box3().setFromObject(rig);
         const size = bounds.getSize(new THREE.Vector3());

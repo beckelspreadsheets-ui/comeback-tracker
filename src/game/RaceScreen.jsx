@@ -42,7 +42,9 @@ import charTclowUrl from '../assets/game/select/char-tclow.png';
 import charLayer23Url from '../assets/game/select/char-layer23.png';
 import kartHeroUrl from '../assets/game/select/kart-hero.png';
 import kartIcesledUrl from '../assets/game/select/kart-icesled.png';
+import kartIceracerUrl from '../assets/game/select/kart-iceracer.png';
 import kartKenneyUrl from '../assets/game/select/kart-kenney.png';
+import kartMiamicruiserUrl from '../assets/game/select/kart-miamicruiser.png';
 
 // Portraits are prerendered from the real GLBs by
 // scripts/select-portraits-capture.mjs — rerun it when the roster changes.
@@ -56,7 +58,9 @@ const CHARACTER_PORTRAITS = {
 const KART_PORTRAITS = {
   hero: kartHeroUrl,
   icesled: kartIcesledUrl,
+  iceracer: kartIceracerUrl,
   kenney: kartKenneyUrl,
+  miamicruiser: kartMiamicruiserUrl,
 };
 import { BANKED_ITEMS, COMMON_BOX_ITEMS, ITEM_META } from './raceItems.js';
 import { RACE_TRACKS } from './raceTracks.js';

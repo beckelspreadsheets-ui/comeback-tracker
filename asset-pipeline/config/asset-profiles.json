@@ -329,6 +329,18 @@
       "assetId": "pvtribute.token-cluster",
       "class": "trackside-building",
       "role": "runtime-trackside-prop"
+    },
+    {
+      "path": "src/assets/game/models/karts/ice-racer.glb",
+      "assetId": "karts.iceRacer",
+      "class": "hero-kart",
+      "role": "runtime-vehicle"
+    },
+    {
+      "path": "src/assets/game/models/karts/miami-cruiser.glb",
+      "assetId": "karts.miamiCruiser",
+      "class": "hero-kart",
+      "role": "runtime-vehicle"
     }
   ]
 }

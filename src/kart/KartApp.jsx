@@ -36,7 +36,9 @@ import charTclowUrl from '../assets/game/select/char-tclow.png';
 import charLayer23Url from '../assets/game/select/char-layer23.png';
 import kartHeroUrl from '../assets/game/select/kart-hero.png';
 import kartIcesledUrl from '../assets/game/select/kart-icesled.png';
+import kartIceracerUrl from '../assets/game/select/kart-iceracer.png';
 import kartKenneyUrl from '../assets/game/select/kart-kenney.png';
+import kartMiamicruiserUrl from '../assets/game/select/kart-miamicruiser.png';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -52,7 +54,9 @@ const CHARACTER_PORTRAITS = {
 const KART_PORTRAITS = {
   hero: kartHeroUrl,
   icesled: kartIcesledUrl,
+  iceracer: kartIceracerUrl,
   kenney: kartKenneyUrl,
+  miamicruiser: kartMiamicruiserUrl,
 };
 
 const KartIntroScreen = ({ onStart }) => (

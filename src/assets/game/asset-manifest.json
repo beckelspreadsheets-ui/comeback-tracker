@@ -698,5 +698,45 @@
       "promotedAt": "2026-07-12",
       "labEvidence": "tmp/k4-crosser/yaw-0.png .. yaw-270.png + finish-crossing.png"
     }
+  },
+  {
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — NO people/animals/penguins in every prompt)",
+    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "assetClass": "hero-kart",
+    "status": "runtime-promoted-k5-kart",
+    "runtimeTransform": "weld -> simplify 0.5/0.01 -> resize 384 -> meshopt LAST (individual verbs; 384 chosen at the 2026-07-12 budget squeeze)",
+    "filePath": "src/assets/game/models/karts/ice-racer.glb",
+    "source": "nano_banana_2 concept ffd947c4-5e86-4b81-9e7d-077e4259fca0 (compact re-roll of the too-massive snow buggy) -> meshy image_to_3d lift 71c10781-4cb9-41f1-a51e-638bde68d752, 2026-07-12",
+    "role": "K5 selectable player kart (KART_OPTIONS iceracer, Frozen top end); Meshy nose -X -> mount yaw +PI/2 (nose lab tmp/w4-kart-lab/nose-ice-racer-*.png)",
+    "assetId": "karts.iceRacer",
+    "sourceHash": "sha256:fdd9a7ef678c779fa7d697bfd7642517c6cdeaccf8016329bf5ba044f9cd19dc",
+    "outputHash": "sha256:1ea01b4f2afe7e29dbaa7678f76742c86c22ee8f5fdb3171b62e7b7dc2a2b151",
+    "sizeBudget": "hero-kart class; 539KB shipped; shipped sha256:1ea01b4f2afe7e29dbaa7678f76742c86c22ee8f5fdb3171b62e7b7dc2a2b151",
+    "proof": "tmp/w4-kart-lab/ (concept, turntables, generation-jobs.json)",
+    "promotion": {
+      "approval": "Owner 2026-07-12: 'I love the carts' (concepts) + corrected pick 'i meant the ice racer and miami cruser'",
+      "promotedAt": "2026-07-12",
+      "labEvidence": "kart-lab.html + tmp/w4-kart-lab/turn-ice-racer-*.png"
+    }
+  },
+  {
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — NO people/animals/penguins in every prompt)",
+    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "assetClass": "hero-kart",
+    "status": "runtime-promoted-k5-kart",
+    "runtimeTransform": "weld -> simplify 0.5/0.01 -> resize 384 -> meshopt LAST (individual verbs; 384 chosen at the 2026-07-12 budget squeeze)",
+    "filePath": "src/assets/game/models/karts/miami-cruiser.glb",
+    "source": "nano_banana_2 concept c065d336-0b93-4e45-83ef-07d7062df906 -> meshy image_to_3d lift 17907f8c-18b7-419d-9c26-0e6ecf4cf0ed, 2026-07-12",
+    "role": "K5 selectable player kart (KART_OPTIONS miamicruiser, Grips the neon); Meshy nose -X -> mount yaw +PI/2 (nose lab tmp/w4-kart-lab/nose-miami-cruiser-*.png)",
+    "assetId": "karts.miamiCruiser",
+    "sourceHash": "sha256:fd31887733b1fb3602705c8c29aaeea34d65e6086135438d80b01be6ebdef65b",
+    "outputHash": "sha256:cc633f565f2cb1a548d7f9509f7abc542f60e5374bcb3c31ac72f46d3868f383",
+    "sizeBudget": "hero-kart class; 586KB shipped; shipped sha256:cc633f565f2cb1a548d7f9509f7abc542f60e5374bcb3c31ac72f46d3868f383",
+    "proof": "tmp/w4-kart-lab/ (concept, turntables, generation-jobs.json)",
+    "promotion": {
+      "approval": "Owner 2026-07-12: 'I love the carts' (concepts) + corrected pick 'i meant the ice racer and miami cruser'",
+      "promotedAt": "2026-07-12",
+      "labEvidence": "kart-lab.html + tmp/w4-kart-lab/turn-miami-cruiser-*.png"
+    }
   }
 ]
