@@ -25,12 +25,36 @@ tracks):**
 - Kart bundle fresh-build **9648.77/9800 KiB gz** (portrait→webp paid
   for the props); fitness untouched.
 
-**NEXT TASK (fresh context starts HERE): K7 boost-pad authored rebuild**
-— match the approved concept (tmp/k7-item-lab/boost-pad.png: chunky
-beveled chevrons, white-hot cores, glowing edge trim) by rebuilding the
-existing authored pad geometry/emissive ramp (NOT a GLB lift — the pad
-is track-embedded geometry). Separate change, then drift-tier VFX, then
-the phase5 headed pair closes K7.
+**BOOST-PAD REBUILD DONE (2026-07-13, commit 8c01ffe6, committed NOT
+deployed — hub row says "say deploy"):** the authored pad now matches
+the approved concept — 3 chunky beveled ExtrudeGeometry chevrons with
+HDR vertex-color ember→orange gradients, each carrying a molten
+white-hot core strip (inset extrude MERGED into the same geometry via
+mergeGeometries — one draw call per chevron; a vertex-color spine can
+NOT render on a flat cap, no interior vertices, real geometry was the
+only way), double gold trim ring (outer band + inner pinstripe, ONE
+extrude, rounded corners via absarc), charcoal plate. chevronOrder
+still rides the shipped pulse. Pad cost 8→6 draw calls (PV was 799/800
+— now has headroom; CC proof maxDrawCalls 460). Battery green: kart
+9656.55/9800 fresh-build · playable both tracks · proof errors=0 ·
+smoke 26/26. Evidence tmp/k7-boost-pad/ (before-*/after6-*
+far/near/at, capture pattern = lap≥2 + routeProgress windows against
+the RUNNING 5173).
+
+**⚠️ FITNESS BUNDLE TRUTH (found 2026-07-13 by stash A/B, PRE-existing):
+fresh fitness build = 16.54 MiB / 11,416 KiB gz vs 15 MiB / 8,500 gates
+= OVER.** Every "fitness byte-stable 8489.99" reading since the K5 kart
+wave was a STALE-dist measurement (same trap as test:bundle:kart — the
+fitness test:bundle ALSO measures the existing dist). Kart GLBs
+(iceracer/miamicruiser/lifoladen/4 item props) DO enter the fitness
+dist — the old "new GLBs don't enter fitness" empirical note is DEAD.
+Live fitness site unaffected (predates the wave); bites at next fitness
+deploy. Fix vehicle = queued K2 race-path diet (owner-gated) or a
+narrow lazy-load patch — owner's call, hub row up.
+
+**NEXT TASK (fresh context starts HERE): drift-tier VFX** (owner deploy
+word for the boost pads first if given), then the phase5 headed pair
+closes K7.
 
 **GOTCHAS from this sprint (additive to everything below):**
 - `test:bundle:kart` MEASURES the existing dist-kart — ALWAYS
