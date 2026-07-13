@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import {
   Dumbbell,
   Settings as SettingsIcon,
@@ -16,9 +16,12 @@ import {
 import { normalizeState, usePersistedState } from './hooks/usePersistedState.js';
 import { useRestTimer } from './hooks/useRestTimer.js';
 import { RestTimerFAB } from './components/RestTimer.jsx';
-import { deriveGameProfile } from './game/gameProfile.js';
-import { filterRaceDestinations, getRaceAvailability } from './game/raceAvailability.js';
-import { getWorldDestinations } from './game/worldConfig.js';
+
+// 2026-07-13 owner call ("make it completely separate apps for space"): the
+// fitness app no longer bundles ANY of src/game/ — no world hub, no race
+// runtime, no kart GLBs. Penguin Kart lives at its own Pages project; the
+// Race nav item and legacy #race deep links go there.
+const KART_APP_URL = 'https://comeback-city-kart.pages.dev';
 
 const lazyNamed = (loader, exportName) =>
   lazy(() => loader().then((module) => ({ default: module[exportName] })));
@@ -30,39 +33,6 @@ const DayScreen = lazyNamed(() => import('./screens/DayScreen.jsx'), 'DayScreen'
 const MetricsScreen = lazyNamed(() => import('./screens/MetricsScreen.jsx'), 'MetricsScreen');
 const FoodScreen = lazyNamed(() => import('./screens/FoodScreen.jsx'), 'FoodScreen');
 const JointScreen = lazyNamed(() => import('./screens/JointScreen.jsx'), 'JointScreen');
-const WorldMode = lazyNamed(() => import('./game/WorldMode.jsx'), 'WorldMode');
-const RaceScreen = lazyNamed(() => import('./game/RaceScreen.jsx'), 'RaceScreen');
-const ComebackCityThreeKartRace = lazyNamed(
-  () => import('./game/ComebackCityThreeKartRace.jsx'),
-  'ComebackCityThreeKartRace'
-);
-const VISUAL_REFERENCE_ROUTE_FLAG = import.meta.env.VITE_VISUAL_REFERENCE_ROUTES;
-const VISUAL_REFERENCE_ROUTES_ENABLED =
-  import.meta.env.DEV ||
-  VISUAL_REFERENCE_ROUTE_FLAG === 'true' ||
-  VISUAL_REFERENCE_ROUTE_FLAG === 'TRUE' ||
-  VISUAL_REFERENCE_ROUTE_FLAG === 'True';
-const VisualReferencePage = VISUAL_REFERENCE_ROUTES_ENABLED
-  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'VisualReferencePage')
-  : null;
-const ReferencePlazaView = VISUAL_REFERENCE_ROUTES_ENABLED
-  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'ReferencePlazaView')
-  : null;
-const DistrictCloseupStrip = VISUAL_REFERENCE_ROUTES_ENABLED
-  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'DistrictCloseupStrip')
-  : null;
-const KartDesignSheet = VISUAL_REFERENCE_ROUTES_ENABLED
-  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'KartDesignSheet')
-  : null;
-const HudMoodBoard = VISUAL_REFERENCE_ROUTES_ENABLED
-  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'HudMoodBoard')
-  : null;
-const ArcadeKartProofScene = VISUAL_REFERENCE_ROUTES_ENABLED
-  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'ArcadeKartProofScene')
-  : null;
-const PlayableKartProofScene = VISUAL_REFERENCE_ROUTES_ENABLED
-  ? lazyNamed(() => import('./game/comebackCityVisuals.jsx'), 'PlayableKartProofScene')
-  : null;
 
 const syncTone = {
   synced: 'text-pine border-pine/25',
@@ -174,43 +144,15 @@ const SyncBanner = ({ sync, onExport }) => {
   );
 };
 
-const initialScreenFromHash = () => {
-  if (typeof window === 'undefined') return 'home';
+// Legacy race deep links (#race, #race-3d-spike) predate the app split —
+// send those visitors to the standalone kart app instead of a dead route.
+const legacyRaceHash = () => {
+  if (typeof window === 'undefined') return false;
   const hash = window.location.hash.replace(/^#/, '');
-  if (VISUAL_REFERENCE_ROUTES_ENABLED) {
-    if (hash === 'visual-plaza') return 'visual-plaza';
-    if (hash === 'visual-districts') return 'visual-districts';
-    if (hash === 'visual-kart') return 'visual-kart';
-    if (hash === 'visual-hud') return 'visual-hud';
-    if (hash === 'visual-kart-proof') return 'visual-kart-proof';
-    if (hash === 'visual-kart-playable') return 'visual-kart-playable';
-  }
-  if (hash === 'race') return getRaceAvailability().disabled ? 'race-disabled' : 'race';
-  if (hash === 'race-3d-spike') return getRaceAvailability().disabled ? 'race-disabled' : 'race-3d-spike';
-  return 'home';
+  return hash === 'race' || hash === 'race-3d-spike';
 };
 
-const RaceDisabledScreen = ({ onBack, reason }) => (
-  <section
-    className="mx-auto max-w-xl border border-gold/25 bg-gold/[0.04] p-5 text-bone"
-    data-testid="race-disabled-screen"
-  >
-    <div className="flex items-start gap-3">
-      <AlertTriangle size={18} className="mt-1 shrink-0 text-gold" />
-      <div className="min-w-0 flex-1">
-        <h1 className="font-display text-2xl italic leading-none">Raceway unavailable</h1>
-        <p className="mt-3 text-sm leading-relaxed text-stone">{reason}</p>
-        <button
-          type="button"
-          onClick={onBack}
-          className="mt-5 border border-gold/45 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-gold"
-        >
-          Back to today
-        </button>
-      </div>
-    </div>
-  </section>
-);
+const initialScreenFromHash = () => 'home';
 
 const RouteFallback = ({ fullScreen = false }) => (
   <div
@@ -223,48 +165,29 @@ const RouteFallback = ({ fullScreen = false }) => (
 export default function App() {
   const [state, setState, sync] = usePersistedState();
   const [screen, setScreen] = useState(initialScreenFromHash);
-  const raceAvailability = useMemo(() => getRaceAvailability(), []);
   const timer = useRestTimer();
   const readOnly = sync.viewOnly;
   const activeState = readOnly ? sync.viewedState || state : state;
   const activeSetState = readOnly ? sync.setViewedState : setState;
-  const homeMode = readOnly ? 'basic' : activeState.game?.homeMode || 'world';
-  const visualProfile = deriveGameProfile(activeState);
-  const visualDestinations = filterRaceDestinations(
-    getWorldDestinations(activeState, visualProfile),
-    raceAvailability
-  );
-
-  const clearRaceHash = useCallback(() => {
-    if (
-      typeof window !== 'undefined' &&
-      (window.location.hash === '#race' || window.location.hash === '#race-3d-spike')
-    ) {
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-    }
-  }, []);
 
   const navigateToScreen = useCallback((nextScreen) => {
-    if (nextScreen !== 'race') clearRaceHash();
     setScreen(nextScreen);
-  }, [clearRaceHash]);
+  }, []);
 
-  const returnHome = useCallback(() => {
-    clearRaceHash();
-    setScreen('home');
-  }, [clearRaceHash]);
+  useEffect(() => {
+    const redirectLegacyRaceHash = () => {
+      if (legacyRaceHash()) window.location.replace(`${KART_APP_URL}/#race`);
+    };
+    redirectLegacyRaceHash();
+    window.addEventListener('hashchange', redirectLegacyRaceHash);
+    return () => window.removeEventListener('hashchange', redirectLegacyRaceHash);
+  }, []);
 
   useEffect(() => {
     if (readOnly && screen !== 'home' && !screen.match(/^day-\d$/)) {
       setScreen('home');
     }
   }, [readOnly, screen]);
-
-  useEffect(() => {
-    if (raceAvailability.disabled && screen === 'race') {
-      setScreen('race-disabled');
-    }
-  }, [raceAvailability.disabled, screen]);
 
   useEffect(() => {
     const syncHashScreen = () => setScreen(initialScreenFromHash());
@@ -335,22 +258,6 @@ export default function App() {
         return <FoodScreen state={activeState} setState={activeSetState} />;
       case 'joint':
         return <JointScreen />;
-      case 'race':
-        return <RaceScreen state={activeState} setState={activeSetState} onExit={returnHome} readOnly={readOnly} />;
-      case 'race-3d-spike':
-        return (
-          <div
-            className="relative min-h-[100svh] overflow-hidden bg-[#10151d]"
-            data-race-renderer="three-kart"
-            data-testid="race-screen"
-          >
-            <Suspense fallback={<RouteFallback fullScreen />}>
-              <ComebackCityThreeKartRace mode="spike" reducedMotion={Boolean(activeState.game?.hub?.reducedMotion)} />
-            </Suspense>
-          </div>
-        );
-      case 'race-disabled':
-        return <RaceDisabledScreen onBack={returnHome} reason={raceAvailability.reason} />;
       default:
         return (
           <HomeScreen
@@ -370,12 +277,12 @@ export default function App() {
     { key: 'joint', label: 'Joints', icon: Shield },
     { key: 'metrics', label: 'Body', icon: Activity },
     { key: 'food', label: 'Food', icon: Apple },
-    { key: 'race', label: 'Race', icon: Trophy },
+    // Penguin Kart is its own app now — this opens it, nothing game-side
+    // ships in this bundle.
+    { key: 'race', label: 'Race', icon: Trophy, href: `${KART_APP_URL}/#race` },
     { key: 'settings', label: 'Setup', icon: SettingsIcon },
   ];
-  const visibleNavItems = (readOnly ? navItems.filter((item) => item.key === 'home') : navItems).filter(
-    (item) => !(raceAvailability.disabled && item.key === 'race')
-  );
+  const visibleNavItems = readOnly ? navItems.filter((item) => item.key === 'home') : navItems;
   const hasNotice = Boolean(sync.conflict || sync.decision || readOnly);
   const notice = hasNotice ? (
     <>
@@ -387,119 +294,6 @@ export default function App() {
       )}
     </>
   ) : null;
-
-  // Visual routes are regression/reference panels; the playable city hub mounts at `/`.
-  if (VISUAL_REFERENCE_ROUTES_ENABLED && screen === 'visual-plaza') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <VisualReferencePage type="plaza">
-          <ReferencePlazaView destinations={visualDestinations} />
-        </VisualReferencePage>
-      </Suspense>
-    );
-  }
-
-  if (VISUAL_REFERENCE_ROUTES_ENABLED && screen === 'visual-districts') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <VisualReferencePage type="districts">
-          <DistrictCloseupStrip destinations={visualDestinations} />
-        </VisualReferencePage>
-      </Suspense>
-    );
-  }
-
-  if (VISUAL_REFERENCE_ROUTES_ENABLED && screen === 'visual-kart') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <VisualReferencePage type="kart">
-          <KartDesignSheet profile={visualProfile} />
-        </VisualReferencePage>
-      </Suspense>
-    );
-  }
-
-  if (VISUAL_REFERENCE_ROUTES_ENABLED && screen === 'visual-hud') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <VisualReferencePage type="hud">
-          <HudMoodBoard profile={visualProfile} />
-        </VisualReferencePage>
-      </Suspense>
-    );
-  }
-
-  if (VISUAL_REFERENCE_ROUTES_ENABLED && screen === 'visual-kart-proof') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <VisualReferencePage type="kart-proof">
-          <ArcadeKartProofScene />
-        </VisualReferencePage>
-      </Suspense>
-    );
-  }
-
-  if (VISUAL_REFERENCE_ROUTES_ENABLED && screen === 'visual-kart-playable') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <VisualReferencePage type="kart-proof">
-          <PlayableKartProofScene />
-        </VisualReferencePage>
-      </Suspense>
-    );
-  }
-
-  if (screen === 'race') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <RaceScreen state={activeState} setState={activeSetState} onExit={returnHome} readOnly={readOnly} />
-      </Suspense>
-    );
-  }
-
-  if (screen === 'race-3d-spike') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <div
-          className="relative min-h-[100svh] overflow-hidden bg-[#10151d]"
-          data-race-renderer="three-kart"
-          data-testid="race-screen"
-        >
-          <ComebackCityThreeKartRace mode="spike" reducedMotion={Boolean(activeState.game?.hub?.reducedMotion)} />
-        </div>
-      </Suspense>
-    );
-  }
-
-  if (screen === 'race-disabled') {
-    return (
-      <div className="min-h-screen bg-ink px-4 py-20 text-bone">
-        <RaceDisabledScreen onBack={returnHome} reason={raceAvailability.reason} />
-      </div>
-    );
-  }
-
-  if (homeMode === 'world') {
-    return (
-      <Suspense fallback={<RouteFallback fullScreen />}>
-        <WorldMode
-          notice={notice}
-          readOnly={readOnly}
-          raceAvailability={raceAvailability}
-          renderScreen={() => (
-            <Suspense fallback={<RouteFallback />}>
-              {renderScreen()}
-            </Suspense>
-          )}
-          screen={screen}
-          setScreen={navigateToScreen}
-          setState={activeSetState}
-          state={activeState}
-        />
-        <RestTimerFAB timer={timer} />
-      </Suspense>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-ink text-bone antialiased">
@@ -590,19 +384,28 @@ export default function App() {
             const Icon = item.icon;
             const active =
               screen === item.key || (item.key === 'home' && (screen === 'home' || dayMatch));
-            return (
-              <button
-                key={item.key}
-                onClick={() => navigateToScreen(item.key)}
-                className={`flex flex-col items-center justify-center gap-1 transition-colors relative ${
-                  active ? 'text-gold' : 'text-stone hover:text-bone/70'
-                }`}
-              >
+            const itemClass = `flex flex-col items-center justify-center gap-1 transition-colors relative ${
+              active ? 'text-gold' : 'text-stone hover:text-bone/70'
+            }`;
+            const body = (
+              <>
                 <Icon size={18} strokeWidth={active ? 2.25 : 1.75} />
                 <span className="text-[9px] font-mono uppercase tracking-[0.22em]">{item.label}</span>
                 {active && (
                   <div className="absolute top-0 h-px w-6 bg-gold" />
                 )}
+              </>
+            );
+            if (item.href) {
+              return (
+                <a key={item.key} href={item.href} className={itemClass} data-testid="nav-kart-link">
+                  {body}
+                </a>
+              );
+            }
+            return (
+              <button key={item.key} onClick={() => navigateToScreen(item.key)} className={itemClass}>
+                {body}
               </button>
             );
           })}

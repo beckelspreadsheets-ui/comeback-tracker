@@ -4,15 +4,10 @@
 // 2.71MB plaza-scene-shapes.json), no WorldMode. Race results + reducedMotion
 // live in kartLocalStore.js.
 //
-// MIRROR RULE: KartIntroScreen, KartStatBar, KartCharacterSelect,
-// urlSeededKey, the portrait maps, and the select-flow state machine are
-// copied VERBATIM from src/game/RaceScreen.jsx:49-60, 1727-1948, 1953-2043
-// and 2184-2228 (the live first return). RaceScreen cannot be imported here:
-// its module-level `import { ArcadeRace3D }` (RaceScreen.jsx:29) would bundle
-// the exact dead fitness chain K1 exists to remove, and editing RaceScreen
-// would break the fitness build's byte-identity guarantee. Until the fitness
-// copy is deleted (K2/V2 cleanup), intro/select edits MUST be applied to both
-// files.
+// MIRROR RULE RETIRED 2026-07-13 (app split): src/game/RaceScreen.jsx — the
+// fitness copy this file used to mirror — is DELETED. The fitness app no
+// longer routes to the game at all (its Race nav links out to this app).
+// This file is now the ONLY owner of the intro → select flow; edit freely.
 
 import { useCallback, useEffect, useState } from 'react';
 import { Bitcoin, BookOpen } from 'lucide-react';

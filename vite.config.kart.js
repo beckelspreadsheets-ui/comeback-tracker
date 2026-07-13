@@ -1,4 +1,4 @@
-import { copyFileSync, createReadStream, renameSync } from 'node:fs';
+import { renameSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -10,8 +10,6 @@ import { VitePWA } from 'vite-plugin-pwa';
 // the owner-pending placeholder name.
 
 const kartHtmlPath = fileURLToPath(new URL('./index.kart.html', import.meta.url));
-const sharedBakedSpikePath = fileURLToPath(new URL('./public/baked-spike.glb', import.meta.url));
-const distBakedSpikePath = fileURLToPath(new URL('./dist-kart/baked-spike.glb', import.meta.url));
 
 // The kart entry lives at repo root as index.kart.html (the fitness
 // index.html keeps the root slot), but Cloudflare Pages, vite preview, and
@@ -38,34 +36,16 @@ const kartHtmlEntry = () => ({
   },
 });
 
-// publicDir is public-kart/ (kart _headers/_redirects/icons must differ from
-// the fitness set), but baked-spike.glb (1.58 MB, runtime-fetched behind
-// ?bakedSpike=1) is shared with the fitness build — copy it at build time
-// instead of committing a duplicate binary. Not precached (glb), so ordering
-// vs the PWA plugin's closeBundle doesn't matter.
-const kartSharedPublicAssets = () => ({
-  name: 'kart-shared-public-assets',
-  closeBundle() {
-    copyFileSync(sharedBakedSpikePath, distBakedSpikePath);
-  },
-  configureServer(server) {
-    server.middlewares.use((req, res, next) => {
-      if ((req.url || '').split('?')[0] === '/baked-spike.glb') {
-        res.setHeader('Content-Type', 'model/gltf-binary');
-        createReadStream(sharedBakedSpikePath).pipe(res);
-        return;
-      }
-      next();
-    });
-  },
-});
+// publicDir is public-kart/ — baked-spike.glb moved there with the 2026-07-13
+// app split (the fitness build no longer ships ANY race asset), so vite's
+// native publicDir copy covers build and dev; the old shared-copy plugin is
+// gone.
 
 export default defineConfig({
   publicDir: 'public-kart',
   plugins: [
     react(),
     kartHtmlEntry(),
-    kartSharedPublicAssets(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],

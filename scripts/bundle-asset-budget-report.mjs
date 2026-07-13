@@ -13,23 +13,22 @@ const distDir =
 const artifactDir =
   process.env.BUNDLE_BUDGET_ARTIFACT_DIR ||
   join(repoRoot, 'tmp', budgetMode === 'kart' ? 'bundle-budget-kart' : 'bundle-budget');
-// Fitness: re-baselined 2026-07-02 (A4, graphics V2 PRD) against the honest
-// post-fix build: QA proof PNGs no longer ship (comebackCityVisualTokens
-// split), the dead 2D ComebackCityKartRace import is gone, meshopt avatar
-// re-promotions landed, and public/baked-*.glb count as shipped content.
-// Measured: total 12.30 MiB / 7263 KiB gzip, images 1.86 MiB, JS 4.79 MiB
-// (1199 KiB gzip), largest file 2.75 MiB (the shared three.js world chunk).
-// Supersedes the 2026-06-01 delegated 8.5 MiB baseline, which predates the 3D
-// kart content (GLBs alone are 5.5 MiB). Threshold minus measured = the
-// published Phase C headroom — see the report's headroom block.
+// Fitness: re-baselined 2026-07-13 at the APP SPLIT (owner: "make it
+// completely separate apps for space") — the fitness build no longer ships
+// ANY of src/game/ (no world hub, no race routes, no kart GLBs; baked-spike
+// moved to public-kart/). Measured post-split: total 1.168 MiB / 343.8 KiB
+// gzip, JS 1.08 MiB / 305 KiB gzip. Thresholds set tight with ~40-50%
+// headroom so game content can never silently creep back into this bundle —
+// a breach here means the split leaked, not that the app "grew". Supersedes
+// the 2026-07-02 A4 combined-build baseline (15 MiB / 8500).
 const fitnessThresholdDefaults = {
-  imageTotalMiB: 4.0,
-  javascriptTotalGzipKiB: 1400,
-  javascriptTotalMiB: 5.25,
-  largestFileMiB: 3.0,
-  largestJavaScriptGzipKiB: 900,
-  totalGzipKiB: 8500,
-  totalMiB: 15.0,
+  imageTotalMiB: 0.25,
+  javascriptTotalGzipKiB: 450,
+  javascriptTotalMiB: 1.6,
+  largestFileMiB: 1.0,
+  largestJavaScriptGzipKiB: 250,
+  totalGzipKiB: 500,
+  totalMiB: 1.75,
 };
 // Kart: set at K1 exit from the first dist-kart measurement (2026-07-11);
 // totals REVISED 2026-07-12 at the K4/K5 roster wave (crosser + two owner-

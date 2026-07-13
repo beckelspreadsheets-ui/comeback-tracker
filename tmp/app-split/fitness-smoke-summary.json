@@ -1,0 +1,52 @@
+[
+  {
+    "name": "home renders with bottom nav",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "no world-hub canvas",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "race nav links to kart app",
+    "ok": true,
+    "detail": "https://comeback-city-kart.pages.dev/#race"
+  },
+  {
+    "name": "screen mounts: Calib",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "screen mounts: Joints",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "screen mounts: Body",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "screen mounts: Food",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "screen mounts: Setup",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "#race redirects to kart app",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "no game chunks/GLBs in dist",
+    "ok": true,
+    "detail": "clean"
+  }
+]

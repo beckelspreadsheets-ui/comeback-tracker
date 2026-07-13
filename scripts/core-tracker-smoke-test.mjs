@@ -255,7 +255,7 @@ const runMainTrackerSmoke = async (browser) => {
   await page.screenshot({ fullPage: true, path: path.join(artifactsDir, 'core-tracker-food.png') });
 
   await page.getByRole('button', { name: /^Setup$/i }).click();
-  await page.waitForSelector('text=City Garage & Body', { timeout: 12000 });
+  await page.waitForSelector('text=Body & Program', { timeout: 12000 });
   const currentBwInput = page
     .locator('label:has-text("Current BW")')
     .locator('xpath=..')
