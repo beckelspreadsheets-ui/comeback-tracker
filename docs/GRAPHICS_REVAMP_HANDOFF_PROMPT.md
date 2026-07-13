@@ -43,19 +43,39 @@ smoke 26/26. Evidence tmp/k7-boost-pad/ (before-*/after6-*
 far/near/at, capture pattern = lap≥2 + routeProgress windows against
 the RUNNING 5173).
 
-**⚠️ FITNESS BUNDLE TRUTH (found 2026-07-13 by stash A/B, PRE-existing):
-fresh fitness build = 16.54 MiB / 11,416 KiB gz vs 15 MiB / 8,500 gates
-= OVER.** Every "fitness byte-stable 8489.99" reading since the K5 kart
-wave was a STALE-dist measurement (same trap as test:bundle:kart — the
-fitness test:bundle ALSO measures the existing dist). Kart GLBs
-(iceracer/miamicruiser/lifoladen/4 item props) DO enter the fitness
-dist — the old "new GLBs don't enter fitness" empirical note is DEAD.
-Live fitness site unaffected (predates the wave); bites at next fitness
-deploy. Fix vehicle = queued K2 race-path diet (owner-gated) or a
-narrow lazy-load patch — owner's call, hub row up.
+**APP SPLIT DONE 2026-07-13 (76513be9, owner verbatim "we want to get
+rid of the fitness hub and make it completely seperate apps for space"
+— committed+pushed, FITNESS DEPLOY OWNER-GATED, not run):** the fitness
+app ships ZERO game code. WorldMode hub wrapper GONE (classic dashboard
+always), race routes GONE (Race nav = outbound link to
+comeback-city-kart.pages.dev; legacy #race redirects on mount AND
+hashchange), Metrics recap + Settings City Garage (shelved-economy UI)
+REMOVED. state.game slices untouched (sync compat). RaceScreen.jsx
+DELETED (was fully orphaned) — **MIRROR RULE RETIRED, KartApp owns
+intro/select alone.** baked-spike.glb moved public/→public-kart/ (kart
+copy plugin removed, native publicDir). **Fitness build 16.55 MiB/11,417
+KiB gz → 1.168 MiB/343.8 KiB gz; budgets re-baselined TIGHT (1.75
+MiB/500 KiB gz/JS 450) — a breach now means the split LEAKED.** This
+closed the earlier fitness-over-budget finding AND the K2 economy
+question (split superseded the diet; no economy word needed).
+PIPELINE CHANGES: test:race-proof + test:kart-playable DEFAULTS now
+kart-mode (fitness serves no race); RETIRED suites (features deleted):
+test:hub · test:visual · test:race:browser (perma-red blocker #10 dies
+with it) · test:kart-3d-spike · test:race:disable; test:core expects
+"Body & Program" Settings title now. **NEW GOTCHA: the owner's running
+5173 dev server (fitness) no longer serves the race — dev race captures
+go against dev:kart (5174) or spawn preview:kart; hitting 5173/#race
+redirects to the LIVE origin.** Batteries green both apps at 76513be9:
+fitness 7/7 new gates + split smoke 10/10 (tmp/app-split/) + test:core
+ok · kart bundle 9655.38/9800 · kart-playable passed both tracks ·
+race:proof pass errors=0 · shell smoke 26/26 · assets:check fail=0.
+Dormant-but-kept: WorldMode/WorldScene/comebackCityVisuals/ArcadeRace3D
+chain (unreferenced by any build; V2 may re-home the hub in the kart
+app).
 
 **NEXT TASK (fresh context starts HERE): drift-tier VFX**, then the
-phase5 headed pair closes K7.
+phase5 headed pair closes K7. Owner also owes the fitness deploy word
+for the split (deploy:andrew / deploy:alexander).
 
 **GOTCHAS from this sprint (additive to everything below):**
 - `test:bundle:kart` MEASURES the existing dist-kart — ALWAYS
