@@ -191,13 +191,22 @@ export const KART_CHARACTERS = [
 // light stat spreads so the choice matters without breaking the QA speed
 // budgets. Multipliers apply to top speed cap, throttle accel, and steering
 // lane rate. 'hero' (1/1/1) is the gate-default baseline.
+// REBALANCED 2026-07-13 (owner: "the speeds are all over the place it needs
+// to be a bit more balanced since the race is so short"): top speed ±2%
+// (was −6/+8%), accel ±4%, handling ±5%. Rivals pace against the hero
+// baseline, so wide player multipliers were deciding ~34s races by
+// themselves — the probe at the first pass (±3%) still cost miamicruiser
+// the WIN on kart choice alone (36.9s/2nd vs iceracer 33.2s/1st); at ±2%
+// the measured autoplay spread is 1.0s and every kart WINS. V2 NOTE (owner, same
+// message): when tracks reach MK-length 2-3 min races the spreads can
+// widen back out — pre-rebalance values are in git at 511dc12b.
 export const KART_OPTIONS = [
   { key: 'hero', name: 'Hero Kart', stats: { accel: 1.0, handling: 1.0, topSpeed: 1.0 }, tagline: 'Balanced' },
-  { key: 'icesled', name: 'Ice Sled', stats: { accel: 0.94, handling: 0.92, topSpeed: 1.05 }, tagline: 'Fast & slippery' },
-  { key: 'kenney', name: 'Dragster', stats: { accel: 1.08, handling: 1.04, topSpeed: 0.96 }, tagline: 'Quick off the line' },
+  { key: 'icesled', name: 'Ice Sled', stats: { accel: 0.97, handling: 0.96, topSpeed: 1.015 }, tagline: 'Fast & slippery' },
+  { key: 'kenney', name: 'Dragster', stats: { accel: 1.04, handling: 1.02, topSpeed: 0.99 }, tagline: 'Quick off the line' },
   // K5 owner picks 2026-07-12 ("i meant the ice racer and miami cruser"):
-  { key: 'iceracer', name: 'Ice Racer', stats: { accel: 0.96, handling: 0.9, topSpeed: 1.08 }, tagline: 'Frozen top end' },
-  { key: 'miamicruiser', name: 'Miami Cruiser', stats: { accel: 1.05, handling: 1.07, topSpeed: 0.94 }, tagline: 'Grips the neon' },
+  { key: 'iceracer', name: 'Ice Racer', stats: { accel: 0.98, handling: 0.95, topSpeed: 1.02 }, tagline: 'Frozen top end' },
+  { key: 'miamicruiser', name: 'Miami Cruiser', stats: { accel: 1.03, handling: 1.04, topSpeed: 0.985 }, tagline: 'Grips the neon' },
 ];
 // Generated kart bodies arrive in two facing conventions: Tripo = nose +X
 // (mount -π/2), Meshy = nose -X (mount +π/2). Lab-verified per kart.

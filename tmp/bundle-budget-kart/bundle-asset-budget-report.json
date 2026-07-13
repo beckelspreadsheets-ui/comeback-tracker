@@ -1,7 +1,7 @@
 {
   "artifactDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/bundle-budget-kart",
   "budgetMode": "kart",
-  "capturedAt": "2026-07-13T02:54:27.225Z",
+  "capturedAt": "2026-07-13T16:00:27.517Z",
   "budget": {
     "checks": [
       {
@@ -12,7 +12,7 @@
         "status": "pass"
       },
       {
-        "actual": 9648.77,
+        "actual": 9648.78,
         "label": "total built artifact gzip size",
         "limit": 9800,
         "unit": "KiB",
@@ -68,7 +68,7 @@
   },
   "headroom": {
     "imagesMiB": 0.85,
-    "totalGzipKiB": 151.23,
+    "totalGzipKiB": 151.22,
     "totalMiB": 1.166
   },
   "categories": {
@@ -83,12 +83,12 @@
       "sizeMiB": 0.065
     },
     "html": {
-      "brotliBytes": 610,
+      "brotliBytes": 613,
       "fileCount": 1,
-      "gzipBytes": 833,
+      "gzipBytes": 837,
       "sizeBytes": 1836,
       "brotliKiB": 0.6,
-      "gzipKiB": 0.81,
+      "gzipKiB": 0.82,
       "sizeKiB": 1.79,
       "sizeMiB": 0.002
     },
@@ -103,11 +103,11 @@
       "sizeMiB": 1.65
     },
     "javascript": {
-      "brotliBytes": 303496,
+      "brotliBytes": 303528,
       "fileCount": 7,
-      "gzipBytes": 353747,
-      "sizeBytes": 1165760,
-      "brotliKiB": 296.38,
+      "gzipBytes": 353749,
+      "sizeBytes": 1165763,
+      "brotliKiB": 296.41,
       "gzipKiB": 345.46,
       "sizeKiB": 1138.44,
       "sizeMiB": 1.112
@@ -137,7 +137,7 @@
   "gateStatus": "bundle-budget-pass",
   "git": {
     "branch": "codex/release-v1-comebacktracker-kart-racer",
-    "commit": "c272ec7dc7cea390c0db4ba2f1262d548062286b",
+    "commit": "76d15938b478aea83a1004b5ec56eb21c18fb815",
     "dirty": true
   },
   "largestFiles": [
@@ -162,13 +162,13 @@
       "sizeKiB": 1024.54
     },
     {
-      "brotliBytes": 252067,
-      "brotliKiB": 246.16,
+      "brotliBytes": 252104,
+      "brotliKiB": 246.2,
       "category": "javascript",
-      "gzipBytes": 295503,
+      "gzipBytes": 295505,
       "gzipKiB": 288.58,
-      "path": "assets/index.kart-CbtHidc5.js",
-      "sizeBytes": 990695,
+      "path": "assets/index.kart-CmXRY_fl.js",
+      "sizeBytes": 990698,
       "sizeKiB": 967.48
     },
     {
@@ -309,12 +309,12 @@
       "sizeKiB": 1543.28
     },
     "total": {
-      "brotliBytes": 9348445,
+      "brotliBytes": 9348480,
       "fileCount": 76,
-      "gzipBytes": 9880341,
-      "sizeBytes": 12409012,
-      "brotliKiB": 9129.34,
-      "gzipKiB": 9648.77,
+      "gzipBytes": 9880347,
+      "sizeBytes": 12409015,
+      "brotliKiB": 9129.38,
+      "gzipKiB": 9648.78,
       "sizeKiB": 12118.18,
       "sizeMiB": 11.834
     }
