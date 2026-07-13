@@ -1,6 +1,60 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ V1-BETA SPRINT CHECKPOINT (2026-07-12 EOD — NEWEST, supersedes every block below)
+## ⚡ K6+K7 SHIPPED CHECKPOINT (2026-07-13 — NEWEST, supersedes every block below)
+
+**EVERYTHING THROUGH THE KART REBALANCE IS LIVE (deploy df14c9c8,
+verified; deploys this sprint: lifoladen 9e9fa180 → icons 1d74cc7d →
+props 44e5bb4f → rebalance df14c9c8, every one live-verified both
+tracks):**
+- **K6 lifoladen** = playable racer (slot 2, Miami Cruiser, snowball
+  skin, 353 KiB GLB after the normal-map strip).
+- **K7 icons** = all 12 held-item HUD/guide icons are rendered art
+  (lucide retired; march icon = penguin-free footprints), owner chip
+  pick **B** live (race-item-pickup-pop, 0.66s).
+- **K7 world props** = fishbone-trap / sardine-rocket / avalanche-mound
+  / blizzard-cloud lifted + swapped INSIDE the pools
+  (swapItemPropVisuals; procedural fallbacks kept; snowball lift
+  BENCHED for budget, render in tmp/k7-item-lab/).
+- **Kart rebalance** (owner: "speeds are all over the place... more
+  balanced since the race is so short"): topSpeed ±2% / accel ±4% /
+  handling ±5%; measured before/after with
+  tmp/k7-item-lab/kart-balance-probe.mjs — old spread cost Miami
+  Cruiser the WIN outright; now all five karts finish 1st, live-origin
+  gap 0.84s over the ~34s race. **OWNER V2 CALL recorded: spreads widen
+  back out when 2-3min MK-length tracks land (old values at 511dc12b).**
+- Kart bundle fresh-build **9648.77/9800 KiB gz** (portrait→webp paid
+  for the props); fitness untouched.
+
+**NEXT TASK (fresh context starts HERE): K7 boost-pad authored rebuild**
+— match the approved concept (tmp/k7-item-lab/boost-pad.png: chunky
+beveled chevrons, white-hot cores, glowing edge trim) by rebuilding the
+existing authored pad geometry/emissive ramp (NOT a GLB lift — the pad
+is track-embedded geometry). Separate change, then drift-tier VFX, then
+the phase5 headed pair closes K7.
+
+**GOTCHAS from this sprint (additive to everything below):**
+- `test:bundle:kart` MEASURES the existing dist-kart — ALWAYS
+  `build:kart` first (a stale-dist reading shipped a wrong "pass" once).
+- higgsfield `generate_3d` defaults `should_texture:false` — always pass
+  `true` (3 jobs wasted; ids in tmp/k7-item-lab/generation-record.json).
+- Avatar GLBs: normal maps NEVER render (mountDriverAvatar swaps in
+  MeshToonMaterial{map}) — strip them at diet time.
+- Thin-geometry lifts (fish bone) blob from the front — check ALL yaws.
+- Autoplay always runs 1st, so position-tiered mid-pack items
+  (sardine/blizzard/avalanche) can never be caught on camera —
+  **mid-pack prop visual check OWED at the owner's next phone pass or
+  the phase5 headed pair.**
+- New manifest entries REQUIRE sourceHash or assets:check fails.
+- sharp is NOT in this repo — image processing goes through Playwright
+  canvas (tmp/k7-item-lab/make-icon-tiles.mjs pattern).
+- Races measure ~34s — remember when tuning anything pace-related.
+
+**OWNER OWES (hub top lists all):** 3 ordinal ChatGPT sheets · economy
+word (K2 gated) · game NAME · kart budget ack (13 MiB / 9800 KiB gz) ·
+phone re-check (now doubles as prop + rebalance feel-check FROM
+MID-PACK).
+
+## ⚡ V1-BETA SPRINT CHECKPOINT (2026-07-12 EOD — superseded)
 
 **LIVE at comeback-city-kart.pages.dev (deploy acf0c6f9, verified):** the
 full 2026-07-12 sprint — K2.5 launch fixes (short flights, full-trigger
