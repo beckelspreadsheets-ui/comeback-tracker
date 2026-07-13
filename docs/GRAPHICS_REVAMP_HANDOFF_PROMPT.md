@@ -25,8 +25,10 @@ tracks):**
 - Kart bundle fresh-build **9648.77/9800 KiB gz** (portrait→webp paid
   for the props); fitness untouched.
 
-**BOOST-PAD REBUILD DONE (2026-07-13, commit 8c01ffe6, committed NOT
-deployed — hub row says "say deploy"):** the authored pad now matches
+**BOOST-PAD REBUILD DONE (2026-07-13, commit 8c01ffe6) + DEPLOYED same
+day (owner "deploy"; deploy 56052785 — live-verified both tracks
+22/22+10/10 zero CSP, pads probed at race speed ON the origin,
+tmp/k7-boost-pad/live-*.png):** the authored pad now matches
 the approved concept — 3 chunky beveled ExtrudeGeometry chevrons with
 HDR vertex-color ember→orange gradients, each carrying a molten
 white-hot core strip (inset extrude MERGED into the same geometry via
@@ -52,9 +54,8 @@ Live fitness site unaffected (predates the wave); bites at next fitness
 deploy. Fix vehicle = queued K2 race-path diet (owner-gated) or a
 narrow lazy-load patch — owner's call, hub row up.
 
-**NEXT TASK (fresh context starts HERE): drift-tier VFX** (owner deploy
-word for the boost pads first if given), then the phase5 headed pair
-closes K7.
+**NEXT TASK (fresh context starts HERE): drift-tier VFX**, then the
+phase5 headed pair closes K7.
 
 **GOTCHAS from this sprint (additive to everything below):**
 - `test:bundle:kart` MEASURES the existing dist-kart — ALWAYS
