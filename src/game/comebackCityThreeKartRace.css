@@ -87,6 +87,29 @@
   z-index: 5;
 }
 
+/* K7 pickup pop (owner pick B): the new item's icon springs oversized at
+   mid-screen for ~0.6s, then hands off to the chip/button display. */
+.three-kart-race__item-pop {
+  animation: three-kart-item-pop 0.66s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  border: 2px solid rgba(255, 211, 79, 0.65);
+  border-radius: 20px;
+  box-shadow: 0 0 36px rgba(0, 229, 255, 0.45);
+  left: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+}
+
+@keyframes three-kart-item-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  24% { opacity: 1; transform: translate(-50%, -50%) scale(1.26); }
+  58% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+}
+
 .three-kart-race__results {
   align-items: center;
   background: rgba(13, 20, 30, 0.86);

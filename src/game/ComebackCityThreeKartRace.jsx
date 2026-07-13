@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, Bitcoin, Carrot, CloudSnow, Coffee, Fish, FishSymbol, Flag, Footprints, Gauge, MountainSnow, Rainbow, Rocket, RotateCcw, Shield, Snowflake, Sparkles, Trophy, Zap } from 'lucide-react';
+import { ArrowDown, Bitcoin, Flag, Gauge, RotateCcw, Sparkles, Trophy, Zap } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -34,6 +34,18 @@ import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
 import tclowModelUrl from '../assets/game/models/avatars/tclow-penguin.glb?url';
 import layer23ModelUrl from '../assets/game/models/avatars/layer23-penguin.glb?url';
 import lifoladenModelUrl from '../assets/game/models/avatars/lifoladen.glb?url';
+import itemAuroraIconUrl from '../assets/game/items/item-aurora.webp';
+import itemAvalancheIconUrl from '../assets/game/items/item-avalanche.webp';
+import itemBlizzardIconUrl from '../assets/game/items/item-blizzard.webp';
+import itemCarrotIconUrl from '../assets/game/items/item-carrot.webp';
+import itemCocoaIconUrl from '../assets/game/items/item-cocoa.webp';
+import itemFishboneIconUrl from '../assets/game/items/item-fishbone.webp';
+import itemIceshardIconUrl from '../assets/game/items/item-iceshard.webp';
+import itemIceshieldIconUrl from '../assets/game/items/item-iceshield.webp';
+import itemMarchIconUrl from '../assets/game/items/item-march.webp';
+import itemSardineIconUrl from '../assets/game/items/item-sardine.webp';
+import itemSlapfishIconUrl from '../assets/game/items/item-slapfish.webp';
+import itemSnowballIconUrl from '../assets/game/items/item-snowball.webp';
 import miamiCondoTowerUrl from '../assets/game/models/miami/condo-tower.glb?url';
 import miamiCornerArcadeUrl from '../assets/game/models/miami/corner-arcade.glb?url';
 import miamiDecoHotelUrl from '../assets/game/models/miami/deco-hotel.glb?url';
@@ -4291,28 +4303,42 @@ const publishTelemetry = (
 };
 
 // One icon source for every held-item surface (top badge, throw button,
-// held-item chip, intro item guide). Lucide stand-ins until the W5/H5
-// generated icon set — icons are a similarity trap, owner review per icon
-// when that lands. Exported so the intro guide ALWAYS matches the HUD.
-export const HELD_ITEM_ICONS = {
-  aurora: Rainbow,
-  avalanche: MountainSnow,
-  blizzard: CloudSnow,
-  cocoa: Coffee,
-  fishbone: Fish,
-  iceshield: Shield,
-  march: Footprints,
-  sardine: Rocket,
-  slapfish: FishSymbol,
+// held-item chip, pickup pop, intro item guide). K7 rendered tiles (owner
+// approved the full concept set 2026-07-12) — the lucide stand-ins are
+// retired. Exported so the intro guide ALWAYS matches the HUD.
+export const ITEM_ICON_URLS = {
+  aurora: itemAuroraIconUrl,
+  avalanche: itemAvalancheIconUrl,
+  blizzard: itemBlizzardIconUrl,
+  cocoa: itemCocoaIconUrl,
+  fishbone: itemFishboneIconUrl,
+  iceshield: itemIceshieldIconUrl,
+  march: itemMarchIconUrl,
+  sardine: itemSardineIconUrl,
+  slapfish: itemSlapfishIconUrl,
+};
+// The snowball slot wears the character's projectile skin.
+const SNOWBALL_SKIN_ICON_URLS = {
+  carrot: itemCarrotIconUrl,
+  iceshard: itemIceshardIconUrl,
+  snowball: itemSnowballIconUrl,
 };
 
 export const HeldItemIcon = ({ heldItem, projectileSkin, size = 15 }) => {
-  if (heldItem === 'snowball') {
-    // The snowball slot wears the character's projectile skin.
-    return projectileSkin === 'carrot' ? <Carrot size={size} /> : <Snowflake size={size} />;
-  }
-  const Icon = HELD_ITEM_ICONS[heldItem] || Snowflake;
-  return <Icon size={size} />;
+  const src =
+    heldItem === 'snowball'
+      ? SNOWBALL_SKIN_ICON_URLS[projectileSkin] || SNOWBALL_SKIN_ICON_URLS.snowball
+      : ITEM_ICON_URLS[heldItem] || SNOWBALL_SKIN_ICON_URLS.snowball;
+  return (
+    <img
+      alt=""
+      draggable={false}
+      height={size}
+      src={src}
+      style={{ borderRadius: Math.max(3, Math.round(size * 0.2)), display: 'block', objectFit: 'cover' }}
+      width={size}
+    />
+  );
 };
 
 const heldItemLabel = (heldItem, projectileSkin) => {
@@ -4342,6 +4368,23 @@ export const ComebackCityThreeKartRace = ({
   const finishReportedRef = useRef(false);
   const [snapshot, setSnapshot] = useState(createInitialRace);
   const [webglError, setWebglError] = useState(null);
+  // K7 chip revision, owner pick B (2026-07-12): a new pickup pops the item's
+  // icon oversized for ~0.6s (MK-style "you got X"), then the normal chip/
+  // button display carries it. Purely cosmetic — input and item semantics
+  // untouched.
+  const [itemPop, setItemPop] = useState(null);
+  const lastHeldItemRef = useRef(null);
+  useEffect(() => {
+    const held = snapshot.heldItem;
+    if (held && held !== lastHeldItemRef.current) {
+      setItemPop({ item: held, at: Date.now() });
+      lastHeldItemRef.current = held;
+      const timer = setTimeout(() => setItemPop(null), 680);
+      return () => clearTimeout(timer);
+    }
+    lastHeldItemRef.current = held;
+    return undefined;
+  }, [snapshot.heldItem]);
   const autoplay = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -5831,9 +5874,11 @@ export const ComebackCityThreeKartRace = ({
           {snapshot.heldItem ? (
             <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} />
           ) : snapshot.shieldActive ? (
-            <Shield size={15} />
+            <HeldItemIcon heldItem="iceshield" />
           ) : (
-            <Snowflake size={15} />
+            <span style={{ filter: 'grayscale(0.7)', opacity: 0.45 }}>
+              <HeldItemIcon heldItem="snowball" projectileSkin={playerCharacter.projectileSkin} />
+            </span>
           )}
           <span>
             {snapshot.heldItem
@@ -5846,6 +5891,11 @@ export const ComebackCityThreeKartRace = ({
       </div>
       {snapshot.countdown > 0 ? (
         <div className="three-kart-race__countdown">{Math.ceil(snapshot.countdown)}</div>
+      ) : null}
+      {itemPop ? (
+        <div className="three-kart-race__item-pop" data-testid="race-item-pickup-pop" key={itemPop.at}>
+          <HeldItemIcon heldItem={itemPop.item} projectileSkin={playerCharacter.projectileSkin} size={112} />
+        </div>
       ) : null}
       {snapshot.finished ? (
         <div className="three-kart-race__results">
@@ -5928,10 +5978,10 @@ export const ComebackCityThreeKartRace = ({
             >
               {snapshot.heldItem ? (
                 <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} size={38} />
-              ) : playerCharacter.projectileSkin === 'carrot' ? (
-                <Carrot size={38} />
               ) : (
-                <Snowflake size={38} />
+                <span style={{ filter: 'grayscale(0.7)', opacity: 0.45 }}>
+                  <HeldItemIcon heldItem="snowball" projectileSkin={playerCharacter.projectileSkin} size={38} />
+                </span>
               )}
               <span className="three-kart-race__cluster-item-label" data-testid="race-held-item-chip">
                 {snapshot.heldItem ? heldItemLabel(snapshot.heldItem, playerCharacter.projectileSkin) : 'Item'}

@@ -237,14 +237,14 @@
     "source": "Meshy multi-image-to-3D (job 6afd7358-9f6b-4847-bf65-79b438dbfe71, 4 views) from the owner's lifoladen-charactersheet.png (K6, 2026-07-12; NON-ordinal owner art — no ordinal-upload concern); raw mesh committed at tmp/k6-lifoladen/raw-lifoladen.glb with generation-record.json alongside",
     "license": "Owner-created/generated asset (owner character sheet through Meshy)",
     "role": "Lifoladen driver avatar (K6 roster character, Miami Cruiser signature kart); orientation lab 2026-07-12: front = +Z, driverYaw 0",
-    "sizeBudget": "seated-character class; 904 KiB shipped, 20,920 tris (hard caps 1250KB/25k), 512px textures",
+    "sizeBudget": "seated-character class; 353 KiB shipped, 20,920 tris (hard caps 1250KB/25k), 512px color texture",
     "fallback": "Kart renders driverless if the avatar GLB fails to load",
     "assetId": "avatar.driver.lifoladen",
     "assetClass": "seated-character",
     "status": "runtime-promoted-k6-lifoladen",
-    "runtimeTransform": "weld -> simplify ratio 0.68 error 0.004 (gentle; raw 30,766 tris exceeded the 25k hard cap, likeness verified raw-vs-diet at 4 yaws) -> resize 512 -> meshopt LAST (individual verbs)",
+    "runtimeTransform": "weld -> simplify ratio 0.68 error 0.004 (gentle; raw 30,766 tris exceeded the 25k hard cap, likeness verified raw-vs-diet at 4 yaws) -> resize 512 -> meshopt LAST (individual verbs); 2026-07-12 follow-up: normal texture stripped (mountDriverAvatar swaps in MeshToonMaterial{map} — avatar normal maps never render; 904 KiB -> 353 KiB, likeness re-verified at 4 yaws)",
     "sourceHash": "sha256:d154cdae772ed40ff421004cf28afe463580ebca0608ed5a007876d3322b1808",
-    "outputHash": "sha256:e5eca71ae0a7aded25729fa350fee1b7565dcf9941812efafbd56a98b421c4af",
+    "outputHash": "sha256:bc80b690559c1d4500907dfd3220d3b493f4eb383d5e5a63de7b6873cc54c6e8",
     "proof": "tmp/k6-lifoladen/ (lift views, orientation-capture.mjs turntable, portrait-capture.mjs)"
   },
   {
@@ -295,6 +295,14 @@
     "sourceHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
     "status": "runtime-hard-pass-target-warning",
     "runtimeTransform": "Approved blender-decimate rival-kart-blender-15k-v1"
+  },
+  {
+    "filePath": "src/assets/game/items/*.webp",
+    "source": "K7 held-item icon tiles (2026-07-12, owner approved the full concept set): nano_banana concept renders (job ids in tmp/k7-item-lab/generation-record.json) center-cropped to 192px webp by tmp/k7-item-lab/make-icon-tiles.mjs",
+    "license": "Owner-directed generated art (Higgsfield, text-prompt only — no ordinal inputs)",
+    "role": "ITEM_ICON_URLS: held-item HUD badge, smash button, pickup pop, and intro item guide icons (lucide stand-ins retired)",
+    "sizeBudget": "Twelve 192px webp tiles, ~96 KB total",
+    "fallback": "HeldItemIcon falls back to the plain snowball tile for unknown item keys"
   },
   {
     "filePath": "src/assets/game/select/*.png",

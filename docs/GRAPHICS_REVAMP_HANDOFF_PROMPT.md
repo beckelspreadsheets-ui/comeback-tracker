@@ -52,13 +52,39 @@ offered for world props); cocoa is ICON-ONLY (no world prop exists) and
 rolled a perfect sticker icon; boost-pad = art-direction reference (the
 in-game pad stays authored geometry — rebuild chevron profile/emissive
 to match on pick); avalanche concept has bg-sign text (discarded at
-lift). **OWNER GATE: picks per item + the W7.2 chip question (A = swap
-icons in place · B = A + oversized pickup pop · C = dedicated slot above
-the smash button) — both asked in one lab.** NEXT after picks: meshy
-lifts for picked world props (30cr each) → diet per class → mount +
-validators untouched (one variable per change) → HUD/guide icons from
-the same renders (retire lucide) → battery + race:proof re-baseline +
-phase5 headed pair.
+lift). **OWNER ANSWERED same eve: "love all these rendered icons" + chip pick
+B → K7 ICON HALF LANDED (committed, NOT deployed):** 12 tiles (8 concepts
++ 5 fills @2cr: slapfish/aurora/carrot/iceshard/march — march is
+penguin-FREE footprints-in-snow per the standing rule; ids in
+generation-record.json iconBatch2) → 192px webp via
+tmp/k7-item-lab/make-icon-tiles.mjs (Playwright canvas — sharp is NOT in
+this repo) → src/assets/game/items/ → ITEM_ICON_URLS +
+SNOWBALL_SKIN_ICON_URLS in ComebackCityThreeKartRace.jsx; HeldItemIcon
+now renders img tiles (item-lucide imports deleted); empty chip/button
+states = dimmed skin tile; guide icons size 24 in BOTH mirror files.
+**Pick B live:** race-item-pickup-pop testid, ~0.66s keyframe pop
+(comebackCityThreeKartRace.css), unmount at 680ms; smoke shots
+tmp/k7-item-lab/smoke-pop2.png (frozen mid-pop) / smoke-armed.png /
+smoke-guide.png.
+**TWO CORRECTIONS ON THE RECORD:** (1) test:bundle:kart MEASURES the
+existing dist-kart, it does NOT build — the lifoladen-battery "8745.48
+all-pass" was a stale-dist reading; fresh-build truth was 9861/9800 =
+OVER. (2) Fix: lifoladen.glb carried a 560KB normal map that
+mountDriverAvatar's MeshToonMaterial{map} NEVER renders — stripped
+(tmp/k7-item-lab/strip-lifoladen-normal.mjs, 904→353 KiB, likeness
+re-verified 4 yaws, manifest hash updated). Kart bundle fresh-build =
+9384/9800 gz. ALWAYS build:kart before test:bundle:kart. The LIVE
+deploy 9e9fa180 predates the strip (it shipped the fat GLB — harmless,
+next deploy carries the diet).
+Battery green at the icon commit: assets:check strict · test:race ·
+bundles (fitness byte-stable 8489.99) · kart-playable passed=true ·
+shell smoke 26/26 · race:proof pass errors=0 @ load1 3.89.
+**NEXT: K7 world-prop half** — meshy lifts (30cr each) for fish-bone/
+snowball/avalanche (lift-ready renders); sardine + blizzard want a
+3D-style re-roll BEFORE lifting (owner said icons are loved — re-ask
+only when lifting them as props); boost pad = authored-geometry rebuild
+to the concept; drift tiers after. One variable per change, validators
+untouched, phase5 headed pair owed at K7 exit.
 
 **OWNER OWES (hub top lists all):** 3 ordinal ChatGPT sheets (ak47/
 denomad/georgefx — the PNGs in "fresh add ons/" are 700-930 BYTE pixel

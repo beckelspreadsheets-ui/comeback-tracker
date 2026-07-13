@@ -1,6 +1,6 @@
 {
   "round": "K7 item render concepts round 1 (2026-07-12 eve)",
-  "ownerGo": "verbatim: 'deploy lets knock out k7' — deploy done (lifoladen live), K7 concepts fired same turn",
+  "ownerGo": "verbatim: 'deploy lets knock out k7' \u2014 deploy done (lifoladen live), K7 concepts fired same turn",
   "model": "nano_banana_2 (served as nano_banana_flash), 1:1 1k, 2cr each = 16cr total",
   "scope": "PRD K7: 7 item props + boost pad. Drift spark/trail tiers = engine VFX, follow after prop picks. HUD icons reuse whichever renders win (chip direction question goes to the owner WITH these icons in hand).",
   "concepts": {
@@ -13,5 +13,14 @@
     "avalanche": "f2635cde-85dd-4a34-bb91-6bc7781ede62",
     "boost-pad": "075127da-96bf-417d-9f30-5605a63e11bd"
   },
-  "standingRules": "no text/letters, no people/animals/penguins in generated props (ordinals get posed separately), neon dusk palette, MK oversized + strong glow"
+  "standingRules": "no text/letters, no people/animals/penguins in generated props (ordinals get posed separately), neon dusk palette, MK oversized + strong glow",
+  "iconBatch2": {
+    "note": "fills for full lucide retirement (owner 'love all these rendered icons' + chip answer B, 2026-07-12 eve); 5 more @ 2cr = 10cr",
+    "slapfish": "be0c8425-fcf9-439f-98c8-a97c9124bbff",
+    "aurora": "583a9822-5efd-4462-ac2b-59eeeb71539f",
+    "march-penguinfree-footprints": "f6384972-0079-452a-a97b-300d7d9c7c91",
+    "carrot": "2c1b092b-6bf4-4fd6-9164-1e47cc0b545b",
+    "iceshard": "a92dd9b5-e5fc-4b9d-9380-d8d3afb62a14"
+  },
+  "iconLanding": "12 tiles 192px webp (make-icon-tiles.mjs, CROP 0.78) -> src/assets/game/items/ -> ITEM_ICON_URLS in ComebackCityThreeKartRace.jsx; pickup pop = owner pick B; world-prop lifts = next round"
 }
