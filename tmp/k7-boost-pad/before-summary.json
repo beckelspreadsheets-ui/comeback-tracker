@@ -1,0 +1,18 @@
+{
+  "comeback-city": {
+    "shots": [
+      "tmp/k7-boost-pad/before-comeback-city-pad0055.png",
+      "tmp/k7-boost-pad/before-comeback-city-pad0435.png"
+    ],
+    "drawCalls": null,
+    "boostHits": 3
+  },
+  "penguin-village": {
+    "shots": [
+      "tmp/k7-boost-pad/before-penguin-village-pad012.png",
+      "tmp/k7-boost-pad/before-penguin-village-pad058.png"
+    ],
+    "drawCalls": null,
+    "boostHits": 3
+  }
+}

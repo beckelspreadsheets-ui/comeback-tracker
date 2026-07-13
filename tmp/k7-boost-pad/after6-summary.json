@@ -1,0 +1,18 @@
+{
+  "comeback-city": {
+    "shots": [
+      "tmp/k7-boost-pad/after6-comeback-city-bridge-climb-far.png",
+      "tmp/k7-boost-pad/after6-comeback-city-bridge-climb-near.png",
+      "tmp/k7-boost-pad/after6-comeback-city-bridge-climb-at.png"
+    ],
+    "boostHits": 11
+  },
+  "penguin-village": {
+    "shots": [
+      "tmp/k7-boost-pad/after6-penguin-village-pond-far.png",
+      "tmp/k7-boost-pad/after6-penguin-village-pond-near.png",
+      "tmp/k7-boost-pad/after6-penguin-village-pond-at.png"
+    ],
+    "boostHits": 10
+  }
+}

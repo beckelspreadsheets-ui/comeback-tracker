@@ -1922,6 +1922,99 @@ const camLabConfig = () => {
   };
 };
 
+// K7 boost-pad rebuild geometry (owner-approved concept
+// tmp/k7-item-lab/boost-pad.png — the pad stays authored geometry, not a GLB
+// lift). Shared lazily across every pad on both tracks. The chevron carries
+// its white-hot-core→ember-bevel gradient in HDR vertex colors (the post
+// chain blooms >1 channels, same trick as the multiplyScalar materials) so
+// each chevron stays ONE draw call and can still pulse per-chevron.
+let hotChevronGeometry = null;
+const getHotChevronGeometry = () => {
+  if (hotChevronGeometry) return hotChevronGeometry;
+  // Flat chevron band extrude: apex +Y in shape space → +Z (direction of
+  // travel) once rotated flat; base rests on y=0.
+  const buildChevronSlab = (halfWidth, rake, band, depth, bevelThickness, bevelSize) => {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, band);
+    shape.lineTo(halfWidth, band - halfWidth * rake);
+    shape.lineTo(halfWidth, -halfWidth * rake);
+    shape.lineTo(0, 0);
+    shape.lineTo(-halfWidth, -halfWidth * rake);
+    shape.lineTo(-halfWidth, band - halfWidth * rake);
+    shape.closePath();
+    const slab = new THREE.ExtrudeGeometry(shape, {
+      bevelEnabled: true,
+      bevelSegments: 2,
+      bevelSize,
+      bevelThickness,
+      depth,
+    });
+    slab.rotateX(Math.PI / 2);
+    slab.computeBoundingBox();
+    slab.translate(0, -slab.boundingBox.min.y, 0);
+    return slab;
+  };
+  const paintByHeight = (geometry, low, high) => {
+    geometry.computeBoundingBox();
+    const span = geometry.boundingBox.max.y - geometry.boundingBox.min.y || 1;
+    const base = geometry.boundingBox.min.y;
+    const positions = geometry.getAttribute('position');
+    const colors = new Float32Array(positions.count * 3);
+    for (let i = 0; i < positions.count; i += 1) {
+      const t = (positions.getY(i) - base) / span;
+      colors.set(
+        [low[0] + (high[0] - low[0]) * t, low[1] + (high[1] - low[1]) * t, low[2] + (high[2] - low[2]) * t],
+        i * 3
+      );
+    }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  };
+  const rake = 0.42;
+  // Body: ember at the road climbing to molten orange at the top face.
+  const body = buildChevronSlab(5.8, rake, 1.7, 0.6, 0.24, 0.3);
+  paintByHeight(body, [0.9, 0.22, 0.04], [1.75, 0.62, 0.08]);
+  // White-hot core: an inset strip riding the top face (the concept's molten
+  // center; a vertex-color spine can't render on the cap — no interior
+  // vertices — so it's real geometry, merged to keep ONE draw call).
+  const core = buildChevronSlab(5.0, rake, 0.72, 0.1, 0.07, 0.09);
+  paintByHeight(core, [2.0, 1.15, 0.32], [2.35, 2.05, 1.5]);
+  core.translate(0, 1.03, 0.49); // atop the body, centered in the arm
+  hotChevronGeometry = mergeGeometries([body, core]);
+  return hotChevronGeometry;
+};
+
+// Glowing edge trim: outer band + inner pinstripe as ONE extrude (one draw
+// call), rounded corners like the concept frame.
+let padTrimGeometry = null;
+const getPadTrimGeometry = () => {
+  if (padTrimGeometry) return padTrimGeometry;
+  const roundedRect = (target, halfX, halfZ, radius) => {
+    target.moveTo(-halfX + radius, -halfZ);
+    target.lineTo(halfX - radius, -halfZ);
+    target.absarc(halfX - radius, -halfZ + radius, radius, -Math.PI / 2, 0, false);
+    target.lineTo(halfX, halfZ - radius);
+    target.absarc(halfX - radius, halfZ - radius, radius, 0, Math.PI / 2, false);
+    target.lineTo(-halfX + radius, halfZ);
+    target.absarc(-halfX + radius, halfZ - radius, radius, Math.PI / 2, Math.PI, false);
+    target.lineTo(-halfX, -halfZ + radius);
+    target.absarc(-halfX + radius, -halfZ + radius, radius, Math.PI, Math.PI * 1.5, false);
+    return target;
+  };
+  const frame = (halfX, halfZ, bandWidth, radius) => {
+    const outline = roundedRect(new THREE.Shape(), halfX, halfZ, radius);
+    outline.holes.push(
+      roundedRect(new THREE.Path(), halfX - bandWidth, halfZ - bandWidth, Math.max(radius - bandWidth, 0.2))
+    );
+    return outline;
+  };
+  padTrimGeometry = new THREE.ExtrudeGeometry(
+    [frame(9.6, 6.4, 0.62, 1.3), frame(8.5, 5.4, 0.3, 0.9)],
+    { bevelEnabled: false, depth: 0.12 }
+  );
+  padTrimGeometry.rotateX(-Math.PI / 2);
+  return padTrimGeometry;
+};
+
 const addPad = (world, sampler, pad, index) => {
   const group = new THREE.Group();
   const { point, tangent } = sampler.pointAt(pad.progress, pad.side || 0);
@@ -1999,29 +2092,28 @@ const addPad = (world, sampler, pad, index) => {
     group.add(crossbar);
     addGlowSprite(group, '#2cd8f6', 22, 0.5, 7.4);
   } else {
-    // SHIPPED DEFAULT since the W2 pick (owner 2026-07-07: "boost lab-
-    // v1"): V1 "hot chevrons" — bigger footprint, amber-hot palette that
-    // pops against the teal track identity, five oversized sweeping
-    // chevrons. (?boostLab=1 variant 'v1' falls through here too — same
-    // look; v2/v3 stay reachable for future rounds. The old flat cyan
-    // pad retired with this pick.)
-    group.add(makeBox({ x: 19.6, y: 0.42, z: 13.2 }, { y: 0.04 }, createBasicMaterial('#1a0e04')));
-    const glowPanel = new THREE.Mesh(
-      new THREE.BoxGeometry(18, 0.2, 11.4),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff8c1f').multiplyScalar(1.7) })
+    // SHIPPED DEFAULT: K7 authored rebuild of the W2 V1 "hot chevrons"
+    // pick, matched to the approved concept (tmp/k7-item-lab/boost-pad.png)
+    // — three CHUNKY beveled chevrons with white-hot cores cooling to ember
+    // down the bevels, framed by a glowing edge trim on a charcoal plate.
+    // Same amber-hot identity + footprint as V1; chevronOrder still rides
+    // the shipped pulse. Pad cost DROPS 8→6 draw calls (?boostLab=1 'v1'
+    // falls through here too; v2/v3 stay reachable for future rounds).
+    group.add(makeBox({ x: 19.6, y: 0.42, z: 13.2 }, { y: 0.04 }, createBasicMaterial('#170b03')));
+    const trim = new THREE.Mesh(
+      getPadTrimGeometry(),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff9a2e').multiplyScalar(2.05) })
     );
-    glowPanel.position.y = 0.34;
-    group.add(glowPanel);
-    [-4.4, -2.2, 0, 2.2, 4.4].forEach((z, order) => {
-      const arrow = new THREE.Mesh(
-        new THREE.ConeGeometry(2.9, 3.4, 3),
-        new THREE.MeshBasicMaterial({ color: '#fff3d9', transparent: true })
+    trim.position.y = 0.25;
+    group.add(trim);
+    [-2.55, 0.35, 3.25].forEach((z, order) => {
+      const chevron = new THREE.Mesh(
+        getHotChevronGeometry(),
+        new THREE.MeshBasicMaterial({ transparent: true, vertexColors: true })
       );
-      arrow.position.set(0, 0.58, z - 0.4);
-      arrow.rotation.set(Math.PI / 2, 0, Math.PI);
-      arrow.scale.set(2.2, 1, 0.34);
-      arrow.userData.chevronOrder = order;
-      group.add(arrow);
+      chevron.position.set(0, 0.26, z);
+      chevron.userData.chevronOrder = order;
+      group.add(chevron);
     });
     addGlowSprite(group, '#ffab3d', 20, 0.55, 1.8);
   }
