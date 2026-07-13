@@ -33,6 +33,7 @@ import miamiCruiserKartUrl from '../assets/game/models/karts/miami-cruiser.glb?u
 import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
 import tclowModelUrl from '../assets/game/models/avatars/tclow-penguin.glb?url';
 import layer23ModelUrl from '../assets/game/models/avatars/layer23-penguin.glb?url';
+import lifoladenModelUrl from '../assets/game/models/avatars/lifoladen.glb?url';
 import miamiCondoTowerUrl from '../assets/game/models/miami/condo-tower.glb?url';
 import miamiCornerArcadeUrl from '../assets/game/models/miami/corner-arcade.glb?url';
 import miamiDecoHotelUrl from '../assets/game/models/miami/deco-hotel.glb?url';
@@ -157,6 +158,11 @@ const KART_SCALE = 1.01;
 // `driverYaw` is the lab-verified authored yaw (all Tripo rigs face +X).
 export const KART_CHARACTERS = [
   { accent: '#46d9ef', color: '#e8261d', driverHeight: 5.7, driverYaw: -Math.PI / 2, kart: 'hero', kartName: 'Hero Kart', key: 'crrt-bunny', name: 'CRRT Bunny', projectileSkin: 'carrot' },
+  // Lifoladen (K6): human wizard king, not a penguin — plain 'snowball' skin
+  // keeps him out of the Penguin March pool. Meshy rig, lab-verified +Z
+  // front → driverYaw 0. Second in the roster so he auto-fills a rival seat
+  // for every other pick.
+  { accent: '#a7f542', color: '#8e1a43', driverHeight: 6.4, driverYaw: 0, kart: 'miamicruiser', kartName: 'Miami Cruiser', key: 'lifoladen', name: 'Lifoladen', projectileSkin: 'snowball' },
   // Owner correction (round 8): the penguin previously labeled "CRRT
   // Penguin" IS T Clow — one character, the ice sled is his ride.
   { accent: '#9fe7ff', color: '#2378ff', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'icesled', kartName: 'Ice Sled', key: 'tclow', name: 'T Clow', projectileSkin: 'iceshard' },
@@ -1123,14 +1129,16 @@ const loadKartAssets = () => {
       gltfLoader.loadAsync(iceSledUrl).catch(() => null),
       gltfLoader.loadAsync(tclowModelUrl).catch(() => null),
       gltfLoader.loadAsync(layer23ModelUrl).catch(() => null),
+      gltfLoader.loadAsync(lifoladenModelUrl).catch(() => null),
       gltfLoader.loadAsync(iceRacerKartUrl).catch(() => null),
       gltfLoader.loadAsync(miamiCruiserKartUrl).catch(() => null),
-    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, iceRacerGltf, miamiCruiserGltf]) => ({
+    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, lifoladenGltf, iceRacerGltf, miamiCruiserGltf]) => ({
       colormapImage,
       // Keyed by KART_CHARACTERS entries — seats are assigned at race start.
       driverScenes: {
         'crrt-bunny': bunnyGltf?.scene || null,
         layer23: layer23Gltf?.scene || null,
+        lifoladen: lifoladenGltf?.scene || null,
         mizzle: mizzleGltf?.scene || null,
         'seth-penguin': sethGltf?.scene || null,
         tclow: tclowGltf?.scene || null,
@@ -4308,7 +4316,11 @@ export const HeldItemIcon = ({ heldItem, projectileSkin, size = 15 }) => {
 };
 
 const heldItemLabel = (heldItem, projectileSkin) => {
-  if (heldItem === 'snowball') return projectileSkin === 'carrot' ? 'CARROT' : 'ICE SHARD';
+  if (heldItem === 'snowball') {
+    if (projectileSkin === 'carrot') return 'CARROT';
+    if (projectileSkin === 'snowball') return 'SNOWBALL';
+    return 'ICE SHARD';
+  }
   return ITEM_LABELS[heldItem] || heldItem.toUpperCase();
 };
 

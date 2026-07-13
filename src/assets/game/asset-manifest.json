@@ -233,6 +233,21 @@
     "runtimeTransform": "Approved blender-decimate seated-character-blender-22k-v1"
   },
   {
+    "filePath": "src/assets/game/models/avatars/lifoladen.glb",
+    "source": "Meshy multi-image-to-3D (job 6afd7358-9f6b-4847-bf65-79b438dbfe71, 4 views) from the owner's lifoladen-charactersheet.png (K6, 2026-07-12; NON-ordinal owner art — no ordinal-upload concern); raw mesh committed at tmp/k6-lifoladen/raw-lifoladen.glb with generation-record.json alongside",
+    "license": "Owner-created/generated asset (owner character sheet through Meshy)",
+    "role": "Lifoladen driver avatar (K6 roster character, Miami Cruiser signature kart); orientation lab 2026-07-12: front = +Z, driverYaw 0",
+    "sizeBudget": "seated-character class; 904 KiB shipped, 20,920 tris (hard caps 1250KB/25k), 512px textures",
+    "fallback": "Kart renders driverless if the avatar GLB fails to load",
+    "assetId": "avatar.driver.lifoladen",
+    "assetClass": "seated-character",
+    "status": "runtime-promoted-k6-lifoladen",
+    "runtimeTransform": "weld -> simplify ratio 0.68 error 0.004 (gentle; raw 30,766 tris exceeded the 25k hard cap, likeness verified raw-vs-diet at 4 yaws) -> resize 512 -> meshopt LAST (individual verbs)",
+    "sourceHash": "sha256:d154cdae772ed40ff421004cf28afe463580ebca0608ed5a007876d3322b1808",
+    "outputHash": "sha256:e5eca71ae0a7aded25729fa350fee1b7565dcf9941812efafbd56a98b421c4af",
+    "proof": "tmp/k6-lifoladen/ (lift views, orientation-capture.mjs turntable, portrait-capture.mjs)"
+  },
+  {
     "filePath": "src/assets/game/models/avatars/layer23-penguin.glb",
     "source": "Approved optimized candidate from asset-pipeline/raw/runtime-copies/layer23-penguin__0622be5ab6c7.glb",
     "license": "Owner-created/generated asset; see approval and proof ledger",

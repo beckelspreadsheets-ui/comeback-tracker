@@ -40,6 +40,7 @@ import charSethPenguinUrl from '../assets/game/select/char-seth-penguin.png';
 import charMizzleUrl from '../assets/game/select/char-mizzle.png';
 import charTclowUrl from '../assets/game/select/char-tclow.png';
 import charLayer23Url from '../assets/game/select/char-layer23.png';
+import charLifoladenUrl from '../assets/game/select/char-lifoladen.png';
 import kartHeroUrl from '../assets/game/select/kart-hero.png';
 import kartIcesledUrl from '../assets/game/select/kart-icesled.png';
 import kartIceracerUrl from '../assets/game/select/kart-iceracer.png';
@@ -51,6 +52,7 @@ import kartMiamicruiserUrl from '../assets/game/select/kart-miamicruiser.png';
 const CHARACTER_PORTRAITS = {
   'crrt-bunny': charCrrtBunnyUrl,
   layer23: charLayer23Url,
+  lifoladen: charLifoladenUrl,
   mizzle: charMizzleUrl,
   'seth-penguin': charSethPenguinUrl,
   tclow: charTclowUrl,

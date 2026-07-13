@@ -20,26 +20,26 @@ offered) · coins/rails/all prior content.
 "amazing"; camera was "wild" in fullscreen → fixed by removing fullscreen;
 "hard to see asians" → footprint bump (re-check on his next pass).
 
-**NEXT TASK (fresh context starts HERE): wire lifoladen as a playable
-racer.** The lift is DONE and the likeness is excellent (crown, skull
-face, ₿ staff): raw mesh at tmp/k6-lifoladen/raw-lifoladen.glb (9.7MB,
-committed; front = +Z, Meshy convention; generation-record.json has all
-ids). Steps: diet to seated-character class (weld → resize 512 → meshopt,
-NO simplify if likeness suffers — the crosser precedent; target ≤900KB)
-→ src/assets/game/models/avatars/lifoladen.glb → KART_CHARACTERS entry
-(pick accent/color; signature kart = one of the new K5 karts fits; he is
-a HUMAN wizard so projectileSkin 'snowball' not penguin 'iceshard' —
-judgment call, note it; tune driverHeight/driverYaw via in-game probe;
-driver mounts via mountDriverAvatar) → rival-seat auto-fills → portrait
-via http://localhost:5173/select-portraits.html?model=...&yaw=<PI/2+0.55>
-(use the RUNNING dev server — scripts/select-portraits-capture.mjs spawns
-a SECOND vite dev and dep-cache-ping-pongs; the page needed+now has the
-meshopt decoder) → CHARACTER_PORTRAITS in BOTH src/kart/KartApp.jsx AND
-src/game/RaceScreen.jsx (MIRROR RULE) → manifest + asset-profiles
-classifications (BOTH files or assets:check fails on 'unknown class') →
-full battery → commit; deploy on owner word. THEN: K7 item render
-concepts (7 props + boost pad → item-lab; ask the chip direction WITH
-icons in hand).
+**K6 LIFOLADEN LANDED (2026-07-12 eve, committed NOT deployed —
+owner-gated):** playable racer wired end-to-end. Diet: weld → gentle
+simplify 0.68/0.004 (raw 30,766 tris broke the 25k seated-character hard
+cap; likeness verified raw-vs-diet at 4 yaws BEFORE promotion — crown/
+skull/₿-staff/robe all hold) → resize 512 → meshopt = 904 KiB shipped at
+src/assets/game/models/avatars/lifoladen.glb. Roster: SECOND slot in
+KART_CHARACTERS (so he auto-fills a rival seat for every other pick —
+note: default bunny lineup's rivals are now lifoladen/tclow/seth, mizzle
+dropped out), accent #a7f542 / color #8e1a43, signature kart Miami
+Cruiser, projectileSkin 'snowball' (human wizard — keeps him OUT of the
+iceshard-keyed Penguin March pool; a plain 'snowball' pool variant
+already existed, and heldItemLabel now says SNOWBALL for it).
+Orientation: front = +Z lab-verified → driverYaw 0, portrait pose yaw
+0.55 (the handoff's earlier π/2+0.55 guess was WRONG — booth camera sits
+on +Z like the lab). driverHeight 6.4 reads right in the parked probe
+(tmp/k6-lifoladen/parked-player.png; mounts 43/43 both as player and as
+rival). Manifest + asset-profiles source entry + both portrait mirrors
+done; select-portraits-capture.mjs knows his FRONT_Z_POSE for reruns.
+**NEXT TASK: K7 item render concepts** (7 props + boost pad → item-lab;
+ask the chip direction WITH icons in hand).
 
 **OWNER OWES (hub top lists all):** 3 ordinal ChatGPT sheets (ak47/
 denomad/georgefx — the PNGs in "fresh add ons/" are 700-930 BYTE pixel

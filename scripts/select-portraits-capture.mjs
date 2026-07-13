@@ -17,8 +17,12 @@ const TRIPO_POSE = -Math.PI / 2 + 0.55;
 const KENNEY_POSE = Math.PI + 0.55;
 // K5 Meshy karts arrive nose on -X (Tripo's are +X) — mirrored hero pose.
 const MESHY_KART_POSE = Math.PI / 2 + 0.55;
+// Lifoladen's Meshy rig fronts +Z (lab-verified 2026-07-12) — no facing
+// correction, just the 3/4 turn.
+const FRONT_Z_POSE = 0.55;
 const PORTRAITS = [
   { model: '/src/assets/game/models/avatars/crrt-bunny.glb', name: 'char-crrt-bunny', yaw: TRIPO_POSE },
+  { model: '/src/assets/game/models/avatars/lifoladen.glb', name: 'char-lifoladen', yaw: FRONT_Z_POSE },
   { model: '/src/assets/game/models/avatars/seth-penguin.glb', name: 'char-seth-penguin', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/avatars/mizzle.glb', name: 'char-mizzle', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/avatars/tclow-penguin.glb', name: 'char-tclow', yaw: TRIPO_POSE },

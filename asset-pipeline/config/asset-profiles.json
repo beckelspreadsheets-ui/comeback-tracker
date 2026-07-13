@@ -199,6 +199,12 @@
       "role": "source-driver-avatar"
     },
     {
+      "path": "tmp/k6-lifoladen/raw-lifoladen.glb",
+      "assetId": "source.meshy.lifoladen",
+      "class": "seated-character",
+      "role": "source-driver-avatar"
+    },
+    {
       "path": "src/assets/game/models/tripo/hero-kart-tripo.glb",
       "assetId": "kart.hero.tripo",
       "class": "hero-kart",
