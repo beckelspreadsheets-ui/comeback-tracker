@@ -295,6 +295,30 @@
       "role": "runtime-item-box"
     },
     {
+      "path": "src/assets/game/models/items/fishbone-trap.glb",
+      "assetId": "itemprop.fishbone",
+      "class": "item-box",
+      "role": "runtime-item-prop"
+    },
+    {
+      "path": "src/assets/game/models/items/sardine-rocket.glb",
+      "assetId": "itemprop.sardine",
+      "class": "complex-prop",
+      "role": "runtime-item-prop"
+    },
+    {
+      "path": "src/assets/game/models/items/avalanche-mound.glb",
+      "assetId": "itemprop.avalanche",
+      "class": "complex-prop",
+      "role": "runtime-item-prop"
+    },
+    {
+      "path": "src/assets/game/models/items/blizzard-cloud.glb",
+      "assetId": "itemprop.blizzard",
+      "class": "complex-prop",
+      "role": "runtime-item-prop"
+    },
+    {
       "path": "src/assets/game/models/pv-tribute/outplayasians-crosser.glb",
       "assetId": "pvtribute.outplayasiansCrosser",
       "class": "seated-character",

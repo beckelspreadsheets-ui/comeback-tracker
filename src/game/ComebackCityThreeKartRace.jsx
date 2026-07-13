@@ -34,6 +34,10 @@ import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
 import tclowModelUrl from '../assets/game/models/avatars/tclow-penguin.glb?url';
 import layer23ModelUrl from '../assets/game/models/avatars/layer23-penguin.glb?url';
 import lifoladenModelUrl from '../assets/game/models/avatars/lifoladen.glb?url';
+import fishboneTrapModelUrl from '../assets/game/models/items/fishbone-trap.glb?url';
+import sardineRocketModelUrl from '../assets/game/models/items/sardine-rocket.glb?url';
+import avalancheMoundModelUrl from '../assets/game/models/items/avalanche-mound.glb?url';
+import blizzardCloudModelUrl from '../assets/game/models/items/blizzard-cloud.glb?url';
 import itemAuroraIconUrl from '../assets/game/items/item-aurora.webp';
 import itemAvalancheIconUrl from '../assets/game/items/item-avalanche.webp';
 import itemBlizzardIconUrl from '../assets/game/items/item-blizzard.webp';
@@ -1144,7 +1148,13 @@ const loadKartAssets = () => {
       gltfLoader.loadAsync(lifoladenModelUrl).catch(() => null),
       gltfLoader.loadAsync(iceRacerKartUrl).catch(() => null),
       gltfLoader.loadAsync(miamiCruiserKartUrl).catch(() => null),
-    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, lifoladenGltf, iceRacerGltf, miamiCruiserGltf]) => ({
+      // K7 item-prop renders — optional like the avatars; the procedural
+      // stand-ins stay as instant fallbacks when a GLB fails to load.
+      gltfLoader.loadAsync(fishboneTrapModelUrl).catch(() => null),
+      gltfLoader.loadAsync(sardineRocketModelUrl).catch(() => null),
+      gltfLoader.loadAsync(avalancheMoundModelUrl).catch(() => null),
+      gltfLoader.loadAsync(blizzardCloudModelUrl).catch(() => null),
+    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, lifoladenGltf, iceRacerGltf, miamiCruiserGltf, fishboneGltf, sardineGltf, avalancheGltf, blizzardGltf]) => ({
       colormapImage,
       // Keyed by KART_CHARACTERS entries — seats are assigned at race start.
       driverScenes: {
@@ -1156,6 +1166,12 @@ const loadKartAssets = () => {
         tclow: tclowGltf?.scene || null,
       },
       itemBoxScene: itemBoxGltf.scene,
+      itemPropScenes: {
+        avalanche: avalancheGltf?.scene || null,
+        blizzard: blizzardGltf?.scene || null,
+        fishbone: fishboneGltf?.scene || null,
+        sardine: sardineGltf?.scene || null,
+      },
       kartScenes: {
         hero: tripoKartGltf?.scene || null,
         icesled: iceSledGltf?.scene || null,
@@ -1240,6 +1256,80 @@ const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height 
   kartModel.driverMount.clear();
   kartModel.driverMount.add(rig);
   return rig;
+};
+
+// K7 item-prop fit: clone a rendered GLB, go unlit (the projectile/marker
+// family uses emissive-bright materials so items read at race speed), size
+// it to the MK-oversize target, and either center it or seat it on y=0.
+const fitItemPropScene = (scene, targetSize, { seat = false, yaw = 0 } = {}) => {
+  const rig = scene.clone(true);
+  rig.traverse((node) => {
+    if (node.isMesh) {
+      node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
+      node.castShadow = false;
+    }
+  });
+  rig.rotation.y = yaw;
+  const bounds = new THREE.Box3().setFromObject(rig);
+  const size = bounds.getSize(new THREE.Vector3());
+  rig.scale.setScalar(targetSize / Math.max(0.0001, size.x, size.y, size.z));
+  rig.updateMatrixWorld(true);
+  const fitted = new THREE.Box3().setFromObject(rig);
+  const center = fitted.getCenter(new THREE.Vector3());
+  rig.position.x -= center.x;
+  rig.position.z -= center.z;
+  if (seat) rig.position.y -= fitted.min.y;
+  else rig.position.y -= center.y;
+  return rig;
+};
+
+// K7 prop swaps: rendered GLBs replace the procedural stand-ins INSIDE the
+// existing pools — every position/visibility/burst hook drives the same
+// holders, so item SEMANTICS are untouched (validators prove it) and the
+// procedural mesh remains the instant fallback when a GLB fails to load.
+const swapItemPropVisuals = (engine, itemPropScenes) => {
+  const removeMeshes = (group) => {
+    [...group.children]
+      .filter((child) => child.isMesh)
+      .forEach((child) => {
+        child.geometry?.dispose?.();
+        child.material?.dispose?.();
+        group.remove(child);
+      });
+  };
+  if (itemPropScenes.fishbone) {
+    engine.fishBonePool.forEach((holder) => {
+      removeMeshes(holder);
+      const rig = fitItemPropScene(itemPropScenes.fishbone, 7, { seat: true });
+      rig.position.y += 0.3;
+      holder.add(rig);
+    });
+  }
+  if (itemPropScenes.sardine) {
+    engine.projectilePool.forEach((holder) => {
+      const variant = holder.children.find((child) => child.userData.skin === 'sardine');
+      if (!variant) return;
+      removeMeshes(variant);
+      // Lab-verified nose = -X (Meshy convention) -> +π/2 puts it on the
+      // holder's +Z travel axis like the procedural rocket.
+      variant.add(fitItemPropScene(itemPropScenes.sardine, 6.4, { yaw: Math.PI / 2 }));
+    });
+  }
+  if (itemPropScenes.avalanche) {
+    // Purely additive: the mound erupts inside the existing warning ring —
+    // ring + glow stay (the frame loop drives their opacity/pulse).
+    const mound = fitItemPropScene(itemPropScenes.avalanche, 13, { seat: true });
+    engine.avalancheMarker.add(mound);
+  }
+  if (itemPropScenes.blizzard) {
+    engine.blizzardPool.forEach((holder) => {
+      // The fog shells stay (they ARE the slow-zone read + fade hook); the
+      // rendered cloud crowns the dome and spins with the holder.
+      const cloud = fitItemPropScene(itemPropScenes.blizzard, 15, { seat: true });
+      cloud.position.y += 2.4;
+      holder.add(cloud);
+    });
+  }
 };
 
 // A/B variant: AI-generated kart body with its own baked texture. One fused
@@ -4662,7 +4752,7 @@ export const ComebackCityThreeKartRace = ({
     // Swap procedural fallback bodies for the authored models — the chosen
     // character drives the player kart, the rest take the rival seats.
     loadKartAssets()
-      .then(({ colormapImage, driverScenes, itemBoxScene, kartScenes, racerScene }) => {
+      .then(({ colormapImage, driverScenes, itemBoxScene, itemPropScenes, kartScenes, racerScene }) => {
         if (disposed || engineRef.current !== engine) return;
         // ?kenneyKart=1 keeps the recolored Kenney body reachable for
         // comparison on the player kart; it is also the automatic fallback
@@ -4701,6 +4791,8 @@ export const ComebackCityThreeKartRace = ({
         engine.rivalModels.forEach((rival) => {
           attachCharacter(rival.model, rival.character, false);
         });
+        // K7: rendered item props take over from the procedural stand-ins.
+        swapItemPropVisuals(engine, itemPropScenes);
         // Penguin March marchers: swap the stand-ins for the real roster
         // penguins, cycling through every penguin character — the train
         // gets richer automatically as the owner adds ordinals.

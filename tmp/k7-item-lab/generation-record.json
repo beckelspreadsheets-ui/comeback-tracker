@@ -22,5 +22,28 @@
     "carrot": "2c1b092b-6bf4-4fd6-9164-1e47cc0b545b",
     "iceshard": "a92dd9b5-e5fc-4b9d-9380-d8d3afb62a14"
   },
-  "iconLanding": "12 tiles 192px webp (make-icon-tiles.mjs, CROP 0.78) -> src/assets/game/items/ -> ITEM_ICON_URLS in ComebackCityThreeKartRace.jsx; pickup pop = owner pick B; world-prop lifts = next round"
+  "iconLanding": "12 tiles 192px webp (make-icon-tiles.mjs, CROP 0.78) -> src/assets/game/items/ -> ITEM_ICON_URLS in ComebackCityThreeKartRace.jsx; pickup pop = owner pick B; world-prop lifts = next round",
+  "propRound": {
+    "ownerGo": "verbatim 'deploy and lets keep going forward!' (2026-07-12 late; icons deploy 1d74cc7d verified first)",
+    "rerolls3dStyle": {
+      "sardine": "6347adaf-d00b-4a95-a547-79640bbbdae8",
+      "blizzard": "c606059d-3a88-4036-aca7-dfb3ed96400a"
+    },
+    "liftsTextured": {
+      "fishbone": "fef24559-9ff1-4b84-b9b1-89c61225729d",
+      "snowball": "e29bc610-0519-4798-b7cf-203fdd4927f0",
+      "avalanche": "af705bf2-5aef-43d9-ab68-5e05baf12574"
+    },
+    "wastedUntextured": [
+      "cb749019-3b56-43f6-86f6-c12206bb1edd",
+      "aea7ac9e-19b3-4c61-a90d-48b9842db086",
+      "cb9e0070-e6ff-4b01-b6ab-9da42f9778b3"
+    ],
+    "gotcha": "generate_3d image_to_3d DEFAULTS should_texture:false \u2014 always pass should_texture:true for game lifts",
+    "rerollLifts": {
+      "sardine-v2": "33bd7a20-d182-4a66-bcf4-944a620d4219",
+      "blizzard-v2": "eb0f259d-3176-49d8-b29f-ae6f4287582a"
+    },
+    "rerollVerdictNote": "both re-rolls landed clean 3D-toy style (sardine-rocket-v2.png / blizzard-cloud-v2.png in this dir) \u2014 lifted without another owner round (same approved concepts, style fix only)"
+  }
 }

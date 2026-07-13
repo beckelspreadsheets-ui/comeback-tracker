@@ -297,12 +297,68 @@
     "runtimeTransform": "Approved blender-decimate rival-kart-blender-15k-v1"
   },
   {
+    "filePath": "src/assets/game/models/items/fishbone-trap.glb",
+    "source": "K7 prop round (2026-07-12 late, owner concept approval + 'lets keep going forward'): meshy image_to_3d job fef24559-9ff1-4b84-b9b1-89c61225729d from the approved fish-bone concept; diet weld -> simplify 0.15/0.008 -> resize 128 -> meshopt (raw lift local-only at tmp/k7-item-lab/raw-*.glb, gitignored; refetch via job id)",
+    "license": "Owner-directed generated art (Higgsfield/Meshy, text-prompt concept only)",
+    "role": "Fish Bone trap world prop — swapped into fishBonePool by swapItemPropVisuals (procedural bone = load-failure fallback); orientation: radial trap, spins in place",
+    "sizeBudget": "item-box class; 65 KiB, 4,621 tris (hard 160KB/5000)",
+    "fallback": "Procedural toon fish-bone mesh stays if the GLB fails to load",
+    "assetId": "itemprop.fishbone",
+    "assetClass": "item-box",
+    "outputHash": "sha256:cea534eece03f99767e6cc15d60096d05ff96abfba28c5b51ff4ca1200fdba17",
+    "sourceHash": "sha256:1a707eeabd5c9224a6520b0503284abbed68322dbbb0991450d94ee089511260"
+  },
+  {
+    "filePath": "src/assets/game/models/items/sardine-rocket.glb",
+    "source": "K7 prop round: 3D-style re-roll concept 6347adaf -> meshy lift 33bd7a20-d182-4a66-bcf4-944a620d4219; diet weld -> simplify 0.15/0.008 -> resize 128 -> meshopt (raw lift local-only at tmp/k7-item-lab/raw-*.glb, gitignored; refetch via job id)",
+    "license": "Owner-directed generated art (Higgsfield/Meshy)",
+    "role": "Rocket Sardine projectile skin in the projectile pool (userData.skin='sardine'); lab-verified nose = -X -> mounted yaw +PI/2 onto the holder's +Z travel axis",
+    "sizeBudget": "complex-prop class; 140 KiB, 6,551 tris (hard 500KB/8000)",
+    "fallback": "Procedural sardine (sphere+fins+flame) stays if the GLB fails to load",
+    "assetId": "itemprop.sardine",
+    "assetClass": "complex-prop",
+    "outputHash": "sha256:29213b2f8d064d3fdb04356f8e62930ddc3b30695110fc9b1cc520d1f45c7049",
+    "sourceHash": "sha256:b02949f9be830c670f7120c1ef95d72213f52c7db5c51a1a541eb5c5c8c86d9d"
+  },
+  {
+    "filePath": "src/assets/game/models/items/avalanche-mound.glb",
+    "source": "K7 prop round: meshy lift af705bf2-5aef-43d9-ab68-5e05baf12574 from the approved avalanche concept; diet weld -> simplify 0.12/0.012 -> resize 128 -> meshopt (raw lift local-only at tmp/k7-item-lab/raw-*.glb, gitignored; refetch via job id)",
+    "license": "Owner-directed generated art (Higgsfield/Meshy)",
+    "role": "Avalanche ultimate marker mound — ADDED inside avalancheMarker (ring + glow + pulse logic unchanged)",
+    "sizeBudget": "complex-prop class; 163 KiB, 7,707 tris (hard 500KB/8000)",
+    "fallback": "Marker ring + glow alone (the pre-K7 look) if the GLB fails to load",
+    "assetId": "itemprop.avalanche",
+    "assetClass": "complex-prop",
+    "outputHash": "sha256:743464b32eddbe27dcbac0f8673f4107c2e1992814293a268df99e30caf7f2cf",
+    "sourceHash": "sha256:f3e78e732ecc7ea4d8489079f2dcf0d4c0239bd3b722d1211a0a2e19dd0b94d6"
+  },
+  {
+    "filePath": "src/assets/game/models/items/blizzard-cloud.glb",
+    "source": "K7 prop round: 3D-style re-roll concept c606059d -> meshy lift eb0f259d-3176-49d8-b29f-ae6f4287582a; diet weld -> simplify 0.12/0.012 -> resize 128 -> meshopt (raw lift local-only at tmp/k7-item-lab/raw-*.glb, gitignored; refetch via job id)",
+    "license": "Owner-directed generated art (Higgsfield/Meshy)",
+    "role": "Blizzard cloud crown added to each blizzardPool dome (fog shells + fade logic unchanged; cloud spins with the holder)",
+    "sizeBudget": "complex-prop class; 163 KiB, 7,855 tris (hard 500KB/8000)",
+    "fallback": "Fog dome shells alone (the pre-K7 look) if the GLB fails to load",
+    "assetId": "itemprop.blizzard",
+    "assetClass": "complex-prop",
+    "outputHash": "sha256:1eba3b835ffc17645284dfadc423b2417806b6a33192f91fbadafe33ab2a9192",
+    "sourceHash": "sha256:961fb85908cfd1867899d6b0bf0666bc7bd4dd9b89547c68bcec371e822d97ac"
+  },
+  {
     "filePath": "src/assets/game/items/*.webp",
     "source": "K7 held-item icon tiles (2026-07-12, owner approved the full concept set): nano_banana concept renders (job ids in tmp/k7-item-lab/generation-record.json) center-cropped to 192px webp by tmp/k7-item-lab/make-icon-tiles.mjs",
     "license": "Owner-directed generated art (Higgsfield, text-prompt only — no ordinal inputs)",
     "role": "ITEM_ICON_URLS: held-item HUD badge, smash button, pickup pop, and intro item guide icons (lucide stand-ins retired)",
     "sizeBudget": "Twelve 192px webp tiles, ~96 KB total",
     "fallback": "HeldItemIcon falls back to the plain snowball tile for unknown item keys"
+  },
+  {
+    "filePath": "src/assets/game/select/*.webp",
+    "source": "Same portrait booth as the PNGs (scripts/select-portraits-capture.mjs) — lifoladen re-encoded to webp for the kart bundle diet (tmp/k7-item-lab/portrait-to-webp.mjs, 255KB png -> 40KB webp)",
+    "license": "Project-owned renders derived from owner-created source models",
+    "role": "Select-grid portraits that ship webp (currently char-lifoladen)",
+    "sizeBudget": "40 KB webp at 480px",
+    "fallback": "Select grid falls back to colored placeholder cards if portraits fail to load"
   },
   {
     "filePath": "src/assets/game/select/*.png",

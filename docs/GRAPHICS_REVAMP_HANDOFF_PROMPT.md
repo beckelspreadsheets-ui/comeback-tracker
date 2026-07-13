@@ -79,12 +79,36 @@ next deploy carries the diet).
 Battery green at the icon commit: assets:check strict · test:race ·
 bundles (fitness byte-stable 8489.99) · kart-playable passed=true ·
 shell smoke 26/26 · race:proof pass errors=0 @ load1 3.89.
-**NEXT: K7 world-prop half** — meshy lifts (30cr each) for fish-bone/
-snowball/avalanche (lift-ready renders); sardine + blizzard want a
-3D-style re-roll BEFORE lifting (owner said icons are loved — re-ask
-only when lifting them as props); boost pad = authored-geometry rebuild
-to the concept; drift tiers after. One variable per change, validators
-untouched, phase5 headed pair owed at K7 exit.
+**K7 WORLD PROPS LANDED same night (owner "deploy and lets keep going
+forward" — the deploy word covered the ICON build, which shipped
+1d74cc7d + live-verified; the PROP round is committed NOT deployed,
+mounted look unseen by owner):** 4 lifted GLBs in
+src/assets/game/models/items/ — fishbone-trap (item-box class, 4.6k
+tris), sardine-rocket (complex-prop, 6.6k; 3D-style re-roll concept
+first — both re-rolls landed clean), avalanche-mound (7.7k, erupts
+INSIDE the ring — additive, ring/glow/pulse untouched), blizzard-cloud
+(7.9k, crowns the fog dome, shells + fade untouched).
+swapItemPropVisuals + fitItemPropScene in ComebackCityThreeKartRace.jsx
+swap INSIDE the pools (procedural = load-failure fallback). Sardine
+nose = −X → yaw +π/2 (lab). SNOWBALL LIFT BENCHED for budget
+(tmp/k7-item-lab/snowball-diet*.glb, procedural sphere ships);
+char-lifoladen portrait → webp (255→40KB) paid for the props; fresh
+build 9648.77/9800 gz.
+GOTCHAS this round: generate_3d image_to_3d DEFAULTS
+should_texture:false — ALWAYS pass should_texture:true (3 untextured
+jobs wasted, ids in generation-record.json) · thin geometry (fish bone)
+lifts blob-ish from the front, fine in profile — check ALL yaws before
+promoting · position-tiered items mean autoplay (always 1st) can NEVER
+catch sardine/blizzard/avalanche on camera — mid-pack visual check owed
+on the owner's next phone race or the phase5 headed pass.
+Battery green at the prop commit: assets:check strict fail=0 (sourceHash
+required on new manifest entries — audit fails without it) · test:race ·
+bundles fresh-build all-pass · kart-playable passed=true · smoke 26/26 ·
+race:proof pass errors=0.
+**NEXT: owner deploy word for the props → then boost-pad authored
+rebuild (concept approved, separate change) → drift-tier VFX → phase5
+headed pair at K7 exit. Owner still owes: 3 ordinal sheets · economy
+word · NAME · budget ack (13 MiB/9800) · phone re-check.**
 
 **OWNER OWES (hub top lists all):** 3 ordinal ChatGPT sheets (ak47/
 denomad/georgefx — the PNGs in "fresh add ons/" are 700-930 BYTE pixel

@@ -1,7 +1,7 @@
 {
   "artifactDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/bundle-budget",
   "budgetMode": "fitness",
-  "capturedAt": "2026-07-13T01:53:39.083Z",
+  "capturedAt": "2026-07-13T02:54:47.525Z",
   "budget": {
     "checks": [
       {
@@ -137,7 +137,7 @@
   "gateStatus": "bundle-budget-pass",
   "git": {
     "branch": "codex/release-v1-comebacktracker-kart-racer",
-    "commit": "c25cfb6197079791d38203560e94385ad3fdd127",
+    "commit": "c272ec7dc7cea390c0db4ba2f1262d548062286b",
     "dirty": true
   },
   "largestFiles": [

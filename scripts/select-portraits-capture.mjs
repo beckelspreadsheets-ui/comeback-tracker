@@ -22,6 +22,9 @@ const MESHY_KART_POSE = Math.PI / 2 + 0.55;
 const FRONT_Z_POSE = 0.55;
 const PORTRAITS = [
   { model: '/src/assets/game/models/avatars/crrt-bunny.glb', name: 'char-crrt-bunny', yaw: TRIPO_POSE },
+  // NOTE: lifoladen SHIPS as char-lifoladen.webp (bundle diet 2026-07-12) —
+  // after a rerun, re-convert the fresh png (tmp/k7-item-lab/portrait-to-webp.mjs)
+  // and delete the png; both shells import the .webp.
   { model: '/src/assets/game/models/avatars/lifoladen.glb', name: 'char-lifoladen', yaw: FRONT_Z_POSE },
   { model: '/src/assets/game/models/avatars/seth-penguin.glb', name: 'char-seth-penguin', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/avatars/mizzle.glb', name: 'char-mizzle', yaw: TRIPO_POSE },
