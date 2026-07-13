@@ -1,0 +1,17 @@
+{
+  "round": "K7 item render concepts round 1 (2026-07-12 eve)",
+  "ownerGo": "verbatim: 'deploy lets knock out k7' — deploy done (lifoladen live), K7 concepts fired same turn",
+  "model": "nano_banana_2 (served as nano_banana_flash), 1:1 1k, 2cr each = 16cr total",
+  "scope": "PRD K7: 7 item props + boost pad. Drift spark/trail tiers = engine VFX, follow after prop picks. HUD icons reuse whichever renders win (chip direction question goes to the owner WITH these icons in hand).",
+  "concepts": {
+    "fish-bone": "babc3709-73bc-4258-bdc6-f716aa68575e",
+    "snowball": "ac61fe78-7326-4528-b9e1-f671e49c8c16",
+    "cocoa": "f61d04f3-d301-486b-b1cd-af9c66a36e8b",
+    "ice-shield": "b65a060a-2662-47a1-922f-6d1d3088c4ad",
+    "sardine-rocket": "6f550c9c-9dfb-4ba3-afd0-d7c9f77d1b4b",
+    "blizzard-cloud": "35848eda-da46-4312-9b8e-d0b14f315cc3",
+    "avalanche": "f2635cde-85dd-4a34-bb91-6bc7781ede62",
+    "boost-pad": "075127da-96bf-417d-9f30-5605a63e11bd"
+  },
+  "standingRules": "no text/letters, no people/animals/penguins in generated props (ordinals get posed separately), neon dusk palette, MK oversized + strong glow"
+}

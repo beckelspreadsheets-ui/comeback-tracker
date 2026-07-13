@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- K7 item render lab, round 1 (2026-07-12 eve). Concepts: nano_banana 2cr
+     each; picks get 3D lifts (meshy, 30cr) or land as HUD icon art directly.
+     Served by the vite dev server: http://localhost:5173/tmp/k7-item-lab/item-lab.html -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>K7 Item Render Lab — round 1</title>
+    <style>
+      body { margin: 0; padding: 24px; background: #0c1024; color: #dfe6ff; font: 15px/1.45 -apple-system, sans-serif; }
+      h1 { color: #ffd34f; font-size: 22px; }
+      h2 { color: #ffd34f; font-size: 17px; border-bottom: 1px solid #5a4a1a; padding-bottom: 6px; margin-top: 34px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+      .card { background: #141a38; border: 1px solid #2a3364; border-radius: 10px; padding: 14px; }
+      .card img { width: 100%; border-radius: 6px; }
+      .card h3 { margin: 10px 0 4px; color: #9fe7ff; font-size: 16px; }
+      .meta { font-size: 13px; color: #8f9bd4; }
+      .flag { color: #ffb066; font-size: 13px; }
+      .ask { background: #1a2147; border: 1px solid #ffd34f55; border-radius: 10px; padding: 16px 18px; margin-top: 30px; }
+      .ask strong { color: #ffd34f; }
+      code { background: #0a0e20; padding: 1px 5px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>K7 — item renders, round 1 concepts</h1>
+    <p class="meta">One concept per item (2cr each, retakes cost pennies — ask for any re-roll with direction).
+    Picks become: <strong>world props</strong> via the meshy 3D lift pipeline (like the karts) and/or
+    <strong>HUD icons</strong> replacing the current lucide line-art. Item BEHAVIOR does not change — art only.</p>
+
+    <h2>Thrown / world props (3D lift candidates)</h2>
+    <div class="grid">
+      <div class="card"><img src="fish-bone.png" alt="fish bone" />
+        <h3>Fish Bone</h3><div class="meta">Current: procedural white bone mesh. Concept: glossy toy skeleton, cyan neon rim — matches the game's palette 1:1.</div></div>
+      <div class="card"><img src="snowball.png" alt="snowball" />
+        <h3>Snowball</h3><div class="meta">Current: white sphere + glow sprite. Concept: packed-snow texture with icy core glow. (Also lifoladen's throw skin.)</div></div>
+      <div class="card"><img src="ice-shield.png" alt="ice shield" />
+        <h3>Ice Shield</h3><div class="meta">Current: faceted icosahedron dome (procedural). Concept: crystalline dome with glowing facet seams — a texture bake for the existing dome OR a full lift.</div></div>
+      <div class="card"><img src="sardine-rocket.png" alt="rocket sardine" />
+        <h3>Rocket Sardine</h3><div class="meta">Current: silver fish body + flame cone.</div>
+        <div class="flag">Came out illustration-style (outlined, has an eye) vs the 3D-render look of the others — great as an ICON; say re-roll if you want the 3D-toy-render style for the world prop.</div></div>
+      <div class="card"><img src="blizzard-cloud.png" alt="blizzard cloud" />
+        <h3>Blizzard Cloud</h3><div class="meta">Current: translucent dome + swirl. Concept: storm cloud with a snowflake vortex — the vortex would be the in-world read (cloud above, swirl at track level).</div>
+        <div class="flag">Illustration-lean; reads perfectly as an icon. World version would be cloud mesh + existing dome VFX.</div></div>
+      <div class="card"><img src="avalanche.png" alt="avalanche marker" />
+        <h3>Avalanche Marker</h3><div class="meta">Current: flat warning ring + glow. Concept: erupting ice-boulder mound inside a gold-rimmed ice ring — the ultimate finally LOOKS like an ultimate.</div>
+        <div class="flag">Background sign has stray text ("RCADE") — background is discarded at lift time; prop itself is clean.</div></div>
+    </div>
+
+    <h2>Track + icon-only</h2>
+    <div class="grid">
+      <div class="card"><img src="boost-pad.png" alt="boost pad" />
+        <h3>Boost Pad</h3><div class="meta">Current: hot chevrons V1 (shipped). Concept: beveled 3D chevrons w/ white-hot cores + edge trim ring. This is an ART DIRECTION reference — the in-game pad stays authored geometry; I'd rebuild the chevron profile + emissive ramp to match.</div></div>
+      <div class="card"><img src="cocoa.png" alt="hot cocoa" />
+        <h3>Hot Cocoa</h3><div class="meta">Icon-only item (instant boost, no world prop) — and it happened to roll a perfect sticker-style ICON. Ready to land as HUD/guide art as-is.</div></div>
+    </div>
+
+    <div class="ask">
+      <strong>THE CHIP QUESTION (W7.2 — you asked me to ask with icons in hand):</strong>
+      the held-item display today is the icon ON the smash button (phone) / a small corner chip (desktop).
+      With this icon set, the options are:<br /><br />
+      <strong>A.</strong> Keep the layout, swap in these rendered icons (zero layout risk, big readability win)<br />
+      <strong>B.</strong> A — plus the icon pops oversized for ~0.5s when you pick up a new item (MK-style "you got X" moment)<br />
+      <strong>C.</strong> Dedicated item slot ABOVE the smash button showing the icon in a rounded card (more presence, costs thumb-zone space)<br /><br />
+      Say <code>A</code>, <code>B</code>, or <code>C</code> (or describe your own). Also say which concepts are PICKED /
+      need a re-roll — one word each is fine, e.g. "all picked, re-roll sardine".
+    </div>
+  </body>
+</html>

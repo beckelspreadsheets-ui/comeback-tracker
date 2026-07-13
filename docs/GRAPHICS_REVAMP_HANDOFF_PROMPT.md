@@ -38,8 +38,27 @@ on +Z like the lab). driverHeight 6.4 reads right in the parked probe
 (tmp/k6-lifoladen/parked-player.png; mounts 43/43 both as player and as
 rival). Manifest + asset-profiles source entry + both portrait mirrors
 done; select-portraits-capture.mjs knows his FRONT_Z_POSE for reruns.
-**NEXT TASK: K7 item render concepts** (7 props + boost pad → item-lab;
-ask the chip direction WITH icons in hand).
+**LIFOLADEN DEPLOYED 2026-07-12 eve (owner "deploy lets knock out k7";
+deploy 9e9fa180): live-verified both tracks 22/22 + 10/10, zero CSP,
+lifoladen probed on the origin (tmp/k6-lifoladen/live-parked.png).**
+
+**K7 ROUND 1 FIRED same turn (2026-07-12 eve): all 8 concepts rendered
+(nano_banana 2cr each, 16cr; job ids in
+tmp/k7-item-lab/generation-record.json), lab live at
+tmp/k7-item-lab/item-lab.html, hub row up top.** Read: fish-bone/
+snowball/ice-shield/avalanche = strong 3D-render style (lift-ready);
+sardine + blizzard rolled ILLUSTRATION style (fine as icons; re-roll
+offered for world props); cocoa is ICON-ONLY (no world prop exists) and
+rolled a perfect sticker icon; boost-pad = art-direction reference (the
+in-game pad stays authored geometry — rebuild chevron profile/emissive
+to match on pick); avalanche concept has bg-sign text (discarded at
+lift). **OWNER GATE: picks per item + the W7.2 chip question (A = swap
+icons in place · B = A + oversized pickup pop · C = dedicated slot above
+the smash button) — both asked in one lab.** NEXT after picks: meshy
+lifts for picked world props (30cr each) → diet per class → mount +
+validators untouched (one variable per change) → HUD/guide icons from
+the same renders (retire lucide) → battery + race:proof re-baseline +
+phase5 headed pair.
 
 **OWNER OWES (hub top lists all):** 3 ordinal ChatGPT sheets (ak47/
 denomad/georgefx — the PNGs in "fresh add ons/" are 700-930 BYTE pixel
