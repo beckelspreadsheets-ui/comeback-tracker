@@ -1,0 +1,62 @@
+[
+  {
+    "origin": "https://comeback-fitness-andrew.pages.dev",
+    "name": "home renders with nav",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "origin": "https://comeback-fitness-andrew.pages.dev",
+    "name": "no world-hub canvas",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "origin": "https://comeback-fitness-andrew.pages.dev",
+    "name": "race nav -> kart app",
+    "ok": true,
+    "detail": "https://comeback-city-kart.pages.dev/#race"
+  },
+  {
+    "origin": "https://comeback-fitness-andrew.pages.dev",
+    "name": "screens mount (Calib/Body/Food/Setup)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "origin": "https://comeback-fitness-andrew.pages.dev",
+    "name": "#race redirects to kart app",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "origin": "https://comeback-fitness-alexander.pages.dev",
+    "name": "home renders with nav",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "origin": "https://comeback-fitness-alexander.pages.dev",
+    "name": "no world-hub canvas",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "origin": "https://comeback-fitness-alexander.pages.dev",
+    "name": "race nav -> kart app",
+    "ok": true,
+    "detail": "https://comeback-city-kart.pages.dev/#race"
+  },
+  {
+    "origin": "https://comeback-fitness-alexander.pages.dev",
+    "name": "screens mount (Calib/Body/Food/Setup)",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "origin": "https://comeback-fitness-alexander.pages.dev",
+    "name": "#race redirects to kart app",
+    "ok": true,
+    "detail": ""
+  }
+]
