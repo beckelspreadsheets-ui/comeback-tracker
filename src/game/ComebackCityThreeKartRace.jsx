@@ -30,6 +30,8 @@ import heroKartTripoUrl from '../assets/game/models/tripo/hero-kart-tripo.glb?ur
 import iceRacerKartUrl from '../assets/game/models/karts/ice-racer.glb?url';
 import iceSledUrl from '../assets/game/models/tripo/ice-sled.glb?url';
 import miamiCruiserKartUrl from '../assets/game/models/karts/miami-cruiser.glb?url';
+import iceBlockKartUrl from '../assets/game/models/karts/ice-block.glb?url';
+import btcKartUrl from '../assets/game/models/karts/btc-kart.glb?url';
 import mizzleModelUrl from '../assets/game/models/avatars/mizzle.glb?url';
 import tclowModelUrl from '../assets/game/models/avatars/tclow-penguin.glb?url';
 import layer23ModelUrl from '../assets/game/models/avatars/layer23-penguin.glb?url';
@@ -208,6 +210,10 @@ export const KART_OPTIONS = [
   // K5 owner picks 2026-07-12 ("i meant the ice racer and miami cruser"):
   { key: 'iceracer', name: 'Ice Racer', stats: { accel: 0.98, handling: 0.95, topSpeed: 1.02 }, tagline: 'Frozen top end' },
   { key: 'miamicruiser', name: 'Miami Cruiser', stats: { accel: 1.03, handling: 1.04, topSpeed: 0.985 }, tagline: 'Grips the neon' },
+  // K8 owner picks 2026-07-17 (themed round: "the ice block cart is funny
+  // enough to add" + "lets make a full bitcoin themed cart" -> B1):
+  { key: 'iceblock', name: 'Cold Storage', stats: { accel: 0.96, handling: 0.97, topSpeed: 1.015 }, tagline: 'Frozen assets' },
+  { key: 'btckart', name: 'Block Reward', stats: { accel: 1.02, handling: 0.98, topSpeed: 1.005 }, tagline: 'Number go up' },
 ];
 // Generated kart bodies arrive in two facing conventions: Tripo = nose +X
 // (mount -π/2), Meshy = nose -X (mount +π/2). Lab-verified per kart.
@@ -216,6 +222,8 @@ const KART_NOSE_YAW = {
   icesled: -Math.PI / 2,
   iceracer: Math.PI / 2,
   miamicruiser: Math.PI / 2,
+  iceblock: Math.PI / 2,
+  btckart: Math.PI / 2,
 };
 const kartByKey = (key) => KART_OPTIONS.find((entry) => entry.key === key) || KART_OPTIONS[0];
 export const DEFAULT_CHARACTER_KEY = 'crrt-bunny';
@@ -1199,13 +1207,15 @@ const loadKartAssets = () => {
       gltfLoader.loadAsync(lifoladenModelUrl).catch(() => null),
       gltfLoader.loadAsync(iceRacerKartUrl).catch(() => null),
       gltfLoader.loadAsync(miamiCruiserKartUrl).catch(() => null),
+      gltfLoader.loadAsync(iceBlockKartUrl).catch(() => null),
+      gltfLoader.loadAsync(btcKartUrl).catch(() => null),
       // K7 item-prop renders — optional like the avatars; the procedural
       // stand-ins stay as instant fallbacks when a GLB fails to load.
       gltfLoader.loadAsync(fishboneTrapModelUrl).catch(() => null),
       gltfLoader.loadAsync(sardineRocketModelUrl).catch(() => null),
       gltfLoader.loadAsync(avalancheMoundModelUrl).catch(() => null),
       gltfLoader.loadAsync(blizzardCloudModelUrl).catch(() => null),
-    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, lifoladenGltf, iceRacerGltf, miamiCruiserGltf, fishboneGltf, sardineGltf, avalancheGltf, blizzardGltf]) => ({
+    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, lifoladenGltf, iceRacerGltf, miamiCruiserGltf, iceBlockGltf, btcKartGltf, fishboneGltf, sardineGltf, avalancheGltf, blizzardGltf]) => ({
       colormapImage,
       // Keyed by KART_CHARACTERS entries — seats are assigned at race start.
       driverScenes: {
@@ -1228,6 +1238,8 @@ const loadKartAssets = () => {
         icesled: iceSledGltf?.scene || null,
         iceracer: iceRacerGltf?.scene || null,
         miamicruiser: miamiCruiserGltf?.scene || null,
+        iceblock: iceBlockGltf?.scene || null,
+        btckart: btcKartGltf?.scene || null,
       },
       racerScene: racerGltf.scene,
     }));

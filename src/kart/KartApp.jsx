@@ -35,6 +35,8 @@ import kartIcesledUrl from '../assets/game/select/kart-icesled.png';
 import kartIceracerUrl from '../assets/game/select/kart-iceracer.png';
 import kartKenneyUrl from '../assets/game/select/kart-kenney.png';
 import kartMiamicruiserUrl from '../assets/game/select/kart-miamicruiser.png';
+import kartIceblockUrl from '../assets/game/select/kart-iceblock.png';
+import kartBtckartUrl from '../assets/game/select/kart-btckart.png';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -54,6 +56,8 @@ const KART_PORTRAITS = {
   iceracer: kartIceracerUrl,
   kenney: kartKenneyUrl,
   miamicruiser: kartMiamicruiserUrl,
+  iceblock: kartIceblockUrl,
+  btckart: kartBtckartUrl,
 };
 
 const KartIntroScreen = ({ onStart }) => (

@@ -40,14 +40,18 @@ const fitnessThresholdDefaults = {
 // SW-precached (runtime CacheFirst after first use), so total artifact size
 // is CDN/disk footprint, not first-paint cost; ~1 MB gz of headroom is left
 // for the K6 characters + K7 item props before the next revision.
+// TOTALS RAISED 2026-07-17 WITH OWNER ACK ("lets ship it" for the K8 karts
+// after being told the raise was the one thing blocking them): 13->16 MiB /
+// 9800->12000 KiB gz. This closes the long-pending ack above. JS caps stay
+// tight and unchanged — JS blocks first paint; GLB totals are CDN/disk only.
 const kartThresholdDefaults = {
   imageTotalMiB: 2.5,
   javascriptTotalGzipKiB: 500,
   javascriptTotalMiB: 2.0,
   largestFileMiB: 3.0,
   largestJavaScriptGzipKiB: 400,
-  totalGzipKiB: 9800,
-  totalMiB: 13.0,
+  totalGzipKiB: 12000,
+  totalMiB: 16.0,
 };
 const thresholdDefaults = budgetMode === 'kart' ? kartThresholdDefaults : fitnessThresholdDefaults;
 const budgetThresholds = {

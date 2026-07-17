@@ -35,7 +35,16 @@ const PORTRAITS = [
   { model: '/src/assets/game/models/toy-car-kit/vehicle-drag-racer.glb', name: 'kart-kenney', yaw: KENNEY_POSE },
   { model: '/src/assets/game/models/karts/ice-racer.glb', name: 'kart-iceracer', yaw: MESHY_KART_POSE },
   { model: '/src/assets/game/models/karts/miami-cruiser.glb', name: 'kart-miamicruiser', yaw: MESHY_KART_POSE },
+  // K8 owner picks 2026-07-17 (Cold Storage + Block Reward, Meshy multi-view lifts):
+  { model: '/src/assets/game/models/karts/ice-block.glb', name: 'kart-iceblock', yaw: MESHY_KART_POSE },
+  { model: '/src/assets/game/models/karts/btc-kart.glb', name: 'kart-btckart', yaw: MESHY_KART_POSE },
 ];
+
+// PORTRAITS_ONLY=name1,name2 restricts a run to those entries — used when
+// adding roster members so existing portraits (incl. webp conversions) stay
+// byte-identical.
+const only = (process.env.PORTRAITS_ONLY || '').split(',').filter(Boolean);
+const CAPTURE_LIST = only.length ? PORTRAITS.filter((entry) => only.includes(entry.name)) : PORTRAITS;
 
 const waitForServer = async (url, timeoutMs = 30000) => {
   const started = Date.now();
@@ -59,7 +68,7 @@ try {
   await waitForServer(`http://127.0.0.1:${PORT}/select-portraits.html`);
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { height: 480, width: 480 } });
-  for (const portrait of PORTRAITS) {
+  for (const portrait of CAPTURE_LIST) {
     await page.goto(
       `http://127.0.0.1:${PORT}/select-portraits.html?model=${encodeURIComponent(portrait.model)}&yaw=${portrait.yaw}`,
       { waitUntil: 'networkidle' }
