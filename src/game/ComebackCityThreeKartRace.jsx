@@ -143,6 +143,8 @@ import { applyToonRim, TOON_RIM_SHARED_TINT } from './race/render/toonRimShader.
 import { resolveGraphicsConfig } from './graphics.config.js';
 import { atmosphereGradeFor } from './race/render/graphicsAtmosphere.js';
 import { applyGraphicsEnvironment, disposeGraphicsEnvironment } from './race/render/graphicsEnvironment.js';
+import { createGraphicsPostFx } from './race/render/graphicsPostFx.js';
+import { createGraphicsParticles } from './race/render/graphicsParticles.js';
 import {
   buildVisualPlacementAnchors,
   resolveTrackVisuals,
@@ -3779,6 +3781,12 @@ const createScene = ({
     scene.add(sunFill);
     scene.add(sunFill.target);
   }
+  // GRAPHICS OVERHAUL Phase 2 particles: drift smoke, boost sparks, ambient
+  // motes. Visual-only — they read race state for emission triggers but never
+  // feed back into physics. Absent on ?gfx=off; ambient cut on 'low'.
+  const gfxParticles = createGraphicsParticles({ gfx, trackKey: trackDef.key });
+  world.add(gfxParticles.group);
+
   // B3: resolve the hero fresnel rim for this race — the dev lab hook wins,
   // else the track's shipped palette.heroRim (PV V6 "ice white"; CC has no
   // key = rim off). One shared tint drives every rimmed hero material; a
@@ -3846,6 +3854,13 @@ const createScene = ({
   let composer;
   let bloomPass = null;
   let bloomEffect = null;
+  // GRAPHICS OVERHAUL Phase 2 post FX (color grade + speed CA). Built once
+  // here so the frame loop can drive the speed-reactive bits. Null when the
+  // chain is off or every Phase-2 post feature is disabled.
+  let gfxPostFx = null;
+  // Snapshot of the shipped bloom intensity (0.55) so the Phase-2 speed swell
+  // multiplies a stable base instead of compounding against palette moments.
+  let gfxBloomBase = 0.55;
   if (postChainEnabled) {
     // B4 (?post=1): mipmap bloom + SMAA + vignette + ACES merged in ONE
     // EffectPass. Each effect is individually toggleable for the M2
@@ -3890,9 +3905,26 @@ const createScene = ({
     }
     if (wantSmaa) effects.push(new SMAAEffect({ preset: SMAAPreset.MEDIUM }));
     if (wantVignette) effects.push(new VignetteEffect({ offset: 0.32, darkness: 0.45 }));
+    // GRAPHICS OVERHAUL Phase 2: color grade (LUT-style vibrance + contrast)
+    // and speed-reactive radial chromatic aberration. Null on ?gfx=off so the
+    // chain stays byte-identical to the shipped build. Grade sits before tone
+    // mapping (operates in HDR), CA after (screen-space fringing).
+    gfxPostFx = createGraphicsPostFx({ gfx });
+    if (gfxPostFx && gfxPostFx.effects.length) effects.push(...gfxPostFx.effects);
+    // Snapshot the shipped bloom base once the bloom effect exists so the
+    // frame-loop speed swell multiplies a constant (not the live, moments-
+    // adjusted value — that would compound each frame).
+    if (bloomEffect) gfxBloomBase = bloomEffect.intensity;
     // LUT3DEffect goes here, before ToneMappingEffect, when owner supplies a LUT texture.
     if (wantTone) effects.push(new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC }));
     if (effects.length) composer.addPass(new EffectPass(camera, ...effects));
+    // ChromaticAberrationEffect is a convolution effect and CANNOT be merged
+    // into the shared EffectPass above (pmndrs throws). It rides in its own
+    // pass appended after the merged pass; its offset is driven per-frame by
+    // speed (zero at rest, so this pass is a near-no-op until speed builds).
+    if (gfxPostFx?.chromaticAberration) {
+      composer.addPass(new EffectPass(camera, gfxPostFx.chromaticAberration));
+    }
   } else {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
@@ -4436,6 +4468,11 @@ const createScene = ({
     // and the resolved preset for any per-frame feature checks.
     gfxEnv,
     gfx,
+    // Phase 2: particle systems + post-FX driver for the frame loop.
+    gfxParticles,
+    gfxPostFx,
+    // Shipped bloom base for the Phase-2 speed swell (multiplied per frame).
+    gfxBloomBase,
     trackVisualsEnabled: trackVisuals.enabled,
     world,
   };
@@ -6052,6 +6089,34 @@ export const ComebackCityThreeKartRace = ({
       // B2: per-lap palette moments (no-op unless the race precompiled a
       // moments set — no track ships one until the owner picks).
       applyPaletteMoments(engine, race.progress);
+      // GRAPHICS OVERHAUL Phase 2: drive particles + speed-reactive post FX.
+      // Reads race state for emission triggers only — never writes it back.
+      const speedRatio = clamp(race.speed / MAX_SPEED, 0, 1.15);
+      const playerWorldPos = engine.playerModel.group.position;
+      engine.gfxParticles.updateFrame({
+        dt,
+        drift: { active: race.drift, tier: driftState.tier, position: playerWorldPos },
+        boost: { active: race.boostTimer > 0 || miniTurboActive, tier: driftState.miniTurboTier, position: playerWorldPos },
+        camPosition: engine.camera.position,
+      });
+      // Tint spark/smoke pools to the live tier (amber -> violet grammar).
+      engine.gfxParticles.setTierColor(
+        DRIFT_FEEL.sparkColors[miniTurboActive ? driftState.miniTurboTier : driftState.tier] || DRIFT_FEEL.sparkColors[0],
+        null
+      );
+      // Speed-reactive post: CA edge-fringing + bloom swell at top speed.
+      const gfxBloomMul = engine.gfxPostFx ? engine.gfxPostFx.updateFrame({ speedRatio }) : 1;
+      if (engine.postChainEnabled && engine.bloomEffect) {
+        // Compose: shipped base × speed swell × any palette-moment multiplier
+        // (applyPaletteMoments runs above and sets intensity = moments.bloomBase
+        // × out.bloom; we re-derive the moment factor so the speed swell stacks
+        // multiplicatively instead of being overwritten). When no moments are
+        // active the moment factor is 1.
+        const momentMul = engine.paletteMoments && engine.paletteMoments.bloomBase
+          ? engine.bloomEffect.intensity / engine.paletteMoments.bloomBase
+          : 1;
+        engine.bloomEffect.intensity = engine.gfxBloomBase * gfxBloomMul * momentMul;
+      }
       // pmndrs composer takes the frame delta (seconds) for time-based effects.
       if (engine.postChainEnabled) engine.composer.render(dt);
       else engine.composer.render();
@@ -6117,6 +6182,8 @@ export const ComebackCityThreeKartRace = ({
       // Graphics overhaul: free the PMREM env probe (render target + PMREM
       // generator) before the material sweep below.
       disposeGraphicsEnvironment({ scene: engine.scene, handle: engine.gfxEnv });
+      // Phase 2 particles: dispose pools (geometry + sprite textures).
+      engine.gfxParticles?.dispose?.();
       // Scene traversal below handles geometry/material; the instance
       // matrix attribute needs the InstancedMesh's own dispose.
       engine.coinInstanced?.mesh?.dispose();

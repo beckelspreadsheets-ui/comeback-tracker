@@ -25,6 +25,18 @@ const PRESETS = {
     shadowBoost: true, // sharper + wider key-light shadow frustum
     shadowMapSize: 1024, // up from 384 — crisp kart contact shadows
     sunFill: true, // warm low-intensity bounce light opposite the key
+    // Phase 2 — post-processing.
+    postColorGrade: true, // LUT-style hue/sat + brightness/contrast cohesive grade
+    gradeSaturation: 0.12, // +vibrance: lifts the neon palette out of cartoon-flat
+    gradeContrast: 0.07, // gentle S-curve feel for cinematic separation
+    speedChromaticAberration: true, // radial CA that grows with speed (motion read)
+    chromaticAberrationMax: 0.0016, // CA offset at top speed (subtle, never nauseating)
+    speedBloomBoost: 0.55, // extra bloom intensity at top speed (boost trails glow)
+    // Phase 2 — particles.
+    particlesDriftSmoke: true, // drifting tire smoke/dust puffs (visual-only)
+    particlesBoostSparks: true, // boost flame ember/spark trail
+    particlesAmbient: true, // floating dust motes / snow / track debris
+    ambientParticleCount: 220, // ambient field density (high)
   },
   low: {
     atmosphere: true,
@@ -34,6 +46,17 @@ const PRESETS = {
     shadowBoost: false, // keep the shipped 384 map + tight frustum
     shadowMapSize: 384,
     sunFill: false,
+    // Phase 2 — low keeps the cheap wins, drops the per-frame-cost items.
+    postColorGrade: true,
+    gradeSaturation: 0.1,
+    gradeContrast: 0.06,
+    speedChromaticAberration: false, // CA is a per-frame full-screen pass — drop on low
+    chromaticAberrationMax: 0,
+    speedBloomBoost: 0.3,
+    particlesDriftSmoke: true,
+    particlesBoostSparks: false,
+    particlesAmbient: false, // ambient field is the first particle cut on weak GPUs
+    ambientParticleCount: 0,
   },
   off: {
     atmosphere: false,
@@ -43,6 +66,16 @@ const PRESETS = {
     shadowBoost: false,
     shadowMapSize: 384,
     sunFill: false,
+    postColorGrade: false,
+    gradeSaturation: 0,
+    gradeContrast: 0,
+    speedChromaticAberration: false,
+    chromaticAberrationMax: 0,
+    speedBloomBoost: 0,
+    particlesDriftSmoke: false,
+    particlesBoostSparks: false,
+    particlesAmbient: false,
+    ambientParticleCount: 0,
   },
 };
 
