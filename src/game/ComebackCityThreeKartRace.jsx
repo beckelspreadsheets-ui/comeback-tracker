@@ -140,6 +140,9 @@ import { createMomentSample, resolveMoments, sampleMoments } from './race/palett
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
 import { applyToonRim, TOON_RIM_SHARED_TINT } from './race/render/toonRimShader.js';
+import { resolveGraphicsConfig } from './graphics.config.js';
+import { atmosphereGradeFor } from './race/render/graphicsAtmosphere.js';
+import { applyGraphicsEnvironment, disposeGraphicsEnvironment } from './race/render/graphicsEnvironment.js';
 import {
   buildVisualPlacementAnchors,
   resolveTrackVisuals,
@@ -479,6 +482,10 @@ const createGroundedKartModel = ({
   // the disabled renderer shadow pass. Default keeps the approved shipped look.
   contactGrounding = false,
   scale = 1,
+  // Graphics overhaul preset (graphics.config.js). Resolved per race and
+  // threaded in so the body material can upgrade to PBR metal/paint. 'off'
+  // keeps the shipped flat MeshToon body byte-for-byte.
+  gfx = { name: 'off' },
 } = {}) => {
   const group = new THREE.Group();
   group.userData.kind = 'grounded-3d-kart';
@@ -494,10 +501,32 @@ const createGroundedKartModel = ({
   driverMount.position.set(0, 1.9, -1.3);
   model.add(driverMount);
 
-  const bodyMat = createToonMaterial(color, { emissive: color, emissiveIntensity: 0.2 });
+  // GRAPHICS OVERHAUL (Phase 1 materials): the kart body is the hero surface
+  // the player stares at all race. On 'high' we upgrade it from flat MeshToon
+  // to MeshStandardMaterial with a metallic paint response (clear-coat-like
+  // sheen from the RoomEnvironment IBL probe baked in createScene). The toon
+  // rim shader still applies (hero pop), so the kart keeps its cel silhouette
+  // but gains metal definition + a sun specular. ?gfx=off restores the flat
+  // MeshToon body exactly. Roughness/metalness tuned for glossy painted
+  // metal, not chrome: metalness low enough to keep the base color dominant.
+  const usePbrBody = gfx.name === 'high';
+  const bodyMat = usePbrBody
+    ? applyHeroRim(
+        new THREE.MeshStandardMaterial({
+          color,
+          emissive: color,
+          emissiveIntensity: 0.16,
+          metalness: 0.42,
+          roughness: 0.34,
+        })
+      )
+    : createToonMaterial(color, { emissive: color, emissiveIntensity: 0.2 });
   const blackMat = createToonMaterial('#191c28');
   const tireMat = createToonMaterial('#10121c');
-  const hubMat = createToonMaterial('#343a4c');
+  // Wheel hubs read as machined metal under the env probe on 'high'.
+  const hubMat = usePbrBody
+    ? new THREE.MeshStandardMaterial({ color: '#3a4054', metalness: 0.78, roughness: 0.3 })
+    : createToonMaterial('#343a4c');
   const trimMat = createToonMaterial('#f6fbff');
   const seatMat = createToonMaterial('#1d2233');
   const accentGlowMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 1.1 });
@@ -1463,6 +1492,10 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   const bridgeBand = trackDef.elevation.bridgeBand;
   const roadWidth = trackDef.course.mainRoadWidth || 50;
   const palette = trackDef.palette || {};
+  // Graphics overhaul: per-track grade for the road/ground specular lift.
+  // Atmosphere off (or ?gfx=off) falls back to the shipped material values.
+  const gfxCfg = resolveGraphicsConfig();
+  const roadGrade = gfxCfg.atmosphere ? atmosphereGradeFor(trackDef.key) : null;
   const visualRoadEnabled = trackVisuals.enabled && Boolean(trackDef.visual);
   const visualRoad = trackVisuals.road;
   const bankYOffsetAt = (progress, signedWidthMultiplier) => {
@@ -1524,8 +1557,13 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
     new THREE.MeshStandardMaterial({
       color: '#ffffff',
       map: asphaltTexture,
-      metalness: 0.06,
-      roughness: 0.6,
+      // Graphics overhaul: the grade pushes the asphalt toward a wet/glossy
+      // response so sun + neon streak across it under the env probe. The
+      // envMapIntensity scales this material's IBL on top of the scene-wide
+      // environmentIntensity. ?gfx=off restores the shipped 0.06/0.6 flat mat.
+      metalness: roadGrade ? roadGrade.road.metalness : 0.06,
+      roughness: roadGrade ? roadGrade.road.roughness : 0.6,
+      envMapIntensity: roadGrade ? roadGrade.road.envMapIntensity : 1.0,
       side: THREE.DoubleSide,
     })
   );
@@ -1545,7 +1583,12 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   );
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(1120, 1060, 18, 18),
-    new THREE.MeshStandardMaterial({ color: '#ffffff', map: grassTexture, roughness: 0.92 })
+    new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      map: grassTexture,
+      roughness: roadGrade ? roadGrade.ground.roughness : 0.92,
+      envMapIntensity: roadGrade ? roadGrade.ground.envMapIntensity : 1.0,
+    })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.06;
@@ -3646,8 +3689,19 @@ const createScene = ({
   }
   const renderer = createRaceRenderer({ canvas, onUnavailable });
   if (!renderer) return null;
+  // Graphics overhaul (Hermes): resolve the active preset once per race.
+  // ?gfx=low|high|off overrides; 'off' restores the shipped pre-overhaul look
+  // (every feature below short-circuits). Rendering-only — physics untouched.
+  const gfx = resolveGraphicsConfig();
+  const atmosphereGrade = atmosphereGradeFor(trackDef.key);
   renderer.setClearColor(palette.clearColor || '#131a36', 1);
-  renderer.toneMappingExposure = 1.05;
+  // Tone exposure: the grade lifts the shipped 1.05 for a richer key light.
+  // ?gfx=off leaves the shipped value untouched.
+  if (gfx.toneExposure !== null && gfx.toneExposure !== undefined) {
+    renderer.toneMappingExposure = gfx.toneExposure;
+  } else {
+    renderer.toneMappingExposure = 1.05;
+  }
   // The ?trackVisuals=1 experiment trades real-time shadows for stronger
   // blob/contact grounding; the shipped default keeps the approved
   // shadow-mapped look until the owner signs the §9 default-on gate.
@@ -3658,38 +3712,73 @@ const createScene = ({
   scene.background = makeSkyTexture(palette.sky);
   // B1: atmosphere reads from the track palette; the fallbacks reproduce
   // Comeback City exactly (its palette has no fog/hemi/sun keys, by
-  // construction). NOTE fog.far must stay <= 840 — camera far is 860 and
-  // fog far beyond camera far silently no-ops the haze.
-  const fogCfg = palette.fog || {};
+  // construction). GRAPHICS OVERHAUL: when the atmosphere feature is on, the
+  // per-track grade (graphicsAtmosphere.js) supplies the cinematic mood as
+  // the base; an explicit palette key still wins over the grade, and the
+  // shipped hardcoded defaults sit last. NOTE fog.far must stay <= 840 —
+  // camera far is 860 and fog far beyond camera far silently no-ops the haze.
+  const fogCfg = palette.fog || (gfx.atmosphere ? atmosphereGrade.fog : {});
   scene.fog = new THREE.Fog(fogCfg.color || '#272252', fogCfg.near ?? 240, fogCfg.far ?? 820);
   const camera = new THREE.PerspectiveCamera(66, 1, 0.25, 860);
   const world = new THREE.Group();
   scene.add(world);
   const loader = new THREE.TextureLoader();
+  const hemiCfg = palette.hemi || (gfx.atmosphere ? atmosphereGrade.hemi : {});
   const hemi = new THREE.HemisphereLight(
-    palette.hemi?.sky || '#8d8ce0',
-    palette.hemi?.ground || '#2a1e4a',
-    palette.hemi?.intensity ?? 3.3
+    hemiCfg.sky || '#8d8ce0',
+    hemiCfg.ground || '#2a1e4a',
+    hemiCfg.intensity ?? 3.3
   );
   scene.add(hemi);
+  // Environment reflection probe (Phase 1 materials): PMREM RoomEnvironment
+  // -> scene.environment so kart paint/metal + road specular pick up a subtle
+  // IBL sheen. 'low' gets a dimmer bake, 'off' skips it (shipped flat look).
+  // Baked once here; disposed in the teardown below.
+  const gfxEnv = gfx.environmentMap
+    ? applyGraphicsEnvironment({ renderer, scene, intensity: gfx.environmentIntensity })
+    : null;
   // Shadow-casting key light rides with the kart so a small, sharp shadow
   // frustum covers the action instead of a blurry one covering the world.
-  const sun = new THREE.DirectionalLight(palette.sunColor || '#ffae72', 2.6);
+  // GRAPHICS OVERHAUL: grade supplies the warm key color + a lifted
+  // intensity; 'high' also sharpens the shadow map (384 -> 1024) and widens
+  // the frustum so kart/rival contact shadows stay crisp at race speed.
+  const sun = new THREE.DirectionalLight(
+    palette.sunColor || (gfx.atmosphere ? atmosphereGrade.sunColor : '#ffae72'),
+    gfx.atmosphere ? atmosphereGrade.sunIntensity : 2.6
+  );
   sun.position.set(-150, 52, -70);
   sun.castShadow = !trackVisualsEnabled;
-  sun.shadow.mapSize.set(384, 384);
-  sun.shadow.camera.left = -64;
-  sun.shadow.camera.right = 64;
-  sun.shadow.camera.top = 64;
-  sun.shadow.camera.bottom = -64;
+  sun.shadow.mapSize.set(gfx.shadowBoost ? gfx.shadowMapSize : 384, gfx.shadowBoost ? gfx.shadowMapSize : 384);
+  sun.shadow.camera.left = gfx.shadowBoost ? -72 : -64;
+  sun.shadow.camera.right = gfx.shadowBoost ? 72 : 64;
+  sun.shadow.camera.top = gfx.shadowBoost ? 72 : 64;
+  sun.shadow.camera.bottom = gfx.shadowBoost ? -72 : -64;
   sun.shadow.camera.near = 20;
   sun.shadow.camera.far = 420;
   sun.shadow.bias = -0.0008;
   scene.add(sun);
   scene.add(sun.target);
-  const rimLight = new THREE.DirectionalLight(palette.rimLightColor || '#4fd8ff', 2.0);
+  const rimLight = new THREE.DirectionalLight(
+    palette.rimLightColor || (gfx.atmosphere ? atmosphereGrade.rimLightColor : '#4fd8ff'),
+    gfx.atmosphere ? atmosphereGrade.rimLightIntensity : 2.0
+  );
   rimLight.position.set(92, 56, 74);
   scene.add(rimLight);
+  // Sun-fill bounce (Phase 1, new): a soft low-intensity light opposite the
+  // key that fakes sky/ground bounce so shaded kart faces aren't flat black.
+  // Cheap (no shadow), 'low'/'off' drop it. Sits between the key and rim so
+  // it lifts the dark side without fighting the rim edge.
+  let sunFill = null;
+  if (gfx.sunFill) {
+    sunFill = new THREE.DirectionalLight(
+      palette.sunFillColor || atmosphereGrade.sunFillColor,
+      atmosphereGrade.sunFillIntensity
+    );
+    sunFill.position.set(120, 34, 96);
+    sunFill.castShadow = false;
+    scene.add(sunFill);
+    scene.add(sunFill.target);
+  }
   // B3: resolve the hero fresnel rim for this race — the dev lab hook wins,
   // else the track's shipped palette.heroRim (PV V6 "ice white"; CC has no
   // key = rim off). One shared tint drives every rimmed hero material; a
@@ -4127,6 +4216,7 @@ const createScene = ({
     accent: playerCharacter.accent,
     color: playerCharacter.color,
     contactGrounding: trackVisuals.enabled,
+    gfx,
     scale: KART_SCALE,
   });
   const player = playerModel.group;
@@ -4283,6 +4373,7 @@ const createScene = ({
       accent: rival.accent,
       color: rival.color,
       contactGrounding: trackVisuals.enabled,
+      gfx,
       scale: KART_SCALE,
     });
     model.group.userData.kind = 'grounded-rival-kart';
@@ -4340,6 +4431,11 @@ const createScene = ({
     scene,
     shieldBubble,
     sun,
+    sunFill,
+    // Graphics overhaul handles: the PMREM env probe to dispose on teardown,
+    // and the resolved preset for any per-frame feature checks.
+    gfxEnv,
+    gfx,
     trackVisualsEnabled: trackVisuals.enabled,
     world,
   };
@@ -6018,6 +6114,9 @@ export const ComebackCityThreeKartRace = ({
       window.removeEventListener('resize', handleResize);
       engine.composer.dispose?.();
       engine.renderer.dispose();
+      // Graphics overhaul: free the PMREM env probe (render target + PMREM
+      // generator) before the material sweep below.
+      disposeGraphicsEnvironment({ scene: engine.scene, handle: engine.gfxEnv });
       // Scene traversal below handles geometry/material; the instance
       // matrix attribute needs the InstancedMesh's own dispose.
       engine.coinInstanced?.mesh?.dispose();
