@@ -1,6 +1,61 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ AUDIO + K8 KARTS SHIPPED (2026-07-17 eve — NEWEST, supersedes every block below)
+## ⚡ HANDOFF v16 (2026-07-17 night — NEWEST, supersedes every block below). FRESH CONTEXT STARTS HERE.
+
+**STATE: everything through the phone-pass fix round is LIVE (deploy
+2e6f47d9, live-verified).** This 2026-07-17 mega-day shipped, in order:
+1. **Drift-tier VFX** (97e4bb52): blue→amber→violet tier grammar,
+   tier-up pop ring, fountain sparks, tier-tinted trail/ring/flame.
+2. **RACE AUDIO** (f7774e84): fully synthesized WebAudio, +2.6 KiB, zero
+   assets. Observer architecture — kartAudio.js `cuesForTransition`
+   (pure, exported) derives every cue from state transitions; ONE
+   updateFrame call at the frame tail. Gate: test:audio:kart (9 checks).
+   GOTCHAS: create the manager INSIDE the React effect (StrictMode
+   double-mount crashed the component once) · Higgsfield music models =
+   game-pipeline-only DEAD END, seed_audio = speech only.
+3. **K8 KARTS** (e5d21748): roster = 7. Cold Storage (iceblock) +
+   Block Reward (btckart, full-₿). WINNING ART FLOW after owner rejected
+   colorway concepts: theme-by-SILHOUETTE, matte flat two-tone, no thin
+   trim/chrome/gloss → clean no-words re-roll → generated side/back
+   views → meshy multi_image_to_3d 3-VIEW lift → diet (weld/simplify
+   0.5+0.01/resize384/meshopt) → turntables + seeded ?kart= probes →
+   portraits via PORTRAITS_ONLY flag. Records in
+   tmp/k8-kart-seats/generation-record.json.
+4. **BUDGET RAISE LANDED, ACK CLOSED** (owner "lets ship it"): kart
+   16 MiB / 12000 KiB gz (JS caps unchanged). Fresh build ~10856/12000.
+5. **Phone-pass fixes** (1841db51): gyro = smooth 3° deadzone +
+   1.5-expo to 24° lock (was hard-step linear — "sensitivity off" fixed)
+   · viewport = re-fit on orientationchange + visualViewport.resize +
+   150/600ms settle beats + HUD safe-area (the "fullscreen weird angle /
+   browser bar cuts off game" complaint — NO fullscreen calls exist,
+   stale-canvas-fit was the cause) · outplayasians carries a **BITCOIN
+   IS DEAD picket sign** (buildCrosserSign, canvas texture, zero bytes,
+   owner-directed-text exception), footprint 10, walk width 0.52.
+
+**NEXT = the GRAPHICS CEILING RAISE — full spec in
+docs/GRAPHICS_CEILING_RAISE_PLAN.md (owner-approved 2026-07-17).**
+Three phases: G1 baked AO/lighting (quiet machine, proof re-baseline,
+owner gates bakes) · G2 everything-animates (zero bytes, START HERE) ·
+G3 particles/decals (supersedes the old no-particles rule — approval
+recorded in the plan). Execution order G2 → G3 → G1 per the machine-
+etiquette rules in the plan (owner runs 5 things; a SECOND MODEL works
+this repo on its own branch — ours is
+codex/release-v1-comebacktracker-kart-racer; repo is PUBLIC; safety
+tags pre-graphics-compare-20260717 + wip-... exist).
+
+**OWED (carry forward):** owner phone verdict on new gyro curve +
+viewport fix · mid-pack item check · 7-kart balance probe (quiet load)
+· phase5 headed pair (quiet load) · owner owes 3 ordinal sheets + NAME.
+**Engine-port question: answered AGAIN 2026-07-17 (3rd time) — Three.js
+is NOT the ceiling, stack stays; don't reopen without a console SKU.**
+
+**Deploy runbook:** CLOUDFLARE_ACCOUNT_ID=9f01a1b31a298b112c22c3e00fe70a45
+npx wrangler pages deploy dist-kart --project-name=comeback-city-kart
+--branch=main --commit-dirty=true (fails "Project not found" without the
+account id) → wait alias propagation → tmp/w0-ship/verify-live-deploy.mjs
+→ origin probes. Deploys ONLY on owner's explicit word.
+
+## ⚡ AUDIO + K8 KARTS SHIPPED (2026-07-17 eve — superseded above)
 
 **RACE AUDIO LIVE (deploy 365952b4, audio commit f7774e84 + karts
 e5d21748):** fully synthesized WebAudio (+2.6 KiB gz, ZERO assets) —
