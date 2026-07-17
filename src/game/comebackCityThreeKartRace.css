@@ -70,6 +70,21 @@
   color: #ffd34f;
 }
 
+/* The audio toggle is a real <button> wearing the badge look. The HUD strip
+   is pointer-events:none so it never steals from the canvas — the button
+   opts back in. */
+.three-kart-race__audio-toggle {
+  color: inherit;
+  cursor: pointer;
+  justify-content: center;
+  min-width: 40px;
+  pointer-events: auto;
+}
+
+.three-kart-race__audio-toggle[data-audio-muted='1'] svg {
+  color: rgba(248, 251, 255, 0.4);
+}
+
 .three-kart-race__countdown {
   align-items: center;
   background: rgba(13, 20, 30, 0.66);

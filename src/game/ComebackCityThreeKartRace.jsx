@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, Bitcoin, Flag, Gauge, RotateCcw, Sparkles, Trophy, Zap } from 'lucide-react';
+import { ArrowDown, Bitcoin, Flag, Gauge, RotateCcw, Sparkles, Trophy, Volume2, VolumeX, Zap } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -84,6 +84,7 @@ import {
   hopHeightFor,
   updateDriftFeel,
 } from './race/driftFeel.js';
+import { createKartAudio, readStoredMute } from './race/kartAudio.js';
 import {
   createRivalRacers,
   KART_CONTACT,
@@ -4482,6 +4483,8 @@ const publishTelemetry = (
     airborne: race.airState.airborne,
     auroraActive: race.auroraTimer > 0,
     avalanchePending: Boolean(race.avalanche),
+    audioMuted: runtimeStats.audioMuted ?? null,
+    audioRunning: runtimeStats.audioRunning ?? false,
     bakedSpike: runtimeStats.bakedSpike ?? null,
     // W0 loud-failure guard: kart-playable asserts mounted === requested
     // and failed === 0 on comeback-city (module-level counters — they
@@ -4594,6 +4597,27 @@ export const ComebackCityThreeKartRace = ({
 }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
+  // Synthesized race audio (zero assets): context unlocks on first gesture,
+  // cues derive from state transitions inside updateFrame — see kartAudio.js.
+  const audioRef = useRef(null);
+  const [audioMuted, setAudioMuted] = useState(() => readStoredMute());
+  useEffect(() => {
+    // Created inside the effect (not render) so a StrictMode double-mount
+    // gets a fresh manager after the first cleanup disposed it.
+    const audio = createKartAudio({ muted: readStoredMute() });
+    audioRef.current = audio;
+    audio.attach();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') audio.suspend();
+      else audio.resume();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      audio.dispose();
+      audioRef.current = null;
+    };
+  }, []);
   // steerAxis: analog float from the touch joystick (null = digital keys
   // rule); autoThrottle: coarse-pointer sessions accelerate by default (K3).
   const inputRef = useRef({ autoThrottle: false, brake: false, drift: false, item: false, left: false, restart: false, right: false, steerAxis: null, throttle: false });
@@ -5937,7 +5961,12 @@ export const ComebackCityThreeKartRace = ({
       else engine.composer.render();
       frameWorkSamples.push(performance.now() - now);
       while (frameWorkSamples.length > 40) frameWorkSamples.shift();
+      // Audio observer: engine pitch + drift scrape follow this frame's state,
+      // one-shot cues fire off state transitions (see kartAudio.js).
+      audioRef.current?.updateFrame({ driftState: race.driftState, race });
       publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey, {
+        audioMuted: audioRef.current?.isMuted() ?? null,
+        audioRunning: audioRef.current?.isRunning() ?? false,
         bakedSpike: engine.bakedSpike,
         miamiMounts: { ...miamiMountStats },
         paletteMoments: engine.paletteMoments,
@@ -6148,6 +6177,20 @@ export const ComebackCityThreeKartRace = ({
           <Bitcoin size={15} />
           <span>{snapshot.coins}</span>
         </div>
+        <button
+          type="button"
+          className="three-kart-race__badge three-kart-race__audio-toggle"
+          data-testid="race-audio-toggle"
+          data-audio-muted={audioMuted ? '1' : '0'}
+          aria-label={audioMuted ? 'Unmute sound' : 'Mute sound'}
+          onClick={() => {
+            const next = !audioMuted;
+            setAudioMuted(next);
+            audioRef.current?.setMuted(next);
+          }}
+        >
+          {audioMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+        </button>
         <div className="three-kart-race__badge" data-testid="race-held-item" data-held-item={snapshot.heldItem || 'none'}>
           {snapshot.heldItem ? (
             <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} />

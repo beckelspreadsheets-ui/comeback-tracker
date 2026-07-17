@@ -1,0 +1,59 @@
+{
+  "baseUrl": "http://127.0.0.1:5303",
+  "checks": [
+    {
+      "name": "toggle rendered",
+      "ok": true
+    },
+    {
+      "name": "audio idle before gesture",
+      "ok": true,
+      "detail": {
+        "before": false
+      }
+    },
+    {
+      "name": "audio running after gesture",
+      "ok": true,
+      "detail": {
+        "audioMuted": false,
+        "audioRunning": true
+      }
+    },
+    {
+      "name": "drift chain drove cues",
+      "ok": true,
+      "detail": {
+        "miniTurbo": 1.08,
+        "miniTurboTier": 3
+      }
+    },
+    {
+      "name": "mute toggles telemetry",
+      "ok": true,
+      "detail": {
+        "audioMuted": true
+      }
+    },
+    {
+      "name": "mute attribute set",
+      "ok": true
+    },
+    {
+      "name": "mute persists reload",
+      "ok": true
+    },
+    {
+      "name": "unmute restores",
+      "ok": true
+    },
+    {
+      "name": "zero console errors",
+      "ok": true,
+      "detail": {
+        "consoleErrors": []
+      }
+    }
+  ],
+  "pass": true
+}
