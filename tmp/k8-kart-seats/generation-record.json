@@ -27,6 +27,15 @@
    "rocket-sled": "9ea866b4-419d-4983-830b-28d3435ec69a"
   },
   "liftPlan": "picks get a front/side/back turnaround (nano_banana edit from concept) then meshy multi_image_to_3d like the lifoladen route \u2014 NOT single-view",
-  "ownerPick": "PENDING"
+  "ownerPick": "2026-07-17: ICE-BLOCK PICKED ('funny enough to add'); everything else passed on; owner asked for a full bitcoin kart instead -> round 3"
+ },
+ "round3Bitcoin": {
+  "context": "Owner: 'lets make a full bitcoin themed cart'. \u20bf glyph = deliberate owner-directed art (item-box precedent); all 3 takes carry stray WORD text that must be re-rolled clean before lift.",
+  "concepts": {
+   "btc-hood-emblem": "5769d47f-52c0-4ae2-9c32-936346df6a26",
+   "btc-coin-engine": "4dde54de-3b4b-4e89-9199-9c930932b9f1",
+   "btc-coin-body": "ab144e76-6b9a-4509-9709-f1a75e66f95e"
+  },
+  "ownerPick": "PENDING (B1/B2/B3)"
  }
 }
