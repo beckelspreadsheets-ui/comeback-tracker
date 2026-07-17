@@ -37,6 +37,9 @@ const PRESETS = {
     particlesBoostSparks: true, // boost flame ember/spark trail
     particlesAmbient: true, // floating dust motes / snow / track debris
     ambientParticleCount: 220, // ambient field density (high)
+    // Phase 3 — track surface detail.
+    trackDetailMaps: true, // procedural normal + roughness detail on the road
+    trackDetailNormalScale: 0.55, // micro-surface relief strength (subtle, not gravel)
   },
   low: {
     atmosphere: true,
@@ -57,6 +60,10 @@ const PRESETS = {
     particlesBoostSparks: false,
     particlesAmbient: false, // ambient field is the first particle cut on weak GPUs
     ambientParticleCount: 0,
+    // Phase 3 — low keeps the detail maps (cheap one-time canvas bake, then a
+    // single texture lookup; big readability win for the cost).
+    trackDetailMaps: true,
+    trackDetailNormalScale: 0.45,
   },
   off: {
     atmosphere: false,
@@ -76,6 +83,8 @@ const PRESETS = {
     particlesBoostSparks: false,
     particlesAmbient: false,
     ambientParticleCount: 0,
+    trackDetailMaps: false,
+    trackDetailNormalScale: 0,
   },
 };
 

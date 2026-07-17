@@ -145,6 +145,7 @@ import { atmosphereGradeFor } from './race/render/graphicsAtmosphere.js';
 import { applyGraphicsEnvironment, disposeGraphicsEnvironment } from './race/render/graphicsEnvironment.js';
 import { createGraphicsPostFx } from './race/render/graphicsPostFx.js';
 import { createGraphicsParticles } from './race/render/graphicsParticles.js';
+import { makeAsphaltDetailNormalMap, makeAsphaltRoughnessMap } from './race/render/graphicsTrackDetail.js';
 import {
   buildVisualPlacementAnchors,
   resolveTrackVisuals,
@@ -1498,6 +1499,15 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   // Atmosphere off (or ?gfx=off) falls back to the shipped material values.
   const gfxCfg = resolveGraphicsConfig();
   const roadGrade = gfxCfg.atmosphere ? atmosphereGradeFor(trackDef.key) : null;
+  // Phase 3: procedural detail normal + roughness maps give the asphalt
+  // micro-surface relief + a broken-up wet sheen. One-time canvas bake, then
+  // a single texture lookup per fragment. Tiling matches the color texture.
+  const roadDetailMaps = gfxCfg.trackDetailMaps
+    ? {
+        normalMap: makeAsphaltDetailNormalMap({ repeat: 8 }),
+        roughnessMap: makeAsphaltRoughnessMap({ repeat: 8, base: roadGrade ? roadGrade.road.roughness : 0.6, variance: 0.4 }),
+      }
+    : null;
   const visualRoadEnabled = trackVisuals.enabled && Boolean(trackDef.visual);
   const visualRoad = trackVisuals.road;
   const bankYOffsetAt = (progress, signedWidthMultiplier) => {
@@ -1566,6 +1576,12 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
       metalness: roadGrade ? roadGrade.road.metalness : 0.06,
       roughness: roadGrade ? roadGrade.road.roughness : 0.6,
       envMapIntensity: roadGrade ? roadGrade.road.envMapIntensity : 1.0,
+      // Phase 3 detail: normal relief + varying roughness break the specular
+      // into believable aggregate. normalScale kept subtle so the road reads
+      // as asphalt, not gravel. Absent on ?gfx=off (shipped flat road).
+      normalMap: roadDetailMaps ? roadDetailMaps.normalMap : null,
+      normalScale: roadDetailMaps ? new THREE.Vector2(gfxCfg.trackDetailNormalScale, gfxCfg.trackDetailNormalScale) : new THREE.Vector2(1, 1),
+      roughnessMap: roadDetailMaps ? roadDetailMaps.roughnessMap : null,
       side: THREE.DoubleSide,
     })
   );
