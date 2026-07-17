@@ -71,6 +71,7 @@ const [
   world,
   worldLite,
   worldJs,
+  worldLayout,
   worldCss,
   worldData,
   thanks,
@@ -85,6 +86,7 @@ const [
   get("/world"),
   get("/world?lite=1"),
   get("/world.js"),
+  get("/world-layout.js"),
   get("/world.css"),
   get("/world-data.js"),
   get("/thanks"),
@@ -95,7 +97,12 @@ const [
   get("/og-image.png")
 ]);
 
-const photoMatchPlate = await get("/img/world/photo-match-room-plate.webp");
+const renderedPlateAssets = await Promise.all([
+  get("/img/world/gallery-room/gallery-room-master-desktop-empty.webp"),
+  get("/img/world/gallery-room/gallery-room-master-mobile-empty.jpg"),
+  get("/img/world/gallery-room/station-inspect-plate-empty.webp"),
+  get("/img/world/gallery-room/traileranimated12-poster.jpg")
+]);
 const stationTextures = await Promise.all(stations.map((station) => get(station.screenshotUrl)));
 
 assert("home returns 200", home.status === 200, `${home.status} ${home.url}`);
@@ -109,7 +116,7 @@ assert("home lite route excludes Three payload", !/(three\.module|threejs|three\
 assert("home lite route has security headers", hasSecurityHeaders(homeLite));
 
 assert("world returns 200", world.status === 200, `${world.status} ${world.url}`);
-assert("world serves gallery shell", world.body.includes("Client website stations") && world.body.includes("studioCanvas") && world.body.includes("world.js"));
+assert("world serves rendered plate gallery shell", world.body.includes("Client website stations") && world.body.includes("renderedWorld") && world.body.includes("world.js") && world.body.includes("world-layout.js"));
 assert("world remains noindexed", world.body.includes('content="noindex,follow"'));
 assert("world has security headers", hasSecurityHeaders(world));
 
@@ -120,11 +127,17 @@ assert("world script is JavaScript", String(worldJs.headers["content-type"] || "
 assert("world script has security headers", hasSecurityHeaders(worldJs));
 assert("world script contains lite redirect", worldJs.body.includes('params.get("lite") === "1"') && worldJs.body.includes("setModePreference(null)") && worldJs.body.includes("window.location.replace"));
 assert("world script imports station data", worldJs.body.includes('from "./world-data.js'));
+assert("world script uses rendered plate layout", worldJs.body.includes('from "./world-layout.js') && worldJs.body.includes("renderRoomScreens") && !/three\.module|THREE_URL|WebGLRenderer/.test(worldJs.body));
+
+assert("world layout returns 200", worldLayout.status === 200, `${worldLayout.status} ${worldLayout.url}`);
+assert("world layout is JavaScript", String(worldLayout.headers["content-type"] || "").includes("javascript"));
+assert("world layout contains rendered plate coordinates", worldLayout.body.includes("roomLayout") && worldLayout.body.includes("gallery-room-master-desktop-empty.webp") && worldLayout.body.includes("station-inspect-plate-empty.webp"));
+assert("world layout has security headers", hasSecurityHeaders(worldLayout));
 
 assert("world stylesheet returns 200", worldCss.status === 200, `${worldCss.status} ${worldCss.url}`);
 assert("world stylesheet is CSS", String(worldCss.headers["content-type"] || "").includes("text/css"));
 assert("world stylesheet contains panel styles", worldCss.body.includes(".station-panel") && worldCss.body.includes(".station-panel.is-compact"));
-assert("world stylesheet contains hybrid photo plate", worldCss.body.includes(".photo-match-plate") && worldCss.body.includes("photo-match-room-plate.webp"));
+assert("world stylesheet contains rendered plate styles", worldCss.body.includes(".rendered-world") && worldCss.body.includes(".screen-target") && !worldCss.body.includes("photo-match-room-plate.webp"));
 assert("world stylesheet has security headers", hasSecurityHeaders(worldCss));
 
 assert("world data returns 200", worldData.status === 200, `${worldData.status} ${worldData.url}`);
@@ -158,9 +171,11 @@ assert("Open Graph image returns 200", ogImage.status === 200, `${ogImage.status
 assert("Open Graph image is PNG", String(ogImage.headers["content-type"] || "").includes("image/png"));
 assert("Open Graph image has security headers", hasSecurityHeaders(ogImage));
 
-assert("photo-match room plate returns 200", photoMatchPlate.status === 200, `${photoMatchPlate.status} ${photoMatchPlate.url}`);
-assert("photo-match room plate is WebP", String(photoMatchPlate.headers["content-type"] || "").includes("image/webp"));
-assert("photo-match room plate has security headers", hasSecurityHeaders(photoMatchPlate));
+renderedPlateAssets.forEach((asset) => {
+  assert(`rendered plate asset returns 200 ${asset.path}`, asset.status === 200, `${asset.status} ${asset.url}`);
+  assert(`rendered plate asset has expected media type ${asset.path}`, /image\/(webp|jpeg)/.test(String(asset.headers["content-type"] || "")), String(asset.headers["content-type"] || ""));
+  assert(`rendered plate asset has security headers ${asset.path}`, hasSecurityHeaders(asset));
+});
 
 stationTextures.forEach((texture, index) => {
   const station = stations[index];

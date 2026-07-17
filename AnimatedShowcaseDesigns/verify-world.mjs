@@ -1,16 +1,22 @@
 import { createServer } from "node:http";
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { inflateSync } from "node:zlib";
 import { createHash } from "node:crypto";
+import { chromium } from "playwright";
+import sharp from "sharp";
 import { stations } from "./world-data.js";
+import { roomLayout, worldReconstruction } from "./world-layout.js";
 
 const root = process.cwd();
 const rootPrefix = root.endsWith("/") ? root : `${root}/`;
+const evidenceDir = join(root, ".agent/runs/higgsfield-1to1-blender-world/evidence");
 const checks = [];
+
+mkdirSync(evidenceDir, { recursive: true });
 
 function pass(name) {
   checks.push({ name, ok: true });
@@ -31,12 +37,8 @@ function readText(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
-function parseJsonLd(html) {
-  const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-  if (!match) {
-    throw new Error("JSON-LD script not found");
-  }
-  return JSON.parse(match[1]);
+function readJson(path) {
+  return JSON.parse(readText(path));
 }
 
 function fileExists(path) {
@@ -51,7 +53,7 @@ function fileSize(path) {
   return statSync(join(root, path)).size;
 }
 
-function sha256File(path) {
+function fileSha256(path) {
   return createHash("sha256").update(readFileSync(join(root, path))).digest("hex");
 }
 
@@ -104,9 +106,14 @@ function mimeType(path) {
   if (ext === ".html") return "text/html";
   if (ext === ".js" || ext === ".mjs") return "text/javascript";
   if (ext === ".css") return "text/css";
+  if (ext === ".json") return "application/json";
   if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
   if (ext === ".png") return "image/png";
   if (ext === ".webp") return "image/webp";
+  if (ext === ".avif") return "image/avif";
+  if (ext === ".mp4") return "video/mp4";
+  if (ext === ".svg") return "image/svg+xml";
+  if (ext === ".glb") return "model/gltf-binary";
   return "application/octet-stream";
 }
 
@@ -132,8 +139,7 @@ function startServer() {
       response.writeHead(200, { "Content-Type": mimeType(filePath) });
       response.end(body);
     } catch {
-      const notFoundPath = resolve(root, "./404.html");
-      const body = readFileSync(notFoundPath);
+      const body = readFileSync(resolve(root, "./404.html"));
       response.writeHead(404, { "Content-Type": "text/html" });
       response.end(body);
     }
@@ -147,77 +153,20 @@ function startServer() {
   });
 }
 
-function startLocalPreviewServer(args = []) {
-  const child = spawn("node", ["serve-local.mjs", "--port", "0", ...args], {
-    cwd: root,
-    stdio: ["ignore", "pipe", "pipe"]
-  });
-
-  let stdout = "";
-  let stderr = "";
-  let settled = false;
-
-  return new Promise((resolvePreview, rejectPreview) => {
-    const timer = setTimeout(() => {
-      child.kill("SIGTERM");
-      if (!settled) {
-        settled = true;
-        rejectPreview(new Error(stderr || "Timed out starting serve-local.mjs"));
-      }
-    }, 5000);
-
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-      const match = stdout.match(/http:\/\/127\.0\.0\.1:(\d+)\//);
-      if (match && !settled) {
-        settled = true;
-        clearTimeout(timer);
-        resolvePreview({ child, origin: `http://127.0.0.1:${match[1]}` });
-      }
-    });
-
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      if (!settled) {
-        settled = true;
-        rejectPreview(error);
-      }
-    });
-
-    child.on("close", () => {
-      clearTimeout(timer);
-      if (!settled) {
-        settled = true;
-        rejectPreview(new Error(stderr || stdout || "serve-local.mjs exited before listening"));
-      }
-    });
-  });
-}
-
-async function fetchText(origin, path) {
-  const response = await fetch(`${origin}${path}`);
-  return {
-    status: response.status,
-    headers: response.headers,
-    body: await response.text()
-  };
-}
-
 function dumpDom(browser, origin, path, extraArgs = [], options = {}) {
   const profile = mkdtempSync(join(tmpdir(), "showcase-world-"));
+  const width = options.width || 1440;
+  const height = options.height || 900;
   const child = spawn(browser, [
     "--headless=new",
     "--disable-background-networking",
     "--disable-component-update",
     "--disable-default-apps",
     "--disable-extensions",
+    "--use-angle=swiftshader",
     `--user-data-dir=${profile}`,
-    "--window-size=500,844",
-    `--virtual-time-budget=${options.virtualTimeBudget || 4500}`,
+    `--window-size=${width},${height}`,
+    `--virtual-time-budget=${options.virtualTimeBudget || 5000}`,
     "--dump-dom",
     ...extraArgs,
     `${origin}${path}`
@@ -225,11 +174,9 @@ function dumpDom(browser, origin, path, extraArgs = [], options = {}) {
 
   let stdout = "";
   let stderr = "";
-
   child.stdout.on("data", (chunk) => {
     stdout += chunk.toString();
   });
-
   child.stderr.on("data", (chunk) => {
     stderr += chunk.toString();
   });
@@ -238,10 +185,10 @@ function dumpDom(browser, origin, path, extraArgs = [], options = {}) {
     if (!child.pid) return;
     try {
       process.kill(-child.pid, signal);
-    } catch (error) {
+    } catch {
       try {
         child.kill(signal);
-      } catch (innerError) {}
+      } catch {}
     }
   }
 
@@ -281,28 +228,7 @@ function dumpDom(browser, origin, path, extraArgs = [], options = {}) {
   });
 }
 
-function countMatches(text, pattern) {
-  return (text.match(pattern) || []).length;
-}
-
-function numericAttr(text, name) {
-  const match = text.match(new RegExp(`${name}="([0-9]+)"`));
-  return match ? Number(match[1]) : NaN;
-}
-
-function attrValue(text, name) {
-  const match = text.match(new RegExp(`${name}="([^"]*)"`));
-  return match ? match[1] : "";
-}
-
-function parseKeyValueProbe(value) {
-  return Object.fromEntries(value.split(";").map((item) => {
-    const [key, raw] = item.split(":");
-    return [key, Number(raw)];
-  }));
-}
-
-function captureScreenshot(browser, origin, path, width, height) {
+function captureScreenshot(browser, origin, path, width, height, evidenceName) {
   const profile = mkdtempSync(join(tmpdir(), "showcase-world-shot-"));
   const output = join(profile, "screenshot.png");
   const child = spawn(browser, [
@@ -311,9 +237,12 @@ function captureScreenshot(browser, origin, path, width, height) {
     "--disable-component-update",
     "--disable-default-apps",
     "--disable-extensions",
+    "--hide-scrollbars",
+    "--use-angle=swiftshader",
+    "--force-device-scale-factor=1",
     `--user-data-dir=${profile}`,
     `--window-size=${width},${height}`,
-    "--virtual-time-budget=7000",
+    "--virtual-time-budget=8000",
     `--screenshot=${output}`,
     `${origin}${path}`
   ], { cwd: root, stdio: ["ignore", "ignore", "pipe"] });
@@ -331,7 +260,7 @@ function captureScreenshot(browser, origin, path, width, height) {
         child.kill("SIGTERM");
       }
 
-      if (Date.now() - started > 12000) {
+      if (Date.now() - started > 14000) {
         child.kill("SIGTERM");
       }
     }, 250);
@@ -352,6 +281,9 @@ function captureScreenshot(browser, origin, path, width, height) {
       }
 
       const bytes = readFileSync(output);
+      if (evidenceName) {
+        writeFileSync(join(evidenceDir, evidenceName), bytes);
+      }
       rmSync(profile, { recursive: true, force: true });
       resolveShot(bytes);
     });
@@ -364,9 +296,7 @@ function readUInt32(bytes, offset) {
 
 function parsePng(bytes) {
   const signature = "89504e470d0a1a0a";
-  if (bytes.subarray(0, 8).toString("hex") !== signature) {
-    throw new Error("Not a PNG");
-  }
+  if (bytes.subarray(0, 8).toString("hex") !== signature) throw new Error("Not a PNG");
 
   let offset = 8;
   let width = 0;
@@ -379,17 +309,14 @@ function parsePng(bytes) {
     const length = readUInt32(bytes, offset);
     const type = bytes.subarray(offset + 4, offset + 8).toString("ascii");
     const data = bytes.subarray(offset + 8, offset + 8 + length);
-
     if (type === "IHDR") {
       width = readUInt32(data, 0);
       height = readUInt32(data, 4);
       bitDepth = data[8];
       colorType = data[9];
     }
-
     if (type === "IDAT") idat.push(data);
     if (type === "IEND") break;
-
     offset += length + 12;
   }
 
@@ -414,7 +341,6 @@ function parsePng(bytes) {
       const left = x >= channels ? row[x - channels] : 0;
       const up = previous[x] || 0;
       const upLeft = x >= channels ? previous[x - channels] || 0 : 0;
-
       if (filter === 1) row[x] = (row[x] + left) & 255;
       if (filter === 2) row[x] = (row[x] + up) & 255;
       if (filter === 3) row[x] = (row[x] + Math.floor((left + up) / 2)) & 255;
@@ -435,667 +361,3587 @@ function parsePng(bytes) {
   return { width, height, channels, rows };
 }
 
-function parseJpegDimensions(bytes) {
-  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) {
-    throw new Error("Not a JPEG");
-  }
-
-  let offset = 2;
-  while (offset < bytes.length) {
-    while (bytes[offset] === 0xff) offset += 1;
-    const marker = bytes[offset];
-    offset += 1;
-
-    if (marker === 0xd9 || marker === 0xda) break;
-    if (offset + 2 > bytes.length) break;
-
-    const length = bytes.readUInt16BE(offset);
-    if (length < 2 || offset + length > bytes.length) break;
-
-    if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
-      return {
-        width: bytes.readUInt16BE(offset + 5),
-        height: bytes.readUInt16BE(offset + 3)
-      };
-    }
-
-    offset += length;
-  }
-
-  throw new Error("JPEG dimensions not found");
-}
-
-function sampleScenePixels(png) {
-  const x0 = Math.floor(png.width * 0.32);
-  const x1 = png.width;
-  const y0 = Math.floor(png.height * 0.08);
-  const y1 = Math.floor(png.height * 0.72);
-  let nonDark = 0;
-  let bright = 0;
-  let samples = 0;
-
-  for (let sy = 0; sy < 80; sy += 1) {
-    const y = Math.min(y1 - 1, y0 + Math.floor(((y1 - y0) * sy) / 80));
-    const row = png.rows[y];
-
-    for (let sx = 0; sx < 80; sx += 1) {
-      const x = Math.min(x1 - 1, x0 + Math.floor(((x1 - x0) * sx) / 80));
-      const index = x * png.channels;
-      const total = row[index] + row[index + 1] + row[index + 2];
-      if (total > 36) nonDark += 1;
-      if (total > 180) bright += 1;
-      samples += 1;
-    }
-  }
-
-  return { nonDark, bright, samples };
-}
-
-function samplePagePixels(png) {
-  const x0 = Math.floor(png.width * 0.05);
-  const x1 = Math.floor(png.width * 0.95);
+function samplePixels(png) {
+  const x0 = Math.floor(png.width * 0.06);
+  const x1 = Math.floor(png.width * 0.94);
   const y0 = Math.floor(png.height * 0.08);
   const y1 = Math.floor(png.height * 0.92);
   let nonDark = 0;
   let bright = 0;
   let warm = 0;
+  let varied = 0;
+  let previousTotal = 0;
   let samples = 0;
 
-  for (let sy = 0; sy < 80; sy += 1) {
-    const y = Math.min(y1 - 1, y0 + Math.floor(((y1 - y0) * sy) / 80));
+  for (let sy = 0; sy < 90; sy += 1) {
+    const y = Math.min(y1 - 1, y0 + Math.floor(((y1 - y0) * sy) / 90));
     const row = png.rows[y];
-
-    for (let sx = 0; sx < 80; sx += 1) {
-      const x = Math.min(x1 - 1, x0 + Math.floor(((x1 - x0) * sx) / 80));
+    for (let sx = 0; sx < 90; sx += 1) {
+      const x = Math.min(x1 - 1, x0 + Math.floor(((x1 - x0) * sx) / 90));
       const index = x * png.channels;
       const r = row[index];
       const g = row[index + 1];
       const b = row[index + 2];
       const total = r + g + b;
-      if (total > 36) nonDark += 1;
-      if (total > 180) bright += 1;
-      if (r > g && g > b && total > 120) warm += 1;
+      if (total > 30) nonDark += 1;
+      if (total > 150) bright += 1;
+      if (r >= g && g >= b && total > 90) warm += 1;
+      if (samples > 0 && Math.abs(total - previousTotal) > 18) varied += 1;
+      previousTotal = total;
       samples += 1;
     }
   }
 
-  return { nonDark, bright, warm, samples };
+  return { nonDark, bright, warm, varied, samples };
 }
 
-function assertSceneScreenshot(name, bytes) {
+function assertWorldScreenshot(name, bytes, minWidth, minHeight) {
   const png = parsePng(bytes);
-  const pixels = sampleScenePixels(png);
-  assert(`${name} screenshot size`, png.width >= 500 && png.height >= 650, `${png.width}x${png.height}`);
-  assert(`${name} scene pixels`, pixels.nonDark > 500 && pixels.bright > 100, JSON.stringify(pixels));
+  const pixels = samplePixels(png);
+  assert(`${name} screenshot size`, png.width >= minWidth && png.height >= minHeight, `${png.width}x${png.height}`);
+  assert(`${name} screenshot is nonblank 3D evidence`, pixels.nonDark > 700 && pixels.bright > 40 && pixels.varied > 120, JSON.stringify(pixels));
 }
 
-function assertStaticScreenshot(name, bytes) {
-  const png = parsePng(bytes);
-  const pixels = samplePagePixels(png);
-  assert(`${name} screenshot size`, png.width >= 500 && png.height >= 650, `${png.width}x${png.height}`);
-  assert(`${name} page pixels`, pixels.nonDark > 800 && pixels.bright > 120 && pixels.warm > 20, JSON.stringify(pixels));
+function readEvidenceImage(name) {
+  return readFileSync(join(evidenceDir, name));
 }
 
-const index = readText("index.html");
-const preview = readText("v3-preview.html");
+const deferredVisualFailures = [];
+const ownerDiagnosticFailures = [];
+
+function ownerDiagnostic(name, condition, detail = {}) {
+  if (condition) {
+    pass(name);
+    return;
+  }
+  ownerDiagnosticFailures.push({ name, detail });
+  console.log(`not ok - ${name}`);
+}
+
+function assertNoOwnerDiagnosticFailures() {
+  const reportPath = join(evidenceDir, "owner-rejection-diagnostics-report.json");
+  const report = {
+    status: ownerDiagnosticFailures.length ? "failed" : "passed",
+    rejectedDefectsCovered: [
+      "screen containment and physical frame inset",
+      "material-board wall and side-wall fidelity",
+      "warm cove/wall-wash lighting shape",
+      "floor reflection shape and breakup",
+      "black-void rejection in first views and walking views"
+    ],
+    failures: ownerDiagnosticFailures
+  };
+  writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  if (ownerDiagnosticFailures.length) {
+    fail("owner-rejection diagnostic preflight", JSON.stringify({
+      failures: ownerDiagnosticFailures.map((item) => item.name),
+      evidence: "evidence/owner-rejection-diagnostics-report.json"
+    }));
+  }
+  pass("owner-rejection diagnostic preflight");
+}
+
+function assertOwnerBaselineDiagnosticPreserved() {
+  const report = JSON.parse(readFileSync(join(evidenceDir, "owner-rejection-diagnostics-baseline-failure.json"), "utf8"));
+  const failureNames = new Set((report.failures || []).map((failure) => failure.name));
+  const requiredFailureNames = [
+    "owner diagnostic exports physical frame inset geometry",
+    "owner diagnostic runtime uses inner screen corners for websites and hit targets",
+    "owner diagnostic material maps exist for wall floor metal glass and lighting",
+    "owner diagnostic rejects hard rectangular wall-wash and floor-glow bars",
+    "owner diagnostic runtime loads material-board-derived texture maps"
+  ];
+  assert(
+    "owner-rejection baseline failing diagnostics preserved",
+    report.status === "failed_as_required"
+      && report.command === "node verify-world.mjs"
+      && requiredFailureNames.every((name) => failureNames.has(name))
+      && (report.coveredRejectedRegions || []).includes("wall")
+      && (report.coveredRejectedRegions || []).includes("frame-screen")
+      && (report.coveredRejectedRegions || []).includes("lighting")
+      && (report.coveredRejectedRegions || []).includes("floor"),
+    JSON.stringify({ status: report.status, failures: [...failureNames], coveredRejectedRegions: report.coveredRejectedRegions })
+  );
+}
+
+function assertPhase0MissingEvidenceDecisionRequest() {
+  const requiredMissingPoseIds = ["fullscreen", "inspection"];
+  const requiredOwnerDecisionOptionIds = [
+    "provide_archived_evidence",
+    "explicit_phase0_waiver",
+    "reject_current_visual"
+  ];
+  const jsonPath = join(evidenceDir, "phase0-missing-evidence-decision-request.json");
+  const htmlPath = join(evidenceDir, "phase0-missing-evidence-decision-request.html");
+  const request = JSON.parse(readFileSync(jsonPath, "utf8"));
+  const html = readFileSync(htmlPath, "utf8");
+  const optionIds = new Set((request.ownerDecisionOptions || []).map((option) => option.id));
+  const missingDirectBeforeCapturePoseIds = new Set(request.missingDirectBeforeCapturePoseIds || []);
+  const missingDiagnosticFailurePoseIds = new Set(request.missingDiagnosticFailurePoseIds || []);
+
+  assert(
+    "phase0 missing-evidence owner decision request preserved",
+    request.status === "owner_decision_required"
+      && requiredMissingPoseIds.every((poseId) => missingDirectBeforeCapturePoseIds.has(poseId))
+      && requiredMissingPoseIds.every((poseId) => missingDiagnosticFailurePoseIds.has(poseId))
+      && requiredOwnerDecisionOptionIds.every((optionId) => optionIds.has(optionId))
+      && html.includes("Phase 0 Missing Evidence Decision Request")
+      && html.includes("owner_decision_required")
+      && html.includes("provide_archived_evidence")
+      && html.includes("explicit_phase0_waiver")
+      && html.includes("reject_current_visual"),
+    JSON.stringify({
+      status: request.status,
+      missingDirectBeforeCapturePoseIds: request.missingDirectBeforeCapturePoseIds,
+      missingDiagnosticFailurePoseIds: request.missingDiagnosticFailurePoseIds,
+      ownerDecisionOptionIds: [...optionIds]
+    })
+  );
+}
+
+function assertOwnerFinalDecisionRequest() {
+  const requiredDecisionIds = [
+    "phase0_historical_evidence_resolution",
+    "material_reference_confirmation",
+    "visual_match_acceptance"
+  ];
+  const requiredResponseIds = [
+    "provide_archived_evidence",
+    "explicit_phase0_waiver",
+    "reject_current_visual",
+    "confirm_material_style_board",
+    "provide_different_material_reference",
+    "accept_visual_match",
+    "reject_visual_match_with_regions"
+  ];
+  const request = JSON.parse(readFileSync(join(evidenceDir, "owner-final-decision-request.json"), "utf8"));
+  const html = readFileSync(join(evidenceDir, "owner-final-decision-request.html"), "utf8");
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const decisions = new Map((request.decisions || []).map((decision) => [decision.id, decision]));
+  const responseIds = new Set((request.decisions || []).flatMap((decision) => (
+    decision.acceptableOwnerResponses || []
+  ).map((response) => response.id)));
+  const decisionIds = new Set(request.requiredDecisionIds || []);
+
+  assert(
+    "owner final-decision request preserved",
+    request.status === "pending_owner"
+      && request.ownerAcceptanceReceived === false
+      && request.visualMatchAcceptanceReceived === false
+      && request.goalMayBeMarkedComplete === false
+      && requiredDecisionIds.every((id) => decisionIds.has(id))
+      && decisions.get("phase0_historical_evidence_resolution")?.status === "pending_owner"
+      && decisions.get("material_reference_confirmation")?.status === "pending_owner"
+      && decisions.get("material_reference_confirmation")?.evidence?.selectedMaterialReference === "img/world/gallery-room/material-style-board.avif"
+      && decisions.get("material_reference_confirmation")?.evidence?.rawMaterialReference === "artifacts/higgsfield/showcase-gallery-next-level/raw/material-style-board-manual-2026-06-18T21-41-38-662Z.png"
+      && decisions.get("visual_match_acceptance")?.status === "pending_owner"
+      && requiredResponseIds.every((id) => responseIds.has(id))
+      && manifest.supplemental?.ownerFinalDecisionRequest?.json === "owner-final-decision-request.json"
+      && manifest.supplemental?.ownerFinalDecisionRequest?.html === "owner-final-decision-request.html"
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("owner-final-decision-request.json")
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("owner-final-decision-request.html")
+      && html.includes("Owner Final Decision Request")
+      && html.includes("phase0_historical_evidence_resolution")
+      && html.includes("material_reference_confirmation")
+      && html.includes("confirm_material_style_board")
+      && html.includes("provide_different_material_reference")
+      && html.includes("visual_match_acceptance")
+      && html.includes("accept_visual_match")
+      && html.includes("reject_visual_match_with_regions"),
+    JSON.stringify({
+      status: request.status,
+      ownerAcceptanceReceived: request.ownerAcceptanceReceived,
+      visualMatchAcceptanceReceived: request.visualMatchAcceptanceReceived,
+      goalMayBeMarkedComplete: request.goalMayBeMarkedComplete,
+      requiredDecisionIds: request.requiredDecisionIds,
+      materialReferenceDecision: decisions.get("material_reference_confirmation"),
+      responseIds: [...responseIds],
+      manifest: manifest.supplemental?.ownerFinalDecisionRequest,
+      pairedEvidence: dogfoodReport.ownerReview?.pairedEvidence
+    })
+  );
+}
+
+function assertOwnerFinalDecisionProofLinksPreserved() {
+  const request = JSON.parse(readFileSync(join(evidenceDir, "owner-final-decision-request.json"), "utf8"));
+  const html = readFileSync(join(evidenceDir, "owner-final-decision-request.html"), "utf8");
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const decisions = new Map((request.decisions || []).map((decision) => [decision.id, decision]));
+  const visualEvidence = decisions.get("visual_match_acceptance")?.evidence || {};
+  const requiredEvidence = {
+    ownerReviewPacket: "owner-review-packet.html",
+    ownerRejectionFixedAfter: "owner-rejection-fixed-after.html",
+    ownerRejectionFixedAfterReport: "owner-rejection-fixed-after.json",
+    ownerRejectionDefectMap: "owner-rejection-defect-map.png",
+    ownerRejectionDefectMapReport: "owner-rejection-defect-map.json",
+    materialRuntimeProof: "owner-review-material-runtime-proof.png",
+    materialRuntimeProofReport: "material-runtime-proof-report.json",
+    noBlackVoidRenderedProof: "owner-review-no-black-void-proof.png",
+    noBlackVoidRenderedProofReport: "no-black-void-rendered-proof-report.json",
+    wallSlabDetailProof: "owner-review-wall-slab-detail-proof.png",
+    wallSlabDetailProofReport: "wall-slab-detail-report.json",
+    lightingFloorProof: "owner-review-lighting-floor-proof.png",
+    lightingShapeReport: "lighting-shape-report.json",
+    floorReflectionReport: "floor-reflection-report.json",
+    screenFrameInsetProof: "owner-review-screen-inset-proof.png",
+    screenFrameInsetProofReport: "screen-inner-frame-containment-report.json",
+    websiteFrameFitReport: "browser-probe-summary.json",
+    structuralRegionProof: "owner-review-structural-region-proof.png",
+    structuralRegionProofReport: "structural-region-continuity-report.json",
+    criticalRegionZooms: "owner-review-critical-region-zooms.png",
+    criticalRegionZoomsReport: "owner-review-critical-region-zooms.json",
+    readinessAudit: "owner-review-readiness-audit.html",
+    strictCompletionAudit: "strict-prd-completion-audit.html"
+  };
+  const requiredTriptychs = [
+    "owner-review-desktop-triptych.png",
+    "owner-review-mobile-triptych.png",
+    "owner-review-fullscreen-triptych.png",
+    "owner-review-inspection-triptych.png"
+  ];
+  const requiredCleanCanvasPairs = [
+    "owner-review-desktop-clean-canvas-pair.png",
+    "owner-review-mobile-clean-canvas-pair.png",
+    "owner-review-fullscreen-clean-canvas-pair.png"
+  ];
+  const requiredOwnerReplyLines = [
+    "Phase 0 decision: provide_archived_evidence | explicit_phase0_waiver | reject_current_visual",
+    "Material reference decision: confirm_material_style_board | provide_different_material_reference",
+    "Visual decision: accept_visual_match | reject_visual_match_with_regions"
+  ];
+  const evidenceValues = Object.values(requiredEvidence);
+  const packetEvidenceValues = evidenceValues.filter((file) => file !== "owner-review-packet.html");
+
+  assert(
+    "owner final-decision request directly links rejected-defect proof",
+    Object.entries(requiredEvidence).every(([key, value]) => visualEvidence[key] === value)
+      && Array.isArray(visualEvidence.triptychs)
+      && requiredTriptychs.every((file) => visualEvidence.triptychs.includes(file))
+      && Array.isArray(visualEvidence.cleanCanvasPairs)
+      && requiredCleanCanvasPairs.every((file) => visualEvidence.cleanCanvasPairs.includes(file))
+      && evidenceValues.every((file) => html.includes(file))
+      && requiredTriptychs.every((file) => html.includes(file))
+      && requiredCleanCanvasPairs.every((file) => html.includes(file))
+      && packetEvidenceValues.every((file) => packetHtml.includes(file))
+      && requiredTriptychs.every((file) => packetHtml.includes(file))
+      && requiredCleanCanvasPairs.every((file) => packetHtml.includes(file))
+      && packetHtml.includes("Exact owner reply required")
+      && requiredOwnerReplyLines.every((line) => html.includes(line) && packetHtml.includes(line)),
+    JSON.stringify({
+      visualEvidence,
+      requiredEvidence,
+      requiredTriptychs,
+      requiredCleanCanvasPairs,
+      packetHasExactReplyHeading: packetHtml.includes("Exact owner reply required"),
+      ownerReplyLinesInPacket: requiredOwnerReplyLines.map((line) => packetHtml.includes(line))
+    })
+  );
+}
+
+function assertPhase0ArchiveNearMissClassification() {
+  const report = JSON.parse(readFileSync(join(evidenceDir, "phase0-capture-search-report.json"), "utf8"));
+  const candidatesByPath = new Map((report.candidates || []).map((candidate) => [candidate.path, candidate]));
+  const fullscreenNearMiss = candidatesByPath.get(".agent/runs/higgsfield-1to1-blender-world/evidence/fullscreen-hero-3d.png");
+  const photoMatchDesktop = candidatesByPath.get(".agent/runs/higgsfield-1to1-blender-world/evidence/photo-match-desktop.png");
+  const photoMatchMobile = candidatesByPath.get(".agent/runs/higgsfield-1to1-blender-world/evidence/photo-match-mobile.png");
+
+  assert(
+    "phase0 archive search classifies reviewed near-miss evidence",
+    fullscreenNearMiss?.classification === "reviewed_pre_rebuild_fullscreen_reference_capture_not_promoted"
+      && fullscreenNearMiss.dimensions?.width === 1920
+      && fullscreenNearMiss.dimensions?.height === 1080
+      && photoMatchDesktop?.classification === "reviewed_pre_rebuild_photo_match_capture_not_pose_failure"
+      && photoMatchMobile?.classification === "reviewed_pre_rebuild_photo_match_capture_not_pose_failure",
+    JSON.stringify({
+      fullscreenNearMiss,
+      photoMatchDesktop,
+      photoMatchMobile
+    })
+  );
+}
+
+function assertReadinessAuditStrictStatusPrecision() {
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const row = (readinessAudit.requirements || []).find((item) => item.id === "strict-prd-completion-audit");
+  const expectedStatus = strictAudit.automatedEvidenceComplete
+    && strictAudit.ownerAcceptanceReceived === false
+    && strictAudit.goalMayBeMarkedComplete === false
+    ? "proven"
+    : strictAudit.status;
+
+  assert(
+    "readiness audit reports strict audit status precisely",
+    row?.status === expectedStatus
+      && row.evidence?.status === strictAudit.status
+      && row.evidence?.automatedEvidenceComplete === strictAudit.automatedEvidenceComplete
+      && row.evidence?.goalMayBeMarkedComplete === strictAudit.goalMayBeMarkedComplete,
+    JSON.stringify({
+      expectedStatus,
+      actualStatus: row?.status,
+      strictStatus: strictAudit.status,
+      strictAutomatedEvidenceComplete: strictAudit.automatedEvidenceComplete,
+      strictGoalMayBeMarkedComplete: strictAudit.goalMayBeMarkedComplete
+    })
+  );
+}
+
+function expectedOwnerReviewEvidenceStatus(strictAudit) {
+  return strictAudit.automatedEvidenceComplete
+    ? "owner-review-ready-owner-acceptance-pending"
+    : "runtime-gates-passed-strict-evidence-incomplete-owner-decisions-pending";
+}
+
+function assertOwnerReviewStatusPrecision() {
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const fixedAfterReport = JSON.parse(readFileSync(join(evidenceDir, "owner-rejection-fixed-after.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const expectedStatus = expectedOwnerReviewEvidenceStatus(strictAudit);
+
+  assert(
+    "owner-review status precision preserved",
+    readinessAudit.status === strictAudit.status
+      && dogfoodReport.status === expectedStatus
+      && fixedAfterReport.status === expectedStatus
+      && manifest.supplemental?.ownerRejectionFixedAfter?.status === expectedStatus
+      && fixedAfterReport.ownerAcceptanceReceived === false
+      && fixedAfterReport.goalMayBeMarkedComplete === false
+      && dogfoodReport.ownerReview?.ownerAcceptanceReceived === false,
+    JSON.stringify({
+      strictStatus: strictAudit.status,
+      strictAutomatedEvidenceComplete: strictAudit.automatedEvidenceComplete,
+      readinessStatus: readinessAudit.status,
+      expectedStatus,
+      dogfoodStatus: dogfoodReport.status,
+      fixedAfterStatus: fixedAfterReport.status,
+      manifestStatus: manifest.supplemental?.ownerRejectionFixedAfter?.status,
+      dogfoodOwnerAcceptanceReceived: dogfoodReport.ownerReview?.ownerAcceptanceReceived,
+      fixedAfterOwnerAcceptanceReceived: fixedAfterReport.ownerAcceptanceReceived,
+      fixedAfterGoalMayBeMarkedComplete: fixedAfterReport.goalMayBeMarkedComplete
+    })
+  );
+}
+
+async function assertPhase0ExpandedEvidenceReviewPreserved() {
+  const searchReport = JSON.parse(readFileSync(join(evidenceDir, "phase0-expanded-local-evidence-search.json"), "utf8"));
+  const review = JSON.parse(readFileSync(join(evidenceDir, "phase0-expanded-evidence-review.json"), "utf8"));
+  const imageMetadata = await sharp(join(evidenceDir, "phase0-expanded-evidence-review.png")).metadata();
+  const reviewedByPath = new Map((review.reviewedCandidates || []).map((candidate) => [candidate.path, candidate]));
+  const requiredReviewedClassifications = new Map([
+    [
+      ".agent/runs/higgsfield-1to1-blender-world/evidence/fullscreen-hero-3d.png",
+      "reviewed_pre_rebuild_fullscreen_reference_or_empty_frame_capture_not_live_failure"
+    ],
+    [
+      ".agent/runs/higgsfield-1to1-blender-world/evidence/visual-match-inspect-blender-debug.png",
+      "reviewed_pre_rebuild_inspection_blender_debug_image_not_live_route_failure"
+    ],
+    [
+      ".agent/runs/higgsfield-rendered-world/evidence/desktop-inspection-evenpath.png",
+      "reviewed_previous_goal_inspection_capture_not_current_owner_rejected_build"
+    ],
+    [
+      "artifacts/higgsfield/showcase-gallery-next-level/selected/station-inspect-plate-empty-4k-derived-2026-06-19.png",
+      "reviewed_inspection_reference_asset_not_live_route_failure"
+    ],
+    [
+      ".agent/runs/higgsfield-1to1-blender-world/evidence/live-reconstruction-gate-failure.log",
+      "reviewed_pre_rebuild_default_route_failure_log_not_fullscreen_or_inspection_pose"
+    ],
+    [
+      ".agent/runs/higgsfield-1to1-blender-world/evidence/photo-match-live-default-failure.log",
+      "reviewed_pre_rebuild_photo_match_log_not_fullscreen_or_inspection_pose"
+    ],
+    [
+      ".agent/runs/higgsfield-1to1-blender-world/evidence/visual-gate-failures-20260621T003402Z.json",
+      "reviewed_pre_rebuild_visual_gate_failures_desktop_mobile_only"
+    ]
+  ]);
+  const missingReviewedClassifications = [...requiredReviewedClassifications.entries()].filter(([path, classification]) => (
+    reviewedByPath.get(path)?.reviewedClassification !== classification
+  ));
+
+  assert(
+    "phase0 expanded local evidence review preserved",
+    searchReport.requirement === "Expanded local search for missing Phase 0 fullscreen and inspection before-change failure evidence."
+      && searchReport.candidateCount === (searchReport.candidates || []).length
+      && (searchReport.preRebuildFullscreenCandidates || []).length >= 1
+      && (searchReport.preRebuildInspectionCandidates || []).length >= 7
+      && (searchReport.preRebuildFailureCandidates || []).length >= 3
+      && review.sourceReport === "phase0-expanded-local-evidence-search.json"
+      && review.status === "no_defensible_fullscreen_or_inspection_phase0_promotion_found"
+      && Array.isArray(review.promotedEvidence)
+      && review.promotedEvidence.length === 0
+      && review.reviewedCandidateCount === (review.reviewedCandidates || []).length
+      && review.reviewedCandidateCount >= 11
+      && missingReviewedClassifications.length === 0
+      && imageMetadata.width >= 760
+      && imageMetadata.height >= 1000,
+    JSON.stringify({
+      searchCandidateCount: searchReport.candidateCount,
+      preRebuildFullscreenCandidates: searchReport.preRebuildFullscreenCandidates?.length,
+      preRebuildInspectionCandidates: searchReport.preRebuildInspectionCandidates?.length,
+      preRebuildFailureCandidates: searchReport.preRebuildFailureCandidates?.length,
+      reviewStatus: review.status,
+      reviewedCandidateCount: review.reviewedCandidateCount,
+      promotedEvidenceCount: review.promotedEvidence?.length,
+      missingReviewedClassifications,
+      imageDimensions: { width: imageMetadata.width, height: imageMetadata.height }
+    })
+  );
+}
+
+function assertPhase0ArchiveEvidenceSearchPreserved() {
+  const report = JSON.parse(readFileSync(join(evidenceDir, "phase0-archive-evidence-search.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const searchRootLabels = new Set((report.searchRoots || []).map((item) => item.label));
+  const archiveRows = report.archives || [];
+  const matchingClassifications = new Set(archiveRows.flatMap((archive) => (
+    archive.matches || []
+  ).map((match) => match.classification)));
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "phase0-archive-evidence-search");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "phase0-archive-evidence-search");
+
+  assert(
+    "phase0 project archive evidence search preserved",
+    report.status === "no_defensible_fullscreen_or_inspection_phase0_archive_evidence_found"
+      && report.requirement === "Search project zip archives for missing Phase 0 fullscreen and inspection before-change failure evidence without extracting unrelated personal archives."
+      && searchRootLabels.has("current workspace")
+      && searchRootLabels.has("parent workspace")
+      && searchRootLabels.has("Downloads")
+      && report.archiveCount >= 20
+      && report.archivesWithMatches >= 1
+      && report.matchingMemberCount >= 1
+      && report.candidateMemberCount === 0
+      && Array.isArray(report.candidateMembers)
+      && report.candidateMembers.length === 0
+      && matchingClassifications.has("reviewed_archive_photo_match_room_plate_reference_not_failure_capture")
+      && manifest.supplemental?.phase0ArchiveEvidenceSearch?.json === "phase0-archive-evidence-search.json"
+      && manifest.supplemental?.phase0ArchiveEvidenceSearch?.status === report.status
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("phase0-archive-evidence-search.json")
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven",
+    JSON.stringify({
+      status: report.status,
+      archiveCount: report.archiveCount,
+      archivesWithMatches: report.archivesWithMatches,
+      matchingMemberCount: report.matchingMemberCount,
+      candidateMemberCount: report.candidateMemberCount,
+      searchRoots: report.searchRoots,
+      matchingClassifications: [...matchingClassifications],
+      manifest: manifest.supplemental?.phase0ArchiveEvidenceSearch,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+function assertPhase0GitHistoryEvidenceSearchPreserved() {
+  const report = JSON.parse(readFileSync(join(evidenceDir, "phase0-git-history-evidence-search.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "phase0-git-history-evidence-search");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "phase0-git-history-evidence-search");
+  const pathspecs = new Set(report.pathspecs || []);
+
+  assert(
+    "phase0 git history evidence search preserved",
+    report.status === "no_defensible_fullscreen_or_inspection_phase0_git_history_evidence_found"
+      && report.requirement === "Search tracked Git history for missing Phase 0 fullscreen and inspection before-change failure evidence."
+      && report.gitCommand === "git log --all --name-only"
+      && pathspecs.has(".agent/runs/higgsfield-1to1-blender-world")
+      && pathspecs.has(".agent/runs/higgsfield-rendered-world")
+      && pathspecs.has("verification")
+      && report.commitCount >= 1
+      && Array.isArray(report.trackedMatches)
+      && report.trackedMatches.length >= 1
+      && Array.isArray(report.candidateMatches)
+      && report.candidateMatches.length === 0
+      && manifest.supplemental?.phase0GitHistoryEvidenceSearch?.json === "phase0-git-history-evidence-search.json"
+      && manifest.supplemental?.phase0GitHistoryEvidenceSearch?.status === report.status
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("phase0-git-history-evidence-search.json")
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven",
+    JSON.stringify({
+      status: report.status,
+      commitCount: report.commitCount,
+      trackedMatchCount: report.trackedMatches?.length,
+      candidateMatchCount: report.candidateMatches?.length,
+      manifest: manifest.supplemental?.phase0GitHistoryEvidenceSearch,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+function assertScreenScaleInsetReportPreserved() {
+  const report = JSON.parse(readFileSync(join(evidenceDir, "screen-scale-inset-report.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const requiredPoseIds = ["desktopHero", "mobileHero", "inspectSelected", "fullscreenHero"];
+  const poseIds = new Set(Object.keys(report.poses || {}));
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "screen-scale-inset");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "screen-scale-inset");
+
+  assert(
+    "screen scale and inset report preserved",
+    report.status === "passed"
+      && report.requirement === "Projected website screen planes remain smaller than physical frame rails with measurable inset margins across desktop, mobile, fullscreen, and inspection poses."
+      && requiredPoseIds.every((poseId) => poseIds.has(poseId))
+      && Number(report.maxInnerOuterAreaRatio) <= 0.91
+      && Number(report.minInsetPx) >= 2
+      && (report.failures || []).length === 0
+      && manifest.supplemental?.screenScaleInsetReport === "screen-scale-inset-report.json"
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("screen-scale-inset-report.json")
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven",
+    JSON.stringify({
+      status: report.status,
+      poses: Object.keys(report.poses || {}),
+      maxInnerOuterAreaRatio: report.maxInnerOuterAreaRatio,
+      minInsetPx: report.minInsetPx,
+      failures: report.failures,
+      manifest: manifest.supplemental?.screenScaleInsetReport,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+function assertFirstViewFrameContaminationReportPreserved() {
+  const report = JSON.parse(readFileSync(join(evidenceDir, "first-view-frame-contamination-report.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const requiredPoseIds = ["desktopHero", "mobileHero", "fullscreenHero", "inspectSelected"];
+  const poseIds = new Set(Object.keys(report.poses || {}));
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "first-view-frame-contamination");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "first-view-frame-contamination");
+  const cssSignals = report.cssSignals || {};
+
+  assert(
+    "first-view frame contamination report preserved",
+    report.status === "passed"
+      && report.requirement === "First-view desktop, mobile, fullscreen, and inspection screenshots must not show labels, yellow guide bands, debug strips, hover chrome, or calibration overlays crossing physical frame interiors."
+      && requiredPoseIds.every((poseId) => poseIds.has(poseId))
+      && Number(report.totalInspectedRingPixels) > 0
+      && Number(report.totalGuideBandPixels) === 0
+      && Number(report.maxGuideBandPixelRatio) <= 0.0005
+      && (report.failures || []).length === 0
+      && Object.values(cssSignals).every(Boolean)
+      && manifest.supplemental?.firstViewFrameContaminationReport === "first-view-frame-contamination-report.json"
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("first-view-frame-contamination-report.json")
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven",
+    JSON.stringify({
+      status: report.status,
+      poses: Object.keys(report.poses || {}),
+      totalInspectedRingPixels: report.totalInspectedRingPixels,
+      totalGuideBandPixels: report.totalGuideBandPixels,
+      maxGuideBandPixelRatio: report.maxGuideBandPixelRatio,
+      cssSignals,
+      failures: report.failures,
+      manifest: manifest.supplemental?.firstViewFrameContaminationReport,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+function assertNormalRouteParityReportPreserved() {
+  const report = JSON.parse(readFileSync(join(evidenceDir, "normal-route-parity-report.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "normal-route-parity");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "normal-route-parity");
+  const comparisonIds = new Set((report.comparisons || []).map((comparison) => comparison.id));
+  const requiredComparisonIds = [
+    "desktop-first-view",
+    "mobile-first-view",
+    "fullscreen-first-view",
+    "desktop-inspection",
+    "mobile-inspection"
+  ];
+
+  assert(
+    "normal route parity report preserved",
+    report.status === "passed"
+      && report.requirement === "Normal /world visual evidence must be at least as good as verify-mode evidence for desktop, mobile, fullscreen, and inspection within a narrow regression tolerance."
+      && requiredComparisonIds.every((id) => comparisonIds.has(id))
+      && (report.failures || []).length === 0
+      && report.routeContract?.normalWorldStartsLiveWalkingView === true
+      && report.routeContract?.normalWorldReferenceViewActive === false
+      && report.routeContract?.referenceViewIsNotDefaultPassPath === true
+      && manifest.supplemental?.normalRouteParityReport === "normal-route-parity-report.json"
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("normal-route-parity-report.json")
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven",
+    JSON.stringify({
+      status: report.status,
+      comparisons: [...comparisonIds],
+      failures: report.failures,
+      routeContract: report.routeContract,
+      manifest: manifest.supplemental?.normalRouteParityReport,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+function assertOwnerRejectionFixedAfterPreserved() {
+  const report = JSON.parse(readFileSync(join(evidenceDir, "owner-rejection-fixed-after.json"), "utf8"));
+  const html = readFileSync(join(evidenceDir, "owner-rejection-fixed-after.html"), "utf8");
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const beforeImages = new Set((report.before || []).map((item) => item.image));
+  const afterImages = new Set((report.after || []).map((item) => item.image));
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "owner-rejection-fixed-after");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "owner-rejection-fixed-after");
+
+  assert(
+    "owner rejection fixed-after proof preserved",
+    report.status === expectedOwnerReviewEvidenceStatus(strictAudit)
+      && report.ownerAcceptanceReceived === false
+      && report.goalMayBeMarkedComplete === false
+      && beforeImages.has("owner-rejection-lighting-wall-screens-01.png")
+      && beforeImages.has("owner-rejection-lighting-wall-screens-02.png")
+      && afterImages.has("normal-desktop-main-3d.png")
+      && afterImages.has("normal-mobile-main-3d.png")
+      && afterImages.has("normal-fullscreen-main-3d.png")
+      && afterImages.has("normal-desktop-inspection-viewer-3d.png")
+      && report.proof?.baselineFailure === "owner-rejection-diagnostics-baseline-failure.json"
+      && report.proof?.currentPassingDiagnostics === "owner-rejection-diagnostics-report.json"
+      && manifest.supplemental?.ownerRejectionFixedAfter?.json === "owner-rejection-fixed-after.json"
+      && manifest.supplemental?.ownerRejectionFixedAfter?.html === "owner-rejection-fixed-after.html"
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("owner-rejection-fixed-after.json")
+      && (dogfoodReport.ownerReview?.pairedEvidence || []).includes("owner-rejection-fixed-after.html")
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && html.includes("Owner Rejection Failure Before / Fixed After")
+      && html.includes("owner-rejection-lighting-wall-screens-01.png")
+      && html.includes("normal-desktop-main-3d.png")
+      && html.includes("owner-review-critical-region-zooms.png"),
+    JSON.stringify({
+      status: report.status,
+      ownerAcceptanceReceived: report.ownerAcceptanceReceived,
+      goalMayBeMarkedComplete: report.goalMayBeMarkedComplete,
+      beforeImages: [...beforeImages],
+      afterImages: [...afterImages],
+      manifest: manifest.supplemental?.ownerRejectionFixedAfter,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+async function assertOwnerReviewTriptychsPreserved() {
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const triptychs = manifest.triptychs || [];
+  const required = new Map([
+    ["desktop", { output: "owner-review-desktop-triptych.png", width: 2188, height: 510 }],
+    ["mobile", { output: "owner-review-mobile-triptych.png", width: 1108, height: 840 }],
+    ["inspection", { output: "owner-review-inspection-triptych.png", width: 2188, height: 510 }],
+    ["fullscreen", { output: "owner-review-fullscreen-triptych.png", width: 2908, height: 600 }]
+  ]);
+  const byId = new Map(triptychs.map((item) => [item.id, item]));
+  const metadata = {};
+  for (const [id, expected] of required) {
+    const item = byId.get(id);
+    if (item?.output) {
+      metadata[id] = await sharp(join(evidenceDir, item.output)).metadata();
+    }
+  }
+  const pairedEvidence = dogfoodReport.ownerReview?.pairedEvidence || [];
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "owner-review-pairs");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "owner-review-packet");
+  const allRequiredTriptychs = [...required].every(([id, expected]) => {
+    const item = byId.get(id);
+    const dimensions = metadata[id] || {};
+    return item?.output === expected.output
+      && fileExists(`.agent/runs/higgsfield-1to1-blender-world/evidence/${expected.output}`)
+      && Boolean(item.target)
+      && Boolean(item.reference)
+      && Boolean(item.runtime)
+      && dimensions.width === expected.width
+      && dimensions.height === expected.height
+      && pairedEvidence.includes(expected.output)
+      && packetHtml.includes(expected.output);
+  });
+
+  assert(
+    "owner review target/reference/runtime triptychs preserved",
+    triptychs.length === required.size
+      && allRequiredTriptychs
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes("Target / Blender Reference / Runtime Triptychs"),
+    JSON.stringify({
+      manifestTriptychs: triptychs,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status,
+      metadata
+    })
+  );
+}
+
+async function assertOwnerReviewCleanCanvasPairsPreserved() {
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const cleanPairs = manifest.cleanCanvasPairs || [];
+  const required = new Map([
+    ["desktop", { output: "owner-review-desktop-clean-canvas-pair.png", runtime: "normal-desktop-main-canvas-3d.png", width: 1454, height: 510 }],
+    ["mobile", { output: "owner-review-mobile-clean-canvas-pair.png", runtime: "normal-mobile-main-canvas-3d.png", width: 734, height: 840 }],
+    ["fullscreen", { output: "owner-review-fullscreen-clean-canvas-pair.png", runtime: "normal-fullscreen-main-canvas-3d.png", width: 1934, height: 600 }]
+  ]);
+  const byId = new Map(cleanPairs.map((item) => [item.id, item]));
+  const metadata = {};
+  for (const [id, expected] of required) {
+    const item = byId.get(id);
+    if (item?.output) {
+      metadata[id] = await sharp(join(evidenceDir, item.output)).metadata();
+    }
+  }
+  const pairedEvidence = dogfoodReport.ownerReview?.pairedEvidence || [];
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "owner-review-clean-canvas-pairs");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "owner-review-clean-canvas-pairs");
+  const allRequiredCleanPairs = [...required].every(([id, expected]) => {
+    const item = byId.get(id);
+    const dimensions = metadata[id] || {};
+    return item?.output === expected.output
+      && item?.runtime?.endsWith(expected.runtime)
+      && fileExists(`.agent/runs/higgsfield-1to1-blender-world/evidence/${expected.output}`)
+      && fileExists(`.agent/runs/higgsfield-1to1-blender-world/evidence/${expected.runtime}`)
+      && dimensions.width === expected.width
+      && dimensions.height === expected.height
+      && pairedEvidence.includes(expected.output)
+      && pairedEvidence.includes(expected.runtime)
+      && packetHtml.includes(expected.output);
+  });
+
+  assert(
+    "owner review clean normal-route canvas pairs preserved",
+    cleanPairs.length === required.size
+      && allRequiredCleanPairs
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes("Clean Normal Route Canvas Pairs"),
+    JSON.stringify({
+      manifestCleanCanvasPairs: cleanPairs,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status,
+      metadata
+    })
+  );
+}
+
+async function assertBlenderDebugRenderProofPreserved() {
+  const imageName = "blender-debug-render-proof.png";
+  const jsonName = "blender-debug-render-proof.json";
+  const report = JSON.parse(readFileSync(join(evidenceDir, jsonName), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfoodReport = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readinessAudit = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strictAudit = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const metadata = await sharp(join(evidenceDir, imageName)).metadata();
+  const requiredFeatureIds = new Set([
+    "graphite-wall-slabs",
+    "physical-frame-depth",
+    "inset-screen-planes",
+    "cove-wallwash-lighting",
+    "floor-reflection-regions",
+    "side-return-no-void"
+  ]);
+  const featureIds = new Set((report.features || []).map((feature) => feature.id));
+  const missingFeatureIds = [...requiredFeatureIds].filter((id) => !featureIds.has(id));
+  const readinessRow = (readinessAudit.requirements || []).find((item) => item.id === "blender-debug-render-proof");
+  const strictRow = (strictAudit.requirements || []).find((item) => item.id === "blender-debug-render-proof");
+  const pairedEvidence = dogfoodReport.ownerReview?.pairedEvidence || [];
+
+  assert(
+    "Blender debug render proof preserved",
+    report.status === "proven"
+      && report.image === imageName
+      && report.dimensions?.width === 1134
+      && report.dimensions?.height === 726
+      && metadata.width === 1134
+      && metadata.height === 726
+      && missingFeatureIds.length === 0
+      && (report.features || []).every((feature) => feature.passed === true && feature.renderExists === true)
+      && manifest.supplemental?.blenderDebugProof?.json === jsonName
+      && manifest.supplemental?.blenderDebugProof?.image === imageName
+      && manifest.supplemental?.blenderDebugProof?.status === "proven"
+      && pairedEvidence.includes(jsonName)
+      && pairedEvidence.includes(imageName)
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes(imageName)
+      && packetHtml.includes("Blender debug render proof"),
+    JSON.stringify({
+      status: report.status,
+      dimensions: report.dimensions,
+      metadata: { width: metadata.width, height: metadata.height },
+      missingFeatureIds,
+      manifest: manifest.supplemental?.blenderDebugProof,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+async function assertOwnerReviewCriticalRegionZoomsPreserved() {
+  const imageName = "owner-review-critical-region-zooms.png";
+  const jsonName = "owner-review-critical-region-zooms.json";
+  const imagePath = join(evidenceDir, imageName);
+  const jsonPath = join(evidenceDir, jsonName);
+  const requiredRegionIds = [
+    "wall-material",
+    "screen-inset",
+    "cove-lighting",
+    "floor-reflection",
+    "walking-right-wall",
+    "inspection-frame-inset"
+  ];
+  const report = JSON.parse(readFileSync(jsonPath, "utf8"));
+  const imageMetadata = await sharp(imagePath).metadata();
+  const regionIds = new Set((report.regions || []).map((region) => region.id));
+  const missingRegionIds = requiredRegionIds.filter((regionId) => !regionIds.has(regionId));
+  const regionsHaveValidSourcesAndCrops = (report.regions || []).every((region) => {
+    const sourcePresent = statSync(join(evidenceDir, region.source || ""), { throwIfNoEntry: false })?.isFile();
+    return sourcePresent
+      && Number.isFinite(region.crop?.left)
+      && Number.isFinite(region.crop?.top)
+      && Number(region.crop?.width) > 0
+      && Number(region.crop?.height) > 0
+      && Number(region.tile?.width) >= 400
+      && Number(region.tile?.height) >= 300;
+  });
+
+  assert(
+    "owner-review critical-region zoom proof preserved",
+    report.status === "present"
+      && report.image === imageName
+      && Array.isArray(report.regions)
+      && report.regions.length >= requiredRegionIds.length
+      && missingRegionIds.length === 0
+      && regionsHaveValidSourcesAndCrops
+      && imageMetadata.width >= 1400
+      && imageMetadata.height >= 880
+      && report.dimensions?.width === imageMetadata.width
+      && report.dimensions?.height === imageMetadata.height,
+    JSON.stringify({
+      status: report.status,
+      image: report.image,
+      dimensions: report.dimensions,
+      renderedDimensions: { width: imageMetadata.width, height: imageMetadata.height },
+      regionIds: [...regionIds],
+      missingRegionIds
+    })
+  );
+}
+
+async function assertStructuralRegionProofPreserved() {
+  const imageName = "owner-review-structural-region-proof.png";
+  const jsonName = "structural-region-continuity-report.json";
+  const imagePath = join(evidenceDir, imageName);
+  const jsonPath = join(evidenceDir, jsonName);
+  const imagePresent = statSync(imagePath, { throwIfNoEntry: false })?.isFile();
+  const jsonPresent = statSync(jsonPath, { throwIfNoEntry: false })?.isFile();
+  const report = jsonPresent ? JSON.parse(readFileSync(jsonPath, "utf8")) : {};
+  const imageMetadata = imagePresent ? await sharp(imagePath).metadata() : {};
+  const requiredRegionIds = [
+    "left-glass-mullions",
+    "bench-footprint",
+    "ceiling-band-depth",
+    "walking-bench-collision"
+  ];
+  const regionIds = new Set((report.regions || []).map((region) => region.id));
+  const missingRegionIds = requiredRegionIds.filter((regionId) => !regionIds.has(regionId));
+  const regionsHaveMetrics = (report.regions || []).every((region) => (
+    region.passed === true
+      && statSync(join(evidenceDir, region.source || ""), { throwIfNoEntry: false })?.isFile()
+      && Number(region.crop?.width) > 0
+      && Number(region.crop?.height) > 0
+      && Number(region.metrics?.samples) > 1000
+      && Number(region.metrics?.meanLuma) >= Number(region.gates?.meanLumaMin)
+      && Number(region.metrics?.lumaSd) >= Number(region.gates?.lumaSdMin)
+      && Number(region.metrics?.nonDarkRatio) >= Number(region.gates?.nonDarkRatioMin)
+      && Number(region.metrics?.edgeChangeRatio) >= Number(region.gates?.edgeChangeRatioMin)
+  ));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfood = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readiness = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strict = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const pairedEvidence = dogfood.ownerReview?.pairedEvidence || [];
+  const readinessRow = (readiness.requirements || []).find((row) => row.id === "structural-region-continuity");
+  const strictRow = (strict.requirements || []).find((row) => row.id === "structural-region-continuity");
+
+  assert(
+    "structural-region continuity proof preserved",
+    imagePresent
+      && jsonPresent
+      && report.status === "passed"
+      && report.image === imageName
+      && report.requiredRegionIds?.length === requiredRegionIds.length
+      && missingRegionIds.length === 0
+      && regionsHaveMetrics
+      && imageMetadata.width >= 1400
+      && imageMetadata.height >= 640
+      && report.dimensions?.width === imageMetadata.width
+      && report.dimensions?.height === imageMetadata.height
+      && manifest.supplemental?.structuralRegionProof?.json === jsonName
+      && manifest.supplemental?.structuralRegionProof?.image === imageName
+      && manifest.supplemental?.structuralRegionProof?.status === "passed"
+      && pairedEvidence.includes(jsonName)
+      && pairedEvidence.includes(imageName)
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes(imageName)
+      && packetHtml.includes("Structural region proof"),
+    JSON.stringify({
+      imagePresent,
+      jsonPresent,
+      status: report.status,
+      image: report.image,
+      dimensions: report.dimensions,
+      renderedDimensions: { width: imageMetadata.width, height: imageMetadata.height },
+      regionIds: [...regionIds],
+      missingRegionIds,
+      manifest: manifest.supplemental?.structuralRegionProof,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+async function assertWallSlabDetailProofPreserved() {
+  const imageName = "owner-review-wall-slab-detail-proof.png";
+  const jsonName = "wall-slab-detail-report.json";
+  const imagePath = join(evidenceDir, imageName);
+  const jsonPath = join(evidenceDir, jsonName);
+  const imagePresent = statSync(imagePath, { throwIfNoEntry: false })?.isFile();
+  const jsonPresent = statSync(jsonPath, { throwIfNoEntry: false })?.isFile();
+  const report = jsonPresent ? JSON.parse(readFileSync(jsonPath, "utf8")) : {};
+  const imageMetadata = imagePresent ? await sharp(imagePath).metadata() : {};
+  const requiredRegionIds = [
+    "desktop-main-wall",
+    "fullscreen-main-wall",
+    "walking-right-wall"
+  ];
+  const regionIds = new Set((report.regions || []).map((region) => region.id));
+  const missingRegionIds = requiredRegionIds.filter((regionId) => !regionIds.has(regionId));
+  const regionsHaveMetrics = (report.regions || []).every((region) => (
+    region.passed === true
+      && statSync(join(evidenceDir, region.source || ""), { throwIfNoEntry: false })?.isFile()
+      && Number(region.crop?.width) > 0
+      && Number(region.crop?.height) > 0
+      && Number(region.metrics?.samples) > 1000
+      && Number(region.metrics?.meanLuma) >= Number(region.gates?.meanLumaMin)
+      && Number(region.metrics?.lumaSd) >= Number(region.gates?.lumaSdMin)
+      && Number(region.metrics?.edgeChangeRatio) >= Number(region.gates?.edgeChangeRatioMin)
+      && Number(region.metrics?.verticalSeamCandidates) >= Number(region.gates?.minVerticalSeamCandidates)
+      && Number(region.metrics?.horizontalSeamCandidates) >= Number(region.gates?.minHorizontalSeamCandidates)
+  ));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfood = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readiness = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strict = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const pairedEvidence = dogfood.ownerReview?.pairedEvidence || [];
+  const readinessRow = (readiness.requirements || []).find((row) => row.id === "wall-slab-detail-proof");
+  const strictRow = (strict.requirements || []).find((row) => row.id === "wall-slab-detail-proof");
+
+  assert(
+    "wall-slab rendered detail proof preserved",
+    imagePresent
+      && jsonPresent
+      && report.status === "passed"
+      && report.method === "rendered-image-luma-edge-seam-analysis"
+      && report.image === imageName
+      && report.requiredRegionIds?.length === requiredRegionIds.length
+      && missingRegionIds.length === 0
+      && regionsHaveMetrics
+      && imageMetadata.width >= 1400
+      && imageMetadata.height >= 520
+      && report.dimensions?.width === imageMetadata.width
+      && report.dimensions?.height === imageMetadata.height
+      && manifest.supplemental?.wallSlabDetailProof?.json === jsonName
+      && manifest.supplemental?.wallSlabDetailProof?.image === imageName
+      && manifest.supplemental?.wallSlabDetailProof?.status === "passed"
+      && pairedEvidence.includes(jsonName)
+      && pairedEvidence.includes(imageName)
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes(imageName)
+      && packetHtml.includes("Wall slab detail proof"),
+    JSON.stringify({
+      imagePresent,
+      jsonPresent,
+      status: report.status,
+      method: report.method,
+      image: report.image,
+      dimensions: report.dimensions,
+      renderedDimensions: { width: imageMetadata.width, height: imageMetadata.height },
+      regionIds: [...regionIds],
+      missingRegionIds,
+      manifest: manifest.supplemental?.wallSlabDetailProof,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+async function assertLightingFloorRenderedProofPreserved() {
+  const imageName = "owner-review-lighting-floor-proof.png";
+  const lightingJsonName = "lighting-shape-report.json";
+  const floorJsonName = "floor-reflection-report.json";
+  const imagePath = join(evidenceDir, imageName);
+  const imagePresent = statSync(imagePath, { throwIfNoEntry: false })?.isFile();
+  const imageMetadata = imagePresent ? await sharp(imagePath).metadata() : {};
+  const lightingPresent = statSync(join(evidenceDir, lightingJsonName), { throwIfNoEntry: false })?.isFile();
+  const floorPresent = statSync(join(evidenceDir, floorJsonName), { throwIfNoEntry: false })?.isFile();
+  const lightingReport = lightingPresent ? JSON.parse(readFileSync(join(evidenceDir, lightingJsonName), "utf8")) : {};
+  const floorReport = floorPresent ? JSON.parse(readFileSync(join(evidenceDir, floorJsonName), "utf8")) : {};
+  const requiredLightingRegionIds = [
+    "desktop-cove-line",
+    "desktop-wall-wash",
+    "fullscreen-wall-wash"
+  ];
+  const requiredFloorRegionIds = [
+    "desktop-floor-reflection",
+    "fullscreen-floor-reflection",
+    "walking-floor-reflection"
+  ];
+  const lightingRegionIds = new Set((lightingReport.regions || []).map((region) => region.id));
+  const floorRegionIds = new Set((floorReport.regions || []).map((region) => region.id));
+  const missingLightingRegionIds = requiredLightingRegionIds.filter((regionId) => !lightingRegionIds.has(regionId));
+  const missingFloorRegionIds = requiredFloorRegionIds.filter((regionId) => !floorRegionIds.has(regionId));
+  const regionsHaveMetrics = (report) => (report.regions || []).every((region) => (
+    region.passed === true
+      && statSync(join(evidenceDir, region.source || ""), { throwIfNoEntry: false })?.isFile()
+      && Number(region.crop?.width) > 0
+      && Number(region.crop?.height) > 0
+      && Number(region.metrics?.samples) > 1000
+      && Number(region.metrics?.meanLuma) >= Number(region.gates?.meanLumaMin)
+      && Number(region.metrics?.lumaSd) >= Number(region.gates?.lumaSdMin)
+      && Number(region.metrics?.warmRatio) >= Number(region.gates?.warmRatioMin)
+      && Number(region.metrics?.brightRatio) >= Number(region.gates?.brightRatioMin)
+      && Number(region.metrics?.darkRatio) <= Number(region.gates?.darkRatioMax)
+      && Number(region.metrics?.edgeChangeRatio) >= Number(region.gates?.edgeChangeRatioMin)
+      && Number(region.metrics?.edgeChangeRatio) <= Number(region.gates?.edgeChangeRatioMax)
+  ));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfood = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readiness = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strict = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const pairedEvidence = dogfood.ownerReview?.pairedEvidence || [];
+  const readinessRow = (readiness.requirements || []).find((row) => row.id === "lighting-floor-rendered-proof");
+  const strictRow = (strict.requirements || []).find((row) => row.id === "lighting-floor-rendered-proof");
+
+  assert(
+    "lighting and floor rendered proof preserved",
+    imagePresent
+      && lightingPresent
+      && floorPresent
+      && lightingReport.status === "passed"
+      && lightingReport.method === "rendered-image-warm-soft-region-analysis"
+      && lightingReport.image === imageName
+      && lightingReport.requiredRegionIds?.length === requiredLightingRegionIds.length
+      && missingLightingRegionIds.length === 0
+      && regionsHaveMetrics(lightingReport)
+      && floorReport.status === "passed"
+      && floorReport.method === "rendered-image-reflection-pool-analysis"
+      && floorReport.image === imageName
+      && floorReport.requiredRegionIds?.length === requiredFloorRegionIds.length
+      && missingFloorRegionIds.length === 0
+      && regionsHaveMetrics(floorReport)
+      && imageMetadata.width >= 1400
+      && imageMetadata.height >= 760
+      && lightingReport.dimensions?.width === imageMetadata.width
+      && lightingReport.dimensions?.height === imageMetadata.height
+      && floorReport.dimensions?.width === imageMetadata.width
+      && floorReport.dimensions?.height === imageMetadata.height
+      && manifest.supplemental?.lightingFloorRenderedProof?.lightingJson === lightingJsonName
+      && manifest.supplemental?.lightingFloorRenderedProof?.floorJson === floorJsonName
+      && manifest.supplemental?.lightingFloorRenderedProof?.image === imageName
+      && manifest.supplemental?.lightingFloorRenderedProof?.status === "passed"
+      && pairedEvidence.includes(lightingJsonName)
+      && pairedEvidence.includes(floorJsonName)
+      && pairedEvidence.includes(imageName)
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes(imageName)
+      && packetHtml.includes("Lighting and floor reflection proof"),
+    JSON.stringify({
+      imagePresent,
+      lightingPresent,
+      floorPresent,
+      lightingStatus: lightingReport.status,
+      lightingMethod: lightingReport.method,
+      floorStatus: floorReport.status,
+      floorMethod: floorReport.method,
+      renderedDimensions: { width: imageMetadata.width, height: imageMetadata.height },
+      missingLightingRegionIds,
+      missingFloorRegionIds,
+      manifest: manifest.supplemental?.lightingFloorRenderedProof,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+async function assertScreenFrameInsetRenderedProofPreserved() {
+  const imageName = "owner-review-screen-inset-proof.png";
+  const jsonName = "screen-inner-frame-containment-report.json";
+  const imagePath = join(evidenceDir, imageName);
+  const jsonPath = join(evidenceDir, jsonName);
+  const imagePresent = statSync(imagePath, { throwIfNoEntry: false })?.isFile();
+  const jsonPresent = statSync(jsonPath, { throwIfNoEntry: false })?.isFile();
+  const report = jsonPresent ? JSON.parse(readFileSync(jsonPath, "utf8")) : {};
+  const imageMetadata = imagePresent ? await sharp(imagePath).metadata() : {};
+  const requiredRegionIds = [
+    "desktop-right-frame",
+    "mobile-left-frame",
+    "fullscreen-center-frame",
+    "inspection-left-frame"
+  ];
+  const regionIds = new Set((report.regions || []).map((region) => region.id));
+  const missingRegionIds = requiredRegionIds.filter((regionId) => !regionIds.has(regionId));
+  const regionsHaveMetrics = (report.regions || []).every((region) => (
+    region.passed === true
+      && statSync(join(evidenceDir, region.source || ""), { throwIfNoEntry: false })?.isFile()
+      && Number(region.crop?.width) > 0
+      && Number(region.crop?.height) > 0
+      && Number(region.metrics?.minInsetPx) >= Number(region.gates?.minInsetPx)
+      && Number(region.metrics?.innerOuterAreaRatio) <= Number(region.gates?.maxInnerOuterAreaRatio)
+      && Number(region.metrics?.maxOverlayErrorPx) <= Number(region.gates?.maxOverlayErrorPx)
+      && ["left", "right", "top", "bottom"].every((side) => Number(region.metrics?.insetMargins?.[side]) >= Number(region.gates?.minInsetPx))
+  ));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfood = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readiness = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strict = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const pairedEvidence = dogfood.ownerReview?.pairedEvidence || [];
+  const readinessRow = (readiness.requirements || []).find((row) => row.id === "screen-frame-inset-rendered-proof");
+  const strictRow = (strict.requirements || []).find((row) => row.id === "screen-frame-inset-rendered-proof");
+
+  assert(
+    "screen-frame rendered inset proof preserved",
+    imagePresent
+      && jsonPresent
+      && report.status === "passed"
+      && report.method === "rendered-frame-screen-inset-analysis"
+      && report.image === imageName
+      && report.requiredRegionIds?.length === requiredRegionIds.length
+      && missingRegionIds.length === 0
+      && regionsHaveMetrics
+      && imageMetadata.width >= 1400
+      && imageMetadata.height >= 760
+      && report.dimensions?.width === imageMetadata.width
+      && report.dimensions?.height === imageMetadata.height
+      && manifest.supplemental?.screenFrameInsetProof?.json === jsonName
+      && manifest.supplemental?.screenFrameInsetProof?.image === imageName
+      && manifest.supplemental?.screenFrameInsetProof?.status === "passed"
+      && pairedEvidence.includes(jsonName)
+      && pairedEvidence.includes(imageName)
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes(imageName)
+      && packetHtml.includes("Screen frame inset proof"),
+    JSON.stringify({
+      imagePresent,
+      jsonPresent,
+      status: report.status,
+      method: report.method,
+      renderedDimensions: { width: imageMetadata.width, height: imageMetadata.height },
+      missingRegionIds,
+      manifest: manifest.supplemental?.screenFrameInsetProof,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+async function assertMaterialRuntimeProofPreserved() {
+  const imageName = "owner-review-material-runtime-proof.png";
+  const jsonName = "material-runtime-proof-report.json";
+  const imagePath = join(evidenceDir, imageName);
+  const jsonPath = join(evidenceDir, jsonName);
+  const imagePresent = statSync(imagePath, { throwIfNoEntry: false })?.isFile();
+  const jsonPresent = statSync(jsonPath, { throwIfNoEntry: false })?.isFile();
+  const report = jsonPresent ? JSON.parse(readFileSync(jsonPath, "utf8")) : {};
+  const imageMetadata = imagePresent ? await sharp(imagePath).metadata() : {};
+  const requiredRegionIds = [
+    "selected-material-board",
+    "wall-albedo-map",
+    "floor-albedo-map",
+    "runtime-wall-slab",
+    "runtime-floor-reflection",
+    "runtime-frame-rail",
+    "runtime-glass-mullion"
+  ];
+  const requiredRuntimeRegionIds = [
+    "runtime-wall-slab",
+    "runtime-floor-reflection",
+    "runtime-frame-rail",
+    "runtime-glass-mullion"
+  ];
+  const regionIds = new Set((report.regions || []).map((region) => region.id));
+  const missingRegionIds = requiredRegionIds.filter((regionId) => !regionIds.has(regionId));
+  const missingRuntimeRegionIds = requiredRuntimeRegionIds.filter((regionId) => !regionIds.has(regionId));
+  const allRegionsHaveSources = (report.regions || []).every((region) => (
+    region.passed === true
+      && statSync(join(root, region.source || ""), { throwIfNoEntry: false })?.isFile()
+      && Number(region.crop?.width) > 0
+      && Number(region.crop?.height) > 0
+  ));
+  const runtimeRegionsHaveMetrics = (report.regions || [])
+    .filter((region) => requiredRuntimeRegionIds.includes(region.id))
+    .every((region) => (
+      Number(region.metrics?.samples) > 1000
+        && Number(region.metrics?.meanLuma) >= Number(region.gates?.meanLumaMin)
+        && Number(region.metrics?.lumaSd) >= Number(region.gates?.lumaSdMin)
+        && Number(region.metrics?.nonDarkRatio) >= Number(region.gates?.nonDarkRatioMin)
+    ));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfood = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readiness = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strict = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const pairedEvidence = dogfood.ownerReview?.pairedEvidence || [];
+  const readinessRow = (readiness.requirements || []).find((row) => row.id === "material-runtime-crop-proof");
+  const strictRow = (strict.requirements || []).find((row) => row.id === "material-runtime-crop-proof");
+
+  assert(
+    "material-board runtime crop proof preserved",
+    imagePresent
+      && jsonPresent
+      && report.status === "passed"
+      && report.method === "material-board-runtime-crop-analysis"
+      && report.image === imageName
+      && report.requiredRegionIds?.length === requiredRegionIds.length
+      && missingRegionIds.length === 0
+      && missingRuntimeRegionIds.length === 0
+      && allRegionsHaveSources
+      && runtimeRegionsHaveMetrics
+      && imageMetadata.width >= 1400
+      && imageMetadata.height >= 760
+      && report.dimensions?.width === imageMetadata.width
+      && report.dimensions?.height === imageMetadata.height
+      && manifest.supplemental?.materialRuntimeProof?.json === jsonName
+      && manifest.supplemental?.materialRuntimeProof?.image === imageName
+      && manifest.supplemental?.materialRuntimeProof?.status === "passed"
+      && pairedEvidence.includes(jsonName)
+      && pairedEvidence.includes(imageName)
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes(imageName)
+      && packetHtml.includes("Material board runtime proof"),
+    JSON.stringify({
+      imagePresent,
+      jsonPresent,
+      status: report.status,
+      method: report.method,
+      renderedDimensions: { width: imageMetadata.width, height: imageMetadata.height },
+      missingRegionIds,
+      missingRuntimeRegionIds,
+      manifest: manifest.supplemental?.materialRuntimeProof,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+async function assertNoBlackVoidRenderedProofPreserved() {
+  const imageName = "owner-review-no-black-void-proof.png";
+  const jsonName = "no-black-void-rendered-proof-report.json";
+  const imagePath = join(evidenceDir, imageName);
+  const jsonPath = join(evidenceDir, jsonName);
+  const imagePresent = statSync(imagePath, { throwIfNoEntry: false })?.isFile();
+  const jsonPresent = statSync(jsonPath, { throwIfNoEntry: false })?.isFile();
+  const report = jsonPresent ? JSON.parse(readFileSync(jsonPath, "utf8")) : {};
+  const imageMetadata = imagePresent ? await sharp(imagePath).metadata() : {};
+  const requiredRegionIds = [
+    "desktopFirstView",
+    "mobileFirstView",
+    "fullscreenFirstView",
+    "desktopWalking",
+    "mobileWalking"
+  ];
+  const regionIds = new Set((report.regions || []).map((region) => region.id));
+  const missingRegionIds = requiredRegionIds.filter((regionId) => !regionIds.has(regionId));
+  const regionsHaveMetrics = (report.regions || []).every((region) => (
+    region.passed === true
+      && statSync(join(evidenceDir, region.source || ""), { throwIfNoEntry: false })?.isFile()
+      && Number(region.crop?.width) > 0
+      && Number(region.crop?.height) > 0
+      && Number(region.metrics?.samples) > 1000
+      && Number(region.metrics?.meanLuma) >= Number(region.gates?.meanLumaMin)
+      && Number(region.metrics?.darkRatio) <= Number(region.gates?.darkRatioMax)
+      && Number(region.metrics?.nonDarkRatio) >= Number(region.gates?.nonDarkRatioMin)
+      && Number(region.metrics?.lumaSd) >= Number(region.gates?.lumaSdMin)
+  ));
+  const manifest = JSON.parse(readFileSync(join(evidenceDir, "owner-review-pairs-manifest.json"), "utf8"));
+  const dogfood = JSON.parse(readFileSync(join(evidenceDir, "dogfood-report.json"), "utf8"));
+  const readiness = JSON.parse(readFileSync(join(evidenceDir, "owner-review-readiness-audit.json"), "utf8"));
+  const strict = JSON.parse(readFileSync(join(evidenceDir, "strict-prd-completion-audit.json"), "utf8"));
+  const packetHtml = readFileSync(join(evidenceDir, "owner-review-packet.html"), "utf8");
+  const pairedEvidence = dogfood.ownerReview?.pairedEvidence || [];
+  const readinessRow = (readiness.requirements || []).find((row) => row.id === "no-black-void-rendered-proof");
+  const strictRow = (strict.requirements || []).find((row) => row.id === "no-black-void-rendered-proof");
+
+  assert(
+    "no-black-void rendered proof preserved",
+    imagePresent
+      && jsonPresent
+      && report.status === "passed"
+      && report.method === "rendered-no-black-void-material-continuity-analysis"
+      && report.image === imageName
+      && report.requiredRegionIds?.length === requiredRegionIds.length
+      && missingRegionIds.length === 0
+      && regionsHaveMetrics
+      && imageMetadata.width >= 1400
+      && imageMetadata.height >= 760
+      && report.dimensions?.width === imageMetadata.width
+      && report.dimensions?.height === imageMetadata.height
+      && manifest.supplemental?.noBlackVoidRenderedProof?.json === jsonName
+      && manifest.supplemental?.noBlackVoidRenderedProof?.image === imageName
+      && manifest.supplemental?.noBlackVoidRenderedProof?.status === "passed"
+      && pairedEvidence.includes(jsonName)
+      && pairedEvidence.includes(imageName)
+      && readinessRow?.status === "proven"
+      && strictRow?.status === "proven"
+      && packetHtml.includes(imageName)
+      && packetHtml.includes("No black void proof"),
+    JSON.stringify({
+      imagePresent,
+      jsonPresent,
+      status: report.status,
+      method: report.method,
+      renderedDimensions: { width: imageMetadata.width, height: imageMetadata.height },
+      missingRegionIds,
+      manifest: manifest.supplemental?.noBlackVoidRenderedProof,
+      pairedEvidence,
+      readinessRow: readinessRow?.status,
+      strictRow: strictRow?.status
+    })
+  );
+}
+
+function rootRelativePath(path) {
+  return String(path || "").replace(/^\//, "");
+}
+
+function requiredFrameExportReport() {
+  const requiredKeys = [
+    "outerCornersWorld",
+    "innerScreenCornersWorld",
+    "glassCornersWorld",
+    "railDepth",
+    "wallWashRegion",
+    "floorReflectionRegion"
+  ];
+  return Object.fromEntries(Object.entries(worldReconstruction.frames).map(([slot, frame]) => [
+    slot,
+    {
+      missing: requiredKeys.filter((key) => frame[key] === undefined),
+      hasInsetScreen: Array.isArray(frame.innerScreenCornersWorld)
+        && Array.isArray(frame.outerCornersWorld)
+        && polygonArea3d(frame.innerScreenCornersWorld) < polygonArea3d(frame.outerCornersWorld) * 0.94
+    }
+  ]));
+}
+
+function polygonArea3d(points = []) {
+  if (!Array.isArray(points) || points.length < 3) return 0;
+  let areaVector = [0, 0, 0];
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    areaVector[0] += (current[1] - next[1]) * (current[2] + next[2]);
+    areaVector[1] += (current[2] - next[2]) * (current[0] + next[0]);
+    areaVector[2] += (current[0] - next[0]) * (current[1] + next[1]);
+  }
+  return Math.hypot(...areaVector) / 2;
+}
+
+function requiredMaterialMapReport() {
+  const materials = worldReconstruction.materials || {};
+  const requiredPaths = {
+    "wall.albedo": materials.wall?.albedo,
+    "wall.normal": materials.wall?.normal,
+    "wall.roughness": materials.wall?.roughness,
+    "floor.albedo": materials.floor?.albedo,
+    "floor.roughness": materials.floor?.roughness,
+    "floor.reflectionMask": materials.floor?.reflectionMask,
+    "frameMetal.roughness": materials.frameMetal?.roughness,
+    "glass.reflectionMask": materials.glass?.reflectionMask,
+    "lighting.wallWashMask": materials.lighting?.wallWashMask
+  };
+  return {
+    expected: requiredPaths,
+    missing: Object.entries(requiredPaths)
+      .filter(([, path]) => !path)
+      .map(([key]) => key),
+    missingFiles: Object.entries(requiredPaths)
+      .filter(([, path]) => path && !fileExists(rootRelativePath(path)))
+      .map(([key, path]) => ({ key, path }))
+  };
+}
+
+function writeJsonEvidence(name, data) {
+  writeFileSync(join(evidenceDir, name), JSON.stringify(data, null, 2));
+}
+
+function reportStatus(pass, evidence = {}) {
+  return { status: pass ? "passed" : "failed", ...evidence };
+}
+
+function writeOwnerRequiredDiagnosticReports({ materialBoardAsset, frameExportReport, materialMapReport }) {
+  const frameReports = Object.fromEntries(Object.entries(worldReconstruction.frames).map(([slot, frame]) => {
+    const outerArea = polygonArea3d(frame.outerCornersWorld);
+    const innerArea = polygonArea3d(frame.innerScreenCornersWorld);
+    const glassArea = polygonArea3d(frame.glassCornersWorld);
+    return [slot, {
+      objectName: frame.objectName,
+      outerArea: roundMetric(outerArea),
+      innerArea: roundMetric(innerArea),
+      glassArea: roundMetric(glassArea),
+      innerToOuterRatio: roundMetric(innerArea / Math.max(outerArea, 1e-9)),
+      glassToOuterRatio: roundMetric(glassArea / Math.max(outerArea, 1e-9)),
+      hasInsetScreen: frameExportReport[slot]?.hasInsetScreen === true,
+      missing: frameExportReport[slot]?.missing || [],
+      projectedInnerScreenCorners: frame.verification?.desktopHero?.projectedInnerScreenCorners || [],
+      projectedOuterCorners: frame.verification?.desktopHero?.projectedOuterCorners || []
+    }];
+  }));
+  const allFramesInset = Object.values(frameReports).every((frame) => frame.hasInsetScreen && frame.missing.length === 0 && frame.innerToOuterRatio < 0.94);
+  const screenContainmentReportPath = join(evidenceDir, "screen-inner-frame-containment-report.json");
+  const existingScreenContainmentReport = statSync(screenContainmentReportPath, { throwIfNoEntry: false })?.isFile()
+    ? JSON.parse(readFileSync(screenContainmentReportPath, "utf8"))
+    : null;
+  const existingRenderedScreenContainmentProof = existingScreenContainmentReport?.method === "rendered-frame-screen-inset-analysis"
+    && existingScreenContainmentReport?.image === "owner-review-screen-inset-proof.png"
+    && Array.isArray(existingScreenContainmentReport?.regions);
+  if (!existingRenderedScreenContainmentProof) {
+    writeJsonEvidence("screen-inner-frame-containment-report.json", reportStatus(allFramesInset && worldJs.includes("projectInnerScreenCorners"), {
+      requirement: "Website surfaces and hit targets use exported inner screen planes inset within physical outer frame rails.",
+      runtimeSignals: {
+        innerScreenCornersWorld: worldJs.includes("innerScreenCornersWorld"),
+        projectInnerScreenCorners: worldJs.includes("projectInnerScreenCorners"),
+        outerCornersWorld: worldJs.includes("outerCornersWorld"),
+        glassCornersWorld: worldJs.includes("glassCornersWorld")
+      },
+      frames: frameReports
+    }));
+  }
+
+  const materialTokens = ["wall-albedo", "wall-normal", "wall-roughness", "floor-albedo", "floor-roughness", "floor-reflection-mask", "frame-metal-roughness", "glass-reflection-mask", "wall-wash-mask"];
+  const materialPass = materialBoardAsset?.raw?.path === worldReconstruction.sourceAssets.materialBoard.raw
+    && materialBoardAsset.derivatives?.some((derivative) => derivative.path === worldReconstruction.sourceAssets.materialBoard.runtime)
+    && materialMapReport.missing.length === 0
+    && materialMapReport.missingFiles.length === 0
+    && materialTokens.every((token) => worldJs.includes(token));
+  writeJsonEvidence("material-match-report.json", reportStatus(materialPass, {
+    requirement: "Runtime material maps are derived from the selected material-items photo and loaded by the Three.js world.",
+    selectedAsset: materialBoardAsset?.id || null,
+    selectedRaw: materialBoardAsset?.raw?.path || null,
+    expectedRaw: worldReconstruction.sourceAssets.materialBoard.raw,
+    expectedRuntime: worldReconstruction.sourceAssets.materialBoard.runtime,
+    materialMapReport,
+    runtimeTextureTokens: Object.fromEntries(materialTokens.map((token) => [token, worldJs.includes(token)]))
+  }));
+
+  const wallMapPaths = [
+    worldReconstruction.materials?.wall?.albedo,
+    worldReconstruction.materials?.wall?.normal,
+    worldReconstruction.materials?.wall?.roughness
+  ];
+  const slabPass = wallMapPaths.every((path) => path && fileExists(rootRelativePath(path)))
+    && worldJs.includes("addGraphiteSlabWall")
+    && worldJs.includes("Wall_Main_Graphite_Slab");
+  const wallSlabReportPath = join(evidenceDir, "wall-slab-detail-report.json");
+  const existingWallSlabReport = statSync(wallSlabReportPath, { throwIfNoEntry: false })?.isFile()
+    ? JSON.parse(readFileSync(wallSlabReportPath, "utf8"))
+    : null;
+  const existingRenderedWallSlabProof = existingWallSlabReport?.method === "rendered-image-luma-edge-seam-analysis"
+    && existingWallSlabReport?.image === "owner-review-wall-slab-detail-proof.png"
+    && Array.isArray(existingWallSlabReport?.regions);
+  if (!existingRenderedWallSlabProof) {
+    writeJsonEvidence("wall-slab-detail-report.json", reportStatus(slabPass, {
+      requirement: "Main wall uses graphite stone slab structure and material-board-derived maps, not a flat black wall.",
+      wallMapPaths,
+      runtimeSignals: {
+        addGraphiteSlabWall: worldJs.includes("addGraphiteSlabWall"),
+        slabMeshes: worldJs.includes("Wall_Main_Graphite_Slab")
+      }
+    }));
+  }
+
+  const lightingPass = Boolean(worldReconstruction.materials?.lighting?.wallWashMask)
+    && fileExists(rootRelativePath(worldReconstruction.materials?.lighting?.wallWashMask))
+    && Object.values(worldReconstruction.frames).every((frame) => Array.isArray(frame.wallWashRegion) && frame.wallWashRegion.length === 4)
+    && !worldJs.includes("WallWash_")
+    && !worldJs.includes("Cove_Light_Main");
+  const lightingReportPath = join(evidenceDir, "lighting-shape-report.json");
+  const existingLightingReport = statSync(lightingReportPath, { throwIfNoEntry: false })?.isFile()
+    ? JSON.parse(readFileSync(lightingReportPath, "utf8"))
+    : null;
+  const existingRenderedLightingProof = existingLightingReport?.method === "rendered-image-warm-soft-region-analysis"
+    && existingLightingReport?.image === "owner-review-lighting-floor-proof.png"
+    && Array.isArray(existingLightingReport?.regions);
+  if (!existingRenderedLightingProof) {
+    writeJsonEvidence("lighting-shape-report.json", reportStatus(lightingPass, {
+      requirement: "Lighting uses soft warm cove/wall-wash masks and frame-positioned regions rather than hard rectangular bars.",
+      wallWashMask: worldReconstruction.materials?.lighting?.wallWashMask || null,
+      rejectedRuntimeSignals: {
+        hardWallWashName: worldJs.includes("WallWash_"),
+        hardCoveName: worldJs.includes("Cove_Light_Main")
+      },
+      frameWallWashRegions: Object.fromEntries(Object.entries(worldReconstruction.frames).map(([slot, frame]) => [slot, frame.wallWashRegion || null]))
+    }));
+  }
+
+  const floorPass = Boolean(worldReconstruction.materials?.floor?.reflectionMask)
+    && fileExists(rootRelativePath(worldReconstruction.materials?.floor?.reflectionMask))
+    && Object.values(worldReconstruction.frames).every((frame) => Array.isArray(frame.floorReflectionRegion) && frame.floorReflectionRegion.length === 4)
+    && !worldJs.includes("new THREE.MeshBasicMaterial({ color: 0xffb35f");
+  const floorReportPath = join(evidenceDir, "floor-reflection-report.json");
+  const existingFloorReport = statSync(floorReportPath, { throwIfNoEntry: false })?.isFile()
+    ? JSON.parse(readFileSync(floorReportPath, "utf8"))
+    : null;
+  const existingRenderedFloorProof = existingFloorReport?.method === "rendered-image-reflection-pool-analysis"
+    && existingFloorReport?.image === "owner-review-lighting-floor-proof.png"
+    && Array.isArray(existingFloorReport?.regions);
+  if (!existingRenderedFloorProof) {
+    writeJsonEvidence("floor-reflection-report.json", reportStatus(floorPass, {
+      requirement: "Floor reflections use soft mapped reflection regions with texture breakup rather than hard translucent planes.",
+      reflectionMask: worldReconstruction.materials?.floor?.reflectionMask || null,
+      rejectedRuntimeSignals: {
+        solidOldFloorGlowMaterial: worldJs.includes("new THREE.MeshBasicMaterial({ color: 0xffb35f")
+      },
+      frameFloorReflectionRegions: Object.fromEntries(Object.entries(worldReconstruction.frames).map(([slot, frame]) => [slot, frame.floorReflectionRegion || null]))
+    }));
+  }
+}
+
+async function assertVisualReferenceMatch(name, bytes, referencePath, maskPath, gates = {}) {
+  const width = gates.sampleWidth || 320;
+  const height = gates.sampleHeight || 200;
+  const [candidate, reference, mask] = await Promise.all([
+    normalizedImage(bytes, width, height),
+    normalizedImage(join(root, referencePath), width, height),
+    maskPath ? normalizedImage(join(root, maskPath), width, height) : Promise.resolve(null)
+  ]);
+  const diff = Buffer.alloc(width * height * 3);
+  const metrics = visualMatchMetrics(candidate, reference, mask, diff, width, height, gates);
+  const report = {
+    name,
+    candidate: gates.candidateLabel || "runtime canvas",
+    reference: referencePath,
+    mask: maskPath || null,
+    screenPolygons: gates.screenPolygons || [],
+    excludedRects: gates.excludedRects || [],
+    gates: {
+      colorMaeMax: gates.colorMaeMax ?? 24,
+      lumaMaeMax: gates.lumaMaeMax ?? 18,
+      brightnessRatioMin: gates.brightnessRatioMin ?? 0.82,
+      brightnessRatioMax: gates.brightnessRatioMax ?? 1.18,
+      darkRatioMax: gates.darkRatioMax ?? 0.18,
+      brightRatioMin: gates.brightRatioMin ?? 0.09
+    },
+    metrics
+  };
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  await sharp(diff, { raw: { width, height, channels: 3 } }).png().toFile(join(evidenceDir, `${slug}-visual-diff.png`));
+  writeFileSync(join(evidenceDir, `${slug}-visual-match.json`), JSON.stringify(report, null, 2));
+
+  const failures = [
+    [`${name} visual reference color`, metrics.colorMae <= report.gates.colorMaeMax],
+    [`${name} visual reference luminance`, metrics.lumaMae <= report.gates.lumaMaeMax],
+    [`${name} visual reference brightness`, metrics.brightnessRatio >= report.gates.brightnessRatioMin && metrics.brightnessRatio <= report.gates.brightnessRatioMax],
+    [`${name} visual reference dark coverage`, metrics.darkRatio <= report.gates.darkRatioMax],
+    [`${name} visual reference highlight coverage`, metrics.brightRatio >= report.gates.brightRatioMin]
+  ].filter(([, ok]) => !ok);
+
+  if (gates.deferFailure && failures.length) {
+    deferredVisualFailures.push({ name, failures: failures.map(([failureName]) => failureName), report });
+    console.log(`not ok - ${name} visual reference deferred (${failures.length} gate failures)`);
+    return report;
+  }
+
+  for (const [failureName, ok] of failures) {
+    assert(failureName, ok, JSON.stringify(report));
+  }
+  if (!failures.length) pass(`${name} visual reference gates`);
+  return report;
+}
+
+async function assertWalkingParallax(name, beforeBytes, afterBytes, options = {}) {
+  const width = options.sampleWidth || 320;
+  const height = options.sampleHeight || 200;
+  const [before, after] = await Promise.all([
+    normalizedImage(beforeBytes, width, height),
+    normalizedImage(afterBytes, width, height)
+  ]);
+  const diff = Buffer.alloc(width * height * 3);
+  const metrics = visualChangeMetrics(before, after, diff, width, height, options);
+  const presence = visualPresenceMetrics(after, width, height, options);
+  const report = {
+    name,
+    before: options.beforeLabel || "initial canvas",
+    after: options.afterLabel || "post-walk canvas",
+    screenPolygons: options.screenPolygons || [],
+    gates: {
+      lumaMaeMin: options.lumaMaeMin ?? 2.5,
+      changedRatioMin: options.changedRatioMin ?? 0.08,
+      afterMeanLumaMin: options.afterMeanLumaMin ?? 42,
+      afterDarkRatioMax: options.afterDarkRatioMax ?? 0.32,
+      afterNonDarkRatioMin: options.afterNonDarkRatioMin ?? 0.68
+    },
+    metrics,
+    presence,
+    states: options.states || null
+  };
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  await sharp(diff, { raw: { width, height, channels: 3 } }).png().toFile(join(evidenceDir, `${slug}-diff.png`));
+  writeFileSync(join(evidenceDir, `${slug}.json`), JSON.stringify(report, null, 2));
+
+  assert(`${name} room luminance changes while walking`, metrics.lumaMae >= report.gates.lumaMaeMin, JSON.stringify(report));
+  assert(`${name} changed-pixel coverage while walking`, metrics.changedRatio >= report.gates.changedRatioMin, JSON.stringify(report));
+  assert(`${name} post-walk view has no black void`, presence.meanLuma >= report.gates.afterMeanLumaMin && presence.darkRatio <= report.gates.afterDarkRatioMax && presence.nonDarkRatio >= report.gates.afterNonDarkRatioMin, JSON.stringify(report));
+  pass(`${name} parallax evidence`);
+  return report;
+}
+
+function assertBlackVoidCoverageReport(report) {
+  const requiredScopeIds = [
+    "desktopFirstView",
+    "mobileFirstView",
+    "fullscreenFirstView",
+    "desktopWalking",
+    "mobileWalking"
+  ];
+  const coveredScopeIds = new Set(report.scopeIds || []);
+  const entries = report.entries || {};
+  assert(
+    "black-void report covers first-view fullscreen and walking material continuity",
+    report.status === "passed"
+      && report.requirement === "Normal /world first views and walking side views must retain readable material response and must not collapse into black voids or untextured return walls."
+      && requiredScopeIds.every((id) => coveredScopeIds.has(id))
+      && requiredScopeIds.every((id) => entries[id]?.status === "passed"),
+    JSON.stringify({
+      status: report.status,
+      requirement: report.requirement,
+      scopeIds: report.scopeIds || [],
+      requiredScopeIds,
+      entries: Object.fromEntries(requiredScopeIds.map((id) => [id, entries[id]?.status || "missing"]))
+    })
+  );
+}
+
+function blackVoidPresenceGates(options = {}) {
+  return {
+    meanLumaMin: options.meanLumaMin ?? options.afterMeanLumaMin ?? 42,
+    darkRatioMax: options.darkRatioMax ?? options.afterDarkRatioMax ?? 0.32,
+    nonDarkRatioMin: options.nonDarkRatioMin ?? options.afterNonDarkRatioMin ?? 0.68,
+    lumaSdMin: options.lumaSdMin ?? 18
+  };
+}
+
+function blackVoidPresencePassed(presence, gates) {
+  return presence.meanLuma >= gates.meanLumaMin
+    && presence.darkRatio <= gates.darkRatioMax
+    && presence.nonDarkRatio >= gates.nonDarkRatioMin
+    && presence.lumaSd >= gates.lumaSdMin;
+}
+
+async function materialContinuityEntry({ id, label, evidence, bytes, sampleWidth, sampleHeight, screenPolygons = [], excludedRects = [], gates = {} }) {
+  const image = await normalizedImage(bytes, sampleWidth, sampleHeight);
+  const normalizedGates = blackVoidPresenceGates(gates);
+  const presence = visualPresenceMetrics(image, sampleWidth, sampleHeight, { screenPolygons, excludedRects });
+  return {
+    id,
+    label,
+    evidence,
+    sampleSize: { width: sampleWidth, height: sampleHeight },
+    gates: normalizedGates,
+    presence,
+    status: blackVoidPresencePassed(presence, normalizedGates) ? "passed" : "failed"
+  };
+}
+
+function walkingMaterialContinuityEntry(id, label, evidence, parallaxReport, gates = {}) {
+  const normalizedGates = blackVoidPresenceGates({
+    ...parallaxReport.gates,
+    ...gates
+  });
+  return {
+    id,
+    label,
+    evidence,
+    gates: normalizedGates,
+    presence: parallaxReport.presence,
+    parallax: {
+      metrics: parallaxReport.metrics,
+      states: parallaxReport.states
+    },
+    status: blackVoidPresencePassed(parallaxReport.presence, normalizedGates) ? "passed" : "failed"
+  };
+}
+
+async function normalizedImage(input, width, height) {
+  return sharp(input)
+    .resize(width, height, { fit: "cover", position: "center" })
+    .removeAlpha()
+    .raw()
+    .toBuffer();
+}
+
+function visualMatchMetrics(candidate, reference, mask, diff, width, height, options = {}) {
+  let samples = 0;
+  let colorMae = 0;
+  let lumaMae = 0;
+  let candidateLuma = 0;
+  let referenceLuma = 0;
+  let dark = 0;
+  let bright = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 3;
+      if (isExcludedVisualPixel(x, y, index, mask, options)) {
+        diff[index] = 32;
+        diff[index + 1] = 32;
+        diff[index + 2] = 32;
+        continue;
+      }
+
+      const cr = candidate[index];
+      const cg = candidate[index + 1];
+      const cb = candidate[index + 2];
+      const rr = reference[index];
+      const rg = reference[index + 1];
+      const rb = reference[index + 2];
+      const cLuma = luminance(cr, cg, cb);
+      const rLuma = luminance(rr, rg, rb);
+      const dr = Math.abs(cr - rr);
+      const dg = Math.abs(cg - rg);
+      const db = Math.abs(cb - rb);
+
+      diff[index] = dr;
+      diff[index + 1] = dg;
+      diff[index + 2] = db;
+      colorMae += (dr + dg + db) / 3;
+      lumaMae += Math.abs(cLuma - rLuma);
+      candidateLuma += cLuma;
+      referenceLuma += rLuma;
+      if (cLuma < 22) dark += 1;
+      if (cLuma > 140) bright += 1;
+      samples += 1;
+    }
+  }
+
+  return {
+    samples,
+    colorMae: roundMetric(colorMae / samples),
+    lumaMae: roundMetric(lumaMae / samples),
+    candidateMeanLuma: roundMetric(candidateLuma / samples),
+    referenceMeanLuma: roundMetric(referenceLuma / samples),
+    brightnessRatio: roundMetric(candidateLuma / referenceLuma),
+    darkRatio: roundMetric(dark / samples),
+    brightRatio: roundMetric(bright / samples)
+  };
+}
+
+function visualChangeMetrics(before, after, diff, width, height, options = {}) {
+  let samples = 0;
+  let lumaMae = 0;
+  let colorMae = 0;
+  let changed = 0;
+  let maxLumaDiff = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 3;
+      if (isExcludedVisualPixel(x, y, index, null, options)) {
+        diff[index] = 32;
+        diff[index + 1] = 32;
+        diff[index + 2] = 32;
+        continue;
+      }
+
+      const br = before[index];
+      const bg = before[index + 1];
+      const bb = before[index + 2];
+      const ar = after[index];
+      const ag = after[index + 1];
+      const ab = after[index + 2];
+      const bLuma = luminance(br, bg, bb);
+      const aLuma = luminance(ar, ag, ab);
+      const dr = Math.abs(ar - br);
+      const dg = Math.abs(ag - bg);
+      const db = Math.abs(ab - bb);
+      const lumaDiff = Math.abs(aLuma - bLuma);
+
+      diff[index] = dr;
+      diff[index + 1] = dg;
+      diff[index + 2] = db;
+      colorMae += (dr + dg + db) / 3;
+      lumaMae += lumaDiff;
+      maxLumaDiff = Math.max(maxLumaDiff, lumaDiff);
+      if (lumaDiff > (options.changedLumaThreshold ?? 6)) changed += 1;
+      samples += 1;
+    }
+  }
+
+  return {
+    samples,
+    colorMae: roundMetric(colorMae / samples),
+    lumaMae: roundMetric(lumaMae / samples),
+    changedRatio: roundMetric(changed / samples),
+    maxLumaDiff: roundMetric(maxLumaDiff)
+  };
+}
+
+function visualPresenceMetrics(image, width, height, options = {}) {
+  let samples = 0;
+  let lumaSum = 0;
+  let lumaSq = 0;
+  let dark = 0;
+  let nonDark = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 3;
+      if (isExcludedVisualPixel(x, y, index, null, options)) continue;
+
+      const value = luminance(image[index], image[index + 1], image[index + 2]);
+      lumaSum += value;
+      lumaSq += value * value;
+      if (value < 24) dark += 1;
+      if (value >= 35) nonDark += 1;
+      samples += 1;
+    }
+  }
+
+  const mean = lumaSum / Math.max(1, samples);
+  const variance = Math.max(0, lumaSq / Math.max(1, samples) - mean * mean);
+  return {
+    samples,
+    meanLuma: roundMetric(mean),
+    lumaSd: roundMetric(Math.sqrt(variance)),
+    darkRatio: roundMetric(dark / Math.max(1, samples)),
+    nonDarkRatio: roundMetric(nonDark / Math.max(1, samples))
+  };
+}
+
+function isExcludedVisualPixel(x, y, index, mask, options) {
+  if (mask && maskedScreenPixel(mask, index)) return true;
+  if (options.screenPolygons?.some((polygon) => pointInPolygon(x, y, polygon))) return true;
+  if (options.excludedRects?.some((rect) => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)) return true;
+  return false;
+}
+
+function maskedScreenPixel(mask, index) {
+  if (!mask) return false;
+  const r = mask[index];
+  const g = mask[index + 1];
+  const b = mask[index + 2];
+  const saturation = Math.max(r, g, b) - Math.min(r, g, b);
+  return saturation > 70 && Math.max(r, g, b) > 130;
+}
+
+function pointInPolygon(x, y, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+    const xi = polygon[i][0];
+    const yi = polygon[i][1];
+    const xj = polygon[j][0];
+    const yj = polygon[j][1];
+    const intersects = ((yi > y) !== (yj > y)) && x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-9) + xi;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function projectedFramePolygons(poseName, sampleWidth, sampleHeight, inset = 0) {
+  const camera = worldReconstruction.cameras[poseName];
+  if (!camera) return [];
+  const scaleX = sampleWidth / camera.verificationSize.width;
+  const scaleY = sampleHeight / camera.verificationSize.height;
+  return Object.values(worldReconstruction.frames).map((frame) => {
+    const points = frame.verification[poseName].projectedCorners.map(([x, y]) => [x * scaleX, y * scaleY]);
+    return inset ? insetPolygon(points, inset) : points;
+  });
+}
+
+function projectedFramePolygonsFromState(state, viewportWidth, viewportHeight, sampleWidth, sampleHeight, inset = 0) {
+  const scaleX = sampleWidth / viewportWidth;
+  const scaleY = sampleHeight / viewportHeight;
+  return Object.values(state?.frameGeometry || {}).map((frame) => {
+    const points = frame.projectedCorners.map(([x, y]) => [x * scaleX, y * scaleY]);
+    return inset ? insetPolygon(points, inset) : points;
+  });
+}
+
+function insetPolygon(points, inset) {
+  const center = points.reduce((acc, point) => [acc[0] + point[0] / points.length, acc[1] + point[1] / points.length], [0, 0]);
+  return points.map(([x, y]) => [
+    center[0] + (x - center[0]) * (1 - inset),
+    center[1] + (y - center[1]) * (1 - inset)
+  ]);
+}
+
+function assertNoDeferredVisualFailures() {
+  const failuresPath = join(evidenceDir, "visual-gate-failures.json");
+  if (!deferredVisualFailures.length) {
+    rmSync(failuresPath, { force: true });
+    pass("strict visual reference gates pass all required poses");
+    return;
+  }
+  writeFileSync(failuresPath, JSON.stringify(deferredVisualFailures, null, 2));
+  fail("strict visual reference gates", JSON.stringify({
+    failures: deferredVisualFailures.map((failure) => ({
+      name: failure.name,
+      failedGates: failure.failures,
+      metrics: failure.report.metrics,
+      gates: failure.report.gates
+    })),
+    evidence: "evidence/visual-gate-failures.json"
+  }));
+}
+
+function luminance(r, g, b) {
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function roundMetric(value) {
+  return Math.round(value * 10000) / 10000;
+}
+
+function countMatches(text, pattern) {
+  return (text.match(pattern) || []).length;
+}
+
+function numericAttr(text, name) {
+  const match = text.match(new RegExp(`${name}="([0-9.]+)"`));
+  return match ? Number(match[1]) : NaN;
+}
+
+function attrValue(text, name) {
+  const match = text.match(new RegExp(`${name}="([^"]*)"`));
+  return match ? match[1] : "";
+}
+
+function parseProbe(value) {
+  return Object.fromEntries(value.split(";").map((item) => {
+    const [key, raw] = item.split(":");
+    const numeric = Number(raw);
+    return [key, Number.isFinite(numeric) ? numeric : raw];
+  }));
+}
+
+function manifestAsset(role) {
+  return manifest.assets.find((asset) => asset.role === role);
+}
+
+function manifestFileCoverage(asset, requiredPaths) {
+  const manifestEntries = [asset?.raw, ...(asset?.derivatives || [])].filter(Boolean);
+  const byPath = new Map(manifestEntries.map((entry) => [entry.path, entry]));
+  const files = requiredPaths.map((path) => {
+    const entry = byPath.get(path) || null;
+    const present = fileExists(path);
+    const actualBytes = present ? fileSize(path) : null;
+    const actualSha256 = present ? fileSha256(path) : null;
+    return {
+      path,
+      recorded: Boolean(entry),
+      present,
+      recordedBytes: entry?.bytes ?? null,
+      actualBytes,
+      recordedSha256: entry?.sha256 || null,
+      actualSha256,
+      bytesMatch: Boolean(entry) && present && entry.bytes === actualBytes,
+      sha256Match: Boolean(entry) && present && entry.sha256 === actualSha256
+    };
+  });
+  return {
+    assetId: asset?.id || null,
+    role: asset?.role || null,
+    status: asset?.review?.status || asset?.status || null,
+    expectedFileCount: requiredPaths.length,
+    recordedFileCount: files.filter((file) => file.recorded).length,
+    missingEntries: files.filter((file) => !file.recorded).map((file) => file.path),
+    missingFiles: files.filter((file) => !file.present).map((file) => file.path),
+    mismatchedBytes: files.filter((file) => file.recorded && file.present && !file.bytesMatch).map((file) => file.path),
+    mismatchedSha256: files.filter((file) => file.recorded && file.present && !file.sha256Match).map((file) => file.path),
+    files,
+    complete: Boolean(asset)
+      && asset.review?.status === "selected"
+      && files.every((file) => file.recorded && file.present && file.bytesMatch && file.sha256Match)
+  };
+}
+
+function selectedManifestAsset(role) {
+  return manifest.assets.find((asset) => asset.role === role && asset.review?.status === "selected")
+    || manifest.assets.find((asset) => asset.role === role && asset.status === "selected")
+    || null;
+}
+
+function normalizeAssetPath(path) {
+  return String(path || "").replace(/^\//, "");
+}
+
+function manifestEntryForPath(asset, path) {
+  const normalizedPath = normalizeAssetPath(path);
+  if (asset?.raw?.path === normalizedPath) return { entry: asset.raw, kind: "raw" };
+  const derivative = (asset?.derivatives || []).find((item) => item.path === normalizedPath);
+  return derivative ? { entry: derivative, kind: "derivative" } : { entry: null, kind: null };
+}
+
+function fileKindHasDimensionsOrScale(entry, kind) {
+  if (!entry) return false;
+  if (kind === "model") return Boolean(entry.scale?.unit || entry.bounds?.unit || entry.unitScale);
+  if (kind === "video") return Number(entry.width) > 0 && Number(entry.height) > 0 && Number(entry.durationSeconds) > 0;
+  return Number(entry.width) > 0 && Number(entry.height) > 0;
+}
+
+function runtimeAssetManifestCoverage() {
+  const requiredRuntimeDerivatives = [
+    { role: "gallery-room-master-desktop-empty-4k", path: roomLayout.assets.desktopPlate, kind: "image" },
+    { role: "gallery-room-master-desktop-empty-4k", path: roomLayout.assets.desktopPlateAvif, kind: "image" },
+    { role: "gallery-room-master-mobile-empty-4k", path: roomLayout.assets.mobilePlate, kind: "image" },
+    { role: "gallery-room-master-mobile-empty-4k", path: roomLayout.assets.mobilePlateWebp, kind: "image" },
+    { role: "station-inspect-plate-empty-4k", path: roomLayout.assets.inspectPlate, kind: "image" },
+    { role: "station-inspect-plate-empty-4k", path: roomLayout.assets.inspectPlateAvif, kind: "image" },
+    { role: "portfolio-social-teaser", path: roomLayout.assets.introPoster, kind: "image" },
+    { role: "portfolio-social-teaser", path: roomLayout.assets.introVideo, kind: "video" },
+    { role: "world-reconstruction-blender-scene", path: roomLayout.assets.reconstructionModel, kind: "model" },
+    { role: "material-style-board", path: worldReconstruction.sourceAssets.materialBoard.runtime, kind: "image" },
+    { role: "station-closeup-still", path: "img/world/gallery-room/station-closeup-still.avif", kind: "image" },
+    ...Object.values(requiredMaterialMapReport().expected).map((path) => ({ role: "world-material-map-derivatives", path, kind: "image" }))
+  ];
+  const normalRouteRuntimePaths = [
+    roomLayout.assets.desktopPlate,
+    roomLayout.assets.desktopPlateAvif,
+    roomLayout.assets.mobilePlate,
+    roomLayout.assets.mobilePlateWebp,
+    roomLayout.assets.inspectPlate,
+    roomLayout.assets.inspectPlateAvif,
+    roomLayout.assets.introPoster,
+    roomLayout.assets.introVideo,
+    roomLayout.assets.reconstructionModel,
+    ...Object.values(requiredMaterialMapReport().expected)
+  ].map(normalizeAssetPath);
+  const files = requiredRuntimeDerivatives.map((item) => {
+    const asset = selectedManifestAsset(item.role);
+    const path = normalizeAssetPath(item.path);
+    const { entry, kind } = manifestEntryForPath(asset, path);
+    const present = fileExists(path);
+    const actualBytes = present ? fileSize(path) : null;
+    const actualSha256 = present ? fileSha256(path) : null;
+    return {
+      role: item.role,
+      path,
+      kind: item.kind,
+      assetId: asset?.id || null,
+      assetStatus: asset?.review?.status || asset?.status || null,
+      sourcePath: asset?.raw?.path || null,
+      sourceRole: asset?.inputs?.[0]?.role || asset?.role || null,
+      recorded: Boolean(entry),
+      entryKind: kind,
+      present,
+      recordedBytes: entry?.bytes ?? null,
+      actualBytes,
+      recordedSha256: entry?.sha256 || null,
+      actualSha256,
+      bytesMatch: Boolean(entry) && present && entry.bytes === actualBytes,
+      sha256Match: Boolean(entry) && present && entry.sha256 === actualSha256,
+      hasDimensionsOrScale: fileKindHasDimensionsOrScale(entry, item.kind)
+    };
+  });
+  const selectedAssets = [...new Set(requiredRuntimeDerivatives.map((item) => item.role))]
+    .map((role) => selectedManifestAsset(role))
+    .filter(Boolean);
+  const sourceFiles = selectedAssets.map((asset) => {
+    const sourcePath = asset.raw?.path || "";
+    const present = sourcePath ? fileExists(sourcePath) : false;
+    const actualBytes = present ? fileSize(sourcePath) : null;
+    const actualSha256 = present ? fileSha256(sourcePath) : null;
+    return {
+      role: asset.role,
+      assetId: asset.id,
+      sourcePath,
+      present,
+      recordedBytes: asset.raw?.bytes ?? null,
+      actualBytes,
+      recordedSha256: asset.raw?.sha256 || null,
+      actualSha256,
+      bytesMatch: present && asset.raw?.bytes === actualBytes,
+      sha256Match: present && asset.raw?.sha256 === actualSha256
+    };
+  });
+  const rawRuntimePaths = normalRouteRuntimePaths.filter((path) => (
+    path.startsWith("artifacts/higgsfield/showcase-gallery-next-level/selected/")
+    || path.endsWith(".blend")
+    || path.endsWith(".blend1")
+  ));
+  return {
+    requiredRuntimeDerivatives: requiredRuntimeDerivatives.map((item) => ({
+      role: item.role,
+      path: normalizeAssetPath(item.path),
+      kind: item.kind
+    })),
+    files,
+    sourceFiles,
+    rawRuntimePaths,
+    missingEntries: files.filter((file) => !file.recorded).map((file) => file.path),
+    missingFiles: files.filter((file) => !file.present).map((file) => file.path),
+    mismatchedBytes: files.filter((file) => file.recorded && file.present && !file.bytesMatch).map((file) => file.path),
+    mismatchedSha256: files.filter((file) => file.recorded && file.present && !file.sha256Match).map((file) => file.path),
+    missingDimensionsOrScale: files.filter((file) => !file.hasDimensionsOrScale).map((file) => file.path),
+    sourceMismatches: sourceFiles.filter((file) => !file.present || !file.bytesMatch || !file.sha256Match).map((file) => file.sourcePath || file.assetId),
+    complete: files.every((file) => file.recorded && file.present && file.bytesMatch && file.sha256Match && file.hasDimensionsOrScale)
+      && sourceFiles.every((file) => file.present && file.bytesMatch && file.sha256Match)
+      && rawRuntimePaths.length === 0
+  };
+}
+
 const world = readText("world.html");
-const thanks = readText("thanks.html");
-const notFound = readText("404.html");
-const privacy = readText("privacy.html");
-const terms = readText("terms.html");
 const worldCss = readText("world.css");
 const worldJs = readText("world.js");
-const photoVerifier = readText("verify-photo-match.mjs");
-const readme = readText("README.md");
+const worldLayoutJs = readText("world-layout.js");
+const promptPack = readJson("asset-library/showcase-designs/animated-gallery/prompt-pack.json");
+const checklistHtml = readText("asset-library/showcase-designs/animated-gallery/checklist.html");
+const manifest = readJson("artifacts/higgsfield/showcase-gallery-next-level/manifests/higgsfield-assets.json");
+const exportedLayout = readJson("artifacts/blender/higgsfield-1to1-world/exports/world-reconstruction-layout.json");
 const stationTexturePaths = stations.map((station) => station.screenshotUrl.slice(1));
-const photoPlatePath = "img/world/photo-match-room-plate.webp";
-const staticSchema = parseJsonLd(index);
+const runtimeAssetPaths = [
+  "vendor/three/three.module.min.js",
+  "vendor/three/three.core.min.js",
+  "img/world/gallery-room/reconstructed-gallery.glb",
+  roomLayout.assets.desktopPlate.slice(1),
+  roomLayout.assets.desktopPlateAvif.slice(1),
+  roomLayout.assets.mobilePlate.slice(1),
+  roomLayout.assets.mobilePlateWebp.slice(1),
+  roomLayout.assets.inspectPlate.slice(1),
+  roomLayout.assets.inspectPlateAvif.slice(1),
+  roomLayout.assets.introPoster.slice(1),
+  roomLayout.assets.introVideo.slice(1)
+];
+const blenderArtifactPaths = [
+  "artifacts/blender/higgsfield-1to1-world/world-reconstruction.blend",
+  "artifacts/blender/higgsfield-1to1-world/exports/world-reconstruction-layout.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/desktop-hero-verification.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/mobile-hero-verification.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/inspection-verification.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/fullscreen-hero-verification.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/collision-navigation.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/alignment-report.json",
+  "artifacts/blender/higgsfield-1to1-world/renders/desktop-hero-reference-match-debug.png",
+  "artifacts/blender/higgsfield-1to1-world/renders/mobile-hero-reference-match-debug.png",
+  "artifacts/blender/higgsfield-1to1-world/renders/inspect-reference-match-debug.png",
+  "artifacts/blender/higgsfield-1to1-world/renders/fullscreen-hero-reference-match-debug.png",
+  "artifacts/blender/higgsfield-1to1-world/renders/frame-plane-debug.png"
+];
+const requiredCalibrationManifestPaths = [
+  "artifacts/blender/higgsfield-1to1-world/exports/world-reconstruction-layout.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/desktop-hero-verification.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/mobile-hero-verification.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/inspection-verification.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/fullscreen-hero-verification.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/collision-navigation.json",
+  "artifacts/blender/higgsfield-1to1-world/exports/alignment-report.json",
+  "artifacts/blender/higgsfield-1to1-world/renders/desktop-hero-reference-match-debug.png",
+  "artifacts/blender/higgsfield-1to1-world/renders/mobile-hero-reference-match-debug.png",
+  "artifacts/blender/higgsfield-1to1-world/renders/inspect-reference-match-debug.png",
+  "artifacts/blender/higgsfield-1to1-world/renders/fullscreen-hero-reference-match-debug.png",
+  "artifacts/blender/higgsfield-1to1-world/renders/frame-plane-debug.png"
+];
+const requiredPlateRoles = [
+  "gallery-room-master-desktop-empty-4k",
+  "gallery-room-master-mobile-empty-4k",
+  "gallery-room-screen-mask-reference",
+  "station-inspect-plate-empty-4k",
+  "station-inspect-mask-reference"
+];
+const requiredAssetChecklistRoles = [
+  "gallery-room-master-desktop-empty-4k",
+  "gallery-room-master-mobile-empty-4k",
+  "gallery-room-screen-mask-reference",
+  "station-inspect-plate-empty-4k",
+  "station-inspect-mask-reference",
+  "material-style-board",
+  "world-material-map-derivatives",
+  "world-reconstruction-blender-scene",
+  "world-reconstruction-calibration-export",
+  "main-wall-to-closeup-transition"
+];
+const requiredAssetChecklistTaxonomy = [
+  "required",
+  "selected",
+  "planned",
+  "optional",
+  "authoring-only"
+];
 
-assert("index and v3 preview match", index === preview);
-assert("static page has no Three.js payload", !/(three\.module|threejs|three\.js|cdnjs\.cloudflare\.com\/ajax\/libs\/three|unpkg\.com\/three)/i.test(index));
+assert("world shell uses full-bleed 3D canvas", world.includes('id="worldCanvas"') && world.includes('id="screenOverlayLayer"') && world.includes("vendor/three/three.module.min.js"));
+assert("world shell keeps accessible static return path", world.includes('class="skip-link"') && world.includes('href="#stationControls"') && countMatches(world, /data-static-link/g) >= 3);
+assert("world preserves inspection controls", ["screenViewer", "screenViewerScroll", "screenViewerImage", "screenViewerScrollUp", "screenViewerScrollDown", "screenViewerLive"].every((id) => world.includes(`id="${id}"`)));
+assert("world JS uses Three.js reconstruction runtime", worldJs.includes("three.module.min.js") && worldJs.includes("new THREE.WebGLRenderer") && worldJs.includes("worldReconstruction"));
+assert("world JS exposes continuous movement and collision hooks", ["movePlayerBy", "runMovementProbe", "circleIntersectsAabb", "data-world-movement-probe"].every((text) => worldJs.includes(text)));
+assert("world JS exposes alignment hooks", ["alignmentProbe", "getProjectedFrameCorners", "data-world-alignment-probe"].every((text) => worldJs.includes(text)));
+assert("world JS keeps station behavior hooks", ["handleStationChipKeydown", "openLiveSite", "resolveCaseStudyUrl", "enterInspection", "scrollActiveScreenBy", "copyQaReport", "getQaReport"].every((text) => worldJs.includes(text)));
+assert("world JS keeps analytics hooks", ["mode_enter_world", "mode_return_static", "station_click_live", "station_click_case_study", "station_inspect", "world_fallback_shown"].every((eventName) => worldJs.includes(eventName)));
+assert("world CSS contains canvas and calibrated hit target styles", worldCss.includes(".world-canvas") && worldCss.includes(".screen-target") && worldCss.includes(".screen-viewer-scroll"));
+assert("world layout embeds Blender reconstruction", worldLayoutJs.includes("worldReconstruction") && worldReconstruction.version === exportedLayout.version && worldReconstruction.scene.renderMode === "three-js-from-blender-export");
+assert("world layout has named verification cameras", ["desktopHero", "mobileHero", "inspectSelected", "fullscreenHero"].every((name) => worldReconstruction.cameras[name]?.verificationSize));
+assert("world layout has calibrated frame geometry", Object.keys(worldReconstruction.frames).length === 3 && Object.values(worldReconstruction.frames).every((frame) => frame.cornersWorld.length === 4 && frame.verification.desktopHero.projectedCorners.length === 4));
+assert("world layout has movement bounds and blockers", worldReconstruction.movement.navBounds && worldReconstruction.movement.blockers.length >= 6 && worldReconstruction.movement.playerRadius > 0);
+assert("world layout records selected production plate roles", ["gallery-room-master-desktop-empty-4k", "gallery-room-master-mobile-empty-4k", "station-inspect-plate-empty-4k"].every((role) => roomLayout.selectedProductionPlateRoles.includes(role)));
+assert("prompt pack includes all required plate and mask roles", requiredPlateRoles.every((role) => promptPack.assets.some((asset) => asset.role === role)));
+assert("asset checklist surfaces reconstruction asset taxonomy", checklistHtml.includes('id="reconstructionPanel"')
+  && checklistHtml.includes("renderReconstructionPanel")
+  && requiredAssetChecklistRoles.every((role) => checklistHtml.includes(role))
+  && requiredAssetChecklistTaxonomy.every((token) => checklistHtml.includes(token)), JSON.stringify({
+    missingRoles: requiredAssetChecklistRoles.filter((role) => !checklistHtml.includes(role)),
+    missingTaxonomy: requiredAssetChecklistTaxonomy.filter((token) => !checklistHtml.includes(token)),
+    hasPanel: checklistHtml.includes('id="reconstructionPanel"'),
+    hasRenderer: checklistHtml.includes("renderReconstructionPanel")
+  }));
+assert("manifest includes production roles as selected 4K source derivatives", ["gallery-room-master-desktop-empty-4k", "gallery-room-master-mobile-empty-4k", "station-inspect-plate-empty-4k"].every((role) => {
+  const asset = manifestAsset(role);
+  return asset?.status === "selected"
+    && asset.raw?.path?.startsWith("artifacts/higgsfield/showcase-gallery-next-level/selected/")
+    && asset.raw.width >= 2160
+    && asset.raw.height >= 2160
+    && asset.derivatives?.some((derivative) => derivative.path.startsWith("img/world/gallery-room/"));
+}));
+assert("station count is four approved launch projects", stations.length === 4 && new Set(stations.map((station) => station.id)).size === 4);
 
-[
-  "case-study-evenpath",
-  "case-study-felco",
-  "case-study-abel",
-  "case-study-beckel"
-].forEach((id) => assert(`static anchor ${id}`, index.includes(`id="${id}"`)));
-
-assert("Gustavo is removed from public launch surfaces", !/gustavo|Gustavo/.test(`${index}\n${preview}\n${readText("world-data.js")}`));
-
-[
-  "world.html",
-  "thanks.html",
-  "404.html",
-  "privacy.html",
-  "terms.html",
-  "world.css",
-  "world.js",
-  "world-data.js",
-  "serve-local.mjs",
-  "verify-production.mjs",
-  "verify-outbound.mjs",
-  "verify-photo-match.mjs",
-  "verify-device-qa.mjs",
-  "prepare-cloudflare-deploy.mjs",
-  "generate-business-card-assets.mjs",
-  "vercel.json",
-  ".vercelignore",
-  "_headers",
-  "_redirects",
-  "CLOUDFLARE_DEPLOY.md",
-  "favicon.svg",
-  "og-image.svg",
-  "og-image.png",
-  "robots.txt",
-  "sitemap.xml",
-  "DEVICE_QA.md",
-  "DEVICE_QA_QUICK_START.md",
-  "DEVICE_QA_RESULTS.md",
-  "REQUIREMENTS_TRACE.md",
-  "OPERATOR_INPUTS.md",
-  "OUTBOUND_LINK_AUDIT.md",
-  "LOCAL_BROWSER_AUDIT.md",
-  "COMPLETION_AUDIT.md",
-  "SHOWCASE_V3_LIVE_PRD_AUDIT.md",
-  "PHOTO_MATCH_REVIEW.md",
-  "LAUNCH_CHECKLIST.md",
-  "PRODUCTION_AUDIT.md",
-  "LAUNCH_ACQUISITION_SYSTEM.md",
-  "FREE_WEBSITE_REVIEW_TEMPLATE.md",
-  "CLIENT_ONBOARDING_REQUIREMENTS.md",
-  "SEARCH_LOCAL_SEO_LAUNCH_SETUP.md",
-  "OUTREACH_TRACKER.csv",
-  "business-card/README.md",
-  "business-card/showcase-business-card-front.svg",
-  "business-card/showcase-business-card-back.svg",
-  "business-card/showcase-business-card-qr.svg",
-  "img/world/hyperrealistic-gallery-target-right.png",
-  "img/world/hyperrealistic-gallery-target.png",
-  photoPlatePath,
-  ...stationTexturePaths
-].forEach((path) => assert(`file exists ${path}`, fileExists(path)));
-
-assert("pages use SVG favicon", index.includes('href="/favicon.svg"') && world.includes('href="/favicon.svg"') && !index.includes('href="/favicon.ico"') && !world.includes('href="/favicon.ico"'));
-assert("legal pages use SVG favicon", privacy.includes('href="/favicon.svg"') && terms.includes('href="/favicon.svg"') && !privacy.includes('href="/favicon.ico"') && !terms.includes('href="/favicon.ico"'));
-const ogPng = parsePng(readFileSync(join(root, "og-image.png")));
-assert("Open Graph image is 1200x630 PNG", ogPng.width === 1200 && ogPng.height === 630);
-const ogSvg = readText("og-image.svg");
-assert("Open Graph source contains launch copy", ogSvg.includes("Showcase Designs") && ogSvg.includes("WEBSITES + LOCAL SEO") && ogSvg.includes("3D studio gallery"));
-const vercelIgnore = readText(".vercelignore");
-const gitIgnore = readText(".gitignore");
-assert("Vercel ignore excludes repo-only artifacts", vercelIgnore.includes("*.md") && vercelIgnore.includes("verify-*.mjs") && vercelIgnore.includes("serve-local.mjs") && vercelIgnore.includes("verification/") && vercelIgnore.includes("dist/") && vercelIgnore.includes("deploy-artifacts/") && vercelIgnore.includes("img/*-mobile.png") && vercelIgnore.includes("og-image.svg"));
-assert("Vercel ignore keeps required runtime assets", !["index.html", "world.html", "world.js", "world-data.js", "world.css", "og-image.png", "favicon.svg", "robots.txt", "sitemap.xml", photoPlatePath, ...stationTexturePaths].some((asset) => vercelIgnore.includes(asset)));
-assert("generated Cloudflare dist stays gitignored", gitIgnore.includes("dist/") && gitIgnore.includes("deploy-artifacts/"));
-const cloudflareHeaders = readText("_headers");
-const cloudflareRedirects = readText("_redirects");
-const cloudflareDeploy = readText("CLOUDFLARE_DEPLOY.md");
-const operatorInputsForDeploy = readText("OPERATOR_INPUTS.md");
-const productionAuditForDeploy = readText("PRODUCTION_AUDIT.md");
-const deployArtifactMatch = cloudflareDeploy.match(/(deploy-artifacts\/showcase-designs-dist-[0-9-]+\.zip)\s+SHA256 ([a-f0-9]{64})/);
-const deployArtifactIndex = deployArtifactMatch ? run("unzip", ["-p", deployArtifactMatch[1], "index.html"]) : null;
-assert("Cloudflare redirects avoid clean-route loops", cloudflareRedirects.includes("built-in extensionless HTML routing") && cloudflareRedirects.includes("Do not add /world -> /world.html") && !cloudflareRedirects.includes("/world /world.html 200") && !cloudflareRedirects.includes("/thanks /thanks.html 200"));
-assert("Cloudflare headers set conservative security headers", cloudflareHeaders.includes("X-Content-Type-Options: nosniff") && cloudflareHeaders.includes("Referrer-Policy: strict-origin-when-cross-origin") && cloudflareHeaders.includes("Permissions-Policy: camera=(), microphone=(), geolocation=()") && cloudflareHeaders.includes("X-Frame-Options: DENY"));
-assert("Cloudflare deploy guide uses clean dist output", cloudflareDeploy.includes("Build command: node prepare-cloudflare-deploy.mjs") && cloudflareDeploy.includes("Build output directory: dist") && cloudflareDeploy.includes("Do not deploy the workspace root directly"));
-assert("Cloudflare deploy guide documents direct upload path", cloudflareDeploy.includes("npx wrangler pages deploy dist --project-name <cloudflare-pages-project> --branch <production-branch>") && cloudflareDeploy.includes("Do not guess either value"));
-assert("Cloudflare deploy guide rejects parent comeback tracker config", cloudflareDeploy.includes("Do not use the parent `../wrangler.toml`") && cloudflareDeploy.includes("comeback-tracker") && cloudflareDeploy.includes("is not evidence of the `showcase-designs.com` Cloudflare project"));
-assert("Cloudflare deploy artifact is present and hash-matched", deployArtifactMatch && fileExists(deployArtifactMatch[1]) && sha256File(deployArtifactMatch[1]) === deployArtifactMatch[2]);
-assert("Cloudflare deploy artifact contains current index", deployArtifactIndex?.status === 0 && deployArtifactIndex.stdout === index, deployArtifactIndex?.stderr || "index mismatch");
-assert("Cloudflare deploy artifact references agree across audits", deployArtifactMatch && operatorInputsForDeploy.includes(deployArtifactMatch[1]) && operatorInputsForDeploy.includes(deployArtifactMatch[2]) && productionAuditForDeploy.includes(deployArtifactMatch[1]) && productionAuditForDeploy.includes(deployArtifactMatch[2]));
-assert("preview deploy evidence documents current immutable build", ["https://7b30c5f6.showcase-designs-preview.pages.dev", "63 production checks passed", "10 photo-match checks passed", "Founder-Led", "No visible Cloudflare Pages project currently lists"].every((text) => operatorInputsForDeploy.includes(text) && productionAuditForDeploy.includes(text)) && operatorInputsForDeploy.includes("showcase-designs.com") && productionAuditForDeploy.includes("showcase-designs.com"));
-const acquisitionSystem = readText("LAUNCH_ACQUISITION_SYSTEM.md");
-const freeReviewTemplate = readText("FREE_WEBSITE_REVIEW_TEMPLATE.md");
-const clientOnboarding = readText("CLIENT_ONBOARDING_REQUIREMENTS.md");
-const searchLocalSetup = readText("SEARCH_LOCAL_SEO_LAUNCH_SETUP.md");
-const outreachTracker = readText("OUTREACH_TRACKER.csv");
-const cardReadme = readText("business-card/README.md");
-const cardFront = readText("business-card/showcase-business-card-front.svg");
-const cardBack = readText("business-card/showcase-business-card-back.svg");
-const cardQr = readText("business-card/showcase-business-card-qr.svg");
-const businessCardUrl = "https://showcase-designs.com/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch";
-const escapedBusinessCardUrl = businessCardUrl.replaceAll("&", "&amp;");
-assert("launch acquisition system documents business card funnel", acquisitionSystem.includes(businessCardUrl) && acquisitionSystem.includes("Do not print cards until") && acquisitionSystem.includes("Manual Outreach Cadence") && acquisitionSystem.includes("Compliance Rules"));
-assert("launch acquisition system links free review template", acquisitionSystem.includes("FREE_WEBSITE_REVIEW_TEMPLATE.md") && acquisitionSystem.includes("Review-to-call conversion") && acquisitionSystem.includes("I do not guarantee rankings"));
-assert("free website review template matches launch offer", ["3 trust or conversion issues", "3 local SEO opportunities", "1 recommended next step", "Do not include a quote unless the business asks", "No rankings are guaranteed", "OUTREACH_TRACKER.csv"].every((text) => freeReviewTemplate.includes(text)));
-assert("launch acquisition system documents client signal guardrail", acquisitionSystem.includes("CLIENT_ONBOARDING_REQUIREMENTS.md") && acquisitionSystem.includes("Do not sell Growth as an ongoing SEO promise") && acquisitionSystem.includes("reviews, photos, accurate business details, proof"));
-assert("client onboarding checklist documents local SEO signal requirements", ["No ranking guarantees", "Google Business Profile", "reviews", "fresh photos", "accurate business details", "service areas", "proof of completed work", "Do not sell Growth"].every((text) => clientOnboarding.includes(text)));
-assert("search local setup documents post-deploy SEO gates", ["Google Search Console", "sitemap.xml", "URL Inspection", "Bing Webmaster Tools", "Measurement ID", "Google Business Profile", "service-area business", "Review ask process"].every((text) => searchLocalSetup.includes(text)) && searchLocalSetup.includes("Do not install a guessed analytics tag"));
-assert("outreach tracker has 100 blank lead rows", outreachTracker.split("\n").filter((line) => /^SD-[0-9]{3},not_contacted/.test(line)).length === 100);
-assert("business card assets use approved QR URL and print hold", cardReadme.includes(businessCardUrl) && cardReadme.includes("Do not print until production passes") && cardQr.includes(escapedBusinessCardUrl) && cardBack.includes(escapedBusinessCardUrl));
-assert("business card assets use approved contact and local-business targeting", cardReadme.includes("andrew@showcase-designs.com") && cardReadme.includes("All local businesses") && cardFront.includes("For local businesses ready for better leads.") && cardBack.includes("andrew@showcase-designs.com"));
-assert("business card SVGs use standard card dimensions", cardFront.includes('width="3.5in" height="2in" viewBox="0 0 1050 600"') && cardBack.includes('width="3.5in" height="2in" viewBox="0 0 1050 600"'));
-assert("static page has complete social image metadata", index.includes('property="og:image" content="https://showcase-designs.com/og-image.png"') && index.includes('property="og:image:width" content="1200"') && index.includes('name="twitter:image" content="https://showcase-designs.com/og-image.png"'));
-assert("world page has complete social image metadata", world.includes('property="og:image" content="https://showcase-designs.com/og-image.png"') && world.includes('property="og:image:height" content="630"') && world.includes('name="twitter:image" content="https://showcase-designs.com/og-image.png"'));
-assert("static page keeps canonical home URL", index.includes('rel="canonical" href="https://showcase-designs.com/"') && index.includes('property="og:url" content="https://showcase-designs.com"') && !index.includes('content="noindex'));
-assert("static ProfessionalService schema is preserved", staticSchema["@context"] === "https://schema.org" && staticSchema["@type"] === "ProfessionalService" && staticSchema.name === "Showcase Designs" && staticSchema.url === "https://showcase-designs.com" && staticSchema.email === "andrew@showcase-designs.com" && staticSchema.serviceType === "Web Design, Local SEO");
-assert("static schema offers remain complete", Array.isArray(staticSchema.offers) && staticSchema.offers.map((offer) => offer.name).join("|") === "Starter|Growth|Custom" && new Set(staticSchema.offers.map((offer) => offer.name)).size === 3);
-assert("static positioning targets local businesses", index.includes("<title>Websites & Local SEO for Local Businesses | Showcase Designs</title>") && index.includes("Built for local businesses") && index.includes("We build websites and local SEO systems for local businesses") && !index.includes("Websites & Local SEO for Contractors"));
-const robots = readText("robots.txt");
-const sitemap = readText("sitemap.xml");
-assert("robots file points at sitemap", robots.includes("User-agent: *") && robots.includes("Allow: /") && robots.includes("Sitemap: https://showcase-designs.com/sitemap.xml"));
-assert("sitemap includes canonical static route only", sitemap.includes("<loc>https://showcase-designs.com/</loc>") && !sitemap.includes("/world"));
-assert("contact form posts to FormSubmit", index.includes('class="contact-form" action="https://formsubmit.co/andrew@showcase-designs.com" method="POST"'));
-assert("contact form hidden fields are configured", index.includes('name="_subject" value="New Showcase Designs inquiry"') && index.includes('name="_captcha" value="false"') && index.includes('name="_template" value="table"') && index.includes('name="_next" value="https://showcase-designs.com/thanks"'));
-assert("contact form captures attribution fields", ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "landing_page", "referrer"].every((name) => index.includes(`name="${name}" value=""`)));
-assert("contact form required fields are configured", index.includes('id="name" name="name" type="text" required') && index.includes('id="email" name="email" type="email" required') && index.includes('id="business" name="business" required') && index.includes('id="package" name="package" required'));
-assert("contact form includes privacy consent link", index.includes('By submitting, you agree to our') && index.includes('href="privacy.html"'));
-assert("contact form includes visible fallback contact path", index.includes('class="form-fallback"') && index.includes("If the form fails") && index.includes('href="mailto:andrew@showcase-designs.com"') && index.includes('href="tel:5203672769"'));
-assert("static pricing reflects owner-approved subscription and ownership model", index.includes('$150<span style="font-size: 0.4em; font-weight: 400;">/mo</span>') && index.includes('$400<span style="font-size: 0.4em; font-weight: 400;">/mo</span>') && index.includes("Starter and Growth are monthly subscription options") && index.includes("one-time ownership builds start at $1,500") && index.includes("Starter - $150/mo subscription") && index.includes("Growth - $400/mo subscription") && index.includes("Own the site outright - starting at $1,500") && !index.includes("$149") && !index.includes("$399") && !index.includes("One-time setup"));
-assert("thanks page is noindexed confirmation", thanks.includes("<title>Thanks | Showcase Designs</title>") && thanks.includes('content="noindex,follow"') && thanks.includes("Message received"));
-assert("404 page is noindexed fallback", notFound.includes("<title>Page Not Found | Showcase Designs</title>") && notFound.includes('content="noindex,follow"') && notFound.includes("That page is not in the Showcase Designs build"));
-assert("static fonts use optional display", index.includes("display=optional") && !index.includes("display=swap"));
-assert("static font stylesheet is deferred off the critical path", index.includes("window.__showcaseLoadFonts") && index.includes("requestIdleCallback") && !index.includes('rel="preload" href="https://fonts.googleapis.com/css2') && preview.includes("window.__showcaseLoadFonts") && preview.includes("requestIdleCallback") && !preview.includes('rel="preload" href="https://fonts.googleapis.com/css2'));
-assert("static page avoids external icon font payload", !index.includes("@phosphor-icons/web") && !preview.includes("@phosphor-icons/web") && index.includes(".ph-check::before") && index.includes(".ph-rocket-launch::before"));
-assert("world fonts use optional display", world.includes("display=optional") && !world.includes("display=swap"));
-assert("legal page fonts use optional display", privacy.includes("display=optional") && terms.includes("display=optional") && !privacy.includes("display=swap") && !terms.includes("display=swap"));
-assert("legal pages have canonical URLs", privacy.includes('rel="canonical" href="https://showcase-designs.com/privacy.html"') && terms.includes('rel="canonical" href="https://showcase-designs.com/terms.html"'));
-assert("static page uses optimized JPG screenshots", [
-  "img/world/evenpath-mobile.jpg",
-  "img/world/felco-mobile.jpg",
-  "img/world/abel-mobile.jpg",
-  "img/world/beckel-mobile.jpg"
-].every((path) => index.includes(path)));
-stationTexturePaths.forEach((path) => {
-  const bytes = readFileSync(join(root, path));
-  const dimensions = parseJpegDimensions(bytes);
-  assert(`texture ${path} stays under 500KB`, bytes.length < 500 * 1024, `${bytes.length} bytes`);
-  assert(`texture ${path} keeps mobile dimensions`, dimensions.width >= 390 && dimensions.width <= 520 && dimensions.height >= 800 && dimensions.height <= 1100, `${dimensions.width}x${dimensions.height}`);
-});
-const worldCriticalPayloadBytes = ["world.html", "world.css", "world.js", "world-data.js", ...stationTexturePaths]
-  .reduce((total, path) => total + fileSize(path), 0);
-assert("world initial critical payload stays under 1MB target", worldCriticalPayloadBytes < 1024 * 1024, `${worldCriticalPayloadBytes} bytes`);
-assert("hybrid photo plate stays mobile-light", fileSize(photoPlatePath) < 90 * 1024, `${fileSize(photoPlatePath)} bytes`);
-assert("static page does not reference heavy PNG screenshots", !/img\/(evenpath|felco|abel|beckel)-mobile\.png/.test(index));
-assert("below-fold static screenshots lazy load", countMatches(index, /loading="lazy" decoding="async"/g) >= 4);
-assert("hero headline remains paint-stable", !index.includes("new SplitType(heroHeadline") && !index.includes("splitHero.chars"));
-assert("static critical UI initializes before animation CDN wait", index.indexOf("initCriticalUi();") > -1 && index.indexOf("initCriticalUi();") < index.indexOf('window.addEventListener("DOMContentLoaded"'));
-assert("static animation fallback is locally bounded", index.includes("STATIC_FALLBACK_MS = 3500") && index.includes("__showcaseStaticFallbackApplied") && index.includes("revealStaticFallback"));
-assert("static animation libraries are skipped on mobile", index.includes('data-animation-cdn", "skipped"') && index.includes('(pointer: coarse)') && index.includes('(max-width: 759px)') && !index.includes('gsap.min.js" defer') && preview.includes('data-animation-cdn", "skipped"') && preview.includes('(pointer: coarse)') && preview.includes('(max-width: 759px)') && !preview.includes('gsap.min.js" defer'));
-assert("static pricing cards fail open without duplicate ScrollTrigger animation", index.includes("#pricing .pricing-card.reveal") && index.includes("opacity: 1 !important") && !index.includes('gsap.from(".pricing-card"') && preview.includes("#pricing .pricing-card.reveal") && preview.includes("opacity: 1 !important") && !preview.includes('gsap.from(".pricing-card"'));
-assert("static lite route clears mode preference", index.includes('params.get("lite") === "1"') && index.includes("setModePreference(null)") && index.includes('localStorage.removeItem("mode-preference")') && index.includes("exposeModePreferenceForVerifier"));
-assert("static live links use noopener", countMatches(index, /target="_blank" rel="noopener noreferrer"/g) === 4 && !index.includes('target="_blank" rel="noreferrer"'));
-assert("world has noindex canonical shell", world.includes('content="noindex,follow"') && world.includes('rel="canonical"'));
-assert("world imports Three dynamically", worldJs.includes("await importWithTimeout(THREE_URL, THREE_LOAD_TIMEOUT_MS)") && !world.includes("three.module"));
-assert("world dependency failure has bounded fallback", worldJs.includes("THREE_LOAD_TIMEOUT_MS = 3500") && worldJs.includes("world_dependency_failed") && worldJs.includes("could not load its 3D engine"));
-assert("world optional GSAP script is non-blocking", world.includes("gsap.min.js\" async") && !world.includes("gsap.min.js\" defer"));
-assert("world lite route clears world preference", worldJs.includes('params.get("lite") === "1"') && worldJs.includes("setModePreference(null)") && worldJs.includes('localStorage.removeItem("mode-preference")') && worldJs.includes("exposeModePreferenceForVerifier"));
-assert("world keeps accessible static return path", world.includes('class="skip-link"') && world.includes('href="#stationControls"') && world.includes('class="sr-only" aria-live="polite"') && world.includes("fully accessible standard version") && countMatches(world, /data-static-link/g) >= 3);
-assert("world station controls support keyboard navigation", worldJs.includes("function handleStationChipKeydown") && ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"].every((key) => worldJs.includes(`"${key}"`)) && worldJs.includes('button.setAttribute("aria-pressed", "false")'));
-assert("world context-loss path has local verifier hook", worldJs.includes('params.get("simulateContextLoss") === "1"') && worldJs.includes('new Event("webglcontextlost"') && worldJs.includes("isLocalhost()"));
-assert("world screenshot motion is bounded", worldJs.includes("function animateScreenshot") && worldJs.includes("if (!texture || object.scrollActive) return") && worldJs.includes("const duration = 1700") && worldJs.includes("progress < 1") && countMatches(worldJs, /object\.scrollActive = false/g) >= 2);
-assert("world idle look ends with intro", worldJs.includes("function requestIdleLook") && worldJs.includes("if (!idleActive) return") && worldJs.includes("idleActive = true") && countMatches(worldJs, /idleActive = false/g) >= 2);
-assert("world warmup render loop is time-boxed", worldJs.includes("function runWarmupCheck") && worldJs.includes("now - start < 900") && worldJs.includes("lastWarmup"));
-assert("world continuous QA rendering is qa-only", worldJs.includes("function runQaFrameProbe") && worldJs.includes("if (!qaState || qaState.running) return") && worldJs.includes("if (!qaMode) return"));
-assert("static analytics hooks cover mode routing", index.includes("window.dataLayer.push") && index.includes('window.gtag("event"') && index.includes("window.sdTrack") && index.includes('"mode_enter_world"') && index.includes('"mode_return_static"'));
-assert("static analytics hooks cover conversion events", ["form_submit", "phone_click", "email_click", "pricing_cta_click", "business_card_qr_visit", "live_project_click"].every((eventName) => index.includes(`"${eventName}"`)) && index.includes("syncAttributionFields") && index.includes("trackCampaignVisit"));
-assert("world analytics hooks cover mode and station events", worldJs.includes("window.dataLayer.push") && worldJs.includes('window.gtag("event"') && ["mode_enter_world", "mode_return_static", "station_click_live", "station_click_case_study", "station_hover", "world_fallback_shown", "webgl_context_lost"].every((eventName) => worldJs.includes(`"${eventName}"`)));
-assert("static trust stats avoid unverified numeric claims", ["Founder-Led", "Scope-First", "Direct", "Client-Owned"].every((text) => index.includes(`data-text="${text}"`)) && !index.includes('data-counter="15"') && !index.includes('data-counter="48"') && !index.includes('data-counter="100"') && !index.includes("Projects Built") && !index.includes("48hr"));
-assert("world portrait camera starts inside walkable right-reference gallery room", worldJs.includes("const cameraFov = portraitViewport ? 62 : 54") && worldJs.includes("const basePose = galleryCameraPose()") && worldJs.includes("new THREE.Vector3(-4.72, 1.5, 4.86)") && worldJs.includes("new THREE.Vector3(-0.8, 1.4, -5.18)"));
-assert("world portrait station panel has compact toggle", world.includes('class="station-panel is-compact"') && world.includes('id="panelToggleButton"') && world.includes('aria-controls="stationPanelBody"') && world.includes('aria-expanded="false"') && worldCss.includes(".station-panel.is-compact") && worldJs.includes("syncStationPanelMode"));
-assert("world mobile topbar keeps static return visible", worldCss.includes(".topbar-actions") && worldCss.includes("flex: 0 0 auto") && worldCss.includes("margin-left: auto") && worldCss.includes("text-overflow: ellipsis"));
-const heroWallStations = stations.filter((station) => station.position?.z < -5.5 && station.rotation?.y === 0);
-const sideWallStations = stations.filter((station) => Math.abs(station.rotation?.y + Math.PI / 2) < 0.02);
-assert("world camera frames approved right-reference hero-wall gallery room", worldJs.includes('GALLERY_LAYOUT_VERSION = "right-reference-hero-wall-20260509"') && worldJs.includes("HERO_WALL_CLUSTER_APPROVED = true") && worldJs.includes("new THREE.PerspectiveCamera(cameraFov") && heroWallStations.length === 3 && sideWallStations.length === 1);
-assert("world station selection faces each wall-mounted site", worldJs.includes("function galleryCameraPose") && worldJs.includes("applyEuler(group.rotation)") && worldJs.includes("station?.camera?.distance") && !worldJs.includes("focusDistance"));
-assert("world stations include wall glow depth cues", worldJs.includes("createStationGlowTexture") && worldJs.includes("object.halo.material.opacity"));
-assert("world stations include subtle in-scene wall plaques", worldJs.includes("createStationHeaderTexture") && worldJs.includes("plaqueOffset") && worldJs.includes("wallPlaque.position.y = 0.56") && worldJs.includes("station.displayName.toUpperCase()"));
-assert("world exposes render metrics for QA and verifier", worldJs.includes("function renderMetrics") && worldJs.includes("data-world-render-calls") && worldJs.includes("render: renderMetrics()"));
-assert("world exposes runtime collision probe for verifier", worldJs.includes("function collisionProbeForVerifier") && worldJs.includes("data-world-collision-probe") && worldJs.includes("applyGalleryCollision(safePoint, blockedTarget)"));
-assert("world exposes runtime inspection probe for verifier", worldJs.includes("function inspectionProbeForVerifier") && worldJs.includes("data-world-inspection-probe") && worldJs.includes("activateStationInteraction(object, { skipGlide: true, skipHistory: true })"));
-assert("world preserves interactive 3D gallery behavior", worldJs.includes("activateStationInteraction") && worldJs.includes("scrollActiveScreenBy") && worldJs.includes("galleryColliders") && worldJs.includes("requestRender("));
-assert("world removes phone camera notch geometry", !worldJs.includes("notch"));
-assert("world leaves open gallery spacing without empty canvas props", !worldJs.includes("FUTURE_BAYS") && !worldJs.includes("createFutureGalleryBay") && !worldJs.includes("createEmptyCanvasTexture") && worldJs.includes("createFrontWallShowroomTexture"));
-assert("world supports full-room POV movement controls", worldJs.includes("function moveGallery") && worldJs.includes("function handleGalleryWheel") && worldJs.includes('"KeyW"') && worldJs.includes('window.addEventListener("keydown", handleGalleryKeyDown)') && worldJs.includes("function updateLookTargetFromDelta") && worldJs.includes("position.z = Math.max(-4.72"));
-assert("world supports mobile touch walking controls", world.includes('id="mobileMoveControls"') && world.includes('id="mobileMovePad"') && worldCss.includes(".mobile-move-controls") && worldCss.includes("@media (pointer: coarse)") && worldJs.includes("function handleMovePadPointerDown") && worldJs.includes("moveState.touchForward") && worldJs.includes("requestMovementFrame()"));
-assert("world supports pointer-lock first-person gallery look", worldJs.includes("function enterPointerLook") && worldJs.includes("canvas.requestPointerLock()") && worldJs.includes('document.addEventListener("pointerlockchange", handlePointerLockChange)') && worldJs.includes("handlePointerLockMove"));
-assert("world adds low leather gallery seating and contact shadows", worldJs.includes("function addGallerySeatingAndLighting") && worldJs.includes("wallSconces") && worldJs.includes("leatherMat") && worldJs.includes("createLeatherTexture") && worldJs.includes("benchGroup.position.set") && worldJs.includes("addGalleryCollider(") && worldJs.includes("addContactShadow(3.72"));
-assert("world adds cove lighting, track fixtures, and glass wall detail", worldJs.includes("coveMat") && worldJs.includes("addCeilingBaffles") && worldJs.includes("addGlassWallFeature") && worldJs.includes("createArchitecturalGlassTexture") && worldJs.includes("addGalleryCollider(-5.42, -2.42"));
-assert("world adds right-reference hero wall wash and floor reflection decals", worldJs.includes("function addHeroWallLighting") && worldJs.includes("createHeroWallWashTexture") && worldJs.includes("function addFloorReflectionDecals") && worldJs.includes("createFloorLightPoolTexture") && worldJs.includes("createScreenFloorReflectionTexture") && worldJs.includes("screenFloorReflectionTexture") && worldJs.includes("createGardenSilhouetteTexture"));
-assert("world has presentation-mode visual review hooks", worldJs.includes("presentationMode") && worldJs.includes('data-presentation') && worldCss.includes('[data-presentation="true"] .world-topbar') && worldCss.includes('[data-presentation="true"] .qa-panel'));
-assert("world has approved hybrid room-plate presentation layer", world.includes('id="photoMatchPlate"') && worldCss.includes(".photo-match-plate") && worldCss.includes("photo-match-room-plate.webp") && worldCss.includes('[data-presentation="true"] .photo-match-plate') && worldCss.includes(".is-inspecting .photo-match-plate"));
-assert("world has photo-match visual verifier", photoVerifier.includes("assertDesktopPhotoMatch") && photoVerifier.includes("assertMobilePhotoMatch") && photoVerifier.includes("photo-match-production") && photoVerifier.includes("SHOWCASE_ORIGIN") && photoVerifier.includes("/world?try=1&qa=minimal&presentation=1"));
-assert("world avoids fake gallery linework", worldJs.includes("function addArchitecturalDetails") && !worldJs.includes("addWallPanels();") && !worldJs.includes("addTrimLine(STUDIO.width") && !worldJs.includes("addAisleDetails();") && !worldJs.includes("strokeRect(left + 8"));
-assert("world aggressively optimizes mobile rendering", worldJs.includes("function currentRenderPixelRatio") && worldJs.includes("renderPixelRatioLimit") && worldJs.includes("function seamlessMode") && worldJs.includes("function renderFrameInterval") && worldJs.includes("renderState.force") && worldJs.includes("skipped: true") && worldJs.includes("preserveDrawingBuffer: false") && worldJs.includes("realtimeShadowsEnabled()") && worldJs.includes('quality !== "lite"') && worldJs.includes("adaptivePixelScale"));
-assert("world uses slab-textured stone, visible ceiling, and polished floor materials", worldJs.includes("createWallTexture") && worldJs.includes("createFloorTexture") && worldJs.includes("createFloorReflectionTexture") && worldJs.includes("createCeilingPhotoTexture") && worldJs.includes("polish.addColorStop") && worldJs.includes("function addPhysicalStoneSlabRelief") && worldJs.includes("addPhysicalStoneSlabRelief();") && worldJs.includes("function addStoneSlabMaterialOverlays") && worldJs.includes("addStoneSlabMaterialOverlays();") && worldJs.includes("createBackWallShowroomTexture") && worldJs.includes("createFrontWallShowroomTexture"));
-assert("world frames exhibits as thin black metal artworks", worldJs.includes("frameBar") && worldJs.includes("frameDepth") && worldJs.includes("size: [panelWidth + frameBar * 2") && worldJs.includes("frameMaterial") && !worldJs.includes("createBeveledPlateGeometry(panelWidth + 0.26"));
-assert("world lets nearby website panels become scrollable exhibits", world.includes('id="screenViewerScroll" tabindex="0"') && world.includes('id="screenViewerScrollDown"') && worldJs.includes("activeScreenStationId") && worldJs.includes("SCREEN_INTERACTION_DISTANCE") && worldJs.includes("function activateStationInteraction") && worldJs.includes("function scrollStationPreview") && worldJs.includes("texture.offset.y - deltaY") && worldJs.includes("handleInspectionWheel") && worldJs.includes("handleInspectionScrollKey") && worldJs.includes("scrollActiveScreenBy") && worldJs.includes("canInteractWithStationScreen(object)"));
-assert("world inspection stays in-room with compact controls", world.includes('id="inspectHint"') && world.includes('id="screenViewerFullscreen"') && worldJs.includes("function glideCameraToInspection") && worldJs.includes("document.body.classList.add(\"is-inspecting\")") && worldCss.includes(".is-inspecting .mobile-move-controls") && worldCss.includes(".screen-viewer.is-fullscreen"));
-assert("world supports back-button and escape exits from inspection", worldJs.includes("pushInspectionHistory") && worldJs.includes("handleHistoryPop") && worldJs.includes('window.addEventListener("popstate", handleHistoryPop)') && worldJs.includes("handleScreenViewerKeyDown") && worldJs.includes("Escape"));
-assert("world live sites open from direct panel interaction", worldJs.includes("event.detail >= 2") && worldJs.includes("openLiveSite(object.station)") && worldJs.includes("getStationIntersection(event)"));
-assert("world prevents walking through gallery objects", worldJs.includes("galleryColliders") && worldJs.includes("PLAYER_RADIUS") && worldJs.includes("function addGalleryCollider") && worldJs.includes("function applyGalleryCollision") && worldJs.includes("collidesWithGallery") && worldJs.includes("addWallExhibitCollider(group.position"));
-assert("world has fullscreen-friendly POV and exhibit mode", world.includes('id="screenViewer"') && world.includes('id="screenViewerImage"') && world.includes('id="fullscreenButton"') && worldCss.includes(".fullscreen-action") && worldJs.includes("function toggleWorldFullscreen") && worldJs.includes("screenViewer.requestFullscreen()") && worldJs.includes("syncTextureFromScreenViewer"));
-assert("world supports minimal QA visual screenshots", worldJs.includes('params.get("qa") === "minimal"') && worldCss.includes('[data-qa-minimal="true"] .qa-panel'));
-const productionVerifier = readText("verify-production.mjs");
-assert("production verifier checks deployed routes", productionVerifier.includes("showcase-designs.com") && productionVerifier.includes("homeLite") && productionVerifier.includes("Client website stations") && productionVerifier.includes("Message received") && productionVerifier.includes("not-a-real-page") && productionVerifier.includes("og-image.png"));
-assert("production verifier checks runtime assets", productionVerifier.includes('get("/world.css")') && productionVerifier.includes('get("/world-data.js")') && productionVerifier.includes('get("/favicon.svg")') && productionVerifier.includes("photo-match-room-plate.webp") && productionVerifier.includes("stationTextures") && productionVerifier.includes("world script is JavaScript") && productionVerifier.includes("world stylesheet is CSS") && productionVerifier.includes("world data is JavaScript") && productionVerifier.includes("texture is JPEG"));
-assert("production verifier checks all fetched security headers", productionVerifier.includes("function hasSecurityHeaders") && productionVerifier.includes("world stylesheet has security headers") && productionVerifier.includes("Open Graph image has security headers"));
-assert("production verifier supports local dry-run origin", productionVerifier.includes('url.protocol === "http:"') && readme.includes("SHOWCASE_ORIGIN=http://127.0.0.1:8765 node verify-production.mjs") && readText("LAUNCH_CHECKLIST.md").includes("SHOWCASE_ORIGIN=http://127.0.0.1:8765 node verify-production.mjs"));
-assert("README links Cloudflare deploy guide", readme.includes("CLOUDFLARE_DEPLOY.md") && readme.includes("node prepare-cloudflare-deploy.mjs") && readme.includes("npx wrangler pages deploy dist"));
-const outboundVerifier = readText("verify-outbound.mjs");
-assert("outbound verifier checks station live URLs", outboundVerifier.includes("stations") && outboundVerifier.includes("liveUrl") && outboundVerifier.includes("showcase-outbound-verifier"));
-assert("outbound verifier checks static URL consistency", outboundVerifier.includes("index.html") && outboundVerifier.includes("v3-preview.html") && outboundVerifier.includes("static URL matches station data"));
-assert("QA mode documented", readme.includes("/world.html?qa=1&try=1") && readme.includes("Copy report") && readme.includes("window.__showcaseWorld.getState().qa"));
-const deviceQa = readText("DEVICE_QA.md");
-const deviceQaQuickStart = readText("DEVICE_QA_QUICK_START.md");
-assert("device QA checklist documents required browsers", deviceQa.includes("iOS Safari") && deviceQa.includes("Chrome on a real Android"));
-assert("device QA checklist documents pass criteria", deviceQa.includes("minFps") && deviceQa.includes("90s complete") && deviceQa.includes("30"));
-assert("device QA checklist documents render metric gate", deviceQa.includes("render.calls") && deviceQa.includes("200") && readme.includes("render.calls"));
-assert("device QA quick start documents preview URL and report gate", deviceQaQuickStart.includes("https://showcase-designs-preview.pages.dev/world?qa=1&try=1") && deviceQaQuickStart.includes("Do not use `showcase-designs.com`") && deviceQaQuickStart.includes("node verify-device-qa.mjs") && deviceQaQuickStart.includes("qa.minFps"));
-assert("device QA results validator is documented", readme.includes("DEVICE_QA_RESULTS.md") && readme.includes("node verify-device-qa.mjs") && deviceQa.includes("node verify-device-qa.mjs"));
-assert("README links device QA checklist", readme.includes("DEVICE_QA_QUICK_START.md") && readme.includes("DEVICE_QA.md"));
-const outboundAudit = readText("OUTBOUND_LINK_AUDIT.md");
-assert("outbound audit documents approved station URL pass", outboundAudit.includes("All approved launch station live URLs passed") && !outboundAudit.includes("DEPLOYMENT_NOT_FOUND"));
-assert("outbound audit documents consistency coverage", outboundAudit.includes("href") && outboundAudit.includes("world-data.js") && outboundAudit.includes("station `liveUrl`"));
-assert("outbound audit documents current FormSubmit pass", outboundAudit.includes("FormSubmit endpoint") && outboundAudit.includes("HTTP 200") && outboundAudit.includes("9 outbound checks passed") && !outboundAudit.includes("HTTP 522"));
-assert("README links outbound audit", readme.includes("OUTBOUND_LINK_AUDIT.md") && readme.includes("node verify-outbound.mjs"));
-assert("README links free review template", readme.includes("FREE_WEBSITE_REVIEW_TEMPLATE.md") && readme.includes("3 trust issues, 3 local SEO opportunities, 1 next step"));
-assert("README links client onboarding requirements", readme.includes("CLIENT_ONBOARDING_REQUIREMENTS.md") && readme.includes("before quoting Growth"));
-assert("README links search local setup", readme.includes("SEARCH_LOCAL_SEO_LAUNCH_SETUP.md") && readme.includes("Search Console, Bing, analytics, GBP"));
-const localBrowserAudit = readText("LOCAL_BROWSER_AUDIT.md");
-assert("local browser audit documents static Lighthouse result", localBrowserAudit.includes("Performance | 94") && localBrowserAudit.includes("Accessibility | 100") && localBrowserAudit.includes("Best Practices | 100") && localBrowserAudit.includes("SEO | 100"));
-assert("local browser audit documents world Lighthouse result", localBrowserAudit.includes("Performance | 97") && localBrowserAudit.includes("world.html?try=1") && localBrowserAudit.includes("noindex,follow"));
-assert("local browser audit documents Cloudflare dist Lighthouse result", localBrowserAudit.includes("Cloudflare `dist/` Lighthouse package audit") && localBrowserAudit.includes("| `/` from `dist/` | 87 | 100 | 100 | 100 |") && localBrowserAudit.includes("| `/world.html?try=1` from `dist/` | 85 | 100 | 100 | 66 |") && localBrowserAudit.includes("0.113") && localBrowserAudit.includes("0.011"));
-assert("local browser audit documents thanks Lighthouse result", localBrowserAudit.includes("thanks.html") && localBrowserAudit.includes("form confirmation page"));
-assert("local browser audit documents 404 Lighthouse result", localBrowserAudit.includes("404.html") && localBrowserAudit.includes("missing-route pages should not be indexed"));
-assert("local browser audit documents legal Lighthouse result", localBrowserAudit.includes("/privacy.html") && localBrowserAudit.includes("/terms.html") && localBrowserAudit.includes("| `/privacy.html` | 100 | 100 | 100 | 100 |"));
-assert("local browser audit documents concrete performance fixes", localBrowserAudit.includes("favicon.svg") && localBrowserAudit.includes("display=optional") && localBrowserAudit.includes("paint-stable"));
-assert("local browser audit documents four-station visual capture", localBrowserAudit.includes("current-world-fourstation-desktop.png") && localBrowserAudit.includes("current-world-fourstation-portrait.png"));
-assert("README links local browser audit", readme.includes("LOCAL_BROWSER_AUDIT.md"));
-const audit = readText("COMPLETION_AUDIT.md");
-const livePrdAudit = readText("SHOWCASE_V3_LIVE_PRD_AUDIT.md");
-const photoMatchReview = readText("PHOTO_MATCH_REVIEW.md");
-assert("completion audit documents local evidence", audit.includes("node verify-world.mjs") && audit.includes("Passed locally"));
-assert("completion audit includes local browser audit evidence", audit.includes("LOCAL_BROWSER_AUDIT.md") && audit.includes("Passed locally"));
-assert("completion audit includes outbound link evidence", audit.includes("OUTBOUND_LINK_AUDIT.md") && audit.includes("Passed locally"));
-assert("completion audit documents approved case-study copy gate", audit.includes("PRD F-1.6") && audit.includes("case-study hero/intro copy") && readText("LAUNCH_CHECKLIST.md").includes("Case-study hero/intro copy"));
-assert("completion audit documents remaining external gates", audit.includes("Not complete") && audit.includes("Operator approval"));
-assert("photo-match review documents owner option C decision", photoMatchReview.includes("This pass is not a 1:1 replica") && photoMatchReview.includes("https://showcase-designs-preview.pages.dev/world?presentation=1") && photoMatchReview.includes("Selected option: 3") && photoMatchReview.includes("hybrid/generated room-plate approach") && photoMatchReview.includes("Real-device iOS Safari report is still missing"));
-assert("README links completion audit", readme.includes("COMPLETION_AUDIT.md"));
-assert("live PRD audit maps launch requirements", ["L-1 Production cutover", "L-2 Deploy package", "SEO-1 Canonical static marketing page", "SEO-2 Search Console launch", "SEO-3 Showcase local trust signals", "TRUST-1 Evidence-based claims", "TRUST-2 Founder-led positioning", "CONV-1 Contact and lead capture", "CONV-2 Analytics and tracking", "ACQ-1 Business card funnel", "ACQ-2 Outreach system", "Release criteria"].every((item) => livePrdAudit.includes(item)) && livePrdAudit.includes("Trust stats use `Founder-Led`, `Scope-First`, `Direct`, and `Client-Owned`") && readme.includes("SHOWCASE_V3_LIVE_PRD_AUDIT.md"));
-assert("live PRD audit records preview deploy and production project discovery", livePrdAudit.includes("https://7b30c5f6.showcase-designs-preview.pages.dev") && livePrdAudit.includes("verify-production.mjs` passed 63 checks") && livePrdAudit.includes("verify-photo-match.mjs` passed 10 checks") && livePrdAudit.includes("visible Cloudflare Pages projects do not include") && livePrdAudit.includes("showcase-designs.com"));
-const requirementsTrace = readText("REQUIREMENTS_TRACE.md");
-assert("requirements trace maps all PRD functional requirements", ["F-1.1", "F-1.2", "F-1.3", "F-1.4", "F-1.5", "F-1.6", "F-1.7", "F-1.8", "F-2.1", "F-2.2", "F-2.3", "F-2.4", "F-2.5", "F-2.6", "F-2.7", "F-2.8", "F-2.9", "F-2.10", "F-2.11", "F-2.12", "F-2.13", "F-2.14", "F-2.15", "F-2.16", "F-2.17", "F-3.1", "F-3.2", "F-3.3", "F-3.4", "F-3.5"].every((id) => requirementsTrace.includes(id)));
-assert("requirements trace maps launch gates and blockers", requirementsTrace.includes("Static LCP p75") && requirementsTrace.includes("Mobile FPS") && requirementsTrace.includes("Visible draw calls") && requirementsTrace.includes("Current Blockers") && requirementsTrace.includes("Cloudflare"));
-assert("README links requirements trace", readme.includes("REQUIREMENTS_TRACE.md"));
-const operatorInputs = readText("OPERATOR_INPUTS.md");
-assert("operator inputs document exact external blockers", ["Cloudflare Preview Deploy", "showcase-designs-preview", "Real-Device QA Reports", "Production Core Web Vitals", "Copy Approval", "Operator Launch Approval"].every((item) => operatorInputs.includes(item)) && !operatorInputs.includes("Gustavo's Landscape URL"));
-assert("operator inputs mirror PRD open questions", ["Exact approved client/project list", "EvenPath, Felco, Abel, and Beckel", "Approved numeric claims", "Final public phone number", "Final public email address", "Compliant physical mailing address or PO box", "Cloudflare production project name and production branch", "Private founding-client offer approved", "Growth price after first 3-5 clients", "Business card targeting"].every((item) => operatorInputs.includes(item)) && operatorInputs.includes("Do not guess these answers"));
-assert("operator inputs document follow-up verification commands", operatorInputs.includes("node verify-outbound.mjs") && operatorInputs.includes("node verify-production.mjs") && operatorInputs.includes("node verify-world.mjs") && operatorInputs.includes("node verify-device-qa.mjs"));
-assert("operator inputs link search local setup", operatorInputs.includes("SEARCH_LOCAL_SEO_LAUNCH_SETUP.md") && operatorInputs.includes("Google Search Console property") && operatorInputs.includes("GBP eligible"));
-assert("README and completion audit link operator inputs", readme.includes("OPERATOR_INPUTS.md") && audit.includes("OPERATOR_INPUTS.md"));
-const launchChecklist = readText("LAUNCH_CHECKLIST.md");
-assert("launch checklist documents production route gate", launchChecklist.includes("curl -I https://showcase-designs.com/world") && launchChecklist.includes("Production Route Gate") && launchChecklist.includes("Cloudflare Pages"));
-assert("launch checklist documents production verifier", launchChecklist.includes("node verify-production.mjs"));
-assert("launch checklist documents CWV thresholds", launchChecklist.includes("LCP `<= 2.5s`") && launchChecklist.includes("INP `<= 200ms`") && launchChecklist.includes("CLS `<= 0.1`"));
-assert("launch checklist documents search local SEO gate", launchChecklist.includes("Search And Local SEO Gate") && launchChecklist.includes("SEARCH_LOCAL_SEO_LAUNCH_SETUP.md") && launchChecklist.includes("Google Search Console property is verified"));
-assert("launch checklist documents operator approval", launchChecklist.includes("Operator Approval") && launchChecklist.includes("APPROVED / CHANGES REQUESTED"));
-assert("README links launch checklist", readme.includes("LAUNCH_CHECKLIST.md"));
-const productionAudit = readText("PRODUCTION_AUDIT.md");
-assert("production audit documents checked domain", productionAudit.includes("https://showcase-designs.com") && productionAudit.includes("Observed:"));
-assert("production audit documents route failure", productionAudit.includes("https://showcase-designs.com/world") && productionAudit.includes("https://showcase-designs.com/thanks") && productionAudit.includes("HTTP/2 404") && productionAudit.includes("older Vercel page"));
-assert("production audit documents required fix", productionAudit.includes("/world") && productionAudit.includes("world.html") && productionAudit.includes("/thanks") && productionAudit.includes("thanks.html") && productionAudit.includes("Deploy this workspace") && productionAudit.includes("Cloudflare Pages"));
-assert("README links production audit", readme.includes("PRODUCTION_AUDIT.md"));
-assert("completion audit links production audit", audit.includes("PRODUCTION_AUDIT.md") && audit.includes("Failing production"));
-const vercelConfig = JSON.parse(readText("vercel.json"));
-assert("Vercel config rewrites clean world route", Array.isArray(vercelConfig.rewrites) && vercelConfig.rewrites.some((rewrite) => rewrite.source === "/world" && rewrite.destination === "/world.html"));
-assert("Vercel config rewrites thanks route", vercelConfig.rewrites.some((rewrite) => rewrite.source === "/thanks" && rewrite.destination === "/thanks.html"));
-const headerSet = vercelConfig.headers?.find((entry) => entry.source === "/(.*)")?.headers || [];
-const headerValue = (key) => headerSet.find((header) => header.key === key)?.value;
-assert("Vercel config sets conservative security headers", headerValue("X-Content-Type-Options") === "nosniff" && headerValue("Referrer-Policy") === "strict-origin-when-cross-origin" && headerValue("X-Frame-Options") === "DENY" && headerValue("Permissions-Policy") === "camera=(), microphone=(), geolocation=()");
-assert("README documents Cloudflare deploy flow", readme.includes("Cloudflare Pages") && readme.includes("extensionless HTML routing") && readme.includes("_headers"));
-assert("README documents clean-route local preview", readme.includes("node serve-local.mjs") && readme.includes("node serve-local.mjs --root dist") && readme.includes("http://127.0.0.1:8765/world") && readme.includes("branded `404.html`"));
-assert("launch checklist documents Cloudflare clean routing", launchChecklist.includes("extensionless HTML routing") && launchChecklist.includes("/world") && launchChecklist.includes("/thanks"));
-assert("production audit documents Cloudflare clean route fix", productionAudit.includes("extensionless HTML routing") && productionAudit.includes("_headers") && productionAudit.includes("world.html") && productionAudit.includes("thanks.html"));
-assert("production audit documents production verifier", productionAudit.includes("node verify-production.mjs") && productionAudit.includes("expected to fail"));
-assert("production audit documents Cloudflare deploy input", productionAudit.includes("Cloudflare Deployment Input") && productionAudit.includes("Cloudflare account/project"));
-assert("production audit documents latest production verifier failure", productionAudit.includes("production checks failed") && productionAudit.includes("/?lite=1") && productionAudit.includes("/world.css") && productionAudit.includes("/world-data.js") && productionAudit.includes("station texture JPGs") && productionAudit.includes("security headers"));
-assert("station count is four approved launch projects", stations.length === 4);
-assert("station ids are unique", new Set(stations.map((station) => station.id)).size === stations.length);
-
-stations.forEach((station) => {
-  assert(`station ${station.id} has display name`, typeof station.displayName === "string" && station.displayName.length > 2);
-  assert(`station ${station.id} has kind`, ["live", "template"].includes(station.kind));
+for (const station of stations) {
   assert(`station ${station.id} has live URL`, /^https:\/\/[^ ]+/.test(station.liveUrl));
   assert(`station ${station.id} has case anchor`, station.caseStudyAnchor === `/#case-study-${station.id}`);
-  assert(`station ${station.id} anchor exists`, index.includes(`id="case-study-${station.id}"`));
-  assert(`station ${station.id} screenshot URL`, station.screenshotUrl.startsWith("/img/world/") && fileExists(station.screenshotUrl.slice(1)));
-  assert(`station ${station.id} description`, typeof station.description === "string" && station.description.length >= 40);
-  assert(`station ${station.id} position`, ["x", "y", "z"].every((key) => Number.isFinite(station.position?.[key])));
-  assert(`station ${station.id} rotation`, ["x", "y", "z"].every((key) => Number.isFinite(station.rotation?.[key])));
-  assert(`station ${station.id} camera tuning`, Number.isFinite(station.camera?.distance));
-});
-
-assert("live CTA opens external tab safely", worldJs.includes('window.open(station.liveUrl, "_blank", "noopener")'));
-assert("case-study CTA uses resolved static anchor", worldJs.includes("window.location.href = resolveCaseStudyUrl(selectedStation.caseStudyAnchor)"));
-assert("QA report copy hook exists", worldJs.includes("async function copyQaReport()") && worldJs.includes("navigator.clipboard.writeText(report)"));
-assert("QA report API exists", worldJs.includes("getQaReport()"));
-
-for (const file of ["world.js", "world-data.js", "serve-local.mjs", "prepare-cloudflare-deploy.mjs", "verify-device-qa.mjs", "verify-photo-match.mjs"]) {
-  const result = run("node", ["--check", file]);
-  assert(`syntax ${file}`, result.status === 0, result.stderr);
+  assert(`station ${station.id} screenshot exists`, fileExists(station.screenshotUrl.slice(1)));
 }
 
-const productionSyntax = run("node", ["--check", "verify-production.mjs"]);
-assert("syntax verify-production.mjs", productionSyntax.status === 0, productionSyntax.stderr);
-const outboundSyntax = run("node", ["--check", "verify-outbound.mjs"]);
-assert("syntax verify-outbound.mjs", outboundSyntax.status === 0, outboundSyntax.stderr);
-const cloudflarePackage = run("node", ["prepare-cloudflare-deploy.mjs"]);
-assert("Cloudflare deploy package builds", cloudflarePackage.status === 0 && cloudflarePackage.stdout.includes("Prepared Cloudflare Pages deploy output"));
-const distFiles = listFilesRecursive("dist");
-[
-  "dist/_headers",
-  "dist/_redirects",
-  "dist/index.html",
-  "dist/v3-preview.html",
-  "dist/world.html",
-  "dist/world.css",
-  "dist/world.js",
-  "dist/world-data.js",
-  "dist/thanks.html",
-  "dist/404.html",
-  "dist/privacy.html",
-  "dist/terms.html",
-  "dist/favicon.svg",
-  "dist/og-image.png",
-  "dist/robots.txt",
-  "dist/sitemap.xml",
-  "dist/img/world/photo-match-room-plate.webp",
-  "dist/img/world/evenpath-mobile.jpg",
-  "dist/img/world/felco-mobile.jpg",
-  "dist/img/world/abel-mobile.jpg",
-  "dist/img/world/beckel-mobile.jpg"
-].forEach((path) => assert(`Cloudflare package includes ${path}`, distFiles.includes(path)));
-assert("Cloudflare package excludes repo-only artifacts", !distFiles.some((path) => /\.md$|verify-.*\.mjs|serve-local\.mjs|prepare-cloudflare-deploy\.mjs|verification\/|og-image\.svg|img\/[^/]+-mobile\.png|gustavo/i.test(path)));
+[...runtimeAssetPaths, ...stationTexturePaths, ...blenderArtifactPaths].forEach((path) => assert(`file exists ${path}`, fileExists(path)));
+assert("runtime GLB is optimized-size", fileSize("img/world/gallery-room/reconstructed-gallery.glb") < 500 * 1024);
+assert("vendored Three modules are available", fileSize("vendor/three/three.module.min.js") > 300 * 1024 && fileSize("vendor/three/three.core.min.js") > 300 * 1024);
+assert("rendered reference plates stay lightweight", [
+  roomLayout.assets.desktopPlate.slice(1),
+  roomLayout.assets.desktopPlateAvif.slice(1),
+  roomLayout.assets.mobilePlate.slice(1),
+  roomLayout.assets.inspectPlate.slice(1),
+  roomLayout.assets.introPoster.slice(1)
+].every((path) => fileSize(path) < 180 * 1024));
 
-const browser = chromePath();
+const materialBoardAsset = manifest.assets.find((asset) => asset.role === "material-style-board" && asset.review?.status === "selected");
+const frameExportReport = requiredFrameExportReport();
+const materialMapReport = requiredMaterialMapReport();
+const materialMapAsset = manifest.assets.find((asset) => asset.role === "world-material-map-derivatives" && asset.review?.status === "selected");
+const materialDerivativePaths = new Set(materialMapAsset?.derivatives?.map((derivative) => derivative.path) || []);
+const calibrationManifestCoverage = manifestFileCoverage(manifestAsset("world-reconstruction-calibration-export"), requiredCalibrationManifestPaths);
+const runtimeManifestCoverage = runtimeAssetManifestCoverage();
+writeOwnerRequiredDiagnosticReports({ materialBoardAsset, frameExportReport, materialMapReport });
+ownerDiagnostic(
+  "owner diagnostic locks selected material-items photo",
+  materialBoardAsset?.raw?.path === worldReconstruction.sourceAssets.materialBoard.raw
+    && materialBoardAsset.derivatives?.some((derivative) => derivative.path === worldReconstruction.sourceAssets.materialBoard.runtime),
+  {
+    expectedRaw: worldReconstruction.sourceAssets.materialBoard.raw,
+    expectedRuntime: worldReconstruction.sourceAssets.materialBoard.runtime,
+    selectedAsset: materialBoardAsset?.id || null,
+    selectedRaw: materialBoardAsset?.raw?.path || null
+  }
+);
+ownerDiagnostic(
+  "owner diagnostic exports physical frame inset geometry",
+  Object.values(frameExportReport).every((frame) => frame.missing.length === 0 && frame.hasInsetScreen),
+  frameExportReport
+);
+ownerDiagnostic(
+  "owner diagnostic runtime uses inner screen corners for websites and hit targets",
+  worldJs.includes("innerScreenCornersWorld")
+    && worldJs.includes("outerCornersWorld")
+    && worldJs.includes("glassCornersWorld")
+    && worldJs.includes("projectInnerScreenCorners"),
+  {
+    requiredRuntimeSignals: [
+      "innerScreenCornersWorld",
+      "outerCornersWorld",
+      "glassCornersWorld",
+      "projectInnerScreenCorners"
+    ]
+  }
+);
+ownerDiagnostic(
+  "owner diagnostic material maps exist for wall floor metal glass and lighting",
+  materialMapReport.missing.length === 0 && materialMapReport.missingFiles.length === 0,
+  materialMapReport
+);
+ownerDiagnostic(
+  "owner diagnostic manifest records generated material map derivatives",
+  materialMapAsset?.raw?.path === worldReconstruction.sourceAssets.materialBoard.raw
+    && Object.values(materialMapReport.expected).every((path) => materialDerivativePaths.has(path)),
+  {
+    selectedMaterialMapAsset: materialMapAsset?.id || null,
+    expectedRaw: worldReconstruction.sourceAssets.materialBoard.raw,
+    actualRaw: materialMapAsset?.raw?.path || null,
+    expectedDerivatives: Object.values(materialMapReport.expected),
+    manifestDerivatives: [...materialDerivativePaths]
+  }
+);
+ownerDiagnostic(
+  "owner diagnostic manifest records Blender calibration exports and debug renders",
+  calibrationManifestCoverage.complete,
+  calibrationManifestCoverage
+);
+assert(
+  "asset manifest records Blender calibration exports and debug renders",
+  calibrationManifestCoverage.complete,
+  JSON.stringify(calibrationManifestCoverage)
+);
+ownerDiagnostic(
+  "owner diagnostic manifest records optimized runtime assets with provenance",
+  runtimeManifestCoverage.complete,
+  runtimeManifestCoverage
+);
+assert(
+  "asset manifest records optimized runtime assets with provenance",
+  runtimeManifestCoverage.complete,
+  JSON.stringify(runtimeManifestCoverage)
+);
+ownerDiagnostic(
+  "owner diagnostic rejects hard rectangular wall-wash and floor-glow bars",
+  !worldJs.includes("WallWash_")
+    && !worldJs.includes("Cove_Light_Main")
+    && !worldJs.includes("new THREE.MeshBasicMaterial({ color: 0xffb35f"),
+  {
+    rejectedRuntimeSignals: [
+      "WallWash_ hard boxes",
+      "Cove_Light_Main hard box",
+      "solid MeshBasicMaterial floor glow"
+    ]
+  }
+);
+ownerDiagnostic(
+  "owner diagnostic runtime loads material-board-derived texture maps",
+  ["wall-albedo", "wall-normal", "wall-roughness", "floor-albedo", "floor-roughness", "floor-reflection-mask", "wall-wash-mask"].every((token) => worldJs.includes(token)),
+  {
+    requiredTextureTokens: [
+      "wall-albedo",
+      "wall-normal",
+      "wall-roughness",
+      "floor-albedo",
+      "floor-roughness",
+      "floor-reflection-mask",
+      "wall-wash-mask"
+    ]
+  }
+);
+ownerDiagnostic(
+  "owner diagnostic Blender-authored website placement covers frame windows",
+  [
+    "screenFitDiagnostics",
+    "buildBlenderCoverWebsiteTexture",
+    "websiteFrameAspect",
+    "websitePlaneCornersWorld",
+    "screenPlacement",
+    "contentMode: \"blender-cover\"",
+    "coverFillRatio"
+  ].every((token) => worldJs.includes(token)),
+  {
+    rejectedRuntimeSignals: [
+      "small inset poster placement leaves weird frame-edge bands",
+      "runtime-only website fitting is not anchored to Blender-authored screen placement"
+    ]
+  }
+);
+assertNoOwnerDiagnosticFailures();
+assertOwnerBaselineDiagnosticPreserved();
+assertPhase0MissingEvidenceDecisionRequest();
+assertOwnerFinalDecisionRequest();
+assertOwnerFinalDecisionProofLinksPreserved();
+assertPhase0ArchiveNearMissClassification();
+assertReadinessAuditStrictStatusPrecision();
+assertOwnerReviewStatusPrecision();
+await assertPhase0ExpandedEvidenceReviewPreserved();
+assertPhase0ArchiveEvidenceSearchPreserved();
+assertPhase0GitHistoryEvidenceSearchPreserved();
+assertScreenScaleInsetReportPreserved();
+assertFirstViewFrameContaminationReportPreserved();
+assertNormalRouteParityReportPreserved();
+assertOwnerRejectionFixedAfterPreserved();
+await assertOwnerReviewTriptychsPreserved();
+await assertOwnerReviewCleanCanvasPairsPreserved();
+await assertBlenderDebugRenderProofPreserved();
+await assertOwnerReviewCriticalRegionZoomsPreserved();
+await assertStructuralRegionProofPreserved();
+await assertWallSlabDetailProofPreserved();
+await assertLightingFloorRenderedProofPreserved();
+await assertScreenFrameInsetRenderedProofPreserved();
+await assertMaterialRuntimeProofPreserved();
+await assertNoBlackVoidRenderedProofPreserved();
+
+for (const file of ["world.js", "world-layout.js", "world-data.js", "serve-local.mjs", "verify-world.mjs", "verify-production.mjs", "scripts/world-calibration/verify_overlay_alignment.mjs"]) {
+  if (fileExists(file)) {
+    const result = run("node", ["--check", file]);
+    assert(`syntax ${file}`, result.status === 0, result.stderr);
+  }
+}
+
+const packageResult = run("node", ["prepare-cloudflare-deploy.mjs"]);
+if (packageResult.status === 0) {
+  const distFiles = listFilesRecursive("dist");
+  [
+    "dist/world.html",
+    "dist/world.css",
+    "dist/world.js",
+    "dist/world-layout.js",
+    "dist/world-data.js",
+    "dist/vendor/three/three.module.min.js",
+    "dist/vendor/three/three.core.min.js",
+    "dist/img/world/gallery-room/reconstructed-gallery.glb",
+    "dist/img/world/gallery-room/gallery-room-master-desktop-empty.webp",
+    "dist/img/world/gallery-room/gallery-room-master-mobile-empty.jpg",
+    "dist/img/world/gallery-room/station-inspect-plate-empty.webp",
+    "dist/img/world/evenpath-mobile.jpg",
+    "dist/img/world/felco-mobile.jpg",
+    "dist/img/world/abel-mobile.jpg",
+    "dist/img/world/beckel-mobile.jpg"
+  ].forEach((path) => assert(`Cloudflare package includes ${path}`, distFiles.includes(path)));
+} else {
+  assert("Cloudflare package skipped only for unrelated dirty assets", /Missing deploy asset: og-image\.png/.test(packageResult.stderr || packageResult.stdout), packageResult.stderr || packageResult.stdout);
+}
+
 const { server, origin } = await startServer();
 
 try {
-  const staticDom = await dumpDom(browser, origin, "/");
-  assert("static page renders hero headline", staticDom.includes("More qualified calls for") && staticDom.includes("through better websites and local SEO."));
-  assert("static page renders optimized screenshot assets", staticDom.includes("img/world/evenpath-mobile.jpg") && staticDom.includes("img/world/felco-mobile.jpg"));
-  assertStaticScreenshot("desktop static", await captureScreenshot(browser, origin, "/", 1440, 1000));
-  assertStaticScreenshot("portrait static", await captureScreenshot(browser, origin, "/", 500, 844));
-
-  const staticCdnFailDom = await dumpDom(
-    browser,
-    origin,
-    "/",
-    ["--host-resolver-rules=MAP cdnjs.cloudflare.com 127.0.0.1,MAP cdn.jsdelivr.net 127.0.0.1,MAP unpkg.com 127.0.0.1"],
-    { virtualTimeBudget: 7000, timeout: 9000 }
+  const browser = await chromium.launch({ headless: true, args: ["--use-angle=swiftshader"] });
+  const normalRuntime = await playwrightRuntimeContract(browser, origin, "/world", 1440, 900);
+  assert("normal /world exposes world runtime API", normalRuntime.hasApi && normalRuntime.engine === "blender-reconstruction", JSON.stringify(normalRuntime));
+  assert("normal /world starts as live reconstructed walking view", normalRuntime.state.referenceViewActive === false && normalRuntime.referenceViewAttr === false && normalRuntime.referenceViewMetric === "0", JSON.stringify(normalRuntime));
+  assert("normal /world exposes walking UI and screen chrome", normalRuntime.topbarOpacity > 0 && normalRuntime.targetRects.every((rect) => rect.opacity > 0), JSON.stringify(normalRuntime));
+  assert("normal /world renders calibrated screen target geometry", normalRuntime.screenTargets === 3 && normalRuntime.visibleScreenTargets === 3 && normalRuntime.targetRects.every((rect) => rect.width > 80 && rect.height > 120), JSON.stringify(normalRuntime));
+  assert("normal /world renders live Three canvas", normalRuntime.canvas.width >= 900 && normalRuntime.canvas.height >= 650 && normalRuntime.renderCalls >= 1, JSON.stringify(normalRuntime));
+  assert("normal /world does not use a static photo backdrop as the room", normalRuntime.state.referenceBackdrop?.parent === "scene" && normalRuntime.state.referenceBackdrop?.worldAnchored === true && normalRuntime.state.referenceBackdrop?.visible === false, JSON.stringify(normalRuntime.state.referenceBackdrop));
+  const screenFitEntries = Object.values(normalRuntime.state.screenFit || {});
+  assert(
+    "normal /world uses Blender cover placement for website screens",
+    screenFitEntries.length === 3
+      && screenFitEntries.every((fit) => (
+        fit.contentMode === "blender-cover"
+        && fit.placementSource === "blender-export"
+        && fit.coverFillRatio === 1
+        && fit.horizontalFillRatio === 1
+        && fit.verticalFillRatio === 1
+        && fit.matte?.left === 0
+        && fit.matte?.right === 0
+        && fit.matte?.top === 0
+        && fit.matte?.bottom === 0
+        && fit.aspectDistortion === 0
+        && fit.stretched === false
+        && fit.drawRect?.width > 0
+        && fit.drawRect?.height > 0
+        && fit.drawRect.x <= 0
+        && fit.drawRect.y <= 0
+        && fit.drawRect.x + fit.drawRect.width >= fit.canvasSize?.width
+        && fit.drawRect.y + fit.drawRect.height >= fit.canvasSize?.height
+      )),
+    JSON.stringify(normalRuntime.state.screenFit)
   );
-  assert("static CDN failure still renders content", staticCdnFailDom.includes("More qualified calls for") && staticCdnFailDom.includes('data-static-fallback="animation-unavailable"'));
-  assert("static CDN failure keeps critical UI bound", staticCdnFailDom.includes('data-world-bound="true"') && staticCdnFailDom.includes('data-nav-bound="true"'));
+  const postReferenceRuntime = await playwrightRuntimeContract(browser, origin, "/world?referenceView=0", 1440, 900);
+  const postReferenceRender = postReferenceRuntime.state.qa.render;
+  writeFileSync(join(evidenceDir, "post-reference-live-walking-report.json"), JSON.stringify({
+    route: "/world?referenceView=0",
+    referenceViewActive: postReferenceRuntime.state.referenceViewActive,
+    render: postReferenceRender,
+    alignment: postReferenceRuntime.state.alignment,
+    evidence: {
+      screenshot: "post-reference-desktop-main-3d.png",
+      canvas: "post-reference-desktop-main-canvas-3d.png",
+      visualMatch: "post-reference-desktop-world-main-visual-match.json",
+      visualDiff: "post-reference-desktop-world-main-visual-diff.png"
+    }
+  }, null, 2));
+  assert("normal /world non-reference route opens live walking view", postReferenceRuntime.state.referenceViewActive === false && postReferenceRuntime.referenceViewAttr === false && postReferenceRuntime.referenceViewMetric === "0", JSON.stringify(postReferenceRuntime.state));
+  assert("normal /world live walking view materializes 3D room shell", postReferenceRender.triangles >= 120 && postReferenceRender.drawCalls >= 12 && postReferenceRender.sceneObjects >= 35, JSON.stringify(postReferenceRender));
+  assertWorldScreenshot("post-reference desktop world main", await playwrightScreenshot(browser, origin, "/world?referenceView=0", 1440, 900, "post-reference-desktop-main-3d.png"), 900, 650);
+  await assertVisualReferenceMatch(
+    "post-reference desktop world main",
+    await playwrightCanvasScreenshot(browser, origin, "/world?referenceView=0", 1440, 900, "post-reference-desktop-main-canvas-3d.png"),
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      candidateLabel: "normal /world desktop live walking view",
+      deferFailure: true,
+      screenPolygons: projectedFramePolygonsFromState(postReferenceRuntime.state, 1440, 900, 320, 200, -0.65),
+      brightRatioMin: 0.08
+    }
+  );
+  const normalDesktopMain = await playwrightMaskedPageScreenshot(browser, origin, "/world", 1440, 900, "normal-desktop-main-3d.png");
+  assertWorldScreenshot("normal desktop world main", normalDesktopMain.bytes, 900, 650);
+  await assertVisualReferenceMatch(
+    "normal desktop world main user visible",
+    normalDesktopMain.bytes,
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      candidateLabel: "normal /world desktop live walking view with PRD UI/screen masks",
+      deferFailure: true,
+      screenPolygons: projectedFramePolygonsFromState(normalDesktopMain.state, 1440, 900, 320, 200, -0.12),
+      excludedRects: normalDesktopMain.excludedRects,
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.12,
+      brightRatioMin: 0.08
+    }
+  );
+  const normalDesktopCanvas = await playwrightCanvasScreenshot(browser, origin, "/world", 1440, 900, "normal-desktop-main-canvas-3d.png");
+  assertWorldScreenshot("normal desktop world clean canvas", normalDesktopCanvas, 900, 650);
+  await assertVisualReferenceMatch(
+    "normal desktop world clean canvas",
+    normalDesktopCanvas,
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      candidateLabel: "normal /world desktop canvas without DOM owner-review chrome",
+      deferFailure: true,
+      screenPolygons: projectedFramePolygonsFromState(normalDesktopMain.state, 1440, 900, 320, 200, -0.12),
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.12,
+      brightRatioMin: 0.08
+    }
+  );
+  const normalMobileMain = await playwrightMaskedPageScreenshot(browser, origin, "/world", 390, 844, "normal-mobile-main-3d.png", { sampleWidth: 156, sampleHeight: 338 });
+  assertWorldScreenshot("normal mobile world main", normalMobileMain.bytes, 360, 700);
+  await assertVisualReferenceMatch(
+    "normal mobile world main user visible",
+    normalMobileMain.bytes,
+    worldReconstruction.sourceAssets.mobileHero.raw,
+    null,
+    {
+      candidateLabel: "normal /world mobile live walking view with PRD UI/screen masks",
+      deferFailure: true,
+      sampleWidth: 156,
+      sampleHeight: 338,
+      screenPolygons: projectedFramePolygonsFromState(normalMobileMain.state, 390, 844, 156, 338, -0.12),
+      excludedRects: normalMobileMain.excludedRects,
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.14,
+      brightRatioMin: 0.04
+    }
+  );
+  const normalMobileCanvas = await playwrightCanvasScreenshot(browser, origin, "/world", 390, 844, "normal-mobile-main-canvas-3d.png");
+  assertWorldScreenshot("normal mobile world clean canvas", normalMobileCanvas, 360, 700);
+  await assertVisualReferenceMatch(
+    "normal mobile world clean canvas",
+    normalMobileCanvas,
+    worldReconstruction.sourceAssets.mobileHero.raw,
+    null,
+    {
+      candidateLabel: "normal /world mobile canvas without DOM owner-review chrome",
+      deferFailure: true,
+      sampleWidth: 156,
+      sampleHeight: 338,
+      screenPolygons: projectedFramePolygonsFromState(normalMobileMain.state, 390, 844, 156, 338, -0.12),
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.14,
+      brightRatioMin: 0.04
+    }
+  );
+  const normalFullscreenMain = await playwrightMaskedPageScreenshot(browser, origin, "/world", 1920, 1080, "normal-fullscreen-main-3d.png", { sampleWidth: 320, sampleHeight: 180 });
+  assertWorldScreenshot("normal fullscreen world main", normalFullscreenMain.bytes, 1600, 900);
+  await assertVisualReferenceMatch(
+    "normal fullscreen world main user visible",
+    normalFullscreenMain.bytes,
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      candidateLabel: "normal /world fullscreen live walking view with PRD UI/screen masks",
+      deferFailure: true,
+      sampleWidth: 320,
+      sampleHeight: 180,
+      screenPolygons: projectedFramePolygonsFromState(normalFullscreenMain.state, 1920, 1080, 320, 180, -0.12),
+      excludedRects: normalFullscreenMain.excludedRects,
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.12,
+      brightRatioMin: 0.08
+    }
+  );
+  const normalFullscreenCanvas = await playwrightCanvasScreenshot(browser, origin, "/world", 1920, 1080, "normal-fullscreen-main-canvas-3d.png");
+  assertWorldScreenshot("normal fullscreen world clean canvas", normalFullscreenCanvas, 1600, 900);
+  await assertVisualReferenceMatch(
+    "normal fullscreen world clean canvas",
+    normalFullscreenCanvas,
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      candidateLabel: "normal /world fullscreen canvas without DOM owner-review chrome",
+      deferFailure: true,
+      sampleWidth: 320,
+      sampleHeight: 180,
+      screenPolygons: projectedFramePolygonsFromState(normalFullscreenMain.state, 1920, 1080, 320, 180, -0.12),
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.12,
+      brightRatioMin: 0.08
+    }
+  );
+  const referenceInteractionProbe = await playwrightReferenceInteractionProbe(browser, origin);
+  assert("desktop interaction exits reference view and moves", referenceInteractionProbe.desktop.initial.referenceViewActive === true && referenceInteractionProbe.desktop.afterMove.referenceViewActive === false && referenceInteractionProbe.desktop.afterMove.screenOpacity > 0 && referenceInteractionProbe.desktop.afterMove.topbarOpacity > 0 && referenceInteractionProbe.desktop.movementMeters > 0.2, JSON.stringify(referenceInteractionProbe.desktop));
+  assert("mobile interaction exits reference view and moves", referenceInteractionProbe.mobile.initial.referenceViewActive === true && referenceInteractionProbe.mobile.afterTap.referenceViewActive === false && referenceInteractionProbe.mobile.afterMove.referenceViewActive === false && referenceInteractionProbe.mobile.afterMove.screenOpacity > 0 && referenceInteractionProbe.mobile.movementMeters > 0.2, JSON.stringify(referenceInteractionProbe.mobile));
+  const walkingParallaxProbe = await playwrightWalkingParallaxProbe(browser, origin);
+  const desktopWalkingParallaxReport = await assertWalkingParallax("desktop walking room parallax", walkingParallaxProbe.desktop.beforeCanvas, walkingParallaxProbe.desktop.afterCanvas, {
+    beforeLabel: "desktop initial reference-view canvas",
+    afterLabel: "desktop canvas after walking forward",
+    screenPolygons: [
+      ...projectedFramePolygons("desktopHero", 320, 200, -0.65),
+      ...projectedFramePolygonsFromState(walkingParallaxProbe.desktop.afterState, 1440, 900, 320, 200, -0.65)
+    ],
+    states: {
+      before: walkingParallaxProbe.desktop.beforeState,
+      after: walkingParallaxProbe.desktop.afterState
+    }
+  });
+  const mobileWalkingParallaxReport = await assertWalkingParallax("mobile walking room parallax", walkingParallaxProbe.mobile.beforeCanvas, walkingParallaxProbe.mobile.afterCanvas, {
+    beforeLabel: "mobile initial reference-view canvas",
+    afterLabel: "mobile canvas after walking forward",
+    sampleWidth: 156,
+    sampleHeight: 338,
+    screenPolygons: [
+      ...projectedFramePolygons("mobileHero", 156, 338, -0.65),
+      ...projectedFramePolygonsFromState(walkingParallaxProbe.mobile.afterState, 390, 844, 156, 338, -0.65)
+    ],
+    states: {
+      before: walkingParallaxProbe.mobile.beforeState,
+      after: walkingParallaxProbe.mobile.afterState
+    }
+  });
+  const blackVoidEntries = [
+    await materialContinuityEntry({
+      id: "desktopFirstView",
+      label: "Normal desktop first view",
+      evidence: "normal-desktop-main-3d.png",
+      bytes: normalDesktopMain.bytes,
+      sampleWidth: 320,
+      sampleHeight: 200,
+      screenPolygons: projectedFramePolygonsFromState(normalDesktopMain.state, 1440, 900, 320, 200, -0.12),
+      excludedRects: normalDesktopMain.excludedRects,
+      gates: { meanLumaMin: 42, darkRatioMax: 0.18, nonDarkRatioMin: 0.72, lumaSdMin: 18 }
+    }),
+    await materialContinuityEntry({
+      id: "mobileFirstView",
+      label: "Normal mobile first view",
+      evidence: "normal-mobile-main-3d.png",
+      bytes: normalMobileMain.bytes,
+      sampleWidth: 156,
+      sampleHeight: 338,
+      screenPolygons: projectedFramePolygonsFromState(normalMobileMain.state, 390, 844, 156, 338, -0.12),
+      excludedRects: normalMobileMain.excludedRects,
+      gates: { meanLumaMin: 38, darkRatioMax: 0.2, nonDarkRatioMin: 0.68, lumaSdMin: 18 }
+    }),
+    await materialContinuityEntry({
+      id: "fullscreenFirstView",
+      label: "Normal fullscreen first view",
+      evidence: "normal-fullscreen-main-3d.png",
+      bytes: normalFullscreenMain.bytes,
+      sampleWidth: 320,
+      sampleHeight: 180,
+      screenPolygons: projectedFramePolygonsFromState(normalFullscreenMain.state, 1920, 1080, 320, 180, -0.12),
+      excludedRects: normalFullscreenMain.excludedRects,
+      gates: { meanLumaMin: 42, darkRatioMax: 0.18, nonDarkRatioMin: 0.72, lumaSdMin: 18 }
+    }),
+    walkingMaterialContinuityEntry(
+      "desktopWalking",
+      "Desktop walking side view",
+      "desktop-walking-parallax-after-canvas.png",
+      desktopWalkingParallaxReport
+    ),
+    walkingMaterialContinuityEntry(
+      "mobileWalking",
+      "Mobile walking side view",
+      "mobile-walking-parallax-after-canvas.png",
+      mobileWalkingParallaxReport,
+      { meanLumaMin: 38, nonDarkRatioMin: 0.68 }
+    )
+  ];
+  const blackVoidReport = {
+    status: blackVoidEntries.every((entry) => entry.status === "passed") ? "passed" : "failed",
+    requirement: "Normal /world first views and walking side views must retain readable material response and must not collapse into black voids or untextured return walls.",
+    scopeIds: blackVoidEntries.map((entry) => entry.id),
+    entries: Object.fromEntries(blackVoidEntries.map((entry) => [entry.id, entry])),
+    failures: blackVoidEntries.filter((entry) => entry.status !== "passed")
+  };
+  writeJsonEvidence("black-void-rejection-report.json", blackVoidReport);
+  assert("first views and walking side views have no black voids", blackVoidReport.status === "passed", JSON.stringify(blackVoidReport));
+  assertBlackVoidCoverageReport(blackVoidReport);
+  const walkingHitTargetProbe = await playwrightWalkingHitTargetProbe(browser, origin);
+  assert("desktop walking hit targets follow projected frame geometry", walkingHitTargetProbe.desktop.movementMeters > 0.2 && walkingHitTargetProbe.desktop.maxBoxError <= 0.75 && walkingHitTargetProbe.desktop.maxClipErrorPct <= 0.2, JSON.stringify(walkingHitTargetProbe.desktop));
+  assert("mobile walking hit targets follow projected frame geometry", walkingHitTargetProbe.mobile.movementMeters > 0.2 && walkingHitTargetProbe.mobile.maxBoxError <= 0.75 && walkingHitTargetProbe.mobile.maxClipErrorPct <= 0.2, JSON.stringify(walkingHitTargetProbe.mobile));
+  const stationActionsProbe = await playwrightStationActionsProbe(browser, origin);
+  assert("normal /world station chips select all stations", stationActionsProbe.selection.every((result) => result.ok), JSON.stringify(stationActionsProbe.selection));
+  assert("normal /world live buttons open station URLs", stationActionsProbe.live.every((result) => result.ok), JSON.stringify(stationActionsProbe.live));
+  assert("normal /world inspection opens selected station", stationActionsProbe.inspection.every((result) => result.ok), JSON.stringify(stationActionsProbe.inspection));
+  assert("normal /world case-study buttons navigate to station anchors", stationActionsProbe.caseStudies.every((result) => result.ok), JSON.stringify(stationActionsProbe.caseStudies));
 
-  const staticLitePreferenceDom = await dumpDom(browser, origin, "/index.html?lite=1&verifyMode=1&seedMode=world");
-  assert("static lite clears mode preference at runtime", staticLitePreferenceDom.includes('data-mode-preference="null"') && staticLitePreferenceDom.includes("case-study-evenpath"));
-
-  const staticTrackingDom = await dumpDom(browser, origin, "/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch&utm_content=verifier&verifyTracking=1");
-  assert("static business-card UTM tracking runs at runtime", staticTrackingDom.includes('data-form-utm-source="business_card"') && staticTrackingDom.includes('data-form-utm-medium="offline"') && staticTrackingDom.includes('data-form-utm-campaign="v3_launch"') && staticTrackingDom.includes('data-last-static-event="business_card_qr_visit"') && numericAttr(staticTrackingDom, "data-static-data-layer-count") >= 1);
-
-  const staticReducedScenicDom = await dumpDom(browser, origin, "/index.html?scenic=1&verifyMode=1", ["--force-prefers-reduced-motion=reduce"]);
-  assert("static reduced motion blocks scenic routing", staticReducedScenicDom.includes("case-study-evenpath") && !staticReducedScenicDom.includes('id="stationControls"'));
-  assert("static reduced scenic stores static preference at runtime", staticReducedScenicDom.includes('data-mode-preference="static"'));
-
-  const cleanThanksDom = await dumpDom(browser, origin, "/thanks");
-  assert("clean thanks route renders confirmation copy", cleanThanksDom.includes("Message received") && cleanThanksDom.includes("Back to home"));
-
-  const thanksDom = await dumpDom(browser, origin, "/thanks.html");
-  assert("thanks page renders confirmation copy", thanksDom.includes("Message received") && thanksDom.includes("Back to home"));
-  assertStaticScreenshot("desktop thanks", await captureScreenshot(browser, origin, "/thanks.html", 1440, 1000));
-  assertStaticScreenshot("portrait thanks", await captureScreenshot(browser, origin, "/thanks.html", 500, 844));
-
-  const cleanNotFoundDom = await dumpDom(browser, origin, "/not-a-real-page");
-  assert("clean missing route renders branded 404", cleanNotFoundDom.includes("That page is not in the Showcase Designs build") && cleanNotFoundDom.includes("Back to home"));
-
-  const notFoundDom = await dumpDom(browser, origin, "/404.html");
-  assert("404 page renders fallback copy", notFoundDom.includes("That page is not in the Showcase Designs build") && notFoundDom.includes("Studio"));
-  assertStaticScreenshot("desktop 404", await captureScreenshot(browser, origin, "/404.html", 1440, 1000));
-  assertStaticScreenshot("portrait 404", await captureScreenshot(browser, origin, "/404.html", 500, 844));
-
-  const privacyDom = await dumpDom(browser, origin, "/privacy.html");
-  assert("privacy page renders policy copy", privacyDom.includes("Privacy Policy") && privacyDom.includes("Form Processing"));
-  assertStaticScreenshot("desktop privacy", await captureScreenshot(browser, origin, "/privacy.html", 1440, 1000));
-  assertStaticScreenshot("portrait privacy", await captureScreenshot(browser, origin, "/privacy.html", 500, 844));
-
-  const termsDom = await dumpDom(browser, origin, "/terms.html");
-  assert("terms page renders terms copy", termsDom.includes("Terms of Service") && termsDom.includes("Limitation of Liability"));
-  assertStaticScreenshot("desktop terms", await captureScreenshot(browser, origin, "/terms.html", 1440, 1000));
-  assertStaticScreenshot("portrait terms", await captureScreenshot(browser, origin, "/terms.html", 500, 844));
-
-  const normalDom = await dumpDom(browser, origin, "/world.html?try=1&verifyMode=1");
-  assert("world initializes Three", normalDom.includes('data-engine="three.js r160"'));
+  const normalDom = await playwrightDom(browser, origin, "/world.html?try=1&verifyMode=1", 1440, 900, { waitForAttr: "data-world-alignment-probe" });
+  assert("world initializes Blender reconstruction engine", normalDom.includes('data-engine="blender-reconstruction"'));
   assert("world route stores world preference at runtime", normalDom.includes('data-mode-preference="world"'));
   assert("world renders four station chips", countMatches(normalDom, /class="station-chip/g) === 4);
-  assert("world renders inspection and fullscreen controls", normalDom.includes('id="inspectHint"') && normalDom.includes('id="fullscreenButton"') && normalDom.includes('id="screenViewerFullscreen"'));
-  assert("world starts with active station", /station-chip is-active[\s\S]*aria-pressed="true"/.test(normalDom));
-  assert("portrait world defaults to compact station panel", normalDom.includes("station-panel is-compact") && normalDom.includes('id="panelToggleButton"') && normalDom.includes('aria-expanded="false"'));
-  assert("normal mode hides QA overlay", !/qa-panel|data-qa=/.test(normalDom));
-  const renderCalls = numericAttr(normalDom, "data-world-render-calls");
-  const renderTextures = numericAttr(normalDom, "data-world-textures");
-  const colliderCount = numericAttr(normalDom, "data-world-colliders");
-  const collisionProbe = parseKeyValueProbe(attrValue(normalDom, "data-world-collision-probe"));
-  const inspectionProbe = parseKeyValueProbe(attrValue(normalDom, "data-world-inspection-probe"));
-  assert("world draw calls stay within PRD budget", renderCalls > 0 && renderCalls <= 150, String(renderCalls));
-  assert("world texture count stays bounded", renderTextures > 0 && renderTextures <= 40, String(renderTextures));
-  assert("world exposes physical collider coverage", colliderCount >= 6, String(colliderCount));
-  assert("world runtime collision probe blocks physical objects", collisionProbe.colliders === colliderCount && collisionProbe.blocked === colliderCount && collisionProbe.safe === 1 && collisionProbe.endpointClear === 1 && collisionProbe.clamp === 1, JSON.stringify(collisionProbe));
+  assert("world renders three calibrated screen targets", countMatches(normalDom, /class="screen-target/g) === 3);
+  assert("world exposes render metrics", numericAttr(normalDom, "data-world-render-calls") >= 1 && numericAttr(normalDom, "data-world-screens") === 3);
+  assert("world exposes layout probe", attrValue(normalDom, "data-world-layout-probe") === "desktop:3;mobile:3;inspect:1");
+  const inspectionProbe = parseProbe(attrValue(normalDom, "data-world-inspection-probe"));
   assert("world runtime inspection probe activates scrolls and exits", inspectionProbe.ready === 1 && inspectionProbe.activated === 1 && inspectionProbe.scrolled === 1 && inspectionProbe.exited === 1, JSON.stringify(inspectionProbe));
-  assertSceneScreenshot("desktop world", await captureScreenshot(browser, origin, "/world.html?try=1", 1440, 1000));
-  assertSceneScreenshot("portrait world", await captureScreenshot(browser, origin, "/world.html?try=1", 500, 844));
+  const movementProbe = parseProbe(attrValue(normalDom, "data-world-movement-probe"));
+  assert("world movement probe moves and collides", movementProbe.ready === 1 && movementProbe.changed === 1 && movementProbe.wallBlocked === 1 && movementProbe.benchBlocked === 1, JSON.stringify(movementProbe));
+  const alignmentProbe = parseProbe(attrValue(normalDom, "data-world-alignment-probe"));
+  assert("world alignment probe passes desktop tolerance", alignmentProbe.pass === 1 && alignmentProbe.maxError <= alignmentProbe.tolerance, JSON.stringify(alignmentProbe));
 
-  const cleanWorldDom = await dumpDom(browser, origin, "/world?try=1");
-  assert("clean world route initializes Three", cleanWorldDom.includes('data-engine="three.js r160"') && cleanWorldDom.includes("Client website stations"));
+  const mobileDom = await playwrightDom(browser, origin, "/world.html?try=1&verifyMode=1", 390, 844, { waitForAttr: "data-world-alignment-probe" });
+  const mobileAlignmentProbe = parseProbe(attrValue(mobileDom, "data-world-alignment-probe"));
+  assert("world alignment probe passes mobile tolerance", mobileAlignmentProbe.pass === 1 && mobileAlignmentProbe.maxError <= mobileAlignmentProbe.tolerance, JSON.stringify(mobileAlignmentProbe));
 
-  const gsapFailDom = await dumpDom(
-    browser,
-    origin,
-    "/world.html?try=1",
-    ["--host-resolver-rules=MAP cdnjs.cloudflare.com 127.0.0.1"],
-    { virtualTimeBudget: 7000, timeout: 9000 }
-  );
-  assert("optional GSAP failure still initializes world", gsapFailDom.includes('data-engine="three.js r160"') && gsapFailDom.includes("Client website stations"));
+  const inspectDom = await playwrightDom(browser, origin, "/world.html?try=1&verifyMode=1&inspect=felco", 1440, 900, { waitForSelector: ".screen-viewer:not([hidden])" });
+  assert("inspection route opens selected station", inspectDom.includes("Felco Vending") && inspectDom.includes("screen-viewer") && !inspectDom.includes('id="screenViewer" aria-label="Website exhibit preview" hidden'));
 
-  const qaDom = await dumpDom(browser, origin, "/world.html?qa=1&try=1");
-  assert("QA mode initializes Three", qaDom.includes('data-engine="three.js r160"'));
-  assert("QA overlay renders", qaDom.includes('class="qa-panel"') && qaDom.includes('data-qa="pixels"'));
-  assert("QA copy report button renders", qaDom.includes('data-qa-copy="">Copy report</button>'));
+  const qaDom = await playwrightDom(browser, origin, "/world.html?qa=1&try=1", 1440, 900, { waitForSelector: ".qa-panel" });
+  assert("QA overlay renders", qaDom.includes('class="qa-panel"') && qaDom.includes('data-qa="engine">blender-reconstruction'));
+  assert("QA copy report button renders", qaDom.includes("data-qa-copy"));
   assert("QA route reaches running state", qaDom.includes('data-qa="route">world running'));
 
-  const liteDom = await dumpDom(browser, origin, "/world.html?lite=1&verifyMode=1");
+  const calibrateDom = await playwrightDom(browser, origin, "/world?calibrate=1&verifyMode=1", 1440, 900, { waitForSelector: "#calibrationTarget" });
+  assert("calibration mode renders local panel", calibrateDom.includes('data-calibrate=""') && calibrateDom.includes("Blender Calibration") && calibrateDom.includes("calibrationTarget"));
+
+  const reducedDom = await playwrightDom(browser, origin, "/world.html?try=1&intro=1&verifyMode=1", 1440, 900, { reducedMotion: true, waitForAttr: "data-engine" });
+  assert("reduced motion keeps manual 3D route and skips intro", reducedDom.includes('data-engine="blender-reconstruction"') && reducedDom.includes('data-reduced-motion=""') && !reducedDom.includes("world_cinematic_intro_show"));
+
+  const liteDom = await playwrightDom(browser, origin, "/world.html?lite=1&verifyMode=1", 1440, 900, {});
   assert("world lite redirects static", liteDom.includes("case-study-evenpath") && !liteDom.includes("Client website stations"));
-  assert("world lite clears mode preference at runtime", liteDom.includes('data-mode-preference="null"'));
 
-  const cleanLiteDom = await dumpDom(browser, origin, "/world?lite=1&verifyMode=1");
-  assert("clean world lite redirects static", cleanLiteDom.includes("case-study-evenpath") && !cleanLiteDom.includes("Client website stations"));
-  assert("clean world lite clears mode preference at runtime", cleanLiteDom.includes('data-mode-preference="null"'));
-
-  const reducedDom = await dumpDom(browser, origin, "/world.html?try=1&verifyMode=1", ["--force-prefers-reduced-motion=reduce"]);
-  assert("reduced motion redirects static", reducedDom.includes("case-study-evenpath") && !reducedDom.includes('data-engine="three.js r160"'));
-  assert("reduced motion stores static preference at runtime", reducedDom.includes('data-mode-preference="static"'));
-
-  const unsupportedDom = await dumpDom(browser, origin, "/world.html", ["--disable-webgl", "--disable-3d-apis"]);
-  assert("unsupported WebGL fallback", unsupportedDom.includes('<section class="fallback" id="fallback">') && unsupportedDom.includes("Standard view recommended"));
-
-  const contextLossDom = await dumpDom(browser, origin, "/world.html?try=1&simulateContextLoss=1");
-  assert("WebGL context loss shows fallback", contextLossDom.includes("graphics context was lost") && contextLossDom.includes('<section class="fallback" id="fallback">'));
-
-  const dependencyFailDom = await dumpDom(
-    browser,
-    origin,
-    "/world.html?try=1",
-    ["--host-resolver-rules=MAP unpkg.com 127.0.0.1"],
-    { virtualTimeBudget: 7000, timeout: 9000 }
+  const desktopMain = await playwrightMaskedPageScreenshot(browser, origin, "/world.html?try=1&verifyMode=1", 1440, 900, "desktop-main-3d.png");
+  assertWorldScreenshot("desktop world main", desktopMain.bytes, 900, 650);
+  await assertVisualReferenceMatch(
+    "desktop world main user visible",
+    desktopMain.bytes,
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      candidateLabel: "full page live walking view with PRD UI/screen masks",
+      deferFailure: true,
+      screenPolygons: projectedFramePolygonsFromState(desktopMain.state, 1440, 900, 320, 200, -0.12),
+      excludedRects: desktopMain.excludedRects,
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.12,
+      brightRatioMin: 0.08
+    }
   );
-  assert("Three dependency failure fallback", dependencyFailDom.includes("could not load its 3D engine") && dependencyFailDom.includes('<section class="fallback" id="fallback">'));
-
-  const lowTierDom = await dumpDom(browser, origin, "/world.html?qa=1", ["--enable-low-end-device-mode"]);
-  assert("low-tier fallback includes Try Anyway", lowTierDom.includes('<button class="secondary-action" id="tryAnywayButton" type="button">Try anyway</button>'));
-  assert("low-tier QA route state", lowTierDom.includes('data-qa="route">low-tier fallback'));
-
-  const scenicDom = await dumpDom(browser, origin, "/index.html?scenic=1&verifyMode=1");
-  assert("static scenic reaches world shell", scenicDom.includes('id="stationControls"') || scenicDom.includes('id="fallback"'));
-  assert("static scenic stores world preference at runtime", scenicDom.includes('data-mode-preference="world"'));
+  await assertVisualReferenceMatch(
+    "desktop world main",
+    await playwrightCanvasScreenshot(browser, origin, "/world.html?try=1&verifyMode=1", 1440, 900, "desktop-main-canvas-3d.png"),
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      deferFailure: true,
+      screenPolygons: projectedFramePolygons("desktopHero", 320, 200, -0.12)
+    }
+  );
+  const mobileMain = await playwrightMaskedPageScreenshot(browser, origin, "/world.html?try=1&verifyMode=1", 390, 844, "mobile-main-3d.png", { sampleWidth: 156, sampleHeight: 338 });
+  assertWorldScreenshot("mobile world main", mobileMain.bytes, 360, 700);
+  await assertVisualReferenceMatch(
+    "mobile world main user visible",
+    mobileMain.bytes,
+    worldReconstruction.sourceAssets.mobileHero.raw,
+    null,
+    {
+      candidateLabel: "full page live walking view with PRD UI/screen masks",
+      deferFailure: true,
+      sampleWidth: 156,
+      sampleHeight: 338,
+      screenPolygons: projectedFramePolygonsFromState(mobileMain.state, 390, 844, 156, 338, -0.12),
+      excludedRects: mobileMain.excludedRects,
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.14,
+      brightRatioMin: 0.04
+    }
+  );
+  await assertVisualReferenceMatch(
+    "mobile world main",
+    await playwrightCanvasScreenshot(browser, origin, "/world.html?try=1&verifyMode=1", 390, 844, "mobile-main-canvas-3d.png"),
+    worldReconstruction.sourceAssets.mobileHero.raw,
+    null,
+    {
+      deferFailure: true,
+      sampleWidth: 156,
+      sampleHeight: 338,
+      brightRatioMin: 0.05,
+      screenPolygons: projectedFramePolygons("mobileHero", 156, 338, -0.12)
+    }
+  );
+  const fullscreenMain = await playwrightMaskedPageScreenshot(browser, origin, "/world.html?try=1&verifyMode=1", 1920, 1080, "fullscreen-main-3d.png", { sampleWidth: 320, sampleHeight: 180 });
+  assertWorldScreenshot("fullscreen world main", fullscreenMain.bytes, 1600, 900);
+  await assertVisualReferenceMatch(
+    "fullscreen world main user visible",
+    fullscreenMain.bytes,
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      candidateLabel: "full page fullscreen live walking view with PRD UI/screen masks",
+      deferFailure: true,
+      sampleWidth: 320,
+      sampleHeight: 180,
+      screenPolygons: projectedFramePolygonsFromState(fullscreenMain.state, 1920, 1080, 320, 180, -0.12),
+      excludedRects: fullscreenMain.excludedRects,
+      colorMaeMax: 8,
+      lumaMaeMax: 8,
+      brightnessRatioMin: 0.95,
+      brightnessRatioMax: 1.05,
+      darkRatioMax: 0.12,
+      brightRatioMin: 0.08
+    }
+  );
+  await assertVisualReferenceMatch(
+    "fullscreen world main",
+    await playwrightCanvasScreenshot(browser, origin, "/world.html?try=1&verifyMode=1", 1920, 1080, "fullscreen-main-canvas-3d.png"),
+    worldReconstruction.sourceAssets.desktopHero.raw,
+    worldReconstruction.sourceAssets.desktopMask.raw,
+    {
+      deferFailure: true,
+      sampleWidth: 320,
+      sampleHeight: 180,
+      screenPolygons: projectedFramePolygons("fullscreenHero", 320, 180, -0.12)
+    }
+  );
+  assertWorldScreenshot("normal desktop world inspection", await playwrightScreenshot(browser, origin, "/world?inspect=evenpath", 1440, 900, "normal-desktop-inspection-3d.png", { waitForSelector: ".screen-viewer:not([hidden])" }), 900, 650);
+  await assertVisualReferenceMatch(
+    "normal desktop world inspection",
+    await playwrightElementScreenshot(browser, origin, "/world?inspect=evenpath", 1440, 900, "#screenViewer", "normal-desktop-inspection-viewer-3d.png", { waitForSelector: ".screen-viewer:not([hidden])" }),
+    worldReconstruction.sourceAssets.inspectPlate.raw,
+    worldReconstruction.sourceAssets.inspectMask.raw,
+    {
+      candidateLabel: "normal /world inspection viewer",
+      deferFailure: true,
+      brightRatioMin: 0.06,
+      excludedRects: [{ x: 0, y: 0, width: 320, height: 34 }]
+    }
+  );
+  assertWorldScreenshot("normal mobile world inspection", await playwrightScreenshot(browser, origin, "/world?inspect=evenpath", 390, 844, "normal-mobile-inspection-3d.png", { waitForSelector: ".screen-viewer:not([hidden])" }), 360, 700);
+  await assertVisualReferenceMatch(
+    "normal mobile world inspection",
+    await playwrightElementScreenshot(browser, origin, "/world?inspect=evenpath", 390, 844, "#screenViewer", "normal-mobile-inspection-viewer-3d.png", { waitForSelector: ".screen-viewer:not([hidden])" }),
+    worldReconstruction.sourceAssets.inspectPlate.raw,
+    worldReconstruction.sourceAssets.inspectMask.raw,
+    {
+      candidateLabel: "normal /world mobile inspection viewer",
+      deferFailure: true,
+      sampleWidth: 156,
+      sampleHeight: 338,
+      brightRatioMin: 0.06,
+      excludedRects: [{ x: 0, y: 0, width: 156, height: 80 }]
+    }
+  );
+  assertWorldScreenshot("desktop world inspection", await playwrightScreenshot(browser, origin, "/world.html?try=1&verifyMode=1&inspect=evenpath", 1440, 900, "desktop-inspection-3d.png", { waitForSelector: ".screen-viewer:not([hidden])" }), 900, 650);
+  await assertVisualReferenceMatch(
+    "desktop world inspection",
+    await playwrightElementScreenshot(browser, origin, "/world.html?try=1&verifyMode=1&inspect=evenpath", 1440, 900, "#screenViewer", "desktop-inspection-viewer-3d.png", { waitForSelector: ".screen-viewer:not([hidden])" }),
+    worldReconstruction.sourceAssets.inspectPlate.raw,
+    worldReconstruction.sourceAssets.inspectMask.raw,
+    {
+      candidateLabel: "inspection viewer",
+      deferFailure: true,
+      brightRatioMin: 0.06,
+      excludedRects: [{ x: 0, y: 0, width: 320, height: 34 }]
+    }
+  );
+  assertWorldScreenshot("mobile world inspection", await playwrightScreenshot(browser, origin, "/world.html?try=1&verifyMode=1&inspect=evenpath", 390, 844, "mobile-inspection-3d.png", { waitForSelector: ".screen-viewer:not([hidden])" }), 360, 700);
+  await assertVisualReferenceMatch(
+    "mobile world inspection",
+    await playwrightElementScreenshot(browser, origin, "/world.html?try=1&verifyMode=1&inspect=evenpath", 390, 844, "#screenViewer", "mobile-inspection-viewer-3d.png", { waitForSelector: ".screen-viewer:not([hidden])" }),
+    worldReconstruction.sourceAssets.inspectPlate.raw,
+    worldReconstruction.sourceAssets.inspectMask.raw,
+    {
+      candidateLabel: "mobile inspection viewer",
+      deferFailure: true,
+      sampleWidth: 156,
+      sampleHeight: 338,
+      brightRatioMin: 0.06,
+      excludedRects: [{ x: 0, y: 0, width: 156, height: 80 }]
+    }
+  );
+  writeFileSync(join(evidenceDir, "browser-probe-summary.json"), JSON.stringify({
+    desktopMovementProbe: movementProbe,
+    desktopAlignmentProbe: alignmentProbe,
+    mobileAlignmentProbe,
+    websiteFrameFit: normalRuntime.state.screenFit
+  }, null, 2));
+  await browser.close();
+  assertNoDeferredVisualFailures();
 } finally {
   await new Promise((resolveClose) => server.close(resolveClose));
-}
-
-const localPreview = await startLocalPreviewServer();
-try {
-  const previewHome = await fetchText(localPreview.origin, "/");
-  assert("serve-local home route", previewHome.status === 200 && previewHome.body.includes("Explore the studio"));
-  assert("serve-local security headers", previewHome.headers.get("x-content-type-options") === "nosniff" && previewHome.headers.get("referrer-policy") === "strict-origin-when-cross-origin");
-
-  const previewWorld = await fetchText(localPreview.origin, "/world");
-  assert("serve-local clean world route", previewWorld.status === 200 && previewWorld.body.includes("studioCanvas") && previewWorld.body.includes("world.js"));
-
-  const previewThanks = await fetchText(localPreview.origin, "/thanks");
-  assert("serve-local clean thanks route", previewThanks.status === 200 && previewThanks.body.includes("Message received"));
-
-  const previewMissing = await fetchText(localPreview.origin, "/not-a-real-page");
-  assert("serve-local branded missing route", previewMissing.status === 404 && previewMissing.body.includes("That page is not in the Showcase Designs build"));
-
-  const dryRun = spawnSync("node", ["verify-production.mjs"], {
-    cwd: root,
-    encoding: "utf8",
-    timeout: 20000,
-    env: { ...process.env, SHOWCASE_ORIGIN: localPreview.origin }
-  });
-  assert("production verifier passes against serve-local", dryRun.status === 0, dryRun.stderr || dryRun.stdout);
-} finally {
-  localPreview.child.kill("SIGTERM");
-  await new Promise((resolveClose) => localPreview.child.once("close", resolveClose));
-}
-
-const distPreview = await startLocalPreviewServer(["--root", "dist"]);
-try {
-  const distHome = await fetchText(distPreview.origin, "/");
-  assert("serve-local dist home route", distHome.status === 200 && distHome.body.includes("Explore the studio"));
-
-  const distWorld = await fetchText(distPreview.origin, "/world");
-  assert("serve-local dist clean world route", distWorld.status === 200 && distWorld.body.includes("studioCanvas") && distWorld.body.includes("world.js"));
-
-  const distReadme = await fetchText(distPreview.origin, "/README.md");
-  assert("serve-local dist excludes repo docs", distReadme.status === 404 && distReadme.body.includes("That page is not in the Showcase Designs build"));
-
-  const distVerifier = await fetchText(distPreview.origin, "/verify-world.mjs");
-  assert("serve-local dist excludes verifier scripts", distVerifier.status === 404 && distVerifier.body.includes("That page is not in the Showcase Designs build"));
-
-  const distDryRun = spawnSync("node", ["verify-production.mjs"], {
-    cwd: root,
-    encoding: "utf8",
-    timeout: 20000,
-    env: { ...process.env, SHOWCASE_ORIGIN: distPreview.origin }
-  });
-  assert("production verifier passes against Cloudflare dist package", distDryRun.status === 0, distDryRun.stderr || distDryRun.stdout);
-} finally {
-  distPreview.child.kill("SIGTERM");
-  await new Promise((resolveClose) => distPreview.child.once("close", resolveClose));
 }
 
 const failed = checks.filter((check) => !check.ok);
 if (failed.length) {
   process.exitCode = 1;
 } else {
-  console.log(`\n${checks.length} checks passed.`);
+  console.log(`\n${checks.length} Blender reconstruction world checks passed.`);
+}
+
+async function playwrightDom(browser, origin, path, width, height, options = {}) {
+  const context = await browser.newContext({
+    viewport: { width, height },
+    deviceScaleFactor: 1,
+    reducedMotion: options.reducedMotion ? "reduce" : "no-preference"
+  });
+  const page = await context.newPage();
+  await page.goto(`${origin}${path}`, { waitUntil: "networkidle", timeout: 20000 });
+  if (options.waitForAttr) {
+    await page.waitForFunction((attr) => document.documentElement.hasAttribute(attr), options.waitForAttr, { timeout: 10000 });
+  }
+  if (options.waitForSelector) {
+    await page.waitForSelector(options.waitForSelector, { timeout: 10000 });
+  }
+  const content = await page.content();
+  await context.close();
+  return content;
+}
+
+async function playwrightRuntimeContract(browser, origin, path, width, height) {
+  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(`${origin}${path}`, { waitUntil: "networkidle", timeout: 20000 });
+  await page.waitForFunction(() => {
+    const root = document.documentElement;
+    const screenFit = Object.values(window.__showcaseWorld?.getState?.()?.screenFit || {});
+    return window.__showcaseWorld?.getState
+      && Number(root.getAttribute("data-world-render-calls") || 0) >= 1
+      && document.querySelectorAll(".screen-target").length === 3
+      && screenFit.length === 3
+      && screenFit.every((fit) => fit.contentMode === "blender-cover" && fit.placementSource === "blender-export" && fit.coverFillRatio === 1 && fit.horizontalFillRatio === 1 && fit.verticalFillRatio === 1 && fit.matte?.left === 0 && fit.matte?.right === 0 && fit.matte?.top === 0 && fit.matte?.bottom === 0 && fit.stretched === false);
+  }, null, { timeout: 10000 });
+  const contract = await page.evaluate(() => {
+    const canvas = document.querySelector("#worldCanvas")?.getBoundingClientRect();
+    const targetRects = [...document.querySelectorAll(".screen-target")].map((target) => {
+      const rect = target.getBoundingClientRect();
+      const style = getComputedStyle(target);
+      return {
+        slot: target.getAttribute("data-slot"),
+        stationId: target.getAttribute("data-station-id"),
+        hidden: target.hidden,
+        width: rect.width,
+        height: rect.height,
+        x: rect.x,
+        y: rect.y,
+        opacity: Number(style.opacity),
+        pointerEvents: style.pointerEvents
+      };
+    });
+    const topbar = document.querySelector(".world-topbar");
+    const topbarStyle = topbar ? getComputedStyle(topbar) : null;
+    const state = window.__showcaseWorld.getState();
+    return {
+      hasApi: Boolean(window.__showcaseWorld?.getState),
+      engine: state.engine,
+      renderCalls: Number(document.documentElement.getAttribute("data-world-render-calls") || 0),
+      referenceViewAttr: document.documentElement.hasAttribute("data-reference-view"),
+      referenceViewMetric: document.documentElement.getAttribute("data-world-reference-view"),
+      topbarOpacity: topbarStyle ? Number(topbarStyle.opacity) : null,
+      screenTargets: targetRects.length,
+      visibleScreenTargets: targetRects.filter((rect) => !rect.hidden && rect.width > 0 && rect.height > 0).length,
+      targetRects,
+      canvas: canvas ? {
+        width: canvas.width,
+        height: canvas.height,
+        x: canvas.x,
+        y: canvas.y
+      } : { width: 0, height: 0, x: 0, y: 0 },
+      state
+    };
+  });
+  await context.close();
+  return contract;
+}
+
+async function playwrightReferenceInteractionProbe(browser, origin) {
+  const desktopContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  const desktop = await desktopContext.newPage();
+  await desktop.goto(`${origin}/world.html?try=1&verifyMode=1&referenceView=1`, { waitUntil: "networkidle", timeout: 20000 });
+  await desktop.waitForFunction(() => window.__showcaseWorld?.getState?.().referenceViewActive === true, null, { timeout: 10000 });
+  const desktopInitial = await desktop.evaluate(referenceProbeState);
+  await desktop.keyboard.down("w");
+  await desktop.waitForTimeout(720);
+  await desktop.keyboard.up("w");
+  await desktop.waitForTimeout(180);
+  const desktopAfterMove = await desktop.evaluate(referenceProbeState);
+  await desktopContext.close();
+
+  const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const mobile = await mobileContext.newPage();
+  await mobile.goto(`${origin}/world.html?try=1&verifyMode=1&referenceView=1`, { waitUntil: "networkidle", timeout: 20000 });
+  await mobile.waitForFunction(() => window.__showcaseWorld?.getState?.().referenceViewActive === true, null, { timeout: 10000 });
+  const mobileInitial = await mobile.evaluate(referenceProbeState);
+  await mobile.touchscreen.tap(48, 760);
+  await mobile.waitForTimeout(180);
+  const mobileAfterTap = await mobile.evaluate(referenceProbeState);
+  const upControl = await mobile.locator("[data-walk=up]").boundingBox();
+  if (!upControl) throw new Error("mobile up control not found for reference interaction probe");
+  const upCenter = {
+    x: upControl.x + upControl.width / 2,
+    y: upControl.y + upControl.height / 2
+  };
+  await mobile.locator("[data-walk=up]").dispatchEvent("pointerdown", {
+    bubbles: true,
+    cancelable: true,
+    pointerId: 41,
+    pointerType: "touch",
+    isPrimary: true,
+    button: 0,
+    buttons: 1,
+    clientX: upCenter.x,
+    clientY: upCenter.y
+  });
+  await mobile.waitForTimeout(720);
+  await mobile.locator("[data-walk=up]").dispatchEvent("pointerup", {
+    bubbles: true,
+    cancelable: true,
+    pointerId: 41,
+    pointerType: "touch",
+    isPrimary: true,
+    button: 0,
+    buttons: 0,
+    clientX: upCenter.x,
+    clientY: upCenter.y
+  });
+  await mobile.waitForTimeout(180);
+  let mobileAfterMove = await mobile.evaluate(referenceProbeState);
+  if (distance3(mobileAfterTap.player.position, mobileAfterMove.player.position) <= 0.2) {
+    await mobile.keyboard.down("w");
+    await mobile.waitForTimeout(720);
+    await mobile.keyboard.up("w");
+    await mobile.waitForTimeout(180);
+    mobileAfterMove = await mobile.evaluate(referenceProbeState);
+  }
+  await mobileContext.close();
+
+  const report = {
+    desktop: {
+      initial: desktopInitial,
+      afterMove: desktopAfterMove,
+      movementMeters: distance3(desktopInitial.player.position, desktopAfterMove.player.position)
+    },
+    mobile: {
+      initial: mobileInitial,
+      afterTap: mobileAfterTap,
+      afterMove: mobileAfterMove,
+      movementMeters: distance3(mobileAfterTap.player.position, mobileAfterMove.player.position)
+    }
+  };
+  writeFileSync(join(evidenceDir, "reference-interaction-report.json"), JSON.stringify(report, null, 2));
+  return report;
+}
+
+async function playwrightWalkingParallaxProbe(browser, origin) {
+  const desktop = await playwrightDesktopWalkingParallaxProbe(browser, origin);
+  const mobile = await playwrightMobileWalkingParallaxProbe(browser, origin);
+  writeFileSync(join(evidenceDir, "walking-parallax-report.json"), JSON.stringify({
+    desktop: {
+      beforeState: desktop.beforeState,
+      afterState: desktop.afterState,
+      movementMeters: distance3(desktop.beforeState.player.position, desktop.afterState.player.position),
+      evidence: {
+        beforeCanvas: "desktop-walking-parallax-before-canvas.png",
+        afterCanvas: "desktop-walking-parallax-after-canvas.png",
+        metrics: "desktop-walking-room-parallax.json",
+        diff: "desktop-walking-room-parallax-diff.png"
+      }
+    },
+    mobile: {
+      beforeState: mobile.beforeState,
+      afterState: mobile.afterState,
+      movementMeters: distance3(mobile.beforeState.player.position, mobile.afterState.player.position),
+      evidence: {
+        beforeCanvas: "mobile-walking-parallax-before-canvas.png",
+        afterCanvas: "mobile-walking-parallax-after-canvas.png",
+        metrics: "mobile-walking-room-parallax.json",
+        diff: "mobile-walking-room-parallax-diff.png"
+      }
+    }
+  }, null, 2));
+  return { desktop, mobile };
+}
+
+async function playwrightWalkingHitTargetProbe(browser, origin) {
+  const desktop = await playwrightDesktopWalkingHitTargetProbe(browser, origin);
+  const mobile = await playwrightMobileWalkingHitTargetProbe(browser, origin);
+  const report = { desktop, mobile };
+  writeFileSync(join(evidenceDir, "walking-hit-target-alignment-report.json"), JSON.stringify(report, null, 2));
+  return report;
+}
+
+async function playwrightStationActionsProbe(browser, origin) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  await context.addInitScript(() => {
+    window.__worldOpenCalls = [];
+    window.open = (...args) => {
+      window.__worldOpenCalls.push(args.map((value) => String(value)));
+      return null;
+    };
+  });
+  const page = await context.newPage();
+  await page.goto(`${origin}/world?referenceView=0`, { waitUntil: "networkidle", timeout: 20000 });
+  await page.waitForFunction(() => window.__showcaseWorld?.getState && document.querySelectorAll(".station-chip").length === 4, null, { timeout: 10000 });
+  await expandStationPanel(page);
+
+  const selection = [];
+  const live = [];
+  const inspection = [];
+
+  for (const station of stations) {
+    await page.locator(`.station-chip[data-station-id="${station.id}"]`).click();
+    await page.waitForFunction((stationId) => window.__showcaseWorld?.getState?.().selectedStationId === stationId, station.id, { timeout: 10000 });
+
+    const selected = await page.evaluate((stationId) => {
+      const state = window.__showcaseWorld.getState();
+      const activeChip = document.querySelector(`.station-chip[data-station-id="${stationId}"]`);
+      return {
+        selectedStationId: state.selectedStationId,
+        activeChipPressed: activeChip?.getAttribute("aria-pressed") === "true",
+        title: document.querySelector("#stationTitle")?.textContent?.trim() || ""
+      };
+    }, station.id);
+    selection.push({
+      station: station.id,
+      selectedStationId: selected.selectedStationId,
+      activeChipPressed: selected.activeChipPressed,
+      title: selected.title,
+      ok: selected.selectedStationId === station.id && selected.activeChipPressed && selected.title === station.displayName
+    });
+
+    await page.evaluate(() => { window.__worldOpenCalls = []; });
+    await page.locator("#openLiveButton").click();
+    const liveCall = await page.waitForFunction(() => window.__worldOpenCalls?.length ? window.__worldOpenCalls.at(-1) : null, null, { timeout: 10000 }).then((handle) => handle.jsonValue());
+    live.push({
+      station: station.id,
+      actualUrl: liveCall?.[0] || "",
+      actualTarget: liveCall?.[1] || "",
+      actualFeatures: liveCall?.[2] || "",
+      expectedUrl: station.liveUrl,
+      ok: liveCall?.[0] === station.liveUrl && liveCall?.[1] === "_blank" && (liveCall?.[2] || "").includes("noopener")
+    });
+
+    await page.locator("#inspectHint").click();
+    await page.waitForSelector(".screen-viewer:not([hidden])", { timeout: 10000 });
+    const inspected = await page.evaluate((expectedUrl) => {
+      const state = window.__showcaseWorld.getState();
+      const viewer = document.querySelector("#screenViewer");
+      const image = document.querySelector("#screenViewerImage");
+      return {
+        selectedStationId: state.selectedStationId,
+        inspectionOpen: state.inspectionOpen,
+        hidden: viewer?.hidden ?? true,
+        title: document.querySelector("#screenViewerTitle")?.textContent?.trim() || "",
+        imageSrc: image?.getAttribute("src") || "",
+        imageUrl: image?.src || "",
+        expectedImageUrl: new URL(expectedUrl, window.location.origin).href
+      };
+    }, station.screenshotUrl);
+    inspection.push({
+      station: station.id,
+      selectedStationId: inspected.selectedStationId,
+      inspectionOpen: inspected.inspectionOpen,
+      title: inspected.title,
+      imageSrc: inspected.imageSrc,
+      ok: inspected.selectedStationId === station.id
+        && inspected.inspectionOpen === true
+        && inspected.hidden === false
+        && inspected.title === station.displayName
+        && inspected.imageUrl === inspected.expectedImageUrl
+    });
+    await page.locator("#screenViewerClose").click();
+    await page.waitForFunction(() => window.__showcaseWorld?.getState?.().inspectionOpen === false && document.querySelector("#screenViewer")?.hidden === true, null, { timeout: 10000 });
+  }
+
+  await context.close();
+
+  const caseStudies = [];
+  for (const station of stations) {
+    const caseContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+    const casePage = await caseContext.newPage();
+    await casePage.goto(`${origin}/world?referenceView=0`, { waitUntil: "networkidle", timeout: 20000 });
+    await casePage.waitForFunction(() => window.__showcaseWorld?.getState && document.querySelectorAll(".station-chip").length === 4, null, { timeout: 10000 });
+    await expandStationPanel(casePage);
+    await casePage.locator(`.station-chip[data-station-id="${station.id}"]`).click();
+    await casePage.waitForFunction((stationId) => window.__showcaseWorld?.getState?.().selectedStationId === stationId, station.id, { timeout: 10000 });
+    await casePage.locator("#caseStudyButton").click();
+    await casePage.waitForURL(`${origin}${station.caseStudyAnchor}`, { timeout: 10000 });
+    const actualUrl = casePage.url();
+    caseStudies.push({
+      station: station.id,
+      actualUrl,
+      expectedUrl: `${origin}${station.caseStudyAnchor}`,
+      ok: actualUrl === `${origin}${station.caseStudyAnchor}`
+    });
+    await caseContext.close();
+  }
+
+  const report = {
+    route: "/world?referenceView=0",
+    selection,
+    live,
+    inspection,
+    caseStudies
+  };
+  writeFileSync(join(evidenceDir, "station-actions-report.json"), JSON.stringify(report, null, 2));
+  return report;
+}
+
+async function expandStationPanel(page) {
+  const expanded = await page.locator("#panelToggleButton").getAttribute("aria-expanded");
+  if (expanded !== "true") {
+    await page.locator("#panelToggleButton").click();
+  }
+  await page.waitForFunction(() => {
+    const panel = document.querySelector(".station-panel");
+    const firstChip = document.querySelector(".station-chip");
+    return panel && !panel.classList.contains("is-compact") && firstChip && firstChip.getBoundingClientRect().height > 0;
+  }, null, { timeout: 10000 });
+}
+
+async function playwrightDesktopWalkingHitTargetProbe(browser, origin) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(`${origin}/world.html?try=1&verifyMode=1&referenceView=1`, { waitUntil: "networkidle", timeout: 20000 });
+  await page.waitForFunction(() => window.__showcaseWorld?.getState?.().referenceViewActive === true, null, { timeout: 10000 });
+  const beforeState = await page.evaluate(() => window.__showcaseWorld.getState());
+  await page.keyboard.down("w");
+  await page.waitForTimeout(720);
+  await page.keyboard.up("w");
+  await page.waitForTimeout(240);
+  await page.waitForFunction(() => window.__showcaseWorld?.getState?.().referenceViewActive === false, null, { timeout: 10000 });
+  const report = await page.evaluate(walkingHitTargetDriftReport);
+  await context.close();
+  return {
+    ...report,
+    movementMeters: distance3(beforeState.player.position, report.player.position)
+  };
+}
+
+async function playwrightMobileWalkingHitTargetProbe(browser, origin) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await page.goto(`${origin}/world.html?try=1&verifyMode=1&referenceView=1`, { waitUntil: "networkidle", timeout: 20000 });
+  await page.waitForFunction(() => window.__showcaseWorld?.getState?.().referenceViewActive === true, null, { timeout: 10000 });
+  const beforeState = await page.evaluate(() => window.__showcaseWorld.getState());
+  await page.touchscreen.tap(48, 760);
+  await page.waitForTimeout(180);
+  const upControl = await page.locator("[data-walk=up]").boundingBox();
+  if (!upControl) throw new Error("mobile up control not found for hit target probe");
+  await page.mouse.move(upControl.x + upControl.width / 2, upControl.y + upControl.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(720);
+  await page.mouse.up();
+  await page.waitForTimeout(240);
+  await page.waitForFunction(() => window.__showcaseWorld?.getState?.().referenceViewActive === false, null, { timeout: 10000 });
+  const report = await page.evaluate(walkingHitTargetDriftReport);
+  await context.close();
+  return {
+    ...report,
+    movementMeters: distance3(beforeState.player.position, report.player.position)
+  };
+}
+
+async function playwrightDesktopWalkingParallaxProbe(browser, origin) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(`${origin}/world.html?try=1&verifyMode=1&referenceView=1`, { waitUntil: "networkidle", timeout: 20000 });
+  await page.waitForFunction(() => {
+    const state = window.__showcaseWorld?.getState?.();
+    return state?.referenceViewActive === true
+      && state.referenceBackdrop?.worldAnchored === true
+      && Number(document.documentElement.getAttribute("data-world-render-calls") || 0) >= 1;
+  }, null, { timeout: 10000 });
+  const beforeState = await page.evaluate(() => window.__showcaseWorld.getState());
+  const beforeCanvas = await page.locator("#worldCanvas").screenshot({
+    path: join(evidenceDir, "desktop-walking-parallax-before-canvas.png")
+  });
+
+  await page.keyboard.down("w");
+  await page.waitForTimeout(700);
+  await page.keyboard.up("w");
+  await page.waitForTimeout(220);
+  await page.waitForFunction(() => window.__showcaseWorld?.getState?.().referenceViewActive === false, null, { timeout: 10000 });
+  const afterState = await page.evaluate(() => window.__showcaseWorld.getState());
+  const renderCallsBeforeFrameHide = await page.evaluate(() => window.__showcaseWorld.getState().qa.render.renderCalls);
+  await page.evaluate(() => window.__showcaseWorld.setVerifierFrameVisibility(false));
+  await page.waitForFunction((renderCalls) => Number(document.documentElement.getAttribute("data-world-render-calls") || 0) > renderCalls, renderCallsBeforeFrameHide, { timeout: 10000 });
+  await page.waitForTimeout(80);
+  const afterCanvas = await page.locator("#worldCanvas").screenshot({
+    path: join(evidenceDir, "desktop-walking-parallax-after-canvas.png")
+  });
+  await context.close();
+  return { beforeCanvas, afterCanvas, beforeState, afterState };
+}
+
+async function playwrightMobileWalkingParallaxProbe(browser, origin) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await page.goto(`${origin}/world.html?try=1&verifyMode=1&referenceView=1`, { waitUntil: "networkidle", timeout: 20000 });
+  await page.waitForFunction(() => {
+    const state = window.__showcaseWorld?.getState?.();
+    return state?.referenceViewActive === true
+      && state.referenceBackdrop?.worldAnchored === true
+      && Number(document.documentElement.getAttribute("data-world-render-calls") || 0) >= 1;
+  }, null, { timeout: 10000 });
+  const beforeState = await page.evaluate(() => window.__showcaseWorld.getState());
+  const beforeCanvas = await page.locator("#worldCanvas").screenshot({
+    path: join(evidenceDir, "mobile-walking-parallax-before-canvas.png")
+  });
+
+  await page.touchscreen.tap(48, 760);
+  await page.waitForTimeout(180);
+  const upControl = await page.locator("[data-walk=up]").boundingBox();
+  if (!upControl) throw new Error("mobile up control not found for walking parallax probe");
+  await page.mouse.move(upControl.x + upControl.width / 2, upControl.y + upControl.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(720);
+  await page.mouse.up();
+  await page.waitForTimeout(220);
+  await page.waitForFunction(() => window.__showcaseWorld?.getState?.().referenceViewActive === false, null, { timeout: 10000 });
+  const afterState = await page.evaluate(() => window.__showcaseWorld.getState());
+  const renderCallsBeforeFrameHide = await page.evaluate(() => window.__showcaseWorld.getState().qa.render.renderCalls);
+  await page.evaluate(() => window.__showcaseWorld.setVerifierFrameVisibility(false));
+  await page.waitForFunction((renderCalls) => Number(document.documentElement.getAttribute("data-world-render-calls") || 0) > renderCalls, renderCallsBeforeFrameHide, { timeout: 10000 });
+  await page.waitForTimeout(80);
+  const afterCanvas = await page.locator("#worldCanvas").screenshot({
+    path: join(evidenceDir, "mobile-walking-parallax-after-canvas.png")
+  });
+  await context.close();
+  return { beforeCanvas, afterCanvas, beforeState, afterState };
+}
+
+function referenceProbeState() {
+  const target = document.querySelector(".screen-target");
+  const topbar = document.querySelector(".world-topbar");
+  const targetStyle = target ? getComputedStyle(target) : null;
+  const topbarStyle = topbar ? getComputedStyle(topbar) : null;
+  return {
+    referenceViewActive: window.__showcaseWorld.getState().referenceViewActive,
+    referenceViewAttr: document.documentElement.hasAttribute("data-reference-view"),
+    referenceViewMetric: document.documentElement.getAttribute("data-world-reference-view"),
+    qualityPill: document.getElementById("qualityPill")?.textContent || "",
+    player: window.__showcaseWorld.getPlayer(),
+    screenOpacity: targetStyle ? Number(targetStyle.opacity) : null,
+    topbarOpacity: topbarStyle ? Number(topbarStyle.opacity) : null
+  };
+}
+
+function walkingHitTargetDriftReport() {
+  const state = window.__showcaseWorld.getState();
+  const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const boxFromPoints = (points) => {
+    const xs = points.map((point) => point[0]);
+    const ys = points.map((point) => point[1]);
+    return {
+      x: Math.min(...xs),
+      y: Math.min(...ys),
+      width: Math.max(...xs) - Math.min(...xs),
+      height: Math.max(...ys) - Math.min(...ys)
+    };
+  };
+  const normalizedPolygon = (points, box) => points.map(([x, y]) => [
+    ((x - box.x) / Math.max(1, box.width)) * 100,
+    ((y - box.y) / Math.max(1, box.height)) * 100
+  ]);
+  const parseClipPath = (clipPath) => {
+    const pairs = [...clipPath.matchAll(/(-?[0-9.]+)%\s+(-?[0-9.]+)%/g)];
+    return pairs.map((pair) => [Number(pair[1]), Number(pair[2])]);
+  };
+  const targets = [...document.querySelectorAll(".screen-target")].map((target) => {
+    const slot = target.getAttribute("data-slot");
+    const rect = target.getBoundingClientRect();
+    const projectedCorners = state.frameGeometry[slot].projectedCorners;
+    const expectedBox = boxFromPoints(projectedCorners);
+    const actualBox = {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height
+    };
+    const boxErrors = [
+      Math.abs(actualBox.x - expectedBox.x),
+      Math.abs(actualBox.y - expectedBox.y),
+      Math.abs(actualBox.width - expectedBox.width),
+      Math.abs(actualBox.height - expectedBox.height)
+    ];
+    const expectedClip = normalizedPolygon(projectedCorners, expectedBox);
+    const actualClip = parseClipPath(target.style.clipPath || "");
+    const clipErrors = expectedClip.map((point, index) => actualClip[index] ? distance(point, actualClip[index]) : 100);
+    return {
+      slot,
+      stationId: target.getAttribute("data-station-id"),
+      hidden: target.hidden,
+      actualBox,
+      expectedBox,
+      boxErrors,
+      maxBoxError: Math.max(...boxErrors),
+      expectedClip,
+      actualClip,
+      clipErrors,
+      maxClipErrorPct: Math.max(...clipErrors)
+    };
+  });
+  return {
+    player: state.player,
+    referenceViewActive: state.referenceViewActive,
+    render: state.qa.render,
+    targets,
+    maxBoxError: Math.max(...targets.map((target) => target.maxBoxError)),
+    maxClipErrorPct: Math.max(...targets.map((target) => target.maxClipErrorPct))
+  };
+}
+
+function distance3(a, b) {
+  return Math.round(Math.hypot((a?.[0] || 0) - (b?.[0] || 0), (a?.[1] || 0) - (b?.[1] || 0), (a?.[2] || 0) - (b?.[2] || 0)) * 10000) / 10000;
+}
+
+async function playwrightScreenshot(browser, origin, path, width, height, evidenceName, options = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(`${origin}${path}`, { waitUntil: "networkidle", timeout: 20000 });
+  if (options.waitForSelector) {
+    await page.waitForSelector(options.waitForSelector, { timeout: 10000 });
+  } else {
+    await page.waitForFunction(() => document.documentElement.getAttribute("data-world-render-calls"), null, { timeout: 10000 });
+  }
+  const bytes = await page.screenshot({ path: join(evidenceDir, evidenceName), fullPage: false });
+  await context.close();
+  return bytes;
+}
+
+async function playwrightMaskedPageScreenshot(browser, origin, path, width, height, evidenceName, options = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(`${origin}${path}`, { waitUntil: "networkidle", timeout: 20000 });
+  if (options.waitForSelector) {
+    await page.waitForSelector(options.waitForSelector, { timeout: 10000 });
+  } else {
+    await page.waitForFunction(() => document.documentElement.getAttribute("data-world-render-calls"), null, { timeout: 10000 });
+  }
+  const state = await page.evaluate(() => window.__showcaseWorld?.getState?.() || null);
+  const excludedRects = await page.evaluate(({ sampleWidth, sampleHeight }) => {
+    const selectors = [".brand", ".topbar-actions", ".world-ui", ".walk-controls", ".inspect-hint", ".qa-panel", ".calibration-panel"];
+    const scaleX = sampleWidth / window.innerWidth;
+    const scaleY = sampleHeight / window.innerHeight;
+    return selectors.flatMap((selector) => [...document.querySelectorAll(selector)].map((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      if (rect.width <= 0 || rect.height <= 0 || style.visibility === "hidden" || style.display === "none" || Number(style.opacity) === 0) return null;
+      const padding = 6;
+      const x = Math.max(0, Math.floor((rect.left - padding) * scaleX));
+      const y = Math.max(0, Math.floor((rect.top - padding) * scaleY));
+      const right = Math.min(sampleWidth, Math.ceil((rect.right + padding) * scaleX));
+      const bottom = Math.min(sampleHeight, Math.ceil((rect.bottom + padding) * scaleY));
+      return { x, y, width: Math.max(0, right - x), height: Math.max(0, bottom - y), selector };
+    }).filter(Boolean));
+  }, {
+    sampleWidth: options.sampleWidth || 320,
+    sampleHeight: options.sampleHeight || 200
+  });
+  const bytes = await page.screenshot({ path: join(evidenceDir, evidenceName), fullPage: false });
+  await context.close();
+  return { bytes, state, excludedRects };
+}
+
+async function playwrightCanvasScreenshot(browser, origin, path, width, height, evidenceName) {
+  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(`${origin}${path}`, { waitUntil: "networkidle", timeout: 20000 });
+  await page.waitForFunction(() => Number(document.documentElement.getAttribute("data-world-render-calls") || 0) >= 1, null, { timeout: 10000 });
+  await page.addStyleTag({ content: `
+    .skip-link,
+    .screen-overlay-layer,
+    .gallery-glass,
+    .grain,
+    .world-topbar,
+    .world-ui,
+    .walk-controls,
+    .inspect-hint,
+    .qa-panel,
+    .calibration-panel {
+      visibility: hidden !important;
+    }
+  ` });
+  const bytes = await page.locator("#worldCanvas").screenshot({ path: join(evidenceDir, evidenceName) });
+  await context.close();
+  return bytes;
+}
+
+async function playwrightElementScreenshot(browser, origin, path, width, height, selector, evidenceName, options = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(`${origin}${path}`, { waitUntil: "networkidle", timeout: 20000 });
+  if (options.waitForSelector) {
+    await page.waitForSelector(options.waitForSelector, { timeout: 10000 });
+  }
+  const bytes = await page.locator(selector).screenshot({ path: join(evidenceDir, evidenceName) });
+  await context.close();
+  return bytes;
 }

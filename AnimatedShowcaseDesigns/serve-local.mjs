@@ -55,6 +55,9 @@ function contentType(pathname) {
   if (ext === ".png") return "image/png";
   if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
   if (ext === ".webp") return "image/webp";
+  if (ext === ".avif") return "image/avif";
+  if (ext === ".mp4") return "video/mp4";
+  if (ext === ".glb") return "model/gltf-binary";
   if (ext === ".txt") return "text/plain; charset=utf-8";
   if (ext === ".xml") return "application/xml; charset=utf-8";
   return "application/octet-stream";

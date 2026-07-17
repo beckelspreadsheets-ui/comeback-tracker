@@ -7,3 +7,8 @@ node_modules/
 verification/
 dist/
 deploy-artifacts/
+artifacts/higgsfield/**/raw/*
+artifacts/higgsfield/**/selected/*
+artifacts/higgsfield/**/rejected/*
+artifacts/higgsfield/**/jobs/*.private.json
+!artifacts/higgsfield/**/.gitkeep

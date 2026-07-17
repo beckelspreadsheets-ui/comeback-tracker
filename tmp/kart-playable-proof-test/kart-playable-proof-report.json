@@ -9,8 +9,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -29,8 +29,8 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 77.82,
-      "frameWorkMs": 0.85,
+      "frameElapsedMs": 74.38,
+      "frameWorkMs": 0.93,
       "heldItem": null,
       "fpsEstimate": 13,
       "itemPickups": 6,
@@ -43,16 +43,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 10.16,
+      "raceTime": 9.76,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 55,
-        "triangles": 693944
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -74,8 +74,8 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.83,
-      "speed": 232,
+      "routeProgress": 0.798,
+      "speed": 231,
       "spinOuts": 0,
       "steer": 0,
       "tricksLanded": 1,
@@ -100,8 +100,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": "player",
@@ -120,10 +120,10 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": true,
-      "frameElapsedMs": 73.9,
-      "frameWorkMs": 0.87,
+      "frameElapsedMs": 103.48,
+      "frameWorkMs": 1.28,
       "heldItem": null,
-      "fpsEstimate": 14,
+      "fpsEstimate": 10,
       "itemPickups": 21,
       "lane": -0.311,
       "lap": 3,
@@ -137,13 +137,13 @@
       "raceTime": 34.08,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 56,
-        "triangles": 693944
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -180,8 +180,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -193,37 +193,37 @@
       "laps": 3,
       "slapping": false,
       "fishBonesOnTrack": 1,
-      "boostHits": 3,
+      "boostHits": 2,
       "coins": 3,
       "countdown": 0,
       "drift": false,
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 81.77,
-      "frameWorkMs": 1.09,
-      "heldItem": null,
-      "fpsEstimate": 12,
+      "frameElapsedMs": 88.65,
+      "frameWorkMs": 1.15,
+      "heldItem": "snowball",
+      "fpsEstimate": 11,
       "itemPickups": 3,
-      "lane": 0.139,
+      "lane": 0.153,
       "lap": 1,
-      "miniTurbo": 0.42,
+      "miniTurbo": 0.74,
       "miniTurboTier": 2,
       "paletteMomentsEnabled": false,
       "position": 1,
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 5.8,
+      "raceTime": 5.48,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 468,
-        "geometries": 413,
-        "meshCount": 468,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 55,
-        "triangles": 694072
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -245,10 +245,10 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.448,
-      "speed": 287,
+      "routeProgress": 0.416,
+      "speed": 278,
       "spinOuts": 0,
-      "steer": -0.84,
+      "steer": -1,
       "tricksLanded": 0,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -260,8 +260,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -280,12 +280,12 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 88.36,
-      "frameWorkMs": 1.14,
+      "frameElapsedMs": 93.04,
+      "frameWorkMs": 1.29,
       "heldItem": null,
       "fpsEstimate": 11,
       "itemPickups": 0,
-      "lane": 0.056,
+      "lane": 0.057,
       "lap": 1,
       "miniTurbo": 0,
       "miniTurboTier": 0,
@@ -294,16 +294,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 1.68,
+      "raceTime": 1.6,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 54,
-        "triangles": 693944
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -325,18 +325,18 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.097,
-      "speed": 182,
+      "routeProgress": 0.092,
+      "speed": 173,
       "spinOuts": 0,
-      "steer": -0.02,
+      "steer": -0.04,
       "tricksLanded": 0,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
     },
     "video": "tmp/kart-playable-proof-test/desktop-10s.webm",
     "visibleMotion": {
-      "average": 47.52,
-      "changedRatio": 0.567,
+      "average": 43.57,
+      "changedRatio": 0.534,
       "crop": {
         "h": 476,
         "w": 983,
@@ -354,8 +354,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -374,8 +374,8 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 87.61,
-      "frameWorkMs": 1.18,
+      "frameElapsedMs": 89.6,
+      "frameWorkMs": 1.27,
       "heldItem": null,
       "fpsEstimate": 11,
       "itemPickups": 0,
@@ -388,16 +388,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 0.92,
+      "raceTime": 0.96,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 54,
-        "triangles": 693944
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -434,8 +434,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -454,12 +454,12 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 88.13,
-      "frameWorkMs": 1.13,
+      "frameElapsedMs": 88.32,
+      "frameWorkMs": 1.23,
       "heldItem": null,
       "fpsEstimate": 11,
       "itemPickups": 0,
-      "lane": 0.314,
+      "lane": 0.343,
       "lap": 1,
       "miniTurbo": 0,
       "miniTurboTier": 0,
@@ -468,16 +468,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 1.92,
+      "raceTime": 2,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 54,
-        "triangles": 693944
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -499,8 +499,8 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.085,
-      "speed": 28,
+      "routeProgress": 0.087,
+      "speed": 32,
       "spinOuts": 0,
       "steer": 0.03,
       "tricksLanded": 0,
@@ -525,8 +525,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -545,8 +545,8 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 88.72,
-      "frameWorkMs": 1.16,
+      "frameElapsedMs": 93.75,
+      "frameWorkMs": 1.28,
       "heldItem": null,
       "fpsEstimate": 11,
       "itemPickups": 0,
@@ -559,16 +559,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 0.2,
+      "raceTime": 0.24,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 459,
-        "geometries": 404,
-        "meshCount": 459,
-        "programs": 24,
+        "drawCalls": 451,
+        "geometries": 382,
+        "meshCount": 451,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 54,
-        "triangles": 693848
+        "triangles": 701712
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -605,8 +605,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -625,12 +625,12 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 90.06,
-      "frameWorkMs": 1.19,
+      "frameElapsedMs": 89.33,
+      "frameWorkMs": 1.27,
       "heldItem": null,
       "fpsEstimate": 11,
       "itemPickups": 0,
-      "lane": 0.203,
+      "lane": 0.231,
       "lap": 1,
       "miniTurbo": 0,
       "miniTurboTier": 0,
@@ -639,16 +639,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 1.36,
+      "raceTime": 1.44,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 54,
-        "triangles": 693944
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -670,10 +670,10 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.068,
-      "speed": 126,
+      "routeProgress": 0.07,
+      "speed": 130,
       "spinOuts": 0,
-      "steer": 0.94,
+      "steer": 0.95,
       "tricksLanded": 0,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -687,32 +687,32 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
-      "blizzardsOnTrack": 1,
+      "blizzardsOnTrack": 0,
       "character": "crrt-bunny",
       "kart": "hero",
       "track": "comeback-city",
       "trackVisualsEnabled": false,
       "laps": 3,
       "slapping": false,
-      "fishBonesOnTrack": 2,
-      "boostHits": 5,
-      "coins": 7,
+      "fishBonesOnTrack": 3,
+      "boostHits": 7,
+      "coins": 8,
       "countdown": 0,
       "drift": false,
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 21.24,
-      "frameWorkMs": 0.65,
+      "frameElapsedMs": 22.86,
+      "frameWorkMs": 0.7,
       "heldItem": null,
-      "fpsEstimate": 47,
-      "itemPickups": 9,
-      "lane": 0.71,
+      "fpsEstimate": 44,
+      "itemPickups": 12,
+      "lane": 0.225,
       "lap": 2,
       "miniTurbo": 0,
       "miniTurboTier": 0,
@@ -721,16 +721,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 18.25,
+      "raceTime": 17.93,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
-        "textures": 56,
-        "triangles": 693944
+        "textures": 55,
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -739,23 +739,23 @@
           "position": 1
         },
         {
-          "name": "Blue Speed",
+          "name": "Purple Lab",
           "position": 2
         },
         {
-          "name": "Orange Muscle",
+          "name": "Blue Speed",
           "position": 3
         },
         {
-          "name": "Purple Lab",
+          "name": "Orange Muscle",
           "position": 4
         }
       ],
       "route": "race",
-      "routeProgress": 0.559,
-      "speed": 234,
+      "routeProgress": 0.543,
+      "speed": 235,
       "spinOuts": 0,
-      "steer": 0.78,
+      "steer": 0.71,
       "tricksLanded": 1,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -779,8 +779,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -799,12 +799,12 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 20.64,
-      "frameWorkMs": 0.63,
+      "frameElapsedMs": 19.25,
+      "frameWorkMs": 0.65,
       "heldItem": null,
-      "fpsEstimate": 49,
-      "itemPickups": 7,
-      "lane": 0.207,
+      "fpsEstimate": 52,
+      "itemPickups": 6,
+      "lane": -0.02,
       "lap": 1,
       "miniTurbo": 0,
       "miniTurboTier": 0,
@@ -813,16 +813,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 10.46,
+      "raceTime": 10.21,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 55,
-        "triangles": 693944
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -831,11 +831,11 @@
           "position": 1
         },
         {
-          "name": "Blue Speed",
+          "name": "Orange Muscle",
           "position": 2
         },
         {
-          "name": "Orange Muscle",
+          "name": "Blue Speed",
           "position": 3
         },
         {
@@ -844,10 +844,10 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.855,
+      "routeProgress": 0.835,
       "speed": 232,
       "spinOuts": 0,
-      "steer": 0.35,
+      "steer": -0.12,
       "tricksLanded": 1,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -859,8 +859,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 22,
-        "requested": 22
+        "mounted": 43,
+        "requested": 43
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -875,16 +875,16 @@
       "boostHits": 1,
       "coins": 1,
       "countdown": 0,
-      "drift": false,
-      "driftCharge": 0,
+      "drift": true,
+      "driftCharge": 0.06,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 24.42,
-      "frameWorkMs": 0.76,
+      "frameElapsedMs": 30.28,
+      "frameWorkMs": 0.84,
       "heldItem": null,
-      "fpsEstimate": 41,
+      "fpsEstimate": 33,
       "itemPickups": 1,
-      "lane": 0.199,
+      "lane": 0.194,
       "lap": 1,
       "miniTurbo": 0,
       "miniTurboTier": 0,
@@ -893,16 +893,16 @@
       "propCount": 34,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 2.8,
+      "raceTime": 2.68,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 467,
-        "geometries": 412,
-        "meshCount": 467,
-        "programs": 24,
+        "drawCalls": 459,
+        "geometries": 390,
+        "meshCount": 459,
+        "programs": 25,
         "shadowMapEnabled": true,
         "textures": 53,
-        "triangles": 693944
+        "triangles": 701808
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -924,7 +924,7 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.182,
+      "routeProgress": 0.173,
       "speed": 229,
       "spinOuts": 0,
       "steer": -0.99,
@@ -934,8 +934,8 @@
     },
     "video": "tmp/kart-playable-proof-test/mobile-10s.webm",
     "visibleMotion": {
-      "average": 46.59,
-      "changedRatio": 0.616,
+      "average": 49.94,
+      "changedRatio": 0.651,
       "crop": {
         "h": 473,
         "w": 351,
@@ -966,8 +966,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 10,
-        "requested": 10
+        "mounted": 19,
+        "requested": 19
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -982,16 +982,16 @@
       "boostHits": 2,
       "coins": 1,
       "countdown": 0,
-      "drift": true,
-      "driftCharge": 0.24,
+      "drift": false,
+      "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 68.09,
-      "frameWorkMs": 1.36,
+      "frameElapsedMs": 76.94,
+      "frameWorkMs": 1.55,
       "heldItem": "cocoa",
-      "fpsEstimate": 15,
+      "fpsEstimate": 13,
       "itemPickups": 4,
-      "lane": 0.013,
+      "lane": -0.117,
       "lap": 1,
       "miniTurbo": 0,
       "miniTurboTier": 0,
@@ -1000,16 +1000,16 @@
       "propCount": 0,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 5.56,
+      "raceTime": 5.24,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 788,
-        "geometries": 753,
-        "meshCount": 788,
-        "programs": 26,
+        "drawCalls": 780,
+        "geometries": 731,
+        "meshCount": 780,
+        "programs": 27,
         "shadowMapEnabled": true,
         "textures": 60,
-        "triangles": 493716
+        "triangles": 501580
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -1031,10 +1031,10 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.504,
-      "speed": 226,
+      "routeProgress": 0.474,
+      "speed": 229,
       "spinOuts": 0,
-      "steer": -0.96,
+      "steer": -0.62,
       "tricksLanded": 0,
       "visualAssetSet": "comeback-city-v2-three-runtime",
       "wallContact": false
@@ -1046,8 +1046,8 @@
       "bakedSpike": "inactive",
       "miamiMounts": {
         "failed": 0,
-        "mounted": 10,
-        "requested": 10
+        "mounted": 19,
+        "requested": 19
       },
       "marchActive": false,
       "avalancheTarget": null,
@@ -1066,8 +1066,8 @@
       "driftCharge": 0,
       "driftTier": 0,
       "finished": false,
-      "frameElapsedMs": 75.17,
-      "frameWorkMs": 1.5,
+      "frameElapsedMs": 79.03,
+      "frameWorkMs": 1.61,
       "heldItem": null,
       "fpsEstimate": 13,
       "itemPickups": 1,
@@ -1080,16 +1080,16 @@
       "propCount": 0,
       "postChainEnabled": true,
       "proofCameraMode": "chase",
-      "raceTime": 0.76,
+      "raceTime": 0.72,
       "renderer": "three-kart",
       "rendererStats": {
-        "drawCalls": 788,
-        "geometries": 753,
-        "meshCount": 788,
-        "programs": 26,
+        "drawCalls": 780,
+        "geometries": 731,
+        "meshCount": 780,
+        "programs": 27,
         "shadowMapEnabled": true,
         "textures": 56,
-        "triangles": 493716
+        "triangles": 501580
       },
       "rivalCount": 3,
       "rivalPositions": [
@@ -1111,8 +1111,8 @@
         }
       ],
       "route": "race",
-      "routeProgress": 0.065,
-      "speed": 90,
+      "routeProgress": 0.063,
+      "speed": 85,
       "spinOuts": 0,
       "steer": 0,
       "tricksLanded": 0,
