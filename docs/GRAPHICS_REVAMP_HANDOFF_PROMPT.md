@@ -73,9 +73,36 @@ Dormant-but-kept: WorldMode/WorldScene/comebackCityVisuals/ArcadeRace3D
 chain (unreferenced by any build; V2 may re-home the hub in the kart
 app).
 
+**FITNESS SPLIT DEPLOYED 2026-07-16** (owner "deploy fitness" + "any
+preview link"): NEW projects comeback-fitness-andrew/-alexander
+.pages.dev on Showcasedesigns, live-verified 10/10 both. Old
+comeback-andrew/alexander = a third unreachable CF account, still
+serving the old combined build, UNTOUCHED — all old data safe (old-link
+localStorage + old-account D1 + state_backups all intact; new links
+start empty, migration = in-app Export→Import). New links = LOCAL ONLY
+sync (no D1/Access; wiring offered). package.json deploy:andrew/:alexander
+still point at the OLD project names.
+
+**OWNER STEER 2026-07-16: "what else can we do to improve the game with
+the more headroom for space now" — he wants the space dividend spent on
+GAME CONTENT.** Reality check for the next context: the KART bundle is
+at 9655/9800 KiB gz (~145 KiB headroom) — the split freed the FITNESS
+app, not the kart budget. The kart budget raise is the unlock (GLBs are
+runtime-fetched, not precached — total artifact = CDN/disk, not
+first-paint; JS caps stay tight). PROPOSED: 13→16 MiB / 9800→12000 KiB
+gz, folded into the SAME pending owner budget ack. Space-enabled queue,
+in rough owner-value order: (1) drift-tier VFX (JS-cheap, was already
+next), (2) UNBENCH the snowball world-prop lift (diet sits ready in
+tmp/k7-item-lab/snowball-diet*.glb), (3) RACE AUDIO — the biggest feel
+multiplier still missing (adapt legacy race/raceAudio.js; owner never
+declined it, it just never fit), (4) re-roll the 3 rejected kart seats,
+(5) more trackside props / start-line haunt figures (W3.5), (6) the 2-3
+min MK-length track (V2 headliner; rebalance widens per the recorded V2
+call). Characters still blocked on his 3 ordinal ChatGPT sheets.
+
 **NEXT TASK (fresh context starts HERE): drift-tier VFX**, then the
-phase5 headed pair closes K7. Owner also owes the fitness deploy word
-for the split (deploy:andrew / deploy:alexander).
+phase5 headed pair closes K7 — and put the budget-raise + space-queue
+proposal in front of the owner early so (2)+(3) can start.
 
 **GOTCHAS from this sprint (additive to everything below):**
 - `test:bundle:kart` MEASURES the existing dist-kart — ALWAYS
