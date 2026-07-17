@@ -95,7 +95,9 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // line always exists. The old fish-cart/penguin-march entries were
     // legacy-only dead data (the shipped runtime never consumed crossers
     // before K4) — revive them in V2 once they have shipped visuals.
-    { key: 'outplayasians-finish', progress: 0.015, direction: 1, speed: 0.16, width: 0.34, modelType: 'ordinalWalker' },
+    // Width 0.34 → 0.52 (owner 2026-07-17: "walk across the finish line
+    // more"; a driving line still exists on the far side, rivals dodge).
+    { key: 'outplayasians-finish', progress: 0.015, direction: 1, speed: 0.16, width: 0.52, modelType: 'ordinalWalker' },
   ],
   // Arctic-neon palette: snow ground, icy dusk sky, ice-blue edges. Road
   // asphalt stays dark (readability rule — Sherbet Land does the same).

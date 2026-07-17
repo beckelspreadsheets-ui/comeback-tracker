@@ -1081,6 +1081,59 @@ const mountMiamiAsset = (target, assetKey, { footprint, yaw = MIAMI_FRONT_YAW, z
     target.add(rig);
   });
 };
+
+// "BITCOIN IS DEAD" picket sign for the finish-line crosser (owner 2026-07-17:
+// "just his sign should make him stand out" — deliberate owner-directed text,
+// same exception as the ₿ item boxes). Canvas texture on two front-facing
+// planes so the text reads from both directions; zero asset bytes.
+const makeCrosserSignTexture = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f4eee0';
+  ctx.fillRect(0, 0, 512, 256);
+  ctx.strokeStyle = '#a81f1f';
+  ctx.lineWidth = 14;
+  ctx.strokeRect(12, 12, 488, 232);
+  ctx.fillStyle = '#a81f1f';
+  ctx.textAlign = 'center';
+  ctx.font = '900 88px "Arial Black", ui-sans-serif, sans-serif';
+  ctx.fillText('BITCOIN', 256, 112);
+  ctx.fillText('IS DEAD', 256, 210);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+};
+
+const buildCrosserSign = () => {
+  const sign = new THREE.Group();
+  const stick = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 10, 0.6),
+    new THREE.MeshBasicMaterial({ color: '#4a3a2c' })
+  );
+  stick.position.y = 13;
+  sign.add(stick);
+  const boardTexture = makeCrosserSignTexture();
+  [1, -1].forEach((facing) => {
+    const face = new THREE.Mesh(
+      new THREE.PlaneGeometry(13, 6.5),
+      new THREE.MeshBasicMaterial({ map: boardTexture })
+    );
+    face.position.set(0, 20.5, facing * 0.06);
+    face.rotation.y = facing === 1 ? 0 : Math.PI;
+    sign.add(face);
+  });
+  sign.traverse((node) => {
+    if (node.isMesh) {
+      node.castShadow = false;
+      node.receiveShadow = false;
+    }
+  });
+  // Slight protest-march tilt so it reads hand-held, not architectural.
+  sign.rotation.z = 0.06;
+  return sign;
+};
 // Opening straight (same anchors as OPENING_FACADES) + roadside dressing.
 // Footprints follow the old slots (50-ish opening, 36 districts); the
 // condo tower gets a smaller footprint because footprint scales the
@@ -3864,8 +3917,10 @@ const createScene = ({
   // front = +Z per the orientation lab -> yaw 0).
   const crosserRigs = (trackDef.crossers || []).map((entry) => {
     const group = new THREE.Group();
-    // footprint 6 → 8 (owner 2026-07-12: "hard to see asians at the end").
-    mountMiamiAsset(group, 'outplayasiansCrosser', { footprint: 8, yaw: 0 });
+    // footprint 6 → 8 (owner 2026-07-12: "hard to see asians at the end")
+    // → 10 (owner 2026-07-17: "isnt noticable enough").
+    mountMiamiAsset(group, 'outplayasiansCrosser', { footprint: 10, yaw: 0 });
+    group.add(buildCrosserSign());
     world.add(group);
     return { group, key: entry.key };
   });
@@ -4756,7 +4811,15 @@ export const ComebackCityThreeKartRace = ({
       const roll = softLandscapeRef.current
         ? beta * (gamma >= 0 ? 1 : -1)
         : angle === 90 ? beta : angle === 270 || angle === -90 ? -beta : gamma;
-      const axis = Math.abs(roll) < 2.5 ? 0 : clamp(roll / 22, -1, 1);
+      // Feel fix (owner 2026-07-17 "gyro sensitivity seems off"): the old
+      // linear roll/22 with a hard 2.5° cutoff STEPPED from 0 to ~12% steer
+      // at the deadzone edge and hit 50% by 11° — twitchy around center.
+      // Now: smooth ramp FROM the deadzone edge with a 1.5-expo curve, so
+      // small tilts steer gently and full lock arrives at 24°.
+      const dead = 3;
+      const lock = 24;
+      const mag = clamp((Math.abs(roll) - dead) / (lock - dead), 0, 1);
+      const axis = Math.sign(roll) * Math.pow(mag, 1.5);
       inputRef.current = { ...inputRef.current, steerAxis: axis };
     };
     window.addEventListener('deviceorientation', onOrientation);
@@ -4924,7 +4987,21 @@ export const ComebackCityThreeKartRace = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('resize', handleResize);
+    // iOS Safari settles browser-chrome collapse and rotation layout AFTER
+    // the resize event fires — a single fit reads a stale canvas size and the
+    // camera sticks on a wrong aspect ("weird camera angle" / game cut off
+    // under the browser bar, owner 2026-07-17). Re-fit on every viewport
+    // signal plus two trailing beats so the last fit always sees the settled
+    // layout.
+    let resizeSettleTimers = [];
+    const handleResizeSettled = () => {
+      handleResize();
+      resizeSettleTimers.forEach(clearTimeout);
+      resizeSettleTimers = [150, 600].map((delay) => setTimeout(handleResize, delay));
+    };
+    window.addEventListener('resize', handleResizeSettled);
+    window.addEventListener('orientationchange', handleResizeSettled);
+    window.visualViewport?.addEventListener('resize', handleResizeSettled);
     handleResize();
 
     // Swap procedural fallback bodies for the authored models — the chosen
@@ -6027,7 +6104,10 @@ export const ComebackCityThreeKartRace = ({
       window.cancelAnimationFrame(raf);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', handleResizeSettled);
+      window.removeEventListener('orientationchange', handleResizeSettled);
+      window.visualViewport?.removeEventListener('resize', handleResizeSettled);
+      resizeSettleTimers.forEach(clearTimeout);
       engine.composer.dispose?.();
       engine.renderer.dispose();
       // Scene traversal below handles geometry/material; the instance
