@@ -623,6 +623,13 @@ const createGroundedKartModel = ({
         })
       );
       spark.position.set(side * (5.0 + index * 0.3), 0.9 + index * 0.2, -4.2 - index * 0.8);
+      // Rest pose + phase for the per-frame fountain arc (position animated in
+      // the render loop; faster and taller as the drift tier climbs).
+      spark.userData.side = side;
+      spark.userData.phase = index * 1.7 + (side > 0 ? 0.9 : 0);
+      spark.userData.baseX = 5.0 + index * 0.3;
+      spark.userData.baseY = 0.9 + index * 0.2;
+      spark.userData.baseZ = -4.2 - index * 0.8;
       driftSparkGroup.add(spark);
     }
   });
@@ -676,6 +683,26 @@ const createGroundedKartModel = ({
   miniTurboRing.renderOrder = 35;
   model.add(miniTurboRing);
 
+  // Tier-up pop ring — a single fast expand+fade burst in the NEW tier's
+  // color the frame a charging drift banks the next tier, so tier changes
+  // read as an event at race speed instead of a silent color swap.
+  const driftTierPopRing = new THREE.Mesh(
+    new THREE.TorusGeometry(2.6, 0.3, 4, 14),
+    createBasicMaterial('#00E5FF', {
+      emissive: '#00E5FF',
+      emissiveIntensity: 1.0,
+      opacity: 0.9,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+  );
+  driftTierPopRing.rotation.x = -Math.PI / 2;
+  driftTierPopRing.position.y = 0.9;
+  driftTierPopRing.visible = false;
+  driftTierPopRing.renderOrder = 35;
+  model.add(driftTierPopRing);
+
   // Blob shadow keeps karts grounded; with contactGrounding (?trackVisuals=1)
   // it deepens and gains an accent glow disc to replace the shadow pass.
   const shadow = new THREE.Mesh(
@@ -714,7 +741,7 @@ const createGroundedKartModel = ({
   model.traverse((node) => {
     if (node.isMesh) node.castShadow = true;
   });
-  [boostFlame, driftSparkGroup, driftIceTrailGroup, miniTurboRing].forEach((vfx) =>
+  [boostFlame, driftSparkGroup, driftIceTrailGroup, miniTurboRing, driftTierPopRing].forEach((vfx) =>
     vfx.traverse((node) => {
       node.castShadow = false;
     })
@@ -744,7 +771,21 @@ const createGroundedKartModel = ({
     });
   };
 
-  return { boostFlame, contactGlow, driftIceTrailGroup, driftSparkGroup, driverMount, group, idleFlames, miniTurboRing, replaceBody, shadow, wheels };
+  return {
+    boostFlame,
+    contactGlow,
+    driftIceTrailGroup,
+    driftSparkGroup,
+    driftTierPop: { lastTier: 0, tier: 0, timer: 0 },
+    driftTierPopRing,
+    driverMount,
+    group,
+    idleFlames,
+    miniTurboRing,
+    replaceBody,
+    shadow,
+    wheels,
+  };
 };
 
 const makeQuestionTexture = () => {
@@ -5680,10 +5721,26 @@ export const ComebackCityThreeKartRace = ({
       engine.playerModel.boostFlame.visible = race.boostTimer > 0 || miniTurboActive;
       engine.playerModel.boostFlame.children.forEach((flame) => {
         flame.scale.setScalar(miniTurboActive ? 1 + driftState.miniTurboTier * 0.22 : 1);
+        // Tier-3 mini-turbo burns violet — the MK ultra-turbo read; everything
+        // else keeps the stock amber flame.
+        flame.material.emissive?.set(
+          miniTurboActive && driftState.miniTurboTier >= 3 ? '#C879FF' : '#FFD34F'
+        );
       });
       // Drift sparks escalate through the tier colors while charging and
-      // flash big in the banked tier's color on release.
+      // flash big in the banked tier's color on release. Banking a new tier
+      // fires a one-shot pop (ring burst + spark punch) so the tier change
+      // reads as an event at race speed.
       const releaseFlash = !race.drift && driftState.releaseFlashTimer > 0;
+      const tierPop = engine.playerModel.driftTierPop;
+      if (race.drift && driftState.tier > tierPop.lastTier) {
+        tierPop.timer = 0.45;
+        tierPop.tier = driftState.tier;
+      }
+      if (!race.drift && !releaseFlash) tierPop.timer = 0;
+      tierPop.lastTier = race.drift ? driftState.tier : 0;
+      tierPop.timer = Math.max(0, tierPop.timer - dt);
+      const tierPopPunch = tierPop.timer / 0.45;
       engine.playerModel.driftSparkGroup.visible = race.drift || releaseFlash;
       if (engine.playerModel.driftSparkGroup.visible) {
         const sparkTier = releaseFlash ? driftState.miniTurboTier : driftState.tier;
@@ -5694,29 +5751,57 @@ export const ComebackCityThreeKartRace = ({
           if (spark.material.emissiveIntensity !== undefined) {
             spark.material.emissiveIntensity = 0.55 + sparkTier * 0.18;
           }
+          // Fountain arc off the rear wheels — faster and taller per tier so
+          // the spray itself carries the tier read, not just the color.
+          const rest = spark.userData;
+          const arc = race.raceTime * (9 + sparkTier * 3) + rest.phase;
+          spark.position.set(
+            rest.side * (rest.baseX + Math.sin(arc * 0.8) * 0.3 + sparkTier * 0.2),
+            rest.baseY + Math.abs(Math.sin(arc)) * (0.5 + sparkTier * 0.35),
+            rest.baseZ - Math.abs(Math.sin(arc * 0.6)) * (0.5 + sparkTier * 0.4)
+          );
           spark.scale.setScalar(
             0.7 +
               sparkTier * 0.3 +
               Math.sin(race.raceTime * 22 + sparkIndex * 1.7) * 0.18 +
-              (releaseFlash ? 0.9 : 0)
+              (releaseFlash ? 0.9 : 0) +
+              tierPopPunch * 0.5
           );
         });
       }
-      // Tier 2+ ground ice trail: visible while charging tier 2/3 drift.
+      // Tier-up pop ring: one fast expand+fade burst in the new tier's color.
+      const popRing = engine.playerModel.driftTierPopRing;
+      popRing.visible = tierPopPunch > 0;
+      if (popRing.visible) {
+        const popColor = DRIFT_FEEL.sparkColors[tierPop.tier] || DRIFT_FEEL.sparkColors[0];
+        popRing.material.color.set(popColor);
+        popRing.material.emissive?.set(popColor);
+        popRing.material.opacity = 0.9 * tierPopPunch;
+        popRing.scale.setScalar(0.5 + (1 - tierPopPunch) * (1.9 + tierPop.tier * 0.2));
+      }
+      // Tier 2+ ground trail: visible while charging tier 2/3 drift, tinted
+      // to the live tier color (amber → violet) to double the readable area.
       const iceTrailTier = race.drift ? driftState.tier : 0;
       engine.playerModel.driftIceTrailGroup.visible = iceTrailTier >= 2;
       if (engine.playerModel.driftIceTrailGroup.visible) {
+        const trailColor = DRIFT_FEEL.sparkColors[iceTrailTier] || DRIFT_FEEL.sparkColors[0];
         engine.playerModel.driftIceTrailGroup.children.forEach((shard, shardIndex) => {
           const trailIntensity = 0.6 + (iceTrailTier - 2) * 0.35;
+          shard.material.color.set(trailColor);
+          shard.material.emissive?.set(trailColor);
           shard.material.opacity = 0.5 + trailIntensity * 0.45 + Math.sin(race.raceTime * 18 + shardIndex * 1.3) * 0.12;
           shard.material.emissiveIntensity = 0.55 + trailIntensity * 0.45;
           shard.scale.setScalar(0.9 + trailIntensity * 0.45 + Math.sin(race.raceTime * 14 + shardIndex * 2.1) * 0.12);
         });
       }
-      // Mini-turbo cyan burst ring: scale up + fade out for the boost duration.
+      // Mini-turbo burst ring: scale up + fade out for the boost duration,
+      // in the banked tier's color.
       const ring = engine.playerModel.miniTurboRing;
       ring.visible = miniTurboActive;
       if (miniTurboActive) {
+        const ringColor = DRIFT_FEEL.sparkColors[driftState.miniTurboTier] || DRIFT_FEEL.sparkColors[1];
+        ring.material.color.set(ringColor);
+        ring.material.emissive?.set(ringColor);
         const ringDuration = DRIFT_FEEL.boostDurations[driftState.miniTurboTier - 1] || 1;
         const ringProgress = 1 - driftState.miniTurboTimer / ringDuration;
         const ringScale = 0.35 + ringProgress * (1.7 + driftState.miniTurboTier * 0.25);

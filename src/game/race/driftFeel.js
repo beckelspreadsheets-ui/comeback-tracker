@@ -17,9 +17,10 @@ export const DRIFT_FEEL = {
   releaseFlash: 0.4,
   slideAngleBase: 0.32, // ~18° yaw off the velocity direction
   slideAngleMax: 0.5, // ~29° when steering hard into the drift
-  // Index 0 is the pre-tier charging color, then tiers 1-3 (plan: blue →
-  // orange → purple).
-  sparkColors: ['#F5F8FF', '#00E5FF', '#7EC8E8', '#7B61FF'],
+  // Index 0 is the pre-tier charging color, then tiers 1-3 (blue → orange →
+  // purple). Tier 2 shares the boost-pad ember palette so "amber = boost
+  // energy" reads as one grammar across pads, flames and sparks.
+  sparkColors: ['#F5F8FF', '#00E5FF', '#FFD34F', '#C879FF'],
 };
 
 export const driftTierForCharge = (charge) =>

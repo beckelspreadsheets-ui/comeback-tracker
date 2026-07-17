@@ -505,7 +505,7 @@ const smokeCoreTracker = async (context) => {
   await page.getByRole('button', { name: /^Food$/i }).click();
   await page.waitForSelector('text=Daily fuel', { timeout: 12000 });
   await page.getByRole('button', { name: /^Setup$/i }).click();
-  await page.waitForSelector('text=City Garage & Body', { timeout: 12000 });
+  await page.waitForSelector('text=Body & Program', { timeout: 12000 });
   await page.getByRole('button', { name: /^Today$/i }).click();
   await page.waitForSelector('text=The Comeback', { timeout: 12000 });
   const finalState = await page.evaluate(() => ({

@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-07-17T16:25:21.921Z",
+  "consoleErrors": [],
+  "direction": "ArrowRight",
+  "label": "after",
+  "miniTurboTierBanked": 3,
+  "pass": true,
+  "tiersSeen": [
+    1,
+    2,
+    3
+  ]
+}
