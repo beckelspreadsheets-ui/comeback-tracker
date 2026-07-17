@@ -2,8 +2,12 @@
 
 ## ⚡ DRIFT-TIER VFX CHECKPOINT (2026-07-17 — NEWEST, supersedes every block below)
 
-**DRIFT-TIER VFX DONE (commit 0cbefcb1, committed+pushed, NOT deployed —
-owner word pending):** tier grammar now genre-correct blue→amber→violet
+**DRIFT-TIER VFX DEPLOYED 2026-07-17 (owner "deploy"; deploy 97e4bb52 —
+live-verified both tracks 22/22+10/10 zero CSP, and a REAL drift driven
+ON the origin: tiers 1→2→3 hit, tier-3 banked, amber/violet sparks
+confirmed live, evidence tmp/drift-tier-vfx/*-live.png; NOTE deploy:kart
+script FAILS without CLOUDFLARE_ACCOUNT_ID=9f01a1b31a298b112c22c3e00fe70a45
+— two accounts visible, prefix it):** tier grammar now genre-correct blue→amber→violet
 (old t2 pale-blue #7EC8E8 was indistinguishable from t1 cyan at speed;
 new t2 #FFD34F rides the boost-pad ember grammar, t3 brightened
 #C879FF) · one-shot tier-up pop ring + spark punch the frame a tier

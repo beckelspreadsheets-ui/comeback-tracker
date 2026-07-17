@@ -11,7 +11,9 @@ import { chromium } from 'playwright';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..', '..');
 const port = Number(process.env.DRIFT_VFX_PORT || 5301);
-const baseUrl = `http://127.0.0.1:${port}`;
+// DRIFT_VFX_URL (e.g. the live origin) skips the dev-server spawn entirely.
+const remoteUrl = process.env.DRIFT_VFX_URL || null;
+const baseUrl = remoteUrl || `http://127.0.0.1:${port}`;
 const outputDir = __dirname;
 const labelSuffix = process.env.DRIFT_VFX_LABEL ? `-${process.env.DRIFT_VFX_LABEL}` : '';
 
@@ -82,13 +84,15 @@ const attemptDrift = async (page, steerKey) => {
 const run = async () => {
   await mkdir(outputDir, { recursive: true });
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const server = spawn(npm, ['run', 'dev:kart', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
-    cwd: root,
-    stdio: 'ignore',
-  });
+  const server = remoteUrl
+    ? null
+    : spawn(npm, ['run', 'dev:kart', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
+        cwd: root,
+        stdio: 'ignore',
+      });
   let browser = null;
   try {
-    await waitForServer(baseUrl);
+    if (!remoteUrl) await waitForServer(baseUrl);
     browser = await chromium.launch();
     const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
     const consoleErrors = [];
@@ -142,7 +146,7 @@ const run = async () => {
     if (!report.pass) process.exitCode = 1;
   } finally {
     await browser?.close();
-    server.kill('SIGTERM');
+    server?.kill('SIGTERM');
   }
 };
 
