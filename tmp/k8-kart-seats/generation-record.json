@@ -36,6 +36,18 @@
    "btc-coin-engine": "4dde54de-3b4b-4e89-9199-9c930932b9f1",
    "btc-coin-body": "ab144e76-6b9a-4509-9709-f1a75e66f95e"
   },
-  "ownerPick": "PENDING (B1/B2/B3)"
+  "ownerPick": "2026-07-17: B1 btc-hood-emblem PICKED"
+ },
+ "pipeline": {
+  "btcClean": "7193020f-b8bd-4d1a-98f9-788e971cdf91",
+  "btcSide": "82161486-defb-410d-8216-2b0ac9bf9336",
+  "btcBack": "74312d45-0c39-4200-b71f-d9b33d55289a",
+  "iceSide": "95e50688-d8d7-4459-8a49-924331781343",
+  "iceBack": "05d17808-60f4-40cb-873a-7fdbcc0d0433",
+  "lifts3d": {
+   "ice-block": "b7bd32d9-a105-4446-b307-09b3583609d5",
+   "btc-hood-emblem": "9af691a3-dcbf-4db0-93ae-3578691a104c"
+  },
+  "liftSpec": "multi_image_to_3d, 3 views each (3/4 + side + back), should_texture TRUE, symmetry on, 30k tris"
  }
 }
