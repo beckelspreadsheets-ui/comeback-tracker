@@ -1,6 +1,42 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ K6+K7 SHIPPED CHECKPOINT (2026-07-13 — NEWEST, supersedes every block below)
+## ⚡ DRIFT-TIER VFX CHECKPOINT (2026-07-17 — NEWEST, supersedes every block below)
+
+**DRIFT-TIER VFX DONE (commit 0cbefcb1, committed+pushed, NOT deployed —
+owner word pending):** tier grammar now genre-correct blue→amber→violet
+(old t2 pale-blue #7EC8E8 was indistinguishable from t1 cyan at speed;
+new t2 #FFD34F rides the boost-pad ember grammar, t3 brightened
+#C879FF) · one-shot tier-up pop ring + spark punch the frame a tier
+banks (was a silent color swap) · sparks got a per-tier fountain arc ·
+trail/mini-turbo ring/release flash all tint to the banked tier ·
+tier-3 mini-turbo burns the flame violet. Physics untouched (colors in
+DRIFT_FEEL only; state machine unchanged). Evidence
+tmp/drift-tier-vfx/ — assertion-backed capture script (spawns dev:kart
+5301, keyboard-drives a real drift, screenshots on telemetry driftTier
+flips 1→2→3, asserts miniTurboTier 3 banked, zero console errors;
+reusable: DRIFT_VFX_LABEL=before for A/B). Battery green: bundle
+9655.76/9800 fresh-build · kart-playable both tracks · race-proof
+errors=0.
+
+**SAME DAY: repo is PUBLIC (github.com/beckelspreadsheets-ui/
+comeback-tracker) and the owner has a SECOND MODEL doing a graphics
+comparison on its own branch — do not be surprised by unfamiliar
+branches; ours is codex/release-v1-comebacktracker-kart-racer. Safety
+tags pushed: pre-graphics-compare-20260717 (f172fa22) +
+wip-pre-graphics-compare-20260717 (uncommitted-tree snapshot).**
+
+**NEW DEBT FLAGGED: scripts/release-smoke-test.mjs is pre-split legacy**
+— Settings title fixed to "Body & Program" (this round) but it still
+expects arcade-race-shell (the retired pre-Three renderer) inside the
+FITNESS app; it is in neither post-split battery. Modernize or retire.
+
+**QUEUE: budget-raise ack still pending with owner (13→16 MiB /
+9800→12000 KiB gz)** — pitched 2026-07-17, unlocks snowball unbench +
+race audio. NEXT = phase5 headed pair (closes K7; mid-pack prop
+feel-check still owed at owner's next phone pass), then space queue in
+the recorded order.
+
+## ⚡ K6+K7 SHIPPED CHECKPOINT (2026-07-13 — supersedes every block below)
 
 **EVERYTHING THROUGH THE KART REBALANCE IS LIVE (deploy df14c9c8,
 verified; deploys this sprint: lifoladen 9e9fa180 → icons 1d74cc7d →
