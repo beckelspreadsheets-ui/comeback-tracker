@@ -32,3 +32,5 @@ asset-pipeline/manifests/latest-*.json
 tmp/w4-kart-lab/raw-*.glb
 tmp/k7-item-lab/raw-*.glb
 tmp/k7-item-lab/props-smoke/
+tmp/k8-kart-seats/raw-*.glb
+tmp/k8-kart-seats/w[0-9]*.glb
