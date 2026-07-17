@@ -1,6 +1,53 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ DRIFT-TIER VFX CHECKPOINT (2026-07-17 — NEWEST, supersedes every block below)
+## ⚡ AUDIO + K8 KARTS SHIPPED (2026-07-17 eve — NEWEST, supersedes every block below)
+
+**RACE AUDIO LIVE (deploy 365952b4, audio commit f7774e84 + karts
+e5d21748):** fully synthesized WebAudio (+2.6 KiB gz, ZERO assets) —
+src/game/race/kartAudio.js, observer architecture (one
+updateFrame(race, race.driftState) at the frame tail; cues derive from
+state transitions, cuesForTransition pure+exported). Engine pitch by
+speed + boost reach, per-tier drift scrape, one-shots for countdown/go/
+lap/finish/item pickup+use/coin gain+loss/spin/drift-start/tier chirps/
+mini-turbo pops (t3 whoosh)/boost/land. Ctx unlocks on first gesture
+(webdriver proofs stay silent); HUD mute toggle race-audio-toggle
+(HUD strip pointer-events:none — button opts back in), persisted
+cc-kart-audio-muted; telemetry audioRunning/audioMuted; suspend on
+visibilitychange. New gate test:audio:kart (9/9). GOTCHAS: StrictMode
+double-mount = create manager INSIDE the effect · Higgsfield music =
+DEAD END (sonilo/mirelo game-pipeline-only, seed_audio speech-only).
+
+**K8 KARTS LIVE (same deploy): roster is 7 — Cold Storage (iceblock,
+"Frozen assets") + Block Reward (btckart, "Number go up", full-₿:
+coin wheels + hood ₿).** Themed-concept flow WORKED after owner
+rejected the colorway round ("once they 3d render they will look
+bad"): theme-by-SILHOUETTE + matte flat two-tone + no thin trim →
+clean no-words re-roll (₿ glyphs only) → generated side/back views →
+meshy multi_image_to_3d 3-VIEW lift (lifoladen route; ₿ embossing
+SURVIVED) → diet weld/simplify 0.5+0.01/resize 384/meshopt (ice
+6.2MB→421KB, btc 9.1MB→605KB) → turntables + seeded in-game probes
+(?kart=iceblock/btckart) → portraits via PORTRAITS_ONLY (new flag —
+existing portraits stay byte-identical). Evidence + generation-record:
+tmp/k8-kart-seats/. Stats inside the rebalance envelope; balance
+probe on the 7-kart grid = nice-to-have at next quiet pass.
+
+**BUDGET RAISE LANDED, ACK CLOSED (owner "lets ship it"): kart totals
+13→16 MiB / 9800→12000 KiB gz (JS caps unchanged); fresh build
+10856.18/12000.** Battery green: assets:check fail=0 · audio 9/9 ·
+kart-playable both · race-proof errors=0. LIVE-VERIFIED: both tracks
+22/22+10/10 zero CSP + both new karts driven ON origin with
+audioRunning=true, zero console errors (tmp/k8-kart-seats/live-*.png).
+Owner credits: ~250 left unspent at expiry (music dead end; karts
+only needed ~90).
+
+**QUEUE NOW: phase5 headed pair (quiet machine) · mid-pack prop
+feel-check + drift/audio feel on owner's next phone pass · snowball
+prop unbench (diet ready, budget now allows) · owner still owes: 3
+ordinal sheets · NAME · re-check of remaining rejected-seat slot (1 of
+3 re-rolled seats filled by K8's two? roster now 7 — owner passed on
+the rest of the themed round).**
+
+## ⚡ DRIFT-TIER VFX CHECKPOINT (2026-07-17 — superseded above)
 
 **DRIFT-TIER VFX DEPLOYED 2026-07-17 (owner "deploy"; deploy 97e4bb52 —
 live-verified both tracks 22/22+10/10 zero CSP, and a REAL drift driven
