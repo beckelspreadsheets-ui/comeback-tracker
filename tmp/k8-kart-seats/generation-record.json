@@ -1,19 +1,32 @@
 {
-  "round": "K8 kart-seat re-roll (2026-07-17) — replaces the 3 rejected K5 seats (cyber-lowrider, gold-gp, stealth-speedster)",
-  "context": "Owner had ~340 credits expiring 2026-07-17; concepts fired same-day. Taste data honored: compact low-slung only (snow-buggy 'too massive' rejection), NO gold ('the gold looked bad once rendered in 3d').",
-  "model": "concepts: nano_banana_flash 1:1 1k (catalog remap of nano_banana_2), ~2cr each · lifts: meshy image_to_3d textured symmetry-on 30k tris, 30cr each — LIFT ONLY AFTER OWNER PICK",
+ "round": "K8 kart-seat re-roll (2026-07-17) \u2014 replaces the 3 rejected K5 seats (cyber-lowrider, gold-gp, stealth-speedster)",
+ "context": "Owner had ~340 credits expiring 2026-07-17; concepts fired same-day. Taste data honored: compact low-slung only (snow-buggy 'too massive' rejection), NO gold ('the gold looked bad once rendered in 3d').",
+ "model": "concepts: nano_banana_flash 1:1 1k (catalog remap of nano_banana_2), ~2cr each \u00b7 lifts: meshy image_to_3d textured symmetry-on 30k tris, 30cr each \u2014 LIFT ONLY AFTER OWNER PICK",
+ "concepts": {
+  "synthwave-royal": "92f76727-7f7c-41cd-b7a2-b8b639c85b3c",
+  "aurora-runner": "6018d8c6-f81b-4f5b-b078-275714d80cc1",
+  "midnight-neon": "4ca62969-c5e1-4970-a570-9a246483084a",
+  "candy-coral": "cbe7258f-bdfe-456e-b018-f7c533847abd",
+  "mint-diner": "352fb1bf-761b-49cd-a174-874751f19c74",
+  "blaze-ember": "af40657c-b1bf-4fb1-9349-8641395cb107"
+ },
+ "notes": {
+  "aurora-runner": "carries a '#23' livery number \u2014 text slipped past the prompt; would clash with Layer 23 branding. If picked, re-roll clean or accept as deliberate.",
+  "synthwave-royal": "neon trim reads like the CC track palette (heroRim electric).",
+  "blaze-ember": "matches the boost-pad ember grammar."
+ },
+ "ownerPick": "PENDING \u2014 pick up to 3; picked seats meshy-lift same day while credits live",
+ "round2Themed": {
+  "context": "Owner verdict on round 1: 'dont love the direction... once they 3d render they will look bad'. Round 2 = themed silhouettes designed FOR the lift: matte toy plastic, bold flat two-tone, thick chunky forms, no thin trim/chrome/gloss.",
   "concepts": {
-    "synthwave-royal": "92f76727-7f7c-41cd-b7a2-b8b639c85b3c",
-    "aurora-runner": "6018d8c6-f81b-4f5b-b078-275714d80cc1",
-    "midnight-neon": "4ca62969-c5e1-4970-a570-9a246483084a",
-    "candy-coral": "cbe7258f-bdfe-456e-b018-f7c533847abd",
-    "mint-diner": "352fb1bf-761b-49cd-a174-874751f19c74",
-    "blaze-ember": "af40657c-b1bf-4fb1-9349-8641395cb107"
+   "sardine-tin": "474bff49-fc24-4639-827e-7248d710a5ed",
+   "ice-block": "18994415-63f8-40fd-9b80-0b32965e6886",
+   "coin-roller": "6318d410-9841-4ccb-a416-08f3320edfed",
+   "bobsled-rocket": "4abe0b70-3114-45e5-99bf-0fde4e1be73a",
+   "snowplow": "96ded8c5-c1d9-45c4-b312-fa519488bc9c",
+   "rocket-sled": "9ea866b4-419d-4983-830b-28d3435ec69a"
   },
-  "notes": {
-    "aurora-runner": "carries a '#23' livery number — text slipped past the prompt; would clash with Layer 23 branding. If picked, re-roll clean or accept as deliberate.",
-    "synthwave-royal": "neon trim reads like the CC track palette (heroRim electric).",
-    "blaze-ember": "matches the boost-pad ember grammar."
-  },
-  "ownerPick": "PENDING — pick up to 3; picked seats meshy-lift same day while credits live"
+  "liftPlan": "picks get a front/side/back turnaround (nano_banana edit from concept) then meshy multi_image_to_3d like the lifoladen route \u2014 NOT single-view",
+  "ownerPick": "PENDING"
+ }
 }
