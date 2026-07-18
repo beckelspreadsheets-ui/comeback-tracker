@@ -146,6 +146,7 @@ import { applyGraphicsEnvironment, disposeGraphicsEnvironment } from './race/ren
 import { createGraphicsPostFx } from './race/render/graphicsPostFx.js';
 import { createGraphicsParticles } from './race/render/graphicsParticles.js';
 import { makeAsphaltDetailNormalMap, makeAsphaltRoughnessMap } from './race/render/graphicsTrackDetail.js';
+import { makeGraphicsSkyTexture } from './race/render/graphicsSky.js';
 import {
   buildVisualPlacementAnchors,
   resolveTrackVisuals,
