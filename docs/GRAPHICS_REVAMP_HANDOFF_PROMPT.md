@@ -1,6 +1,70 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ HANDOFF v16 (2026-07-17 night — NEWEST, supersedes every block below). FRESH CONTEXT STARTS HERE.
+## ⚡ HANDOFF v17 (2026-07-18 — NEWEST, supersedes every block below). FRESH CONTEXT STARTS HERE.
+
+**G2 EVERYTHING-ANIMATES LANDED (commit 3a9b7036, NOT deployed — owner
+word pending).** All six plan tasks shipped, zero asset bytes:
+1. **Driver lean + counter-lean + boost tuck** — `updateKartBodyMotion`
+   (player + all rivals, same helper): lean into the locked drift
+   direction (deeper per tier), counter-kick rides releaseFlashTimer,
+   forward tuck while boosting. driverMount pivots at the seat base.
+2. **Suspension bob** — speed-scaled y-bob on the NEW `bodyRig` handle
+   (the kart model's inner group: body+driver+VFX, NOT the blob shadow).
+   Landing squash already existed (race.squash → updateVehiclePose).
+3. **Sway** — `applyAmbientSway` in toonRimShader.js (the Amendment-7
+   registry): world-height-scaled vertex sway, instancing-aware, phase
+   from vertex world-pos. On PV spectators (+beak, same params = same
+   phase), PV pennant flag cones, CC palmClusters (`sway` opt on
+   MIAMI_ROADSIDE entries). Frozen matrices preserved.
+4. **CC marquees** — 2 no-words neon chevron canvas strips (deco hotel
+   pink, corner arcade cyan), UV-scrolled in the frame loop. Mounted
+   INSIDE mountMiamiAsset off the FITTED bounds (`ticker` opt).
+5. **PV snowfall** — ONE Points cloud, 220 flakes, player-centered
+   world-space wrap box, frustumCulled=false, hidden under
+   reducedMotion. The only G2 draw-call add (+1).
+6. **PV ice-floe drift** — floe children of the frozen river group
+   animate free (setFlatTransform only freezes the top-level object).
+
+**Plumbing:** `engine.ambient = { floes, snow, tickers }` (created in
+createScene, returned; probe hook `window.__g2AmbientDebug`). ONE clock
+`AMBIENT_SWAY_TIME` advanced in the frame loop — **not advancing it IS
+the reducedMotion gate** for all shader sway; ticker/floe/snow updates
+sit in the same `if (!reducedMotion)` block.
+
+**Battery at commit:** bundle 10858/12000 gz PASS · kart-playable
+PASSED (full suite pre-ticker-refactor; after the refactor the machine
+was at load 7-8.5 with ~400MB free and the browser kept dying — the
+refactor's risk surface was probed green instead: 22/22 + 10/10 miami
+mounts, 2 tickers, 4 floes, snow, ZERO console errors both tracks,
+tmp/g2-ambient/mount-health-probe.mjs) · tier-3 drift chain proven
+live (drift-probe.mjs) · CC draw est 453, PV 775/800. **REQUEUE AT
+load1 < 4 (before offering deploy): full test:kart-playable ·
+test:audio:kart · test:race-proof · phase5 headed pair.**
+
+**NEW GOTCHAS (G2 round):**
+- **test:audio red at load1 ≥ 7 is a LOAD FAKE with a known mechanism:**
+  sim time dilates ~3x, the harness presses Space while speed < drift
+  minSpeed 62, and a HELD key never re-hops (`held && !wasHeld`) — so
+  driftTier never climbs and the 8s wait dies. Retry quiet, or gate the
+  press on `speed > 80` (see tmp/g2-ambient/drift-probe.mjs).
+- **Miami GLB depth ≠ footprint** — footprint normalizes the max
+  horizontal dim; deco hotel is much shallower, a footprint/2 z-offset
+  floated the marquee mid-road. Mount facade attachments off the fitted
+  Box3 inside mountMiamiAsset (post-fit), never off footprint math.
+- **estimateSceneRenderStats doesn't count Points** — telemetry
+  drawCalls won't show the snowfall (+1 real GPU call, invisible to the
+  proof gate's estimate).
+- Evidence + reusable probes: tmp/g2-ambient/ (capture-evidence.mjs
+  does both tracks + a manual tier-3 drift for the lean shots).
+
+**NEXT = G3 particles/decals** (plan §G3: drift snow spray, skid-mark
+ring buffer, boost speed-lines, coin sparkle, spin-out poof — derive
+every burst from kartAudio's cuesForTransition, ≤4 draw calls, tier
+counts down under viewport.mobile), then **G1 bakes at a quiet machine
+window**. Owed list unchanged (gyro verdict · mid-pack item check ·
+7-kart balance probe · phase5 pair · 3 ordinal sheets · NAME).
+
+## ⚡ HANDOFF v16 (2026-07-17 night — superseded above).
 
 **STATE: everything through the phone-pass fix round is LIVE (deploy
 2e6f47d9, live-verified).** This 2026-07-17 mega-day shipped, in order:
