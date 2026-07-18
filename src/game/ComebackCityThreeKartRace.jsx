@@ -86,7 +86,8 @@ import {
   hopHeightFor,
   updateDriftFeel,
 } from './race/driftFeel.js';
-import { createKartAudio, readStoredMute } from './race/kartAudio.js';
+import { createKartAudio, cuesForTransition, readStoredMute, snapshotRaceForAudio } from './race/kartAudio.js';
+import { createRaceParticles } from './race/render/raceParticles.js';
 import {
   createRivalRacers,
   KART_CONTACT,
@@ -5038,6 +5039,20 @@ export const ComebackCityThreeKartRace = ({
     if (typeof window !== 'undefined') window.__comebackCityKartTrackVisualsEnabled = engine.trackVisualsEnabled;
     engineRef.current = engine;
     finishReportedRef.current = false;
+    // G3 particles/decals: pooled up front (4 draw calls total), one-shot
+    // bursts fed by the SAME cuesForTransition the audio observes. The
+    // speed-lines mesh is camera-space, so the camera must join the scene
+    // graph for its children to render.
+    const particles = createRaceParticles({
+      isIce: trackDef.key === 'penguin-village',
+      mobile: touchControls,
+    });
+    engine.world.add(particles.group);
+    engine.scene.add(engine.camera);
+    engine.camera.add(particles.speedLines);
+    // Probe hook (same spirit as __g2AmbientDebug) for headless smokes.
+    if (typeof window !== 'undefined') window.__g3ParticlesDebug = particles;
+    let particlePrevSnapshot = null;
     const race = createInitialRace(rivalSeats, trackDef);
     // ?itemShowcase=1 parks one of each item visual just past the spawn and
     // raises the ice shield — deterministic close-ups for the approval
@@ -6213,6 +6228,32 @@ export const ComebackCityThreeKartRace = ({
           floe.mesh.rotation.y += rawDt * floe.spin;
         });
       }
+      // G3 particles: one-shot bursts fire off the SAME pure cue derivation
+      // the audio runs at the frame tail (identical inputs → identical cues,
+      // so sight and sound agree); continuous systems read this frame's
+      // drift/boost state directly.
+      {
+        const particleContext = {
+          airborne: race.airState.airborne || driftState.hopTimer > 0 || race.shortcut.active,
+          boosting: race.boostTimer > 0 || driftState.miniTurboTimer > 0,
+          camera: engine.camera,
+          drifting: race.drift,
+          dt,
+          groundY: playerSample.point.y,
+          kartPosition: engine.playerModel.group.position,
+          miniTurboTier: driftState.miniTurboTier,
+          reducedMotion,
+          tier: driftState.tier,
+          yaw: engine.playerModel.group.rotation.y,
+        };
+        const particleSnapshot = snapshotRaceForAudio(race, driftState);
+        cuesForTransition(particlePrevSnapshot, particleSnapshot).forEach((cue) =>
+          particles.onCue(cue, particleContext)
+        );
+        particlePrevSnapshot = particleSnapshot;
+        particles.update(particleContext);
+      }
+
       const ambientSnow = engine.ambient.snow;
       if (ambientSnow) {
         // Static mid-air flakes read as a glitch — hide, don't freeze.
@@ -6366,6 +6407,7 @@ export const ComebackCityThreeKartRace = ({
       // Scene traversal below handles geometry/material; the instance
       // matrix attribute needs the InstancedMesh's own dispose.
       engine.coinInstanced?.mesh?.dispose();
+      particles.dispose();
       engine.scene.traverse((object) => {
         object.geometry?.dispose?.();
         if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
