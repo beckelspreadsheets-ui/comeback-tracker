@@ -1,6 +1,54 @@
 # Graphics Revamp — Fresh-Context Handoff Prompt
 
-## ⚡ HANDOFF v17 (2026-07-18 — NEWEST, supersedes every block below). FRESH CONTEXT STARTS HERE.
+## ⚡ HANDOFF v18 (2026-07-18 — NEWEST, supersedes every block below). FRESH CONTEXT STARTS HERE.
+
+**G3 PARTICLES & DECALS LANDED (commit b3af370b, on top of G2 at
+3a9b7036 — BOTH committed, NEITHER deployed; owner word pending).**
+New `src/game/race/render/raceParticles.js`, exactly 4 added draw calls:
+1. **Drift spray** — InstancedMesh 48/24-mobile soft-dot quads, tier
+   colors from DRIFT_FEEL.sparkColors, rate scales with tier (halves
+   under reducedMotion), ballistic off the rear wheels.
+2. **Skid marks** — ONE 64-quad ring-buffer geometry updated in place,
+   per-rear-wheel segments while drifting, 6s vertex-alpha fade, trail
+   breaks when the drift breaks; dark on CC, blue-white on PV ice.
+3. **Boost speed-lines** — camera-space radial wedges (the camera was
+   ADDED TO THE SCENE for its children to render — engine.scene.add
+   (engine.camera) in the effect), violet at tier 3, hidden under
+   reducedMotion.
+4. **Bursts** — one shared InstancedMesh pool w/ instanceColor: gold
+   coin sparkle + grey spin-out poof. Cues come from the SAME pure
+   `cuesForTransition`/`snapshotRaceForAudio` the audio runs (own
+   prevSnapshot in the frame loop) — no second event system, sight and
+   sound agree by construction.
+Wiring: created after createScene, group → engine.world, speedLines →
+engine.camera; particles.update(context) + cue routing sit right before
+the G2 snow block in frame(); particles.dispose() in cleanup (instanced
+attrs). Mobile tier = touchControls. Probe hook __g3ParticlesDebug.
+
+**Battery at commit:** bundle PASS · mount-health probe green both
+tracks (draw estimates CC 456, PV **778/800**, zero console errors) ·
+manual tier-3 drift driven live, all systems captured
+(tmp/g3-particles/). Machine at load1 ~10 / ~400MB free all session —
+**REQUEUE AT load1 < 4 (before offering deploy): full test:kart-playable
+· test:audio:kart · test:race-proof · phase5 headed pair.**
+
+**NEW GOTCHA:** camera-space geometry authored in the camera xy-plane
+that winds toward -Z is BACKFACE-CULLED from the camera's own view —
+use DoubleSide or wind toward +Z (cost a three-probe bisection to find;
+the mesh had visible=true, parent=camera, root=scene, and still drew
+nothing).
+
+**NEXT = G1 baked lighting/AO — the QUIET-MACHINE phase** (plan §G1):
+Blender AO bakes multiplied into the unlit Miami/PV base textures,
+contact-shadow decals, track-edge vertex-AO, manifest outputHash
+updates, race-proof re-baseline with gatesNote, and the before/after
+A/B sheet — THE OWNER GATES WHICH BAKES SHIP. Do not start the bake
+batch while his machine is loaded. G1 tasks 3/4 (contact decals +
+edge vertex AO) are code-only but still change pixels → they ride the
+same re-baseline + owner gate. Owed list unchanged (gyro verdict ·
+mid-pack item check · 7-kart balance probe · 3 ordinal sheets · NAME).
+
+## ⚡ HANDOFF v17 (2026-07-18 — superseded above).
 
 **G2 EVERYTHING-ANIMATES LANDED (commit 3a9b7036, NOT deployed — owner
 word pending).** All six plan tasks shipped, zero asset bytes:
