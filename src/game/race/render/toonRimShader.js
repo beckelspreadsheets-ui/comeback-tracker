@@ -72,6 +72,46 @@ export const addShaderInjection = (material, injection) => {
   return material;
 };
 
+// G2 ambient sway — ONE shared clock across every swaying material, advanced
+// once per frame by the race loop (and simply not advanced under
+// reducedMotion, which freezes all shader sway at zero cost).
+export const AMBIENT_SWAY_TIME = { value: 0 };
+
+// Vertex-shader sway for frozen-matrix scenery (spectators, pennant flags,
+// palms): matrixAutoUpdate stays false — the lean happens in the shader, so
+// the CPU never touches a matrix. Displacement rides the object-local X axis
+// (each prop rocks around its own facing) and scales with WORLD height above
+// the ground plane, so feet/bases/trunks stay planted. Instancing-aware: the
+// phase seed and height use instanceMatrix when present, giving every
+// instance its own beat.
+const AMBIENT_SWAY_PARS = /* glsl */ `uniform float uSwayTime;
+uniform float uSwayStrength;
+uniform float uSwaySpeed;
+uniform float uSwayHeight;`;
+
+const AMBIENT_SWAY_CHUNK = /* glsl */ `
+	vec4 swayLocal = vec4(transformed, 1.0);
+	#ifdef USE_INSTANCING
+		swayLocal = instanceMatrix * swayLocal;
+	#endif
+	vec4 swayWorld = modelMatrix * swayLocal;
+	float swayWave = sin(uSwayTime * uSwaySpeed + swayWorld.x * 0.43 + swayWorld.z * 0.61);
+	transformed.x += swayWave * uSwayStrength * clamp(swayWorld.y / uSwayHeight, 0.0, 1.5);`;
+
+export const applyAmbientSway = (material, { heightRef = 4, speed = 1.6, strength = 0.1 } = {}) =>
+  addShaderInjection(material, {
+    name: 'ambient-sway-v1',
+    uniforms: {
+      uSwayHeight: { value: heightRef },
+      uSwaySpeed: { value: speed },
+      uSwayStrength: { value: strength },
+      uSwayTime: AMBIENT_SWAY_TIME,
+    },
+    vertexAnchor: '#include <project_vertex>',
+    vertexChunk: AMBIENT_SWAY_CHUNK,
+    vertexPars: AMBIENT_SWAY_PARS,
+  });
+
 // Palette-tinted fresnel rim for the hero set (karts, drivers, marchers,
 // item boxes — never scenery: rim-on-everything cheapens the read).
 // Defaults are the execution-plan starting values; the owner-gated rim lab

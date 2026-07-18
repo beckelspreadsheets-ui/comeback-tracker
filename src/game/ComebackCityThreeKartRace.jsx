@@ -141,7 +141,12 @@ import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
-import { applyToonRim, TOON_RIM_SHARED_TINT } from './race/render/toonRimShader.js';
+import {
+  AMBIENT_SWAY_TIME,
+  applyAmbientSway,
+  applyToonRim,
+  TOON_RIM_SHARED_TINT,
+} from './race/render/toonRimShader.js';
 import {
   buildVisualPlacementAnchors,
   resolveTrackVisuals,
@@ -781,6 +786,10 @@ const createGroundedKartModel = ({
   };
 
   return {
+    // G2 suspension bob rides this inner rig: it carries the body, driver and
+    // exhaust VFX but NOT the blob shadow/underglow on the outer group, so
+    // the contact read stays glued to the road while the kart breathes.
+    bodyRig: model,
     boostFlame,
     contactGlow,
     driftIceTrailGroup,
@@ -791,6 +800,7 @@ const createGroundedKartModel = ({
     group,
     idleFlames,
     miniTurboRing,
+    motion: { lean: 0 },
     replaceBody,
     shadow,
     wheels,
@@ -1052,7 +1062,7 @@ const loadMiamiAsset = (url) => {
   }
   return miamiMeshCache.get(url);
 };
-const mountMiamiAsset = (target, assetKey, { footprint, yaw = MIAMI_FRONT_YAW, z = 0 }) => {
+const mountMiamiAsset = (target, assetKey, { footprint, sway = null, ticker = null, yaw = MIAMI_FRONT_YAW, z = 0 }) => {
   miamiMountStats.requested += 1;
   loadMiamiAsset(MIAMI_ASSETS[assetKey]).then((template) => {
     if (!template) {
@@ -1065,6 +1075,9 @@ const mountMiamiAsset = (target, assetKey, { footprint, yaw = MIAMI_FRONT_YAW, z
     rig.traverse((node) => {
       if (node.isMesh) {
         node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
+        // G2: wind sway for foliage mounts (palms) — the clone owns these
+        // materials, so injecting here never reaches other mounts.
+        if (sway) applyAmbientSway(node.material, sway);
         node.castShadow = false;
         node.receiveShadow = false;
       }
@@ -1078,6 +1091,22 @@ const mountMiamiAsset = (target, assetKey, { footprint, yaw = MIAMI_FRONT_YAW, z
     rig.position.x -= center.x;
     rig.position.z -= center.z - z;
     rig.position.y -= fitted.min.y;
+    // G2 marquee: placed off the FITTED bounds (buildings are often much
+    // shallower than their footprint — a footprint-based offset floated the
+    // deco-hotel strip mid-road), so it hugs the real road-facing facade.
+    // Mounted here, after the fit, so a failed GLB never orphans a strip.
+    if (ticker) {
+      const seated = new THREE.Box3().setFromObject(rig);
+      const texture = makeTickerTexture(ticker.accent);
+      const strip = new THREE.Mesh(
+        new THREE.PlaneGeometry(footprint * 0.62, 2.1),
+        new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
+      );
+      strip.position.set(0, clamp(seated.max.y * 0.45, 6, 13), seated.min.z - 0.4);
+      strip.rotation.y = Math.PI;
+      target.add(strip);
+      ticker.ambient.tickers.push({ mesh: strip, rate: 0.18, texture });
+    }
     target.add(rig);
   });
 };
@@ -1134,31 +1163,70 @@ const buildCrosserSign = () => {
   sign.rotation.z = 0.06;
   return sign;
 };
+// G2 signage marquee: a no-words neon chevron strip (owner text rule — only
+// owner-directed words ship) whose texture.offset scrolls in the frame loop.
+// Zero asset bytes (canvas), one draw call per strip.
+const makeTickerTexture = (accent) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a1022';
+  ctx.fillRect(0, 0, 256, 32);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = accent;
+  ctx.shadowBlur = 8;
+  for (let x = 8; x < 256; x += 32) {
+    ctx.beginPath();
+    ctx.moveTo(x, 26);
+    ctx.lineTo(x + 10, 6);
+    ctx.lineTo(x + 20, 26);
+    ctx.stroke();
+  }
+  ctx.fillStyle = accent;
+  for (let x = 28; x < 256; x += 32) {
+    ctx.beginPath();
+    ctx.arc(x, 16, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.repeat.x = 3;
+  return texture;
+};
+
 // Opening straight (same anchors as OPENING_FACADES) + roadside dressing.
 // Footprints follow the old slots (50-ish opening, 36 districts); the
 // condo tower gets a smaller footprint because footprint scales the
 // horizontal bounds and the tower is ~3x taller than wide.
+// `ticker` mounts the G2 scrolling marquee strip on that building's facade.
 const MIAMI_OPENING_RUN = [
   { asset: 'retroDiner', footprint: 34, progress: 0.072, side: -1 },
-  { asset: 'decoHotel', footprint: 52, progress: 0.092, side: -1 },
+  { asset: 'decoHotel', footprint: 52, progress: 0.092, side: -1, ticker: '#ff4fd8' },
   { asset: 'condoTower', footprint: 36, progress: 0.112, side: 1 },
-  { asset: 'cornerArcade', footprint: 48, progress: 0.136, side: 1 },
+  { asset: 'cornerArcade', footprint: 48, progress: 0.136, side: 1, ticker: '#46d9ef' },
   { asset: 'decoHotel', footprint: 52, progress: 0.16, side: 1 },
 ];
 const MIAMI_DISTRICT_ASSETS = ['decoHotel', 'condoTower', 'cornerArcade', 'retroDiner', 'decoHotel'];
+// G2: palms carry wind sway (world-height scaled, trunks planted); the
+// per-cluster world-position phase keeps the rows from waving in unison.
+const PALM_SWAY = { heightRef: 9, speed: 1.3, strength: 0.34 };
 const MIAMI_ROADSIDE = [
-  { asset: 'palmCluster', footprint: 18, progress: 0.05, side: 1 },
-  { asset: 'palmCluster', footprint: 16, progress: 0.21, side: -1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.05, side: 1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.21, side: -1, sway: PALM_SWAY },
   { asset: 'lifeguard', footprint: 14, progress: 0.3, side: 1 },
-  { asset: 'palmCluster', footprint: 18, progress: 0.4, side: 1 },
-  { asset: 'palmCluster', footprint: 16, progress: 0.52, side: -1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.4, side: 1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.52, side: -1, sway: PALM_SWAY },
   { asset: 'retroDiner', footprint: 26, progress: 0.6, side: -1 },
-  { asset: 'palmCluster', footprint: 17, progress: 0.68, side: 1 },
+  { asset: 'palmCluster', footprint: 17, progress: 0.68, side: 1, sway: PALM_SWAY },
   { asset: 'lifeguard', footprint: 14, progress: 0.78, side: -1 },
-  { asset: 'palmCluster', footprint: 18, progress: 0.88, side: 1 },
-  { asset: 'palmCluster', footprint: 16, progress: 0.95, side: -1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.88, side: 1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.95, side: -1, sway: PALM_SWAY },
 ];
-const addMiamiTrackside = (world, sampler, roadWidth) => {
+const addMiamiTrackside = (world, sampler, roadWidth, ambient = null) => {
   MIAMI_OPENING_RUN.forEach((entry) => {
     const { normal, point, tangent } = sampler.pointAt(entry.progress);
     const placement = clearBuildingPlacement(sampler, point, normal, entry.side, 64);
@@ -1166,7 +1234,10 @@ const addMiamiTrackside = (world, sampler, roadWidth) => {
     const group = new THREE.Group();
     group.position.copy(placement);
     group.rotation.y = Math.atan2(tangent.x, tangent.z) + (entry.side > 0 ? -Math.PI / 2 : Math.PI / 2);
-    mountMiamiAsset(group, entry.asset, { footprint: entry.footprint });
+    mountMiamiAsset(group, entry.asset, {
+      footprint: entry.footprint,
+      ticker: entry.ticker && ambient ? { accent: entry.ticker, ambient } : null,
+    });
     world.add(group);
   });
   MIAMI_ROADSIDE.forEach((entry) => {
@@ -1176,7 +1247,7 @@ const addMiamiTrackside = (world, sampler, roadWidth) => {
     const group = new THREE.Group();
     group.position.copy(position);
     group.rotation.y = Math.atan2(tangent.x, tangent.z) + (entry.side > 0 ? -Math.PI / 2 : Math.PI / 2);
-    mountMiamiAsset(group, entry.asset, { footprint: entry.footprint });
+    mountMiamiAsset(group, entry.asset, { footprint: entry.footprint, sway: entry.sway || null });
     world.add(group);
   });
 };
@@ -2629,7 +2700,7 @@ const clearBuildingPlacement = (sampler, basePoint, normal, side, startOffset, c
   return null;
 };
 
-const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
+const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false }), ambient = null) => {
   const roadWidth = trackDef.course.mainRoadWidth || 50;
   const propMat = {
     cone: createBasicMaterial('#ff8b21', { emissive: '#ff8b21', emissiveIntensity: 0.18 }),
@@ -2796,7 +2867,7 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
   // straight (old facade-run anchors) and dresses the roadside with palms,
   // lifeguard towers, and the diner. CC-only (openingFacades dressing).
   if (miamiMode && trackDef.dressing?.openingFacades) {
-    addMiamiTrackside(world, sampler, roadWidth);
+    addMiamiTrackside(world, sampler, roadWidth, ambient);
   }
   // W3: the Penguin Village tribute set rides the same gate — ?skyLab=0
   // strips it with the rest of the generated dressing.
@@ -2906,8 +2977,10 @@ const makeIceberg = (height) => {
 // Small real-colored penguin (spectator/waddler) — black/white with a beak.
 const makePenguinSpectator = (s = 1.1) => {
   const g = new THREE.Group();
-  const black = createToonMaterial('#222d3f');
-  const white = createToonMaterial('#f4f8ff');
+  // G2: crowd sway — shader-side (matrices stay frozen), world-position
+  // phase gives every penguin its own excited rock.
+  const black = applyAmbientSway(createToonMaterial('#222d3f'), { heightRef: 3.4 * s, speed: 2.4, strength: 0.16 });
+  const white = applyAmbientSway(createToonMaterial('#f4f8ff'), { heightRef: 3.4 * s, speed: 2.4, strength: 0.16 });
   const body = new THREE.Mesh(new THREE.CylinderGeometry(1 * s, 1.3 * s, 2.6 * s, 8), black);
   body.position.y = 1.5 * s;
   g.add(body);
@@ -2918,7 +2991,12 @@ const makePenguinSpectator = (s = 1.1) => {
   belly.scale.set(0.8, 1.2, 0.55);
   belly.position.set(0, 1.7 * s, 0.7 * s);
   g.add(belly);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.28 * s, 0.7 * s, 6), createBasicMaterial('#ff9a2e'));
+  // Beak carries the same sway params — world-position phase keeps it in
+  // lockstep with the head it sits on.
+  const beak = new THREE.Mesh(
+    new THREE.ConeGeometry(0.28 * s, 0.7 * s, 6),
+    applyAmbientSway(createBasicMaterial('#ff9a2e'), { heightRef: 3.4 * s, speed: 2.4, strength: 0.16 })
+  );
   beak.rotation.x = Math.PI / 2;
   beak.position.set(0, 3.2 * s, 1 * s);
   g.add(beak);
@@ -3156,7 +3234,9 @@ const makePennantFlags = () => {
     const y = 8.2 - Math.sin(t * Math.PI) * 1.2;
     const flag = new THREE.Mesh(
       new THREE.ConeGeometry(0.7, 1.4, 3),
-      createBasicMaterial(colors[i % colors.length])
+      // G2: flags flutter (shader sway, high on the string so the clamp
+      // saturates → whole-flag swing); poles and bases stay rigid.
+      applyAmbientSway(createBasicMaterial(colors[i % colors.length]), { heightRef: 5, speed: 3.1, strength: 0.2 })
     );
     flag.rotation.z = -Math.PI / 2;
     flag.rotation.y = Math.PI / 2;
@@ -3415,7 +3495,7 @@ const makeIceBlockBarrier = () => {
   return g;
 };
 
-const addPenguinVillageDressing = (world, sampler, trackDef) => {
+const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => {
   const roadWidth = trackDef.course.mainRoadWidth || 56;
   // Giant ordinal-penguin ice statues at signature spots — the landmark.
   [
@@ -3535,7 +3615,9 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
     );
     sheen.position.y = 0.3;
     river.add(sheen);
-    // Ice-floe shards drifting on the river.
+    // Ice-floe shards drifting on the river. G2: they actually drift now —
+    // the river group's matrix is frozen, but the floe children keep
+    // matrixAutoUpdate, so the frame loop can slide/turn them for free.
     [-90, -30, 40, 100].forEach((x, i) => {
       const floe = new THREE.Mesh(
         new THREE.CylinderGeometry(6 + (i % 2) * 3, 6 + (i % 2) * 3, 0.6, 6),
@@ -3543,6 +3625,13 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
       );
       floe.position.set(x, 0.5, (i % 2 ? 1 : -1) * 16);
       river.add(floe);
+      ambient?.floes.push({
+        baseX: x,
+        baseZ: (i % 2 ? 1 : -1) * 16,
+        mesh: floe,
+        phase: i * 1.8,
+        spin: (i % 2 ? 1 : -1) * 0.02,
+      });
     });
     river.traverse((n) => {
       n.castShadow = false;
@@ -3686,6 +3775,56 @@ const addPenguinVillageDressing = (world, sampler, trackDef) => {
       n.castShadow = false;
     });
     world.add(arch);
+  }
+  // G2 snowfall — ONE Points cloud (+1 draw call, the only G2 draw-call
+  // add; PV headed truth is 783/800 so nothing else gets one). Flakes live
+  // in world space inside a box the frame loop re-centers on the player:
+  // a flake holds its spot until the box edge passes it, then wraps — so
+  // snow never reads as glued to the kart. Hidden under reducedMotion
+  // (static mid-air flakes read as a glitch, not calm).
+  if (ambient) {
+    const flakeCount = 220;
+    const positions = new Float32Array(flakeCount * 3);
+    const speeds = new Float32Array(flakeCount);
+    const phases = new Float32Array(flakeCount);
+    const spanXZ = 95;
+    const spanY = 55;
+    const start = sampler.pointAt(0).point;
+    for (let i = 0; i < flakeCount; i += 1) {
+      positions[i * 3] = start.x + (((i * 37) % 190) - spanXZ);
+      positions[i * 3 + 1] = ((i * 23) % spanY) + 2;
+      positions[i * 3 + 2] = start.z + (((i * 53) % 190) - spanXZ);
+      speeds[i] = 3.2 + ((i * 13) % 10) * 0.34;
+      phases[i] = (i % 12) * 0.55;
+    }
+    const snowGeometry = new THREE.BufferGeometry();
+    snowGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const flakeCanvas = document.createElement('canvas');
+    flakeCanvas.width = 32;
+    flakeCanvas.height = 32;
+    const flakeCtx = flakeCanvas.getContext('2d');
+    const flakeGrad = flakeCtx.createRadialGradient(16, 16, 1, 16, 16, 15);
+    flakeGrad.addColorStop(0, 'rgba(255,255,255,0.95)');
+    flakeGrad.addColorStop(0.55, 'rgba(235,246,255,0.5)');
+    flakeGrad.addColorStop(1, 'rgba(235,246,255,0)');
+    flakeCtx.fillStyle = flakeGrad;
+    flakeCtx.fillRect(0, 0, 32, 32);
+    const snow = new THREE.Points(
+      snowGeometry,
+      new THREE.PointsMaterial({
+        color: '#ffffff',
+        depthWrite: false,
+        map: new THREE.CanvasTexture(flakeCanvas),
+        opacity: 0.85,
+        size: 1.15,
+        sizeAttenuation: true,
+        transparent: true,
+      })
+    );
+    // The wrap box follows the player, so static bounds would cull it.
+    snow.frustumCulled = false;
+    world.add(snow);
+    ambient.snow = { phases, points: snow, spanXZ, spanY, speeds };
   }
 };
 
@@ -4186,8 +4325,15 @@ const createScene = ({
     world.add(kicker);
   }
   addFinishGate(world, sampler, trackDef, trackVisuals);
-  const propCount = addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals) + trackVisualPropCount;
-  if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef);
+  // G2 ambient-animation handles: scenery builders drop live refs here
+  // (marquee tickers, ice floes, snowfall) for the frame loop to drive.
+  const ambient = { floes: [], snow: null, tickers: [] };
+  // Probe hook (same spirit as __comebackCityKartTelemetry): headless
+  // smokes assert the ambient handles mounted without a scene traversal.
+  if (typeof window !== 'undefined') window.__g2AmbientDebug = ambient;
+  const propCount =
+    addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals, ambient) + trackVisualPropCount;
+  if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef, ambient);
 
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({
@@ -4363,6 +4509,7 @@ const createScene = ({
   });
 
   return {
+    ambient,
     auroraRig,
     avalancheGlow,
     avalancheMarker,
@@ -5213,6 +5360,40 @@ export const ComebackCityThreeKartRace = ({
     const spinOutYaw = (spinTimer) =>
       spinTimer > 0 ? (1 - spinTimer / ITEM_FEEL.spinDuration) * Math.PI * 2 : 0;
 
+    // G2 everything-animates: driver lean + suspension bob, shared by the
+    // player and every rival (same kart factory). The driver rig pivots at
+    // its seat base (driverMount), so a z-rotation reads as a body lean —
+    // INTO the locked drift direction (deeper per banked tier, matching the
+    // kart's -slideYaw roll sign), a lighter steer lean otherwise, and a
+    // brief counter-kick riding the release flash. The bob lives on the
+    // inner bodyRig — never the camera (phone framing is pinned) and never
+    // the outer group, whose blob shadow must stay glued to the road.
+    const updateKartBodyMotion = (
+      kartModel,
+      { airborne, boosting, drift, driftDirection, driftTier, dt, phase, releaseFlash, speed, steer }
+    ) => {
+      const leanTarget = drift
+        ? -driftDirection * (0.24 + driftTier * 0.05)
+        : releaseFlash > 0
+          ? driftDirection * 0.18 * releaseFlash
+          : -steer * 0.15;
+      const motion = kartModel.motion;
+      motion.lean = lerp(motion.lean, leanTarget, 1 - Math.pow(0.0005, dt));
+      kartModel.driverMount.rotation.z = motion.lean;
+      // Boosts push the driver into a forward tuck; eases back on expiry.
+      kartModel.driverMount.rotation.x = lerp(
+        kartModel.driverMount.rotation.x,
+        boosting ? 0.13 : 0,
+        1 - Math.pow(0.002, dt)
+      );
+      const speedRatio = clamp(speed / MAX_SPEED, 0, 1);
+      const bob =
+        !reducedMotion && !airborne && speed > 16
+          ? Math.sin(race.raceTime * (7 + speedRatio * 8) + phase) * 0.05 * (0.35 + speedRatio)
+          : 0;
+      kartModel.bodyRig.position.y = bob;
+    };
+
     let cachedRendererStats = estimateSceneRenderStats(engine.world, engine.renderer);
     let nextRendererStatsRefresh = performance.now() + RENDER_STATS_REFRESH_MS;
     const rendererStatsForFrame = (now) => {
@@ -5725,6 +5906,21 @@ export const ComebackCityThreeKartRace = ({
         slideYaw: driftState.slideYaw,
         squash: race.squash,
       });
+      updateKartBodyMotion(engine.playerModel, {
+        airborne: race.airState.airborne || driftState.hopTimer > 0 || race.shortcut.active,
+        boosting: race.boostTimer > 0 || driftState.miniTurboTimer > 0,
+        drift: race.drift,
+        driftDirection: driftState.direction || 0,
+        driftTier: driftState.tier,
+        dt,
+        phase: 0,
+        releaseFlash:
+          !race.drift && driftState.releaseFlashTimer > 0
+            ? driftState.releaseFlashTimer / DRIFT_FEEL.releaseFlash
+            : 0,
+        speed: race.speed,
+        steer: race.steer,
+      });
       engine.shieldBubble.visible = race.shieldActive;
       if (race.shieldActive) {
         engine.shieldBubble.rotation.y += dt * 1.6;
@@ -5977,6 +6173,19 @@ export const ComebackCityThreeKartRace = ({
           slideYaw: 0,
           squash: 1,
         });
+        updateKartBodyMotion(rival.model, {
+          airborne: racer.air.airborne,
+          boosting: racer.boostTimer > 0,
+          drift: false,
+          driftDirection: 0,
+          driftTier: 0,
+          dt,
+          // Distinct phases keep the field from bobbing in lockstep.
+          phase: 1.1 + index * 1.9,
+          releaseFlash: 0,
+          speed: racer.speed,
+          steer: clamp(racer.laneVel * 0.6, -1, 1),
+        });
         rival.model.boostFlame.visible = racer.boostTimer > 0;
         rival.model.idleFlames.forEach((flame, flameIndex) => {
           flame.visible = racer.speed > 16;
@@ -5987,6 +6196,50 @@ export const ComebackCityThreeKartRace = ({
           if (wheel.userData.front) wheel.rotation.y = clamp(racer.laneVel * 0.5, -0.5, 0.5);
         });
       });
+
+      // G2 ambient animation. One shared clock drives every shader sway
+      // (spectators, pennants, palms) — NOT advancing it IS the
+      // reducedMotion gate, at zero per-frame cost. CPU-side handles
+      // (marquee tickers, ice floes, snowfall) ride the same gate.
+      if (!reducedMotion) {
+        AMBIENT_SWAY_TIME.value += rawDt;
+        const ambientTime = AMBIENT_SWAY_TIME.value;
+        engine.ambient.tickers.forEach((ticker) => {
+          ticker.texture.offset.x -= rawDt * ticker.rate;
+        });
+        engine.ambient.floes.forEach((floe) => {
+          floe.mesh.position.x = floe.baseX + Math.sin(ambientTime * 0.11 + floe.phase) * 4;
+          floe.mesh.position.z = floe.baseZ + Math.cos(ambientTime * 0.07 + floe.phase) * 2.2;
+          floe.mesh.rotation.y += rawDt * floe.spin;
+        });
+      }
+      const ambientSnow = engine.ambient.snow;
+      if (ambientSnow) {
+        // Static mid-air flakes read as a glitch — hide, don't freeze.
+        ambientSnow.points.visible = !reducedMotion;
+        if (!reducedMotion) {
+          const anchor = playerSample.point;
+          const snowPositions = ambientSnow.points.geometry.attributes.position;
+          const flakes = snowPositions.array;
+          const snowTime = AMBIENT_SWAY_TIME.value;
+          for (let flake = 0; flake < ambientSnow.speeds.length; flake += 1) {
+            let flakeX = flakes[flake * 3] + Math.sin(snowTime * 0.9 + ambientSnow.phases[flake]) * rawDt * 1.6;
+            let flakeY = flakes[flake * 3 + 1] - ambientSnow.speeds[flake] * rawDt;
+            let flakeZ = flakes[flake * 3 + 2];
+            if (flakeY < 0.4) flakeY += ambientSnow.spanY;
+            // World-fixed until the player-centered box edge passes — then
+            // wrap across, so snow never reads as glued to the kart.
+            if (flakeX - anchor.x > ambientSnow.spanXZ) flakeX -= ambientSnow.spanXZ * 2;
+            else if (flakeX - anchor.x < -ambientSnow.spanXZ) flakeX += ambientSnow.spanXZ * 2;
+            if (flakeZ - anchor.z > ambientSnow.spanXZ) flakeZ -= ambientSnow.spanXZ * 2;
+            else if (flakeZ - anchor.z < -ambientSnow.spanXZ) flakeZ += ambientSnow.spanXZ * 2;
+            flakes[flake * 3] = flakeX;
+            flakes[flake * 3 + 1] = flakeY;
+            flakes[flake * 3 + 2] = flakeZ;
+          }
+          snowPositions.needsUpdate = true;
+        }
+      }
 
       let targetFov;
       if (proofCameraMode === 'top') {
