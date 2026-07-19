@@ -19,7 +19,7 @@ const PRESETS = {
   high: {
     // Phase 1 — lighting & atmosphere.
     atmosphere: true, // per-track cinematic fog/hemi/sun/rim grade
-    toneExposure: 1.18, // toneMappingExposure lift (was 1.05) for a richer key
+    toneExposure: 1.14, // toneMappingExposure lift (was 1.05) for a richer key
     environmentMap: true, // PMREM RoomEnvironment -> scene.environment (PBR sheen)
     environmentIntensity: 0.55, // subtle: lifts metal/paint without washing the toon look
     shadowBoost: true, // sharper + wider key-light shadow frustum
@@ -45,7 +45,7 @@ const PRESETS = {
   },
   low: {
     atmosphere: true,
-    toneExposure: 1.12,
+    toneExposure: 1.1,
     environmentMap: true, // RoomEnvironment PMREM is cheap (one-time bake)
     environmentIntensity: 0.35,
     shadowBoost: false, // keep the shipped 384 map + tight frustum

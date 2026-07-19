@@ -21,10 +21,10 @@ export const TRACK_ATMOSPHERE_GRADES = Object.freeze({
   'comeback-city': Object.freeze({
     // Deep violet haze — pulls the horizon back so the neon towers pop. Fog
     // far stays well under the 840 camera-far no-op ceiling.
-    fog: { color: '#241c3f', near: 230, far: 760 },
+    fog: { color: '#241c3f', near: 260, far: 760 },
     // Warm lavender sky fill over a deep indigo ground bounce — the classic
     // dusk two-tone that keeps kart undersides from going black.
-    hemi: { sky: '#9a8ff0', ground: '#241a44', intensity: 3.05 },
+    hemi: { sky: '#9a8ff0', ground: '#241a44', intensity: 2.85 },
     // Low golden key — the "sun is setting behind the skyline" read. Warm
     // amber flatters the red/white hero karts and the gold ₿ accents.
     sunColor: '#ffb066',
@@ -42,29 +42,29 @@ export const TRACK_ATMOSPHERE_GRADES = Object.freeze({
     // slightly wet so the city lights + sun streak across it. envMapIntensity
     // scales the IBL contribution on this one material (multiplies the
     // scene-wide environmentIntensity for the road only).
-    road: { metalness: 0.14, roughness: 0.42, envMapIntensity: 0.9 },
+    road: { metalness: 0.14, roughness: 0.46, envMapIntensity: 0.75 },
     ground: { roughness: 0.9, envMapIntensity: 0.25 },
   }),
   'penguin-village': Object.freeze({
     // Thin cold haze — keeps the arctic air readable without the shipped
     // grey-out. Slightly tighter near/far than CC for a fresher feel.
-    fog: { color: '#5a7a94', near: 170, far: 720 },
+    fog: { color: '#5a7a94', near: 200, far: 680 },
     // Bright icy sky over deep blue shadow — high key for snow that doesn't
     // blow out, dark enough ground to ground the karts.
-    hemi: { sky: '#7fb2d8', ground: '#0e2438', intensity: 3.0 },
+    hemi: { sky: '#6a9ec8', ground: '#0b1c2e', intensity: 2.7 },
     // Pale gold dawn sun — long shadows + a warm edge on the ice. Cools the
     // snow's flat white into something with direction.
     sunColor: '#f2d9a8',
-    sunIntensity: 2.9,
+    sunIntensity: 2.6,
     // Aurora-cyan rim — the track's signature #00d5ff, pushed a touch.
     rimLightColor: '#18dcff',
     rimLightIntensity: 2.55,
     // Cold sky bounce fill — lifts the shadowed kart flanks off the snow.
     sunFillColor: '#3f6f9f',
-    sunFillIntensity: 0.9,
+    sunFillIntensity: 0.75,
     // Road surface specular: packed-snow/ice asphalt gets a glossier sheen
     // than CC so the dawn sun glints off the frozen surface.
-    road: { metalness: 0.1, roughness: 0.34, envMapIntensity: 1.0 },
+    road: { metalness: 0.08, roughness: 0.42, envMapIntensity: 0.85 },
     ground: { roughness: 0.82, envMapIntensity: 0.35 },
   }),
 });
