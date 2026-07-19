@@ -137,45 +137,58 @@ const addCylinder = (group, radius, depth, position, material, options = {}) => 
 export const createKartModelV2 = ({
   accent = CITY3D_PALETTE.cyan,
   color = CITY3D_PALETTE.redKart,
+  driverSuit = '#111827',
   scale = 1,
   suit = '#202837',
 } = {}) => {
   const group = new THREE.Group();
   group.scale.setScalar(scale);
 
-  const bodyMat = createBasicMaterial(color, { emissive: color, emissiveIntensity: 0.1 });
-  const redDarkMat = createBasicMaterial('#a91f1d', { emissive: color, emissiveIntensity: 0.04 });
-  const accentMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.52 });
+  const bodyMat = createBasicMaterial(color, {
+    emissive: color,
+    emissiveIntensity: 0.04,
+    metalness: 0.04,
+    roughness: 0.48,
+  });
+  const redDarkMat = createBasicMaterial('#a91f1d', {
+    emissive: color,
+    emissiveIntensity: 0.02,
+    roughness: 0.58,
+  });
+  const accentMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.24 });
   const darkMat = createBasicMaterial(CITY3D_PALETTE.tire);
   const cockpitMat = createBasicMaterial('#202837');
   const trimMat = createBasicMaterial(CITY3D_PALETTE.light);
   const headlightMat = createBasicMaterial(CITY3D_PALETTE.cyan, {
     emissive: CITY3D_PALETTE.cyan,
-    emissiveIntensity: 0.9,
+    emissiveIntensity: 0.38,
   });
   const yellowMat = createBasicMaterial(CITY3D_PALETTE.roadLine, {
     emissive: CITY3D_PALETTE.roadLine,
     emissiveIntensity: 0.2,
   });
   const suitMat = createBasicMaterial(suit);
+  const penguinBodyMat = createBasicMaterial(driverSuit, { roughness: 0.78 });
+  const penguinBellyMat = createBasicMaterial('#f7fbff', { roughness: 0.72 });
+  const penguinBeakMat = createBasicMaterial('#ffac32', { roughness: 0.62 });
 
-  addBox(group, { x: 7.8, y: 1.2, z: 8.4 }, { y: 1.35, z: -0.45 }, redDarkMat);
-  addBox(group, { x: 6.9, y: 1.0, z: 6.2 }, { y: 2.05, z: 1.1 }, bodyMat);
-  addBox(group, { x: 4.6, y: 1.7, z: 3.5 }, { y: 3.15, z: -1.8 }, cockpitMat);
+  addBox(group, { x: 8.55, y: 1.32, z: 8.9 }, { y: 1.34, z: -0.55 }, redDarkMat);
+  addBox(group, { x: 7.45, y: 1.05, z: 6.5 }, { y: 2.08, z: 1.05 }, bodyMat);
+  addBox(group, { x: 4.95, y: 1.38, z: 3.8 }, { y: 3.04, z: -1.92 }, cockpitMat);
   addBox(group, { x: 5.2, y: 0.42, z: 0.78 }, { y: 4.1, z: -3.6 }, darkMat);
-  addBox(group, { x: 8.8, y: 0.54, z: 1.1 }, { y: 1.42, z: 4.95 }, trimMat);
-  addBox(group, { x: 7.8, y: 0.42, z: 1.0 }, { y: 1.08, z: -5.1 }, darkMat);
+  addBox(group, { x: 9.45, y: 0.56, z: 1.16 }, { y: 1.42, z: 5.02 }, trimMat);
+  addBox(group, { x: 8.25, y: 0.46, z: 1.04 }, { y: 1.06, z: -5.18 }, darkMat);
   addBox(group, { x: 1.05, y: 0.32, z: 7.1 }, { y: 2.7, z: 0.75 }, trimMat);
 
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(3.95, 5.7, 4), bodyMat);
-  nose.position.set(0, 1.65, 5.9);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(4.25, 5.85, 4), bodyMat);
+  nose.position.set(0, 1.65, 6.04);
   nose.rotation.x = Math.PI / 2;
   nose.rotation.y = Math.PI / 4;
   nose.castShadow = true;
   group.add(nose);
 
-  const noseStripe = new THREE.Mesh(new THREE.ConeGeometry(1.05, 5.82, 4), trimMat);
-  noseStripe.position.set(0, 1.96, 5.96);
+  const noseStripe = new THREE.Mesh(new THREE.ConeGeometry(1.0, 5.94, 4), trimMat);
+  noseStripe.position.set(0, 1.96, 6.08);
   noseStripe.rotation.x = Math.PI / 2;
   noseStripe.rotation.y = Math.PI / 4;
   noseStripe.scale.z = 1.02;
@@ -183,15 +196,15 @@ export const createKartModelV2 = ({
   group.add(noseStripe);
 
   [-1, 1].forEach((side) => {
-    addBox(group, { x: 1.45, y: 0.52, z: 1.18 }, { x: side * 2.65, y: 2.46, z: 5.68 }, headlightMat);
-    addBox(group, { x: 1.5, y: 0.75, z: 5.8 }, { x: side * 4.55, y: 1.95, z: 0.2 }, darkMat);
-    addBox(group, { x: 0.72, y: 0.5, z: 5.7 }, { x: side * 5.0, y: 2.18, z: 0.35 }, accentMat);
-    addBox(group, { x: 1.2, y: 0.42, z: 3.2 }, { x: side * 3.7, y: 2.35, z: 2.7 }, bodyMat);
-    addBox(group, { x: 0.52, y: 0.38, z: 3.6 }, { x: side * 3.9, y: 2.92, z: 1.82 }, trimMat);
+    addBox(group, { x: 1.58, y: 0.5, z: 1.16 }, { x: side * 2.82, y: 2.42, z: 5.8 }, headlightMat);
+    addBox(group, { x: 1.76, y: 0.82, z: 6.1 }, { x: side * 4.98, y: 1.78, z: 0.08 }, darkMat);
+    addBox(group, { x: 0.64, y: 0.44, z: 5.5 }, { x: side * 5.42, y: 2.1, z: 0.34 }, accentMat);
+    addBox(group, { x: 1.44, y: 0.42, z: 3.35 }, { x: side * 3.96, y: 2.34, z: 2.74 }, bodyMat);
+    addBox(group, { x: 0.48, y: 0.34, z: 3.62 }, { x: side * 4.18, y: 2.85, z: 1.82 }, trimMat);
   });
 
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(3.55, 2.55, 2.7), cockpitMat);
-  seat.position.set(0, 4.0, -2.35);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(3.95, 2.2, 2.95), cockpitMat);
+  seat.position.set(0, 3.72, -2.45);
   seat.rotation.x = -0.15;
   seat.castShadow = true;
   freezeStaticTransform(seat);
@@ -215,26 +228,75 @@ export const createKartModelV2 = ({
   });
 
   const driver = new THREE.Group();
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 1.12, 1.65, 7), suitMat);
-  torso.position.y = 4.55;
-  const helmet = new THREE.Mesh(new THREE.DodecahedronGeometry(1.12, 0), accentMat);
-  helmet.position.y = 5.78;
-  const visor = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.34, 0.18), darkMat);
-  visor.position.set(0, 5.82, 0.98);
-  driver.position.z = -1.85;
-  freezeStaticTransform(torso);
-  freezeStaticTransform(helmet);
-  freezeStaticTransform(visor);
-  driver.add(torso, helmet, visor);
+  driver.name = 'seated-ordinal-penguin-driver';
+  driver.position.set(0, 0, -1.98);
+  driver.rotation.x = -0.06;
+
+  const hips = new THREE.Mesh(new THREE.SphereGeometry(1.12, 16, 10), penguinBodyMat);
+  hips.name = 'penguin-seated-body';
+  hips.scale.set(0.95, 0.72, 0.82);
+  hips.position.set(0, 3.92, -0.18);
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.82, 14, 8), penguinBellyMat);
+  belly.name = 'penguin-white-belly';
+  belly.scale.set(0.86, 1.0, 0.32);
+  belly.position.set(0, 4.0, 0.48);
+  const chest = new THREE.Mesh(new THREE.SphereGeometry(1.04, 16, 10), penguinBodyMat);
+  chest.name = 'penguin-upright-chest';
+  chest.scale.set(0.9, 1.08, 0.72);
+  chest.position.set(0, 4.74, -0.02);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1.08, 18, 12), penguinBodyMat);
+  head.name = 'penguin-readable-head';
+  head.scale.set(0.95, 1.02, 0.9);
+  head.position.set(0, 5.92, 0.1);
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.72, 14, 8), penguinBellyMat);
+  face.name = 'penguin-face-patch';
+  face.scale.set(0.82, 0.86, 0.24);
+  face.position.set(0, 5.95, 0.78);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.7, 4), penguinBeakMat);
+  beak.name = 'penguin-beak';
+  beak.position.set(0, 5.84, 1.26);
+  beak.rotation.x = Math.PI / 2;
+  beak.rotation.y = Math.PI / 4;
+  [-1, 1].forEach((side) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), darkMat);
+    eye.name = 'penguin-eye';
+    eye.position.set(side * 0.28, 6.14, 0.94);
+    driver.add(eye);
+
+    const flipper = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 1.15, 4, 8), penguinBodyMat);
+    flipper.name = 'penguin-flipper-on-wheel';
+    flipper.position.set(side * 1.02, 4.74, 0.54);
+    flipper.rotation.set(0.72, 0, side * 0.78);
+    driver.add(flipper);
+
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.18, 1.02), penguinBeakMat);
+    foot.name = 'penguin-tucked-foot';
+    foot.position.set(side * 0.48, 3.32, 0.9);
+    foot.rotation.y = side * 0.2;
+    driver.add(foot);
+  });
+  const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.08, 6, 24), darkMat);
+  wheel.name = 'kart-steering-wheel';
+  wheel.position.set(0, 4.7, 1.16);
+  wheel.rotation.x = Math.PI / 2.8;
+  const wheelColumn = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.15, 8), darkMat);
+  wheelColumn.name = 'kart-steering-column';
+  wheelColumn.position.set(0, 4.2, 0.78);
+  wheelColumn.rotation.x = 0.55;
+  [hips, belly, chest, head, face, beak, wheel, wheelColumn].forEach((mesh) => {
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    driver.add(mesh);
+  });
   group.add(driver);
 
   [-1, 1].forEach((side) => {
-    const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 3.8, 6), darkMat);
-    cage.position.set(side * 1.88, 4.45, -2.52);
+    const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 3.65, 6), darkMat);
+    cage.position.set(side * 2.0, 4.24, -2.62);
     cage.rotation.z = side * 0.18;
     group.add(cage);
   });
-  addBox(group, { x: 4.25, y: 0.28, z: 0.42 }, { y: 5.98, z: -2.52 }, darkMat);
+  addBox(group, { x: 4.35, y: 0.26, z: 0.42 }, { y: 5.74, z: -2.6 }, darkMat);
 
   const wheelGroup = new THREE.Group();
   const wheelMat = createBasicMaterial(CITY3D_PALETTE.tire);
@@ -242,27 +304,42 @@ export const createKartModelV2 = ({
   const hubMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.38 });
   const wheels = [];
   [
-    [-4.75, 1.08, -3.75],
-    [4.75, 1.08, -3.75],
-    [-4.75, 1.08, 3.68],
-    [4.75, 1.08, 3.68],
+    [-5.05, 1.18, -3.85],
+    [5.05, 1.18, -3.85],
+    [-5.05, 1.18, 3.82],
+    [5.05, 1.18, 3.82],
   ].forEach(([x, y, z]) => {
     const wheel = new THREE.Group();
     wheel.position.set(x, y, z);
     wheel.userData.front = z > 0;
-    const tire = new THREE.Mesh(new THREE.CylinderGeometry(1.72, 1.72, 1.68, 16), wheelMat);
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(1.86, 1.86, 1.82, 18), wheelMat);
     tire.rotation.z = Math.PI / 2;
-    const sidewall = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.18, 1.74, 16), sidewallMat);
+    const sidewall = new THREE.Mesh(new THREE.CylinderGeometry(1.24, 1.24, 1.9, 18), sidewallMat);
     sidewall.rotation.z = Math.PI / 2;
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 1.86, 9), hubMat);
     hub.rotation.z = Math.PI / 2;
     const rim = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.1, 5, 20), hubMat);
     rim.rotation.y = Math.PI / 2;
-    const highlight = new THREE.Mesh(new THREE.TorusGeometry(1.55, 0.06, 5, 20), accentMat);
+    const highlight = new THREE.Mesh(new THREE.TorusGeometry(1.66, 0.05, 5, 20), accentMat);
     highlight.rotation.y = Math.PI / 2;
     wheel.add(tire, sidewall, hub, rim, highlight);
     wheelGroup.add(wheel);
     wheels.push(wheel);
+
+    const contact = new THREE.Mesh(
+      new THREE.CircleGeometry(1.75, 22),
+      new THREE.MeshBasicMaterial({
+        color: '#05070b',
+        depthWrite: false,
+        opacity: 0.24,
+        transparent: true,
+      })
+    );
+    contact.name = 'wheel-contact-shadow';
+    contact.position.set(x, 0.035, z);
+    contact.rotation.x = -Math.PI / 2;
+    contact.scale.set(1.24, 0.52, 1);
+    group.add(contact);
   });
   group.add(wheelGroup);
 
