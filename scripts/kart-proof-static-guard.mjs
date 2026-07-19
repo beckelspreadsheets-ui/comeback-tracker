@@ -9,6 +9,8 @@ const root = path.resolve(__dirname, '..');
 const port = Number(process.env.KART_PROOF_GUARD_PORT || 5294);
 const baseUrl = `http://127.0.0.1:${port}`;
 const outputDir = path.join(root, 'tmp', 'kart-proof-static-guard');
+const harnessPath = path.join(outputDir, 'kart-proof-static-guard-harness.html');
+const harnessModulePath = path.join(outputDir, 'kart-proof-static-guard-harness.jsx');
 
 const proofDesktopAsset = 'src/assets/game/proof/comeback-city-kart-proof-desktop-v1.png';
 const proofMobileAsset = 'src/assets/game/proof/comeback-city-kart-proof-mobile-v1.png';
@@ -24,6 +26,16 @@ const fail = (message, detail = {}) => {
   const error = new Error(message);
   error.detail = detail;
   throw error;
+};
+
+const stopServer = (server) => {
+  if (!server?.pid) return;
+  try {
+    if (process.platform === 'win32') server.kill('SIGTERM');
+    else process.kill(-server.pid, 'SIGTERM');
+  } catch {
+    server.kill('SIGTERM');
+  }
 };
 
 const waitForServer = async (url, timeoutMs = 30000) => {
@@ -64,6 +76,32 @@ const assertManifestIncludesProofAssets = async () => {
   if (missing.length) fail('Proof assets are missing from asset manifest provenance', { missing });
 };
 
+const writeProofHarness = async () => {
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kart Static Proof Guard</title>
+  <script type="module" src="/tmp/kart-proof-static-guard/kart-proof-static-guard-harness.jsx"></script>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>
+`;
+  await writeFile(harnessPath, html);
+  await writeFile(
+    harnessModulePath,
+    `import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { ArcadeKartProofScene } from '/src/game/comebackCityVisuals.jsx';
+
+createRoot(document.getElementById('root')).render(React.createElement(ArcadeKartProofScene));
+`
+  );
+};
+
 const captureProof = async (browser, shot) => {
   const page = await browser.newPage({
     deviceScaleFactor: 1,
@@ -76,8 +114,17 @@ const captureProof = async (browser, shot) => {
     if (message.type() === 'error' && !text.includes('Failed to load resource')) errors.push(text);
   });
 
-  await page.goto(`${baseUrl}/#visual-kart-proof`, { waitUntil: 'networkidle' });
-  await page.waitForSelector('[data-visual-section="kart-proof"] img', { timeout: 15000 });
+  await page.goto(`${baseUrl}/tmp/kart-proof-static-guard/kart-proof-static-guard-harness.html`, {
+    waitUntil: 'networkidle',
+  });
+  await page.waitForFunction(
+    () => {
+      const img = document.querySelector('[data-visual-section="kart-proof"] img');
+      return img?.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+    },
+    null,
+    { timeout: 15000 }
+  );
   await page.waitForTimeout(250);
 
   const result = await page.evaluate(() => {
@@ -145,10 +192,12 @@ const run = async () => {
   await mkdir(outputDir, { recursive: true });
   await assertSourceDoesNotContainRejectedProofShapes();
   await assertManifestIncludesProofAssets();
+  await writeProofHarness();
 
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const server = spawn(npm, ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
     cwd: root,
+    detached: process.platform !== 'win32',
     env: { ...process.env, BROWSER: 'none' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -190,7 +239,7 @@ const run = async () => {
     throw error;
   } finally {
     if (browser) await browser.close();
-    server.kill('SIGTERM');
+    stopServer(server);
   }
 };
 

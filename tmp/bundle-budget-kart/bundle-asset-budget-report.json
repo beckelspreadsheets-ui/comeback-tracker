@@ -1,32 +1,32 @@
 {
-  "artifactDir": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/bundle-budget-kart",
+  "artifactDir": "/home/openclaw/hermes-trial/work/kart-racer-overnight-rebuild/tmp/bundle-budget-kart",
   "budgetMode": "kart",
-  "capturedAt": "2026-07-13T16:00:27.517Z",
+  "capturedAt": "2026-07-19T17:17:02.853Z",
   "budget": {
     "checks": [
       {
-        "actual": 11.834,
+        "actual": 11.862,
         "label": "total built artifact size",
         "limit": 13,
         "unit": "MiB",
         "status": "pass"
       },
       {
-        "actual": 9648.78,
+        "actual": 9722.25,
         "label": "total built artifact gzip size",
         "limit": 9800,
         "unit": "KiB",
         "status": "pass"
       },
       {
-        "actual": 1.112,
+        "actual": 1.146,
         "label": "total JavaScript size",
         "limit": 2,
         "unit": "MiB",
         "status": "pass"
       },
       {
-        "actual": 345.46,
+        "actual": 359.89,
         "label": "total JavaScript gzip size",
         "limit": 500,
         "unit": "KiB",
@@ -47,7 +47,7 @@
         "status": "pass"
       },
       {
-        "actual": 288.58,
+        "actual": 302.88,
         "label": "largest JavaScript gzip size",
         "limit": 400,
         "unit": "KiB",
@@ -68,54 +68,54 @@
   },
   "headroom": {
     "imagesMiB": 0.85,
-    "totalGzipKiB": 151.22,
-    "totalMiB": 1.166
+    "totalGzipKiB": 77.75,
+    "totalMiB": 1.138
   },
   "categories": {
     "css": {
-      "brotliBytes": 10513,
+      "brotliBytes": 9726,
       "fileCount": 1,
-      "gzipBytes": 12900,
-      "sizeBytes": 68468,
-      "brotliKiB": 10.27,
-      "gzipKiB": 12.6,
-      "sizeKiB": 66.86,
-      "sizeMiB": 0.065
+      "gzipBytes": 11768,
+      "sizeBytes": 61025,
+      "brotliKiB": 9.5,
+      "gzipKiB": 11.49,
+      "sizeKiB": 59.59,
+      "sizeMiB": 0.058
     },
     "html": {
       "brotliBytes": 613,
       "fileCount": 1,
-      "gzipBytes": 837,
+      "gzipBytes": 833,
       "sizeBytes": 1836,
       "brotliKiB": 0.6,
-      "gzipKiB": 0.82,
+      "gzipKiB": 0.81,
       "sizeKiB": 1.79,
       "sizeMiB": 0.002
     },
     "images": {
       "brotliBytes": 1711102,
       "fileCount": 32,
-      "gzipBytes": 1711172,
+      "gzipBytes": 1711614,
       "sizeBytes": 1730618,
       "brotliKiB": 1671,
-      "gzipKiB": 1671.07,
+      "gzipKiB": 1671.5,
       "sizeKiB": 1690.06,
       "sizeMiB": 1.65
     },
     "javascript": {
-      "brotliBytes": 303528,
+      "brotliBytes": 314518,
       "fileCount": 7,
-      "gzipBytes": 353749,
-      "sizeBytes": 1165763,
-      "brotliKiB": 296.41,
-      "gzipKiB": 345.46,
-      "sizeKiB": 1138.44,
-      "sizeMiB": 1.112
+      "gzipBytes": 368525,
+      "sizeBytes": 1201891,
+      "brotliKiB": 307.15,
+      "gzipKiB": 359.89,
+      "sizeKiB": 1173.72,
+      "sizeMiB": 1.146
     },
     "metadata": {
       "brotliBytes": 245,
       "fileCount": 1,
-      "gzipBytes": 287,
+      "gzipBytes": 289,
       "sizeBytes": 553,
       "brotliKiB": 0.24,
       "gzipKiB": 0.28,
@@ -125,19 +125,19 @@
     "other": {
       "brotliBytes": 7322479,
       "fileCount": 34,
-      "gzipBytes": 7801402,
+      "gzipBytes": 7862552,
       "sizeBytes": 9441777,
       "brotliKiB": 7150.86,
-      "gzipKiB": 7618.56,
+      "gzipKiB": 7678.27,
       "sizeKiB": 9220.49,
       "sizeMiB": 9.004
     }
   },
-  "distDir": "/Users/andrewferguson/Downloads/comeback-tracker/dist-kart",
+  "distDir": "/home/openclaw/hermes-trial/work/kart-racer-overnight-rebuild/dist-kart",
   "gateStatus": "bundle-budget-pass",
   "git": {
-    "branch": "codex/release-v1-comebacktracker-kart-racer",
-    "commit": "76d15938b478aea83a1004b5ec56eb21c18fb815",
+    "branch": "overnight-major-rebuild-20260719",
+    "commit": "3afe9fb04b54804130acfe09dec8aebf51c3f21d",
     "dirty": true
   },
   "largestFiles": [
@@ -145,8 +145,8 @@
       "brotliBytes": 1421501,
       "brotliKiB": 1388.18,
       "category": "other",
-      "gzipBytes": 1436770,
-      "gzipKiB": 1403.1,
+      "gzipBytes": 1438560,
+      "gzipKiB": 1404.84,
       "path": "baked-spike.glb",
       "sizeBytes": 1580320,
       "sizeKiB": 1543.28
@@ -155,28 +155,28 @@
       "brotliBytes": 465233,
       "brotliKiB": 454.33,
       "category": "other",
-      "gzipBytes": 577088,
-      "gzipKiB": 563.56,
+      "gzipBytes": 609430,
+      "gzipKiB": 595.15,
       "path": "assets/hero-kart-tripo-Dgz8iw2M.glb",
       "sizeBytes": 1049128,
       "sizeKiB": 1024.54
     },
     {
-      "brotliBytes": 252104,
-      "brotliKiB": 246.2,
+      "brotliBytes": 262938,
+      "brotliKiB": 256.78,
       "category": "javascript",
-      "gzipBytes": 295505,
-      "gzipKiB": 288.58,
-      "path": "assets/index.kart-CmXRY_fl.js",
-      "sizeBytes": 990698,
-      "sizeKiB": 967.48
+      "gzipBytes": 310151,
+      "gzipKiB": 302.88,
+      "path": "assets/index.kart-BW6xesNY.js",
+      "sizeBytes": 1026411,
+      "sizeKiB": 1002.35
     },
     {
       "brotliBytes": 793599,
       "brotliKiB": 775,
       "category": "other",
-      "gzipBytes": 808002,
-      "gzipKiB": 789.06,
+      "gzipBytes": 806861,
+      "gzipKiB": 787.95,
       "path": "assets/outplayasians-crosser-Cm7cQF3X.glb",
       "sizeBytes": 842140,
       "sizeKiB": 822.4
@@ -185,8 +185,8 @@
       "brotliBytes": 542779,
       "brotliKiB": 530.06,
       "category": "other",
-      "gzipBytes": 555231,
-      "gzipKiB": 542.22,
+      "gzipBytes": 554583,
+      "gzipKiB": 541.58,
       "path": "assets/miami-cruiser-Bup65esq.glb",
       "sizeBytes": 585548,
       "sizeKiB": 571.82
@@ -195,8 +195,8 @@
       "brotliBytes": 265096,
       "brotliKiB": 258.88,
       "category": "other",
-      "gzipBytes": 344927,
-      "gzipKiB": 336.84,
+      "gzipBytes": 366657,
+      "gzipKiB": 358.06,
       "path": "assets/crrt-bunny-C5uFuXzT.glb",
       "sizeBytes": 581692,
       "sizeKiB": 568.06
@@ -205,8 +205,8 @@
       "brotliBytes": 498957,
       "brotliKiB": 487.26,
       "category": "other",
-      "gzipBytes": 510236,
-      "gzipKiB": 498.28,
+      "gzipBytes": 509121,
+      "gzipKiB": 497.19,
       "path": "assets/ice-racer-Cnr8BTg1.glb",
       "sizeBytes": 539436,
       "sizeKiB": 526.79
@@ -215,8 +215,8 @@
       "brotliBytes": 241733,
       "brotliKiB": 236.07,
       "category": "other",
-      "gzipBytes": 306685,
-      "gzipKiB": 299.5,
+      "gzipBytes": 325653,
+      "gzipKiB": 318.02,
       "path": "assets/seth-penguin-CHlgeInf.glb",
       "sizeBytes": 505868,
       "sizeKiB": 494.01
@@ -225,8 +225,8 @@
       "brotliBytes": 307022,
       "brotliKiB": 299.83,
       "category": "other",
-      "gzipBytes": 323099,
-      "gzipKiB": 315.53,
+      "gzipBytes": 321761,
+      "gzipKiB": 314.22,
       "path": "assets/lifoladen-C2dFd7WX.glb",
       "sizeBytes": 361592,
       "sizeKiB": 353.12
@@ -235,8 +235,8 @@
       "brotliBytes": 246543,
       "brotliKiB": 240.76,
       "category": "other",
-      "gzipBytes": 261916,
-      "gzipKiB": 255.78,
+      "gzipBytes": 260596,
+      "gzipKiB": 254.49,
       "path": "assets/tclow-penguin-BJiRkeyk.glb",
       "sizeBytes": 301100,
       "sizeKiB": 294.04
@@ -245,8 +245,8 @@
       "brotliBytes": 221904,
       "brotliKiB": 216.7,
       "category": "other",
-      "gzipBytes": 233414,
-      "gzipKiB": 227.94,
+      "gzipBytes": 232345,
+      "gzipKiB": 226.9,
       "path": "assets/condo-tower-DbN4XSv3.glb",
       "sizeBytes": 262008,
       "sizeKiB": 255.87
@@ -255,8 +255,8 @@
       "brotliBytes": 210857,
       "brotliKiB": 205.92,
       "category": "other",
-      "gzipBytes": 223876,
-      "gzipKiB": 218.63,
+      "gzipBytes": 222833,
+      "gzipKiB": 217.61,
       "path": "assets/layer23-penguin-r7deVVY0.glb",
       "sizeBytes": 254860,
       "sizeKiB": 248.89
@@ -265,8 +265,8 @@
       "brotliBytes": 204672,
       "brotliKiB": 199.88,
       "category": "other",
-      "gzipBytes": 217768,
-      "gzipKiB": 212.66,
+      "gzipBytes": 216981,
+      "gzipKiB": 211.9,
       "path": "assets/mizzle-CzDJipfu.glb",
       "sizeBytes": 248916,
       "sizeKiB": 243.08
@@ -275,8 +275,8 @@
       "brotliBytes": 196050,
       "brotliKiB": 191.46,
       "category": "other",
-      "gzipBytes": 205478,
-      "gzipKiB": 200.66,
+      "gzipBytes": 204821,
+      "gzipKiB": 200.02,
       "path": "assets/corner-arcade-B_pJ_EG6.glb",
       "sizeBytes": 229512,
       "sizeKiB": 224.13
@@ -285,8 +285,8 @@
       "brotliBytes": 199659,
       "brotliKiB": 194.98,
       "category": "other",
-      "gzipBytes": 208779,
-      "gzipKiB": 203.89,
+      "gzipBytes": 208392,
+      "gzipKiB": 203.51,
       "path": "assets/ice-sled-BUPMNhA7.glb",
       "sizeBytes": 229228,
       "sizeKiB": 223.86
@@ -295,28 +295,28 @@
   "note": "This records local kart-only (dist-kart) artifact sizes — the budget contract for the comeback-city-kart Pages project since K1. Preview and production release evidence still need deployed smoke and sign-off.",
   "summary": {
     "cssFileCount": 1,
-    "cssTotalKiB": 66.86,
+    "cssTotalKiB": 59.59,
     "javascriptFileCount": 7,
-    "javascriptTotalKiB": 1138.44,
+    "javascriptTotalKiB": 1173.72,
     "largestFile": {
       "brotliBytes": 1421501,
       "brotliKiB": 1388.18,
       "category": "other",
-      "gzipBytes": 1436770,
-      "gzipKiB": 1403.1,
+      "gzipBytes": 1438560,
+      "gzipKiB": 1404.84,
       "path": "baked-spike.glb",
       "sizeBytes": 1580320,
       "sizeKiB": 1543.28
     },
     "total": {
-      "brotliBytes": 9348480,
+      "brotliBytes": 9358683,
       "fileCount": 76,
-      "gzipBytes": 9880347,
-      "sizeBytes": 12409015,
-      "brotliKiB": 9129.38,
-      "gzipKiB": 9648.78,
-      "sizeKiB": 12118.18,
-      "sizeMiB": 11.834
+      "gzipBytes": 9955581,
+      "sizeBytes": 12437700,
+      "brotliKiB": 9139.34,
+      "gzipKiB": 9722.25,
+      "sizeKiB": 12146.19,
+      "sizeMiB": 11.862
     }
   }
 }

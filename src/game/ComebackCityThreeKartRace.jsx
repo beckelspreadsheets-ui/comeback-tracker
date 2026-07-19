@@ -7,9 +7,8 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-// B4: pmndrs chain rides behind ?post=1 until the owner signs the post-ban
-// supersession at the M2 benchmark review; the three-examples chain above
-// stays the shipped default until then.
+// B4: pmndrs is the default post chain. The three-examples chain above remains
+// available behind ?post=0 for A/B diagnosis.
 import {
   BloomEffect,
   EffectComposer as PmndrsEffectComposer,
@@ -136,6 +135,7 @@ import {
   updateShortcut,
 } from './race/airTricks.js';
 import { createBasicMaterial } from './race/render/createKartModel.js';
+import { createRivalKartModel } from './race/render/createRaceVehicles.js';
 import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
@@ -475,20 +475,99 @@ const addGlowDisc = (group, color, scale = 1) => {
   return glow;
 };
 
+const createProceduralSeatedPenguin = ({
+  accent = '#38d7ff',
+  suit = '#171d2b',
+} = {}) => {
+  const rig = new THREE.Group();
+  rig.userData.kind = 'procedural-seated-ordinal-penguin';
+  const blackMat = createToonMaterial('#141a25', { emissive: '#05080d', emissiveIntensity: 0.08 });
+  const bellyMat = createToonMaterial('#f3f7ff');
+  const beakMat = createToonMaterial('#f1a33a');
+  const accentMat = createToonMaterial(accent, { emissive: accent, emissiveIntensity: 0.24 });
+  const suitMat = createToonMaterial(suit);
+
+  const hips = new THREE.Mesh(new THREE.SphereGeometry(1.28, 12, 8), suitMat);
+  hips.scale.set(1.05, 0.82, 0.92);
+  hips.position.set(0, 1.0, -0.18);
+  rig.add(hips);
+
+  const torso = new THREE.Mesh(new THREE.SphereGeometry(1.55, 14, 10), blackMat);
+  torso.scale.set(0.92, 1.2, 0.72);
+  torso.position.set(0, 2.25, -0.1);
+  rig.add(torso);
+
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(1.12, 12, 8), bellyMat);
+  belly.scale.set(0.78, 1.05, 0.28);
+  belly.position.set(0, 2.12, 0.92);
+  rig.add(belly);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1.34, 14, 10), blackMat);
+  head.scale.set(1.02, 0.96, 0.92);
+  head.position.set(0, 3.98, 0.12);
+  rig.add(head);
+
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.92, 12, 8), bellyMat);
+  face.scale.set(0.78, 0.76, 0.22);
+  face.position.set(0, 4.02, 1.13);
+  rig.add(face);
+
+  [-0.36, 0.36].forEach((x) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), createToonMaterial('#05070b'));
+    eye.position.set(x, 4.22, 1.33);
+    rig.add(eye);
+  });
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.72, 4), beakMat);
+  beak.position.set(0, 4.02, 1.52);
+  beak.rotation.x = Math.PI / 2;
+  rig.add(beak);
+
+  [-1, 1].forEach((side) => {
+    const flipper = new THREE.Mesh(new THREE.SphereGeometry(0.46, 8, 6), blackMat);
+    flipper.scale.set(0.42, 1.18, 0.24);
+    flipper.position.set(side * 1.35, 2.45, 0.42);
+    flipper.rotation.set(0.42, 0, side * 0.62);
+    rig.add(flipper);
+
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 5), accentMat);
+    hand.position.set(side * 0.78, 2.58, 1.34);
+    rig.add(hand);
+
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.38, 8, 5), beakMat);
+    foot.scale.set(1.25, 0.32, 0.78);
+    foot.position.set(side * 0.48, 0.32, 0.64);
+    rig.add(foot);
+  });
+
+  const trait = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.26, 0.18), accentMat);
+  trait.position.set(0, 4.9, 0.25);
+  rig.add(trait);
+
+  rig.rotation.x = -0.08;
+  rig.traverse((node) => {
+    if (node.isMesh) {
+      node.castShadow = false;
+      node.receiveShadow = false;
+    }
+  });
+  return rig;
+};
+
 // Low-poly kart modeled to the V2 hero trait card: chunky tires dominate the
 // silhouette, wide low glossy body, twin hood stripes, glowing headlight strip,
-// empty bucket seat with headrest (the cards show no driver), rear light bar,
-// twin exhausts with flames.
+// bucket seat with a procedural seated driver, rear light bar, twin exhausts
+// with flames.
 const createGroundedKartModel = ({
   accent = '#38d7ff',
   color = '#ef4334',
-  // ?trackVisuals=1 look: stronger blob + accent contact glow standing in for
-  // the disabled renderer shadow pass. Default keeps the approved shipped look.
+  // ?trackVisuals=1 look: stronger blob + accent contact glow. The renderer
+  // shadow pass is disabled globally for this presentation slice, so contact
+  // grounding remains a mesh-only visual.
   contactGrounding = false,
   scale = 1,
   // Graphics overhaul preset (graphics.config.js). Resolved per race and
   // threaded in so the body material can upgrade to PBR metal/paint. 'off'
-  // keeps the shipped flat MeshToon body byte-for-byte.
+  // keeps this kart body on the flat MeshToon path.
   gfx = { name: 'off' },
 } = {}) => {
   const group = new THREE.Group();
@@ -502,8 +581,11 @@ const createGroundedKartModel = ({
   const bodyGroup = new THREE.Group();
   model.add(bodyGroup);
   const driverMount = new THREE.Group();
-  driverMount.position.set(0, 1.9, -1.3);
+  driverMount.position.set(0, 3.05, -1.15);
   model.add(driverMount);
+  const fallbackDriver = createProceduralSeatedPenguin({ accent });
+  fallbackDriver.scale.setScalar(0.9);
+  driverMount.add(fallbackDriver);
 
   // GRAPHICS OVERHAUL (Phase 1 materials): the kart body is the hero surface
   // the player stares at all race. On 'high' we upgrade it from flat MeshToon
@@ -785,9 +867,6 @@ const createGroundedKartModel = ({
   });
   shadow.castShadow = false;
 
-  // Neon underglow — color-codes each racer against the dark road.
-  addGlowSprite(group, accent, 9.5, 0.3, 0.6);
-
   const replaceBody = (rig) => {
     bodyGroup.traverse((node) => {
       node.geometry?.dispose?.();
@@ -934,14 +1013,14 @@ const getToonGradient = () => {
 };
 // B3 rim: palette-tinted fresnel rim on the hero set — karts, drivers,
 // marchers, item boxes; scenery stays rim-free (rim-on-everything cheapens
-// the read). SHIPPED per track via palette.heroRim: Penguin Village carries
-// the owner-picked V6 "ice white" (2026-07-06); Comeback City has no
-// heroRim key and ships rim-off pending its own pick from rim-lab.html.
+// the read). Per-track via palette.heroRim: Penguin Village carries the
+// owner-picked V6 "ice white" (2026-07-06); Comeback City has no heroRim key
+// and remains rim-off pending its own pick from rim-lab.html.
 // Dev hook (same pattern as ?paletteLab=1): ?rimLab=1 + optional
 // window.__rimLabOverrides = { strength, power, tint } forces a candidate
 // look; ?rimLab=0 forces the rim OFF (the lab's control tile on a track
-// whose shipped default is rim-on). The URL hook overrides the shipped
-// palette config so the lab can keep exploring on either track. Returns
+// whose palette default is rim-on). The URL hook overrides the active palette
+// config so the lab can keep exploring on either track. Returns
 // undefined when the param is absent (no opinion — palette decides).
 const heroRimConfig = () => {
   if (typeof window === 'undefined') return undefined;
@@ -966,10 +1045,9 @@ const applyHeroRim = (material) =>
 // window.__momentsLabOverrides = [{ progress, fog, hemi, sun, rim, rimTint,
 // bloom }, ...] REPLACES palette.moments for a lab capture session;
 // ?momentsLab=0 forces moments OFF (the control tile on a track whose
-// shipped palette carries a moments key). Returns undefined when the param
-// is absent (no opinion — palette decides). Shipped default today is
-// moment-LESS on every track until the owner picks a set from
-// moments-lab.html.
+// palette carries a moments key). Returns undefined when the param is absent
+// (no opinion — palette decides). Current default is moment-LESS on every
+// track until the owner picks a set from moments-lab.html.
 const momentsLabConfig = () => {
   if (typeof window === 'undefined') return undefined;
   const param = new URLSearchParams(window.location.search).get('momentsLab');
@@ -978,13 +1056,10 @@ const momentsLabConfig = () => {
   return Array.isArray(window.__momentsLabOverrides) ? window.__momentsLabOverrides : null;
 };
 
-// Miami mode (generated backdrops + owner-approved trackside set) is the
-// SHIPPED DEFAULT since the W0 promotion (owner-approved behind ?skyLab=1
-// through 2026-07-07, then flipped). ?skyLab=0 is the diagnostic escape
-// hatch: no backdrop rings, no trackside set, camera.far back to 860 —
-// NOT the old look (the old skyline/facade/boxy dressing is deleted for
-// good). window.__skyLabOverrides = { far, near } still swaps candidate
-// strip URLs for lab work.
+// Generated backdrop rings are the default presentation layer. ?skyLab=0 is
+// the diagnostic escape hatch for the rings only — not a route back to the old
+// skyline/facade/boxy dressing, which was deleted. window.__skyLabOverrides =
+// { far, near } still swaps candidate strip URLs for lab work.
 const skyLabConfig = () => {
   if (typeof window === 'undefined') return null;
   if (new URLSearchParams(window.location.search).get('skyLab') === '0') return null;
@@ -995,16 +1070,14 @@ const skyLabConfig = () => {
   };
 };
 
-// H8 Miami trackside set (city-lab, owner-approved 2026-07-07: hotel /
-// condo tower / corner arcade / palms / lifeguard tower + retro diner —
-// "perfect vibes"). Dev-stage: mounts behind ?skyLab=1 from dev-served
-// tmp/m3-city-lab GLBs; promotion moves the files to src/assets +
-// manifest. Every load goes through createGameGltfLoader (house rule),
-// one cached template per URL, cloned per placement, converted unlit
-// (MeshBasicMaterial + baked map) like the baked-building swaps. Tripo
-// rigs natively face +X (orientation-lab ground truth for every Tripo
-// asset so far); the facade/district group convention puts the road on
-// the group's -Z side, so MIAMI_FRONT_YAW turns +X onto -Z.
+// H8 Miami trackside set (city-lab: hotel / condo tower / corner arcade /
+// palms / lifeguard tower + retro diner). This presentation slice keeps those
+// heavier generated mounts behind
+// ?glbTrackside=1 and uses lightweight procedural facades by default. Every
+// load goes through createGameGltfLoader (house rule), one cached template per
+// URL, cloned per placement, converted unlit (MeshBasicMaterial + baked map).
+// Tripo rigs natively face +X; the facade/district group convention puts the
+// road on the group's -Z side, so MIAMI_FRONT_YAW turns +X onto -Z.
 const MIAMI_ASSETS = {
   condoTower: miamiCondoTowerUrl,
   cornerArcade: miamiCornerArcadeUrl,
@@ -1497,7 +1570,7 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   const roadWidth = trackDef.course.mainRoadWidth || 50;
   const palette = trackDef.palette || {};
   // Graphics overhaul: per-track grade for the road/ground specular lift.
-  // Atmosphere off (or ?gfx=off) falls back to the shipped material values.
+  // Atmosphere off (or ?gfx=off) falls back to the renderer material baseline.
   const gfxCfg = resolveGraphicsConfig();
   const roadGrade = gfxCfg.atmosphere ? atmosphereGradeFor(trackDef.key) : null;
   // Phase 3: procedural detail normal + roughness maps give the asphalt
@@ -1573,13 +1646,13 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
       // Graphics overhaul: the grade pushes the asphalt toward a wet/glossy
       // response so sun + neon streak across it under the env probe. The
       // envMapIntensity scales this material's IBL on top of the scene-wide
-      // environmentIntensity. ?gfx=off restores the shipped 0.06/0.6 flat mat.
+      // environmentIntensity. ?gfx=off leaves the baseline 0.06/0.6 flat mat.
       metalness: roadGrade ? roadGrade.road.metalness : 0.06,
       roughness: roadGrade ? roadGrade.road.roughness : 0.6,
       envMapIntensity: roadGrade ? roadGrade.road.envMapIntensity : 1.0,
       // Phase 3 detail: normal relief + varying roughness break the specular
       // into believable aggregate. normalScale kept subtle so the road reads
-      // as asphalt, not gravel. Absent on ?gfx=off (shipped flat road).
+      // as asphalt, not gravel. Absent on ?gfx=off.
       normalMap: roadDetailMaps ? roadDetailMaps.normalMap : null,
       normalScale: roadDetailMaps ? new THREE.Vector2(gfxCfg.trackDetailNormalScale, gfxCfg.trackDetailNormalScale) : new THREE.Vector2(1, 1),
       roughnessMap: roadDetailMaps ? roadDetailMaps.roughnessMap : null,
@@ -1999,8 +2072,8 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
 
 // W2 boost-pad clarity lab (dev-only, house hook pattern): ?boostLab=1 +
 // window.__boostLabOverrides = { variant: 'v1'|'v2'|'v3' } REPLACES the pad
-// treatment; ?boostLab=0 or absent = shipped default untouched until the
-// owner picks (owner 2026-07-07: "The boost aren't very clear").
+// treatment; ?boostLab=0 or absent = current default untouched until the owner
+// picks (owner 2026-07-07: "The boost aren't very clear").
 const boostLabVariant = () => {
   if (typeof window === 'undefined') return null;
   if (new URLSearchParams(window.location.search).get('boostLab') !== '1') return null;
@@ -2012,7 +2085,7 @@ const boostLabVariant = () => {
 // window.__camLabOverrides = { back, height, lookAhead, lookUp } replaces
 // the chase-camera framing numbers — built to answer the owner's "see the
 // boost pads earlier on approach" ask with SMALL camera adjustments.
-// Shipped framing untouched without the param.
+// Default framing untouched without the param.
 const camLabConfig = () => {
   if (typeof window === 'undefined') return null;
   if (new URLSearchParams(window.location.search).get('camLab') !== '1') return null;
@@ -2026,9 +2099,9 @@ const camLabConfig = () => {
   };
 };
 
-// K7 boost-pad rebuild geometry (owner-approved concept
-// tmp/k7-item-lab/boost-pad.png — the pad stays authored geometry, not a GLB
-// lift). Shared lazily across every pad on both tracks. The chevron carries
+// K7 boost-pad rebuild geometry (concept: tmp/k7-item-lab/boost-pad.png; the
+// pad stays authored geometry, not a GLB lift). Shared lazily across every pad
+// on both tracks. The chevron carries
 // its white-hot-core→ember-bevel gradient in HDR vertex colors (the post
 // chain blooms >1 channels, same trick as the multiplyScalar materials) so
 // each chevron stays ONE draw call and can still pulse per-chevron.
@@ -2162,7 +2235,7 @@ const addPad = (world, sampler, pad, index) => {
     });
     addGlowSprite(group, '#2cd8f6', 18, 0.5, 2.2);
   } else if (variant === 'v3') {
-    // V3 "light gate": the shipped pad plus side pylons and a glowing
+    // V3 "light gate": the default pad plus side pylons and a glowing
     // crossbar overhead — visible over kart roofs and from far upstream.
     group.add(makeBox({ x: 16.4, y: 0.42, z: 10.6 }, { y: 0.04 }, createBasicMaterial('#0d1726')));
     const glowPanel = new THREE.Mesh(
@@ -2192,16 +2265,16 @@ const addPad = (world, sampler, pad, index) => {
       new THREE.MeshBasicMaterial({ color: new THREE.Color('#38e8ff').multiplyScalar(1.8) })
     );
     crossbar.position.y = 7.4;
-    crossbar.userData.chevronOrder = 1; // rides the shipped pulse animation
+    crossbar.userData.chevronOrder = 1; // rides the shared pulse animation
     group.add(crossbar);
     addGlowSprite(group, '#2cd8f6', 22, 0.5, 7.4);
   } else {
-    // SHIPPED DEFAULT: K7 authored rebuild of the W2 V1 "hot chevrons"
-    // pick, matched to the approved concept (tmp/k7-item-lab/boost-pad.png)
+    // DEFAULT: K7 authored rebuild of the W2 V1 "hot chevrons"
+    // pick, matched to tmp/k7-item-lab/boost-pad.png
     // — three CHUNKY beveled chevrons with white-hot cores cooling to ember
     // down the bevels, framed by a glowing edge trim on a charcoal plate.
     // Same amber-hot identity + footprint as V1; chevronOrder still rides
-    // the shipped pulse. Pad cost DROPS 8→6 draw calls (?boostLab=1 'v1'
+    // the shared pulse. Pad cost DROPS 8→6 draw calls (?boostLab=1 'v1'
     // falls through here too; v2/v3 stay reachable for future rounds).
     group.add(makeBox({ x: 19.6, y: 0.42, z: 13.2 }, { y: 0.04 }, createBasicMaterial('#170b03')));
     const trim = new THREE.Mesh(
@@ -2237,40 +2310,16 @@ const makeWinterItemCrate = (accent = '#00E5FF') => {
     roughness: 0.28,
     transparent: true,
   });
-  const bracketMat = new THREE.MeshStandardMaterial({
-    color: '#F5F8FF',
-    emissive: accent,
-    emissiveIntensity: 0.65,
-    flatShading: true,
-    metalness: 0.45,
-    roughness: 0.22,
-  });
   const body = new THREE.Mesh(new RoundedBoxGeometry(6.8, 6.8, 6.8, 1, 0.85), bodyMat);
   crate.add(body);
-  // Metal corner brackets.
-  [
-    [-1, -1, -1],
-    [-1, -1, 1],
-    [-1, 1, -1],
-    [-1, 1, 1],
-    [1, -1, -1],
-    [1, -1, 1],
-    [1, 1, -1],
-    [1, 1, 1],
-  ].forEach(([x, y, z]) => {
-    const bracket = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), bracketMat);
-    bracket.position.set(x * 3.1, y * 3.1, z * 3.1);
-    crate.add(bracket);
-  });
-  // Glowing edge bands.
   const edgeMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.9 });
-  [[0, 1, 0], [0, -1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].forEach(([x, y, z]) => {
-    const edge = new THREE.Mesh(
-      new THREE.BoxGeometry(x ? 7.2 : 0.25, y ? 7.2 : 0.25, z ? 7.2 : 0.25),
-      edgeMat
-    );
-    edge.position.set(x * 3.42, y * 3.42, z * 3.42);
-    crate.add(edge);
+  [
+    { size: [7.35, 0.32, 0.32], rotation: [0, 0, 0] },
+    { size: [0.32, 7.35, 0.32], rotation: [0, 0, 0] },
+  ].forEach(({ size, rotation }) => {
+    const band = new THREE.Mesh(new THREE.BoxGeometry(...size), edgeMat);
+    band.rotation.set(...rotation);
+    crate.add(band);
   });
   crate.traverse((n) => {
     n.castShadow = true;
@@ -2514,8 +2563,8 @@ const addRampApproachChevrons = (world, sampler, ramps) => {
 
 const addFinishGate = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const gateWidth = sampler.widthAt(0);
-  // Schema colors and the beacon/halo dressing are part of the ?trackVisuals=1
-  // experiment; flag-off reproduces the approved gate exactly.
+  // Schema colors and beacon/halo dressing are opt-in via ?trackVisuals=1;
+  // flag-off keeps the simpler gate baseline for this presentation slice.
   const gateVisual = (trackVisuals.enabled && trackDef.visual?.finishGate) || {};
   const gateAccent = gateVisual.beacon || '#38d7ff';
   const gateHalo = gateVisual.halo || '#ffd34f';
@@ -2637,12 +2686,9 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     tire: createBasicMaterial('#151923'),
   };
   let propCount = 0;
-  // Miami mode (shipped default; ?skyLab=0 = diagnostic escape hatch). The
-  // old boxy buildings / facade sprites / procedural skyline were DELETED
-  // at the W0 promotion (owner 2026-07-07: "get rid of the old building so
-  // we just keep the new theme") — the escape hatch renders bare districts
-  // (portals + beacons only), not the old look.
-  const miamiMode = Boolean(skyLabConfig());
+  const generatedTrackside =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('glbTrackside') === '1';
 
   trackDef.course.districtAnchors.forEach((district, districtIndex) => {
     const { normal, point, tangent } = sampler.pointAt(district.progress);
@@ -2653,14 +2699,36 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     group.rotation.y = Math.atan2(tangent.x, tangent.z) + (district.side > 0 ? -Math.PI / 2 : Math.PI / 2);
     group.userData.kind = `district-${district.key}`;
     const accent = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 1.25 });
-    // The owner-approved city-lab building mounts in the slot behind the
-    // neon portal (the road is on the group's -Z side). The old boxy
-    // district bodies + their baked-GLB swap-ins are gone (W0 promotion).
-    if (miamiMode) {
+    // Default path is a lightweight procedural district facade behind the neon
+    // portal (the road is on the group's -Z side). ?glbTrackside=1 restores
+    // the heavier generated city-lab mounts for capture comparison.
+    if (generatedTrackside) {
       mountMiamiAsset(group, MIAMI_DISTRICT_ASSETS[districtIndex % MIAMI_DISTRICT_ASSETS.length], {
         footprint: 40,
         z: 6,
       });
+    } else {
+      const bodyPalette = ['#f3d4bd', '#e98f6e', '#76b7b2', '#f6e7cc', '#5d8aa8'];
+      const trimPalette = ['#f8fbff', '#204052', '#2f6f73'];
+      const bodyColor = bodyPalette[districtIndex % bodyPalette.length];
+      const trimColor = trimPalette[districtIndex % trimPalette.length];
+      const bodyMat = createBasicMaterial(bodyColor, { emissive: bodyColor, emissiveIntensity: 0.04 });
+      const trimMat = createBasicMaterial(trimColor);
+      const roofMat = createBasicMaterial(district.dark || '#204052');
+      const bodyHeight = 25 + (districtIndex % 3) * 5;
+      group.add(makeRoundedBox({ x: 30, y: bodyHeight, z: 18 }, { y: bodyHeight / 2, z: 2 }, bodyMat, 1.2));
+      group.add(makeBox({ x: 24, y: 4, z: 20 }, { y: bodyHeight + 2, z: 2 }, roofMat));
+      group.add(makeBox({ x: 18, y: 8, z: 14 }, { y: bodyHeight + 8, z: -1 }, trimMat));
+      for (let row = 0; row < 3; row += 1) {
+        for (let col = 0; col < 4; col += 1) {
+          if ((row + col + districtIndex) % 4 === 0) continue;
+          group.add(makeBox(
+            { x: 2.4, y: 1.7, z: 0.2 },
+            { x: -9 + col * 6, y: 8 + row * 5, z: -7.12 },
+            createBasicMaterial('#f7f1c8', { emissive: '#ffd58a', emissiveIntensity: 0.22 })
+          ));
+        }
+      }
     }
     // Standing neon arch doorway, like the portal modules on the district card
     const portal = new THREE.Mesh(new THREE.TorusGeometry(7.8, 1.05, 8, 22, Math.PI), accent);
@@ -2789,15 +2857,14 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     // keep the new theme").
   });
 
-  // H8 miami mode: the owner-approved city-lab set fills the opening
-  // straight (old facade-run anchors) and dresses the roadside with palms,
-  // lifeguard towers, and the diner. CC-only (openingFacades dressing).
-  if (miamiMode && trackDef.dressing?.openingFacades) {
+  // Optional generated trackside capture: city-lab set fills the opening
+  // straight and dresses the roadside with palms, lifeguard towers, and the
+  // diner. CC-only (openingFacades dressing).
+  if (generatedTrackside && trackDef.dressing?.openingFacades) {
     addMiamiTrackside(world, sampler, roadWidth);
   }
-  // W3: the Penguin Village tribute set rides the same gate — ?skyLab=0
-  // strips it with the rest of the generated dressing.
-  if (miamiMode && trackDef.dressing?.penguinVillage) {
+  // Penguin Village tribute dressing rides the same opt-in generated gate.
+  if (generatedTrackside && trackDef.dressing?.penguinVillage) {
     addPvTributeTrackside(world, sampler, roadWidth);
   }
 
@@ -3698,7 +3765,7 @@ const createScene = ({
   let palette = trackDef.palette || {};
   // Palette lab (dev QA, B1/B2 variant review): ?paletteLab=1 merges
   // window.__paletteLabOverrides over the track palette so the variant lab
-  // captures candidate looks without touching shipped defaults.
+  // captures candidate looks without touching presentation defaults.
   if (
     typeof window !== 'undefined' &&
     window.__paletteLabOverrides &&
@@ -3709,22 +3776,22 @@ const createScene = ({
   const renderer = createRaceRenderer({ canvas, onUnavailable });
   if (!renderer) return null;
   // Graphics overhaul (Hermes): resolve the active preset once per race.
-  // ?gfx=low|high|off overrides; 'off' restores the shipped pre-overhaul look
-  // (every feature below short-circuits). Rendering-only — physics untouched.
+  // ?gfx=low|high|off overrides; 'off' skips this module's additive visual
+  // features before they touch the scene. Rendering-only — physics untouched.
   const gfx = resolveGraphicsConfig();
   const atmosphereGrade = atmosphereGradeFor(trackDef.key);
   renderer.setClearColor(palette.clearColor || '#131a36', 1);
-  // Tone exposure: the grade lifts the shipped 1.05 for a richer key light.
-  // ?gfx=off leaves the shipped value untouched.
+  // Tone exposure: the grade lifts the 1.05 renderer fallback for a richer
+  // key light. ?gfx=off leaves that fallback untouched.
   if (gfx.toneExposure !== null && gfx.toneExposure !== undefined) {
     renderer.toneMappingExposure = gfx.toneExposure;
   } else {
     renderer.toneMappingExposure = 1.05;
   }
-  // The ?trackVisuals=1 experiment trades real-time shadows for stronger
-  // blob/contact grounding; the shipped default keeps the approved
-  // shadow-mapped look until the owner signs the §9 default-on gate.
-  renderer.shadowMap.enabled = !trackVisualsEnabled;
+  // Presentation slice default: skip the real-time shadow pass and rely on
+  // mesh blob/contact grounding. This keeps the frame budget focused on the
+  // visible kart/body/track work without touching physics.
+  renderer.shadowMap.enabled = false;
   renderer.shadowMap.type = THREE.BasicShadowMap;
 
   const scene = new THREE.Scene();
@@ -3732,9 +3799,9 @@ const createScene = ({
   // B1: atmosphere reads from the track palette; the fallbacks reproduce
   // Comeback City exactly (its palette has no fog/hemi/sun keys, by
   // construction). GRAPHICS OVERHAUL: when the atmosphere feature is on, the
-  // per-track grade (graphicsAtmosphere.js) supplies the cinematic mood as
-  // the base; an explicit palette key still wins over the grade, and the
-  // shipped hardcoded defaults sit last. NOTE fog.far must stay <= 840 —
+  // per-track grade (graphicsAtmosphere.js) supplies the presentation lighting
+  // base; an explicit palette key still wins over the grade, and the
+  // hardcoded defaults sit last. NOTE fog.far must stay <= 840 —
   // camera far is 860 and fog far beyond camera far silently no-ops the haze.
   const fogCfg = palette.fog || (gfx.atmosphere ? atmosphereGrade.fog : {});
   scene.fog = new THREE.Fog(fogCfg.color || '#272252', fogCfg.near ?? 240, fogCfg.far ?? 820);
@@ -3751,22 +3818,19 @@ const createScene = ({
   scene.add(hemi);
   // Environment reflection probe (Phase 1 materials): PMREM RoomEnvironment
   // -> scene.environment so kart paint/metal + road specular pick up a subtle
-  // IBL sheen. 'low' gets a dimmer bake, 'off' skips it (shipped flat look).
+  // IBL sheen. 'low' gets a dimmer bake, 'off' skips it.
   // Baked once here; disposed in the teardown below.
   const gfxEnv = gfx.environmentMap
     ? applyGraphicsEnvironment({ renderer, scene, intensity: gfx.environmentIntensity })
     : null;
-  // Shadow-casting key light rides with the kart so a small, sharp shadow
-  // frustum covers the action instead of a blurry one covering the world.
-  // GRAPHICS OVERHAUL: grade supplies the warm key color + a lifted
-  // intensity; 'high' also sharpens the shadow map (384 -> 1024) and widens
-  // the frustum so kart/rival contact shadows stay crisp at race speed.
+  // Key light rides with the kart. The shadow camera settings remain in place
+  // for local A/B toggles, but castShadow stays off in this slice.
   const sun = new THREE.DirectionalLight(
     palette.sunColor || (gfx.atmosphere ? atmosphereGrade.sunColor : '#ffae72'),
     gfx.atmosphere ? atmosphereGrade.sunIntensity : 2.6
   );
   sun.position.set(-150, 52, -70);
-  sun.castShadow = !trackVisualsEnabled;
+  sun.castShadow = false;
   sun.shadow.mapSize.set(gfx.shadowBoost ? gfx.shadowMapSize : 384, gfx.shadowBoost ? gfx.shadowMapSize : 384);
   sun.shadow.camera.left = gfx.shadowBoost ? -72 : -64;
   sun.shadow.camera.right = gfx.shadowBoost ? 72 : 64;
@@ -3805,7 +3869,7 @@ const createScene = ({
   world.add(gfxParticles.group);
 
   // B3: resolve the hero fresnel rim for this race — the dev lab hook wins,
-  // else the track's shipped palette.heroRim (PV V6 "ice white"; CC has no
+  // else the track's active palette.heroRim (PV V6 "ice white"; CC has no
   // key = rim off). One shared tint drives every rimmed hero material; a
   // heroRim.tint overrides the palette rimLightColor for the shader rim
   // only (the rimLight above keeps its own color).
@@ -3813,13 +3877,13 @@ const createScene = ({
   activeHeroRim = labRim !== undefined ? labRim : palette.heroRim || null;
   TOON_RIM_SHARED_TINT.value.set(activeHeroRim?.tint || palette.rimLightColor || '#4fd8ff');
 
-  // Generated backdrop (SHIPPED DEFAULT since W0): two parallax billboard
+  // Generated backdrop presentation layer: two parallax billboard
   // rings — an opaque far band (its own sky + horizon glow, top 35%
   // alpha-faded into the procedural gradient) and an alpha-keyed nearer
   // silhouette row, bundled from src/assets/game/generated/backdrops/.
   // Rings are fog-exempt (the art is pre-hazed) and never write depth, so
-  // the world always overdraws them; camera.far 1800 is the shipped value
-  // when the backdrop is on (?skyLab=0 diagnostic drops back to 860 — the
+  // the world always overdraws them; camera.far 1800 is the backdrop value
+  // when the layer is on (?skyLab=0 diagnostic drops back to 860 — the
   // fog.far <= 840 rule is about FOG and is unaffected either way).
   const skyLab = skyLabConfig();
   if (skyLab) {
@@ -3867,7 +3931,9 @@ const createScene = ({
     addBackdropRing(skyLab.near || strips.near, { height: 210, order: -19, radius: 590, repeats: 7, y: 78 });
   }
 
-  // Post-processing: bloom is what makes the neon dusk actually glow.
+  // Post-processing is opt-in for the vertical slice. The default proof frame
+  // must stand up without bloom/color tricks, so direct rendering is the
+  // baseline and ?post=1 enables the pmndrs A/B chain.
   let composer;
   let bloomPass = null;
   let bloomEffect = null;
@@ -3875,21 +3941,21 @@ const createScene = ({
   // here so the frame loop can drive the speed-reactive bits. Null when the
   // chain is off or every Phase-2 post feature is disabled.
   let gfxPostFx = null;
-  // Snapshot of the shipped bloom intensity (0.55) so the Phase-2 speed swell
-  // multiplies a stable base instead of compounding against palette moments.
-  let gfxBloomBase = 0.55;
+  // Snapshot the active bloom intensity so the Phase-2 speed swell multiplies
+  // a stable base instead of compounding against palette moments.
+  let gfxBloomBase = 0.18;
   if (postChainEnabled) {
-    // B4 (?post=1): mipmap bloom + SMAA + vignette + ACES merged in ONE
+    // B4 (?post=1): mipmap bloom + SMAA + optional vignette + ACES merged in ONE
     // EffectPass. Each effect is individually toggleable for the M2
     // benchmark review: ?post=1&postBloom=0 / &postSmaa=0 / &postTone=0 /
-    // &postVignette=0.
+    // &postVignette=1.
     const postParams = new URLSearchParams(window.location.search);
     const wantBloom = postParams.get('postBloom') !== '0';
     const wantSmaa = postParams.get('postSmaa') !== '0';
     const wantTone = postParams.get('postTone') !== '0';
-    // Vignette ships ON inside the chain — owner signed the gate-2 on/off
-    // pair 2026-07-06 ("every change in the post lab is amazing").
-    const wantVignette = postParams.get('postVignette') !== '0';
+    // Vignette is opt-in for this slice; it is useful for capture comparison
+    // but too easy to read as a darkened frame in the playable default.
+    const wantVignette = postParams.get('postVignette') === '1';
     // The pmndrs chain owns tone mapping (ToneMappingEffect below), so the
     // renderer must hand over linear HDR frames. LOCAL override only: the
     // shared configureRaceRenderer (createRaceScene.js) still sets ACES for
@@ -3902,19 +3968,14 @@ const createScene = ({
     composer.addPass(new PmndrsRenderPass(scene, camera));
     const effects = [];
     if (wantBloom) {
-      // pmndrs radius/intensity semantics differ from UnrealBloomPass —
-      // these values were tuned for parity with the old chain (0.55/0.45/1.0),
-      // judged by the step-1 A/B capture, not by matching numbers.
+      // pmndrs radius/intensity semantics differ from UnrealBloomPass. These
+      // reduced values preserve neon read without washing out the kart.
       bloomEffect = new BloomEffect({
         mipmapBlur: true,
-        intensity: 0.55,
-        // radius 0.7 / smoothing 0.22 (up from the planned 0.45 / 0.08):
-        // the legacy chain ran UnrealBloom on a 30%-resolution target, which
-        // oversizes its halos; mipmap bloom is resolution-independent, so it
-        // needs a wider radius and softer knee to reproduce the approved glow
-        // on Penguin Village's near-threshold snow. Neon sits above threshold
-        // and is unaffected. Judged by the step-1 parity captures.
-        radius: 0.7,
+        intensity: 0.22,
+        // Keep the mipmap bloom radius restrained; snow and road highlights
+        // should support the kart silhouette, not haze over it.
+        radius: 0.38,
         luminanceThreshold: 1.0,
         luminanceSmoothing: 0.22,
       });
@@ -3924,11 +3985,11 @@ const createScene = ({
     if (wantVignette) effects.push(new VignetteEffect({ offset: 0.32, darkness: 0.45 }));
     // GRAPHICS OVERHAUL Phase 2: color grade (LUT-style vibrance + contrast)
     // and speed-reactive radial chromatic aberration. Null on ?gfx=off so the
-    // chain stays byte-identical to the shipped build. Grade sits before tone
+    // chain stays isolated from additive presentation features. Grade sits before tone
     // mapping (operates in HDR), CA after (screen-space fringing).
     gfxPostFx = createGraphicsPostFx({ gfx });
     if (gfxPostFx && gfxPostFx.effects.length) effects.push(...gfxPostFx.effects);
-    // Snapshot the shipped bloom base once the bloom effect exists so the
+    // Snapshot the active bloom base once the bloom effect exists so the
     // frame-loop speed swell multiplies a constant (not the live, moments-
     // adjusted value — that would compound each frame).
     if (bloomEffect) gfxBloomBase = bloomEffect.intensity;
@@ -3942,12 +4003,6 @@ const createScene = ({
     if (gfxPostFx?.chromaticAberration) {
       composer.addPass(new EffectPass(camera, gfxPostFx.chromaticAberration));
     }
-  } else {
-    composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    bloomPass = new UnrealBloomPass(new THREE.Vector2(640, 360), 0.55, 0.45, 1.0);
-    composer.addPass(bloomPass);
-    composer.addPass(new OutputPass());
   }
 
   // B2: per-lap palette moments — resolved ONCE per race into decoded lerp
@@ -3982,7 +4037,7 @@ const createScene = ({
     addItemBox(world, sampler, box, index, questionTexture)
   );
   // ₿ collectible coins (owner concept 2026-07-07): rows from the pure
-  // module; the visual clones ONE face-node of the shipped CC coin box
+  // module; the visual clones ONE face-node of the active CC coin box
   // K4: crosser rigs — one positioned group per track crosser, loaded via
   // the guarded miami mount machinery (loud 404, telemetry mounts guard).
   // The frame loop drives position/facing from the pure crosser sim. Only
@@ -4418,16 +4473,16 @@ const createScene = ({
   world.add(marchRig);
   world.add(player);
   const rivalModels = rivalSeats.map((rival) => {
-    const model = createGroundedKartModel({
+    const model = createRivalKartModel({
       accent: rival.accent,
       color: rival.color,
-      contactGrounding: trackVisuals.enabled,
-      gfx,
-      scale: KART_SCALE,
+      scale: 0.58,
     });
+    model.idleFlames = [];
     model.group.userData.kind = 'grounded-rival-kart';
-    // Rivals keep only blob shadows — their cast shadows read as nothing at
-    // race distance but triple the shadow pass draw count.
+    // Rivals use the lightweight mesh contract during the vertical slice:
+    // visible four-wheel silhouettes and boost hooks, without the hero
+    // driver/body GLB load path reserved for the player.
     model.group.traverse((node) => {
       node.castShadow = false;
     });
@@ -4488,7 +4543,7 @@ const createScene = ({
     // Phase 2: particle systems + post-FX driver for the frame loop.
     gfxParticles,
     gfxPostFx,
-    // Shipped bloom base for the Phase-2 speed swell (multiplied per frame).
+    // Active bloom base for the Phase-2 speed swell (multiplied per frame).
     gfxBloomBase,
     trackVisualsEnabled: trackVisuals.enabled,
     world,
@@ -4688,9 +4743,8 @@ const publishTelemetry = (
 };
 
 // One icon source for every held-item surface (top badge, throw button,
-// held-item chip, pickup pop, intro item guide). K7 rendered tiles (owner
-// approved the full concept set 2026-07-12) — the lucide stand-ins are
-// retired. Exported so the intro guide ALWAYS matches the HUD.
+// held-item chip, pickup pop, intro item guide). K7 rendered tiles replace the
+// lucide stand-ins. Exported so the intro guide ALWAYS matches the HUD.
 export const ITEM_ICON_URLS = {
   aurora: itemAuroraIconUrl,
   avalanche: itemAvalancheIconUrl,
@@ -4924,8 +4978,8 @@ export const ComebackCityThreeKartRace = ({
     [track]
   );
   const trackVisualsEnabled = useMemo(() => {
-    // Opt-in experiment (PRD P0-3b): default OFF everywhere until the owner
-    // signs the §9 trackVisualSchema default-on gate.
+    // Track schema dressing remains opt-in while this slice concentrates on
+    // kart/body/post/trackside readability and frame budget.
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
     return params.get('trackVisuals') === '1' || params.get('trackVisualSchema') === '1';
@@ -4937,13 +4991,10 @@ export const ComebackCityThreeKartRace = ({
   // Resolved once — the chase block runs per frame and must not parse URLs.
   const camLab = useMemo(() => camLabConfig(), []);
   const postChainEnabled = useMemo(() => {
-    // B4 pmndrs post chain: DEFAULT ON — owner signed the §9 post-ban
-    // supersession at the M2 close (2026-07-06; post-lab gates were
-    // "every change in the post lab is amazing"). ?post=0 keeps the legacy
-    // UnrealBloom chain reachable for A/B and diagnosis; ?post=1 stays a
-    // no-op for older capture URLs.
-    if (typeof window === 'undefined') return true;
-    return new URLSearchParams(window.location.search).get('post') !== '0';
+    // ?post=1 keeps the pmndrs chain reachable for A/B and diagnosis. The
+    // shipped vertical slice defaults to direct effects-off rendering.
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('post') === '1';
   }, []);
   const trackDef = trackByKey(trackKey);
 
@@ -5053,11 +5104,6 @@ export const ComebackCityThreeKartRace = ({
             after: { width: canvas.width, height: canvas.height },
           });
         }
-      } else {
-        engine.composer.setPixelRatio(viewport.dpr);
-        engine.composer.setSize(viewport.width, viewport.height);
-        // Bloom is gaussian-blurred anyway — run it at low resolution.
-        engine.bloomPass.setSize(viewport.width * viewport.dpr * 0.3, viewport.height * viewport.dpr * 0.3);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -5065,10 +5111,16 @@ export const ComebackCityThreeKartRace = ({
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    // Swap procedural fallback bodies for the authored models — the chosen
-    // character drives the player kart, the rest take the rival seats.
-    loadKartAssets()
-      .then(({ colormapImage, driverScenes, itemBoxScene, itemPropScenes, kartScenes, racerScene }) => {
+    // Authored GLB swaps stay available for roster/contact-sheet work, but the
+    // vertical-slice default keeps the procedural kart, seated driver, item
+    // boxes, and item VFX fallbacks. Those forms are faster, deterministic in
+    // headless proof, and satisfy the effects-off hero-frame gate.
+    const useAuthoredRuntimeAssets =
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('authoredAssets') === '1';
+    if (useAuthoredRuntimeAssets) {
+      loadKartAssets()
+        .then(({ colormapImage, driverScenes, itemBoxScene, itemPropScenes, kartScenes, racerScene }) => {
         if (disposed || engineRef.current !== engine) return;
         // ?kenneyKart=1 keeps the recolored Kenney body reachable for
         // comparison on the player kart; it is also the automatic fallback
@@ -5104,9 +5156,6 @@ export const ComebackCityThreeKartRace = ({
           }
         };
         attachCharacter(engine.playerModel, playerCharacter, true);
-        engine.rivalModels.forEach((rival) => {
-          attachCharacter(rival.model, rival.character, false);
-        });
         // K7: rendered item props take over from the procedural stand-ins.
         swapItemPropVisuals(engine, itemPropScenes);
         // Penguin March marchers: swap the stand-ins for the real roster
@@ -5204,10 +5253,11 @@ export const ComebackCityThreeKartRace = ({
             box.add(rig);
           });
         });
-      })
-      .catch(() => {
-        // Procedural fallback bodies stay in place.
-      });
+        })
+        .catch(() => {
+          // Procedural fallback bodies stay in place.
+        });
+    }
 
     // Blender bake spike (A/B): ?bakedSpike=1 overlays the offline-baked
     // gym-sweeper shell (public/baked-spike.glb) on the procedural road.
@@ -5291,7 +5341,11 @@ export const ComebackCityThreeKartRace = ({
       // must show their real length here even though the sim clamps to 40ms.
       frameElapsedSamples.push(now - previousFrameTime);
       while (frameElapsedSamples.length > 40) frameElapsedSamples.shift();
-      const rawDt = Math.min(0.04, Math.max(0.001, (now - previousFrameTime) / 1000));
+      // Keep normal-frame physics identical, but avoid proof/browser
+      // time-dilation when headless Chromium throttles rAF. The cap is still
+      // bounded so a background-tab pause cannot explode the simulation.
+      const maxFrameDt = autoplay ? 0.5 : 0.12;
+      const rawDt = Math.min(maxFrameDt, Math.max(0.001, (now - previousFrameTime) / 1000));
       previousFrameTime = now;
       const dt = reducedMotion ? rawDt * 0.86 : rawDt;
       frameTimes.push(now);
@@ -6121,10 +6175,12 @@ export const ComebackCityThreeKartRace = ({
         DRIFT_FEEL.sparkColors[miniTurboActive ? driftState.miniTurboTier : driftState.tier] || DRIFT_FEEL.sparkColors[0],
         null
       );
-      // Speed-reactive post: CA edge-fringing + bloom swell at top speed.
+      // Speed-reactive post: restrained bloom swell at top speed. CA remains
+      // wired through the graphics config, but the presentation default keeps
+      // it at zero for a cleaner chase view.
       const gfxBloomMul = engine.gfxPostFx ? engine.gfxPostFx.updateFrame({ speedRatio }) : 1;
       if (engine.postChainEnabled && engine.bloomEffect) {
-        // Compose: shipped base × speed swell × any palette-moment multiplier
+        // Compose: active base × speed swell × any palette-moment multiplier
         // (applyPaletteMoments runs above and sets intensity = moments.bloomBase
         // × out.bloom; we re-derive the moment factor so the speed swell stacks
         // multiplicatively instead of being overwritten). When no moments are
@@ -6136,7 +6192,7 @@ export const ComebackCityThreeKartRace = ({
       }
       // pmndrs composer takes the frame delta (seconds) for time-based effects.
       if (engine.postChainEnabled) engine.composer.render(dt);
-      else engine.composer.render();
+      else engine.renderer.render(engine.scene, engine.camera);
       frameWorkSamples.push(performance.now() - now);
       while (frameWorkSamples.length > 40) frameWorkSamples.shift();
       // Audio observer: engine pitch + drift scrape follow this frame's state,
@@ -6194,7 +6250,7 @@ export const ComebackCityThreeKartRace = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', handleResize);
-      engine.composer.dispose?.();
+      engine.composer?.dispose?.();
       engine.renderer.dispose();
       // Graphics overhaul: free the PMREM env probe (render target + PMREM
       // generator) before the material sweep below.

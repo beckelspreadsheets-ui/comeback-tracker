@@ -18,11 +18,22 @@ const root = path.resolve(__dirname, '..');
 const port = Number(process.env.KART_AUDIO_SMOKE_PORT || 5303);
 const baseUrl = process.env.KART_AUDIO_SMOKE_URL || `http://127.0.0.1:${port}`;
 const outputDir = path.join(root, 'tmp', 'kart-audio-smoke');
+let serverLog = '';
 
 const fail = (message, detail = {}) => {
   const error = new Error(message);
   error.detail = detail;
   throw error;
+};
+
+const stopServer = (server) => {
+  if (!server?.pid) return;
+  try {
+    if (process.platform === 'win32') server.kill('SIGTERM');
+    else process.kill(-server.pid, 'SIGTERM');
+  } catch {
+    server.kill('SIGTERM');
+  }
 };
 
 const waitForServer = async (url, timeoutMs = 30000) => {
@@ -40,6 +51,30 @@ const waitForServer = async (url, timeoutMs = 30000) => {
 
 const telemetry = (page) => page.evaluate(() => window.__comebackCityKartTelemetry || null);
 
+const pageFacts = (page) =>
+  page
+    .evaluate(() => ({
+      bodyText: document.body.innerText.slice(0, 500),
+      kartRaceMounted: Boolean(document.querySelector('[data-testid="comeback-city-3d-kart-race"]')),
+      raceScreenMounted: Boolean(document.querySelector('[data-testid="race-screen"]')),
+      title: document.title,
+      url: window.location.href,
+    }))
+    .catch(() => null);
+
+const waitForTelemetry = async (page, predicate, label, timeout = 60000) => {
+  try {
+    await page.waitForFunction(predicate, null, { timeout });
+  } catch (error) {
+    fail(`${label} timed out`, {
+      page: await pageFacts(page),
+      serverLog: serverLog.slice(-4000),
+      telemetry: await telemetry(page).catch(() => null),
+      waitError: String(error),
+    });
+  }
+};
+
 const run = async () => {
   await mkdir(outputDir, { recursive: true });
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -47,8 +82,15 @@ const run = async () => {
     ? null
     : spawn(npm, ['run', 'dev:kart', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
         cwd: root,
-        stdio: 'ignore',
+        detached: process.platform !== 'win32',
+        stdio: ['ignore', 'pipe', 'pipe'],
       });
+  server?.stdout?.on('data', (chunk) => {
+    serverLog += chunk.toString();
+  });
+  server?.stderr?.on('data', (chunk) => {
+    serverLog += chunk.toString();
+  });
   let browser = null;
   const checks = [];
   const check = (name, ok, detail = null) => {
@@ -64,16 +106,22 @@ const run = async () => {
     page.on('console', (message) => {
       if (message.type() === 'error') consoleErrors.push(message.text());
     });
-    await page.goto(`${baseUrl}/#race`, { waitUntil: 'networkidle' });
-    await page.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, {
-      timeout: 20000,
-    });
+    await page.goto(`${baseUrl}/#race`, { waitUntil: 'domcontentloaded' });
+    await waitForTelemetry(
+      page,
+      () => window.__comebackCityKartTelemetry?.renderer === 'three-kart',
+      'three-kart telemetry'
+    );
 
     check('toggle rendered', (await page.locator('[data-testid="race-audio-toggle"]').count()) === 1);
     const before = await telemetry(page);
     check('audio idle before gesture', before.audioRunning === false, { before: before.audioRunning });
 
-    await page.waitForFunction(() => window.__comebackCityKartTelemetry?.countdown <= 0, null, { timeout: 20000 });
+    await waitForTelemetry(
+      page,
+      () => window.__comebackCityKartTelemetry?.countdown <= 0,
+      'race countdown'
+    );
     // Trusted keyboard input = the unlock gesture AND the drive.
     await page.keyboard.down('ArrowUp');
     await page.waitForTimeout(1500);
@@ -87,9 +135,12 @@ const run = async () => {
     await page.keyboard.down('ArrowRight');
     await page.keyboard.down('Space');
     try {
-      await page.waitForFunction(() => (window.__comebackCityKartTelemetry?.driftTier || 0) >= 3, null, {
-        timeout: 8000,
-      });
+      await waitForTelemetry(
+        page,
+        () => (window.__comebackCityKartTelemetry?.driftTier || 0) >= 3,
+        'drift tier 3 charge',
+        20000
+      );
     } finally {
       await page.keyboard.up('Space');
     }
@@ -111,10 +162,12 @@ const run = async () => {
       'mute attribute set',
       (await page.getAttribute('[data-testid="race-audio-toggle"]', 'data-audio-muted')) === '1'
     );
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, {
-      timeout: 20000,
-    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await waitForTelemetry(
+      page,
+      () => window.__comebackCityKartTelemetry?.renderer === 'three-kart',
+      'three-kart telemetry after reload'
+    );
     check(
       'mute persists reload',
       (await page.getAttribute('[data-testid="race-audio-toggle"]', 'data-audio-muted')) === '1'
@@ -137,7 +190,7 @@ const run = async () => {
     process.exitCode = 1;
   } finally {
     await browser?.close();
-    server?.kill('SIGTERM');
+    stopServer(server);
   }
 };
 

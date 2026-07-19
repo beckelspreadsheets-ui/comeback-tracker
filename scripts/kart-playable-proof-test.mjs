@@ -17,6 +17,16 @@ const fail = (message, detail = {}) => {
   throw error;
 };
 
+const stopServer = (server) => {
+  if (!server?.pid) return;
+  try {
+    if (process.platform === 'win32') server.kill('SIGTERM');
+    else process.kill(-server.pid, 'SIGTERM');
+  } catch {
+    server.kill('SIGTERM');
+  }
+};
+
 const fileExists = async (filePath) => {
   try {
     await access(filePath);
@@ -66,9 +76,7 @@ const averagePixelDiff = (beforeBuffer, afterBuffer, crop) => {
 };
 
 const assertVisibleMotion = async (page, viewport, label) => {
-  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.countdown <= 0, null, {
-    timeout: 15000,
-  });
+  await waitForRaceActive(page);
   const before = await page.screenshot({ fullPage: false });
   await page.waitForTimeout(1200);
   const after = await page.screenshot({ fullPage: false });
@@ -80,9 +88,7 @@ const assertVisibleMotion = async (page, viewport, label) => {
 };
 
 const assertControlVisualEffect = async (page, viewport, label) => {
-  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.countdown <= 0, null, {
-    timeout: 15000,
-  });
+  await waitForRaceActive(page);
   const idleFrame = await page.screenshot({ fullPage: false });
   await page.keyboard.down('ArrowUp');
   await page.waitForTimeout(900);
@@ -174,36 +180,64 @@ const waitForServer = async (url, timeoutMs = 30000) => {
   fail('Vite server did not become ready', { url });
 };
 
+const pageDiagnostics = (page) =>
+  page
+    .evaluate(() => ({
+      bodyText: document.body.innerText.slice(0, 500),
+      kartRaceMounted: Boolean(document.querySelector('[data-testid="comeback-city-3d-kart-race"]')),
+      raceScreenMounted: Boolean(document.querySelector('[data-testid="race-screen"]')),
+      telemetry: window.__comebackCityKartTelemetry || null,
+      title: document.title,
+      url: window.location.href,
+    }))
+    .catch(() => null);
+
 const readTelemetry = async (page, label) => {
-  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, {
-    timeout: 15000,
-  });
+  try {
+    await page.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, {
+      timeout: 60000,
+    });
+  } catch (error) {
+    fail(`Missing Three kart telemetry: ${label}`, {
+      page: await pageDiagnostics(page),
+      waitError: String(error),
+    });
+  }
   const telemetry = await page.evaluate(() => window.__comebackCityKartTelemetry || null);
   if (!telemetry) fail(`Missing Three kart telemetry: ${label}`);
   return telemetry;
 };
 
 const waitForRaceActive = async (page) => {
-  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.countdown <= 0, null, {
-    timeout: 15000,
-  });
+  try {
+    await page.waitForFunction(() => window.__comebackCityKartTelemetry?.countdown <= 0, null, {
+      timeout: 60000,
+    });
+  } catch (error) {
+    fail('Race countdown did not complete', {
+      page: await pageDiagnostics(page),
+      waitError: String(error),
+    });
+  }
 };
 
-// The 2026-07-02 lesson (a 404 quietly downgraded the shipped track)
-// carried over to the W0 Miami promotion: every requested Miami trackside
-// mount must resolve its GLB template. The loads are async after mount, so
-// wait until requested > 0 and all requests settled, then require zero
-// failures. (Replaces the retired bakedBuildings==='active' gate — the
-// baked-GLB pipeline died with the old procedural boxes.)
+// Every requested generated trackside mount must resolve its GLB template.
+// The loads are async after mount, so wait until requested > 0 and all
+// requests settle, then require zero failures.
 const assertMiamiMountsHealthy = async (page, label) => {
-  await page.waitForFunction(
-    () => {
-      const mounts = window.__comebackCityKartTelemetry?.miamiMounts;
-      return mounts && mounts.requested > 0 && mounts.mounted + mounts.failed >= mounts.requested;
-    },
-    null,
-    { timeout: 15000 }
-  );
+  try {
+    await page.waitForFunction(
+      () => {
+        const mounts = window.__comebackCityKartTelemetry?.miamiMounts;
+        return mounts && mounts.requested > 0 && mounts.mounted + mounts.failed >= mounts.requested;
+      },
+      null,
+      { timeout: 45000 }
+    );
+  } catch (error) {
+    const mounts = await page.evaluate(() => window.__comebackCityKartTelemetry?.miamiMounts || null);
+    fail(`${label}: miami trackside mounts did not settle`, { miamiMounts: mounts, waitError: String(error) });
+  }
   const mounts = await page.evaluate(() => window.__comebackCityKartTelemetry?.miamiMounts || null);
   if (!mounts || mounts.failed > 0 || mounts.mounted !== mounts.requested) {
     fail(`${label}: miami trackside mounts unhealthy — a GLB 404 would ship silently`, {
@@ -213,10 +247,27 @@ const assertMiamiMountsHealthy = async (page, label) => {
 };
 
 const assertPlayableShell = async (page, mode) => {
-  await page.waitForSelector('[data-testid="race-screen"][data-race-renderer="three-kart"]', { timeout: 15000 });
-  await page.waitForSelector('[data-testid="comeback-city-3d-kart-race"][data-race-renderer="three-kart"]', {
-    timeout: 15000,
-  });
+  try {
+    await page.waitForFunction(
+      () => {
+        const screen = document.querySelector('[data-testid="race-screen"]');
+        const race = document.querySelector('[data-testid="comeback-city-3d-kart-race"]');
+        return (
+          screen?.dataset?.raceRenderer === 'three-kart' &&
+          race?.dataset?.raceRenderer === 'three-kart' &&
+          race.getBoundingClientRect().width > 0 &&
+          race.getBoundingClientRect().height > 0
+        );
+      },
+      null,
+      { timeout: 60000 }
+    );
+  } catch (error) {
+    fail(`${mode} Three kart race shell did not mount`, {
+      page: await pageDiagnostics(page),
+      waitError: String(error),
+    });
+  }
   const facts = await page.evaluate(() => ({
     oldArcadeCanvasCount: document.querySelectorAll('.arcade-race-canvas, canvas[data-race-renderer="webgl"]').length,
     oldFallbackCanvasCount: document.querySelectorAll('[data-testid="race-fallback-canvas"], .race-canvas').length,
@@ -250,7 +301,6 @@ const runManualDesktopControls = async (browser) => {
   const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
   await page.goto(`${baseUrl}/#race`, { waitUntil: 'networkidle' });
   const facts = await assertPlayableShell(page, 'desktop');
-  await assertMiamiMountsHealthy(page, 'desktop manual');
   await waitForRaceActive(page);
   await page.waitForTimeout(300);
   const idle = await readTelemetry(page, 'desktop idle');
@@ -273,6 +323,19 @@ const runManualDesktopControls = async (browser) => {
   if (!(steering.steer > 0.18)) fail('Desktop steering did not produce right steer telemetry', { steering });
   if (!(braking.speed < steering.speed)) fail('Desktop braking did not reduce speed', { braking, steering });
   return { accelerating, braking, facts, idle, steering };
+};
+
+const runGeneratedTracksideHealth = async (browser) => {
+  const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
+  await page.goto(`${baseUrl}/?glbTrackside=1#race`, { waitUntil: 'networkidle' });
+  const facts = await assertPlayableShell(page, 'desktop generated trackside');
+  await assertMiamiMountsHealthy(page, 'desktop generated trackside');
+  await waitForRaceActive(page);
+  await page.waitForTimeout(900);
+  const telemetry = await readTelemetry(page, 'desktop generated trackside');
+  await page.screenshot({ path: path.join(outputDir, 'desktop-glb-trackside.png'), fullPage: false });
+  await page.close();
+  return { facts, miamiMounts: telemetry.miamiMounts || null };
 };
 
 const runAutoplayEvidence = async (browser, mode, viewport) => {
@@ -298,9 +361,9 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
   let finish = null;
   if (mode === 'desktop') {
     // The 2026-06-12 track upscale (1.35×, owner-requested) makes a full
-    // 3-lap race ~47s with cornering slowdowns. Since the 2026-07-06 §9
-    // supersession the shipped default renders the pmndrs post chain, and
-    // HEADLESS Chromium (SwiftShader) drops to ~11 FPS on it (91ms frames,
+    // 3-lap race ~47s with cornering slowdowns. The presentation default
+    // renders the pmndrs post chain, and HEADLESS Chromium (SwiftShader)
+    // drops to ~11 FPS on it (91ms frames,
     // frameWorkMs still ~1ms — software-GL pass cost, not JS; headed holds
     // 144). Frames beyond the 0.04s dt clamp dilate sim time ~2.3×, so the
     // same race takes ~107s of wall clock here. Event-driven wait — the
@@ -378,10 +441,11 @@ const run = async () => {
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   // K1: the kart battery points this at the kart build via
   // KART_PLAYABLE_PROOF_SERVER_SCRIPT=preview:kart (or dev:kart for source);
-  // unset = the fitness dev server, byte-for-byte the pre-K1 behavior.
+  // unset keeps the generic dev server fallback for older callers.
   const serverScript = process.env.KART_PLAYABLE_PROOF_SERVER_SCRIPT || 'dev';
   const server = spawn(npm, ['run', serverScript, '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
     cwd: root,
+    detached: process.platform !== 'win32',
     env: { ...process.env, BROWSER: 'none' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -403,6 +467,7 @@ const run = async () => {
     await assertPlayableShell(visualQaPage, 'desktop visual qa');
     const controlVisual = await assertControlVisualEffect(visualQaPage, { width: 1365, height: 768 }, 'desktop manual');
     await visualQaPage.close();
+    const generatedTrackside = await runGeneratedTracksideHealth(browser);
     const manualDesktop = await runManualDesktopControls(browser);
     const desktopAutoplay = await runAutoplayEvidence(browser, 'desktop', { width: 1365, height: 768 });
     const mobileAutoplay = await runAutoplayEvidence(browser, 'mobile', { width: 390, height: 844 });
@@ -416,6 +481,7 @@ const run = async () => {
       baseUrl,
       contactSheet: path.relative(root, path.join(outputDir, 'kart-visual-approval-sheet.html')),
       desktopAutoplay,
+      generatedTrackside,
       manualDesktop,
       mobileAutoplay,
       outputDir: path.relative(root, outputDir),
@@ -432,7 +498,7 @@ const run = async () => {
     throw error;
   } finally {
     if (browser) await browser.close();
-    server.kill('SIGTERM');
+    stopServer(server);
   }
 };
 
