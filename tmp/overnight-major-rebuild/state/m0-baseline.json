@@ -1,0 +1,22 @@
+{
+  "milestone": "M0 baseline and protected mechanics inventory",
+  "lastActivityUtc": "2026-07-19T04:18:08.317Z",
+  "repo": "/home/openclaw/hermes-trial/work/kart-racer-overnight-rebuild",
+  "branch": "overnight-major-rebuild-20260719",
+  "head": "2c27a537dc5fef9973d37ccf8239068c29c418ba",
+  "statusShort": "",
+  "oldWorktree": {
+    "repo": "/home/openclaw/hermes-trial/work/kart-racer",
+    "branchStatus": "## graphics-compare-hermes-kimi-k3...origin/graphics-compare-hermes-kimi-k3\n M package-lock.json\n M src/game/ComebackCityThreeKartRace.jsx\n M src/game/graphics.config.js\n?? tmp/card-a1-evidence/\n?? tmp/kart-solidity-plan-state.json\n?? tmp/kimi-major-solidity-plan-prompt.md\n?? tmp/overnight-solidity-state.json\n?? tmp/phase0-baseline/\n?? tmp/phase1-canonical/\n?? tmp/phase1-durable-state.json\n?? tmp/phase1-evidence/\n?? tmp/phase1-gfx-off-repeatability-dom/\n?? tmp/phase1-gfx-off-repeatability/\n?? tmp/phase1-gfx-off-verify/\n?? tmp/phase1-review/",
+    "head": "2c27a537dc5fef9973d37ccf8239068c29c418ba",
+    "dirtyFingerprints": "44155a71b01e2f40d5fea17548cacc9523840a714f25f0fa87093f5732153c30  package-lock.json\nb7f94277d989b910f6f08d1378a5fea6ecd0e3dbbcdf9c30ebc2c04b60a3dbf4  src/game/ComebackCityThreeKartRace.jsx\ne703af3a2a670f1cd058be62075743b4b8c241202f1e1a7c6628ab55498d1910  src/game/graphics.config.js"
+  },
+  "worktrees": "worktree /home/openclaw/hermes-trial/work/kart-racer\nHEAD 2c27a537dc5fef9973d37ccf8239068c29c418ba\nbranch refs/heads/graphics-compare-hermes-kimi-k3\n\nworktree /home/openclaw/hermes-trial/work/kart-racer-overnight-rebuild\nHEAD 2c27a537dc5fef9973d37ccf8239068c29c418ba\nbranch refs/heads/overnight-major-rebuild-20260719",
+  "lockfileSha256": "0619eb674a754faa19a773a6f1df9653a1aa0dc3bf4df72cc098565b731cfec0",
+  "rollbackCommit": "2c27a537dc5fef9973d37ccf8239068c29c418ba",
+  "sourcePlan": "/home/openclaw/.openclaw/workspace/plans/kart-racer-major-solidity-rebuild-plan-2026-07-19.md",
+  "handoff": "/home/openclaw/.openclaw/workspace/plans/kart-racer-overnight-rebuild-handoff-prompt-2026-07-19.md",
+  "artifacts": [],
+  "testResults": [],
+  "nextSafeAction": "Run baseline build, mechanics probes, visual proof, and budgets before mutation."
+}
