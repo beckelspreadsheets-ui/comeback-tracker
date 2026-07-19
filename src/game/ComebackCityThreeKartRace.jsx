@@ -135,7 +135,6 @@ import {
   updateShortcut,
 } from './race/airTricks.js';
 import { createBasicMaterial } from './race/render/createKartModel.js';
-import { createRivalKartModel } from './race/render/createRaceVehicles.js';
 import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
@@ -147,6 +146,8 @@ import { createGraphicsPostFx } from './race/render/graphicsPostFx.js';
 import { createGraphicsParticles } from './race/render/graphicsParticles.js';
 import { makeAsphaltDetailNormalMap, makeAsphaltRoughnessMap } from './race/render/graphicsTrackDetail.js';
 import { makeGraphicsSkyTexture } from './race/render/graphicsSky.js';
+import { buildCityMassing } from './race/render/cityMassing.js';
+import { buildPenguinVillageMassing } from './race/render/penguinVillageMassing.js';
 import {
   buildVisualPlacementAnchors,
   resolveTrackVisuals,
@@ -584,7 +585,9 @@ const createGroundedKartModel = ({
   driverMount.position.set(0, 3.05, -1.15);
   model.add(driverMount);
   const fallbackDriver = createProceduralSeatedPenguin({ accent });
-  fallbackDriver.scale.setScalar(0.9);
+  // Hero-slice presence: the seated Ordinal Penguin must read clearly above
+  // the seat at chase distance — slightly oversized beats hidden.
+  fallbackDriver.scale.setScalar(1.04);
   driverMount.add(fallbackDriver);
 
   // GRAPHICS OVERHAUL (Phase 1 materials): the kart body is the hero surface
@@ -885,6 +888,7 @@ const createGroundedKartModel = ({
   };
 
   return {
+    bodyGroup,
     boostFlame,
     contactGlow,
     driftIceTrailGroup,
@@ -899,6 +903,36 @@ const createGroundedKartModel = ({
     shadow,
     wheels,
   };
+};
+
+// Draw-call diet for roster propagation: merge every direct-child static mesh
+// of a container by material into one mesh per material. Groups (wheels,
+// steering rigs) are skipped so per-frame animation keeps working. Used for
+// rival karts — the hero player model keeps its original part hierarchy for
+// the authored-body swap path.
+const mergeStaticMeshesByMaterial = (container) => {
+  const buckets = new Map();
+  container.children.forEach((child) => {
+    if (!child.isMesh) return;
+    child.updateMatrix();
+    const key = child.material.uuid;
+    if (!buckets.has(key)) buckets.set(key, { material: child.material, geometries: [] });
+    const geometry = child.geometry.index ? child.geometry.toNonIndexed() : child.geometry.clone();
+    geometry.applyMatrix4(child.matrix);
+    buckets.get(key).geometries.push(geometry);
+  });
+  const stills = container.children.filter((child) => child.isMesh);
+  stills.forEach((child) => {
+    container.remove(child);
+    child.geometry?.dispose?.();
+  });
+  buckets.forEach(({ material, geometries }) => {
+    const merged = new THREE.Mesh(mergeGeometries(geometries, false), material);
+    merged.castShadow = false;
+    merged.receiveShadow = false;
+    container.add(merged);
+    geometries.forEach((geometry) => geometry.dispose?.());
+  });
 };
 
 const makeQuestionTexture = () => {
@@ -1579,7 +1613,7 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   const roadDetailMaps = gfxCfg.trackDetailMaps
     ? {
         normalMap: makeAsphaltDetailNormalMap({ repeat: 8 }),
-        roughnessMap: makeAsphaltRoughnessMap({ repeat: 8, base: roadGrade ? roadGrade.road.roughness : 0.6, variance: 0.4 }),
+        roughnessMap: makeAsphaltRoughnessMap({ repeat: 8, base: roadGrade ? roadGrade.road.roughness : 0.6, variance: 0.18 }),
       }
     : null;
   const visualRoadEnabled = trackVisuals.enabled && Boolean(trackDef.visual);
@@ -1633,9 +1667,9 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
     speckles: visualRoadEnabled
       ? visualRoad.asphalt.speckles
       : [
-          { color: '#3a4666', count: 420, size: 2.4 },
-          { color: '#202840', count: 360, size: 3.1 },
-          { color: '#46537a', count: 130, size: 1.6 },
+          { color: '#343f5c', count: 380, size: 2.4 },
+          { color: '#202840', count: 340, size: 3.1 },
+          { color: '#3c4a6e', count: 90, size: 1.6 },
         ],
   });
   const road = new THREE.Mesh(
@@ -4312,7 +4346,11 @@ const createScene = ({
     world.add(kicker);
   }
   addFinishGate(world, sampler, trackDef, trackVisuals);
-  const propCount = addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals) + trackVisualPropCount;
+  const cityMassingCount =
+    buildCityMassing({ world, sampler, trackDef, minCenterlineDistance }) +
+    buildPenguinVillageMassing({ world, sampler, trackDef, minCenterlineDistance });
+  const propCount =
+    addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals) + trackVisualPropCount + cityMassingCount;
   if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef);
 
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
@@ -4333,26 +4371,31 @@ const createScene = ({
   const shieldShellGeometry = new THREE.IcosahedronGeometry(7.4 * KART_SCALE, 1);
   const shieldShell = new THREE.Mesh(
     shieldShellGeometry,
-    new THREE.MeshBasicMaterial({ color: '#7EC8E8', depthWrite: false, opacity: 0.22, transparent: true })
+    // Hero slice: one clean translucent dome — the wireframe facet overlay
+    // read as a cracked egg hiding the kart/driver at gameplay distance.
+    new THREE.MeshBasicMaterial({ color: '#7EC8E8', depthWrite: false, opacity: 0.1, transparent: true })
   );
   shieldShell.scale.set(1.12, 0.7, 1.3);
   shieldShell.position.y = 3.4;
   shieldBubble.add(shieldShell);
-  const shieldFacets = new THREE.Mesh(
-    shieldShellGeometry,
-    new THREE.MeshBasicMaterial({ color: '#F5F8FF', depthWrite: false, opacity: 0.45, transparent: true, wireframe: true })
+  // Thin equator rim keeps the shield readable as a bubble without a
+  // faceted cage around the kart.
+  const shieldRim = new THREE.Mesh(
+    new THREE.TorusGeometry(7.4 * KART_SCALE, 0.16, 6, 40),
+    new THREE.MeshBasicMaterial({ color: '#bfeaff', depthWrite: false, opacity: 0.4, transparent: true })
   );
-  shieldFacets.scale.copy(shieldShell.scale);
-  shieldFacets.position.copy(shieldShell.position);
-  shieldBubble.add(shieldFacets);
-  const orbitShardGeometry = new THREE.OctahedronGeometry(0.85);
+  shieldRim.rotation.x = Math.PI / 2;
+  shieldRim.scale.set(1.12, 1.3, 1);
+  shieldRim.position.y = 3.4;
+  shieldBubble.add(shieldRim);
+  const orbitShardGeometry = new THREE.OctahedronGeometry(0.55);
   orbitShardGeometry.scale(0.7, 1.6, 0.7);
-  for (let index = 0; index < 6; index += 1) {
+  for (let index = 0; index < 3; index += 1) {
     const shard = new THREE.Mesh(
       orbitShardGeometry,
-      createBasicMaterial('#F5F8FF', { emissive: '#00E5FF', emissiveIntensity: 0.85 })
+      createBasicMaterial('#F5F8FF', { emissive: '#00E5FF', emissiveIntensity: 0.5 })
     );
-    const angle = (index / 6) * Math.PI * 2;
+    const angle = (index / 3) * Math.PI * 2;
     shard.position.set(Math.cos(angle) * 7.6 * KART_SCALE, 3.2, Math.sin(angle) * 7.6 * KART_SCALE);
     shard.rotation.y = -angle;
     shieldBubble.add(shard);
@@ -4473,16 +4516,23 @@ const createScene = ({
   world.add(marchRig);
   world.add(player);
   const rivalModels = rivalSeats.map((rival) => {
-    const model = createRivalKartModel({
+    // Roster cohesion (major rebuild): rivals race the SAME grounded hero
+    // kart + seated penguin system as the player, at near-equal mass, in
+    // their own livery. One kart language on track; identity comes from
+    // color/accent, not a smaller weaker model.
+    const model = createGroundedKartModel({
       accent: rival.accent,
       color: rival.color,
-      scale: 0.58,
+      gfx,
+      scale: 0.94,
     });
-    model.idleFlames = [];
     model.group.userData.kind = 'grounded-rival-kart';
-    // Rivals use the lightweight mesh contract during the vertical slice:
-    // visible four-wheel silhouettes and boost hooks, without the hero
-    // driver/body GLB load path reserved for the player.
+    // Roster draw-call diet: fold the static body trim + seated penguin into
+    // one mesh per material. Wheels stay grouped so spin/steer still animate.
+    mergeStaticMeshesByMaterial(model.bodyGroup);
+    model.driverMount.children.forEach((child) => {
+      if (child.isGroup) mergeStaticMeshesByMaterial(child);
+    });
     model.group.traverse((node) => {
       node.castShadow = false;
     });
@@ -6123,10 +6173,10 @@ export const ComebackCityThreeKartRace = ({
         const phoneWide = touchControls;
         // After the finish, pull up slightly for a results tableau centered on
         // the kart (staying short of the gate behind it).
-        const cameraBackUnits = race.finished ? 30 : camLab?.back ?? (phoneWide ? 33 : viewport.mobile ? 43 : 38);
+        const cameraBackUnits = race.finished ? 30 : camLab?.back ?? (phoneWide ? 34 : viewport.mobile ? 42 : 38);
         const cameraHeight = race.finished
           ? 13
-          : (camLab?.height ?? (phoneWide ? 10 : viewport.mobile ? 12.5 : 10.5)) * (underpass ? 0.62 : 1);
+          : (camLab?.height ?? (phoneWide ? 11.5 : viewport.mobile ? 13.5 : 12)) * (underpass ? 0.62 : 1);
         const cameraProgress = wrap01(race.progress - cameraBackUnits / engine.sampler.length);
         const cameraSample = engine.sampler.pointAt(cameraProgress, race.lane * 0.6);
         const desiredCamera = cameraSample.point
@@ -6140,14 +6190,14 @@ export const ComebackCityThreeKartRace = ({
           ? playerSample.point.clone().add(new THREE.Vector3(0, 6, 0))
           : playerSample.point
               .clone()
-              .addScaledVector(playerSample.tangent, camLab?.lookAhead ?? (phoneWide ? 28 : viewport.mobile ? 26 : 30))
+              .addScaledVector(playerSample.tangent, camLab?.lookAhead ?? (phoneWide ? 30 : viewport.mobile ? 28 : 34))
               .add(new THREE.Vector3(0, camLab?.lookUp ?? (viewport.mobile && !phoneWide ? 5.5 : 4.5), 0));
         engine.camera.lookAt(lookAt);
         // Mini-turbo gets a small extra FOV kick on top of the speed widening.
         targetFov =
-          (phoneWide ? 63 : viewport.mobile ? 68 : 70) +
-          clamp(race.speed / MAX_SPEED, 0, 1.15) * 7 +
-          (miniTurboActive ? 3.5 : 0);
+          (phoneWide ? 61 : viewport.mobile ? 63 : 60) +
+          clamp(race.speed / MAX_SPEED, 0, 1.15) * 3 +
+          (miniTurboActive ? 2 : 0);
       }
       if (Math.abs(engine.camera.fov - targetFov) > 0.1) {
         engine.camera.fov = lerp(engine.camera.fov, targetFov, 1 - Math.pow(0.001, dt));

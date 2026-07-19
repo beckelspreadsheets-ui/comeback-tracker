@@ -37,13 +37,106 @@ export const createRivalKartModel = ({
   color = '#ef4334',
   scale = 1,
 } = {}) => {
-  return createKartModelV2({
-    accent,
-    color,
-    driverSuit: '#0f172a',
-    scale,
-    suit: '#202837',
+  const group = new THREE.Group();
+  group.scale.setScalar(scale);
+
+  const bodyMat = createBasicMaterial(color, { emissive: color, emissiveIntensity: 0.08 });
+  const accentMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 0.42 });
+  const cockpitMat = createBasicMaterial('#202837');
+  const darkMat = createBasicMaterial(CITY3D_PALETTE.tire);
+  const trimMat = createBasicMaterial(CITY3D_PALETTE.light);
+  const flameMat = createBasicMaterial(CITY3D_PALETTE.roadLine, {
+    emissive: CITY3D_PALETTE.roadLine,
+    emissiveIntensity: 0.85,
   });
+
+  addStaticBox(group, { x: 7.2, y: 1.1, z: 7.5 }, { y: 1.35, z: -0.35 }, bodyMat);
+  addStaticBox(group, { x: 5.2, y: 1.25, z: 3.2 }, { y: 2.3, z: -1.55 }, darkMat);
+  addStaticBox(group, { x: 7.8, y: 0.42, z: 1 }, { y: 1.3, z: 4.45 }, trimMat);
+  addStaticMesh(
+    group,
+    new THREE.Mesh(new THREE.ConeGeometry(3.2, 4.7, 4), bodyMat),
+    { rx: Math.PI / 2, ry: Math.PI / 4, y: 1.6, z: 5.25 }
+  );
+  addStaticMesh(
+    group,
+    new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.94, 1.45, 6), cockpitMat),
+    { y: 3.72, z: -1.8 }
+  );
+  addStaticMesh(
+    group,
+    new THREE.Mesh(new THREE.DodecahedronGeometry(1.04, 0), accentMat),
+    { y: 4.78, z: -1.8 }
+  );
+  addStaticBox(group, { x: 1.1, y: 0.28, z: 0.16 }, { y: 4.84, z: -0.92 }, darkMat);
+
+  const wheelGroup = new THREE.Group();
+  const wheels = [];
+  [
+    [-4.2, 1.02, -3.1],
+    [4.2, 1.02, -3.1],
+    [-4.2, 1.02, 3.15],
+    [4.2, 1.02, 3.15],
+  ].forEach(([x, y, z]) => {
+    const wheel = new THREE.Group();
+    wheel.position.set(x, y, z);
+    wheel.userData.front = z > 0;
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.35, 1.18, 10), darkMat);
+    tire.rotation.z = Math.PI / 2;
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.3, 7), accentMat);
+    hub.rotation.z = Math.PI / 2;
+    freezeStaticTransform(tire);
+    freezeStaticTransform(hub);
+    wheel.add(tire, hub);
+    wheelGroup.add(wheel);
+    wheels.push(wheel);
+  });
+  group.add(wheelGroup);
+
+  const hoverGroup = new THREE.Group();
+  hoverGroup.visible = false;
+  [-2.4, 2.4].forEach((x) => {
+    addStaticMesh(
+      hoverGroup,
+      new THREE.Mesh(
+        new THREE.CircleGeometry(1.24, 14),
+        new THREE.MeshBasicMaterial({ color: accent, opacity: 0.26, transparent: true })
+      ),
+      { rx: -Math.PI / 2, x, y: 0.18, z: -2 }
+    );
+  });
+  group.add(hoverGroup);
+
+  const planeGroup = new THREE.Group();
+  planeGroup.visible = false;
+  addStaticBox(planeGroup, { x: 9.2, y: 0.3, z: 1.75 }, { y: 2.1, z: -1.1 }, accentMat);
+  addStaticBox(planeGroup, { x: 3.5, y: 0.28, z: 1.1 }, { y: 3.1, z: -4.6 }, accentMat);
+  addStaticBox(planeGroup, { x: 0.34, y: 1.85, z: 1.0 }, { y: 3.76, z: -4.6 }, accentMat);
+  group.add(planeGroup);
+
+  const boostFlame = new THREE.Group();
+  boostFlame.visible = false;
+  [-0.9, 0.9].forEach((x) => {
+    addStaticMesh(
+      boostFlame,
+      new THREE.Mesh(new THREE.ConeGeometry(0.46, 2.8, 5), flameMat),
+      { rx: -Math.PI / 2, x, y: 1.05, z: -4.8 }
+    );
+  });
+  group.add(boostFlame);
+
+  const setMode = (mode) => {
+    wheelGroup.visible = mode !== 'plane';
+    hoverGroup.visible = mode === 'hover';
+    planeGroup.visible = mode === 'plane';
+  };
+
+  return {
+    boostFlame,
+    group,
+    setMode,
+    wheels,
+  };
 };
 
 export const createVehicleSwitchRing = () => {
@@ -79,7 +172,7 @@ export const createRaceVehicleMeshes = ({
     const model = createRivalKartModel({
       accent: rival.accent,
       color: rival.color,
-      scale: 0.62,
+      scale: 0.58,
     });
     model.setMode(defaultVehicle);
     world.add(model.group);

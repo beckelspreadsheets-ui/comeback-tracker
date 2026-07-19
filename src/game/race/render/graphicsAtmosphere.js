@@ -42,7 +42,7 @@ export const TRACK_ATMOSPHERE_GRADES = Object.freeze({
     // slightly wet so the city lights + sun streak across it. envMapIntensity
     // scales the IBL contribution on this one material (multiplies the
     // scene-wide environmentIntensity for the road only).
-    road: { metalness: 0.14, roughness: 0.46, envMapIntensity: 0.75 },
+    road: { metalness: 0.08, roughness: 0.62, envMapIntensity: 0.55 },
     ground: { roughness: 0.9, envMapIntensity: 0.25 },
   }),
   'penguin-village': Object.freeze({
@@ -64,7 +64,7 @@ export const TRACK_ATMOSPHERE_GRADES = Object.freeze({
     sunFillIntensity: 0.75,
     // Road surface specular: packed-snow/ice asphalt gets a glossier sheen
     // than CC so the dawn sun glints off the frozen surface.
-    road: { metalness: 0.08, roughness: 0.42, envMapIntensity: 0.85 },
+    road: { metalness: 0.05, roughness: 0.58, envMapIntensity: 0.6 },
     ground: { roughness: 0.82, envMapIntensity: 0.35 },
   }),
 });

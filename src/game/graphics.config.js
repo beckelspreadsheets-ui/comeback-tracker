@@ -38,7 +38,7 @@ const PRESETS = {
     ambientParticleCount: 0,
     // Phase 3 — track surface detail.
     trackDetailMaps: true, // procedural normal + roughness detail on the road
-    trackDetailNormalScale: 0.55, // micro-surface relief strength (subtle, not gravel)
+    trackDetailNormalScale: 0.4, // micro-surface relief strength (subtle, not gravel)
     // Phase 4 — sky backdrop.
     cinematicSky: true, // equirect sky dome: gradient + sun disc + horizon glow + stars
   },
