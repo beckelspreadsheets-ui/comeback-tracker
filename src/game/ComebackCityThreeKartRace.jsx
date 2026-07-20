@@ -394,6 +394,25 @@ const setFlatTransform = (object) => {
   return object;
 };
 
+// TrackSurfaceAnchor: a shared visual/collision transform sampled directly
+// from the road surface. `lane` uses the sampler's [-1, 1] lane space;
+// `hover` offsets the anchor above the asphalt. The returned position is
+// inside the legal drivable envelope by construction.
+const makeTrackSurfaceAnchor = (sampler, progress, lane, { hover = 0 } = {}) => {
+  const sample = sampler.pointAt(progress, lane);
+  const position = sample.point.clone();
+  position.y += hover;
+  return {
+    progress,
+    lane,
+    position,
+    normal: sample.normal,
+    tangent: sample.tangent,
+    center: sample.center,
+    roadHalfWidth: sampler.widthAt(progress) * 0.44,
+  };
+};
+
 const makeBox = (size, position, material) => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), material);
   mesh.position.set(position.x || 0, position.y || 0, position.z || 0);
@@ -4477,9 +4496,12 @@ const createScene = ({
   const coinField = buildCoinField(trackDef.key);
   const coinMeshes = coinField.map((coin) => {
     const group = new THREE.Group();
-    const sample = sampler.pointAt(coin.progress, coin.lane);
-    group.position.copy(sample.point);
-    group.position.y += 2.3;
+    // Grounded placement via TrackSurfaceAnchor: visual and logical position
+    // share the same surface sample; a low hover keeps the coin readable.
+    const anchor = makeTrackSurfaceAnchor(sampler, coin.progress, coin.lane, { hover: 0.9 });
+    group.position.copy(anchor.position);
+    coin.anchor = anchor;
+    coin.worldPosition = anchor.position;
     world.add(group);
     return group;
   });

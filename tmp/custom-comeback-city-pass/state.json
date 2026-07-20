@@ -79,7 +79,7 @@
     "gate": "passed-with-note",
     "gateNote": "test:race, build:kart, test:kart-playable:kart green. Race proof captured (effects-off + effects-on desktop/mobile). Compare min-FPS gate reads low on headless SwiftShader; verified the same Stage 1 commit also fails min-FPS in current environment, indicating environmental CPU/fill-rate pressure, not Stage 2 regression. Draw calls 577, triangles 121k."
   },
-  "lastActivity": "2026-07-20T23:10Z Stage 2 first-30-seconds vertical slice: Ice Plaza start gantry/grandstands/garages/tower/lights/flags/penguin statue + Neon Downtown art-deco blocks/lamps/planters. Effects-on/off evidence captured.",
+  "lastActivity": "2026-07-20T23:15Z Stage 3a: TrackSurfaceAnchor + grounded Bitcoin coins.",
   "artifacts": [
     "tmp/custom-comeback-city-pass/state.json",
     "tmp/custom-comeback-city-pass/worker.log",
@@ -109,5 +109,12 @@
     "deployment": "baseline still serving 431df0e-era build",
     "externalVerified": false,
     "vercelCli": "/home/openclaw/.openclaw/tools/node-v22.22.0/bin/vercel (auth.json present)"
-  }
+  },
+  "stage3Steps": [
+    {
+      "step": "3a",
+      "note": "TrackSurfaceAnchor helper; coins grounded at surface+0.9y",
+      "status": "committed"
+    }
+  ]
 }
