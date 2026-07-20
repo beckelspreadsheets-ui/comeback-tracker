@@ -4,6 +4,7 @@
 // the runtime used to hardcode: elevation, ramps, the dare shortcut, laps,
 // spawn offset, and the QA gate budgets.
 import { COMEBACK_CITY_COURSE_V2 } from '../../courseV2.js';
+import { COMEBACK_CITY_AUTHORED } from '../../courseV2Authored.js';
 import { TRACK_VISUAL_SCHEMA_VERSION } from './trackVisualSchema.js';
 
 const COMEBACK_CITY_VISUAL_BANDS = COMEBACK_CITY_COURSE_V2.roadRibbons.map((ribbon, index) => ({
@@ -25,11 +26,11 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
   // Spawn just past the finish line so the gate frames the lap wrap at
   // progress 0 without crowding the spawn camera.
   startOffset: 0.03,
-  // Bridge band peaks at progress ~0.467 where the climb crosses over the
-  // dive (which passes under at ~0.191); peak must clear kart visual
-  // height. Measured from the generated centerline's self-intersection.
-  // crestLaunch: the bridge top is a free ballistic launch (kicker + jump).
-  elevation: { bridgeBand: { from: 0.4, peak: 21, to: 0.534 }, crestLaunch: true },
+  // custom-comeback-city-pass Stage 1: elevation + shortcut come from the
+  // generated authored course (courseV2Authored.js). The skyline-run
+  // elevation band carries the supported overpass over the ice-plaza
+  // boulevard; the harbor dare shortcut jumps the harbor cut.
+  elevation: COMEBACK_CITY_AUTHORED.elevation,
   // Procedural opening-facade run + roadside scatter are comeback-city-only
   // dressing; new tracks bring their own.
   dressing: { openingFacades: true, roadsideProps: true },
@@ -105,21 +106,10 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
     { progress: 0.075, side: -0.35 },
     { progress: 0.685, side: 0.35 },
   ],
-  // Shortcut dare-ramp: jump the entire south carousel from the inside
-  // line. Only sticks if you arrive ABOVE natural top speed; case it slow
-  // and you crash-land mid-corner. Risk ≈ 4-5s lost, reward ≈ 2-3s won.
-  shortcut: {
-    failFlightTime: 0.85,
-    failLandProgress: 0.272,
-    failSpeed: 40,
-    failSpin: 1.8,
-    flightTime: 1.55,
-    landProgress: 0.365,
-    launchProgress: 0.212,
-    minSpeed: 232,
-    peakHeight: 26,
-    side: -0.7,
-  },
+  // Harbor dare shortcut (custom map): jump the harbor cut from the
+  // boardwalk onto the skyline climb. Same risk contract as before: only
+  // sticks above natural top speed; case it slow and you crash-land.
+  shortcut: COMEBACK_CITY_AUTHORED.shortcut,
   // QA gate budgets (kart-playable): deterministic autoplay must finish
   // within finishSeconds and hold at least speedFloor mid-race.
   budgets: { finishSeconds: 45, speedFloor: 140 },

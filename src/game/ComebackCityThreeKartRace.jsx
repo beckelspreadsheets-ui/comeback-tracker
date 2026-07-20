@@ -1707,8 +1707,13 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
       ],
     }
   );
+  // Ground plane sized from the course world bounds (custom map ships
+  // worldBounds; legacy courses keep the authored 1120×1060 plane).
+  const worldBounds = trackDef.course.worldBounds || null;
+  const groundSpanX = worldBounds ? worldBounds.maxX - worldBounds.minX + 220 : 1120;
+  const groundSpanZ = worldBounds ? worldBounds.maxZ - worldBounds.minZ + 220 : 1060;
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(1120, 1060, 18, 18),
+    new THREE.PlaneGeometry(groundSpanX, groundSpanZ, 18, 18),
     new THREE.MeshStandardMaterial({
       color: '#ffffff',
       map: grassTexture,
@@ -1718,6 +1723,10 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.06;
+  if (worldBounds) {
+    ground.position.x = (worldBounds.minX + worldBounds.maxX) / 2;
+    ground.position.z = (worldBounds.minZ + worldBounds.maxZ) / 2;
+  }
   ground.receiveShadow = true;
   world.add(setFlatTransform(ground));
 
@@ -3942,6 +3951,7 @@ const createScene = ({
   // when the layer is on (?skyLab=0 diagnostic drops back to 860 — the
   // fog.far <= 840 rule is about FOG and is unaffected either way).
   const skyLab = skyLabConfig();
+  const worldBoundsForRings = trackDef.course?.worldBounds || null;
   if (skyLab) {
     const SKY_LAB_STRIPS = {
       'comeback-city': {
@@ -3962,6 +3972,16 @@ const createScene = ({
     const strips = SKY_LAB_STRIPS[trackDef.key] || {};
     camera.far = 1800;
     camera.updateProjectionMatrix();
+    // Ring placement: courses with authored worldBounds (the custom map)
+    // center the rings on the course and push them outside the far edge so
+    // the band never cuts through a district; legacy courses keep the
+    // owner-approved origin-centered radii.
+    const ringCenter = worldBoundsForRings
+      ? { x: (worldBoundsForRings.minX + worldBoundsForRings.maxX) / 2, z: (worldBoundsForRings.minZ + worldBoundsForRings.maxZ) / 2 }
+      : { x: 0, z: 0 };
+    const ringRadius = worldBoundsForRings
+      ? Math.ceil(Math.max(worldBoundsForRings.maxX - ringCenter.x, worldBoundsForRings.maxZ - ringCenter.z, ringCenter.x - worldBoundsForRings.minX, ringCenter.z - worldBoundsForRings.minZ) / 50) * 50
+      : null;
     const addBackdropRing = (url, { height, order, radius, repeats, y }) => {
       if (!url) return;
       loader.load(url, (texture) => {
@@ -3978,13 +3998,20 @@ const createScene = ({
             transparent: true,
           })
         );
+        ring.position.x = ringCenter.x;
+        ring.position.z = ringCenter.z;
         ring.position.y = y;
         ring.renderOrder = order;
         scene.add(ring);
       });
     };
-    addBackdropRing(skyLab.far || strips.far, { height: 380, order: -20, radius: 780, repeats: 5, y: 140 });
-    addBackdropRing(skyLab.near || strips.near, { height: 210, order: -19, radius: 590, repeats: 7, y: 78 });
+    if (ringRadius) {
+      addBackdropRing(skyLab.far || strips.far, { height: 520, order: -20, radius: ringRadius + 420, repeats: 7, y: 200 });
+      addBackdropRing(skyLab.near || strips.near, { height: 300, order: -19, radius: ringRadius + 180, repeats: 9, y: 115 });
+    } else {
+      addBackdropRing(skyLab.far || strips.far, { height: 380, order: -20, radius: 780, repeats: 5, y: 140 });
+      addBackdropRing(skyLab.near || strips.near, { height: 210, order: -19, radius: 590, repeats: 7, y: 78 });
+    }
   }
 
   // Post-processing is opt-in for the vertical slice. The default proof frame
@@ -4368,6 +4395,64 @@ const createScene = ({
     world.add(kicker);
   }
   addFinishGate(world, sampler, trackDef, trackVisuals);
+
+  // Dev course visualization (?devOverlay=1): temporary debug overlay showing
+  // centerline (white), legal lane envelope edges (green), AI racing line
+  // (magenta), boost pads (orange), item boxes (cyan), and coin pickup
+  // anchors (gold). Diagnostic only — never on by default, zero cost off.
+  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('devOverlay') === '1') {
+    const overlay = new THREE.Group();
+    overlay.userData.kind = 'dev-course-overlay';
+    const overlayLine = (points, color, y = 1.6) => {
+      const geometry = new THREE.BufferGeometry().setFromPoints(points.map((p) => new THREE.Vector3(p.x, (p.y || 0) + y, p.z)));
+      const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.9 }));
+      line.renderOrder = 60;
+      overlay.add(line);
+    };
+    const STEPS = 400;
+    const centerPts = [];
+    const leftEdge = [];
+    const rightEdge = [];
+    const aiLine = [];
+    for (let i = 0; i <= STEPS; i += 1) {
+      const p = i / STEPS;
+      const width = sampler.widthAt(p);
+      centerPts.push(sampler.pointAt(p, 0).point);
+      leftEdge.push(sampler.pointAt(p, -1.16).point);
+      rightEdge.push(sampler.pointAt(p, 1.16).point);
+      // Approximate AI racing line: apex-seeking bias toward corner inside.
+      const ahead = sampler.pointAt(p + 0.01, 0).tangent;
+      const here = sampler.pointAt(p, 0).tangent;
+      const turn = ahead.x * here.z - ahead.z * here.x;
+      aiLine.push(sampler.pointAt(p, THREE.MathUtils.clamp(turn * 6, -0.55, 0.55)).point);
+    }
+    overlayLine(centerPts, '#ffffff');
+    overlayLine(leftEdge, '#3aff88', 1.2);
+    overlayLine(rightEdge, '#3aff88', 1.2);
+    overlayLine(aiLine, '#ff4fd8', 2.0);
+    (trackDef.course.boostPads || []).forEach((padDef) => {
+      const { point } = sampler.pointAt(padDef.progress, padDef.side);
+      const marker = new THREE.Mesh(new THREE.SphereGeometry(3, 8, 6), new THREE.MeshBasicMaterial({ color: '#ff9d2e', depthTest: false }));
+      marker.position.copy(point).y += 4;
+      marker.renderOrder = 61;
+      overlay.add(marker);
+    });
+    (trackDef.course.itemBoxes || []).forEach((boxDef) => {
+      const { point } = sampler.pointAt(boxDef.progress, boxDef.side);
+      const marker = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.4, 3.4), new THREE.MeshBasicMaterial({ color: '#54c8ff', depthTest: false }));
+      marker.position.copy(point).y += 4;
+      marker.renderOrder = 61;
+      overlay.add(marker);
+    });
+    coinField.forEach((coin) => {
+      const { point } = sampler.pointAt(coin.progress, coin.lane);
+      const marker = new THREE.Mesh(new THREE.SphereGeometry(1.8, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffd34f', depthTest: false }));
+      marker.position.copy(point).y += 2.6;
+      marker.renderOrder = 61;
+      overlay.add(marker);
+    });
+    world.add(overlay);
+  }
   const cityMassingCount =
     buildCityMassing({ world, sampler, trackDef, minCenterlineDistance }) +
     buildPenguinVillageMassing({ world, sampler, trackDef, minCenterlineDistance });

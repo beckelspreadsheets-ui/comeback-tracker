@@ -1,6 +1,6 @@
 {
   "objective": "Execute custom Comeback City map pass stages 0-7 from kart-racer-custom-comeback-city-map-plan-2026-07-20.md: one fully authored six-district Comeback City course, grounded Bitcoin pickups via shared TrackSurfaceAnchor, six recognizable personal racers in-race, original arcade soundtrack, evidence package, HTTPS preview deploy. Penguin Village untouched.",
-  "executor": "Kimi K3 (sole implementation builder; Codex preflight worker verified stopped before tracked edits — its untracked state.json/worker.log/empty stage0 dir were inspected and adopted)",
+  "executor": "Kimi K3 (sole implementation builder; Codex preflight worker verified stopped before tracked edits \u2014 its untracked state.json/worker.log/empty stage0 dir were inspected and adopted)",
   "boundaries": {
     "implementationWorktree": "/home/openclaw/hermes-trial/work/kart-racer-overnight-rebuild",
     "implementationBranch": "overnight-major-rebuild-20260719",
@@ -46,10 +46,24 @@
   },
   "baselineEvidence": {
     "mechanics": {
-      "test:race": { "result": "PASS", "exit": 0, "at": "2026-07-20T17:12Z" },
-      "build:kart": { "result": "PASS", "log": "tmp/custom-comeback-city-pass/stage0/build-kart-baseline.log" },
-      "test:bundle:kart": { "result": "PASS", "log": "tmp/custom-comeback-city-pass/stage0/build-kart-baseline.log" },
-      "race:proof:capture": { "result": "PASS", "run": "asset-pipeline/proof/runs/2026-07-20T17-13-21-688Z__race-proof", "copiedTo": "tmp/custom-comeback-city-pass/stage0/baseline/proof-run" }
+      "test:race": {
+        "result": "PASS",
+        "exit": 0,
+        "at": "2026-07-20T17:12Z"
+      },
+      "build:kart": {
+        "result": "PASS",
+        "log": "tmp/custom-comeback-city-pass/stage0/build-kart-baseline.log"
+      },
+      "test:bundle:kart": {
+        "result": "PASS",
+        "log": "tmp/custom-comeback-city-pass/stage0/build-kart-baseline.log"
+      },
+      "race:proof:capture": {
+        "result": "PASS",
+        "run": "asset-pipeline/proof/runs/2026-07-20T17-13-21-688Z__race-proof",
+        "copiedTo": "tmp/custom-comeback-city-pass/stage0/baseline/proof-run"
+      }
     },
     "ownerRejectedIssues": {
       "flatCardScenery": "Confirmed in baseline captures (desktop/mid.png): trackside buildings are flat-shaded box rows with painted stripe windows; no volumetric district composition.",
@@ -60,24 +74,31 @@
     }
   },
   "stageGateState": {
-    "stage": 0,
+    "stage": 1,
     "status": "complete",
     "gate": "passed",
-    "gateNote": "Baseline reproducible (test:race + build:kart + bundle + proof capture all green at 431df0e); protected worktree fingerprint unchanged; preview restorable from 431df0e."
+    "gateNote": "3-lap autoplay finish 75.77s (kart-playable-proof, desktop+mobile); manual drive controls green; Penguin Village autoplay regression green; test:race green; build+bundle green. Autoplay ~24s/lap (human-projected ~55-70s, in 55-75s target band; human validation on Seth PC at Stage 7)."
   },
-  "lastActivity": "2026-07-20T17:20Z Stage 0 gate passed; baseline evidence captured and inspected (flat box scenery, homogenized dark driver silhouettes, hover-pose coins, oscillator audio confirmed).",
+  "lastActivity": "2026-07-20T18:20Z Stage 1 gate passed; authored six-district course (6155u) live; overhead route map + dev overlay added.",
   "artifacts": [
     "tmp/custom-comeback-city-pass/state.json",
     "tmp/custom-comeback-city-pass/worker.log",
     "tmp/custom-comeback-city-pass/stage0/build-kart-baseline.log",
     "tmp/custom-comeback-city-pass/stage0/race-proof-baseline.log",
-    "tmp/custom-comeback-city-pass/stage0/baseline/proof-run/"
+    "tmp/custom-comeback-city-pass/stage0/baseline/proof-run/",
+    "scripts/author-comeback-city-course.mjs",
+    "scripts/render-course-overhead.mjs",
+    "src/game/courseV2Authored.js",
+    "tmp/custom-comeback-city-pass/stage1/overhead-route-map.png",
+    "tmp/custom-comeback-city-pass/stage1/route-draft.png",
+    "tmp/custom-comeback-city-pass/stage1/kart-playable-stage1.log"
   ],
-  "nextAction": "Stage 1: author six-district course blockout (new centerline/elevation bands/widths/anchors in courseV2 data + generalized elevation in runtime), run races with debug visualization, gate on 3-lap completion + timing.",
+  "nextAction": "Stage 2: first-30-seconds vertical slice \u2014 fully author Ice Plaza + opening boulevard + first Downtown corner (road kit, curb/barrier language, building style, lighting, palette), validate one personal driver + one rival, effects on/off desktop+mobile captures.",
   "rollback": {
     "start": "431df0e3726d7c9f867c85c31ebaf4492b729816",
     "current": "431df0e3726d7c9f867c85c31ebaf4492b729816",
-    "stage0": "431df0e3726d7c9f867c85c31ebaf4492b729816"
+    "stage0": "431df0e3726d7c9f867c85c31ebaf4492b729816",
+    "stage1": "pending-commit"
   },
   "previewMetadata": {
     "url": "https://comeback-city-kart-preview.vercel.app/",

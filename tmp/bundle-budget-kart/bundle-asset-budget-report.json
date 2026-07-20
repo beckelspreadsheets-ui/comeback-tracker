@@ -1,7 +1,7 @@
 {
   "artifactDir": "/home/openclaw/hermes-trial/work/kart-racer-overnight-rebuild/tmp/bundle-budget-kart",
   "budgetMode": "kart",
-  "capturedAt": "2026-07-20T00:50:51.688Z",
+  "capturedAt": "2026-07-20T17:12:27.402Z",
   "budget": {
     "checks": [
       {
@@ -137,7 +137,7 @@
   "gateStatus": "bundle-budget-pass",
   "git": {
     "branch": "overnight-major-rebuild-20260719",
-    "commit": "907d7b195d29e606412c33f608ef98975136d129",
+    "commit": "431df0e3726d7c9f867c85c31ebaf4492b729816",
     "dirty": true
   },
   "largestFiles": [

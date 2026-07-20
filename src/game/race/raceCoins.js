@@ -25,10 +25,14 @@ export const COIN_FEEL = {
   spinLoss: 3, // coins shaken loose by a spin-out
 };
 
-// Row progresses per track, hand-placed clear of every item-box row and
-// boost pad (±0.02) so pickups never compete for the same moment.
+// Row progresses per track. Comeback City's rows come from the authored
+// custom-map module (courseV2Authored.js, generator-validated clear of
+// every item-box row and boost pad); Penguin Village keeps its hand-placed
+// rows (clear of its own pads/boxes by construction).
+import { COMEBACK_CITY_AUTHORED } from '../courseV2Authored.js';
+
 export const COIN_ROWS = {
-  'comeback-city': [0.08, 0.165, 0.3, 0.405, 0.55, 0.67, 0.8, 0.93],
+  'comeback-city': COMEBACK_CITY_AUTHORED.coinRows,
   'penguin-village': [0.025, 0.09, 0.24, 0.4, 0.52, 0.66, 0.79, 0.92],
 };
 

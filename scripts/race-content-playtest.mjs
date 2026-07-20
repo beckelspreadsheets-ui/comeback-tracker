@@ -1,4 +1,5 @@
 import { RACE_TRACKS } from '../src/game/raceTracks.js';
+import { COMEBACK_CITY_COURSE_V2 } from '../src/game/courseV2.js';
 import {
   applyRaceHazardEffect,
   applyRaceTrackEvent,
@@ -10281,8 +10282,12 @@ const validateRaceCoinHelpers = () => {
   if (coinsAfterSpin(1) !== 0) fail('spin loss must floor at zero');
 
   // Placement discipline: every row clear of its track's pads and boxes.
+  // Comeback City markers are DERIVED from the authored course data (they
+  // moved with the custom-map rebuild); Penguin Village keeps its hand
+  // table (its course data is runtime-built, not a static module).
+  const cc = COMEBACK_CITY_COURSE_V2;
   const MARKERS = {
-    'comeback-city': [0.055, 0.205, 0.435, 0.875, 0.025, 0.115, 0.225, 0.36, 0.5, 0.6, 0.74, 0.86],
+    'comeback-city': [...cc.boostPads.map((p) => p.progress), ...cc.itemBoxes.map((b) => b.progress)],
     'penguin-village': [0.12, 0.33, 0.58, 0.85, 0.06, 0.18, 0.3, 0.46, 0.6, 0.74],
   };
   for (const [trackKey, rows] of Object.entries(COIN_ROWS)) {
