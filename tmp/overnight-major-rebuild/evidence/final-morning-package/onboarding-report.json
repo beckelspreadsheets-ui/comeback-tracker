@@ -1,0 +1,10 @@
+{
+  "desktop-intro": "shown",
+  "desktop-select": "shown",
+  "desktop-roster-cards": 8,
+  "desktop-race-started": "yes",
+  "mobile-intro": "shown",
+  "mobile-select": "shown",
+  "mobile-roster-cards": 8,
+  "mobile-race-started": "yes"
+}

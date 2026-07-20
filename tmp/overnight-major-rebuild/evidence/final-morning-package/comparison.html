@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Penguin Kart — Overnight Rebuild Comparison</title>
+<style>
+  body { background:#0c1124; color:#e8ecf8; font:14px/1.5 system-ui,sans-serif; margin:0; padding:24px; }
+  h1 { font-size:20px; } h2 { font-size:14px; letter-spacing:.12em; text-transform:uppercase; color:#7eefff; margin:28px 0 8px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  figure { margin:0; } figcaption { font:600 11px/1.4 monospace; letter-spacing:.1em; color:#9aa3c0; padding:4px 0; }
+  img { width:100%; border:1px solid #2a3352; display:block; }
+  .rebuild figcaption { color:#8affc1; } .before figcaption { color:#ff9a9a; }
+</style>
+</head>
+<body>
+<h1>Comeback City Grand Prix — overnight major rebuild (branch <code>overnight-major-rebuild-20260719</code>)</h1>
+<p>Same chase-view family, before vs rebuild. Mechanics untouched: steering, items, AI, laps, collision, timing all gate-verified identical.</p>
+
+<h2>Comeback City — race view</h2>
+<div class="row">
+  <figure class="before"><figcaption>BEFORE — flat skyline cards, empty plain, 70° jittery wide FOV, driver hidden</figcaption><img src="comeback-city-BEFORE.png" alt="Comeback City before"></figure>
+  <figure class="rebuild"><figcaption>REBUILD — real city massing, unified kart+penguin roster, calm 60° elevated chase</figcaption><img src="comeback-city-REBUILD.png" alt="Comeback City rebuild"></figure>
+</div>
+
+<h2>Comeback City — effects-off proof frame (the "no effects hiding weak geometry" test)</h2>
+<div class="row">
+  <figure class="rebuild"><figcaption>REBUILD ?gfx=off — solid seated penguin, grounded 4-wheel kart, readable road/curbs</figcaption><img src="comeback-city-REBUILD-gfx-off.png" alt="Comeback City rebuild effects off"></figure>
+  <figure class="rebuild"><figcaption>MOBILE ?gfx=off — same read at 390×844</figcaption><img src="mobile-REBUILD-gfx-off.png" alt="Mobile rebuild effects off"></figure>
+</div>
+
+<h2>Penguin Village — race view</h2>
+<div class="row">
+  <figure class="before"><figcaption>BEFORE — white void, flat shelf cards, glitter road, crystal-cage shield</figcaption><img src="penguin-village-BEFORE.png" alt="Penguin Village before"></figure>
+  <figure class="rebuild"><figcaption>REBUILD — alpine village (A-frames, warm windows, pines, snowbanks, ice ridge)</figcaption><img src="penguin-village-REBUILD.png" alt="Penguin Village rebuild"></figure>
+</div>
+
+<h2>Penguin Village — effects-off</h2>
+<div class="row">
+  <figure class="rebuild"><figcaption>REBUILD ?gfx=off — village reads without any atmosphere effects</figcaption><img src="penguin-village-REBUILD-gfx-off.png" alt="Penguin Village rebuild effects off"></figure>
+  <figure class="rebuild"><figcaption>ROSTER — all six Ordinal Penguins, distinct identities</figcaption><img src="roster-sheet.png" alt="Roster sheet"></figure>
+</div>
+
+<h2>Gameplay recordings</h2>
+<div class="row">
+  <figure><figcaption>DESKTOP autoplay 10s</figcaption><video src="gameplay-desktop-10s.webm" controls muted style="width:100%"></video></figure>
+  <figure><figcaption>MOBILE autoplay 10s</figcaption><video src="gameplay-mobile-10s.webm" controls muted style="width:100%"></video></figure>
+</div>
+</body>
+</html>
