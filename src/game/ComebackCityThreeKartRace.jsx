@@ -935,6 +935,40 @@ const mergeStaticMeshesByMaterial = (container) => {
   });
 };
 
+// Stage 2 draw-call diet: recursively collapse all static meshes inside a
+// district group (including authored subgroups) into one merged mesh per
+// material. Sprites and non-mesh children are left untouched.
+const mergeStaticMeshesByMaterialDeep = (container) => {
+  const buckets = new Map();
+  const walk = (obj, parentMatrix) => {
+    const children = obj.children.slice();
+    children.forEach((child) => {
+      if (child.isMesh) {
+        const matrix = new THREE.Matrix4().multiplyMatrices(parentMatrix, child.matrix);
+        const key = child.material.uuid;
+        if (!buckets.has(key)) buckets.set(key, { material: child.material, geometries: [] });
+        const geometry = child.geometry.index ? child.geometry.toNonIndexed() : child.geometry.clone();
+        geometry.applyMatrix4(matrix);
+        buckets.get(key).geometries.push(geometry);
+        obj.remove(child);
+      } else if (child.isGroup) {
+        const nextMatrix = new THREE.Matrix4().multiplyMatrices(parentMatrix, child.matrix);
+        walk(child, nextMatrix);
+        if (child.children.length === 0) obj.remove(child);
+      }
+    });
+  };
+  walk(container, new THREE.Matrix4());
+  buckets.forEach(({ material, geometries }) => {
+    if (!geometries.length) return;
+    const merged = new THREE.Mesh(mergeGeometries(geometries, false), material);
+    merged.castShadow = false;
+    merged.receiveShadow = false;
+    container.add(merged);
+    geometries.forEach((geometry) => geometry.dispose?.());
+  });
+};
+
 const makeQuestionTexture = () => {
   const canvas = document.createElement('canvas');
   canvas.width = 128;
@@ -2729,20 +2763,323 @@ const clearBuildingPlacement = (sampler, basePoint, normal, side, startOffset, c
   return null;
 };
 
+// Stage 2 custom district palettes — coastal city art-deco/neon.
+const CC_PALETTE = Object.freeze({
+  cream: '#f6e7cc',
+  coral: '#e98f6e',
+  teal: '#6aaaa6',
+  cyan: '#7ee7ff',
+  navy: '#204052',
+  gold: '#ffd34f',
+  amber: '#ffb44f',
+  concrete: '#c9c3b8',
+  warmWhite: '#fff7e0',
+  glass: '#fff8d6',
+});
+
+const makeSignLetters = (text, materials, { x = 0, y = 0, z = 0, scale = 1 }) => {
+  const letters = new THREE.Group();
+  letters.position.set(x, y, z);
+  const letterMat = materials.gold;
+  const spacing = 2.2 * scale;
+  const width = text.length * spacing;
+  letters.add(makeBox({ x: width + 2, y: 3.2 * scale, z: 0.6 * scale }, { y: 1.6 * scale }, materials.navy));
+  for (let index = 0; index < text.length; index += 1) {
+    const ch = text[index];
+    if (ch === ' ') continue;
+    const lx = -width * 0.5 + spacing * 0.5 + index * spacing;
+    letters.add(makeBox({ x: 1.2 * scale, y: 1.8 * scale, z: 0.25 * scale }, { x: lx, y: 1.6 * scale, z: 0.45 * scale }, letterMat));
+  }
+  mergeStaticMeshesByMaterial(letters);
+  return letters;
+};
+
+const makePenguinStatue = (materials, height = 10) => {
+  const g = new THREE.Group();
+  const s = height / 10;
+  const white = materials.cream;
+  const dark = materials.navy;
+  const beak = materials.coral;
+  const pedestal = makeBox({ x: 5 * s, y: 2.4 * s, z: 5 * s }, { y: 1.2 * s }, materials.concrete);
+  g.add(pedestal);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(2.4 * s, 3 * s, 5.8 * s, 10), dark);
+  body.position.y = 4.1 * s;
+  g.add(body);
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(2.2 * s, 10, 8), white);
+  belly.scale.set(0.8, 1.25, 0.55);
+  belly.position.set(0, 4.2 * s, 1.5 * s);
+  g.add(belly);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(2.2 * s, 12, 9), dark);
+  head.position.y = 7.8 * s;
+  g.add(head);
+  const beakMesh = new THREE.Mesh(new THREE.ConeGeometry(0.7 * s, 1.6 * s, 7), beak);
+  beakMesh.rotation.x = Math.PI / 2;
+  beakMesh.position.set(0, 7.6 * s, 2.2 * s);
+  g.add(beakMesh);
+  [-1, 1].forEach((side) => {
+    const flipper = new THREE.Mesh(new THREE.SphereGeometry(0.9 * s, 6, 6), dark);
+    flipper.scale.set(0.35, 1.4, 0.8);
+    flipper.position.set(side * 2.8 * s, 4 * s, 0);
+    g.add(flipper);
+  });
+  mergeStaticMeshesByMaterial(g);
+  return g;
+};
+
+const makeArtDecoTower = (materials, { x = 0, z = 0, height = 55, width = 18, depth = 18, accent }) => {
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  const bodyMat = materials.cream;
+  const trimMat = materials.navy;
+  const accentMat = accent || materials.coral;
+  // Stepped art-deco massing
+  g.add(makeBox({ x: width, y: height * 0.55, z: depth }, { y: height * 0.275 }, bodyMat));
+  g.add(makeBox({ x: width * 0.82, y: height * 0.3, z: depth * 0.82 }, { y: height * 0.55 + height * 0.15 }, bodyMat));
+  g.add(makeBox({ x: width * 0.55, y: height * 0.15, z: depth * 0.55 }, { y: height * 0.85 + height * 0.075 }, bodyMat));
+  // Window read is carried by the emissive cornice and material color;
+  // separate window geometry is omitted to keep fragment overdraw low.
+  // Cornice neon trim
+  g.add(makeBox({ x: width + 1.2, y: 1.2, z: depth + 1.2 }, { y: height }, accentMat));
+  // Rooftop antenna / spire
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.7, 8, 6), accentMat)).position.set(0, height + 4, 0);
+  mergeStaticMeshesByMaterial(g);
+  return g;
+};
+
+const makeRowBuilding = (materials, { x = 0, z = 0, width = 22, depth = 14, height = 30, accent }) => {
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  const bodyMat = materials.cream;
+  const trimMat = materials.navy;
+  const accentMat = accent || materials.coral;
+  // Main block with real depth
+  g.add(makeBox({ x: width, y: height, z: depth }, { y: height * 0.5 }, bodyMat));
+  // Ground-floor storefront recess
+  g.add(makeBox({ x: width - 1.2, y: 5.5, z: depth - 2 }, { y: 2.75, z: 1.1 }, trimMat));
+  // Awning
+  g.add(makeBox({ x: width - 2, y: 1.2, z: 3.2 }, { y: 6.2, z: depth * 0.5 + 1.6 }, accentMat));
+  // Lit windows are omitted in effects-off; the emissive roofline/neon
+  // accents and storefront recess give the block its night-city read.
+  // Balconies
+  const floors = Math.floor(height / 5.5);
+  for (let floor = 2; floor < floors; floor += 2) {
+    g.add(makeBox({ x: width - 1.6, y: 0.6, z: 2.2 }, { y: 3.2 + floor * 4.8, z: depth * 0.5 + 1.1 }, trimMat));
+  }
+  // Rooftop AC / trim
+  g.add(makeBox({ x: 4, y: 2.2, z: 3.2 }, { y: height + 1.1, z: -depth * 0.2 }, trimMat));
+  // Neon tube accent along roofline
+  g.add(makeBox({ x: width + 0.6, y: 0.5, z: 0.6 }, { y: height + 0.25, z: depth * 0.5 + 0.3 }, accentMat));
+  mergeStaticMeshesByMaterial(g);
+  return g;
+};
+
+const makeStreetLamp = (materials, { x = 0, z = 0 }) => {
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.45, 7.5, 6), materials.navy);
+  post.position.y = 3.75;
+  g.add(post);
+  const globe = new THREE.Mesh(new THREE.SphereGeometry(1.1, 8, 6), materials.cyan);
+  globe.position.y = 8;
+  g.add(globe);
+  // Street-lamp glow is carried by the emissive globe material in effects-off
+  // to keep transparent overdraw low; the sprite is omitted here.
+  mergeStaticMeshesByMaterial(g);
+  return g;
+};
+
+const buildIcePlazaDistrict = (group, district, roadLocalZ, roadWidth, materials) => {
+  const cream = materials.cream;
+  const coral = materials.coral;
+  const teal = materials.teal;
+  const cyan = materials.cyan;
+  const navy = materials.navy;
+  const gold = materials.gold;
+  const concrete = materials.concrete;
+
+  // 1. Start gantry / arch spanning the road at start-line height
+  const pillarZLeft = roadLocalZ - 34;
+  const pillarZRight = roadLocalZ + 34;
+  [-1, 1].forEach((side) => {
+    const pz = side === -1 ? pillarZLeft : pillarZRight;
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.8, 22, 6), cream);
+    pillar.position.set(0, 11, pz);
+    group.add(pillar);
+    group.add(makeBox({ x: 1, y: 22, z: 0.8 }, { x: 2.5, y: 11, z: pz }, teal));
+    group.add(makeBox({ x: 1, y: 22, z: 0.8 }, { x: -2.5, y: 11, z: pz }, coral));
+  });
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(34, 2.2, 6, 16, Math.PI), coral);
+  arch.rotation.y = -Math.PI / 2;
+  arch.position.set(0, 22, roadLocalZ);
+  group.add(arch);
+  group.add(makeBox({ x: 1, y: 1, z: 66 }, { y: 22, z: roadLocalZ }, teal));
+  // Sign board
+  group.add(makeSignLetters('COMEBACK CITY', materials, { y: 24.8, z: roadLocalZ, scale: 1.15 }));
+
+  // 2. Grandstands on both sides
+  const buildStand = (baseZ, direction, length = 50) => {
+    const stand = new THREE.Group();
+    const rows = 3;
+    const rowDepth = 3;
+    const rowHeight = 1.2;
+    const dotGeom = new THREE.CapsuleGeometry(0.35, 0.6, 4, 6);
+    for (let row = 0; row < rows; row += 1) {
+      const z = baseZ + direction * row * rowDepth;
+      stand.add(makeBox({ x: length, y: rowHeight, z: rowDepth + 0.2 }, { y: row * rowHeight + rowHeight * 0.5, z: z + direction * rowDepth * 0.5 }, concrete));
+      // Crowd dots — fewer, shared materials
+      for (let seat = -length * 0.4; seat <= length * 0.4; seat += 4.2) {
+        const colorMat = (seat + row) % 3 === 0 ? coral : (seat + row) % 3 === 1 ? teal : gold;
+        const dot = new THREE.Mesh(dotGeom, colorMat);
+        dot.position.set(seat, row * rowHeight + 1.1, z + direction * 0.8);
+        stand.add(dot);
+      }
+    }
+    return stand;
+  };
+  const standNear = buildStand(roadLocalZ + 26, 1, 56);
+  mergeStaticMeshesByMaterial(standNear);
+  group.add(standNear);
+  const standFar = buildStand(roadLocalZ - 26, -1, 56);
+  mergeStaticMeshesByMaterial(standFar);
+  group.add(standFar);
+
+  // 3. Paddock / sponsor garages behind near stand
+  const garageZ = 62;
+  const bayCount = 4;
+  const bayWidth = 15;
+  for (let bay = 0; bay < bayCount; bay += 1) {
+    const bx = -22.5 + bay * bayWidth;
+    const bayGroup = new THREE.Group();
+    bayGroup.position.set(bx, 0, garageZ);
+    bayGroup.add(makeBox({ x: bayWidth - 0.6, y: 11, z: 22 }, { y: 5.5 }, cream));
+    bayGroup.add(makeBox({ x: bayWidth - 0.4, y: 0.8, z: 22.4 }, { y: 11.4 }, teal));
+    // Rollup door
+    bayGroup.add(makeBox({ x: 8, y: 7, z: 0.4 }, { y: 3.5, z: 11.2 }, navy));
+    for (let stripe = 0; stripe < 3; stripe += 1) {
+      bayGroup.add(makeBox({ x: 8.1, y: 0.28, z: 0.5 }, { y: 1 + stripe * 2.2, z: 11.3 }, cream));
+    }
+    // Sponsor logo panel
+    const sponsorColors = [coral, teal, gold, cyan];
+    const logoColor = sponsorColors[bay % sponsorColors.length];
+    bayGroup.add(makeBox({ x: 6, y: 2.6, z: 0.3 }, { y: 9, z: 11.3 }, logoColor));
+    // Simple geometric symbol
+    bayGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.3, 6), navy)).rotation.x = Math.PI / 2;
+    mergeStaticMeshesByMaterial(bayGroup);
+    group.add(bayGroup);
+  }
+
+  // 4. Timing tower near start line off road
+  const towerX = -38;
+  const towerZ = roadLocalZ + 42;
+  const tower = new THREE.Group();
+  tower.position.set(towerX, 0, towerZ);
+  tower.add(makeBox({ x: 6, y: 34, z: 6 }, { y: 17 }, cream));
+  tower.add(makeBox({ x: 6.6, y: 1, z: 6.6 }, { y: 20 }, teal));
+  // Display board "LAP 1/3"
+  tower.add(makeBox({ x: 14, y: 4.5, z: 1.2 }, { y: 26, z: 3.1 }, navy));
+  tower.add(makeBox({ x: 2.2, y: 2.2, z: 0.2 }, { x: -4.2, y: 26, z: 3.8 }, coral)); // L
+  tower.add(makeBox({ x: 2.2, y: 2.2, z: 0.2 }, { x: -1.4, y: 26, z: 3.8 }, gold)); // A
+  tower.add(makeBox({ x: 2.2, y: 2.2, z: 0.2 }, { x: 1.4, y: 26, z: 3.8 }, teal)); // P
+  tower.add(makeBox({ x: 2.2, y: 2.2, z: 0.2 }, { x: 4.2, y: 26, z: 3.8 }, cyan)); // 1/3ish
+  tower.add(makeBox({ x: 2.8, y: 0.35, z: 0.25 }, { x: 4.2, y: 26.7, z: 3.8 }, navy));
+  tower.add(makeBox({ x: 0.35, y: 2.2, z: 0.25 }, { x: 4.2, y: 26, z: 3.8 }, navy));
+  mergeStaticMeshesByMaterial(tower);
+  group.add(tower);
+
+  // 5. Starting lights gantry on left side of road
+  const lightsX = 0;
+  const lightsZ = roadLocalZ - 22;
+  const lightPole = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 12, 6), navy);
+  lightPole.position.set(lightsX, 6, lightsZ);
+  group.add(lightPole);
+  group.add(makeBox({ x: 5, y: 0.8, z: 1.5 }, { x: lightsX, y: 12, z: lightsZ }, navy));
+  const lightColors = [coral, coral, teal];
+  for (let index = 0; index < 3; index += 1) {
+    const mat = lightColors[index];
+    const ly = 10.5 - index * 2.6;
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.85, 6, 4), mat);
+    light.position.set(lightsX, ly, lightsZ + 0.9);
+    group.add(light);
+  }
+  // Gantry glow comes from the emissive light spheres; no extra sprite.
+
+  // 6. Flags along grandstands
+  const flagColors = [coral, teal, cyan, gold];
+  [-1, 1].forEach((side) => {
+    const baseZ = side === 1 ? roadLocalZ + 28 : roadLocalZ - 28;
+    for (let index = 0; index < 4; index += 1) {
+      const fx = -18 + index * 12;
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 8, 5), navy);
+      pole.position.set(fx, 4, baseZ + side * 2);
+      group.add(pole);
+      const flag = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 0.15), flagColors[index % flagColors.length]);
+      flag.position.set(fx + 1.2, 7.2, baseZ + side * 2);
+      group.add(flag);
+    }
+  });
+
+  // 7. Penguin hero statue on plaza center island
+  const statue = makePenguinStatue(materials, 8);
+  statue.position.set(0, 0, roadLocalZ + 8);
+  group.add(statue);
+  // Penguin statue group is already merged inside makePenguinStatue.
+  // (No ground glow disc — saves a transparent draw call in effects-off.)
+};
+
+const buildNeonDowntownDistrict = (group, district, roadLocalZ, roadWidth, materials) => {
+  const accent = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 0.85 });
+  // Landmark corner tower — tallest, slightly further back so it reads from multiple angles
+  group.add(makeArtDecoTower(materials, { x: -18, z: 28, height: 68, width: 20, depth: 20, accent }));
+  // Glowing sign face on the tower
+  const signFace = makeBox({ x: 12, y: 7, z: 0.6 }, { x: -18, y: 58, z: 38.3 }, accent);
+  group.add(signFace);
+  // Row buildings along the road
+  group.add(makeRowBuilding(materials, { x: 16, z: 18, width: 20, depth: 16, height: 32, accent }));
+  group.add(makeRowBuilding(materials, { x: -42, z: 20, width: 18, depth: 14, height: 28, accent }));
+  // One building across the road to frame the corner
+  group.add(makeRowBuilding(materials, { x: 10, z: roadLocalZ - 38, width: 24, depth: 16, height: 34, accent }));
+  // Street lamps and planters
+  for (let index = 0; index < 3; index += 1) {
+    const lx = -26 + index * 26;
+    group.add(makeStreetLamp(materials, { x: lx, z: roadLocalZ + 18 }));
+    const planter = makeBox({ x: 4.5, y: 1.6, z: 4.5 }, { x: lx + 8, y: 0.8, z: roadLocalZ + 18 }, materials.concrete);
+    group.add(planter);
+    const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(2.4, 0), materials.teal);
+    bush.position.set(lx + 8, 3, roadLocalZ + 18);
+    group.add(bush);
+  }
+};
+
 const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const roadWidth = trackDef.course.mainRoadWidth || 50;
   const propMat = {
-    cone: createBasicMaterial('#ff8b21', { emissive: '#ff8b21', emissiveIntensity: 0.18 }),
-    lamp: createBasicMaterial('#9feeff', { emissive: '#56e2ff', emissiveIntensity: 1.3 }),
-    planter: createBasicMaterial('#2f8f59'),
+    cone: createBasicMaterial(CC_PALETTE.coral, { emissive: CC_PALETTE.coral, emissiveIntensity: 0.25 }),
+    lamp: createBasicMaterial(CC_PALETTE.cyan, { emissive: CC_PALETTE.cyan, emissiveIntensity: 1.1 }),
+    planter: createBasicMaterial(CC_PALETTE.teal),
     trunk: createBasicMaterial('#70452a'),
-    leaf: createBasicMaterial('#7ee06b'),
+    leaf: createBasicMaterial('#5ac4a8'),
     tire: createBasicMaterial('#151923'),
+    barrier: createBasicMaterial('#263241'),
+    bush: createBasicMaterial('#4a9d8f'),
   };
   let propCount = 0;
   const generatedTrackside =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('glbTrackside') === '1';
+
+  // Shared Stage 2 district materials (reused across authored districts)
+  const ccMaterials = {
+    cream: createBasicMaterial(CC_PALETTE.cream, { emissive: CC_PALETTE.cream, emissiveIntensity: 0.06 }),
+    coral: createBasicMaterial(CC_PALETTE.coral, { emissive: CC_PALETTE.coral, emissiveIntensity: 0.45 }),
+    teal: createBasicMaterial(CC_PALETTE.teal, { emissive: CC_PALETTE.teal, emissiveIntensity: 0.35 }),
+    cyan: createBasicMaterial(CC_PALETTE.cyan, { emissive: CC_PALETTE.cyan, emissiveIntensity: 0.65 }),
+    navy: createBasicMaterial(CC_PALETTE.navy),
+    gold: createBasicMaterial(CC_PALETTE.gold, { emissive: CC_PALETTE.gold, emissiveIntensity: 0.55 }),
+    amber: createBasicMaterial(CC_PALETTE.amber, { emissive: CC_PALETTE.amber, emissiveIntensity: 0.4 }),
+    concrete: createBasicMaterial(CC_PALETTE.concrete),
+    warmWhite: createBasicMaterial(CC_PALETTE.warmWhite, { emissive: CC_PALETTE.warmWhite, emissiveIntensity: 0.3 }),
+    glass: createBasicMaterial(CC_PALETTE.glass, { emissive: CC_PALETTE.glass, emissiveIntensity: 0.28 }),
+  };
 
   trackDef.course.districtAnchors.forEach((district, districtIndex) => {
     const { normal, point, tangent } = sampler.pointAt(district.progress);
@@ -2752,15 +3089,19 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     group.position.copy(placement);
     group.rotation.y = Math.atan2(tangent.x, tangent.z) + (district.side > 0 ? -Math.PI / 2 : Math.PI / 2);
     group.userData.kind = `district-${district.key}`;
-    const accent = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 1.25 });
-    // Default path is a lightweight procedural district facade behind the neon
-    // portal (the road is on the group's -Z side). ?glbTrackside=1 restores
-    // the heavier generated city-lab mounts for capture comparison.
+    // Local Z of the road center in this group's coordinate space (negative).
+    const roadLocalZ = point.clone().sub(placement).dot(normal) * district.side;
+    // Stage 2 authored kits for the first two districts; generic volumetric
+    // placeholder for the rest. ?glbTrackside=1 restores generated GLB mounts.
     if (generatedTrackside) {
       mountMiamiAsset(group, MIAMI_DISTRICT_ASSETS[districtIndex % MIAMI_DISTRICT_ASSETS.length], {
         footprint: 40,
         z: 6,
       });
+    } else if (district.key === 'ice-plaza') {
+      buildIcePlazaDistrict(group, district, roadLocalZ, roadWidth, ccMaterials);
+    } else if (district.key === 'neon-downtown') {
+      buildNeonDowntownDistrict(group, district, roadLocalZ, roadWidth, ccMaterials);
     } else {
       const bodyPalette = ['#f3d4bd', '#e98f6e', '#76b7b2', '#f6e7cc', '#5d8aa8'];
       const trimPalette = ['#f8fbff', '#204052', '#2f6f73'];
@@ -2770,7 +3111,6 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
       const trimMat = createBasicMaterial(trimColor);
       const roofMat = createBasicMaterial(district.dark || '#204052');
       const bodyHeight = 25 + (districtIndex % 3) * 5;
-      // One shared pane material per district — 11 panes merge into 1 draw.
       const paneMat = createBasicMaterial('#f7f1c8', { emissive: '#ffd58a', emissiveIntensity: 0.22 });
       group.add(makeRoundedBox({ x: 30, y: bodyHeight, z: 18 }, { y: bodyHeight / 2, z: 2 }, bodyMat, 1.2));
       group.add(makeBox({ x: 24, y: 4, z: 20 }, { y: bodyHeight + 2, z: 2 }, roofMat));
@@ -2786,7 +3126,8 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
         }
       }
     }
-    // Standing neon arch doorway, like the portal modules on the district card
+    // Standing neon arch doorway (volumetric portal only — no card-like plane).
+    const accent = createBasicMaterial(district.accent, { emissive: district.accent, emissiveIntensity: 1.25 });
     const portal = new THREE.Mesh(new THREE.TorusGeometry(7.8, 1.05, 8, 22, Math.PI), accent);
     portal.position.set(0, 8.2, -10.9);
     group.add(portal);
@@ -2795,28 +3136,15 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
       post.position.set(side * 7.8, 4.1, -10.9);
       group.add(post);
     });
-    const doorway = new THREE.Mesh(
-      new THREE.PlaneGeometry(13.4, 13.8),
-      new THREE.MeshBasicMaterial({
-        blending: THREE.AdditiveBlending,
-        color: district.accent,
-        depthWrite: false,
-        opacity: 0.22,
-        transparent: true,
-      })
-    );
-    doorway.position.set(0, 6.9, -10.6);
-    group.add(doorway);
-    addGlowSprite(group, district.accent, 30, 0.5, 8.6).position.z = -10.9;
-    const beacon = new THREE.Mesh(new THREE.DodecahedronGeometry(3.2, 0), accent);
-    // The beacon hovers over the portal (the old roofline height went with
-    // the boxy bodies; the facade sprites are deleted too — W0 promotion).
+    // Portal glow is omitted in effects-off; the emissive torus/post materials
+    // and the small beacon column carry the neon read.
+    // Replace the generic floating dodecahedron beacon with a small volumetric column.
+    const beacon = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 6.5, 8), accent);
     beacon.position.set(0, 15, 0);
     group.add(beacon);
-    addGlowDisc(group, district.accent, 1.25).position.set(0, 0.16, -14);
     // Draw-call diet: every district facade/portal mesh is static — fold them
     // into one mesh per material (sprites stay live for the additive glow).
-    mergeStaticMeshesByMaterial(group);
+    mergeStaticMeshesByMaterialDeep(group);
     world.add(group);
     propCount += 1;
     // Roadside district cue posts are ?trackVisuals=1 dressing (they also
@@ -2846,7 +3174,7 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     }
   });
 
-  // Roadside scatter (trees / lamps / cones / planters) is comeback-city
+  // Roadside scatter (trees / lamps / cones / planters / barriers) is comeback-city
   // neon-district dressing — opt-in; new tracks bring their own props.
   if (trackDef.dressing?.roadsideProps) for (let index = 0; index < 24; index += 1) {
     const progress = (0.035 + index * 0.041) % 1;
@@ -2858,26 +3186,35 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     // route folds back on itself — skip props that land on another section.
     if (minCenterlineDistance(sampler, group.position.x, group.position.z) < roadWidth * 0.62) continue;
     group.rotation.y = Math.atan2(tangent.x, tangent.z);
-    if (index % 4 === 0) {
+    const variant = index % 6;
+    if (variant === 0) {
       group.add(makeBox({ x: 2, y: 7, z: 2 }, { y: 3.5 }, propMat.trunk));
       const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(5.2, 0), propMat.leaf);
       crown.position.y = 9.6;
       group.add(crown);
-    } else if (index % 4 === 1) {
-      group.add(makeBox({ x: 2, y: 10, z: 2 }, { y: 5 }, createBasicMaterial('#263241')));
+    } else if (variant === 1) {
+      group.add(makeBox({ x: 2, y: 10, z: 2 }, { y: 5 }, propMat.barrier));
       const lamp = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 6), propMat.lamp);
       lamp.position.y = 11.5;
       group.add(lamp);
-      addGlowSprite(group, '#56e2ff', 11, 0.5, 11.5);
-    } else if (index % 4 === 2) {
+      addGlowSprite(group, CC_PALETTE.cyan, 11, 0.5, 11.5);
+    } else if (variant === 2) {
       const cone = new THREE.Mesh(new THREE.ConeGeometry(2.5, 6.8, 4), propMat.cone);
       cone.position.y = 3.4;
       group.add(cone);
-    } else {
+    } else if (variant === 3) {
       group.add(makeBox({ x: 7.2, y: 2.4, z: 4.8 }, { y: 1.2 }, propMat.planter));
-      const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(3.6, 0), propMat.leaf);
+      const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(3.6, 0), propMat.bush);
       bush.position.y = 4.4;
       group.add(bush);
+    } else if (variant === 4) {
+      group.add(makeBox({ x: 8, y: 1.4, z: 2.4 }, { y: 0.7 }, propMat.barrier));
+      group.add(makeBox({ x: 0.8, y: 3.2, z: 0.8 }, { y: 1.6 }, propMat.barrier));
+    } else {
+      group.add(makeBox({ x: 2.2, y: 9, z: 2.2 }, { y: 4.5 }, propMat.trunk));
+      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(4.2, 0), propMat.leaf);
+      crown.position.y = 8.5;
+      group.add(crown);
     }
     group.userData.kind = 'roadside-v2-prop';
     mergeStaticMeshesByMaterial(group);

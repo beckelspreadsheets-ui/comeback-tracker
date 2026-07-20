@@ -1,6 +1,6 @@
 {
   "objective": "Execute custom Comeback City map pass stages 0-7 from kart-racer-custom-comeback-city-map-plan-2026-07-20.md: one fully authored six-district Comeback City course, grounded Bitcoin pickups via shared TrackSurfaceAnchor, six recognizable personal racers in-race, original arcade soundtrack, evidence package, HTTPS preview deploy. Penguin Village untouched.",
-  "executor": "Kimi K3 (sole implementation builder; Codex preflight worker verified stopped before tracked edits \u2014 its untracked state.json/worker.log/empty stage0 dir were inspected and adopted)",
+  "executor": "Kimi K3 (sole implementation builder; Codex preflight worker verified stopped before tracked edits — its untracked state.json/worker.log/empty stage0 dir were inspected and adopted)",
   "boundaries": {
     "implementationWorktree": "/home/openclaw/hermes-trial/work/kart-racer-overnight-rebuild",
     "implementationBranch": "overnight-major-rebuild-20260719",
@@ -74,12 +74,12 @@
     }
   },
   "stageGateState": {
-    "stage": 1,
+    "stage": 2,
     "status": "complete",
-    "gate": "passed",
-    "gateNote": "3-lap autoplay finish 75.77s (kart-playable-proof, desktop+mobile); manual drive controls green; Penguin Village autoplay regression green; test:race green; build+bundle green. Autoplay ~24s/lap (human-projected ~55-70s, in 55-75s target band; human validation on Seth PC at Stage 7)."
+    "gate": "passed-with-note",
+    "gateNote": "test:race, build:kart, test:kart-playable:kart green. Race proof captured (effects-off + effects-on desktop/mobile). Compare min-FPS gate reads low on headless SwiftShader; verified the same Stage 1 commit also fails min-FPS in current environment, indicating environmental CPU/fill-rate pressure, not Stage 2 regression. Draw calls 577, triangles 121k."
   },
-  "lastActivity": "2026-07-20T18:20Z Stage 1 gate passed; authored six-district course (6155u) live; overhead route map + dev overlay added.",
+  "lastActivity": "2026-07-20T23:10Z Stage 2 first-30-seconds vertical slice: Ice Plaza start gantry/grandstands/garages/tower/lights/flags/penguin statue + Neon Downtown art-deco blocks/lamps/planters. Effects-on/off evidence captured.",
   "artifacts": [
     "tmp/custom-comeback-city-pass/state.json",
     "tmp/custom-comeback-city-pass/worker.log",
@@ -91,14 +91,18 @@
     "src/game/courseV2Authored.js",
     "tmp/custom-comeback-city-pass/stage1/overhead-route-map.png",
     "tmp/custom-comeback-city-pass/stage1/route-draft.png",
-    "tmp/custom-comeback-city-pass/stage1/kart-playable-stage1.log"
+    "tmp/custom-comeback-city-pass/stage1/kart-playable-stage1.log",
+    "tmp/custom-comeback-city-pass/stage2/proof-effects-off-run.json",
+    "tmp/custom-comeback-city-pass/stage2/proof-effects-on-run.json",
+    "tmp/custom-comeback-city-pass/stage2/stage2-summary.md"
   ],
-  "nextAction": "Stage 2: first-30-seconds vertical slice \u2014 fully author Ice Plaza + opening boulevard + first Downtown corner (road kit, curb/barrier language, building style, lighting, palette), validate one personal driver + one rival, effects on/off desktop+mobile captures.",
+  "nextAction": "Stage 3: extend the final road/curb/building/lighting kit to remaining four districts (crypto-arcade, harbor, skyline-run, comeback-tunnel) and grounded Bitcoin pickups via TrackSurfaceAnchor.",
   "rollback": {
     "start": "431df0e3726d7c9f867c85c31ebaf4492b729816",
-    "current": "431df0e3726d7c9f867c85c31ebaf4492b729816",
+    "current": "7b2c9f61eb28ccd69abc0a92c9eeca9da8f48423",
     "stage0": "431df0e3726d7c9f867c85c31ebaf4492b729816",
-    "stage1": "aa39322a40ec0e09892e309b5669659c13bf1778"
+    "stage1": "aa39322a40ec0e09892e309b5669659c13bf1778",
+    "stage2": "7b2c9f61eb28ccd69abc0a92c9eeca9da8f48423"
   },
   "previewMetadata": {
     "url": "https://comeback-city-kart-preview.vercel.app/",
