@@ -3069,6 +3069,232 @@ const buildNeonDowntownDistrict = (group, district, roadLocalZ, roadWidth, mater
   }
 };
 
+// Stage 3b: crypto-arcade — pixel-block arcade canyon with marquee strips and a
+// giant cabinet hero prop. Uses magenta + shared CC neon palette.
+const buildCryptoArcadeDistrict = (group, district, roadLocalZ, roadWidth, materials) => {
+  const magenta = createBasicMaterial('#d946ef', { emissive: '#d946ef', emissiveIntensity: 0.9 });
+  const { gold, teal, navy, cream } = materials;
+
+  const addArcadeBuilding = (bx, bz, width, depth, height) => {
+    group.add(makeBox({ x: width, y: height * 0.55, z: depth }, { x: bx, y: height * 0.275, z: bz }, cream));
+    group.add(makeBox({ x: width * 0.8, y: height * 0.35, z: depth * 0.8 }, { x: bx, y: height * 0.725, z: bz }, cream));
+    group.add(makeBox({ x: width + 1, y: 1.2, z: depth + 1 }, { x: bx, y: height, z: bz }, magenta));
+    for (let i = 0; i < 5; i += 1) {
+      const color = i % 2 === 0 ? gold : teal;
+      group.add(makeBox(
+        { x: 1.2, y: height * 0.6, z: 0.6 },
+        { x: bx - width * 0.35 + i * (width * 0.18), y: height * 0.35, z: bz + depth * 0.5 + 0.3 },
+        color
+      ));
+    }
+    const coinRadius = Math.min(width, depth) * 0.22;
+    const coin = new THREE.Mesh(new THREE.CylinderGeometry(coinRadius, coinRadius, 0.8, 12), gold);
+    coin.rotation.x = Math.PI / 2;
+    coin.position.set(bx, height * 0.45, bz + depth * 0.5 + 0.5);
+    group.add(coin);
+    group.add(makeBox({ x: width * 0.5, y: height * 0.25, z: 0.5 }, { x: bx, y: height * 0.35, z: bz + depth * 0.5 + 0.3 }, navy));
+    group.add(makeBox({ x: 1.5, y: 1.5, z: 1.5 }, { x: bx, y: 0.75, z: bz + depth * 0.5 + 0.8 }, magenta));
+  };
+
+  // 2-3 substantial pixel-block buildings stacked along the canyon
+  addArcadeBuilding(-28, 38, 22, 18, 38);
+  addArcadeBuilding(6, 34, 20, 16, 32);
+  addArcadeBuilding(34, 46, 18, 16, 28);
+
+  // Hero voxel arcade cabinet near the road
+  const cx = -10;
+  const cz = roadLocalZ + 28;
+  const cW = 12;
+  const cD = 8;
+  const cH = 22;
+  group.add(makeBox({ x: cW, y: cH, z: cD }, { x: cx, y: cH * 0.5, z: cz }, navy));
+  group.add(makeBox({ x: cW - 1.2, y: cH * 0.55, z: 0.6 }, { x: cx, y: cH * 0.55, z: cz + cD * 0.5 + 0.3 }, teal));
+  group.add(makeBox({ x: cW - 2.5, y: cH * 0.35, z: 0.5 }, { x: cx, y: cH * 0.55, z: cz + cD * 0.5 + 0.6 }, magenta));
+  group.add(makeBox({ x: 1.8, y: 2, z: 1.8 }, { x: cx, y: 1, z: cz + cD * 0.5 + 0.8 }, gold));
+  group.add(makeBox({ x: 3.5, y: 0.8, z: 1 }, { x: cx, y: 1.2, z: cz + cD * 0.5 + 0.9 }, cream));
+  group.add(makeBox({ x: cW - 0.6, y: 2.2, z: 1 }, { x: cx, y: cH - 1.1, z: cz + cD * 0.5 + 0.5 }, gold));
+  [-1, 1].forEach((side) => {
+    group.add(makeBox({ x: 0.6, y: cH * 0.5, z: 1.2 }, { x: cx + side * cW * 0.5, y: cH * 0.35, z: cz }, magenta));
+  });
+
+  // Pixel-art sign tower
+  const tx = 20;
+  const tz = roadLocalZ + 46;
+  const colors = [magenta, gold, teal, cream];
+  for (let row = 0; row < 6; row += 1) {
+    for (let col = 0; col < 4; col += 1) {
+      if ((row + col) % 3 === 0) continue;
+      const c = colors[(row + col) % colors.length];
+      group.add(makeBox({ x: 3.2, y: 3.2, z: 3.2 }, { x: tx - 6 + col * 4, y: 2 + row * 3.2, z: tz }, c));
+    }
+  }
+  const letterColors = [magenta, gold, teal];
+  for (let i = 0; i < 4; i += 1) {
+    group.add(makeBox({ x: 2.4, y: 5.5, z: 1 }, { x: tx - 7 + i * 4.5, y: 22, z: tz }, letterColors[i % letterColors.length]));
+  }
+};
+
+// Stage 3b: harbor — coastal boardwalk with real-depth market stalls, a pier,
+// moored boats, and street lamps in the coastal palette.
+const buildHarborDistrict = (group, district, roadLocalZ, roadWidth, materials) => {
+  const { cream, coral, teal, navy, amber, concrete } = materials;
+
+  const addBoardwalkBuilding = (bx, bz, width, depth, height, awningColor) => {
+    group.add(makeBox({ x: width, y: height, z: depth }, { x: bx, y: height * 0.5, z: bz }, cream));
+    for (let i = 0; i < 4; i += 1) {
+      const px = bx - width * 0.35 + (i % 2) * width * 0.7;
+      const pz = bz - depth * 0.3 + Math.floor(i / 2) * depth * 0.6;
+      group.add(makeBox({ x: 1, y: 6, z: 1 }, { x: px, y: -3, z: pz }, concrete));
+    }
+    group.add(makeBox({ x: width + 1, y: 1.4, z: 3.5 }, { x: bx, y: height * 0.65, z: bz + depth * 0.5 + 1.75 }, awningColor));
+    group.add(makeBox({ x: width - 2, y: height * 0.45, z: 0.6 }, { x: bx, y: height * 0.25, z: bz + depth * 0.5 + 0.3 }, navy));
+    group.add(makeBox({ x: 2.2, y: 3.5, z: 2.2 }, { x: bx + width * 0.25, y: height + 1.75, z: bz - depth * 0.25 }, concrete));
+  };
+
+  // Fish market, bait shop, ice house
+  addBoardwalkBuilding(-34, 38, 24, 16, 14, coral);
+  addBoardwalkBuilding(4, 34, 20, 14, 12, teal);
+  addBoardwalkBuilding(34, 40, 22, 16, 13, amber);
+
+  // Pier / dock extending toward the water (away from road)
+  const pierZ = roadLocalZ + 64;
+  group.add(makeBox({ x: 14, y: 1.2, z: 38 }, { y: 0.6, z: pierZ }, concrete));
+  for (let i = 0; i < 5; i += 1) {
+    group.add(makeBox({ x: 1.2, y: 5, z: 1.2 }, { x: -5, y: -2.5, z: pierZ - 15 + i * 7.5 }, concrete));
+    group.add(makeBox({ x: 1.2, y: 5, z: 1.2 }, { x: 5, y: -2.5, z: pierZ - 15 + i * 7.5 }, concrete));
+  }
+  for (let i = 0; i < 4; i += 1) {
+    group.add(makeBox({ x: 1, y: 1.2, z: 1 }, { x: -5.5, y: 1.8, z: pierZ - 12 + i * 8 }, navy));
+    group.add(makeBox({ x: 1, y: 1.2, z: 1 }, { x: 5.5, y: 1.8, z: pierZ - 12 + i * 8 }, navy));
+  }
+
+  // Chunky low-poly boats moored near the dock
+  const addBoat = (bx, bz, length, width, hullColor) => {
+    group.add(makeBox({ x: width, y: 3.5, z: length }, { x: bx, y: 1.75, z: bz }, hullColor));
+    group.add(makeBox({ x: width - 1.6, y: 2.2, z: length - 2 }, { x: bx, y: 4.4, z: bz }, cream));
+    group.add(makeBox({ x: width * 0.5, y: 2.8, z: length * 0.35 }, { x: bx, y: 6.2, z: bz - length * 0.15 }, teal));
+    group.add(makeBox({ x: 0.6, y: 10, z: 0.6 }, { x: bx, y: 9, z: bz + length * 0.2 }, navy));
+  };
+
+  addBoat(-22, pierZ + 30, 18, 7, navy);
+  addBoat(18, pierZ + 36, 22, 8, coral);
+
+  // Street lamps and planters along the boardwalk
+  for (let i = 0; i < 3; i += 1) {
+    const lx = -20 + i * 20;
+    const lz = roadLocalZ + 20;
+    group.add(makeStreetLamp(materials, { x: lx, z: lz }));
+    group.add(makeBox({ x: 4, y: 1.4, z: 4 }, { x: lx + 8, y: 0.7, z: lz }, concrete));
+    const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2, 0), materials.teal);
+    bush.position.set(lx + 8, 3.2, lz);
+    group.add(bush);
+  }
+};
+
+// Stage 3b: skyline-run — elevated freeway skyline with slender setback towers,
+// an overhead sky-bridge, and emissive billboard frames.
+const buildSkylineRunDistrict = (group, district, roadLocalZ, roadWidth, materials) => {
+  const { cream, coral, teal, navy, gold, glass, concrete } = materials;
+
+  const addTower = (bx, bz, height, width) => {
+    group.add(makeBox({ x: width, y: height * 0.5, z: width }, { x: bx, y: height * 0.25, z: bz }, cream));
+    group.add(makeBox({ x: width * 0.75, y: height * 0.3, z: width * 0.75 }, { x: bx, y: height * 0.65, z: bz }, cream));
+    group.add(makeBox({ x: width * 0.5, y: height * 0.15, z: width * 0.5 }, { x: bx, y: height * 0.875, z: bz }, cream));
+    group.add(makeBox({ x: width + 1.2, y: 1.2, z: width + 1.2 }, { x: bx, y: height, z: bz }, gold));
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 9, 6), teal);
+    antenna.position.set(bx, height + 4.5, bz);
+    group.add(antenna);
+  };
+
+  addTower(-32, 28, 70, 14);
+  addTower(28, 34, 58, 12);
+  addTower(-8, 50, 46, 10);
+
+  // Sky-bridge spanning high above the road
+  const bridgeY = 38;
+  const bridgeZ = roadLocalZ + 2;
+  group.add(makeBox({ x: 54, y: 2.5, z: 6 }, { y: bridgeY, z: bridgeZ }, cream));
+  [-1, 1].forEach((side) => {
+    group.add(makeBox({ x: 1, y: bridgeY - 8, z: 1 }, { x: side * 25, y: (bridgeY + 8) * 0.5, z: bridgeZ }, navy));
+  });
+  group.add(makeBox({ x: 54, y: 2.2, z: 0.4 }, { y: bridgeY + 2.2, z: bridgeZ - 2.8 }, glass));
+  group.add(makeBox({ x: 54, y: 2.2, z: 0.4 }, { y: bridgeY + 2.2, z: bridgeZ + 2.8 }, glass));
+
+  // Billboard frames with emissive panels
+  const addBillboard = (bx, bz) => {
+    const frameW = 18;
+    group.add(makeBox({ x: frameW + 1, y: 11, z: 1 }, { x: bx, y: 16, z: bz }, navy));
+    group.add(makeBox({ x: frameW - 1, y: 9, z: 0.6 }, { x: bx, y: 16, z: bz + 0.5 }, teal));
+    group.add(makeBox({ x: 1.2, y: 14, z: 1.2 }, { x: bx - frameW * 0.35, y: 7, z: bz }, concrete));
+    group.add(makeBox({ x: 1.2, y: 14, z: 1.2 }, { x: bx + frameW * 0.35, y: 7, z: bz }, concrete));
+  };
+
+  addBillboard(-26, roadLocalZ + 20);
+  addBillboard(26, roadLocalZ + 20);
+
+  // Distant accent tower across the road
+  group.add(makeBox({ x: 10, y: 24, z: 10 }, { x: 10, y: 12, z: roadLocalZ - 36 }, coral));
+  group.add(makeBox({ x: 7, y: 8, z: 7 }, { x: 10, y: 28, z: roadLocalZ - 36 }, gold));
+};
+
+// Stage 3b: comeback-tunnel — lit underpass tunnel mouth, retaining walls with
+// neon coves, return banners, a "COMEBACK" sign, and a small hero monument.
+const buildComebackTunnelDistrict = (group, district, roadLocalZ, roadWidth, materials) => {
+  const { cream, coral, teal, cyan, navy, gold, concrete } = materials;
+
+  // Tunnel mouth / underpass arch framing the road
+  const tunnelZ = roadLocalZ;
+  const archRadius = roadWidth * 0.55;
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(archRadius, 2.2, 8, 24, Math.PI), navy);
+  arch.rotation.y = -Math.PI / 2;
+  arch.position.set(0, archRadius, tunnelZ);
+  group.add(arch);
+  group.add(makeBox({ x: roadWidth * 1.4, y: archRadius * 2, z: 14 }, { y: archRadius, z: tunnelZ - 7 }, navy));
+  group.add(makeBox({ x: roadWidth * 1.25, y: 0.6, z: 12 }, { y: archRadius * 1.7, z: tunnelZ - 7 }, cyan));
+  group.add(makeBox({ x: 0.6, y: archRadius * 1.6, z: 12 }, { x: -archRadius * 0.9, y: archRadius * 0.8, z: tunnelZ - 7 }, cyan));
+  group.add(makeBox({ x: 0.6, y: archRadius * 1.6, z: 12 }, { x: archRadius * 0.9, y: archRadius * 0.8, z: tunnelZ - 7 }, cyan));
+
+  // Retaining walls with vertical neon tube coves
+  const wallZ = roadLocalZ + 30;
+  [-1, 1].forEach((side) => {
+    const wx = side * (roadWidth * 0.6 + 6);
+    group.add(makeBox({ x: 5, y: 18, z: 44 }, { x: wx, y: 9, z: wallZ }, concrete));
+    group.add(makeBox({ x: 0.8, y: 16, z: 0.8 }, { x: wx + side * 2.6, y: 8, z: wallZ }, teal));
+  });
+
+  // Return banners / flags
+  const bannerColors = [coral, teal, cyan, gold];
+  for (let i = 0; i < 4; i += 1) {
+    const bx = -18 + i * 12;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 10, 5), navy);
+    pole.position.set(bx, 5, wallZ + 4);
+    group.add(pole);
+    const banner = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.6, 0.15), bannerColors[i % bannerColors.length]);
+    banner.position.set(bx + 1.4, 8, wallZ + 4);
+    group.add(banner);
+  }
+
+  // "COMEBACK" neon sign above the tunnel mouth
+  const signY = archRadius * 2 + 3;
+  group.add(makeBox({ x: 46, y: 4.5, z: 1.2 }, { y: signY, z: tunnelZ }, navy));
+  const signColors = [coral, teal, cyan, gold, coral, teal, cyan, gold];
+  for (let i = 0; i < 8; i += 1) {
+    group.add(makeBox({ x: 3.6, y: 2.8, z: 0.5 }, { x: -17.5 + i * 5, y: signY, z: tunnelZ + 0.7 }, signColors[i]));
+  }
+
+  // Hero monument at the tunnel exit side
+  const monument = new THREE.Group();
+  monument.position.set(0, 0, roadLocalZ + 50);
+  monument.add(makeBox({ x: 8, y: 3, z: 8 }, { y: 1.5 }, concrete));
+  monument.add(makeBox({ x: 4, y: 12, z: 4 }, { y: 7.5 }, cream));
+  monument.add(makeBox({ x: 5, y: 1.2, z: 5 }, { y: 14.1 }, gold));
+  const figure = new THREE.Mesh(new THREE.SphereGeometry(2.2, 12, 8), teal);
+  figure.position.set(0, 16.5, 0);
+  monument.add(figure);
+  mergeStaticMeshesByMaterial(monument);
+  group.add(monument);
+};
+
 const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const roadWidth = trackDef.course.mainRoadWidth || 50;
   const propMat = {
@@ -3121,6 +3347,14 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
       buildIcePlazaDistrict(group, district, roadLocalZ, roadWidth, ccMaterials);
     } else if (district.key === 'neon-downtown') {
       buildNeonDowntownDistrict(group, district, roadLocalZ, roadWidth, ccMaterials);
+    } else if (district.key === 'crypto-arcade') {
+      buildCryptoArcadeDistrict(group, district, roadLocalZ, roadWidth, ccMaterials);
+    } else if (district.key === 'harbor') {
+      buildHarborDistrict(group, district, roadLocalZ, roadWidth, ccMaterials);
+    } else if (district.key === 'skyline-run') {
+      buildSkylineRunDistrict(group, district, roadLocalZ, roadWidth, ccMaterials);
+    } else if (district.key === 'comeback-tunnel') {
+      buildComebackTunnelDistrict(group, district, roadLocalZ, roadWidth, ccMaterials);
     } else {
       const bodyPalette = ['#f3d4bd', '#e98f6e', '#76b7b2', '#f6e7cc', '#5d8aa8'];
       const trimPalette = ['#f8fbff', '#204052', '#2f6f73'];

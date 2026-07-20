@@ -74,12 +74,12 @@
     }
   },
   "stageGateState": {
-    "stage": 2,
+    "stage": 3,
     "status": "complete",
     "gate": "passed-with-note",
-    "gateNote": "test:race, build:kart, test:kart-playable:kart green. Race proof captured (effects-off + effects-on desktop/mobile). Compare min-FPS gate reads low on headless SwiftShader; verified the same Stage 1 commit also fails min-FPS in current environment, indicating environmental CPU/fill-rate pressure, not Stage 2 regression. Draw calls 577, triangles 121k."
+    "gateNote": "All six districts now have authored volumetric dressing. TrackSurfaceAnchor grounded coins. build:kart, test:race, test:kart-playable:kart green. Proof draw calls ~586 (within guardrail). Min-FPS gate still reads low on headless SwiftShader; same environment regression noted in Stage 2."
   },
-  "lastActivity": "2026-07-20T23:15Z Stage 3a: TrackSurfaceAnchor + grounded Bitcoin coins.",
+  "lastActivity": "2026-07-20T23:35Z Stage 3 complete: all-district kit + grounded coins via TrackSurfaceAnchor.",
   "artifacts": [
     "tmp/custom-comeback-city-pass/state.json",
     "tmp/custom-comeback-city-pass/worker.log",
@@ -96,13 +96,14 @@
     "tmp/custom-comeback-city-pass/stage2/proof-effects-on-run.json",
     "tmp/custom-comeback-city-pass/stage2/stage2-summary.md"
   ],
-  "nextAction": "Stage 3: extend the final road/curb/building/lighting kit to remaining four districts (crypto-arcade, harbor, skyline-run, comeback-tunnel) and grounded Bitcoin pickups via TrackSurfaceAnchor.",
+  "nextAction": "Stage 4: make the six personal racers (CRRT Bunny, Lifoladen, T Clow, Seth Penguin, Mizzle, Layer 23) recognizable in selection and on track.",
   "rollback": {
     "start": "431df0e3726d7c9f867c85c31ebaf4492b729816",
-    "current": "7b2c9f61eb28ccd69abc0a92c9eeca9da8f48423",
+    "current": "4faad7bca229565a3b500ddac578558d187dfcfc",
     "stage0": "431df0e3726d7c9f867c85c31ebaf4492b729816",
     "stage1": "aa39322a40ec0e09892e309b5669659c13bf1778",
-    "stage2": "7b2c9f61eb28ccd69abc0a92c9eeca9da8f48423"
+    "stage2": "7b2c9f61eb28ccd69abc0a92c9eeca9da8f48423",
+    "stage3": "4faad7bca229565a3b500ddac578558d187dfcfc"
   },
   "previewMetadata": {
     "url": "https://comeback-city-kart-preview.vercel.app/",
@@ -114,6 +115,11 @@
     {
       "step": "3a",
       "note": "TrackSurfaceAnchor helper; coins grounded at surface+0.9y",
+      "status": "committed"
+    },
+    {
+      "step": "3b",
+      "note": "Authored crypto-arcade, harbor, skyline-run, comeback-tunnel kits",
       "status": "committed"
     }
   ]
