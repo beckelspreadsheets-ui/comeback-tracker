@@ -74,12 +74,12 @@
     }
   },
   "stageGateState": {
-    "stage": 3,
+    "stage": 4,
     "status": "complete",
     "gate": "passed-with-note",
-    "gateNote": "All six districts now have authored volumetric dressing. TrackSurfaceAnchor grounded coins. build:kart, test:race, test:kart-playable:kart green. Proof draw calls ~586 (within guardrail). Min-FPS gate still reads low on headless SwiftShader; same environment regression noted in Stage 2."
+    "gateNote": "Authored driver avatars mount by default for player and rivals; procedural kart bodies retained for performance. Selection screen already shows roster portraits. build/test/playable green; proof draw calls ~572."
   },
-  "lastActivity": "2026-07-20T23:35Z Stage 3 complete: all-district kit + grounded coins via TrackSurfaceAnchor.",
+  "lastActivity": "2026-07-20T23:50Z Stage 4 complete: roster avatars on track by default.",
   "artifacts": [
     "tmp/custom-comeback-city-pass/state.json",
     "tmp/custom-comeback-city-pass/worker.log",
@@ -94,16 +94,18 @@
     "tmp/custom-comeback-city-pass/stage1/kart-playable-stage1.log",
     "tmp/custom-comeback-city-pass/stage2/proof-effects-off-run.json",
     "tmp/custom-comeback-city-pass/stage2/proof-effects-on-run.json",
-    "tmp/custom-comeback-city-pass/stage2/stage2-summary.md"
+    "tmp/custom-comeback-city-pass/stage2/stage2-summary.md",
+    "tmp/custom-comeback-city-pass/stage4/proof-run.json"
   ],
-  "nextAction": "Stage 4: make the six personal racers (CRRT Bunny, Lifoladen, T Clow, Seth Penguin, Mizzle, Layer 23) recognizable in selection and on track.",
+  "nextAction": "Stage 5: finalize coin/pickup grounded placement and visual/collision contract (TrackSurfaceAnchor) across all pickup types.",
   "rollback": {
     "start": "431df0e3726d7c9f867c85c31ebaf4492b729816",
-    "current": "4faad7bca229565a3b500ddac578558d187dfcfc",
+    "current": "23879f227b0fafaca0d6a2182632ef32abd3da95",
     "stage0": "431df0e3726d7c9f867c85c31ebaf4492b729816",
     "stage1": "aa39322a40ec0e09892e309b5669659c13bf1778",
     "stage2": "7b2c9f61eb28ccd69abc0a92c9eeca9da8f48423",
-    "stage3": "4faad7bca229565a3b500ddac578558d187dfcfc"
+    "stage3": "4faad7bca229565a3b500ddac578558d187dfcfc",
+    "stage4": "23879f227b0fafaca0d6a2182632ef32abd3da95"
   },
   "previewMetadata": {
     "url": "https://comeback-city-kart-preview.vercel.app/",
