@@ -62,9 +62,10 @@ export const TRACK_ATMOSPHERE_GRADES = Object.freeze({
     // Cold sky bounce fill — lifts the shadowed kart flanks off the snow.
     sunFillColor: '#3f6f9f',
     sunFillIntensity: 0.75,
-    // Road surface specular: packed-snow/ice asphalt gets a glossier sheen
-    // than CC so the dawn sun glints off the frozen surface.
-    road: { metalness: 0.05, roughness: 0.58, envMapIntensity: 0.6 },
+    // Road surface specular: packed-snow/ice asphalt keeps only a whisper of
+    // env response — the RoomEnvironment probe glittered across the
+    // micro-normal detail at anything higher (2026-07-19 capture review).
+    road: { metalness: 0.03, roughness: 0.7, envMapIntensity: 0.12 },
     ground: { roughness: 0.82, envMapIntensity: 0.35 },
   }),
 });

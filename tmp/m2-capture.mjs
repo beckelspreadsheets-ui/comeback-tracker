@@ -15,10 +15,12 @@ await new Promise((r) => setTimeout(r, 2500));
 
 const browser = await chromium.launch();
 const shots = [
-  { name: 'desktop-gfx-off', w: 1365, h: 768, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&gfx=off#race`, wait: 9000 },
-  { name: 'desktop-default', w: 1365, h: 768, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1#race`, wait: 9000 },
-  { name: 'mobile-gfx-off', w: 390, h: 844, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&gfx=off#race`, wait: 9000 },
-  { name: 'pv-desktop-default', w: 1365, h: 768, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&track=penguin-village#race`, wait: 9000 },
+  { name: 'desktop-gfx-off', w: 1365, h: 768, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&swQuality=full&gfx=off#race`, wait: 9000 },
+  { name: 'desktop-default', w: 1365, h: 768, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&swQuality=full#race`, wait: 9000 },
+  { name: 'mobile-gfx-off', w: 390, h: 844, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&swQuality=full&gfx=off#race`, wait: 9000 },
+  { name: 'pv-desktop-default', w: 1365, h: 768, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&swQuality=full&track=penguin-village#race`, wait: 9000 },
+  { name: 'pv-desktop-gfx-off', w: 1365, h: 768, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&swQuality=full&track=penguin-village&gfx=off#race`, wait: 9000 },
+  { name: 'pv-mobile-default', w: 390, h: 844, url: `http://127.0.0.1:${PORT}/?playableAutoplay=1&swQuality=full&track=penguin-village#race`, wait: 9000 },
 ];
 const results = {};
 for (const shot of shots) {

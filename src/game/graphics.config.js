@@ -38,7 +38,7 @@ const PRESETS = {
     ambientParticleCount: 0,
     // Phase 3 — track surface detail.
     trackDetailMaps: true, // procedural normal + roughness detail on the road
-    trackDetailNormalScale: 0.4, // micro-surface relief strength (subtle, not gravel)
+    trackDetailNormalScale: 0.3, // micro-surface relief strength (subtle, not gravel)
     // Phase 4 — sky backdrop.
     cinematicSky: true, // equirect sky dome: gradient + sun disc + horizon glow + stars
   },
@@ -64,7 +64,7 @@ const PRESETS = {
     // Phase 3 — low keeps the detail maps (cheap one-time canvas bake, then a
     // single texture lookup; big readability win for the cost).
     trackDetailMaps: true,
-    trackDetailNormalScale: 0.45,
+    trackDetailNormalScale: 0.32,
     // Phase 4 — sky is a one-time canvas bake (no per-frame cost),
     // so it stays on at 'low' too.
     cinematicSky: true,

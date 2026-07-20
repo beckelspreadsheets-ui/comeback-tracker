@@ -173,11 +173,13 @@ export const buildCityMassing = ({ world, sampler, trackDef, minCenterlineDistan
     void landmarkIndex;
   });
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 0.04, roughness: 0.82 });
-  const roofMat = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 0.05, roughness: 0.72 });
+  // Lambert, not Standard: matte city at this screen coverage must stay
+  // cheap per pixel (no PBR/env work) — the env-probe road keeps the sheen.
+  const bodyMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+  const roofMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
   const windowMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-  const awningMat = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 0.02, roughness: 0.86 });
-  const farMat = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 0.02, roughness: 0.94 });
+  const awningMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+  const farMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 
   buildInstanced(world, bodies, bodyMat, { colors: true, kind: 'city-massing-near-bodies' });
   buildInstanced(world, roofs, roofMat, { colors: true, kind: 'city-massing-stepped-roofs' });

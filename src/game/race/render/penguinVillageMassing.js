@@ -89,14 +89,14 @@ export const buildPenguinVillageMassing = ({ world, sampler, trackDef, minCenter
       const seed = index * 3.71 + side * 13.3;
       const roll = hash(seed);
       // Cabins: dense in clusters, rare outside them.
-      if (roll < (cluster ? 0.5 : 0.08)) {
-        const setback = width * 0.5 + 26 + hash(seed + 1.2) * 30;
+      if (roll < (cluster ? 0.62 : 0.1)) {
+        const setback = width * 0.5 + 22 + hash(seed + 1.2) * 26;
         const x = point.x + normal.x * side * setback;
         const z = point.z + normal.z * side * setback;
         if (minCenterlineDistance(sampler, x, z) >= roadWidth * 0.72) {
-          const w = 9 + hash(seed + 2.3) * 5;
-          const d = 9 + hash(seed + 3.4) * 5;
-          const h = 6.5 + hash(seed + 4.5) * 3.5;
+          const w = 11 + hash(seed + 2.3) * 6;
+          const d = 10 + hash(seed + 3.4) * 6;
+          const h = 8 + hash(seed + 4.5) * 5;
           const faceYaw = yaw + (side > 0 ? Math.PI : 0);
           cabins.push({
             x,
@@ -115,11 +115,22 @@ export const buildPenguinVillageMassing = ({ world, sampler, trackDef, minCenter
             x: x - normal.x * side * (d / 2 + 0.22),
             y: h * 0.32,
             z: z - normal.z * side * (d / 2 + 0.22),
-            w: 1.5,
-            h: 1.7,
+            w: 1.8,
+            h: 2.1,
             d: 0.3,
             yaw,
             color: WINDOW_COLOR,
+          });
+          // Stone chimney on the back slope — silhouette detail.
+          windows.push({
+            x: x + normal.x * side * (d * 0.18),
+            y: h * 0.72,
+            z: z + normal.z * side * (d * 0.18),
+            w: 1.1,
+            h: 3.2,
+            d: 1.1,
+            yaw,
+            color: '#8a97a5',
           });
         }
       }
@@ -191,19 +202,21 @@ export const buildPenguinVillageMassing = ({ world, sampler, trackDef, minCenter
   const ridgeGeometry = new THREE.ConeGeometry(0.5, 1, 5);
   ridgeGeometry.translate(0, 0.5, 0);
 
-  const standard = (roughness) => new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 0.02, roughness });
+  // Lambert, not Standard: the village fills big screen areas and the PBR
+  // env-probe path costs real fill on weak GPUs (headless gate host included).
+  const lambert = () => new THREE.MeshLambertMaterial({ color: '#ffffff' });
 
-  buildInstanced(world, aFrameGeometry, cabins, standard(0.88), { colors: true, kind: 'pv-massing-cabins' });
-  buildInstanced(world, aFrameGeometry, roofs, standard(0.94), { colors: true, kind: 'pv-massing-snow-roofs' });
+  buildInstanced(world, aFrameGeometry, cabins, lambert(), { colors: true, kind: 'pv-massing-cabins' });
+  buildInstanced(world, aFrameGeometry, roofs, lambert(), { colors: true, kind: 'pv-massing-snow-roofs' });
   buildInstanced(world, boxGeometry, windows, new THREE.MeshBasicMaterial({ color: '#ffffff' }), {
     colors: true,
     kind: 'pv-massing-warm-windows',
   });
-  buildInstanced(world, trunkGeometry, trunks, standard(0.9), { colors: true, kind: 'pv-massing-pine-trunks' });
-  buildInstanced(world, coneGeometry, pineLower, standard(0.92), { colors: true, kind: 'pv-massing-pines' });
-  buildInstanced(world, coneGeometry, pineUpper, standard(0.95), { colors: true, kind: 'pv-massing-pine-snow' });
-  buildInstanced(world, snowbankGeometry, snowbanks, standard(0.96), { colors: true, kind: 'pv-massing-snowbanks' });
-  buildInstanced(world, ridgeGeometry, ridge, standard(0.9), { colors: true, kind: 'pv-massing-ice-ridge' });
+  buildInstanced(world, trunkGeometry, trunks, lambert(), { colors: true, kind: 'pv-massing-pine-trunks' });
+  buildInstanced(world, coneGeometry, pineLower, lambert(), { colors: true, kind: 'pv-massing-pines' });
+  buildInstanced(world, coneGeometry, pineUpper, lambert(), { colors: true, kind: 'pv-massing-pine-snow' });
+  buildInstanced(world, snowbankGeometry, snowbanks, lambert(), { colors: true, kind: 'pv-massing-snowbanks' });
+  buildInstanced(world, ridgeGeometry, ridge, lambert(), { colors: true, kind: 'pv-massing-ice-ridge' });
 
   return cabins.length + trunks.length + snowbanks.length + ridge.length;
 };

@@ -136,7 +136,7 @@ import {
 } from './race/airTricks.js';
 import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
-import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
+import { createRaceRenderer, fitRaceRendererToCanvas, softwareQualityAdapted } from './race/render/createRaceScene.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
 import { applyToonRim, TOON_RIM_SHARED_TINT } from './race/render/toonRimShader.js';
 import { resolveGraphicsConfig } from './graphics.config.js';
@@ -1613,7 +1613,7 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   const roadDetailMaps = gfxCfg.trackDetailMaps
     ? {
         normalMap: makeAsphaltDetailNormalMap({ repeat: 8 }),
-        roughnessMap: makeAsphaltRoughnessMap({ repeat: 8, base: roadGrade ? roadGrade.road.roughness : 0.6, variance: 0.18 }),
+        roughnessMap: makeAsphaltRoughnessMap({ repeat: 8, base: roadGrade ? roadGrade.road.roughness : 0.6, variance: 0.1 }),
       }
     : null;
   const visualRoadEnabled = trackVisuals.enabled && Boolean(trackDef.visual);
@@ -1909,15 +1909,26 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
   const laneMarkings = visualRoadEnabled ? visualRoad.laneMarkings : { color: '#ffd34f', enabled: true, everySamples: 4, mode: 'center-dash' };
   if (laneMarkings.enabled && laneMarkings.mode !== 'none') {
     const lineMat = createBasicMaterial(laneMarkings.color, { emissive: laneMarkings.color, emissiveIntensity: 0.65 });
+    // All center dashes bake into ONE mesh — 28 separate draws was pure
+    // SwiftShader tax on the headless gate host.
+    const dashGeometries = [];
     for (let index = 0; index < TRACK_SAMPLES; index += laneMarkings.everySamples) {
       const progress = index / TRACK_SAMPLES;
       const { point, tangent } = surfacePointAt(progress);
-      const mark = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 11.5), lineMat);
-      mark.position.copy(point);
-      mark.position.y += 0.22;
-      mark.rotation.y = Math.atan2(tangent.x, tangent.z);
-      mark.userData.kind = 'visual-lane-marking';
-      world.add(setFlatTransform(mark));
+      const geometry = new THREE.BoxGeometry(1.15, 0.08, 11.5).toNonIndexed();
+      const transform = new THREE.Matrix4().compose(
+        new THREE.Vector3(point.x, point.y + 0.22, point.z),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.atan2(tangent.x, tangent.z), 0)),
+        new THREE.Vector3(1, 1, 1)
+      );
+      geometry.applyMatrix4(transform);
+      dashGeometries.push(geometry);
+    }
+    if (dashGeometries.length) {
+      const dashes = new THREE.Mesh(mergeGeometries(dashGeometries, false), lineMat);
+      dashes.userData.kind = 'visual-lane-marking';
+      dashGeometries.forEach((geometry) => geometry.dispose());
+      world.add(setFlatTransform(dashes));
     }
   }
   if (visualRoadEnabled) {
@@ -2750,6 +2761,8 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
       const trimMat = createBasicMaterial(trimColor);
       const roofMat = createBasicMaterial(district.dark || '#204052');
       const bodyHeight = 25 + (districtIndex % 3) * 5;
+      // One shared pane material per district — 11 panes merge into 1 draw.
+      const paneMat = createBasicMaterial('#f7f1c8', { emissive: '#ffd58a', emissiveIntensity: 0.22 });
       group.add(makeRoundedBox({ x: 30, y: bodyHeight, z: 18 }, { y: bodyHeight / 2, z: 2 }, bodyMat, 1.2));
       group.add(makeBox({ x: 24, y: 4, z: 20 }, { y: bodyHeight + 2, z: 2 }, roofMat));
       group.add(makeBox({ x: 18, y: 8, z: 14 }, { y: bodyHeight + 8, z: -1 }, trimMat));
@@ -2759,7 +2772,7 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
           group.add(makeBox(
             { x: 2.4, y: 1.7, z: 0.2 },
             { x: -9 + col * 6, y: 8 + row * 5, z: -7.12 },
-            createBasicMaterial('#f7f1c8', { emissive: '#ffd58a', emissiveIntensity: 0.22 })
+            paneMat
           ));
         }
       }
@@ -2792,6 +2805,9 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     beacon.position.set(0, 15, 0);
     group.add(beacon);
     addGlowDisc(group, district.accent, 1.25).position.set(0, 0.16, -14);
+    // Draw-call diet: every district facade/portal mesh is static — fold them
+    // into one mesh per material (sprites stay live for the additive glow).
+    mergeStaticMeshesByMaterial(group);
     world.add(group);
     propCount += 1;
     // Roadside district cue posts are ?trackVisuals=1 dressing (they also
@@ -2855,6 +2871,7 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
       group.add(bush);
     }
     group.userData.kind = 'roadside-v2-prop';
+    mergeStaticMeshesByMaterial(group);
     world.add(group);
     propCount += 1;
   }
@@ -2872,6 +2889,7 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
       tire.rotation.x = Math.PI / 2;
       stack.add(tire);
     }
+    mergeStaticMeshesByMaterial(stack);
     world.add(stack);
     propCount += 1;
   }
@@ -3854,9 +3872,13 @@ const createScene = ({
   // -> scene.environment so kart paint/metal + road specular pick up a subtle
   // IBL sheen. 'low' gets a dimmer bake, 'off' skips it.
   // Baked once here; disposed in the teardown below.
-  const gfxEnv = gfx.environmentMap
-    ? applyGraphicsEnvironment({ renderer, scene, intensity: gfx.environmentIntensity })
-    : null;
+  // Environment reflection probe (Phase 1 materials): PMREM RoomEnvironment
+  // -> scene.environment so kart paint/metal + road specular pick up a subtle
+  // IBL sheen. 'low' gets a dimmer bake, 'off' skips it.
+  // Baked once here; disposed in the teardown below.
+  // Software-GL sessions skip it too: per-fragment PMREM sampling is the
+  // single largest SwiftShader cost (160ms -> 86ms frames without it).
+  const gfxEnv = gfx.environmentMap && !softwareQualityAdapted() ? applyGraphicsEnvironment({ renderer, scene, intensity: gfx.environmentIntensity }) : null;
   // Key light rides with the kart. The shadow camera settings remain in place
   // for local A/B toggles, but castShadow stays off in this slice.
   const sun = new THREE.DirectionalLight(
@@ -4523,7 +4545,9 @@ const createScene = ({
     const model = createGroundedKartModel({
       accent: rival.accent,
       color: rival.color,
-      gfx,
+      // Rivals stay on the cheap toon body path even on 'high' — three PBR
+      // hero bodies are per-pixel cost nobody reads at chase distance.
+      gfx: { ...gfx, name: 'low' },
       scale: 0.94,
     });
     model.group.userData.kind = 'grounded-rival-kart';
@@ -4559,6 +4583,9 @@ const createScene = ({
     bloomPass,
     bloomEffect,
     postChainEnabled: Boolean(postChainEnabled),
+    // Adaptive quality: true when a software rasterizer was detected (and not
+    // overridden by ?swQuality=full). Widens the frame dt clamp in the loop.
+    softwareGL: softwareQualityAdapted(),
     boostPads,
     fishBonePool,
     projectilePool,
@@ -5394,13 +5421,20 @@ export const ComebackCityThreeKartRace = ({
       // Keep normal-frame physics identical, but avoid proof/browser
       // time-dilation when headless Chromium throttles rAF. The cap is still
       // bounded so a background-tab pause cannot explode the simulation.
-      const maxFrameDt = autoplay ? 0.5 : 0.12;
+      // Software-GL sessions (CPU rasterizer) get a wider clamp so the sim
+      // stays real-time at single-digit frame rates — same integration,
+      // just longer steps, matching what autoplay already does.
+      const maxFrameDt = autoplay ? 0.5 : engine.softwareGL ? 0.25 : 0.12;
       const rawDt = Math.min(maxFrameDt, Math.max(0.001, (now - previousFrameTime) / 1000));
       previousFrameTime = now;
       const dt = reducedMotion ? rawDt * 0.86 : rawDt;
       frameTimes.push(now);
-      while (frameTimes.length > 40) frameTimes.shift();
+      while (frameTimes.length > 12) frameTimes.shift();
       const elapsedWindow = frameTimes.length > 1 ? (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000 : 1;
+      // 12-frame window: at single-digit rates (software GL) a 40-frame
+      // average lags 10+ seconds behind the real rate and poisons sustained
+      // samples long after the warmup ramp is over. 12 frames stays smooth
+      // at 60fps yet responds within ~2s at 5fps.
       const fpsEstimate = frameTimes.length > 1 ? (frameTimes.length - 1) / Math.max(0.001, elapsedWindow) : 60;
       const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
       const input = readInput(inputRef, autoplay, race, cornerPush);

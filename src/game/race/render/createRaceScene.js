@@ -7,6 +7,41 @@ export const RACE_RENDERER_OPTIONS = Object.freeze({
   preserveDrawingBuffer: false,
 });
 
+// Software-rasterizer detection (SwiftShader/llvmpipe — headless CI and
+// genuinely GPU-less machines). Probed ONCE on a throwaway context because
+// antialias must be decided before the real renderer is created. Real-GPU
+// sessions are byte-identical to before; software sessions get the
+// adaptive-quality path below instead of a 1fps slideshow.
+let softwareGLCache = null;
+export const detectSoftwareGL = () => {
+  if (softwareGLCache !== null) return softwareGLCache;
+  softwareGLCache = false;
+  try {
+    if (typeof document === 'undefined') return false;
+    const probe = document.createElement('canvas');
+    const gl = probe.getContext('webgl') || probe.getContext('experimental-webgl');
+    if (!gl) return false;
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    softwareGLCache = /swiftshader|llvmpipe|softpipe|software|basic render/i.test(name);
+    gl.getExtension('WEBGL_lose_context')?.loseContext?.();
+  } catch {
+    softwareGLCache = false;
+  }
+  return softwareGLCache;
+};
+
+// ?swQuality=full opts a software-GL session back into full quality (evidence
+// captures that need pretty frames and don't care about frame rate).
+export const softwareQualityAdapted = (search = undefined) => {
+  if (!detectSoftwareGL()) return false;
+  if (typeof window !== 'undefined') {
+    const raw = search ?? window.location.search;
+    if (new URLSearchParams(raw).get('swQuality') === 'full') return false;
+  }
+  return true;
+};
+
 // Shipped-game render scale. Desktop raised 0.58 -> 0.85 (A3, 2026-07-02):
 // the 0.58 cut chased a headless-instrument artifact; headed canonical
 // captures on the reference hardware hold 144 FPS at 0.85 (worst sample
@@ -23,6 +58,13 @@ export const RACE_RENDER_SCALE = Object.freeze({
 export const RACE_RENDER_SCALE_LEGACY = Object.freeze({
   desktop: 0.58,
   mobile: 0.6,
+});
+
+// Software-GL sessions: fill is the bottleneck on a CPU rasterizer, so cut
+// internal resolution hard. Gameplay/physics are untouched by this table.
+export const RACE_RENDER_SCALE_SOFTWARE = Object.freeze({
+  desktop: 0.2,
+  mobile: 0.3,
 });
 
 export const RACE_FOG_NEAR = 210;
@@ -47,6 +89,8 @@ export const createRaceRenderer = ({
     return configureRaceRenderer(
       new RendererClass({
         ...RACE_RENDERER_OPTIONS,
+        // MSAA on a CPU rasterizer multiplies fill cost for no readable win.
+        antialias: RACE_RENDERER_OPTIONS.antialias && !softwareQualityAdapted(),
         canvas,
       })
     );
@@ -73,7 +117,8 @@ export const fitRaceRendererToCanvas = ({
   raceViewport.height = Math.max(1, canvas.clientHeight || rect.height || 1);
   raceViewport.mobile = raceViewport.width / raceViewport.height < 0.74;
   const rawDpr = Math.min(windowRef?.devicePixelRatio || 1, 2);
-  const renderScale = raceViewport.mobile ? scaleTable.mobile : scaleTable.desktop;
+  const adaptedTable = softwareQualityAdapted() ? RACE_RENDER_SCALE_SOFTWARE : scaleTable;
+  const renderScale = raceViewport.mobile ? adaptedTable.mobile : adaptedTable.desktop;
   const dpr = Math.max(0.355, rawDpr * renderScale);
   const width = Math.max(1, Math.floor(rect.width * dpr));
   const height = Math.max(1, Math.floor(rect.height * dpr));

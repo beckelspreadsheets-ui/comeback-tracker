@@ -1,34 +1,50 @@
 {
   "desktop-gfx-off": {
-    "drawCalls": 665,
+    "drawCalls": 571,
     "triangles": 109222,
     "fpsEstimate": 2,
-    "frameWorkMs": 23.61,
+    "frameWorkMs": 25.13,
     "speed": 284,
     "lap": 1
   },
   "desktop-default": {
-    "drawCalls": 665,
+    "drawCalls": 571,
     "triangles": 109222,
     "fpsEstimate": 1,
-    "frameWorkMs": 134.49,
-    "speed": 256,
+    "frameWorkMs": 133.52,
+    "speed": 284,
     "lap": 1
   },
   "mobile-gfx-off": {
-    "drawCalls": 664,
-    "triangles": 109094,
-    "fpsEstimate": 8,
-    "frameWorkMs": 3.84,
-    "speed": 229,
+    "drawCalls": 571,
+    "triangles": 109206,
+    "fpsEstimate": 5,
+    "frameWorkMs": 3.61,
+    "speed": 230,
     "lap": 1
   },
   "pv-desktop-default": {
-    "drawCalls": 938,
-    "triangles": 125231,
+    "drawCalls": 919,
+    "triangles": 137329,
     "fpsEstimate": 1,
-    "frameWorkMs": 81.93,
+    "frameWorkMs": 110.37,
     "speed": 228,
+    "lap": 1
+  },
+  "pv-desktop-gfx-off": {
+    "drawCalls": 919,
+    "triangles": 137329,
+    "fpsEstimate": 2,
+    "frameWorkMs": 23.72,
+    "speed": 228,
+    "lap": 1
+  },
+  "pv-mobile-default": {
+    "drawCalls": 920,
+    "triangles": 137457,
+    "fpsEstimate": 3,
+    "frameWorkMs": 44.05,
+    "speed": 229,
     "lap": 1
   }
 }

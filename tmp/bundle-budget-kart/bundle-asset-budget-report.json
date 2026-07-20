@@ -1,32 +1,32 @@
 {
   "artifactDir": "/home/openclaw/hermes-trial/work/kart-racer-overnight-rebuild/tmp/bundle-budget-kart",
   "budgetMode": "kart",
-  "capturedAt": "2026-07-19T17:17:02.853Z",
+  "capturedAt": "2026-07-20T00:50:51.688Z",
   "budget": {
     "checks": [
       {
-        "actual": 11.862,
+        "actual": 11.867,
         "label": "total built artifact size",
         "limit": 13,
         "unit": "MiB",
         "status": "pass"
       },
       {
-        "actual": 9722.25,
+        "actual": 9724.33,
         "label": "total built artifact gzip size",
         "limit": 9800,
         "unit": "KiB",
         "status": "pass"
       },
       {
-        "actual": 1.146,
+        "actual": 1.152,
         "label": "total JavaScript size",
         "limit": 2,
         "unit": "MiB",
         "status": "pass"
       },
       {
-        "actual": 359.89,
+        "actual": 361.92,
         "label": "total JavaScript gzip size",
         "limit": 500,
         "unit": "KiB",
@@ -47,7 +47,7 @@
         "status": "pass"
       },
       {
-        "actual": 302.88,
+        "actual": 304.91,
         "label": "largest JavaScript gzip size",
         "limit": 400,
         "unit": "KiB",
@@ -68,24 +68,24 @@
   },
   "headroom": {
     "imagesMiB": 0.85,
-    "totalGzipKiB": 77.75,
-    "totalMiB": 1.138
+    "totalGzipKiB": 75.67,
+    "totalMiB": 1.133
   },
   "categories": {
     "css": {
-      "brotliBytes": 9726,
+      "brotliBytes": 9757,
       "fileCount": 1,
-      "gzipBytes": 11768,
-      "sizeBytes": 61025,
-      "brotliKiB": 9.5,
-      "gzipKiB": 11.49,
-      "sizeKiB": 59.59,
+      "gzipBytes": 11831,
+      "sizeBytes": 61318,
+      "brotliKiB": 9.53,
+      "gzipKiB": 11.55,
+      "sizeKiB": 59.88,
       "sizeMiB": 0.058
     },
     "html": {
       "brotliBytes": 613,
       "fileCount": 1,
-      "gzipBytes": 833,
+      "gzipBytes": 829,
       "sizeBytes": 1836,
       "brotliKiB": 0.6,
       "gzipKiB": 0.81,
@@ -103,14 +103,14 @@
       "sizeMiB": 1.65
     },
     "javascript": {
-      "brotliBytes": 314518,
+      "brotliBytes": 316285,
       "fileCount": 7,
-      "gzipBytes": 368525,
-      "sizeBytes": 1201891,
-      "brotliKiB": 307.15,
-      "gzipKiB": 359.89,
-      "sizeKiB": 1173.72,
-      "sizeMiB": 1.146
+      "gzipBytes": 370603,
+      "sizeBytes": 1207600,
+      "brotliKiB": 308.87,
+      "gzipKiB": 361.92,
+      "sizeKiB": 1179.3,
+      "sizeMiB": 1.152
     },
     "metadata": {
       "brotliBytes": 245,
@@ -137,7 +137,7 @@
   "gateStatus": "bundle-budget-pass",
   "git": {
     "branch": "overnight-major-rebuild-20260719",
-    "commit": "3afe9fb04b54804130acfe09dec8aebf51c3f21d",
+    "commit": "907d7b195d29e606412c33f608ef98975136d129",
     "dirty": true
   },
   "largestFiles": [
@@ -162,14 +162,14 @@
       "sizeKiB": 1024.54
     },
     {
-      "brotliBytes": 262938,
-      "brotliKiB": 256.78,
+      "brotliBytes": 264694,
+      "brotliKiB": 258.49,
       "category": "javascript",
-      "gzipBytes": 310151,
-      "gzipKiB": 302.88,
-      "path": "assets/index.kart-BW6xesNY.js",
-      "sizeBytes": 1026411,
-      "sizeKiB": 1002.35
+      "gzipBytes": 312225,
+      "gzipKiB": 304.91,
+      "path": "assets/index.kart-DAR_T_i5.js",
+      "sizeBytes": 1032120,
+      "sizeKiB": 1007.93
     },
     {
       "brotliBytes": 793599,
@@ -295,9 +295,9 @@
   "note": "This records local kart-only (dist-kart) artifact sizes — the budget contract for the comeback-city-kart Pages project since K1. Preview and production release evidence still need deployed smoke and sign-off.",
   "summary": {
     "cssFileCount": 1,
-    "cssTotalKiB": 59.59,
+    "cssTotalKiB": 59.88,
     "javascriptFileCount": 7,
-    "javascriptTotalKiB": 1173.72,
+    "javascriptTotalKiB": 1179.3,
     "largestFile": {
       "brotliBytes": 1421501,
       "brotliKiB": 1388.18,
@@ -309,14 +309,14 @@
       "sizeKiB": 1543.28
     },
     "total": {
-      "brotliBytes": 9358683,
+      "brotliBytes": 9360481,
       "fileCount": 76,
-      "gzipBytes": 9955581,
-      "sizeBytes": 12437700,
-      "brotliKiB": 9139.34,
-      "gzipKiB": 9722.25,
-      "sizeKiB": 12146.19,
-      "sizeMiB": 11.862
+      "gzipBytes": 9957718,
+      "sizeBytes": 12443702,
+      "brotliKiB": 9141.09,
+      "gzipKiB": 9724.33,
+      "sizeKiB": 12152.05,
+      "sizeMiB": 11.867
     }
   }
 }
