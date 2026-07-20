@@ -1502,6 +1502,18 @@ const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height 
   return rig;
 };
 
+// Stage 4: mount an authored driver avatar for a specific roster character.
+// Falls back to the existing procedural seated driver if the GLB is missing.
+const mountCharacterDriver = (kartModel, characterEntry, driverScenes) => {
+  const scene = driverScenes[characterEntry.key];
+  if (!scene) return null;
+  return mountDriverAvatar(kartModel, scene, {
+    castsShadow: false,
+    height: characterEntry.driverHeight,
+    yaw: characterEntry.driverYaw,
+  });
+};
+
 // K7 item-prop fit: clone a rendered GLB, go unlit (the projectile/marker
 // family uses emissive-bright materials so items read at race speed), size
 // it to the MK-oversize target, and either center it or seat it on y=0.
@@ -6013,6 +6025,25 @@ export const ComebackCityThreeKartRace = ({
           // Procedural fallback bodies stay in place.
         });
     }
+
+    // Stage 4: even in the default procedural-kart mode, mount the authored
+    // driver avatars so the six roster characters are recognizable on track.
+    // Kart bodies stay procedural for performance/determinism; the driver
+    // GLBs are the identity signal. loadKartAssets is memoized, so this is
+    // cheap when ?authoredAssets=1 already triggered the load above.
+    loadKartAssets()
+      .then(({ driverScenes }) => {
+        if (disposed || engineRef.current !== engine) return;
+        if (useAuthoredRuntimeAssets) return; // full attachCharacter handled it
+        mountCharacterDriver(engine.playerModel, playerCharacter, driverScenes);
+        engine.rivals.forEach((rival) => {
+          const entry = KART_CHARACTERS.find((c) => c.key === rival.key);
+          if (entry) mountCharacterDriver(rival.model, entry, driverScenes);
+        });
+      })
+      .catch(() => {
+        // Procedural fallback drivers stay in place.
+      });
 
     // Blender bake spike (A/B): ?bakedSpike=1 overlays the offline-baked
     // gym-sweeper shell (public/baked-spike.glb) on the procedural road.
