@@ -116,7 +116,7 @@
   },
   "previewMetadata": {
     "url": "https://comeback-city-kart-preview.vercel.app/",
-    "deployment": "branch pushed (HEAD cd40e40) but preview URL still serves stale build; Vercel CLI not authenticated",
+    "deployment": "branch pushed (HEAD ebb6c81) but preview URL still serves stale build; Vercel CLI not authenticated",
     "externalVerified": false,
     "vercelCli": "/home/openclaw/.openclaw/tools/node-v22.22.0/bin/vercel",
     "blocker": "No existing credentials found. The auth file /home/openclaw/.local/share/com.vercel.cli/auth.json exists but is empty (0 keys) and VERCEL_TOKEN is unset."

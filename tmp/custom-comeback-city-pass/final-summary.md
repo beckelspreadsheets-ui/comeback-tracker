@@ -42,7 +42,7 @@
 
 ## Deployment status
 
-- Isolated branch pushed to `origin/overnight-major-rebuild-20260719` (HEAD `cd40e40`).
+- Isolated branch pushed to `origin/overnight-major-rebuild-20260719` (HEAD `ebb6c81`).
 - The configured preview URL `https://comeback-city-kart-preview.vercel.app/` was polled after the push and continued to serve the **stale** build (HTML script hash `DAR_T_i5`); the local `dist-kart/index.html` hash is `DOtq5ScL`.
 - Vercel CLI has **no usable credentials**: `vercel deploy --prebuilt --cwd dist-kart --yes` reports `Error: No existing credentials found. Please run \`vercel login\` or pass "--token"`. The CLI auth file `/home/openclaw/.local/share/com.vercel.cli/auth.json` exists but is empty (0 keys), and no `VERCEL_TOKEN` environment variable is present.
 - Without a token or dashboard access, the current process cannot authorize a deploy to the existing preview URL, nor can it confirm the Vercel project/GitHub linkage.
