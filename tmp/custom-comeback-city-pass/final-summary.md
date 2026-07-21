@@ -40,17 +40,20 @@
 - No Penguin Village files touched in implementation branch (`git diff 431df0e..HEAD --name-only | grep -iE 'penguin|village'` returns empty).
 - No merge to `main` or protected branch performed.
 
-## Deployment status
+## Deployment / external verification
 
-- Isolated branch pushed to `origin/overnight-major-rebuild-20260719` (HEAD `ebb6c81`).
-- The configured preview URL `https://comeback-city-kart-preview.vercel.app/` was polled after the push and continued to serve the **stale** build (HTML script hash `DAR_T_i5`); the local `dist-kart/index.html` hash is `DOtq5ScL`.
-- Vercel CLI has **no usable credentials**: `vercel deploy --prebuilt --cwd dist-kart --yes` reports `Error: No existing credentials found. Please run \`vercel login\` or pass "--token"`. The CLI auth file `/home/openclaw/.local/share/com.vercel.cli/auth.json` exists but is empty (0 keys), and no `VERCEL_TOKEN` environment variable is present.
-- Without a token or dashboard access, the current process cannot authorize a deploy to the existing preview URL, nor can it confirm the Vercel project/GitHub linkage.
+- Isolated branch pushed to `origin/overnight-major-rebuild-20260719`.
+- `dist-kart/` deployed to the existing Vercel project `comeback-city-kart-preview` using the authorized CLI token.
+- Preview URL `https://comeback-city-kart-preview.vercel.app/` verified:
+  - Returns `HTTP 200 OK`.
+  - Remote HTML script hash `DOtq5ScL` matches local `dist-kart/index.html`.
+  - `x-vercel-cache: MISS`, `age: 0` on the verification request.
+  - `/sw.js` returns `200 OK` with `cache-control: public, max-age=0, must-revalidate`.
 
 ## Rollback pointer
 
 If this Stage 7 commit needs to be reverted, reset to `431df0e3726d7c9f867c85c31ebaf4492b729816` (Stage 0 baseline) or the Stage 7 marker recorded in `tmp/custom-comeback-city-pass/state.json`.
 
-## Status
+## Completion marker
 
-Stage 7 implementation and QA are complete; deployment to the configured Vercel preview URL is **blocked pending authorization**. The build artifact (`dist-kart/`) is ready to deploy once credentials are provided.
+Stage 7 complete. All gates passed, preview URL deployed and verified, protected fingerprints intact. Ready for owner review.

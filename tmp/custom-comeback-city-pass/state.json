@@ -75,11 +75,11 @@
   },
   "stageGateState": {
     "stage": 7,
-    "status": "paused",
-    "gate": "blocked",
-    "gateNote": "Stage 7 QA/capture complete. Deployment to https://comeback-city-kart-preview.vercel.app/ blocked: no Vercel CLI credentials (auth.json empty, no VERCEL_TOKEN), preview URL still serves stale build DAR_T_i5 vs local DOtq5ScL."
+    "status": "complete",
+    "gate": "passed",
+    "gateNote": "Final QA, evidence capture, Vercel deploy to comeback-city-kart-preview, and external hash/cache verification all pass."
   },
-  "lastActivity": "2026-07-21T01:17Z Stage 7 paused: build/tests pass, Vercel preview deploy blocked by missing credentials.",
+  "lastActivity": "2026-07-21T01:36Z Stage 7 complete: deployed dist-kart to https://comeback-city-kart-preview.vercel.app/, remote hash matches local, sw.js 200.",
   "artifacts": [
     "tmp/custom-comeback-city-pass/state.json",
     "tmp/custom-comeback-city-pass/worker.log",
@@ -101,7 +101,7 @@
     "tmp/custom-comeback-city-pass/stage6/proof-run.json",
     "tmp/custom-comeback-city-pass/final-summary.md"
   ],
-  "nextAction": "Provide Vercel token or dashboard access to deploy dist-kart to the configured preview URL, then re-run external verification.",
+  "nextAction": "Owner review of Comeback City custom map pass.",
   "rollback": {
     "start": "431df0e3726d7c9f867c85c31ebaf4492b729816",
     "current": "c6ae699ef13a727b6a0db96d251bf0f0457607c3",
@@ -116,10 +116,13 @@
   },
   "previewMetadata": {
     "url": "https://comeback-city-kart-preview.vercel.app/",
-    "deployment": "branch pushed (HEAD ebb6c81) but preview URL still serves stale build; Vercel CLI not authenticated",
-    "externalVerified": false,
-    "vercelCli": "/home/openclaw/.openclaw/tools/node-v22.22.0/bin/vercel",
-    "blocker": "No existing credentials found. The auth file /home/openclaw/.local/share/com.vercel.cli/auth.json exists but is empty (0 keys) and VERCEL_TOKEN is unset."
+    "deployment": "Vercel production deploy of dist-kart to project comeback-city-kart-preview",
+    "externalVerified": true,
+    "remoteHtmlHash": "DOtq5ScL",
+    "localHtmlHash": "DOtq5ScL",
+    "cache": "x-vercel-cache: MISS on first request, age 0",
+    "swJs": "200 OK, max-age=0, must-revalidate",
+    "blocker": null
   },
   "stage3Steps": [
     {

@@ -32,3 +32,4 @@ asset-pipeline/manifests/latest-*.json
 tmp/w4-kart-lab/raw-*.glb
 tmp/k7-item-lab/raw-*.glb
 tmp/k7-item-lab/props-smoke/
+.vercel
