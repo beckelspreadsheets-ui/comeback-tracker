@@ -5,9 +5,14 @@
 // derived from state transitions here — no scattered playCue() calls inside
 // the 6k-line update loop.
 //
+// Stage 6 adds an original upbeat arcade-racing music loop synthesized in
+// kartMusicLoop.js — no external audio files, no provenance risk.
+//
 // Autoplay safety: the AudioContext is only created on the first real user
 // gesture (attach() wires once-listeners). Webdriver/autoplay proof runs never
 // gesture, so tests stay silent and unaffected.
+
+import { createKartMusicLoop } from './kartMusicLoop.js';
 
 const MUTE_STORAGE_KEY = 'cc-kart-audio-muted';
 
@@ -80,6 +85,7 @@ export const createKartAudio = ({
   let master = null;
   let engine = null; // { osc, sub, filter, gain, lfo, lfoGain }
   let driftLoop = null; // { source, filter, gain }
+  let musicLoop = null; // { schedule, dispose }
   let noiseBuffer = null;
   let prev = null;
   let detachGesture = null;
@@ -155,6 +161,9 @@ export const createKartAudio = ({
     driftSource.connect(driftFilter).connect(driftGain).connect(master);
     driftSource.start();
     driftLoop = { filter: driftFilter, gain: driftGain, source: driftSource };
+
+    // Stage 6: original arcade-racing background loop.
+    musicLoop = createKartMusicLoop(ctx, master);
 
     return ctx;
   };
@@ -273,6 +282,10 @@ export const createKartAudio = ({
   const updateFrame = ({ driftState, race }) => {
     if (disposed || !race) return;
     const next = snapshotRaceForAudio(race, driftState);
+    if (ctx && ctx.state === 'running') {
+      // Keep the music scheduler fed even while muted so unmuting is seamless.
+      musicLoop?.schedule?.(ctx.currentTime);
+    }
     if (ctx && ctx.state === 'running' && !muted) {
       const time = ctx.currentTime;
       const speedRatio = Math.max(0, (race.speed || 0) / 240);
@@ -303,6 +316,9 @@ export const createKartAudio = ({
     disposed = true;
     detachGesture?.();
     detachGesture = null;
+    try {
+      musicLoop?.dispose?.();
+    } catch {}
     try {
       ctx?.close?.();
     } catch {}

@@ -74,12 +74,12 @@
     }
   },
   "stageGateState": {
-    "stage": 5,
+    "stage": 6,
     "status": "complete",
-    "gate": "passed-with-note",
-    "gateNote": "Coins placed via TrackSurfaceAnchor; collectCoinsForFrame uses shared anchor worldPosition for visual/collision match. Boost pads and item boxes remain surface-placed. build/test/playable green."
+    "gate": "passed",
+    "gateNote": "Original upbeat arcade-racing loop synthesized in kartMusicLoop.js; kartAudio.js integrates it. test:audio:kart, build, race, playable pass."
   },
-  "lastActivity": "2026-07-20T23:58Z Stage 5 complete: grounded pickups with shared visual/collision transform.",
+  "lastActivity": "2026-07-21T00:08Z Stage 6 complete: original synthesized music loop.",
   "artifacts": [
     "tmp/custom-comeback-city-pass/state.json",
     "tmp/custom-comeback-city-pass/worker.log",
@@ -96,18 +96,21 @@
     "tmp/custom-comeback-city-pass/stage2/proof-effects-on-run.json",
     "tmp/custom-comeback-city-pass/stage2/stage2-summary.md",
     "tmp/custom-comeback-city-pass/stage4/proof-run.json",
-    "tmp/custom-comeback-city-pass/stage5/proof-run.json"
+    "tmp/custom-comeback-city-pass/stage5/proof-run.json",
+    "src/game/race/kartMusicLoop.js",
+    "tmp/custom-comeback-city-pass/stage6/proof-run.json"
   ],
-  "nextAction": "Stage 6: original arcade-racing soundtrack or documented mute blocker.",
+  "nextAction": "Stage 7: final integration, evidence package, HTTPS preview deploy, and durable handoff.",
   "rollback": {
     "start": "431df0e3726d7c9f867c85c31ebaf4492b729816",
-    "current": "12a73049ab007205c319737cb71a1587a7e324f6",
+    "current": "5340a82c7d087736045404145acf92310260bec7",
     "stage0": "431df0e3726d7c9f867c85c31ebaf4492b729816",
     "stage1": "aa39322a40ec0e09892e309b5669659c13bf1778",
     "stage2": "7b2c9f61eb28ccd69abc0a92c9eeca9da8f48423",
     "stage3": "4faad7bca229565a3b500ddac578558d187dfcfc",
     "stage4": "23879f227b0fafaca0d6a2182632ef32abd3da95",
-    "stage5": "12a73049ab007205c319737cb71a1587a7e324f6"
+    "stage5": "12a73049ab007205c319737cb71a1587a7e324f6",
+    "stage6": "5340a82c7d087736045404145acf92310260bec7"
   },
   "previewMetadata": {
     "url": "https://comeback-city-kart-preview.vercel.app/",
