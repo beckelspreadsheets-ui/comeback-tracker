@@ -1,6 +1,6 @@
 {
   "jobId": "ordinal-racers-seth-layer23-20260721",
-  "status": "starting",
+  "status": "queued",
   "objective": "Build an isolated visual prototype for Seth Penguin and Layer23, stopping for owner approval after baseline evidence and target briefs before replacing runtime models.",
   "approvalBoundary": "No merge, production deploy, runtime model replacement, or work on Mizzle/TClow without Seth's explicit approval.",
   "repo": "/home/openclaw/hermes-trial/work/kart-racer-ordinal-prototype",
@@ -18,7 +18,11 @@
   "completedArtifacts": [],
   "nextSafeAction": "Audit existing Seth and Layer23 source/reference assets and produce reproducible baseline metrics and comparison evidence without modifying protected runtime assets.",
   "rollback": "Delete the isolated worktree/branch or reset only this experiment branch to 03b49f1; the original checkout and live deployment are untouched.",
-  "lastActivityUtc": "2026-07-21T15:47:00Z",
+  "lastActivityUtc": "2026-07-21T15:48:00Z",
+  "launchNotes": [
+    "Initial Codex CLI launch failed before work began because the local CLI OAuth transport returned HTTP 401. No project files were changed by that attempt.",
+    "Recovery path: run Stage 0 as an OpenClaw isolated durable task using the active authenticated model session."
+  ],
   "worker": null,
   "watchdog": null
 }
