@@ -15,7 +15,7 @@
 | 4 | Authored GLB driver avatars enabled by default so the six personal racers render on track. | `src/game/ComebackCityThreeKartRace.jsx` |
 | 5 | Shared visual/collision pickup transform; hover reduced to 1.1. | `src/game/ComebackCityThreeKartRace.jsx` |
 | 6 | Original synthesized arcade-racing music loop (bass, chords, arp, drums) integrated with engine/drift cues. | `src/game/race/kartMusicLoop.js`, `src/game/race/kartAudio.js` |
-| 7 | Final QA, evidence package, capture-script robustness fixes, branch push, HTTPS preview verification. | `scripts/capture-race-proof.mjs`, this summary, `state.json` |
+| 7 | Final QA, evidence package, capture-script robustness fixes, branch push. | `scripts/capture-race-proof.mjs`, this summary, `state.json` |
 
 ## Final QA results
 
@@ -40,15 +40,17 @@
 - No Penguin Village files touched in implementation branch (`git diff 431df0e..HEAD --name-only | grep -iE 'penguin|village'` returns empty).
 - No merge to `main` or protected branch performed.
 
-## Deployment / external verification
+## Deployment status
 
-- Branch pushed to `origin/overnight-major-rebuild-20260719`.
-- Preview URL `https://comeback-city-kart-preview.vercel.app/` verified returning `200 OK` with a fresh `x-vercel-cache: MISS` and build hash matching `dist-kart/`.
+- Isolated branch pushed to `origin/overnight-major-rebuild-20260719` (HEAD `cd40e40`).
+- The configured preview URL `https://comeback-city-kart-preview.vercel.app/` was polled after the push and continued to serve the **stale** build (HTML script hash `DAR_T_i5`); the local `dist-kart/index.html` hash is `DOtq5ScL`.
+- Vercel CLI has **no usable credentials**: `vercel deploy --prebuilt --cwd dist-kart --yes` reports `Error: No existing credentials found. Please run \`vercel login\` or pass "--token"`. The CLI auth file `/home/openclaw/.local/share/com.vercel.cli/auth.json` exists but is empty (0 keys), and no `VERCEL_TOKEN` environment variable is present.
+- Without a token or dashboard access, the current process cannot authorize a deploy to the existing preview URL, nor can it confirm the Vercel project/GitHub linkage.
 
 ## Rollback pointer
 
-If this Stage 7 commit needs to be reverted, reset to `431df0e3726d7c9f867c85c31ebaf4492b729816` (Stage 0 baseline) or the Stage 7 completion marker recorded in `tmp/custom-comeback-city-pass/state.json`.
+If this Stage 7 commit needs to be reverted, reset to `431df0e3726d7c9f867c85c31ebaf4492b729816` (Stage 0 baseline) or the Stage 7 marker recorded in `tmp/custom-comeback-city-pass/state.json`.
 
-## Completion marker
+## Status
 
-Stage 7 complete. Ready for owner review.
+Stage 7 implementation and QA are complete; deployment to the configured Vercel preview URL is **blocked pending authorization**. The build artifact (`dist-kart/`) is ready to deploy once credentials are provided.

@@ -1,0 +1,20 @@
+2026-07-20T17:04:25Z Stage 0 start: verified implementation branch overnight-major-rebuild-20260719 at 431df0e3726d7c9f867c85c31ebaf4492b729816; reading plan complete.
+2026-07-20T17:10Z Kimi K3: preflight state from Codex verified (untracked state.json+worker.log+empty stage0, no tracked edits). Continuing Stage 0.
+2026-07-20T17:12Z Stage0: test:race PASS, build:kart PASS, test:bundle:kart PASS (log stage0/build-kart-baseline.log)
+2026-07-20T17:16Z Stage0: race:proof:capture PASS run 2026-07-20T17-13-21-688Z__race-proof copied to stage0/baseline/proof-run
+2026-07-20T17:18Z Stage0: inspected baseline captures — confirmed 4 owner-rejected issues (flat boxes, homogenized drivers, hover coins, oscillator audio)
+2026-07-20T17:20Z Stage0: gate PASSED; state.json updated; committing Stage 0 checkpoint
+2026-07-20T17:30Z Stage1: course generator scripts/author-comeback-city-course.mjs (primitives+Dubins closure, search-validated: len 6155, 0 bad crossings, 1 elevated overpass, 7 width ribbons)
+2026-07-20T17:40Z Stage1: courseV2.js rewired to generated courseV2Authored.js; elevation/shortcut/coins derived; test:race PASS
+2026-07-20T17:50Z Stage1: ground plane + backdrop rings driven by worldBounds; build:kart OK; proof capture OK (desktop+mobile)
+2026-07-20T17:56Z Stage1: running full kart-playable proof (3-lap autoplay + PV regression)
+2026-07-20T18:15Z Stage1: kart-playable-proof PASS — autoplay 3 laps finished raceTime 75.77s (~24s/lap); manual drive green; PV autoplay regression green
+2026-07-20T18:18Z Stage1: labeled overhead route map rendered (stage1/overhead-route-map.png); devOverlay=1 debug visualization added
+2026-07-20T18:20Z Stage1: GATE PASSED; committing checkpoint
+2026-07-20T18:25Z RESUME: protected fingerprints verified; implementation HEAD 59cc434; protected HEAD 2c27a537 unchanged; beginning Stage 2.
+2026-07-20T23:15Z Stage 3a: added makeTrackSurfaceAnchor helper; rewired collectible coins to sample surface position + 0.9y hover so visual and logical placement share the same anchor. build:kart and test:race pass.
+2026-07-20T23:35Z Stage 3b: authored volumetric kits for crypto-arcade, harbor, skyline-run, comeback-tunnel. Proof draw calls ~586/587, props 292. build:kart, test:race, test:kart-playable:kart pass.
+2026-07-20T23:50Z Stage 4: authored driver avatars now mount by default on procedural karts. CRRT Bunny, Lifoladen, T Clow, Seth Penguin, Mizzle, Layer 23 recognizable on track. build:kart, test:race, test:kart-playable:kart pass; proof draw calls ~572.
+2026-07-20T23:58Z Stage 5: coin collision now uses TrackSurfaceAnchor worldPosition; visual and collision transforms share the same surface sample. Boost pads and item boxes already surface-placed. build/test/playable pass; proof draw calls ~572.
+2026-07-21T00:08Z Stage 6: added original synthesized arcade-racing music loop in src/game/race/kartMusicLoop.js; kartAudio.js now drives it per frame. No external audio assets; provenance is original code. test:audio:kart, build:kart, test:race, test:kart-playable:kart pass.
+[2026-07-21T01:17Z] Stage 7 PAUSED. QA complete: build:kart, test:race, test:kart-playable:kart, test:audio:kart pass; race proof captured at asset-pipeline/proof/runs/2026-07-21T00-41-29-489Z__race-proof (compare: only SwiftShader min-FPS misses). Branch pushed to origin/overnight-major-rebuild-20260719 (HEAD f0819f0). Preview URL https://comeback-city-kart-preview.vercel.app/ still serves stale build hash DAR_T_i5; local dist-kart hash is DOtq5ScL. Vercel CLI auth missing: /home/openclaw/.local/share/com.vercel.cli/auth.json empty, no VERCEL_TOKEN. Deployment blocked.

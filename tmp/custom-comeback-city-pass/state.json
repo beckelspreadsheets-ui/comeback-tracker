@@ -74,12 +74,12 @@
     }
   },
   "stageGateState": {
-    "stage": 6,
-    "status": "complete",
-    "gate": "passed",
-    "gateNote": "Original upbeat arcade-racing loop synthesized in kartMusicLoop.js; kartAudio.js integrates it. test:audio:kart, build, race, playable pass."
+    "stage": 7,
+    "status": "paused",
+    "gate": "blocked",
+    "gateNote": "Stage 7 QA/capture complete. Deployment to https://comeback-city-kart-preview.vercel.app/ blocked: no Vercel CLI credentials (auth.json empty, no VERCEL_TOKEN), preview URL still serves stale build DAR_T_i5 vs local DOtq5ScL."
   },
-  "lastActivity": "2026-07-21T00:08Z Stage 6 complete: original synthesized music loop.",
+  "lastActivity": "2026-07-21T01:17Z Stage 7 paused: build/tests pass, Vercel preview deploy blocked by missing credentials.",
   "artifacts": [
     "tmp/custom-comeback-city-pass/state.json",
     "tmp/custom-comeback-city-pass/worker.log",
@@ -98,25 +98,28 @@
     "tmp/custom-comeback-city-pass/stage4/proof-run.json",
     "tmp/custom-comeback-city-pass/stage5/proof-run.json",
     "src/game/race/kartMusicLoop.js",
-    "tmp/custom-comeback-city-pass/stage6/proof-run.json"
+    "tmp/custom-comeback-city-pass/stage6/proof-run.json",
+    "tmp/custom-comeback-city-pass/final-summary.md"
   ],
-  "nextAction": "Stage 7: final integration, evidence package, HTTPS preview deploy, and durable handoff.",
+  "nextAction": "Provide Vercel token or dashboard access to deploy dist-kart to the configured preview URL, then re-run external verification.",
   "rollback": {
     "start": "431df0e3726d7c9f867c85c31ebaf4492b729816",
-    "current": "5340a82c7d087736045404145acf92310260bec7",
+    "current": "c6ae699ef13a727b6a0db96d251bf0f0457607c3",
     "stage0": "431df0e3726d7c9f867c85c31ebaf4492b729816",
     "stage1": "aa39322a40ec0e09892e309b5669659c13bf1778",
     "stage2": "7b2c9f61eb28ccd69abc0a92c9eeca9da8f48423",
     "stage3": "4faad7bca229565a3b500ddac578558d187dfcfc",
     "stage4": "23879f227b0fafaca0d6a2182632ef32abd3da95",
     "stage5": "12a73049ab007205c319737cb71a1587a7e324f6",
-    "stage6": "5340a82c7d087736045404145acf92310260bec7"
+    "stage6": "5340a82c7d087736045404145acf92310260bec7",
+    "stage7": "c6ae699ef13a727b6a0db96d251bf0f0457607c3"
   },
   "previewMetadata": {
     "url": "https://comeback-city-kart-preview.vercel.app/",
-    "deployment": "baseline still serving 431df0e-era build",
+    "deployment": "branch pushed (HEAD cd40e40) but preview URL still serves stale build; Vercel CLI not authenticated",
     "externalVerified": false,
-    "vercelCli": "/home/openclaw/.openclaw/tools/node-v22.22.0/bin/vercel (auth.json present)"
+    "vercelCli": "/home/openclaw/.openclaw/tools/node-v22.22.0/bin/vercel",
+    "blocker": "No existing credentials found. The auth file /home/openclaw/.local/share/com.vercel.cli/auth.json exists but is empty (0 keys) and VERCEL_TOKEN is unset."
   },
   "stage3Steps": [
     {
