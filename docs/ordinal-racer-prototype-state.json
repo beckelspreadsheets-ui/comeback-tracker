@@ -28,7 +28,8 @@
   ],
   "nextSafeAction": "Owner reviews Stage 0 evidence, supplies or confirms canonical Seth/Layer23 art and inscription IDs, and explicitly approves or requests bounded revisions before any modeling or runtime replacement.",
   "rollback": "Delete the isolated worktree/branch or reset only this experiment branch to 03b49f1; the original checkout and live deployment are untouched.",
-  "lastActivityUtc": "2026-07-21T15:55:36Z",
+  "lastActivityUtc": "2026-07-21T15:57:08Z",
+  "durableCommit": "b63b199ca6c8b930c7002fe3af06e02c7b2ee874",
   "launchNotes": [
     "Initial Codex CLI launch failed before work began because the local CLI OAuth transport returned HTTP 401. No project files were changed by that attempt.",
     "Recovery path: run Stage 0 as an OpenClaw isolated durable task using the active authenticated model session."
