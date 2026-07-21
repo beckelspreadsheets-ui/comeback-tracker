@@ -32,6 +32,12 @@ const parsed = parseArgs({
 
 const PHASE_2_GROUPS = [
   {
+    id: 'seth-penguin',
+    label: 'Seth Penguin',
+    source: '3d generations:character sheets/seth-3dpengu.glb',
+    runtime: 'src/assets/game/models/avatars/seth-penguin.glb',
+  },
+  {
     id: 'layer23-penguin',
     label: 'Layer 23 Penguin',
     source: '3d generations:character sheets/layer233d.glb',
@@ -69,7 +75,7 @@ const PHASE_2_GROUPS = [
   },
 ];
 
-const VIEWS = ['front', 'side', 'rear', 'top'];
+const VIEWS = ['front', 'left', 'right', 'rear', 'three-quarter'];
 const V2_REFERENCE_IMAGES = [
   'src/assets/game/art-direction/v2/hero-red-kart-trait-card-v2.png',
   'src/assets/game/art-direction/v2/blue-speed-rival-trait-card-v2.png',
@@ -186,7 +192,7 @@ async function buildGalleryGroups({ candidateIndex, config, requestedAssets }) {
         budgetStatus: candidate.budgetStatus,
       })),
     ]) {
-      if (!entry.repoPath) continue;
+      if (!entry.repoPath || !(await fileExists(fromRepoPath(repoRoot, entry.repoPath)))) continue;
       assets.push(await buildAssetEntry({
         budgetStatus: entry.budgetStatus || null,
         config,

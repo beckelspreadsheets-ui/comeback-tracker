@@ -1,6 +1,6 @@
 {
   "jobId": "ordinal-racers-seth-layer23-20260721",
-  "status": "running",
+  "status": "awaiting_owner_approval",
   "objective": "Build an isolated visual prototype for Seth Penguin and Layer23, stopping for owner approval after baseline evidence and target briefs before replacing runtime models.",
   "approvalBoundary": "No merge, production deploy, runtime model replacement, or work on Mizzle/TClow without Seth's explicit approval.",
   "repo": "/home/openclaw/hermes-trial/work/kart-racer-ordinal-prototype",
@@ -12,23 +12,28 @@
     "src/assets/game/select/char-seth-penguin.png": "2a51bda1c1564651c5651f55570d6be6a893a3c6759f0dd8ad1f46e6dc55154e",
     "src/assets/game/select/char-layer23.png": "867f0780bcae2e5e28a67ec0ee5d641d300c15d06b593fa3d8830c6da98e9b71"
   },
-  "currentStep": 0,
+  "currentStep": 1,
   "totalSteps": 7,
-  "currentMilestone": "Persist launch state and start Stage 0 baseline audit",
-  "completedArtifacts": [],
-  "nextSafeAction": "Audit existing Seth and Layer23 source/reference assets and produce reproducible baseline metrics and comparison evidence without modifying protected runtime assets.",
+  "currentMilestone": "Stage 0 and factual Stage 1 inventory complete; stopped at owner approval gate",
+  "completedArtifacts": [
+    "Verified isolated branch/worktree and protected baseline relationship",
+    "Located runtime GLBs, selection portraits, Layer23 raw copy/references, manifests, and historical source-root references",
+    "Confirmed canonical 3d generations:character sheets source root is absent from this worktree",
+    "tmp/ordinal-racer-prototype/stage0/metrics.json",
+    "tmp/ordinal-racer-prototype/stage0/neutral-gallery (10 neutral captures and contact sheet)",
+    "tmp/ordinal-racer-prototype/stage0/gameplay (8 desktop/mobile select and chase/seated captures)",
+    "docs/ordinal-racer-stage0-report.md (inventory, provenance gaps, identity briefs, gate decision)",
+    "scripts/ordinal-racer-stage0-audit.mjs and scripts/ordinal-racer-stage0-capture.mjs",
+    "Extended asset gallery with Seth and five required neutral camera angles"
+  ],
+  "nextSafeAction": "Owner reviews Stage 0 evidence, supplies or confirms canonical Seth/Layer23 art and inscription IDs, and explicitly approves or requests bounded revisions before any modeling or runtime replacement.",
   "rollback": "Delete the isolated worktree/branch or reset only this experiment branch to 03b49f1; the original checkout and live deployment are untouched.",
-  "lastActivityUtc": "2026-07-21T15:47:56Z",
+  "lastActivityUtc": "2026-07-21T15:55:36Z",
   "launchNotes": [
     "Initial Codex CLI launch failed before work began because the local CLI OAuth transport returned HTTP 401. No project files were changed by that attempt.",
     "Recovery path: run Stage 0 as an OpenClaw isolated durable task using the active authenticated model session."
   ],
-  "worker": {
-    "type": "openclaw-isolated-task",
-    "jobId": "05f37222-d51c-4a6b-8229-7a84e84b49c0",
-    "runId": "manual:05f37222-d51c-4a6b-8229-7a84e84b49c0:1784648876536:5",
-    "verifiedRunningAtUtc": "2026-07-21T15:47:56Z"
-  },
+  "worker": null,
   "watchdog": {
     "jobId": "4056ee5a-7769-4720-bf9f-2899363ac6b8",
     "intervalMinutes": 10,
