@@ -1,0 +1,24 @@
+{
+  "jobId": "ordinal-racers-seth-layer23-20260721",
+  "status": "starting",
+  "objective": "Build an isolated visual prototype for Seth Penguin and Layer23, stopping for owner approval after baseline evidence and target briefs before replacing runtime models.",
+  "approvalBoundary": "No merge, production deploy, runtime model replacement, or work on Mizzle/TClow without Seth's explicit approval.",
+  "repo": "/home/openclaw/hermes-trial/work/kart-racer-ordinal-prototype",
+  "branch": "experiment/ordinal-racers-seth-layer23-20260721",
+  "baselineHead": "03b49f1982b1704ba4c37b377c4569bc42f1874a",
+  "protectedFingerprints": {
+    "src/assets/game/models/avatars/seth-penguin.glb": "ec6348cf5f3ff1e1c4acc8b922b323737c40db5132a9eaaed386ce3d682ce2da",
+    "src/assets/game/models/avatars/layer23-penguin.glb": "6e5afbbc95bd462defde486642fcd811a5a9482b1a5ebd303d2ecb21877e339b",
+    "src/assets/game/select/char-seth-penguin.png": "2a51bda1c1564651c5651f55570d6be6a893a3c6759f0dd8ad1f46e6dc55154e",
+    "src/assets/game/select/char-layer23.png": "867f0780bcae2e5e28a67ec0ee5d641d300c15d06b593fa3d8830c6da98e9b71"
+  },
+  "currentStep": 0,
+  "totalSteps": 7,
+  "currentMilestone": "Persist launch state and start Stage 0 baseline audit",
+  "completedArtifacts": [],
+  "nextSafeAction": "Audit existing Seth and Layer23 source/reference assets and produce reproducible baseline metrics and comparison evidence without modifying protected runtime assets.",
+  "rollback": "Delete the isolated worktree/branch or reset only this experiment branch to 03b49f1; the original checkout and live deployment are untouched.",
+  "lastActivityUtc": "2026-07-21T15:47:00Z",
+  "worker": null,
+  "watchdog": null
+}
