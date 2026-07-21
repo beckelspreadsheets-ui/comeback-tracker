@@ -160,6 +160,12 @@ const waitForRace = async (page, scenarioKey) => {
   return facts;
 };
 
+const waitForCountdown = async (page, scenarioKey) => {
+  await page.waitForFunction(() => window.__comebackCityKartTelemetry?.countdown <= 0, null, {
+    timeout: 120000,
+  });
+};
+
 const captureTimedEvidence = async ({ config, page, scenarioDir }) => {
   const durationMs = config.capture.durationMs;
   const sampleIntervalMs = config.capture.sampleIntervalMs;
@@ -206,6 +212,7 @@ const captureTopDown = async ({ browser, config, scenario, scenarioDir }) => {
   installPageObservers(page, bucket);
   await page.goto(buildRaceUrl(config.topDown.query), { waitUntil: 'networkidle' });
   await waitForRace(page, `${scenario.key}-top-down`);
+  await waitForCountdown(page, `${scenario.key}-top-down`);
   await page.waitForTimeout(config.topDown.atMs);
   const fileName = 'top-down.png';
   await page.screenshot({ fullPage: false, path: path.join(scenarioDir, fileName) });
@@ -235,6 +242,7 @@ const captureScenario = async ({ browser, config, scenario }) => {
   installPageObservers(page, bucket);
   await page.goto(buildRaceUrl(config.query), { waitUntil: 'networkidle' });
   const facts = await waitForRace(page, scenario.key);
+  await waitForCountdown(page, scenario.key);
   const timed = await captureTimedEvidence({ config, page, scenarioDir });
   const finalTelemetry = await readTelemetry(page);
   const resources = await readResourceSummary(page);
@@ -328,9 +336,34 @@ const run = async () => {
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const server = spawn(npm, ['run', serverMode, '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
     cwd: root,
+    detached: process.platform !== 'win32',
     env: { ...process.env, BROWSER: 'none' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  const stopServer = () => {
+    if (!server?.pid) return;
+    try {
+      if (process.platform === 'win32') {
+        server.kill('SIGTERM');
+      } else {
+        process.kill(-server.pid, 'SIGTERM');
+      }
+    } catch {
+      server.kill('SIGTERM');
+    }
+    const timer = setTimeout(() => {
+      try {
+        if (process.platform === 'win32') {
+          server.kill('SIGKILL');
+        } else {
+          process.kill(-server.pid, 'SIGKILL');
+        }
+      } catch {
+        server.kill('SIGKILL');
+      }
+    }, 5000);
+    server.once('exit', () => clearTimeout(timer));
+  };
   let serverLog = '';
   server.stdout.on('data', (chunk) => {
     serverLog += chunk.toString();
@@ -371,7 +404,7 @@ const run = async () => {
     throw error;
   } finally {
     if (browser) await browser.close();
-    server.kill('SIGTERM');
+    stopServer();
   }
 };
 
