@@ -18,7 +18,8 @@ const shortDelta = (a, b) => {
 
 export const COIN_FEEL = {
   hitLane: 0.2, // lane distance that counts as a grab
-  hitProgress: 8, // world units fore/aft that count as a grab
+  hitProgress: 8, // world units fore/aft that counts as a grab
+  hitRadius: 5.5, // world-space 3D grab radius when using TrackSurfaceAnchor positions
   laneSpread: 0.3, // rows are two coins at -spread / +spread (center dropped, owner 2026-07-11)
   maxSpeedCoins: 10, // the speed bonus stops growing here
   perCoinSpeedBonus: 0.004, // +0.4% top speed per carried coin
@@ -48,14 +49,24 @@ export const buildCoinField = (trackKey) =>
 
 // Marks grabbed coins collected and returns their ids (the caller hides
 // the meshes and bumps the counter).
-export const collectCoinsForFrame = (coins, progress, lane, trackLength) => {
+// Stage 5: when a sampler is supplied, use the shared TrackSurfaceAnchor
+// world positions for the hit test so visual and collision transforms match.
+export const collectCoinsForFrame = (coins, progress, lane, samplerOrLength) => {
   const grabbed = [];
+  const useWorld = samplerOrLength && typeof samplerOrLength.pointAt === 'function';
+  const kartPos = useWorld ? samplerOrLength.pointAt(progress, lane).point : null;
   for (const coin of coins) {
     if (coin.collected) continue;
-    if (
-      shortDelta(progress, coin.progress) * trackLength < COIN_FEEL.hitProgress &&
-      Math.abs(lane - coin.lane) < COIN_FEEL.hitLane
-    ) {
+    let hit = false;
+    if (useWorld && coin.worldPosition) {
+      hit = kartPos.distanceTo(coin.worldPosition) < COIN_FEEL.hitRadius;
+    } else {
+      const trackLength = samplerOrLength;
+      hit =
+        shortDelta(progress, coin.progress) * trackLength < COIN_FEEL.hitProgress &&
+        Math.abs(lane - coin.lane) < COIN_FEEL.hitLane;
+    }
+    if (hit) {
       coin.collected = true;
       grabbed.push(coin.id);
     }

@@ -6370,7 +6370,7 @@ export const ComebackCityThreeKartRace = ({
           // ₿ coins: grab on drive-through; a spin-out START shakes a few
           // loose (single detection point so every spin source counts).
           if (engine.coinField && !airState.airborne) {
-            collectCoinsForFrame(engine.coinField, race.progress, race.lane, engine.sampler.length).forEach(
+            collectCoinsForFrame(engine.coinField, race.progress, race.lane, engine.sampler).forEach(
               (id) => {
                 race.coins += 1;
                 const mesh = engine.coinMeshes[id];
