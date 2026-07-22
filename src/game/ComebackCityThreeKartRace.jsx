@@ -147,6 +147,7 @@ import { createGraphicsParticles } from './race/render/graphicsParticles.js';
 import { makeAsphaltDetailNormalMap, makeAsphaltRoughnessMap } from './race/render/graphicsTrackDetail.js';
 import { makeGraphicsSkyTexture } from './race/render/graphicsSky.js';
 import { buildCityMassing } from './race/render/cityMassing.js';
+import { buildInscriptionCircuitMassing } from './race/render/inscriptionCircuitMassing.js';
 import { buildPenguinVillageMassing } from './race/render/penguinVillageMassing.js';
 import {
   buildVisualPlacementAnchors,
@@ -4370,7 +4371,8 @@ const createScene = ({
   addFinishGate(world, sampler, trackDef, trackVisuals);
   const cityMassingCount =
     buildCityMassing({ world, sampler, trackDef, minCenterlineDistance }) +
-    buildPenguinVillageMassing({ world, sampler, trackDef, minCenterlineDistance });
+    buildPenguinVillageMassing({ world, sampler, trackDef, minCenterlineDistance }) +
+    buildInscriptionCircuitMassing({ world, sampler, trackDef, minCenterlineDistance });
   const propCount =
     addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals) + trackVisualPropCount + cityMassingCount;
   if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef);

@@ -45,6 +45,27 @@ export const TRACK_ATMOSPHERE_GRADES = Object.freeze({
     road: { metalness: 0.08, roughness: 0.62, envMapIntensity: 0.55 },
     ground: { roughness: 0.9, envMapIntensity: 0.25 },
   }),
+  'inscription-circuit': Object.freeze({
+    // Inscription dusk haze — indigo with a teal cast; far stays under the
+    // 840 camera-far no-op ceiling.
+    fog: { color: '#2a2246', near: 190, far: 700 },
+    // Violet-blue sky fill over deep indigo ground bounce — dusk on dark
+    // carved stone without silhouetting the karts.
+    hemi: { sky: '#7a86d8', ground: '#1c1430', intensity: 2.9 },
+    // Low warm dusk key — flatters the teal/orange Launch Yard accents and
+    // the wharf lantern gold.
+    sunColor: '#ffd0a0',
+    sunIntensity: 2.7,
+    // Teal rim — the circuit's inscription-ink edge light.
+    rimLightColor: '#3fe0c8',
+    rimLightIntensity: 2.4,
+    // Violet sky bounce fill opposite the key.
+    sunFillColor: '#5a4f9f',
+    sunFillIntensity: 0.8,
+    // Carved-stone asphalt: mostly matte, whisper of env response.
+    road: { metalness: 0.06, roughness: 0.66, envMapIntensity: 0.3 },
+    ground: { roughness: 0.88, envMapIntensity: 0.28 },
+  }),
   'penguin-village': Object.freeze({
     // Thin cold haze — keeps the arctic air readable without the shipped
     // grey-out. Slightly tighter near/far than CC for a fresher feel.

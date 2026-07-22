@@ -26,6 +26,20 @@ export const TRACK_SKY_GRADES = {
     sun: { color: '#fff0c0', haloColor: '#ff9a4a', elevation: 0.86, azimuth: 0.5, size: 0.055, intensity: 1.0 },
     stars: { count: 140, brightness: 0.7, belowElevation: 0.5 },
   },
+  'inscription-circuit': {
+    // Inscription dusk: indigo zenith -> deep teal -> burnt-orange horizon.
+    // Shares NO stops with CC's magenta-amber or PV's arctic cyan grades.
+    stops: [
+      [0, '#070a1e'],
+      [0.4, '#14224a'],
+      [0.62, '#1e3f5e'],
+      [0.8, '#3f6a72'],
+      [0.92, '#c06a48'],
+      [1, '#ff9a4a'],
+    ],
+    sun: { color: '#ffe0b0', haloColor: '#ff9a4a', elevation: 0.85, azimuth: 0.5, size: 0.05, intensity: 0.95 },
+    stars: { count: 150, brightness: 0.7, belowElevation: 0.5 },
+  },
   'penguin-village': {
     // Crisp arctic dawn: teal-navy zenith -> pale cyan -> soft gold horizon.
     stops: [

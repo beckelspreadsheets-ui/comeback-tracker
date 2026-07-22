@@ -29,6 +29,9 @@ export const COIN_FEEL = {
 // boost pad (±0.02) so pickups never compete for the same moment.
 export const COIN_ROWS = {
   'comeback-city': [0.08, 0.165, 0.3, 0.405, 0.55, 0.67, 0.8, 0.93],
+  // Inscription Circuit: hand-placed clear of its pads (0.10/0.27/0.52/0.905)
+  // and boxes (0.06/0.20/0.34/0.46/0.60/0.74/0.88) by >= 0.02.
+  'inscription-circuit': [0.03, 0.14, 0.24, 0.38, 0.49, 0.645, 0.78, 0.945],
   'penguin-village': [0.025, 0.09, 0.24, 0.4, 0.52, 0.66, 0.79, 0.92],
 };
 

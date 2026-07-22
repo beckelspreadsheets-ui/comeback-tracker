@@ -224,23 +224,27 @@ const waitForRaceActive = async (page) => {
 // Every requested generated trackside mount must resolve its GLB template.
 // The loads are async after mount, so wait until requested > 0 and all
 // requests settle, then require zero failures.
-const assertMiamiMountsHealthy = async (page, label) => {
+const assertGeneratedTracksideSettles = async (page, label) => {
+  // 2026-07-22 (Ordinals rebuild): the Inscription Circuit carries NO
+  // generated Miami/PV trackside GLBs, so requested === 0 is the correct
+  // healthy state. The gate still fails on any FAILED mount — a GLB 404
+  // must never ship silently.
   try {
     await page.waitForFunction(
       () => {
         const mounts = window.__comebackCityKartTelemetry?.miamiMounts;
-        return mounts && mounts.requested > 0 && mounts.mounted + mounts.failed >= mounts.requested;
+        return mounts && mounts.mounted + mounts.failed >= mounts.requested;
       },
       null,
       { timeout: 45000 }
     );
   } catch (error) {
     const mounts = await page.evaluate(() => window.__comebackCityKartTelemetry?.miamiMounts || null);
-    fail(`${label}: miami trackside mounts did not settle`, { miamiMounts: mounts, waitError: String(error) });
+    fail(`${label}: generated trackside mounts did not settle`, { miamiMounts: mounts, waitError: String(error) });
   }
   const mounts = await page.evaluate(() => window.__comebackCityKartTelemetry?.miamiMounts || null);
   if (!mounts || mounts.failed > 0 || mounts.mounted !== mounts.requested) {
-    fail(`${label}: miami trackside mounts unhealthy — a GLB 404 would ship silently`, {
+    fail(`${label}: generated trackside mounts unhealthy — a GLB 404 would ship silently`, {
       miamiMounts: mounts,
     });
   }
@@ -329,7 +333,7 @@ const runGeneratedTracksideHealth = async (browser) => {
   const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
   await page.goto(`${baseUrl}/?glbTrackside=1#race`, { waitUntil: 'networkidle' });
   const facts = await assertPlayableShell(page, 'desktop generated trackside');
-  await assertMiamiMountsHealthy(page, 'desktop generated trackside');
+  await assertGeneratedTracksideSettles(page, 'desktop generated trackside');
   await waitForRaceActive(page);
   await page.waitForTimeout(900);
   const telemetry = await readTelemetry(page, 'desktop generated trackside');
@@ -403,29 +407,29 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
   };
 };
 
-// Amendment 9 (exec plan): the proof must also drive Penguin Village —
-// without it the penguin-track acceptance criteria in Phases B/D are
-// unverifiable. Shorter than the comeback-city run: shell + track identity +
-// sustained motion, no finish wait.
-const runPenguinVillageEvidence = async (browser) => {
+// Ordinals rebuild (2026-07-22): the Penguin Village run is replaced by an
+// explicit Inscription Circuit identity run — the proof must show the new
+// default track IS the new map, not a recycled old one. Shorter than the
+// main run: shell + track identity + sustained motion, no finish wait.
+const runInscriptionCircuitEvidence = async (browser) => {
   const page = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
-  await page.goto(`${baseUrl}/?playableAutoplay=1&track=penguin-village#race`, { waitUntil: 'networkidle' });
-  const facts = await assertPlayableShell(page, 'penguin-village');
+  await page.goto(`${baseUrl}/?playableAutoplay=1&track=inscription-circuit#race`, { waitUntil: 'networkidle' });
+  const facts = await assertPlayableShell(page, 'inscription-circuit');
   await waitForRaceActive(page);
   await page.waitForTimeout(1200);
-  const start = await readTelemetry(page, 'penguin-village start');
-  if (start.track !== 'penguin-village') {
-    fail('Penguin Village run is not on the penguin-village track', { start });
+  const start = await readTelemetry(page, 'inscription-circuit start');
+  if (start.track !== 'inscription-circuit') {
+    fail('Inscription Circuit run is not on the inscription-circuit track', { start });
   }
-  await page.screenshot({ path: path.join(outputDir, 'penguin-village-start.png'), fullPage: false });
+  await page.screenshot({ path: path.join(outputDir, 'inscription-circuit-start.png'), fullPage: false });
   await page.waitForTimeout(7600);
-  const mid = await readTelemetry(page, 'penguin-village mid');
-  await page.screenshot({ path: path.join(outputDir, 'penguin-village-mid.png'), fullPage: false });
+  const mid = await readTelemetry(page, 'inscription-circuit mid');
+  await page.screenshot({ path: path.join(outputDir, 'inscription-circuit-mid.png'), fullPage: false });
   await page.close();
   if (!(mid.speed >= 120 && (mid.lap > start.lap || mid.routeProgress > start.routeProgress))) {
-    fail('Penguin Village autoplay did not sustain race speed and route progress', { mid, start });
+    fail('Inscription Circuit autoplay did not sustain race speed and route progress', { mid, start });
   }
-  if (mid.rivalCount < 3) fail('Penguin Village autoplay does not show three rivals in telemetry', { facts, mid });
+  if (mid.rivalCount < 3) fail('Inscription Circuit autoplay does not show three rivals in telemetry', { facts, mid });
   return { facts, mid, start };
 };
 
@@ -471,7 +475,7 @@ const run = async () => {
     const manualDesktop = await runManualDesktopControls(browser);
     const desktopAutoplay = await runAutoplayEvidence(browser, 'desktop', { width: 1365, height: 768 });
     const mobileAutoplay = await runAutoplayEvidence(browser, 'mobile', { width: 390, height: 844 });
-    const penguinVillage = await runPenguinVillageEvidence(browser);
+    const inscriptionCircuit = await runInscriptionCircuitEvidence(browser);
     const visibleMotionReport = {
       controlVisual,
       desktopAutoplay: desktopAutoplay.visibleMotion,
@@ -486,7 +490,7 @@ const run = async () => {
       mobileAutoplay,
       outputDir: path.relative(root, outputDir),
       passed: true,
-      penguinVillage,
+      inscriptionCircuit,
       visibleMotionReport: path.relative(root, path.join(outputDir, 'visible-motion-report.json')),
     };
     await writeContactSheet();

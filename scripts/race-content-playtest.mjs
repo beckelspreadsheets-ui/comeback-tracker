@@ -10283,6 +10283,9 @@ const validateRaceCoinHelpers = () => {
   // Placement discipline: every row clear of its track's pads and boxes.
   const MARKERS = {
     'comeback-city': [0.055, 0.205, 0.435, 0.875, 0.025, 0.115, 0.225, 0.36, 0.5, 0.6, 0.74, 0.86],
+    // Inscription Circuit pads (0.10/0.27/0.52/0.905) + boxes
+    // (0.06/0.20/0.34/0.46/0.60/0.74/0.88).
+    'inscription-circuit': [0.1, 0.27, 0.52, 0.905, 0.06, 0.2, 0.34, 0.46, 0.6, 0.74, 0.88],
     'penguin-village': [0.12, 0.33, 0.58, 0.85, 0.06, 0.18, 0.3, 0.46, 0.6, 0.74],
   };
   for (const [trackKey, rows] of Object.entries(COIN_ROWS)) {
