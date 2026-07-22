@@ -24,36 +24,24 @@ import {
   readReducedMotion,
   recordRaceFinish,
 } from './kartLocalStore.js';
-import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
-import charSethPenguinUrl from '../assets/game/select/char-seth-penguin.png';
-import charMizzleUrl from '../assets/game/select/char-mizzle.png';
-import charTclowUrl from '../assets/game/select/char-tclow.png';
-import charLayer23Url from '../assets/game/select/char-layer23.png';
-import charLifoladenUrl from '../assets/game/select/char-lifoladen.webp';
-import kartHeroUrl from '../assets/game/select/kart-hero.png';
-import kartIcesledUrl from '../assets/game/select/kart-icesled.png';
-import kartIceracerUrl from '../assets/game/select/kart-iceracer.png';
-import kartKenneyUrl from '../assets/game/select/kart-kenney.png';
-import kartMiamicruiserUrl from '../assets/game/select/kart-miamicruiser.png';
+import ordIsethiusUrl from '../assets/game/select/ord-isethius.jpg';
+import ordTClowUrl from '../assets/game/select/ord-t-clow.jpg';
+import ordLayer23Url from '../assets/game/select/ord-layer23.jpg';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-// Portraits are prerendered from the real GLBs by
-// scripts/select-portraits-capture.mjs — rerun it when the roster changes.
+// Driver portraits are the supplied Ordinal inscriptions themselves
+// (asset-intake/ordinals/, SHA-256 verified). Kart cards temporarily reuse
+// the driver's portrait — real in-engine kart renders land in M5.
 const CHARACTER_PORTRAITS = {
-  'crrt-bunny': charCrrtBunnyUrl,
-  layer23: charLayer23Url,
-  lifoladen: charLifoladenUrl,
-  mizzle: charMizzleUrl,
-  'seth-penguin': charSethPenguinUrl,
-  tclow: charTclowUrl,
+  isethius: ordIsethiusUrl,
+  layer23: ordLayer23Url,
+  't-clow': ordTClowUrl,
 };
 const KART_PORTRAITS = {
-  hero: kartHeroUrl,
-  icesled: kartIcesledUrl,
-  iceracer: kartIceracerUrl,
-  kenney: kartKenneyUrl,
-  miamicruiser: kartMiamicruiserUrl,
+  'deck-runner': ordTClowUrl,
+  'mesa-strider': ordLayer23Url,
+  'orbit-rover': ordIsethiusUrl,
 };
 
 const KartIntroScreen = ({ onStart }) => (

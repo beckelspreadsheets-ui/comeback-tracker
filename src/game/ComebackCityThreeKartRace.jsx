@@ -148,6 +148,8 @@ import { makeAsphaltDetailNormalMap, makeAsphaltRoughnessMap } from './race/rend
 import { makeGraphicsSkyTexture } from './race/render/graphicsSky.js';
 import { buildCityMassing } from './race/render/cityMassing.js';
 import { buildInscriptionCircuitMassing } from './race/render/inscriptionCircuitMassing.js';
+import { createInscriptionKartBody } from './race/render/createInscriptionKartBody.js';
+import { createOrdinalDriver } from './race/render/createOrdinalDriver.js';
 import { buildPenguinVillageMassing } from './race/render/penguinVillageMassing.js';
 import {
   buildVisualPlacementAnchors,
@@ -182,19 +184,16 @@ const KART_SCALE = 1.01;
 // recolored drag racer); `projectileSkin` is the cosmetic snowball flavor
 // (carrot for the bunny, ice shards for the penguins — identical stats);
 // `driverYaw` is the lab-verified authored yaw (all Tripo rigs face +X).
+// The playable roster (Ordinals rebuild, M2): the three supplied inscription
+// characters. The player picks one — the others fill the rival seats (the
+// third seat wraps with the seat's own personality/livery accent). Drivers
+// and karts are the NEW procedural rigs (createOrdinalDriver /
+// createInscriptionKartBody) built from asset-intake/ordinals/*.jpg — no
+// retired GLB avatars or kart bodies in the shipped path.
 export const KART_CHARACTERS = [
-  { accent: '#46d9ef', color: '#e8261d', driverHeight: 5.7, driverYaw: -Math.PI / 2, kart: 'hero', kartName: 'Hero Kart', key: 'crrt-bunny', name: 'CRRT Bunny', projectileSkin: 'carrot' },
-  // Lifoladen (K6): human wizard king, not a penguin — plain 'snowball' skin
-  // keeps him out of the Penguin March pool. Meshy rig, lab-verified +Z
-  // front → driverYaw 0. Second in the roster so he auto-fills a rival seat
-  // for every other pick.
-  { accent: '#a7f542', color: '#8e1a43', driverHeight: 6.4, driverYaw: 0, kart: 'miamicruiser', kartName: 'Miami Cruiser', key: 'lifoladen', name: 'Lifoladen', projectileSkin: 'snowball' },
-  // Owner correction (round 8): the penguin previously labeled "CRRT
-  // Penguin" IS T Clow — one character, the ice sled is his ride.
-  { accent: '#9fe7ff', color: '#2378ff', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'icesled', kartName: 'Ice Sled', key: 'tclow', name: 'T Clow', projectileSkin: 'iceshard' },
-  { accent: '#38d7ff', color: '#7e35f4', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Purple Dragster', key: 'seth-penguin', name: 'Seth Penguin', projectileSkin: 'iceshard' },
-  { accent: '#ffd34f', color: '#f28b2e', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Orange Dragster', key: 'mizzle', name: 'Mizzle', projectileSkin: 'iceshard' },
-  { accent: '#ffd9a0', color: '#a86b32', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Bronze Dragster', key: 'layer23', name: 'Layer 23', projectileSkin: 'iceshard' },
+  { accent: '#2ee6c8', color: '#ff8b21', driverHeight: 6.4, driverYaw: 0, kart: 'orbit-rover', kartName: 'Orbit Rover', key: 'isethius', name: 'isethius', projectileSkin: 'iceshard' },
+  { accent: '#ffb23e', color: '#23202c', driverHeight: 6.4, driverYaw: 0, kart: 'deck-runner', kartName: 'Deck Runner', key: 't-clow', name: 't clow', projectileSkin: 'iceshard' },
+  { accent: '#ffd34f', color: '#5a3f9f', driverHeight: 6.4, driverYaw: 0, kart: 'mesa-strider', kartName: 'Mesa Strider', key: 'layer23', name: 'Layer23', projectileSkin: 'iceshard' },
 ];
 
 // Karts are picked separately from characters (owner request, round 8) —
@@ -211,12 +210,9 @@ export const KART_CHARACTERS = [
 // message): when tracks reach MK-length 2-3 min races the spreads can
 // widen back out — pre-rebalance values are in git at 511dc12b.
 export const KART_OPTIONS = [
-  { key: 'hero', name: 'Hero Kart', stats: { accel: 1.0, handling: 1.0, topSpeed: 1.0 }, tagline: 'Balanced' },
-  { key: 'icesled', name: 'Ice Sled', stats: { accel: 0.97, handling: 0.96, topSpeed: 1.015 }, tagline: 'Fast & slippery' },
-  { key: 'kenney', name: 'Dragster', stats: { accel: 1.04, handling: 1.02, topSpeed: 0.99 }, tagline: 'Quick off the line' },
-  // K5 owner picks 2026-07-12 ("i meant the ice racer and miami cruser"):
-  { key: 'iceracer', name: 'Ice Racer', stats: { accel: 0.98, handling: 0.95, topSpeed: 1.02 }, tagline: 'Frozen top end' },
-  { key: 'miamicruiser', name: 'Miami Cruiser', stats: { accel: 1.03, handling: 1.04, topSpeed: 0.985 }, tagline: 'Grips the neon' },
+  { key: 'orbit-rover', name: 'Orbit Rover', stats: { accel: 1.0, handling: 1.0, topSpeed: 1.0 }, tagline: 'Balanced' },
+  { key: 'deck-runner', name: 'Deck Runner', stats: { accel: 1.04, handling: 1.02, topSpeed: 0.99 }, tagline: 'Quick off the line' },
+  { key: 'mesa-strider', name: 'Mesa Strider', stats: { accel: 0.98, handling: 0.95, topSpeed: 1.02 }, tagline: 'Built for the climb' },
 ];
 // Generated kart bodies arrive in two facing conventions: Tripo = nose +X
 // (mount -π/2), Meshy = nose -X (mount +π/2). Lab-verified per kart.
@@ -227,7 +223,7 @@ const KART_NOSE_YAW = {
   miamicruiser: Math.PI / 2,
 };
 const kartByKey = (key) => KART_OPTIONS.find((entry) => entry.key === key) || KART_OPTIONS[0];
-export const DEFAULT_CHARACTER_KEY = 'crrt-bunny';
+export const DEFAULT_CHARACTER_KEY = 'isethius';
 const characterByKey = (key) =>
   KART_CHARACTERS.find((entry) => entry.key === key) || KART_CHARACTERS[0];
 
@@ -241,13 +237,18 @@ const RIVALS = [
 ];
 const rivalSeatsFor = (playerKey) => {
   const remaining = KART_CHARACTERS.filter((entry) => entry.key !== playerKey);
-  return RIVALS.map((seat, index) => ({
-    ...seat,
-    accent: remaining[index].accent,
-    character: remaining[index],
-    color: remaining[index].color,
-    projectileSkin: remaining[index].projectileSkin,
-  }));
+  // Roster is 3 and there are 3 seats: the last seat wraps to a remaining
+  // character (seat personality + grid lane keep it distinct on track).
+  return RIVALS.map((seat, index) => {
+    const character = remaining[index % remaining.length];
+    return {
+      ...seat,
+      accent: character.accent,
+      character,
+      color: character.color,
+      projectileSkin: character.projectileSkin,
+    };
+  });
 };
 const ordinal = (position) => ['1st', '2nd', '3rd', '4th'][position - 1] || `${position}th`;
 const PROP_COUNT = 36;
@@ -560,12 +561,13 @@ const createProceduralSeatedPenguin = ({
 // bucket seat with a procedural seated driver, rear light bar, twin exhausts
 // with flames.
 const createGroundedKartModel = ({
-  accent = '#38d7ff',
-  color = '#ef4334',
-  // ?trackVisuals=1 look: stronger blob + accent contact glow. The renderer
-  // shadow pass is disabled globally for this presentation slice, so contact
-  // grounding remains a mesh-only visual.
+  accent = '#2ee6c8',
+  color = '#ff8b21',
   contactGrounding = false,
+  // Ordinals rebuild (M2): which Ordinal sits in the seat + which
+  // inscription kart body wraps the rig.
+  driverKey = 'isethius',
+  kartKey = 'orbit-rover',
   scale = 1,
   // Graphics overhaul preset (graphics.config.js). Resolved per race and
   // threaded in so the body material can upgrade to PBR metal/paint. 'off'
@@ -585,101 +587,38 @@ const createGroundedKartModel = ({
   const driverMount = new THREE.Group();
   driverMount.position.set(0, 3.05, -1.15);
   model.add(driverMount);
-  const fallbackDriver = createProceduralSeatedPenguin({ accent });
-  // Hero-slice presence: the seated Ordinal Penguin must read clearly above
-  // the seat at chase distance — slightly oversized beats hidden.
+  const fallbackDriver = createOrdinalDriver({ key: driverKey, kit: { createToonMaterial } });
+  // Hero-slice presence: the seated Ordinal must read clearly above the seat
+  // at chase distance — slightly oversized beats hidden.
   fallbackDriver.scale.setScalar(1.04);
   driverMount.add(fallbackDriver);
 
-  // GRAPHICS OVERHAUL (Phase 1 materials): the kart body is the hero surface
-  // the player stares at all race. On 'high' we upgrade it from flat MeshToon
-  // to MeshStandardMaterial with a metallic paint response (clear-coat-like
-  // sheen from the RoomEnvironment IBL probe baked in createScene). The toon
-  // rim shader still applies (hero pop), so the kart keeps its cel silhouette
-  // but gains metal definition + a sun specular. ?gfx=off restores the flat
-  // MeshToon body exactly. Roughness/metalness tuned for glossy painted
-  // metal, not chrome: metalness low enough to keep the base color dominant.
-  const usePbrBody = gfx.name === 'high';
-  const bodyMat = usePbrBody
-    ? applyHeroRim(
-        new THREE.MeshStandardMaterial({
-          color,
-          emissive: color,
-          emissiveIntensity: 0.16,
-          metalness: 0.42,
-          roughness: 0.34,
-        })
-      )
-    : createToonMaterial(color, { emissive: color, emissiveIntensity: 0.2 });
-  const blackMat = createToonMaterial('#191c28');
+  // M2 body: the NEW inscription kart silhouette (rocket/prow/blade nose,
+  // rune side strips, twin rear fins — no wing, no tub). Wheels, flames,
+  // VFX, and the shadow stay in this rig so proven suspension/drift
+  // presentation is untouched.
+  bodyGroup.add(
+    createInscriptionKartBody({
+      accent,
+      color,
+      gfx,
+      kartKey,
+      kit: { applyHeroRim, createBasicMaterial, createToonMaterial },
+    })
+  );
   const tireMat = createToonMaterial('#10121c');
   // Wheel hubs read as machined metal under the env probe on 'high'.
-  const hubMat = usePbrBody
-    ? new THREE.MeshStandardMaterial({ color: '#3a4054', metalness: 0.78, roughness: 0.3 })
-    : createToonMaterial('#343a4c');
-  const trimMat = createToonMaterial('#f6fbff');
-  const seatMat = createToonMaterial('#1d2233');
+  const hubMat =
+    gfx.name === 'high'
+      ? new THREE.MeshStandardMaterial({ color: '#3a4054', metalness: 0.78, roughness: 0.3 })
+      : createToonMaterial('#343a4c');
   const accentGlowMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 1.1 });
 
-  const addPart = (mesh, x, y, z, rx = 0) => {
-    mesh.position.set(x, y, z);
-    if (rx) mesh.rotation.x = rx;
-    bodyGroup.add(mesh);
-    return mesh;
-  };
-  const box = (w, h, d, material, radius = 0.3) =>
-    new THREE.Mesh(
-      new RoundedBoxGeometry(w, h, d, 1, Math.min(radius, Math.min(w, h, d) * 0.34)),
-      material
-    );
-
-  // Body tub, sloped hood, nose lip — capped with a rounded cowl so the
-  // front reads bulbous like the card kart, not flat.
-  addPart(box(6.6, 1.8, 9.6, bodyMat, 0.55), 0, 2.5, 0.2);
-  addPart(box(6.2, 0.7, 4.8, bodyMat, 0.3), 0, 3.25, 2.9, -0.13);
-  addPart(box(6.6, 1.0, 1.4, bodyMat, 0.4), 0, 2.2, 5.6);
-  const cowl = new THREE.Mesh(new THREE.SphereGeometry(3.3, 12, 9), bodyMat);
-  cowl.scale.set(1.0, 0.52, 1.3);
-  addPart(cowl, 0, 2.85, 4.4);
-  // Twin white racing stripes on the hood
-  [-0.62, 0.62].forEach((x) => {
-    addPart(box(0.75, 0.1, 4.6, trimMat), x, 3.68, 2.9, -0.13);
-    addPart(box(0.75, 0.1, 1.5, trimMat), x, 2.76, 5.58);
-  });
-  // Front bumper + glowing headlight strip and lamps
-  addPart(box(6.9, 0.9, 0.8, blackMat), 0, 1.65, 6.0);
-  addPart(box(4.6, 0.55, 0.32, accentGlowMat), 0, 2.55, 6.22);
-  [-2.35, 2.35].forEach((x) => addPart(box(1.0, 0.7, 0.28, accentGlowMat), x, 2.45, 6.18));
-  // Cockpit: open inset with a real bucket seat (base, tall back, side
-  // bolsters, headrest, accent piping) and a steering wheel — sized so an
-  // avatar can sit in it later.
-  addPart(box(3.6, 0.5, 3.4, blackMat), 0, 3.5, -0.5);
-  addPart(box(3.3, 0.6, 2.7, seatMat, 0.25), 0, 3.62, -1.3);
-  addPart(box(3.3, 2.4, 1.0, seatMat, 0.32), 0, 4.7, -2.55, 0.12);
-  [-1, 1].forEach((side) => addPart(box(0.55, 1.9, 1.15, seatMat, 0.2), side * 1.6, 4.55, -2.25, 0.12));
-  addPart(box(2.0, 1.05, 0.9, seatMat, 0.32), 0, 6.15, -2.72);
-  addPart(box(2.6, 0.18, 0.18, accentGlowMat), 0, 5.55, -2.28, 0.12);
-  const steeringWheel = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.17, 6, 14), blackMat);
-  addPart(steeringWheel, 0, 4.35, 0.95, -0.55);
-  addPart(box(0.32, 1.4, 0.32, hubMat, 0.1), 0, 3.75, 1.25, 0.5);
-  // Rear wing for the kart-racer silhouette
-  addPart(box(6.4, 0.42, 1.7, bodyMat, 0.18), 0, 5.05, -4.5);
-  [-2.35, 2.35].forEach((x) => addPart(box(0.42, 1.35, 0.95, blackMat, 0.12), x, 4.15, -4.45));
-  // Side pods with accent glow strips
-  [-1, 1].forEach((side) => {
-    addPart(box(1.05, 1.15, 4.8, blackMat), side * 3.78, 2.0, 0.2);
-    addPart(box(0.16, 0.42, 4.2, accentGlowMat), side * 4.34, 2.1, 0.2);
-  });
-  // Rear bumper, light bar, exhausts
-  addPart(box(6.9, 1.05, 0.9, blackMat), 0, 2.2, -4.95);
-  addPart(box(4.2, 0.42, 0.26, createBasicMaterial('#ff4a3d', { emissive: '#ff4a3d', emissiveIntensity: 1.0 })), 0, 2.95, -5.2);
+  // Exhaust flames live on the model (not the swappable body) so they
+  // survive body swaps. Pipes are part of the inscription body.
   const flameMat = createBasicMaterial('#FF8C00', { emissive: '#FF8C00', emissiveIntensity: 1.0 });
   const idleFlames = [];
   [-1.5, 1.5].forEach((x) => {
-    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.54, 1.2, 8), hubMat);
-    addPart(pipe, x, 2.1, -5.45, Math.PI / 2);
-    // Flames live on the model (not the swappable body) so they survive the
-    // authored-body swap.
     const flame = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.6, 6), flameMat);
     flame.position.set(x, 2.1, -6.4);
     flame.rotation.x = -Math.PI / 2;
@@ -3810,6 +3749,7 @@ const createScene = ({
   canvas,
   onUnavailable,
   playerCharacter = characterByKey(DEFAULT_CHARACTER_KEY),
+  playerKartKey = 'orbit-rover',
   postChainEnabled = false,
   rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY),
   trackDef = trackByKey(DEFAULT_TRACK_KEY),
@@ -4382,10 +4322,15 @@ const createScene = ({
     accent: playerCharacter.accent,
     color: playerCharacter.color,
     contactGrounding: trackVisuals.enabled,
+    driverKey: playerCharacter.key,
     gfx,
+    kartKey: playerKartKey,
     scale: KART_SCALE,
   });
   const player = playerModel.group;
+  // Dev/proof hook: lets capture scripts verify which driver/body rigs are
+  // actually mounted (M2 identity probes). Read-only references.
+  if (typeof window !== 'undefined') window.__kartDebugModels = { playerModel };
   player.userData.kind = 'player-kart';
   // Ice Shield bubble (themed one-hit shield) — faceted ice dome: a low-poly
   // crystal shell with a glowing edge wireframe, plus a ring of ice shards
@@ -4547,9 +4492,11 @@ const createScene = ({
     const model = createGroundedKartModel({
       accent: rival.accent,
       color: rival.color,
+      driverKey: rival.character.key,
       // Rivals stay on the cheap toon body path even on 'high' — three PBR
       // hero bodies are per-pixel cost nobody reads at chase distance.
       gfx: { ...gfx, name: 'low' },
+      kartKey: rival.character.kart,
       scale: 0.94,
     });
     model.group.userData.kind = 'grounded-rival-kart';
@@ -5087,6 +5034,7 @@ export const ComebackCityThreeKartRace = ({
       canvas,
       onUnavailable: (error) => setWebglError(error?.message || 'WebGL unavailable'),
       playerCharacter,
+      playerKartKey: kartKey,
       postChainEnabled,
       rivalSeats,
       trackDef,
