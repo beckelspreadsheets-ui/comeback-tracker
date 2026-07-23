@@ -13,18 +13,24 @@ const shortDelta = (a, b) => {
 
 export const ITEM_KEYS = ['aurora', 'avalanche', 'blizzard', 'cocoa', 'fishbone', 'iceshield', 'march', 'sardine', 'slapfish', 'snowball'];
 
-// HUD labels for the themed names (keys stay terse for telemetry).
+// HUD labels — the INSCRIPTION set (M4 rebrand; keys stay for telemetry +
+// test fixtures, names are all-new original designs):
+//   snowball  → Rune Bolt (forward shard)      sardine → Signal Seeker (homing)
+//   fishbone  → Glyph Mine (rear trap)         iceshield → Ward Shell
+//   cocoa     → Ion Charge (mini-turbo)        slapfish → Cutlass Arc (melee)
+//   blizzard  → Static Veil (fog dome)         avalanche → Blackflag Barrage
+//   aurora    → Overdrive (invincible speed)   march → Cargo Crawler (crossing)
 export const ITEM_LABELS = {
-  aurora: 'AURORA',
-  avalanche: 'AVALANCHE',
-  blizzard: 'BLIZZARD',
-  cocoa: 'COCOA',
-  fishbone: 'FISH BONE',
-  iceshield: 'ICE SHIELD',
-  march: 'MARCH',
-  sardine: 'SARDINE',
-  slapfish: 'SLAP FISH',
-  snowball: 'SNOWBALL',
+  aurora: 'OVERDRIVE',
+  avalanche: 'BARRAGE',
+  blizzard: 'STATIC VEIL',
+  cocoa: 'ION CHARGE',
+  fishbone: 'GLYPH MINE',
+  iceshield: 'WARD SHELL',
+  march: 'CRAWLER',
+  sardine: 'SEEKER',
+  slapfish: 'CUTLASS',
+  snowball: 'RUNE BOLT',
 };
 
 // Aurora Boost: ~3s of invincible speed — fish bones, projectiles, blizzard

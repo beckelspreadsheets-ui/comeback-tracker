@@ -37,18 +37,18 @@ import fishboneTrapModelUrl from '../assets/game/models/items/fishbone-trap.glb?
 import sardineRocketModelUrl from '../assets/game/models/items/sardine-rocket.glb?url';
 import avalancheMoundModelUrl from '../assets/game/models/items/avalanche-mound.glb?url';
 import blizzardCloudModelUrl from '../assets/game/models/items/blizzard-cloud.glb?url';
-import itemAuroraIconUrl from '../assets/game/items/item-aurora.webp';
-import itemAvalancheIconUrl from '../assets/game/items/item-avalanche.webp';
-import itemBlizzardIconUrl from '../assets/game/items/item-blizzard.webp';
-import itemCarrotIconUrl from '../assets/game/items/item-carrot.webp';
-import itemCocoaIconUrl from '../assets/game/items/item-cocoa.webp';
-import itemFishboneIconUrl from '../assets/game/items/item-fishbone.webp';
-import itemIceshardIconUrl from '../assets/game/items/item-iceshard.webp';
-import itemIceshieldIconUrl from '../assets/game/items/item-iceshield.webp';
-import itemMarchIconUrl from '../assets/game/items/item-march.webp';
-import itemSardineIconUrl from '../assets/game/items/item-sardine.webp';
-import itemSlapfishIconUrl from '../assets/game/items/item-slapfish.webp';
-import itemSnowballIconUrl from '../assets/game/items/item-snowball.webp';
+import itemAuroraIconUrl from '../assets/game/items/item-overdrive.webp';
+import itemAvalancheIconUrl from '../assets/game/items/item-barrage.webp';
+import itemBlizzardIconUrl from '../assets/game/items/item-staticveil.webp';
+import itemCarrotIconUrl from '../assets/game/items/item-powdershot.webp';
+import itemCocoaIconUrl from '../assets/game/items/item-ioncharge.webp';
+import itemFishboneIconUrl from '../assets/game/items/item-glyphmine.webp';
+import itemIceshardIconUrl from '../assets/game/items/item-runebolt.webp';
+import itemIceshieldIconUrl from '../assets/game/items/item-wardshell.webp';
+import itemMarchIconUrl from '../assets/game/items/item-crawler.webp';
+import itemSardineIconUrl from '../assets/game/items/item-seeker.webp';
+import itemSlapfishIconUrl from '../assets/game/items/item-cutlass.webp';
+import itemSnowballIconUrl from '../assets/game/items/item-sigilbolt.webp';
 import miamiCondoTowerUrl from '../assets/game/models/miami/condo-tower.glb?url';
 import miamiCornerArcadeUrl from '../assets/game/models/miami/corner-arcade.glb?url';
 import miamiDecoHotelUrl from '../assets/game/models/miami/deco-hotel.glb?url';
@@ -193,9 +193,9 @@ const KART_SCALE = 1.01;
 // createInscriptionKartBody) built from asset-intake/ordinals/*.jpg — no
 // retired GLB avatars or kart bodies in the shipped path.
 export const KART_CHARACTERS = [
-  { accent: '#2ee6c8', color: '#ff8b21', driverHeight: 6.4, driverYaw: 0, kart: 'orbit-rover', kartName: 'Orbit Rover', key: 'isethius', name: 'isethius', projectileSkin: 'iceshard' },
-  { accent: '#ffb23e', color: '#23202c', driverHeight: 6.4, driverYaw: 0, kart: 'deck-runner', kartName: 'Deck Runner', key: 't-clow', name: 't clow', projectileSkin: 'iceshard' },
-  { accent: '#ffd34f', color: '#5a3f9f', driverHeight: 6.4, driverYaw: 0, kart: 'mesa-strider', kartName: 'Mesa Strider', key: 'layer23', name: 'Layer23', projectileSkin: 'iceshard' },
+  { accent: '#2ee6c8', color: '#ff8b21', driverHeight: 6.4, driverYaw: 0, flavor: 'orbital precision', kart: 'orbit-rover', kartName: 'Orbit Rover', key: 'isethius', name: 'isethius', projectileSkin: 'iceshard' },
+  { accent: '#ffb23e', color: '#23202c', driverHeight: 6.4, driverYaw: 0, flavor: 'captain of the blackflag', kart: 'deck-runner', kartName: 'Deck Runner', key: 't-clow', name: 't clow', projectileSkin: 'carrot' },
+  { accent: '#ffd34f', color: '#5a3f9f', driverHeight: 6.4, driverYaw: 0, flavor: 'reads the ledger', kart: 'mesa-strider', kartName: 'Mesa Strider', key: 'layer23', name: 'Layer23', projectileSkin: 'snowball' },
 ];
 
 // Karts are picked separately from characters (owner request, round 8) —
@@ -4046,15 +4046,30 @@ const createScene = ({
   );
   // ₿ collectible coins (owner concept 2026-07-07): rows from the pure
   // module; the visual clones ONE face-node of the active CC coin box
-  // K4: crosser rigs — one positioned group per track crosser, loaded via
-  // the guarded miami mount machinery (loud 404, telemetry mounts guard).
-  // The frame loop drives position/facing from the pure crosser sim. Only
-  // the ordinalWalker visual exists so far (outplayasians, Meshy mesh:
-  // front = +Z per the orientation lab -> yaw 0).
+  // K4: crosser rigs — one positioned group per track crosser. ordinalWalker
+  // entries load the guarded miami mount (loud 404, telemetry mounts guard);
+  // the Inscription cannonball is a procedural iron shot (no GLB, no mount
+  // request). The frame loop drives position/facing from the pure sim.
   const crosserRigs = (trackDef.crossers || []).map((entry) => {
     const group = new THREE.Group();
-    // footprint 6 → 8 (owner 2026-07-12: "hard to see asians at the end").
-    mountMiamiAsset(group, 'outplayasiansCrosser', { footprint: 8, yaw: 0 });
+    if (entry.modelType === 'cannonball') {
+      const ball = new THREE.Mesh(
+        new THREE.SphereGeometry(3.1, 12, 9),
+        createToonMaterial('#16141c', { emissive: '#050508', emissiveIntensity: 0.25 })
+      );
+      ball.position.y = 3.1;
+      group.add(ball);
+      const fuse = new THREE.Mesh(
+        new THREE.SphereGeometry(0.8, 8, 6),
+        createBasicMaterial('#ffb23e', { emissive: '#ffb23e', emissiveIntensity: 1.4 })
+      );
+      fuse.position.set(0, 6.4, -1.2);
+      group.add(fuse);
+      addGlowSprite(group, '#ffb23e', 9, 0.4, 6.4);
+    } else {
+      // footprint 6 → 8 (owner 2026-07-12: "hard to see asians at the end").
+      mountMiamiAsset(group, 'outplayasiansCrosser', { footprint: 8, yaw: 0 });
+    }
     world.add(group);
     return { group, key: entry.key };
   });
@@ -4145,30 +4160,23 @@ const createScene = ({
   if (trackDef.shortcut) {
     addRamp(world, sampler, { progress: trackDef.shortcut.launchProgress, side: trackDef.shortcut.side }, { dare: true });
   }
-  // Fish Bone pool — meshes recycled to mirror the live fish-bone list each
-  // frame (themed banana-class hazard). One merged skeleton geometry per
-  // holder keeps the draw count identical to the old single-mesh drop.
+  // Glyph Mine pool (M4 rebrand of the dropped trap) — a dark rune plate
+  // with an upright violet glyph shard and gold edge inlay. One merged
+  // geometry per holder keeps the draw count identical.
   const fishBoneGeometry = (() => {
     const parts = [];
-    const spine = new THREE.CylinderGeometry(0.2, 0.2, 4.6, 6);
-    spine.rotateX(Math.PI / 2);
-    parts.push(spine);
-    const skull = new THREE.ConeGeometry(1.05, 1.7, 5);
-    skull.rotateX(Math.PI / 2);
-    skull.translate(0, 0, 2.9);
-    parts.push(skull);
-    [-1.55, -0.45, 0.65].forEach((z, order) => {
-      const rib = new THREE.CylinderGeometry(0.11, 0.11, 2.3 - order * 0.35, 5);
-      rib.translate(0, 0, z);
-      parts.push(rib);
-    });
-    const tail = new THREE.OctahedronGeometry(1.05);
-    tail.scale(0.18, 1.5, 1);
-    tail.translate(0, 0, -2.85);
-    parts.push(tail);
-    // The octahedron is non-indexed while cylinders/cones are indexed —
+    const plate = new THREE.BoxGeometry(5.2, 0.6, 5.2);
+    parts.push(plate);
+    const glyph = new THREE.OctahedronGeometry(1.5);
+    glyph.scale(0.5, 1.6, 0.5);
+    glyph.translate(0, 1.6, 0);
+    parts.push(glyph);
+    const inlay = new THREE.BoxGeometry(4.2, 0.2, 0.9);
+    inlay.translate(0, 0.42, 0);
+    parts.push(inlay);
+    // The octahedron is non-indexed while boxes are indexed —
     // mergeGeometries refuses mixed inputs, so normalize first.
-    return mergeGeometries(parts.map((part) => part.toNonIndexed()));
+    return mergeGeometries(parts.map((part) => (part.index ? part.toNonIndexed() : part)));
   })();
   const fishBonePool = [];
   for (let index = 0; index < 8; index += 1) {
@@ -4176,7 +4184,7 @@ const createScene = ({
     holder.visible = false;
     const bone = new THREE.Mesh(
       fishBoneGeometry,
-      createToonMaterial('#F5F8FF', { emissive: '#7EC8E8', emissiveIntensity: 0.32 })
+      createToonMaterial('#3a2c4e', { emissive: '#b08aff', emissiveIntensity: 0.42 })
     );
     // Items read oversized on purpose (MK rule) — at race speed and camera
     // distance a true-scale prop disappears. (Round-7 owner feedback:
@@ -4184,7 +4192,7 @@ const createScene = ({
     bone.scale.setScalar(1.5);
     bone.position.y = 2.1;
     holder.add(bone);
-    addGlowSprite(holder, '#00E5FF', 9, 0.42, 1.6);
+    addGlowSprite(holder, '#b08aff', 9, 0.42, 1.6);
     world.add(holder);
     fishBonePool.push(holder);
   }
@@ -4197,48 +4205,52 @@ const createScene = ({
     holder.visible = false;
     const snowball = new THREE.Group();
     snowball.userData.skin = 'snowball';
+    // Sigil Bolt (layer23's slot): violet rune shard.
+    const sigilGeometry = new THREE.OctahedronGeometry(2.3);
+    sigilGeometry.scale(0.8, 0.8, 1.6);
     snowball.add(
-      new THREE.Mesh(
-        new THREE.SphereGeometry(2.1, 10, 8),
-        createBasicMaterial('#F5F8FF', { emissive: '#00E5FF', emissiveIntensity: 0.7 })
-      )
+      new THREE.Mesh(sigilGeometry, createBasicMaterial('#b08aff', { emissive: '#b08aff', emissiveIntensity: 0.85 }))
     );
-    addGlowSprite(snowball, '#00E5FF', 9, 0.45, 0);
+    addGlowSprite(snowball, '#b08aff', 9, 0.45, 0);
+    // Powder Shot (t clow's slot): little cannonball with a gold fuse spark.
     const carrot = new THREE.Group();
     carrot.userData.skin = 'carrot';
-    const carrotBody = new THREE.ConeGeometry(1.5, 5.6, 8);
-    carrotBody.rotateX(Math.PI / 2);
     carrot.add(
-      new THREE.Mesh(carrotBody, createBasicMaterial('#ff8a2a', { emissive: '#ff7d1f', emissiveIntensity: 0.6 }))
+      new THREE.Mesh(
+        new THREE.SphereGeometry(2.0, 10, 8),
+        createBasicMaterial('#16141c', { emissive: '#050508', emissiveIntensity: 0.3 })
+      )
     );
-    const carrotLeaf = new THREE.ConeGeometry(0.85, 2.2, 5);
-    carrotLeaf.rotateX(-Math.PI / 2);
-    carrotLeaf.translate(0, 0, -3.3);
     carrot.add(
-      new THREE.Mesh(carrotLeaf, createBasicMaterial('#5fd068', { emissive: '#4cba55', emissiveIntensity: 0.55 }))
+      new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 8, 6),
+        createBasicMaterial('#ffb23e', { emissive: '#ffb23e', emissiveIntensity: 1.4 })
+      )
     );
-    addGlowSprite(carrot, '#ffb066', 10, 0.55, 0);
+    carrot.children[1].position.set(0, 2.1, -0.8);
+    addGlowSprite(carrot, '#ffb23e', 10, 0.55, 0);
     const iceShard = new THREE.Group();
     iceShard.userData.skin = 'iceshard';
+    // Rune Bolt (isethius's slot): teal inscription shard.
     const shardGeometry = new THREE.OctahedronGeometry(2.3);
     shardGeometry.scale(0.8, 0.8, 1.6);
     iceShard.add(
-      new THREE.Mesh(shardGeometry, createBasicMaterial('#7EC8E8', { emissive: '#00E5FF', emissiveIntensity: 0.8 }))
+      new THREE.Mesh(shardGeometry, createBasicMaterial('#2ee6c8', { emissive: '#2ee6c8', emissiveIntensity: 0.85 }))
     );
-    addGlowSprite(iceShard, '#00E5FF', 10, 0.55, 0);
-    // Rocket Sardine — a little silver fish with a rocket flame, nose-first.
+    addGlowSprite(iceShard, '#2ee6c8', 10, 0.55, 0);
+    // Signal Seeker — a gold drone dart with a rocket flame, nose-first.
     const sardine = new THREE.Group();
     sardine.userData.skin = 'sardine';
     const sardineBody = new THREE.SphereGeometry(1, 10, 8);
     sardineBody.scale(0.8, 1.0, 2.4);
     sardine.add(
-      new THREE.Mesh(sardineBody, createBasicMaterial('#cfe8f4', { emissive: '#9fdcff', emissiveIntensity: 0.6 }))
+      new THREE.Mesh(sardineBody, createBasicMaterial('#ffd34f', { emissive: '#ffb23e', emissiveIntensity: 0.7 }))
     );
     const sardineTail = new THREE.OctahedronGeometry(1.0);
     sardineTail.scale(0.16, 1.1, 0.8);
     sardineTail.translate(0, 0, -2.7);
     sardine.add(
-      new THREE.Mesh(sardineTail, createBasicMaterial('#b7dcec', { emissive: '#9fdcff', emissiveIntensity: 0.6 }))
+      new THREE.Mesh(sardineTail, createBasicMaterial('#2ee6c8', { emissive: '#2ee6c8', emissiveIntensity: 0.7 }))
     );
     const sardineFlame = new THREE.ConeGeometry(0.7, 2.2, 6);
     sardineFlame.rotateX(-Math.PI / 2);
@@ -4263,17 +4275,17 @@ const createScene = ({
     holder.visible = false;
     const outer = new THREE.Mesh(
       new THREE.SphereGeometry(15, 18, 12),
-      new THREE.MeshBasicMaterial({ color: '#7EC8E8', depthWrite: false, opacity: 0.28, transparent: true })
+      new THREE.MeshBasicMaterial({ color: '#5a3f9f', depthWrite: false, opacity: 0.28, transparent: true })
     );
     outer.scale.set(1, 0.5, 1);
     holder.add(outer);
     const inner = new THREE.Mesh(
       new THREE.SphereGeometry(10, 14, 10),
-      new THREE.MeshBasicMaterial({ color: '#F5F8FF', depthWrite: false, opacity: 0.36, transparent: true })
+      new THREE.MeshBasicMaterial({ color: '#b08aff', depthWrite: false, opacity: 0.36, transparent: true })
     );
     inner.scale.set(1, 0.5, 1);
     holder.add(inner);
-    addGlowSprite(holder, '#00E5FF', 20, 0.22, 5);
+    addGlowSprite(holder, '#b08aff', 20, 0.22, 5);
     holder.userData.shells = [outer, inner];
     holder.traverse((node) => {
       node.castShadow = false;
@@ -4353,7 +4365,7 @@ const createScene = ({
     shieldShellGeometry,
     // Hero slice: one clean translucent dome — the wireframe facet overlay
     // read as a cracked egg hiding the kart/driver at gameplay distance.
-    new THREE.MeshBasicMaterial({ color: '#7EC8E8', depthWrite: false, opacity: 0.1, transparent: true })
+    new THREE.MeshBasicMaterial({ color: '#2ee6c8', depthWrite: false, opacity: 0.1, transparent: true })
   );
   shieldShell.scale.set(1.12, 0.7, 1.3);
   shieldShell.position.y = 3.4;
@@ -4362,7 +4374,7 @@ const createScene = ({
   // faceted cage around the kart.
   const shieldRim = new THREE.Mesh(
     new THREE.TorusGeometry(7.4 * KART_SCALE, 0.16, 6, 40),
-    new THREE.MeshBasicMaterial({ color: '#bfeaff', depthWrite: false, opacity: 0.4, transparent: true })
+    new THREE.MeshBasicMaterial({ color: '#9ff5e8', depthWrite: false, opacity: 0.4, transparent: true })
   );
   shieldRim.rotation.x = Math.PI / 2;
   shieldRim.scale.set(1.12, 1.3, 1);
@@ -4373,7 +4385,7 @@ const createScene = ({
   for (let index = 0; index < 3; index += 1) {
     const shard = new THREE.Mesh(
       orbitShardGeometry,
-      createBasicMaterial('#F5F8FF', { emissive: '#00E5FF', emissiveIntensity: 0.5 })
+      createBasicMaterial('#9ff5e8', { emissive: '#2ee6c8', emissiveIntensity: 0.5 })
     );
     const angle = (index / 3) * Math.PI * 2;
     shard.position.set(Math.cos(angle) * 7.6 * KART_SCALE, 3.2, Math.sin(angle) * 7.6 * KART_SCALE);
@@ -4417,11 +4429,12 @@ const createScene = ({
     ribbonCanvas.width = 64;
     ribbonCanvas.height = 256;
     const ribbonCtx = ribbonCanvas.getContext('2d');
+    // Overdrive (M4): gold/teal ion trails instead of the retired aurora.
     const ribbonGradient = ribbonCtx.createLinearGradient(0, 0, 0, 256);
-    ribbonGradient.addColorStop(0, 'rgba(0, 229, 201, 0)');
-    ribbonGradient.addColorStop(0.35, 'rgba(57, 255, 140, 0.85)');
-    ribbonGradient.addColorStop(0.7, 'rgba(123, 97, 255, 0.75)');
-    ribbonGradient.addColorStop(1, 'rgba(0, 229, 201, 0)');
+    ribbonGradient.addColorStop(0, 'rgba(46, 230, 200, 0)');
+    ribbonGradient.addColorStop(0.35, 'rgba(255, 211, 79, 0.85)');
+    ribbonGradient.addColorStop(0.7, 'rgba(46, 230, 200, 0.75)');
+    ribbonGradient.addColorStop(1, 'rgba(46, 230, 200, 0)');
     ribbonCtx.fillStyle = ribbonGradient;
     ribbonCtx.fillRect(0, 0, 64, 256);
     const ribbonTexture = new THREE.CanvasTexture(ribbonCanvas);
@@ -4441,29 +4454,30 @@ const createScene = ({
       ribbon.userData.phase = order * 2.1;
       auroraRig.add(ribbon);
     });
-    addGlowSprite(auroraRig, '#39FF8C', 14, 0.35, 3);
+    addGlowSprite(auroraRig, '#ffd34f', 14, 0.35, 3);
   }
   auroraRig.traverse((node) => {
     node.castShadow = false;
   });
   player.add(auroraRig);
-  // Avalanche marker — rumble ring during the warning, expanding flash on
-  // the burst. Repositioned over the locked target every frame.
+  // Barrage marker (M4: the leader-killer is the Blackflag Barrage) —
+  // blackflag-red rumble ring during the warning, gold flash on the burst.
   const avalancheMarker = new THREE.Group();
   avalancheMarker.visible = false;
   const avalancheRing = new THREE.Mesh(
     new THREE.TorusGeometry(7.8, 0.55, 6, 26),
-    new THREE.MeshBasicMaterial({ color: '#ffffff', depthWrite: false, opacity: 0.85, transparent: true })
+    new THREE.MeshBasicMaterial({ color: '#d43a2e', depthWrite: false, opacity: 0.85, transparent: true })
   );
   avalancheRing.rotation.x = Math.PI / 2;
   avalancheMarker.add(avalancheRing);
-  const avalancheGlow = addGlowSprite(avalancheMarker, '#f4fbff', 16, 0.55, 4);
+  const avalancheGlow = addGlowSprite(avalancheMarker, '#ffb23e', 16, 0.55, 4);
   avalancheMarker.traverse((node) => {
     node.castShadow = false;
   });
   world.add(avalancheMarker);
-  // Penguin March rig — seven marchers repositioned along the crossing
-  // every frame. Procedural stand-ins until the roster GLBs swap in.
+  // Cargo Crawler rig (M4 rebrand of the crossing ultimate) — seven little
+  // shipyard hauler bots crossing the road in a train. Timber chassis, crate
+  // load, lantern nose light. Procedural stand-ins stay the shipped path.
   const marchRig = new THREE.Group();
   marchRig.visible = false;
   const marchers = [];
@@ -4472,19 +4486,27 @@ const createScene = ({
     const inner = new THREE.Group();
     const standIn = new THREE.Group();
     standIn.userData.kind = 'march-fallback';
-    const body = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.6, 2.1, 4.6, 8),
-      createToonMaterial('#1c2433', { emissive: '#0e1420', emissiveIntensity: 0.2 })
+    const chassis = new THREE.Mesh(
+      new THREE.BoxGeometry(3.4, 2.0, 4.6),
+      createToonMaterial('#2a1a12', { emissive: '#120a06', emissiveIntensity: 0.2 })
     );
-    body.position.y = 2.3;
-    standIn.add(body);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 6), createToonMaterial('#1c2433'));
-    head.position.y = 5.2;
-    standIn.add(head);
-    const belly = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 6), createToonMaterial('#f4f8ff'));
-    belly.scale.set(0.8, 1.3, 0.55);
-    belly.position.set(1.0, 2.5, 0);
-    standIn.add(belly);
+    chassis.position.y = 1.6;
+    standIn.add(chassis);
+    const crateLoad = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.2, 2.6), createToonMaterial('#4a3220'));
+    crateLoad.position.set(0, 3.7, -0.6);
+    crateLoad.rotation.y = 0.2;
+    standIn.add(crateLoad);
+    const lamp = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 0.9, 0.9),
+      createToonMaterial('#ffb23e', { emissive: '#ffb23e', emissiveIntensity: 1.1 })
+    );
+    lamp.position.set(0, 2.0, 2.4);
+    standIn.add(lamp);
+    [-1, 1].forEach((side) => {
+      const tread = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 4.8), createToonMaterial('#12100e'));
+      tread.position.set(side * 2.0, 0.8, 0);
+      standIn.add(tread);
+    });
     inner.add(standIn);
     wrapper.add(inner);
     wrapper.traverse((node) => {
@@ -4828,9 +4850,9 @@ export const HeldItemIcon = ({ heldItem, projectileSkin, size = 15 }) => {
 
 const heldItemLabel = (heldItem, projectileSkin) => {
   if (heldItem === 'snowball') {
-    if (projectileSkin === 'carrot') return 'CARROT';
-    if (projectileSkin === 'snowball') return 'SNOWBALL';
-    return 'ICE SHARD';
+    if (projectileSkin === 'carrot') return 'POWDER SHOT';
+    if (projectileSkin === 'snowball') return 'SIGIL BOLT';
+    return 'RUNE BOLT';
   }
   return ITEM_LABELS[heldItem] || heldItem.toUpperCase();
 };

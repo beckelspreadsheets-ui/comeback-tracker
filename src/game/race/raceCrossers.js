@@ -28,6 +28,15 @@ export const CROSSER_TYPES = Object.freeze({
     laneFrequency: 0,
     speedMultiplier: 0.55,
   },
+  // Inscription Circuit (M4): the Blackflag cannon battery's rolling shot —
+  // a steady iron ball crossing the wharf switchback apex.
+  cannonball: {
+    hitSeverity: 1,
+    label: 'Cannonball',
+    laneAmplitude: 0,
+    laneFrequency: 0,
+    speedMultiplier: 0.62,
+  },
   fishCart: {
     hitSeverity: 1,
     label: 'Fish Cart',

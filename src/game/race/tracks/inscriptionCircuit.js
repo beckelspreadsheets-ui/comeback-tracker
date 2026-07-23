@@ -101,7 +101,11 @@ export const INSCRIPTION_CIRCUIT_TRACK = Object.freeze({
     peakHeight: 22,
     side: -0.65,
   },
-  crossers: [],
+  crossers: [
+    // The Blackflag cannon battery (prop placed in M3) fires rolling shot
+    // across the switchback apex — slow, narrow, dodgeable, always cycling.
+    { key: 'wharf-cannonball', progress: 0.475, direction: 1, speed: 0.5, width: 0.18, modelType: 'cannonball' },
+  ],
   // Inscription-dusk palette: dark carved stone ground, indigo→teal→burnt
   // orange dusk sky. District light languages (teal runway / lantern gold /
   // beacon violet+gold) ride on top via the visual schema + M3 dressing.
