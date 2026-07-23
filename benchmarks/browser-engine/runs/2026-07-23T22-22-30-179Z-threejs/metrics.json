@@ -1,0 +1,201 @@
+{
+  "protocolVersion": 1,
+  "lane": "threejs",
+  "capturedAt": "2026-07-23T22:23:24.458Z",
+  "diagnosticOnly": true,
+  "environment": {
+    "headed": false,
+    "hostname": "openclaw-seth",
+    "platform": "linux 6.8.0-111-generic",
+    "cpu": "AMD EPYC-Milan Processor",
+    "logicalCpuCount": 2,
+    "totalMemoryBytes": 8123715584,
+    "playwrightBrowser": "chromium"
+  },
+  "scenarios": [
+    {
+      "id": "desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "url": "http://127.0.0.1:5197/?raceAutoplay=1&track=comeback-city#race",
+      "load": {
+        "startupToReadyMs": 5223,
+        "transferBytes": 1405704,
+        "responseCount": 11,
+        "navigation": {
+          "name": "http://127.0.0.1:5197/?raceAutoplay=1&track=comeback-city#race",
+          "entryType": "navigation",
+          "startTime": 0,
+          "duration": 169.19999980926514,
+          "initiatorType": "navigation",
+          "deliveryType": "",
+          "nextHopProtocol": "http/1.1",
+          "renderBlockingStatus": "non-blocking",
+          "contentEncoding": "gzip",
+          "workerStart": 0,
+          "workerRouterEvaluationStart": 0,
+          "workerCacheLookupStart": 0,
+          "workerMatchedSourceType": "",
+          "workerFinalSourceType": "",
+          "redirectStart": 0,
+          "redirectEnd": 0,
+          "fetchStart": 2.3999996185302734,
+          "domainLookupStart": 6.5,
+          "domainLookupEnd": 6.5,
+          "connectStart": 6.5,
+          "secureConnectionStart": 0,
+          "connectEnd": 7.199999809265137,
+          "requestStart": 7.800000190734863,
+          "responseStart": 14.199999809265137,
+          "firstInterimResponseStart": 0,
+          "finalResponseHeadersStart": 14.199999809265137,
+          "responseEnd": 17.5,
+          "transferSize": 1150,
+          "encodedBodySize": 850,
+          "decodedBodySize": 1902,
+          "responseStatus": 200,
+          "serverTiming": [],
+          "unloadEventStart": 0,
+          "unloadEventEnd": 0,
+          "domInteractive": 29.5,
+          "domContentLoadedEventStart": 168.89999961853027,
+          "domContentLoadedEventEnd": 169,
+          "domComplete": 169.19999980926514,
+          "loadEventStart": 169.19999980926514,
+          "loadEventEnd": 169.19999980926514,
+          "type": "navigate",
+          "redirectCount": 0,
+          "activationStart": 0,
+          "criticalCHRestart": 0,
+          "notRestoredReasons": null,
+          "confidence": {
+            "randomizedTriggerRate": 0.4994798,
+            "value": "high"
+          }
+        }
+      },
+      "memory": {
+        "jsHeapSizeLimit": 2330000000,
+        "totalJSHeapSize": 50400000,
+        "usedJSHeapSize": 31200000
+      },
+      "frames": {
+        "sampleCount": 243,
+        "medianFps": 12,
+        "onePercentLowFps": 3.96,
+        "medianFrameMs": 83.3,
+        "p99FrameMs": 216.6,
+        "longFrameCount": 221,
+        "spikeCount": 67
+      },
+      "scene": {
+        "drawCalls": 711,
+        "geometries": 676,
+        "meshCount": 711,
+        "programs": 24,
+        "shadowMapEnabled": false,
+        "textures": 16,
+        "triangles": 91810
+      },
+      "artifacts": [
+        "start.png",
+        "middle.png",
+        "end.png"
+      ]
+    },
+    {
+      "id": "mobile-landscape",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "url": "http://127.0.0.1:5197/?raceAutoplay=1&track=comeback-city#race",
+      "load": {
+        "startupToReadyMs": 5168,
+        "transferBytes": 1405704,
+        "responseCount": 11,
+        "navigation": {
+          "name": "http://127.0.0.1:5197/?raceAutoplay=1&track=comeback-city#race",
+          "entryType": "navigation",
+          "startTime": 0,
+          "duration": 222,
+          "initiatorType": "navigation",
+          "deliveryType": "",
+          "nextHopProtocol": "http/1.1",
+          "renderBlockingStatus": "non-blocking",
+          "contentEncoding": "gzip",
+          "workerStart": 0,
+          "workerRouterEvaluationStart": 0,
+          "workerCacheLookupStart": 0,
+          "workerMatchedSourceType": "",
+          "workerFinalSourceType": "",
+          "redirectStart": 0,
+          "redirectEnd": 0,
+          "fetchStart": 0.3000001907348633,
+          "domainLookupStart": 1.8000001907348633,
+          "domainLookupEnd": 1.8000001907348633,
+          "connectStart": 1.8000001907348633,
+          "secureConnectionStart": 0,
+          "connectEnd": 1.9000005722045898,
+          "requestStart": 2.200000762939453,
+          "responseStart": 7.100000381469727,
+          "firstInterimResponseStart": 0,
+          "finalResponseHeadersStart": 7.100000381469727,
+          "responseEnd": 7.700000762939453,
+          "transferSize": 1150,
+          "encodedBodySize": 850,
+          "decodedBodySize": 1902,
+          "responseStatus": 200,
+          "serverTiming": [],
+          "unloadEventStart": 0,
+          "unloadEventEnd": 0,
+          "domInteractive": 47.20000076293945,
+          "domContentLoadedEventStart": 214.20000076293945,
+          "domContentLoadedEventEnd": 215.70000076293945,
+          "domComplete": 222,
+          "loadEventStart": 222,
+          "loadEventEnd": 222,
+          "type": "navigate",
+          "redirectCount": 0,
+          "activationStart": 0,
+          "criticalCHRestart": 0,
+          "notRestoredReasons": null,
+          "confidence": {
+            "randomizedTriggerRate": 0.4994798,
+            "value": "high"
+          }
+        }
+      },
+      "memory": {
+        "jsHeapSizeLimit": 2330000000,
+        "totalJSHeapSize": 53500000,
+        "usedJSHeapSize": 23100000
+      },
+      "frames": {
+        "sampleCount": 606,
+        "medianFps": 30.03,
+        "onePercentLowFps": 14.56,
+        "medianFrameMs": 33.3,
+        "p99FrameMs": 66.6,
+        "longFrameCount": 16,
+        "spikeCount": 0
+      },
+      "scene": {
+        "drawCalls": 711,
+        "geometries": 676,
+        "meshCount": 711,
+        "programs": 24,
+        "shadowMapEnabled": false,
+        "textures": 16,
+        "triangles": 91810
+      },
+      "artifacts": [
+        "start.png",
+        "middle.png",
+        "end.png"
+      ]
+    }
+  ]
+}

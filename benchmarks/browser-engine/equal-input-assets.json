@@ -1,0 +1,710 @@
+{
+  "protocolVersion": 1,
+  "generatedAt": "2026-07-23T22:22:12.211Z",
+  "sourceCommit": "32f75eaa99defbe7917af20478053131f2dda44c",
+  "assetRoot": "src/assets/game",
+  "totalAssets": 140,
+  "totalBytes": 79415173,
+  "assets": [
+    {
+      "path": "src/assets/game/art-direction/avatars/crrt-penguin-sheet.png",
+      "bytes": 2348945,
+      "sha256": "f7013202bde100a99e439066d72d9b2ed734af81ae5ee3619a537735a79479d1"
+    },
+    {
+      "path": "src/assets/game/art-direction/avatars/tripo-inputs/crrt-bunny-seated-back.png",
+      "bytes": 1315509,
+      "sha256": "597e79759e8e0007321817c5700a3eb6d9bf60ac75d8bc2a6456551e8a0bbee0"
+    },
+    {
+      "path": "src/assets/game/art-direction/avatars/tripo-inputs/crrt-bunny-seated-front34.png",
+      "bytes": 1406640,
+      "sha256": "8db308d9e4cf83e2a5a01473030947483513407315528a75b13bf3635faa54aa"
+    },
+    {
+      "path": "src/assets/game/art-direction/avatars/tripo-inputs/crrt-bunny-seated-side.png",
+      "bytes": 1352368,
+      "sha256": "a67c69fe4891595d6711c3c05afabe0ecc1fef6a920a6f062ee72cac11622fee"
+    },
+    {
+      "path": "src/assets/game/art-direction/comeback-city-world-trait-sheet-v1.png",
+      "bytes": 2484182,
+      "sha256": "1dffc6b298ba1c789f4631f3647150d7bafdc945f606af6c8d2cd406f57fffbf"
+    },
+    {
+      "path": "src/assets/game/art-direction/hud-controls-trait-sheet-v1.png",
+      "bytes": 1809744,
+      "sha256": "e648d7d69ad37497cec927933739ca8286d1d8fab2633d2a2faf631101ec21ec"
+    },
+    {
+      "path": "src/assets/game/art-direction/pickups-vfx-trait-sheet-v1.png",
+      "bytes": 2024230,
+      "sha256": "b1cc8a2f676ef078ac0020e0485eacd71785f22b78b06657773e9fac2905cd06"
+    },
+    {
+      "path": "src/assets/game/art-direction/player-kart-trait-sheet-v1.png",
+      "bytes": 1880627,
+      "sha256": "a59383e3c318676882c0d49b02a61cef4688db836ba1bd794aa8adc772a6106b"
+    },
+    {
+      "path": "src/assets/game/art-direction/rival-kart-family-trait-sheet-v1.png",
+      "bytes": 2020999,
+      "sha256": "fc404ac440d7a6d65d9cb53d132261d246499e9b19fc690ea9b8bcf8023e8544"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/black-gold-elite-rival-trait-card-v2.png",
+      "bytes": 2231318,
+      "sha256": "7abc7c313f6bb57b7e8e55d59ade4e69326fc06dcfab0d6f0c7f4492a8a565e8"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/blue-speed-rival-trait-card-v2.png",
+      "bytes": 2024110,
+      "sha256": "45563fbcca469943ab413b77e56d8888bc629107647153269a5b03511be9bc48"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/district-portals-facades-trait-card-v2.png",
+      "bytes": 2221944,
+      "sha256": "dae2794fc188fcd99d0dbdc70b0e679567b9400ae9f320470a88507e02673af1"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/green-utility-rival-trait-card-v2.png",
+      "bytes": 2112068,
+      "sha256": "872743092bc9345726af41bb6f9f31fc0e711e31fc0aeb99adcdcd3db681a8c3"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/hero-red-kart-trait-card-v2.png",
+      "bytes": 2126353,
+      "sha256": "0449ba5b199c6489aa6574a00cab1f8324fb5a53a112ac870cc8e34898036222"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/material-lighting-camera-trait-card-v2.png",
+      "bytes": 2286117,
+      "sha256": "be0ad7803e9a5fe4d1b4a136341cd902bc50c7a4605264f6325de6f3e275a461"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/orange-muscle-rival-trait-card-v2.png",
+      "bytes": 1999895,
+      "sha256": "8479e54b0d56249a9539f8ae20cf1c78d84a670b824cfad730131c58ee9a75c8"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/pickups-boost-vfx-trait-card-v2.png",
+      "bytes": 2201115,
+      "sha256": "b88b04d2a6df408c28bbd19d9d6ec007180bf200ff64579758d9e97f0bcfb611"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/purple-tech-rival-trait-card-v2.png",
+      "bytes": 1975782,
+      "sha256": "bbf01b132dd60b1f93d81a673eb20f756b24c5b52e23a95ca7d0f9ade46c2778"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/roadside-props-barriers-trait-card-v2.png",
+      "bytes": 2003558,
+      "sha256": "c86625fc6a8a30e46f0c2db71b8cd289687f390604f716b7aaa92596bebc6566"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/track-geometry-road-system-trait-card-v2.png",
+      "bytes": 2135077,
+      "sha256": "b4c131741a4a4abe6894450c3d70c146f3acf763bc08ab2f7e17678980059229"
+    },
+    {
+      "path": "src/assets/game/art-direction/v2/white-red-support-rival-trait-card-v2.png",
+      "bytes": 2169202,
+      "sha256": "2c896e0921a72bbaf9c7741c944fa9c5b3fe2ea3dbae42c6fb6de96d579fbed2"
+    },
+    {
+      "path": "src/assets/game/city-skyline-backdrop.png",
+      "bytes": 1721609,
+      "sha256": "dc508f525df9b35545ff089d45f99fbcdb59ff5521ae97a6a83b5901ecfd5e29"
+    },
+    {
+      "path": "src/assets/game/comeback-city-race-backdrop-v2.png",
+      "bytes": 2021818,
+      "sha256": "8c70437666a3cf663825e76146e7959318f916dbde7d7b239311e8ef126b7337"
+    },
+    {
+      "path": "src/assets/game/comeback-city-race-backdrop.png",
+      "bytes": 1820097,
+      "sha256": "62cea42d130b464fb2de217f40adf452e35f26a0c60d5ee55ae3fa028c38a68b"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/pickups/pickups-vfx-alpha-sheet.png",
+      "bytes": 1100510,
+      "sha256": "8b23be633f14df239a203de833afee5f29a4a8239c7b8b167e496b65e84f6c64"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/player/player-boost.png",
+      "bytes": 237736,
+      "sha256": "5dd7e39d027a30a81dc478580d28717501f4cb78ea817cbb7c06571d3e5c3908"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/player/player-lean-left.png",
+      "bytes": 215403,
+      "sha256": "dbab0c8fbfe2113f9fbb9963930fac081837da33d6dbbc74a5dea1cfa8ed29b0"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/player/player-lean-right.png",
+      "bytes": 216968,
+      "sha256": "476eeabd9fd607bd2db8a69cce973a3fc32de8db9d9284fb530f37a7b398d03a"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/player/player-straight.png",
+      "bytes": 210382,
+      "sha256": "0cd2168099782a96ec8b0b604da00b8853c5c7c7cb5d5010c2e393d0dd89b230"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/rivals/rival-blue-a.png",
+      "bytes": 174188,
+      "sha256": "119cfcd5d21a985af9e18ae43723d289d0c78b89f86ddfbd4ff717d120c891fc"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/rivals/rival-blue-b.png",
+      "bytes": 162982,
+      "sha256": "12d38f85003b0b02e2bbfbc4d9145ddea542e063f2ebe628511ae249200b83b2"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/rivals/rival-orange-a.png",
+      "bytes": 167420,
+      "sha256": "d47c676daabb6f316e2e1a7ad88d5bd20de7caf498e4ae8371909aedc937f0df"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/rivals/rival-orange-b.png",
+      "bytes": 166722,
+      "sha256": "ff46f6ef171e63ecbcfe5bb064a7c05a98122f1de28ddcaad93f87b6f66c2822"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/rivals/rival-purple-a.png",
+      "bytes": 174974,
+      "sha256": "208530dac3e7c150bf925832d82868b5dc2a867a0653929f10c43dd774efe933"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/rivals/rival-purple-b.png",
+      "bytes": 162834,
+      "sha256": "7010f1db707123c00d3c1ef8b3636ab4a6a9b609f9673501a80f6eb746ea0bf5"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/road/road-boost-lane.png",
+      "bytes": 308496,
+      "sha256": "7b45adbf877b079a46358cf0ae3d5cfeadd85df0889e90849f7720c4c39226a8"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/road/road-curve-left.png",
+      "bytes": 292827,
+      "sha256": "0409e7c53a3fbc0c8c7d4a5db8302280184415529dafc9459bda4504e221e640"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/road/road-curve-right.png",
+      "bytes": 295883,
+      "sha256": "7db597d58743be5f899b2be8393e54bc747189d7f7d235bf6993993976d89329"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/road/road-straight.png",
+      "bytes": 284600,
+      "sha256": "77aa9f0b3e80ec1dbddc1804b72fbb98a3fa1346e0a586d5f8a1f54e3966cfc4"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/sheets/pickups-vfx-source.png",
+      "bytes": 1741476,
+      "sha256": "726606e7d4858117e9dc7003e26486cca9bf4fd110d2e8ab884b96b7cd071653"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/sheets/player-kart-states-source.png",
+      "bytes": 1434517,
+      "sha256": "fa4105a9b4f8757bb8953a99c7b78105762cca5731a919405139b364f859b148"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/sheets/rival-kart-family-source.png",
+      "bytes": 1539858,
+      "sha256": "c4ade84fabe0c7d528bf30b20c076ce83fcd59fe06cd25a60679f50fd75f9dc6"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/sheets/road-modules-source.png",
+      "bytes": 2590018,
+      "sha256": "8ac6fc140f5dfec66f4525a2a9bd9fb7f3d427eed0e1b64f451fd58f778d0e2d"
+    },
+    {
+      "path": "src/assets/game/generated-race-v2/sheets/road-perspective-modules-source.png",
+      "bytes": 1614868,
+      "sha256": "09cb76c7c060696a784871d4cb1924010a748694d0d85eac4b9086a7e66a07b1"
+    },
+    {
+      "path": "src/assets/game/generated/backdrops/cc-far.webp",
+      "bytes": 49406,
+      "sha256": "8d1a65d539c81d8ad9626b1dff3d78493c646f5b31f2ee587023399f26e21435"
+    },
+    {
+      "path": "src/assets/game/generated/backdrops/cc-near.webp",
+      "bytes": 143420,
+      "sha256": "4abf37d64e0a24e9dc2aa17219b3543921bae3d092c75d36ed0cd45a6a8d20be"
+    },
+    {
+      "path": "src/assets/game/generated/backdrops/ic-far.webp",
+      "bytes": 13430,
+      "sha256": "c1a3cf928f60c3b82db7eee0e7bf9ab416d822e1d73e18b3d2869f76a782e956"
+    },
+    {
+      "path": "src/assets/game/generated/backdrops/ic-near.webp",
+      "bytes": 14032,
+      "sha256": "02218a1a813d9bc579970ca0287f89d8df13a3fcb9155ab9869b5232a4a278c3"
+    },
+    {
+      "path": "src/assets/game/generated/backdrops/pv-far.webp",
+      "bytes": 34564,
+      "sha256": "30367685a6386c260240f1965d87e5c2182ca0ae7a8ef238a6c48305c1959b75"
+    },
+    {
+      "path": "src/assets/game/generated/backdrops/pv-near.webp",
+      "bytes": 86520,
+      "sha256": "7fc6b2419bc3f652ceb96b119cf55c60c616245c54e1310a0c02ada6be9fd498"
+    },
+    {
+      "path": "src/assets/game/generated/district-facade-clinic.png",
+      "bytes": 177467,
+      "sha256": "e90b4a6d11c43e00ad1df79df253602324b4e99c9e738705997a9a1eed6a20e8"
+    },
+    {
+      "path": "src/assets/game/generated/district-facade-food.png",
+      "bytes": 168932,
+      "sha256": "0283fd16bf46ed03d526e37263ca8a878f1fde4cdbb05cfedb30384b29973e8e"
+    },
+    {
+      "path": "src/assets/game/generated/district-facade-garage.png",
+      "bytes": 171597,
+      "sha256": "0e2fc4e26c73b400c390c3e7a83c9a777197a154360fefcbb58ed0ef884ecd89"
+    },
+    {
+      "path": "src/assets/game/generated/district-facade-gym.png",
+      "bytes": 174886,
+      "sha256": "4364962300beef0f12a5965aaea3dffee174ef2290cdf56965dd2f758df64fe4"
+    },
+    {
+      "path": "src/assets/game/generated/district-facade-lab.png",
+      "bytes": 162561,
+      "sha256": "1d18f94b444ca1f4eb0454232920abb67073300170f818483b7de3a072909ad4"
+    },
+    {
+      "path": "src/assets/game/items/item-aurora.webp",
+      "bytes": 5658,
+      "sha256": "05efc264f77322b55eb9137f9f343642a9f84f5d13780867a1f9a0203ac93df5"
+    },
+    {
+      "path": "src/assets/game/items/item-avalanche.webp",
+      "bytes": 11000,
+      "sha256": "acb4c4f4ae83fd33d51e1db834f76bdf865f6d181646f32724ec497f12d09b21"
+    },
+    {
+      "path": "src/assets/game/items/item-barrage.webp",
+      "bytes": 2124,
+      "sha256": "2f6e0a53abd7f843a022f5f30b5d56843a9376eb850e4587cf8543ecb2503c35"
+    },
+    {
+      "path": "src/assets/game/items/item-blizzard.webp",
+      "bytes": 5870,
+      "sha256": "f5e3efc940e826d0b86c3e5f87b68bd2073c593a8adbd33495d71ba38f62a22d"
+    },
+    {
+      "path": "src/assets/game/items/item-carrot.webp",
+      "bytes": 5550,
+      "sha256": "e47f95dfca103aca5100911d54c05aeda3a74ded6de32487c0b34bb6cbf37dbb"
+    },
+    {
+      "path": "src/assets/game/items/item-cocoa.webp",
+      "bytes": 6732,
+      "sha256": "72f0c9f084c3e96fbc27ff23c5cc82d9668cba40fbf32a0c2a9f0e560ff2cd64"
+    },
+    {
+      "path": "src/assets/game/items/item-crawler.webp",
+      "bytes": 1542,
+      "sha256": "b0161d1477e50061fcfe7964bae1e4270828f3c364ed6cf7bf0fd5b5867717f4"
+    },
+    {
+      "path": "src/assets/game/items/item-cutlass.webp",
+      "bytes": 2072,
+      "sha256": "63a4e5c5b5f5d2f538285d5c0b04f34497d700c76ed5c241c7c8179482a511b8"
+    },
+    {
+      "path": "src/assets/game/items/item-fishbone.webp",
+      "bytes": 3852,
+      "sha256": "9b886e9e7d4f7518c35f54683960306694205cba4ff41a03786609e23e3f2665"
+    },
+    {
+      "path": "src/assets/game/items/item-glyphmine.webp",
+      "bytes": 1806,
+      "sha256": "69a337f7178cf82397a470dda577c762875cd90b0ccebc9f4525147990efce3f"
+    },
+    {
+      "path": "src/assets/game/items/item-iceshard.webp",
+      "bytes": 5644,
+      "sha256": "06347f43bd7c9331c36467d3ff650748e3f9e4ba368b33b3fb363b7778945936"
+    },
+    {
+      "path": "src/assets/game/items/item-iceshield.webp",
+      "bytes": 7916,
+      "sha256": "f5e42360878f850d387d08355437b23a160d82e44e43a4dc43d7bf846de17a58"
+    },
+    {
+      "path": "src/assets/game/items/item-ioncharge.webp",
+      "bytes": 2238,
+      "sha256": "8eace181b9ed7ef690c8609bda1be5c118ba4299b415e8b771ddec2f3155d5ee"
+    },
+    {
+      "path": "src/assets/game/items/item-march.webp",
+      "bytes": 4470,
+      "sha256": "4ae4650b4048a8cd80a95ee8f83541b2845cbd9d53103dbfe21faf9be382ded4"
+    },
+    {
+      "path": "src/assets/game/items/item-overdrive.webp",
+      "bytes": 2750,
+      "sha256": "c5d38ccba35009e0ca0a80e9dcdb83466ae043354d0c625cdb450eb2515b3fa3"
+    },
+    {
+      "path": "src/assets/game/items/item-powdershot.webp",
+      "bytes": 2502,
+      "sha256": "2df1fa14011885c1af5c36fdfeba269f730a2a926239e7028914c448d352f1f3"
+    },
+    {
+      "path": "src/assets/game/items/item-runebolt.webp",
+      "bytes": 1834,
+      "sha256": "1ace2a767b4c55a556a11aa40d9f06442a8d3614d0af9b0cc5dabb0784d260e7"
+    },
+    {
+      "path": "src/assets/game/items/item-sardine.webp",
+      "bytes": 7602,
+      "sha256": "0fc5f9e1d1789309da372970b6e6ed22f5a61c90b57676eb6524af220015ba6e"
+    },
+    {
+      "path": "src/assets/game/items/item-seeker.webp",
+      "bytes": 2296,
+      "sha256": "40ff3c2f6dbe688e18671228caa92d0066f7fe970f3abc067da7d8edb1a6be3c"
+    },
+    {
+      "path": "src/assets/game/items/item-sigilbolt.webp",
+      "bytes": 1792,
+      "sha256": "ffd644f9e27cac9112fa1b95f5e84181ef239f4e82297bb1ce10b32b8a0576f8"
+    },
+    {
+      "path": "src/assets/game/items/item-slapfish.webp",
+      "bytes": 6634,
+      "sha256": "fa15d9d019d6446729d5f8b6546f36fc86896cd3fdfdb13ae69b7a22b1ff129b"
+    },
+    {
+      "path": "src/assets/game/items/item-snowball.webp",
+      "bytes": 6186,
+      "sha256": "3f250630157aabda14bee2bf97687c926d87b415bf7497a35f201f12a93515fd"
+    },
+    {
+      "path": "src/assets/game/items/item-staticveil.webp",
+      "bytes": 1982,
+      "sha256": "05ac9542740227edb8a551d2e09983eaed7b5cf4657a801572754a3f2352b113"
+    },
+    {
+      "path": "src/assets/game/items/item-wardshell.webp",
+      "bytes": 2206,
+      "sha256": "6f50e0f4d63af16ac2b59babeacfb2718eeee64846879f10c504020c103e9605"
+    },
+    {
+      "path": "src/assets/game/karts/boost-pad-proof.png",
+      "bytes": 20843,
+      "sha256": "0b3b4ccf110427fbb0f3889020db3d446f67626751d6e8652ba66a07cbd8216e"
+    },
+    {
+      "path": "src/assets/game/karts/item-box-proof.png",
+      "bytes": 35538,
+      "sha256": "39503349dbb8394cd4d7bb1a026b31644939737ebc157fbe09ec11dfe0872861"
+    },
+    {
+      "path": "src/assets/game/karts/player-proof-rear.png",
+      "bytes": 428786,
+      "sha256": "bb8bc2da9e8bb4223df66dc1e87c94135def42271bba619feb506e15dabe165f"
+    },
+    {
+      "path": "src/assets/game/karts/rival-proof-blue.png",
+      "bytes": 23758,
+      "sha256": "50b7ddd85af887c647b5a1f79e472110bcf7a9dabbb1fdcec1cd602d583aeaa9"
+    },
+    {
+      "path": "src/assets/game/karts/rival-proof-orange.png",
+      "bytes": 34643,
+      "sha256": "815393403e9e6b1cf19625bdc31d90c89cfe2f362af398ec029b065c16e9d84f"
+    },
+    {
+      "path": "src/assets/game/karts/rival-proof-purple.png",
+      "bytes": 41073,
+      "sha256": "83858ee682fc553a42e81f0afe5875a4210a6f437a7027eaa8d4bb855a9ec641"
+    },
+    {
+      "path": "src/assets/game/models/avatars/crrt-bunny.glb",
+      "bytes": 581692,
+      "sha256": "8f6f60d956081690ba551d2ea3478eea41051043953d0eb824d00ee152b7307e"
+    },
+    {
+      "path": "src/assets/game/models/avatars/layer23-penguin.glb",
+      "bytes": 254860,
+      "sha256": "6e5afbbc95bd462defde486642fcd811a5a9482b1a5ebd303d2ecb21877e339b"
+    },
+    {
+      "path": "src/assets/game/models/avatars/lifoladen.glb",
+      "bytes": 361592,
+      "sha256": "bc80b690559c1d4500907dfd3220d3b493f4eb383d5e5a63de7b6873cc54c6e8"
+    },
+    {
+      "path": "src/assets/game/models/avatars/mizzle.glb",
+      "bytes": 248916,
+      "sha256": "4e621b083c5173cfa51a47076b8d55a6bb3264aea9ba66027dd3048852cbcc4c"
+    },
+    {
+      "path": "src/assets/game/models/avatars/seth-penguin.glb",
+      "bytes": 505868,
+      "sha256": "ec6348cf5f3ff1e1c4acc8b922b323737c40db5132a9eaaed386ce3d682ce2da"
+    },
+    {
+      "path": "src/assets/game/models/avatars/tclow-penguin.glb",
+      "bytes": 301100,
+      "sha256": "6a34c995bde92a4ace89a806d81544e056c82453940df9afd78a53753532ecf9"
+    },
+    {
+      "path": "src/assets/game/models/items/avalanche-mound.glb",
+      "bytes": 166676,
+      "sha256": "743464b32eddbe27dcbac0f8673f4107c2e1992814293a268df99e30caf7f2cf"
+    },
+    {
+      "path": "src/assets/game/models/items/blizzard-cloud.glb",
+      "bytes": 166704,
+      "sha256": "1eba3b835ffc17645284dfadc423b2417806b6a33192f91fbadafe33ab2a9192"
+    },
+    {
+      "path": "src/assets/game/models/items/fishbone-trap.glb",
+      "bytes": 66948,
+      "sha256": "cea534eece03f99767e6cc15d60096d05ff96abfba28c5b51ff4ca1200fdba17"
+    },
+    {
+      "path": "src/assets/game/models/items/item-box-cc-coin.glb",
+      "bytes": 64116,
+      "sha256": "594bb7aca7ff0b6194ace23a804c510af23ca8a0423b4d8f815788244e02c469"
+    },
+    {
+      "path": "src/assets/game/models/items/item-box-pv-ice.glb",
+      "bytes": 42676,
+      "sha256": "16a0076f9563adf5fb7d5c244ffb8c4046bd18117a9dbdaa311f329ee72fe0c0"
+    },
+    {
+      "path": "src/assets/game/models/items/sardine-rocket.glb",
+      "bytes": 143096,
+      "sha256": "29213b2f8d064d3fdb04356f8e62930ddc3b30695110fc9b1cc520d1f45c7049"
+    },
+    {
+      "path": "src/assets/game/models/karts/ice-racer.glb",
+      "bytes": 539436,
+      "sha256": "1ea01b4f2afe7e29dbaa7678f76742c86c22ee8f5fdb3171b62e7b7dc2a2b151"
+    },
+    {
+      "path": "src/assets/game/models/karts/miami-cruiser.glb",
+      "bytes": 585548,
+      "sha256": "cc633f565f2cb1a548d7f9509f7abc542f60e5374bcb3c31ac72f46d3868f383"
+    },
+    {
+      "path": "src/assets/game/models/miami/condo-tower.glb",
+      "bytes": 262008,
+      "sha256": "76cb6aaf3e2a348728c5772677974092abcefcd30dd31846788293d94d636544"
+    },
+    {
+      "path": "src/assets/game/models/miami/corner-arcade.glb",
+      "bytes": 229512,
+      "sha256": "cc8d6a40376ac90a9bd027ad55cd0e87855f034d8a59b943b50e9b965069d107"
+    },
+    {
+      "path": "src/assets/game/models/miami/deco-hotel.glb",
+      "bytes": 180756,
+      "sha256": "89ba210add205a43ebd7b987e3ec6f8f7fbfca72d1bdb3c5d0363235608c6068"
+    },
+    {
+      "path": "src/assets/game/models/miami/lifeguard-tower.glb",
+      "bytes": 159240,
+      "sha256": "3df6243285e92f2f3102ec877ed1340d8916c07af5ef4c837b84e83a2a513517"
+    },
+    {
+      "path": "src/assets/game/models/miami/palm-cluster.glb",
+      "bytes": 153920,
+      "sha256": "a0c11bfb8a5c7bcbc134af324533030251f6b4875ea046fb298f3fab7f5426eb"
+    },
+    {
+      "path": "src/assets/game/models/miami/retro-diner.glb",
+      "bytes": 217244,
+      "sha256": "ec387ba1fb46bfe7e9544f45d003d4a7e98c9af1d7ddc808892da809972c2705"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/outplayasians-crosser.glb",
+      "bytes": 842140,
+      "sha256": "9c5ebc6175eb0b9afc46c9eab41ccf8d741a0b24e0357d50dac33d3d21376e9b"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-bitcoin-monument.glb",
+      "bytes": 66252,
+      "sha256": "28d457675aba5a4f077054a79fec44def3c8b939eeb6fe2c76d765b8e7af3811"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-blackjack.glb",
+      "bytes": 58424,
+      "sha256": "faa5348c2c0ce8e8ffd1d2ace13c4ee92a035f160f62631043a1cfb42ebb00a0"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-craps.glb",
+      "bytes": 68720,
+      "sha256": "096c5b5394ed8ddc7139080044c41bd1a1dd192e7d20c166117b00b42f22fa35"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-odds-board.glb",
+      "bytes": 67628,
+      "sha256": "05577ba873c5375e58c1c76596f9dfead5af567bdafbc8e5cc775db461ac5be4"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-runestone.glb",
+      "bytes": 58128,
+      "sha256": "d3a498cb31d05a45a7089760849b89d36dd8f0f796cf24f61090b9ea5380e26f"
+    },
+    {
+      "path": "src/assets/game/models/pv-tribute/pv-token-cluster.glb",
+      "bytes": 65468,
+      "sha256": "686ed70d8ae6bd12f495b3842f5400a8305038ae01b1d08527a623e8dd93a25c"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/Textures/colormap.png",
+      "bytes": 8706,
+      "sha256": "0d4947d34ff32acf4a359c7f22ca784e057e7e72f622170a9a77b6fc88fdb70e"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/colormap.png",
+      "bytes": 8706,
+      "sha256": "0d4947d34ff32acf4a359c7f22ca784e057e7e72f622170a9a77b6fc88fdb70e"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/item-banana.glb",
+      "bytes": 11240,
+      "sha256": "e171d73c1e8a6ee7492c38c9367a41f2b6726d7f499f178f4c0498fd3a5b1154"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/item-box.glb",
+      "bytes": 18768,
+      "sha256": "314b75f3e8c3e99ef189d8c5c5ab911fe9d6bed274bb4658881129b2161d1925"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/item-cone.glb",
+      "bytes": 8936,
+      "sha256": "b7fcd99e0afa8e45639e637638438ab139b271d7413246ad99597a8be85587ac"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/vehicle-drag-racer.glb",
+      "bytes": 104636,
+      "sha256": "e55cec7720744af6bdee05f0716c032dabede9d173a3629fd8af7ec58447ce1d"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/vehicle-racer-low.glb",
+      "bytes": 103808,
+      "sha256": "d585746ad006094cf745630b2866af65c6c244589dab346179fd41007f9fac6e"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/vehicle-racer.glb",
+      "bytes": 104328,
+      "sha256": "2cdf369f231bf3e38bdf3a376144971f1b4d1a1e558000047ac927c5ac81a42c"
+    },
+    {
+      "path": "src/assets/game/models/toy-car-kit/vehicle-vintage-racer.glb",
+      "bytes": 102156,
+      "sha256": "8528456ca062685ddabb713509eb60b82146e26343b283344c26811dd5d8faf8"
+    },
+    {
+      "path": "src/assets/game/models/tripo/hero-kart-tripo.glb",
+      "bytes": 1049128,
+      "sha256": "6d6817d9b429a6ce4d5e6b1c56628b0eff89e9d926f58d76f63a6ff86da64f62"
+    },
+    {
+      "path": "src/assets/game/models/tripo/ice-sled.glb",
+      "bytes": 229228,
+      "sha256": "bd6ce093427fcb99758f9fe1e07d9199aca7add3cf8a7816423e097a9eadc91e"
+    },
+    {
+      "path": "src/assets/game/proof/comeback-city-kart-proof-desktop-v1.png",
+      "bytes": 2324578,
+      "sha256": "0f2cbc78428b145a01d96889cf14a238c5d77a22b467e74d52f63b9a6c5c2fe0"
+    },
+    {
+      "path": "src/assets/game/proof/comeback-city-kart-proof-mobile-v1.png",
+      "bytes": 2223764,
+      "sha256": "a0b3de77bfaa9233a80052a7b93b0b434e236683c7fa540fce7646153ae797a3"
+    },
+    {
+      "path": "src/assets/game/reference/comeback-city-original-reference.png",
+      "bytes": 2519471,
+      "sha256": "8d4aef74073da4c86b5360163478b978fe5c3101371bc7a8d18d7390e4003c55"
+    },
+    {
+      "path": "src/assets/game/select/char-crrt-bunny.png",
+      "bytes": 108224,
+      "sha256": "c38a7364d18ea389ceb8f1c0a09744222e83f274c6a3031403a1e47961f0ae33"
+    },
+    {
+      "path": "src/assets/game/select/char-layer23.png",
+      "bytes": 156607,
+      "sha256": "867f0780bcae2e5e28a67ec0ee5d641d300c15d06b593fa3d8830c6da98e9b71"
+    },
+    {
+      "path": "src/assets/game/select/char-lifoladen.webp",
+      "bytes": 40280,
+      "sha256": "4c9f0760d09774fe49f8897430c2a26eb29ed1e337f6e0dab8698d6b79eb1ccf"
+    },
+    {
+      "path": "src/assets/game/select/char-mizzle.png",
+      "bytes": 163055,
+      "sha256": "cd4b704ccb62b98dd57467ae75fa3f4473be268435ab77f93e4e28cf0175c901"
+    },
+    {
+      "path": "src/assets/game/select/char-seth-penguin.png",
+      "bytes": 161517,
+      "sha256": "2a51bda1c1564651c5651f55570d6be6a893a3c6759f0dd8ad1f46e6dc55154e"
+    },
+    {
+      "path": "src/assets/game/select/char-tclow.png",
+      "bytes": 157175,
+      "sha256": "bfa334fb57173b61fa60cea43a11846503f7d238c8e9e727d9aacef70d8b96c1"
+    },
+    {
+      "path": "src/assets/game/select/kart-deck-runner.png",
+      "bytes": 59689,
+      "sha256": "212c9af01583db3a78baaba86c96b35b24940db200c4bc21503a22b44f97fab5"
+    },
+    {
+      "path": "src/assets/game/select/kart-hero.png",
+      "bytes": 148745,
+      "sha256": "261d6b477660799db20d2d99e1c829e10603fc86ff0a380d4c545ba14ba81421"
+    },
+    {
+      "path": "src/assets/game/select/kart-iceracer.png",
+      "bytes": 91654,
+      "sha256": "bf1e5634dd3cf7bd254c530641ee2ae1932350c51c00b264028e082c855babf3"
+    },
+    {
+      "path": "src/assets/game/select/kart-icesled.png",
+      "bytes": 131013,
+      "sha256": "cf0dfb775df32f98a9e2dd1173bbce59822592f7ebb9ccb2af8dc0a2316dd9eb"
+    },
+    {
+      "path": "src/assets/game/select/kart-kenney.png",
+      "bytes": 23491,
+      "sha256": "b2acdb4a0d55bccdf528ca13a53abf12904ee7160a1bff828254be482bfef009"
+    },
+    {
+      "path": "src/assets/game/select/kart-mesa-strider.png",
+      "bytes": 59855,
+      "sha256": "104d0715840e6fd55a3bb643ba1219eab6b90cfb6110bacc5d25f772fc99c562"
+    },
+    {
+      "path": "src/assets/game/select/kart-miamicruiser.png",
+      "bytes": 107813,
+      "sha256": "a9c06a36eda755c23b6caf1424f556cd73ac7fcd5bbba437b47a9136acbec2b0"
+    },
+    {
+      "path": "src/assets/game/select/kart-orbit-rover.png",
+      "bytes": 60251,
+      "sha256": "f5a8c61fb4658f7c2988fc5c38fe33eeef38a8d9ccace540494040df440fbe19"
+    }
+  ]
+}

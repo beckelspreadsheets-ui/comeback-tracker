@@ -43,6 +43,8 @@
     "test:race-proof": "npm run build:kart && RACE_PROOF_SERVER_MODE=preview:kart npm run race:proof:capture && npm run race:proof:compare",
     "test:race-proof:kart": "npm run build:kart && RACE_PROOF_SERVER_MODE=preview:kart npm run race:proof:capture && npm run race:proof:compare",
     "test:webgl": "node scripts/webgl-context-smoke-test.mjs",
+    "benchmark:engine": "node scripts/browser-engine-benchmark.mjs",
+    "benchmark:assets": "node scripts/build-engine-bakeoff-asset-manifest.mjs",
     "assets:audit": "node scripts/audit-game-assets.mjs",
     "assets:bake": "node scripts/bake-baked-glbs.mjs",
     "assets:candidates": "node scripts/build-candidate-index.mjs",

@@ -1,0 +1,32 @@
+{
+  "objective": "Produce equal-input evidence for Three.js, PlayCanvas, Unity Web, and Unity plus Needle without beginning a production migration.",
+  "approvalBoundary": "Benchmark harness and candidate previews only. No production migration before Seth reviews results.",
+  "sourceRepo": "beckelspreadsheets-ui/comeback-tracker",
+  "branch": "codex/browser-engine-bakeoff-20260723",
+  "sourceHead": "32f75eaa99defbe7917af20478053131f2dda44c",
+  "milestones": {
+    "total": 5,
+    "completed": 2,
+    "current": "M3 - build the PlayCanvas equal-input lane",
+    "items": [
+      "M1 benchmark contract and collector",
+      "M2 Three.js control evidence",
+      "M3 PlayCanvas equal-input lane",
+      "M4 external Unity and Needle lanes",
+      "M5 comparison and recommendation"
+    ]
+  },
+  "protectedDirtyFingerprintFile": "/tmp/ordinals-protected-fingerprints-20260723.txt",
+  "rollback": "Delete the isolated worktree and branch; original Ordinals rebuild worktree remains untouched.",
+  "completedArtifacts": [
+    "benchmarks/browser-engine/equal-input-assets.json",
+    "benchmarks/browser-engine/runs/2026-07-23T22-22-30-179Z-threejs/metrics.json"
+  ],
+  "lastVerifiedWorker": {
+    "kind": "tmux",
+    "name": "ordinals-engine-bakeoff-preview",
+    "status": "running",
+    "verifiedAt": "2026-07-23T22:23:35Z"
+  },
+  "updatedAt": "2026-07-23T22:23:35Z"
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ordinals Kart browser engine benchmark",
+  "type": "object",
+  "required": ["protocolVersion", "lane", "environment", "scenarios"],
+  "properties": {
+    "protocolVersion": { "const": 1 },
+    "lane": { "type": "string", "enum": ["threejs", "playcanvas", "unity-web", "unity-needle"] },
+    "environment": { "type": "object" },
+    "scenarios": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "load", "frames", "artifacts"],
+        "properties": {
+          "id": { "type": "string" },
+          "load": { "type": "object" },
+          "frames": { "type": "object" },
+          "scene": { "type": ["object", "null"] },
+          "artifacts": { "type": "array" }
+        }
+      }
+    }
+  }
+}

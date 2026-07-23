@@ -1,0 +1,31 @@
+{
+  "protocolVersion": 1,
+  "controlLane": "threejs",
+  "lanes": [
+    {
+      "id": "threejs",
+      "label": "Three.js control",
+      "status": "runnable-local",
+      "urlEnv": "ENGINE_BENCHMARK_URL",
+      "rendererTelemetry": "three-kart"
+    },
+    {
+      "id": "playcanvas",
+      "label": "PlayCanvas WebGPU/WebGL2",
+      "status": "scene-port-required",
+      "urlEnv": "ENGINE_BENCHMARK_URL"
+    },
+    {
+      "id": "unity-web",
+      "label": "Unity 6 URP Web",
+      "status": "external-gpu-editor-required",
+      "urlEnv": "ENGINE_BENCHMARK_URL"
+    },
+    {
+      "id": "unity-needle",
+      "label": "Unity Editor + Needle Engine",
+      "status": "external-gpu-editor-required",
+      "urlEnv": "ENGINE_BENCHMARK_URL"
+    }
+  ]
+}
