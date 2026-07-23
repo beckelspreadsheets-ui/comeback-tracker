@@ -22,11 +22,13 @@
     "benchmarks/browser-engine/equal-input-assets.json",
     "benchmarks/browser-engine/runs/2026-07-23T22-22-30-179Z-threejs/metrics.json"
   ],
+  "workerStatus": "paused-between-milestones",
+  "nextSafeAction": "Build the PlayCanvas lane from the frozen equal-input asset manifest.",
   "lastVerifiedWorker": {
     "kind": "tmux",
     "name": "ordinals-engine-bakeoff-preview",
-    "status": "running",
-    "verifiedAt": "2026-07-23T22:23:35Z"
+    "status": "stopped-after-successful-control-capture",
+    "verifiedAt": "2026-07-23T22:25:00Z"
   },
-  "updatedAt": "2026-07-23T22:23:35Z"
+  "updatedAt": "2026-07-23T22:25:00Z"
 }
