@@ -48,10 +48,10 @@ export const TRACK_ATMOSPHERE_GRADES = Object.freeze({
   'inscription-circuit': Object.freeze({
     // Inscription dusk haze — indigo with a teal cast; far stays under the
     // 840 camera-far no-op ceiling.
-    fog: { color: '#2a2246', near: 190, far: 700 },
+    fog: { color: '#322a52', near: 210, far: 740 },
     // Violet-blue sky fill over deep indigo ground bounce — dusk on dark
     // carved stone without silhouetting the karts.
-    hemi: { sky: '#7a86d8', ground: '#1c1430', intensity: 2.9 },
+    hemi: { sky: '#8690e0', ground: '#221a3a', intensity: 3.1 },
     // Low warm dusk key — flatters the teal/orange Launch Yard accents and
     // the wharf lantern gold.
     sunColor: '#ffd0a0',

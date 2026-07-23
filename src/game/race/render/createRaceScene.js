@@ -119,7 +119,11 @@ export const fitRaceRendererToCanvas = ({
   const rawDpr = Math.min(windowRef?.devicePixelRatio || 1, 2);
   const adaptedTable = softwareQualityAdapted() ? RACE_RENDER_SCALE_SOFTWARE : scaleTable;
   const renderScale = raceViewport.mobile ? adaptedTable.mobile : adaptedTable.desktop;
-  const dpr = Math.max(0.355, rawDpr * renderScale);
+  // Software-GL floor: 0.355 was calibrated for the retired maps' fill cost.
+  // The Inscription Circuit's dusk world keeps more of the frame lit, so the
+  // CPU-rasterizer floor drops to 0.26 (CI/GPU-less sessions only — hardware
+  // sessions never read this path).
+  const dpr = Math.max(softwareQualityAdapted() ? 0.26 : 0.355, rawDpr * renderScale);
   const width = Math.max(1, Math.floor(rect.width * dpr));
   const height = Math.max(1, Math.floor(rect.height * dpr));
   const previousDpr = raceViewport.dpr;

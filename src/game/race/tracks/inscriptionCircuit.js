@@ -115,12 +115,12 @@ export const INSCRIPTION_CIRCUIT_TRACK = Object.freeze({
       [1, '#ff9a4a'],
     ],
     ground: {
-      base: '#241c2e',
+      base: '#2a2136',
       repeat: 16,
       speckles: [
-        { color: '#2e2440', count: 320, size: 3.2 },
-        { color: '#1a1426', count: 300, size: 4.0 },
-        { color: '#3a2c4e', count: 140, size: 2.0 },
+        { color: '#352a48', count: 320, size: 3.2 },
+        { color: '#201a30', count: 300, size: 4.0 },
+        { color: '#43335c', count: 140, size: 2.0 },
       ],
     },
     // Road language: teal rail light, orange/white curbs (Launch Yard leads
@@ -130,8 +130,8 @@ export const INSCRIPTION_CIRCUIT_TRACK = Object.freeze({
     wall: { a: '#3a2c4e', b: '#f4f0ff' },
     // Mesa band: dark stone skirts, gold beacon glow, violet pillars.
     bridge: { skirt: '#241a36', glow: '#ffd34f', pillar: '#4a3a66', pillarEmissive: '#2a2040', beam: '#322448' },
-    fog: { color: '#2a2246', near: 190, far: 720 },
-    hemi: { sky: '#7a86d8', ground: '#1c1430', intensity: 3 },
+    fog: { color: '#322a52', near: 210, far: 760 },
+    hemi: { sky: '#8690e0', ground: '#221a3a', intensity: 3.15 },
     sunColor: '#ffd0a0',
     rimLightColor: '#3fe0c8',
     heroRim: { power: 2.2, strength: 0.45, tint: '#3fe0c8' },

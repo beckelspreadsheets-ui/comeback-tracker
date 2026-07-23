@@ -1,0 +1,154 @@
+{
+  "contactSheet": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/visual-review-contact-sheet.html",
+  "errors": [],
+  "ok": true,
+  "runDir": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof",
+  "runId": "2026-07-23T02-19-12-100Z__race-proof",
+  "scenarios": [
+    {
+      "key": "desktop",
+      "consoleErrors": 0,
+      "errors": [],
+      "facts": {
+        "oldArcadeCanvasCount": 0,
+        "oldFallbackCanvasCount": 0,
+        "pixiCanvasCount": 0,
+        "propCount": 36,
+        "renderer": "three-kart",
+        "shellVisible": true,
+        "threeCanvasCount": 1,
+        "trackVisualsEnabled": "false"
+      },
+      "maxDrawCalls": 696,
+      "maxTriangles": 92778,
+      "minFps": 8,
+      "motion": {
+        "average": 45.37,
+        "changedRatio": 0.552,
+        "samples": 17190
+      },
+      "networkFailures": 0,
+      "screenshots": {
+        "start": {
+          "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/desktop/start.png",
+          "stats": {
+            "colorBuckets": 383,
+            "height": 768,
+            "luminanceRange": 250.65,
+            "samples": 10750,
+            "width": 1365
+          }
+        },
+        "mid": {
+          "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/desktop/mid.png",
+          "stats": {
+            "colorBuckets": 342,
+            "height": 768,
+            "luminanceRange": 253.05,
+            "samples": 10750,
+            "width": 1365
+          }
+        },
+        "end": {
+          "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/desktop/end.png",
+          "stats": {
+            "colorBuckets": 291,
+            "height": 768,
+            "luminanceRange": 250.58,
+            "samples": 10750,
+            "width": 1365
+          }
+        },
+        "topDown": {
+          "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/desktop/top-down.png",
+          "stats": {
+            "colorBuckets": 110,
+            "height": 768,
+            "luminanceRange": 225.5,
+            "samples": 10750,
+            "width": 1365
+          }
+        }
+      },
+      "transferBytes": 554982,
+      "video": {
+        "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/desktop/desktop-10s.webm",
+        "size": 2057356
+      },
+      "warnings": []
+    },
+    {
+      "key": "mobile",
+      "consoleErrors": 0,
+      "errors": [],
+      "facts": {
+        "oldArcadeCanvasCount": 0,
+        "oldFallbackCanvasCount": 0,
+        "pixiCanvasCount": 0,
+        "propCount": 36,
+        "renderer": "three-kart",
+        "shellVisible": true,
+        "threeCanvasCount": 1,
+        "trackVisualsEnabled": "false"
+      },
+      "maxDrawCalls": 696,
+      "maxTriangles": 92778,
+      "minFps": 17,
+      "motion": {
+        "average": 42.13,
+        "changedRatio": 0.665,
+        "samples": 5445
+      },
+      "networkFailures": 0,
+      "screenshots": {
+        "start": {
+          "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/mobile/start.png",
+          "stats": {
+            "colorBuckets": 294,
+            "height": 844,
+            "luminanceRange": 250.65,
+            "samples": 11050,
+            "width": 390
+          }
+        },
+        "mid": {
+          "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/mobile/mid.png",
+          "stats": {
+            "colorBuckets": 283,
+            "height": 844,
+            "luminanceRange": 249.15,
+            "samples": 11050,
+            "width": 390
+          }
+        },
+        "end": {
+          "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/mobile/end.png",
+          "stats": {
+            "colorBuckets": 261,
+            "height": 844,
+            "luminanceRange": 249.01,
+            "samples": 11050,
+            "width": 390
+          }
+        },
+        "topDown": {
+          "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/mobile/top-down.png",
+          "stats": {
+            "colorBuckets": 237,
+            "height": 844,
+            "luminanceRange": 246.21,
+            "samples": 11050,
+            "width": 390
+          }
+        }
+      },
+      "transferBytes": 508900,
+      "video": {
+        "path": "asset-pipeline/proof/runs/2026-07-23T02-19-12-100Z__race-proof/mobile/mobile-10s.webm",
+        "size": 1586140
+      },
+      "warnings": []
+    }
+  ],
+  "warnings": []
+}

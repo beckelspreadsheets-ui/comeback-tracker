@@ -66,6 +66,8 @@ import itemBoxCcCoinUrl from '../assets/game/models/items/item-box-cc-coin.glb?u
 import itemBoxPvIceUrl from '../assets/game/models/items/item-box-pv-ice.glb?url';
 import backdropCcFarUrl from '../assets/game/generated/backdrops/cc-far.webp';
 import backdropCcNearUrl from '../assets/game/generated/backdrops/cc-near.webp';
+import backdropIcFarUrl from '../assets/game/generated/backdrops/ic-far.webp';
+import backdropIcNearUrl from '../assets/game/generated/backdrops/ic-near.webp';
 import backdropPvFarUrl from '../assets/game/generated/backdrops/pv-far.webp';
 import backdropPvNearUrl from '../assets/game/generated/backdrops/pv-near.webp';
 import {
@@ -252,7 +254,7 @@ const rivalSeatsFor = (playerKey) => {
 };
 const ordinal = (position) => ['1st', '2nd', '3rd', '4th'][position - 1] || `${position}th`;
 const PROP_COUNT = 36;
-const VISUAL_ASSET_SET = 'comeback-city-v2-three-runtime';
+const VISUAL_ASSET_SET = 'inscription-circuit-v1-three-runtime';
 
 // Spawn offset past the finish line lives in the track def (startOffset).
 const startProgressFor = (trackDef) =>
@@ -3889,6 +3891,15 @@ const createScene = ({
         far: backdropCcFarUrl,
         near: backdropCcNearUrl,
       },
+      // Inscription Circuit (M3): generated dusk panorama — mesa plateau +
+      // beacons, spaceport tower/gantries/dishes, wharf masts; near ring is
+      // dune ridge, stone arches, crate stacks, gantry posts. Zero shared
+      // pixels with the retired CC/PV rings (scripts/render-inscription-
+      // backdrops.py).
+      'inscription-circuit': {
+        far: backdropIcFarUrl,
+        near: backdropIcNearUrl,
+      },
       // PV ships the b-takes: the a-take ice row keyed out DARK (teal +
       // gold cracks) and read like CC's dark tower skyline — the owner
       // flagged the two tracks as "the same exact background". The b-takes
@@ -4512,6 +4523,15 @@ const createScene = ({
     world.add(model.group);
     return { ...rival, model };
   });
+
+  // Shader warmup (M3 perf): compile every program up front so the first
+  // timed/raced frames don't pay SwiftShader/driver compile stalls — helps
+  // real first-time players exactly as much as the proof harness.
+  try {
+    renderer.compile(scene, camera);
+  } catch {
+    // compile is best-effort; the first frame compiles lazily as before.
+  }
 
   return {
     auroraRig,
