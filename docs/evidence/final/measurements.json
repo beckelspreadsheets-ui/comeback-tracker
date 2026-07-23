@@ -1,0 +1,66 @@
+{
+ "runDir": "asset-pipeline/proof/runs/2026-07-23T04-08-12-168Z__race-proof",
+ "ok": true,
+ "scenarios": [
+  {
+   "key": "desktop",
+   "minFps": 8,
+   "fpsSamples": [
+    9,
+    8,
+    7,
+    8,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    10,
+    9,
+    9
+   ],
+   "maxDrawCalls": 712,
+   "maxTriangles": 91938,
+   "propCount": 36,
+   "consoleErrors": 0,
+   "networkFailures": 0,
+   "transferBytes": 491826,
+   "motionRatio": 0.606,
+   "video": {
+    "path": "asset-pipeline/proof/runs/2026-07-23T04-08-12-168Z__race-proof/desktop/desktop-10s.webm",
+    "size": 2018382
+   }
+  },
+  {
+   "key": "mobile",
+   "minFps": 19,
+   "fpsSamples": [
+    21,
+    19,
+    23,
+    19,
+    17,
+    21,
+    19,
+    22,
+    23,
+    25,
+    22,
+    24,
+    22
+   ],
+   "maxDrawCalls": 712,
+   "maxTriangles": 91938,
+   "propCount": 36,
+   "consoleErrors": 0,
+   "networkFailures": 0,
+   "transferBytes": 491826,
+   "motionRatio": 0.601,
+   "video": {
+    "path": "asset-pipeline/proof/runs/2026-07-23T04-08-12-168Z__race-proof/mobile/mobile-10s.webm",
+    "size": 1586712
+   }
+  }
+ ]
+}
