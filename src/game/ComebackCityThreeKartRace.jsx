@@ -4733,6 +4733,47 @@ const readInput = (input, autoplay, race, cornerPush = 0) => {
   };
 };
 
+// M5 gamepad: polled once per frame, merged over the keyboard/touch state
+// (analog stick steer wins over digital keys when deflected). Standard
+// mapping: left stick / d-pad steer, RT or A throttle, LT or B brake,
+// LB or X drift/hop, RB or Y fire item, Start restart.
+const pollGamepad = () => {
+  if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') return null;
+  const pads = navigator.getGamepads();
+  let gp = null;
+  for (const pad of pads) {
+    if (pad && pad.connected) {
+      gp = pad;
+      break;
+    }
+  }
+  if (!gp) return null;
+  const btn = (index) => Boolean(gp.buttons[index]?.pressed);
+  const axis = gp.axes[0] || 0;
+  const dpad = (btn(15) ? 1 : 0) - (btn(14) ? 1 : 0);
+  const steerAxis = Math.abs(axis) > 0.18 ? clamp(axis, -1, 1) : dpad !== 0 ? dpad : null;
+  return {
+    brake: btn(6) || btn(1),
+    drift: btn(4) || btn(2),
+    item: btn(5) || btn(3),
+    restart: btn(9),
+    steerAxis,
+    throttle: btn(7) || btn(0),
+  };
+};
+
+const mergeGamepadInput = (input, pad, padPrev) => {
+  if (!pad) return padPrev;
+  if (pad.steerAxis !== null) input.steerAxis = pad.steerAxis;
+  input.throttle = input.throttle || pad.throttle;
+  input.brake = input.brake || pad.brake;
+  input.drift = input.drift || pad.drift;
+  input.item = input.item || pad.item;
+  // Start is edge-triggered so one press = one restart.
+  if (pad.restart && !padPrev?.restart) input.restart = true;
+  return pad;
+};
+
 const rollingAverage = (samples) => {
   if (!samples.length) return null;
   let total = 0;
@@ -5120,6 +5161,7 @@ export const ComebackCityThreeKartRace = ({
     let disposed = false;
     let previousFrameTime = performance.now();
     let snapshotTimer = 0;
+    const padPrevRef = { current: null };
 
     const setInputKey = (key, value) => {
       inputRef.current = { ...inputRef.current, [key]: value };
@@ -5430,6 +5472,9 @@ export const ComebackCityThreeKartRace = ({
       const fpsEstimate = frameTimes.length > 1 ? (frameTimes.length - 1) / Math.max(0.001, elapsedWindow) : 60;
       const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
       const input = readInput(inputRef, autoplay, race, cornerPush);
+      // M5 gamepad — merged over keyboard/touch (never overrides autoplay,
+      // which returns its own deterministic input object).
+      padPrevRef.current = mergeGamepadInput(input, autoplay ? null : pollGamepad(), padPrevRef.current);
       if (input.restart) {
         inputRef.current.restart = false;
         restartRace();

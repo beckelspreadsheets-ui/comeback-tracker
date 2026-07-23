@@ -21,27 +21,33 @@ import {
 import { DEFAULT_TRACK_KEY, KART_TRACKS } from '../game/race/tracks/index.js';
 import {
   migrateLegacyRaceResultsOnce,
+  readGfxPreset,
   readReducedMotion,
   recordRaceFinish,
+  writeGfxPreset,
+  writeReducedMotion,
 } from './kartLocalStore.js';
 import ordIsethiusUrl from '../assets/game/select/ord-isethius.jpg';
 import ordTClowUrl from '../assets/game/select/ord-t-clow.jpg';
 import ordLayer23Url from '../assets/game/select/ord-layer23.jpg';
+import kartOrbitRoverUrl from '../assets/game/select/kart-orbit-rover.png';
+import kartDeckRunnerUrl from '../assets/game/select/kart-deck-runner.png';
+import kartMesaStriderUrl from '../assets/game/select/kart-mesa-strider.png';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 // Driver portraits are the supplied Ordinal inscriptions themselves
-// (asset-intake/ordinals/, SHA-256 verified). Kart cards temporarily reuse
-// the driver's portrait — real in-engine kart renders land in M5.
+// (asset-intake/ordinals/, SHA-256 verified). Kart portraits are in-engine
+// captures of the real inscription karts (scripts/capture-kart-portraits.mjs).
 const CHARACTER_PORTRAITS = {
   isethius: ordIsethiusUrl,
   layer23: ordLayer23Url,
   't-clow': ordTClowUrl,
 };
 const KART_PORTRAITS = {
-  'deck-runner': ordTClowUrl,
-  'mesa-strider': ordLayer23Url,
-  'orbit-rover': ordIsethiusUrl,
+  'deck-runner': kartDeckRunnerUrl,
+  'mesa-strider': kartMesaStriderUrl,
+  'orbit-rover': kartOrbitRoverUrl,
 };
 
 const KartIntroScreen = ({ onStart }) => (
@@ -51,8 +57,8 @@ const KartIntroScreen = ({ onStart }) => (
   >
     <div className="my-auto w-full max-w-3xl space-y-5 py-6">
       <div className="text-center">
-        <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City</div>
-        <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Grand Prix — How to Race</h2>
+        <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#2ee6c8]">Ordinals</div>
+        <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Inscription Circuit — How to Race</h2>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="border border-white/12 bg-white/[0.03] p-4">
@@ -62,6 +68,7 @@ const KartIntroScreen = ({ onStart }) => (
             <li><span className="text-white">← → / A D</span> — steer</li>
             <li><span className="text-white">↓ / S</span> — brake</li>
             <li><span className="text-white">SHIFT / ENTER / E / F</span> — fire item</li>
+            <li><span className="text-white">Gamepad</span> — stick steers, RT/A accelerates, LT/B brakes, LB/X drifts, RB/Y fires</li>
             <li>On mobile you auto-accelerate: drag to steer, flick the drag to drift, tap to throw — the big buttons work too. TILT switches to motion steering.</li>
           </ul>
         </div>
@@ -106,7 +113,7 @@ const KartIntroScreen = ({ onStart }) => (
         >
           Start Race
         </button>
-        <div className="mt-2 text-[11px] text-white/40">Beat Blue Speed for the win — he's fast, but he can't drift like you.</div>
+        <div className="mt-2 text-[11px] text-white/40">Three districts, one lap: outrun the crew through the Launch Yard, Blackflag Wharf, and the Layer23 Mesa.</div>
       </div>
     </div>
   </div>
@@ -126,16 +133,16 @@ const KartStatBar = ({ label, value }) => (
 // Pre-race garage: pick your racer AND your kart (karts carry light stat
 // spreads). The remaining characters take the rival seats in their signature
 // rides. Shown every visit after the one-time intro; QA automation skips it.
-const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, selectedKey, setKartKey, setSelectedKey, setTrackKey, trackKey }) => (
+const KartCharacterSelect = ({ gfxPreset, kartKey, onGfxPreset, onReducedMotion, onShowGuide, onStart, reducedMotion, selectedKey, setKartKey, setSelectedKey, setTrackKey, trackKey }) => (
   <div
     className="absolute inset-0 z-40 flex justify-center overflow-y-auto bg-[#0c1124]/[0.97] p-4"
     data-testid="race-character-select"
   >
     <div className="my-auto w-full max-w-4xl space-y-5 py-6">
       <div className="text-center">
-        <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#7eefff]">Comeback City Grand Prix</div>
+        <div className="font-mono text-[11px] font-black uppercase tracking-[0.3em] text-[#2ee6c8]">Inscription Circuit</div>
         <h2 className="mt-1 font-mono text-2xl font-black uppercase tracking-[0.08em] text-white">Race Setup</h2>
-        <p className="mt-1 text-[12px] text-white/50">Pick your track, your racer, and your kart.</p>
+        <p className="mt-1 text-[12px] text-white/50">Pick your racer and your kart — one track, three districts.</p>
         {/* W2 (owner): the intro's full item guide must be reachable every
             visit, not just the first — "so people are not just guessing". */}
         <button
@@ -244,6 +251,30 @@ const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, selectedKey, setKa
           );
         })}
       </div>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          aria-pressed={reducedMotion}
+          data-testid="race-setting-reduced-motion"
+          onClick={() => onReducedMotion(!reducedMotion)}
+          className={`border px-4 py-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] transition-colors ${
+            reducedMotion ? 'border-[#2ee6c8] bg-[#2ee6c8]/10 text-[#2ee6c8]' : 'border-white/20 bg-white/[0.04] text-white/60 hover:border-white/40'
+          }`}
+        >
+          Reduced motion {reducedMotion ? 'on' : 'off'}
+        </button>
+        <button
+          type="button"
+          aria-pressed={gfxPreset === 'low'}
+          data-testid="race-setting-low-effects"
+          onClick={() => onGfxPreset(gfxPreset === 'low' ? 'high' : 'low')}
+          className={`border px-4 py-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] transition-colors ${
+            gfxPreset === 'low' ? 'border-[#ffb23e] bg-[#ffb23e]/10 text-[#ffb23e]' : 'border-white/20 bg-white/[0.04] text-white/60 hover:border-white/40'
+          }`}
+        >
+          Low effects {gfxPreset === 'low' ? 'on' : 'off'}
+        </button>
+      </div>
       <div className="text-center">
         <button
           type="button"
@@ -276,7 +307,16 @@ export const KartApp = () => {
     migrateLegacyRaceResultsOnce();
     return true;
   });
-  const [reducedMotion] = useState(readReducedMotion);
+  const [reducedMotion, setReducedMotion] = useState(readReducedMotion);
+  const [gfxPreset, setGfxPreset] = useState(readGfxPreset);
+  const handleReducedMotion = useCallback((enabled) => {
+    writeReducedMotion(enabled);
+    setReducedMotion(enabled);
+  }, []);
+  const handleGfxPreset = useCallback((preset) => {
+    writeGfxPreset(preset);
+    setGfxPreset(preset);
+  }, []);
   const [introSeen, setIntroSeen] = useState(() => {
     if (typeof window === 'undefined') return true;
     if (window.navigator?.webdriver) return true; // QA harness skips the intro
@@ -371,7 +411,7 @@ export const KartApp = () => {
 
   return (
     <div
-      className="relative min-h-[100svh] overflow-hidden bg-[#10151d]"
+      className="relative min-h-[100svh] overflow-hidden bg-[#0d0a1c]"
       data-race-renderer="three-kart"
       data-race-track={kartTrackKey}
       data-testid="race-screen"
@@ -380,9 +420,13 @@ export const KartApp = () => {
         <KartIntroScreen onStart={dismissIntro} />
       ) : !characterReady ? (
         <KartCharacterSelect
+          gfxPreset={gfxPreset}
           kartKey={kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart}
+          onGfxPreset={handleGfxPreset}
+          onReducedMotion={handleReducedMotion}
           onShowGuide={() => setIntroSeen(false)}
           onStart={confirmCharacter}
+          reducedMotion={reducedMotion}
           selectedKey={characterKey}
           setKartKey={setKartKey}
           setSelectedKey={setCharacterKey}

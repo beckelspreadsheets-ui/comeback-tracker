@@ -1,5 +1,5 @@
 .three-kart-race {
-  background: #10151d;
+  background: #0d0a1c;
   color: #f8fbff;
   height: 100svh;
   /* dvh grows with the collapsing browser chrome — "browser mode" uses the
@@ -142,7 +142,7 @@
 }
 
 .three-kart-race__results span {
-  color: #b6c6d6;
+  color: #9aa8cc;
   display: block;
   font: 800 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 0.16em;
@@ -205,7 +205,7 @@
 }
 
 .three-kart-race__touch button.three-kart-race__cluster-drift {
-  color: #7ff4ff;
+  color: #2ee6c8;
   min-height: 84px;
   min-width: 84px;
 }
@@ -270,7 +270,7 @@
   background: rgba(12, 16, 29, 0.7);
   border: 1px solid rgba(56, 215, 255, 0.28);
   border-radius: 999px;
-  color: #9fc2d8;
+  color: #a8b8e0;
   font: 900 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   min-height: 40px;
   padding: 0 14px;
@@ -306,7 +306,7 @@
 
 .three-kart-race__fallback {
   align-items: center;
-  background: #10151d;
+  background: #0d0a1c;
   color: #f8fbff;
   display: flex;
   flex-direction: column;

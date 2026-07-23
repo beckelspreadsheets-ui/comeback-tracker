@@ -93,14 +93,23 @@ const PRESETS = {
   },
 };
 
-// Resolve the active preset. URL wins (?gfx=), else default 'high'. Parsed
-// once per page load — the graphics preset is a boot-time decision, not a
-// per-frame knob, so hot-swapping mid-race is out of scope by design.
+// Resolve the active preset. URL wins (?gfx=), else the player's saved
+// preference (cc-kart-gfx, set from the M5 settings toggles on the select
+// screen), else default 'high'. Parsed once per page load — the graphics
+// preset is a boot-time decision, not a per-frame knob, so hot-swapping
+// mid-race is out of scope by design.
 export const resolveGraphicsPreset = (search = undefined) => {
   let param = null;
   if (typeof window !== 'undefined') {
     const raw = search ?? window.location.search;
     param = new URLSearchParams(raw).get('gfx');
+    if (!param) {
+      try {
+        param = window.localStorage?.getItem('cc-kart-gfx');
+      } catch {
+        param = null;
+      }
+    }
   }
   if (param === 'low') return 'low';
   if (param === 'off') return 'off';

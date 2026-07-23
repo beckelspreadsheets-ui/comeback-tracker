@@ -5,8 +5,8 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // K1: standalone kart-game build target. `npm run build:kart` -> dist-kart ->
-// the comeback-city-kart Pages project. The fitness build (vite.config.js ->
-// dist) is untouched by this file — K1 adds, never mutates. "Penguin Kart" is
+// the comeback-city-kart Pages project (Penguin Kart was the placeholder name). The fitness build (vite.config.js ->
+// dist) is untouched by this file — K1 adds, never mutates. "Penguin Kart" was
 // the owner-pending placeholder name.
 
 const kartHtmlPath = fileURLToPath(new URL('./index.kart.html', import.meta.url));
@@ -50,11 +50,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Penguin Kart',
-        short_name: 'Penguin Kart',
-        description: 'Penguin Kart — arcade kart racing with the ordinal crew (beta)',
-        theme_color: '#10151d',
-        background_color: '#10151d',
+        name: 'Inscription Circuit',
+        short_name: 'Inscription',
+        description: 'Inscription Circuit — arcade kart racing with the Ordinals: spaceport dusk, pirate wharf, mesa observatory',
+        theme_color: '#0d0a1c',
+        background_color: '#0d0a1c',
         display: 'standalone',
         orientation: 'landscape',
         scope: '/',

@@ -117,3 +117,30 @@ export const readReducedMotion = () => {
     return false;
   }
 };
+
+// M5: the select-screen settings toggles write these.
+export const writeReducedMotion = (enabled) => {
+  try {
+    window.localStorage?.setItem(REDUCED_MOTION_KEY, enabled ? '1' : '0');
+  } catch {
+    // best-effort
+  }
+};
+
+const GFX_KEY = 'cc-kart-gfx';
+export const readGfxPreset = () => {
+  if (typeof window === 'undefined') return 'high';
+  try {
+    const value = window.localStorage?.getItem(GFX_KEY);
+    return value === 'low' || value === 'off' ? value : 'high';
+  } catch {
+    return 'high';
+  }
+};
+export const writeGfxPreset = (preset) => {
+  try {
+    window.localStorage?.setItem(GFX_KEY, preset === 'low' || preset === 'off' ? preset : 'high');
+  } catch {
+    // best-effort
+  }
+};
