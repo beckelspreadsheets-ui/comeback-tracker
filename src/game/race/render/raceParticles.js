@@ -11,10 +11,12 @@
 //   2. skid marks       ONE Mesh over ONE ring-buffer BufferGeometry (256/128)
 //   3. additive sprites ONE InstancedMesh (160 quads, 72 mobile) shared by the
 //                       coin sparkle, the coin spill, the item pickup and use
-//                       bursts, the spin-out poof, the mini-turbo sparks, the
-//                       ice glints, the flung surface crystals and the
-//                       boost/idle exhaust (instanceColor keeps concurrent
-//                       systems in their own colors)
+//                       bursts, the item-box shards, the impact shock ring, the
+//                       spin-out poof and spiral, the mini-turbo sparks and tier
+//                       pips, the finish confetti, the ice glints, the flung
+//                       surface crystals and the boost/idle exhaust
+//                       (instanceColor keeps concurrent systems in their own
+//                       colors)
 //   4. boost speed-lines ONE full-screen NDC quad + fragment shader (a polar
 //                       streak field; the pixels do all the work, so there is
 //                       no geometry to spin and nothing to occlude the kart)
@@ -98,12 +100,52 @@
 // is the impact shockwave, which is an event centred on the kart. Nothing here
 // can fix the shadow rig's own additive glow — that is the monolith's.
 //
+// Event-legibility contract (wave 5). The acceptance bar for the cue half of
+// this module is that a viewer can name what just happened FROM A STILL, with
+// the HUD covered. Colour cannot carry that — a recoloured copy of the same ball
+// is the same ball — so every cue below is a distinct SILHOUETTE and, where the
+// event has a magnitude, a COUNTABLE one:
+//   item box       an outward shell of hard mixed-hue splinters (the box breaks)
+//                  plus the inward motes of the pickup (the item goes in). It is
+//                  the only place in the module where two opposed motions play
+//                  on one frame, which is exactly what "consumed" means.
+//   kart contact   an expanding ring of TANGENTIAL dashes in the camera plane at
+//                  the contact point, plus radial sparks, plus a scuff ring on
+//                  the road beneath it. Nothing else in the module draws a ring
+//                  of tangential dashes.
+//   spin-out       three trailing ARCS curling around the kart. Nothing else
+//                  here is curved; rotation is the one thing a still cannot show
+//                  any other way.
+//   item use       a forward cone off the nose with a muzzle ring at its root.
+//   mini-turbo     N chevrons laid on the road behind the axle, where N is the
+//                  tier — the tier is countable rather than merely coloured, so
+//                  a colour-blind viewer and a still frame both get it. The bank
+//                  (`tier-N`) fires N vertical pips per rear wheel for the same
+//                  reason, at a fraction of the weight, because banking a stage
+//                  is a promise and releasing it is the payoff.
+//   finish         confetti: the only multi-hue, slow, tumbling, gravity-bound
+//                  system in the file. Everything else is fast and monochrome
+//                  per event, so a frame with slow coloured paper in it can only
+//                  be the finish.
+// All of it emits into the two pools that already exist. Zero added draw calls,
+// zero added bytes.
+//
+// Shake contract (wave 5): the camera package (chaseCameraFeel.impulseChaseShake)
+// already implements angular impact shake; it just has nothing telling it that an
+// impact happened. This module is where impacts are known, so it exposes the
+// TRIGGER and implements none of the camera side — `onShake(amount, event)`,
+// amount in 0..1, ready to hand straight to impulseChaseShake. It is optional:
+// with no callback the visuals are unchanged.
+//
 // reducedMotion: storm snow, ground spindrift, speed-lines, ice glints and idle
 // exhaust hide entirely (all decorative), spray/sparks/boost-exhaust halve (gameplay-critical tier and
 // boost feedback stays readable), the contact wash drops to 0.4 rather than
 // zero — after this wave it is the only thing telling the player what they are
 // driving on, which is information and not ambience — and one-shot bursts keep
-// firing (brief event feedback, not ambient motion).
+// firing (brief event feedback, not ambient motion). The finish confetti is the
+// single exception that halves: it is the only cue whose particles live for
+// seconds rather than for a beat, which is long enough to read as motion rather
+// than as a notification, and a celebration at half density is still one.
 import * as THREE from 'three';
 import { DRIFT_FEEL } from '../driftFeel.js';
 
@@ -430,6 +472,96 @@ const ICE_GROUND_POWDER = 0.92;
 // Below a hop's worth of air there is nothing to displace; a puff on every
 // kerb bump would be constant noise.
 const LANDING_MIN_DROP = 1.2;
+
+// ---- Event cues (wave 5) -------------------------------------------------
+// See the event-legibility contract at the top of the file. Every number here
+// is chosen so the SHAPE survives a 900p still, not so the effect is loud.
+
+// Item-box glass. Mixed hues on purpose, and they are the box's own colours
+// (ITEM_BOX_COLORS in the monolith) rather than the item's: the shards are what
+// BROKE, the motes flying inward are what the player got. Two different things
+// happened on that frame and they must not be the same colour.
+const ITEM_BOX_SHARDS = ['#00E5FF', '#7EC8E8', '#F5F8FF', '#39FF8C', '#7B61FF'];
+// A splinter is the one sprite in the module that WANTS the soft dot's alpha
+// plateau (see getSnowFlakeTexture for why the snow had to escape it): stretched,
+// that plateau produces a bright bar with hard tips, which is a chip of glass.
+const SHARD_GRAVITY = -30;
+const SHARD_TTL = 0.46;
+// Tighter than a spark's: a shard is small debris, and the whole read is that
+// there are MANY of them, not that any one is large.
+const SHARD_MAX_ANGLE = 0.013;
+
+// Impact shock ring. Expanded in the plane of the SCREEN rather than the plane
+// perpendicular to the impact, which is a legibility call over a physical one: a
+// side-swipe's honest shock plane contains the kart's forward and up axes, and
+// from a chase camera that plane is edge-on — i.e. the ring would be a vertical
+// line. Drawn in the camera's own right/up basis it is a ring from every framing,
+// and because the sprites are billboarded anyway it costs nothing to do.
+const IMPACT_RING_TINT = '#FFF1D0';
+const IMPACT_RING_TINT_ICE = '#E4F7FF';
+const IMPACT_SPARK_TINT = '#FFF6E2';
+const IMPACT_RING_MAX_ANGLE = 0.02;
+// Shake amounts, in the 0..1 units impulseChaseShake takes. A spin-out is the
+// biggest thing that can happen to the player short of finishing; a graze is a
+// graze.
+const SHAKE_CONTACT = 0.55;
+const SHAKE_SPIN_OUT = 0.85;
+
+// Mini-turbo tier chevrons, laid FLAT on the road behind the rear axle. Flat for
+// the same reason everything else grounded in this module is (see the grounding
+// contract): a chevron floating over the road is a HUD element that has escaped
+// into the world, while one lying in the road plane is a mark the kart left.
+//
+// Spacing and length are set against the road, not against the kart: the ribbon
+// is ~56 units across, so a bar of ~10 units at 55 degrees puts a chevron about
+// 13 units wide — a quarter of the road, three of them stacked over 16 units of
+// track. Twice that and tier 3 paints the whole corner.
+const TIER_CHEVRON_ASPECT = 5.4;
+const TIER_CHEVRON_SPACING = 5.5;
+const TIER_CHEVRON_ANGLE = 0.96;
+
+// Finish confetti. Slow, tumbling, gravity-bound and multi-hue — deliberately
+// the opposite of every other emitter here, all of which are fast, short-lived
+// and one colour per event.
+//
+// Three waves rather than one pop: a single instant of paper is a muzzle flash,
+// and a celebration has to keep arriving. The waves are spawned from update()
+// off a timer because onCue fires once and the second wave has no cue of its own.
+const CONFETTI_COLORS_CITY = ['#FF4FD8', '#00E5FF', '#FFD34F', '#7B61FF', '#FF8A5C', '#6BFFC4'];
+const CONFETTI_COLORS_ICE = ['#8FE9FF', '#FFFFFF', '#B27CFF', '#FFD34F', '#6BFFC4', '#FF7FB0'];
+const CONFETTI_WAVES = 3;
+const CONFETTI_WAVE_GAP = 0.34;
+// Paper, not debris: it barely accelerates, and it lives long enough to actually
+// drift through the frame the finish camera pulls back into.
+const CONFETTI_GRAVITY = -5.5;
+const CONFETTI_TTL = 2.3;
+// Wider than a spark's cap because a ribbon is SUPPOSED to be resolvable — it is
+// the one system whose individual members the viewer is meant to read.
+const CONFETTI_MAX_ANGLE = 0.022;
+// Tumble geometry, shared by the shards and the confetti. The floor stops a
+// sprite from strobing to nothing at each edge-on pass (and, with the width
+// compensation below, from dividing by anything small); the gain caps how much
+// of that width may be handed back to the long axis, so the worst case is a
+// ~5:1 sliver at the emitter's own angular ceiling rather than an unbounded rod.
+const TUMBLE_WIDTH_FLOOR = 0.3;
+const TUMBLE_ASPECT_GAIN = 1.8;
+
+// Kart wake in the storm snow. Four waves of critics have asked for the same
+// thing in different words — "snow falls straight through the play space
+// regardless of a kart passing at 279 km/h" — and it is the cheapest legibility
+// win left in the weather: a deflection cone makes the flakes PART around the
+// player, and because the deflection goes into the flake's velocity it also
+// feeds the streak direction, so the frames nearest the kart show a fan rather
+// than a field of parallel lines. One distance test per flake per frame.
+const SNOW_WAKE_RADIUS = 14;
+const SNOW_WAKE_PUSH = 30;
+// The low sunset break the arctic sky is graded to. A minority of flakes carry a
+// little of it so the layer is not one uniform grey — the "grey lens smudges"
+// read three critics have logged. Deliberately a small mean (the exponent makes
+// most flakes cold): the same grade at full strength is what turned the snow
+// FIELD beige in the wave-4 frames, and that is a mistake worth not repeating in
+// the weather.
+const SNOW_BREAK_TINT = new THREE.Color('#FFD9B0');
 
 // Storm snow. Two shells, both wrapped in a box carried by the camera.
 //
@@ -830,9 +962,17 @@ void main() {
 }
 `;
 
-export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
+export const createRaceParticles = ({ isIce = false, mobile = false, onShake = null } = {}) => {
   const group = new THREE.Group();
   group.name = 'g3-race-particles';
+
+  // Impact trigger for the camera package. See the shake contract at the top of
+  // the file: this module knows WHEN, chaseCameraFeel owns HOW. Guarded rather
+  // than assumed so a caller that passes nothing is byte-identical to today.
+  const shake = (amount, event) => {
+    if (typeof onShake !== 'function' || !(amount > 0)) return;
+    onShake(Math.min(1, amount), event);
+  };
 
   // Emission scale. The mobile pools are ~40% of desktop, so emitting at the
   // desktop rate there would recycle live particles and shorten every trail
@@ -1042,9 +1182,14 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   // jitter (0 = steady, which is what every other emitter wants). stretchMax is
   // the per-particle length ceiling described above.
   const burstPool = Array.from({ length: burstCount }, () => ({
-    // Length-to-width ratio for a `flat` sprite. A specular flash on a frozen
-    // surface is anisotropic — that is what makes it read as light caught by a
-    // facet rather than as a bead sitting on top of the road.
+    // Length-to-width ratio, on BOTH paths. For a `flat` sprite it is the
+    // specular anisotropy of a flash caught by a facet of ice — that is what
+    // makes it read as light in the surface rather than as a bead sitting on
+    // it. For a billboard it is an authored SILHOUETTE: a shard, a ring dash and
+    // a confetti ribbon are all objects with a long axis, and shape is the only
+    // channel a still frame has once colour has been spent (see the
+    // event-legibility contract at the top of the file). 1 everywhere else, so
+    // every emitter that predates it is untouched.
     aspect: 1,
     brightness: 1,
     // See the spray pool's field of the same name. Only the FLAT emitters in
@@ -1074,15 +1219,21 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     stretchMax: BURST_STRETCH_MAX,
     tint: new THREE.Color(),
     ttl: 0,
+    // Radians per second of roll, plus the width modulation that goes with it.
+    // A flat object tumbling in air is only legible as flat because it
+    // periodically turns edge-on and thins to nothing — the width term is the
+    // whole cue, and without it a spinning ribbon is just a rotating stick.
+    // Zero on every emitter but the shards and the confetti.
+    tumble: 0,
     velocity: new THREE.Vector3(),
   }));
   let burstCursor = 0;
   let sparkAccumulator = 0;
   let flameAccumulator = 0;
   const sparkTint = new THREE.Color();
-  // The three fields a recycled slot must NOT inherit — a coin sparkle landing
-  // in a slot the ice glint last used would otherwise be drawn as a flat
-  // elongated sliver lying on the road.
+  // The fields a recycled slot must NOT inherit — a coin sparkle landing in a
+  // slot the ice glint last used would otherwise be drawn as a flat elongated
+  // sliver lying on the road, and one landing in a confetti slot would tumble.
   const nextBurst = () => {
     const item = burstPool[burstCursor];
     burstCursor = (burstCursor + 1) % burstCount;
@@ -1092,6 +1243,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     item.lengthJitter = 0.62 + Math.random() * 0.5;
     item.maxAngle = 0;
     item.roll = Math.random() * Math.PI * 2;
+    item.tumble = 0;
     return item;
   };
 
@@ -1242,8 +1394,17 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       for (let n = 0; n < shell.count; n += 1, index += 1) {
         snowShellOf[index] = shellIndex;
         snowPhase[index] = Math.random() * Math.PI * 2;
-        // Per-flake value jitter so the field is not one flat stencil of dots.
-        scratchColor.set(shell.tint).multiplyScalar(0.82 + Math.random() * 0.3);
+        // Per-flake value jitter so the field is not one flat stencil of dots,
+        // plus a minority carrying the sunset break (see SNOW_BREAK_TINT). The
+        // near shell takes less of it than the far one: the break is a long way
+        // off down the storm, so the flakes nearest the lens are the ones least
+        // entitled to it, and they are also the ones drawn over the road where a
+        // warm cast would read as dirt rather than as weather.
+        const breakMix = Math.pow(Math.random(), 2.5) * (shell.name === 'near' ? 0.22 : 0.4);
+        scratchColor
+          .set(shell.tint)
+          .lerp(SNOW_BREAK_TINT, breakMix)
+          .multiplyScalar(0.82 + Math.random() * 0.3);
         scratchColor.toArray(snowBaseTint, index * 3);
         snowMesh.setColorAt(index, scratchColor);
       }
@@ -1260,12 +1421,18 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     snowPositions[base + 2] = cameraPosition.z + (Math.random() * 2 - 1) * half[2];
   };
 
+  // Where the kart is and how hard it is punching a hole in the weather, filled
+  // in by update() each frame. Kept as one preallocated object rather than
+  // arguments so the wake can grow a term without re-threading the signature.
+  const snowWake = { fx: 0, fz: 0, strength: 0, x: 0, y: 0, z: 0 };
+
   const updateStormSnow = (dt) => {
     if (!snowSeeded) {
       for (let index = 0; index < snowCount; index += 1) seedFlake(index);
       snowSeeded = true;
     }
     let snowColorDirty = false;
+    const wake = snowWake.strength;
     for (let index = 0; index < snowCount; index += 1) {
       const shell = snowShells[snowShellOf[index]];
       const half = shell.half;
@@ -1278,6 +1445,26 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         SNOW_FALL,
         SNOW_WIND.z + Math.cos(clock * SNOW_GUST_RATE * 0.83 + phase * 1.7) * SNOW_GUST
       );
+      // Kart wake. Radial push away from the kart (the flakes PART) plus a drag
+      // along its heading (they are pulled into its slipstream), both falling off
+      // quadratically so there is no edge to the cone. It goes into the velocity
+      // rather than straight into the position on purpose: velocity is what the
+      // streak direction is derived from below, so the deflection is visible in a
+      // still and not only in motion. See SNOW_WAKE_RADIUS.
+      if (wake > 0) {
+        const wx = snowPositions[base] - snowWake.x;
+        const wy = snowPositions[base + 1] - snowWake.y;
+        const wz = snowPositions[base + 2] - snowWake.z;
+        const distanceSq = wx * wx + wy * wy + wz * wz;
+        if (distanceSq < SNOW_WAKE_RADIUS * SNOW_WAKE_RADIUS) {
+          const distance = Math.sqrt(distanceSq) + 0.001;
+          const falloff = 1 - distance / SNOW_WAKE_RADIUS;
+          const push = (wake * falloff * falloff) / distance;
+          snowVelocity.x += wx * push + snowWake.fx * wake * falloff * 0.5;
+          snowVelocity.y += wy * push * 0.6;
+          snowVelocity.z += wz * push + snowWake.fz * wake * falloff * 0.5;
+        }
+      }
       let x = snowPositions[base] + snowVelocity.x * dt;
       let y = snowPositions[base + 1] + snowVelocity.y * dt;
       let z = snowPositions[base + 2] + snowVelocity.z * dt;
@@ -1702,18 +1889,23 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   // same physical event (something hit the surface hard) and both have to read
   // as a disturbance OF the road, which is precisely what the flat orientation
   // buys — a billboarded ring is just a scatter of balls.
-  const spawnGroundRing = (context, { brightness = 1, count, radius, size, speed, tint, ttl = 0.45 }) => {
+  const spawnGroundRing = (context, { brightness = 1, count, origin, radius, size, speed, tint, ttl = 0.45 }) => {
     // One shared phase per ring so the ring reads as a ring, plus per-particle
     // jitter so it does not read as a polygon.
     const phase = Math.random() * Math.PI * 2;
+    // `origin` lets a kart-to-kart contact put its scuff ring under the CONTACT
+    // POINT rather than under the player's own centre — an event that happened
+    // at the left-front corner and is drawn at the axle is an event the viewer
+    // cannot attribute to anything.
+    const anchor = origin || context.kartPosition;
     for (let index = 0; index < count; index += 1) {
       const item = nextSpray();
       const angle = phase + (index / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
       const r = radius * (0.75 + Math.random() * 0.5);
       item.position.set(
-        context.kartPosition.x + Math.cos(angle) * r,
+        anchor.x + Math.cos(angle) * r,
         context.groundY + FLAT_LIFT,
-        context.kartPosition.z + Math.sin(angle) * r
+        anchor.z + Math.sin(angle) * r
       );
       const out = speed * (0.7 + Math.random() * 0.6);
       item.velocity.set(Math.cos(angle) * out, 0, Math.sin(angle) * out);
@@ -1888,7 +2080,14 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     item.life = item.ttl;
   };
 
-  const spawnBurst = (context, { color, count, gravity = -7.5, origin, originY, size, speed, spread = 0, stretch = 0, ttl, upBias }) => {
+  const spawnBurst = (
+    context,
+    // `maxAngle` 0 keeps the size-derived heuristic, i.e. every emitter that
+    // predates it. Impact sparks pass SPARK_MAX_ANGLE for the same reason the
+    // drift sparks do: at 0.3 units the heuristic allows ~12 px of WIDTH, and a
+    // 12 px-wide additive sprite with a bright core is a lozenge at any length.
+    { color, count, gravity = -7.5, maxAngle = 0, origin, originY, size, speed, spread = 0, stretch = 0, ttl, upBias }
+  ) => {
     const anchor = origin || context.kartPosition;
     const height = originY ?? context.groundY + 2.4;
     for (let index = 0; index < count; index += 1) {
@@ -1911,6 +2110,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       item.flicker = 0;
       item.stretchMax = BURST_STRETCH_MAX;
       item.gravity = gravity;
+      item.maxAngle = maxAngle;
       item.size = size;
       item.stretch = stretch;
       item.tint.set(color);
@@ -1965,6 +2165,352 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       item.life = item.ttl;
     }
   };
+
+  // ---- Wave 5 event vocabulary -------------------------------------------
+  // See the event-legibility contract at the top of the file. Everything below
+  // emits into the two pools that already exist.
+
+  // World anchor for an event, from a kart-space offset. Written into a shared
+  // vector because cue handlers run sequentially inside one frame and none of
+  // them holds it past its own call.
+  const eventOrigin = new THREE.Vector3();
+  const anchorToWorld = (context, lx, ly, lz) => {
+    const cos = Math.cos(context.yaw);
+    const sin = Math.sin(context.yaw);
+    return eventOrigin.set(
+      context.kartPosition.x + cos * lx + sin * lz,
+      context.groundY + ly,
+      context.kartPosition.z - sin * lx + cos * lz
+    );
+  };
+  // Camera basis for the shock ring, rebuilt per ring rather than per particle.
+  const ringRight = new THREE.Vector3();
+  const ringUp = new THREE.Vector3();
+  const ringOffset = new THREE.Vector3();
+  // Arc colour for the spin-out. Warm on Miami, cold on the arctic — a spin-out
+  // is friction, and friction takes the track's own key light.
+  const SPIN_ARC_TINT = new THREE.Color(isIce ? '#DDF3FF' : '#FFCF8A');
+
+  // An expanding ring of TANGENTIAL dashes, drawn in the camera's own right/up
+  // plane at an arbitrary world point. See the IMPACT_RING_* block for why the
+  // plane is the screen's rather than the impact's.
+  const spawnShockRing = (
+    context,
+    { aspect = 3.2, brightness = 1, count, point, radius = 0.9, size, speed, tint, ttl }
+  ) => {
+    // scratchQuaternion holds the camera's world rotation; onCue runs before
+    // update() in the caller's frame, so on a cue this is one frame stale —
+    // three orders of magnitude below the ring's own expansion in that time.
+    ringRight.set(1, 0, 0).applyQuaternion(scratchQuaternion);
+    ringUp.set(0, 1, 0).applyQuaternion(scratchQuaternion);
+    for (let index = 0; index < count; index += 1) {
+      const item = nextBurst();
+      const angle = (index / count) * Math.PI * 2;
+      ringOffset
+        .copy(ringRight)
+        .multiplyScalar(Math.cos(angle))
+        .addScaledVector(ringUp, Math.sin(angle));
+      item.position.copy(point).addScaledVector(ringOffset, radius);
+      item.velocity.copy(ringOffset).multiplyScalar(speed * (0.85 + Math.random() * 0.3));
+      item.brightness = brightness;
+      item.flicker = 0;
+      // A shockwave does not fall inside the quarter-second it exists, and a
+      // ring that sags is a spray.
+      item.gravity = 0;
+      item.size = size;
+      item.aspect = aspect;
+      item.maxAngle = IMPACT_RING_MAX_ANGLE;
+      // Tangential, and this is the whole trick. `roll` is a screen-space Z
+      // rotation applied BEFORE the camera billboard, and the ring lies in the
+      // camera's own right/up plane, so the world angle around the ring is also
+      // its screen angle. The sprite's long axis is local +Y, i.e. screen up at
+      // roll 0, so roll = angle lands it exactly on the tangent. Radial dashes
+      // would be a starburst — which is what every other burst in this module
+      // already is; tangential dashes are a ring, and nothing else here draws
+      // one.
+      item.roll = angle;
+      item.stretch = 0;
+      item.tint.set(tint);
+      item.ttl = ttl * (0.85 + Math.random() * 0.3);
+      item.life = item.ttl;
+    }
+  };
+
+  // Kart-to-kart contact. Three parts because one is never enough to say WHERE:
+  // the ring says an impact happened, the sparks say it was hard, and the scuff
+  // on the road underneath ties it to a point in the world rather than to a
+  // point on the screen. Plus the camera trigger — a hit the frame does not
+  // flinch at is a hit the player does not feel.
+  const spawnImpactEvent = (
+    context,
+    { cue = 'contact', point, shakeAmount = SHAKE_CONTACT, strength = 1 } = {}
+  ) => {
+    // Default anchor is the player's own front quarter: a caller with no contact
+    // geometry still gets the event on the corner of the kart rather than
+    // floating at its centre.
+    const impact = point || anchorToWorld(context, 2.6, 2.2, 2.6);
+    const scale = clamp01(strength);
+    spawnShockRing(context, {
+      brightness: 0.9,
+      count: mobile ? 10 : 16,
+      point: impact,
+      radius: 0.9,
+      size: 0.34 + scale * 0.12,
+      speed: 18 + scale * 14,
+      tint: isIce ? IMPACT_RING_TINT_ICE : IMPACT_RING_TINT,
+      ttl: 0.24,
+    });
+    spawnBurst(context, {
+      color: IMPACT_SPARK_TINT,
+      count: mobile ? 6 : 10,
+      gravity: -18,
+      maxAngle: SPARK_MAX_ANGLE,
+      origin: impact,
+      originY: impact.y,
+      size: 0.3,
+      speed: 14 + scale * 10,
+      spread: 1.4,
+      stretch: 1.9,
+      ttl: 0.22,
+      upBias: 4.5,
+    });
+    // Ground scuff under the contact point. Dim — the ring above is the event,
+    // this is only what says it happened on the road and not in the air.
+    spawnGroundRing(context, {
+      brightness: (isIce ? 0.5 : 0.4) * (0.6 + scale * 0.4),
+      count: mobile ? 6 : 10,
+      origin: impact,
+      radius: 2.2,
+      size: 2 * currentLook.grow,
+      speed: 12 + scale * 8,
+      tint: groundTint,
+      ttl: 0.3,
+    });
+    shake(shakeAmount * (0.5 + scale * 0.5), { cue, x: impact.x, y: impact.y, z: impact.z });
+  };
+
+  // Item box shatter. The box is a monolith object and this module cannot hide
+  // it — what it can do is make the frame it disappears on the frame it BREAKS
+  // on. Mixed hues (the box's own glass, not the item's) and hard tips: this is
+  // the one emitter that wants the soft dot's alpha plateau, because stretched,
+  // a plateau produces a bright bar with abrupt ends, which is a chip.
+  const spawnBoxShards = (context, point) => {
+    const count = mobile ? 9 : 15;
+    for (let index = 0; index < count; index += 1) {
+      const item = nextBurst();
+      const angle = (index / count) * Math.PI * 2 + Math.random() * 0.5;
+      const out = 9 + Math.random() * 11;
+      item.position.set(
+        point.x + Math.cos(angle) * 0.8,
+        point.y + (Math.random() - 0.5) * 1.6,
+        point.z + Math.sin(angle) * 0.8
+      );
+      item.velocity.set(Math.cos(angle) * out, 3 + Math.random() * 6, Math.sin(angle) * out);
+      item.brightness = 0.8;
+      item.flicker = 0;
+      item.gravity = SHARD_GRAVITY;
+      item.size = 0.26 + Math.random() * 0.2;
+      item.aspect = 1.9 + Math.random() * 1.3;
+      item.maxAngle = SHARD_MAX_ANGLE;
+      // NOT velocity-stretched: the silhouette is authored by `aspect`, and the
+      // screen-velocity term would drag every shard onto the same flow angle,
+      // which is the one thing a scatter of broken glass must not do. It is also
+      // why `aspect` is only read on the unstretched path — no sprite in this
+      // module has both, so no sprite can multiply the two into a rod.
+      item.stretch = 0;
+      item.tumble = 8 + Math.random() * 14;
+      item.tint.set(ITEM_BOX_SHARDS[index % ITEM_BOX_SHARDS.length]);
+      item.ttl = SHARD_TTL * (0.7 + Math.random() * 0.6);
+      item.life = item.ttl;
+    }
+  };
+
+  // Spin-out arcs. Three trailing arms curling around the kart — the only curved
+  // shape in the module, because rotation is the one event a still frame cannot
+  // show any other way. A radial poof says "something happened here"; an arc
+  // says the kart is going round.
+  const spawnSpinArcs = (context, { arms, perArm, spin }) => {
+    for (let arm = 0; arm < arms; arm += 1) {
+      const armPhase = (arm / arms) * Math.PI * 2 + Math.random() * 0.3;
+      for (let index = 0; index < perArm; index += 1) {
+        const t = index / perArm;
+        const angle = armPhase + t * 2.4 * spin;
+        const radius = 2.4 + t * 6.2;
+        const item = nextBurst();
+        item.position.set(
+          context.kartPosition.x + Math.cos(angle) * radius,
+          context.groundY + 1.1 + t * 1.5,
+          context.kartPosition.z + Math.sin(angle) * radius
+        );
+        // Tangential and DECAYING along the arm: the arm is a smear of the
+        // kart's own rotation, so its tip has to travel slower than its root or
+        // the spiral unwinds into a ring within two frames.
+        const swirl = (15 - t * 8) * spin;
+        item.velocity.set(-Math.sin(angle) * swirl, 1.2 + Math.random(), Math.cos(angle) * swirl);
+        item.brightness = 0.62 * (1 - t * 0.45);
+        item.flicker = 0;
+        item.gravity = -6;
+        item.size = 0.42 - t * 0.14;
+        item.maxAngle = SPARK_MAX_ANGLE * 1.7;
+        // Streaked, but well under the spark's ceiling. At race speed the smear
+        // term saturates on the CAMERA's motion, so a full-length arc particle
+        // would come out as a 76 px hairline pointing back down the track — i.e.
+        // the arc's own curvature would be overwritten by the flow, and eighteen
+        // of them would read as the lens scratches this module has spent two
+        // waves removing. The curl has to live in the POSITIONS.
+        item.stretch = 1;
+        item.stretchMax = 3.4;
+        item.tint.copy(SPIN_ARC_TINT);
+        item.ttl = 0.42 + t * 0.24;
+        item.life = item.ttl;
+      }
+    }
+  };
+
+  // Mini-turbo release chevrons: N bars laid FLAT on the road behind the axle,
+  // where N is the tier. The tier already has a colour (blue/amber/purple), and
+  // a colour is exactly what a still frame is worst at — it survives one glance
+  // and no colour-blind viewer at all. A COUNT survives both. Flat rather than
+  // billboarded for the same reason the wash is (see the grounding contract): a
+  // chevron floating over the road is a HUD arrow that escaped into the world.
+  const spawnTierChevrons = (context, tier, tint) => {
+    const cos = Math.cos(context.yaw);
+    const sin = Math.sin(context.yaw);
+    const bar = Math.cos(TIER_CHEVRON_ANGLE);
+    const swing = Math.sin(TIER_CHEVRON_ANGLE);
+    for (let step = 0; step < tier; step += 1) {
+      const lz = -6.5 - step * TIER_CHEVRON_SPACING;
+      for (let half = 0; half < 2; half += 1) {
+        const side = half === 0 ? -1 : 1;
+        const item = nextSpray();
+        // Half a bar-length out along the bar's own lateral component, so the
+        // two halves meet at an apex on the centreline instead of crossing into
+        // an X: a bar of ~9 units at 55 degrees reaches ~3.7 across from its
+        // centre, and its inner tip then lands on the racing line.
+        const lx = side * 3.8;
+        item.position.set(
+          context.kartPosition.x + cos * lx + sin * lz,
+          // Above the wash's own lift so a release inside a drift cannot
+          // z-fight with the trail it is being laid on top of.
+          context.groundY + FLAT_LIFT + 0.05,
+          context.kartPosition.z - sin * lx + cos * lz
+        );
+        // Bar axis: the kart's forward, swung inward by TIER_CHEVRON_ANGLE, so
+        // the two halves meet in a ">" pointing where the kart is going. Kart
+        // axes are the file's usual convention — local +z is world (sin, cos),
+        // local +x is world (cos, -sin).
+        const dx = bar * sin - side * swing * cos;
+        const dz = bar * cos + side * swing * sin;
+        // Long axis of a flat quad is local +X, which `spin` rotates about Y to
+        // world (cos s, -sin s) — the same derivation SPINDRIFT_YAW uses.
+        item.spin = Math.atan2(-dz, dx);
+        item.spinRate = 0;
+        item.aspect = TIER_CHEVRON_ASPECT;
+        // The one flat emitter besides the shockwave that opts out of the
+        // contact mask: the first bar is laid a kart-length behind the axle,
+        // which is inside the footprint the mask exists to protect, and masking
+        // it would delete the bar that carries the count.
+        item.contactMask = 0;
+        item.drag = 2;
+        item.fadeCurve = 1.1;
+        item.flat = true;
+        item.floorY = context.groundY - 1e3;
+        item.gravity = 0;
+        // Creeps outward and back, so the chevron opens as it dies rather than
+        // sitting as a stamped decal.
+        item.velocity.set(cos * side * 1.6 - sin * 2, 0, -sin * side * 1.6 - cos * 2);
+        item.sizeStart = 1.4;
+        item.sizeEnd = 2.1;
+        item.stretch = 0;
+        // Falls off with distance behind the kart: the near bar is the loud one,
+        // and a stack of three at equal value reads as a ladder rather than as a
+        // thing thrown off the axle.
+        item.tint.copy(tint).multiplyScalar((isIce ? 0.62 : 0.5) * (1 - step * 0.18));
+        item.ttl = 0.4 + step * 0.06;
+        item.life = item.ttl;
+      }
+    }
+  };
+
+  // Banked-tier pips. The quiet half of the same readout: N motes stacked at
+  // each rear wheel the instant a stage is banked, so the promise is countable
+  // too. Static in the world and barely moving — a pip that arcs reads as
+  // material being thrown, and this is a number.
+  const spawnTierPips = (context, tier, tint) => {
+    const cos = Math.cos(context.yaw);
+    const sin = Math.sin(context.yaw);
+    for (let half = 0; half < 2; half += 1) {
+      const side = half === 0 ? -1 : 1;
+      for (let pip = 0; pip < tier; pip += 1) {
+        const item = nextBurst();
+        const lx = side * 4.7;
+        const lz = -3.3;
+        item.position.set(
+          context.kartPosition.x + cos * lx + sin * lz,
+          // 1.2 apart: far enough that three of them never merge into one bar
+          // once the camera has closed on them.
+          context.groundY + 1.2 + pip * 1.2,
+          context.kartPosition.z - sin * lx + cos * lz
+        );
+        item.velocity.set(0, 2, 0);
+        item.brightness = 0.8;
+        item.flicker = 0;
+        item.gravity = 0;
+        item.size = 0.34;
+        item.maxAngle = SPARK_MAX_ANGLE * 1.5;
+        // Short: countable beats streaked here, and at race speed the camera's
+        // own motion would smear a fully-stretched pip into its neighbour.
+        item.stretch = 0.5;
+        item.stretchMax = 2.4;
+        item.tint.copy(tint);
+        item.ttl = 0.3;
+        item.life = item.ttl;
+      }
+    }
+  };
+
+  // Finish confetti. Deliberately the opposite of everything else in this file:
+  // slow, multi-hue, gravity-bound and tumbling, where every other emitter is
+  // fast, single-hue and gone inside half a second. That contrast IS the read —
+  // a frame with slow coloured paper in it cannot be any other event.
+  const spawnConfetti = (context, wave) => {
+    const palette = isIce ? CONFETTI_COLORS_ICE : CONFETTI_COLORS_CITY;
+    const count = Math.round((mobile ? 13 : 24) * (context.reducedMotion ? 0.5 : 1));
+    for (let index = 0; index < count; index += 1) {
+      const item = nextBurst();
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 3 + Math.random() * 15;
+      item.position.set(
+        context.kartPosition.x + Math.cos(angle) * radius,
+        // Above the frame the finish camera pulls back into, and each wave a
+        // little higher, so the fall is staggered rather than a single curtain.
+        context.groundY + 7 + wave * 2.5 + Math.random() * 11,
+        context.kartPosition.z + Math.sin(angle) * radius
+      );
+      item.velocity.set((Math.random() - 0.5) * 8, -(1.5 + Math.random() * 3.5), (Math.random() - 0.5) * 8);
+      // Under a full-value burst: there are more of these alive at once than
+      // anything else the module emits, they overlap, and it is the sum the
+      // camera sees.
+      item.brightness = 0.72;
+      item.flicker = 0;
+      item.gravity = CONFETTI_GRAVITY;
+      item.size = 0.42 + Math.random() * 0.3;
+      item.aspect = 1.8 + Math.random() * 1;
+      item.maxAngle = CONFETTI_MAX_ANGLE;
+      // No velocity streak: paper does not blur, it FLIPS. The tumble owns the
+      // silhouette instead, which also keeps the confetti out of the radial
+      // smear every other burst in the module shares.
+      item.stretch = 0;
+      item.tumble = 6 + Math.random() * 10;
+      item.tint.set(palette[index % palette.length]);
+      item.ttl = CONFETTI_TTL * (0.75 + Math.random() * 0.5);
+      item.life = item.ttl;
+    }
+  };
+  // Waves are spawned from update() off this counter: onCue fires once, and the
+  // second and third waves have no cue of their own.
+  let confettiPending = 0;
+  let confettiTimer = 0;
 
   // Mini-turbo sparks. Distinct from the spray on purpose: tiny, fast, and
   // velocity-stretched, so the tier COLOUR (blue → amber → purple) is legible
@@ -2150,10 +2696,18 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         ttl: 0.6,
         upBias: 6,
       });
-    } else if (cue === 'item-pickup') {
-      // Implosion: motes born on a ring and thrown INWARD, so the item reads as
-      // being absorbed by the kart. Nothing else in the module moves inward,
-      // which is the whole point.
+    } else if (cue === 'item-pickup' || cue === 'item-box') {
+      // TWO opposed motions on one frame, which is the only honest way to draw
+      // "consumed": the box breaks OUTWARD into its own glass, and the item goes
+      // INWARD into the kart. Either alone is ambiguous — an outward burst is
+      // every other explosion in the module, and an inward one on its own reads
+      // as a pickup with no source.
+      //
+      // The box sat just ahead of the nose, which is where the kart drove
+      // through it. `context.itemBoxPoint` overrides that the day the runtime
+      // sends the real one; until then the nose anchor is within a kart-length
+      // of the truth and moving at 285 either way.
+      spawnBoxShards(context, context.itemBoxPoint || anchorToWorld(context, 0, 2.6, 5.2));
       lastItemTint = itemTintFor(context.heldItem);
       const count = mobile ? 6 : 9;
       const cos = Math.cos(context.yaw);
@@ -2182,6 +2736,21 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         item.life = item.ttl;
       }
     } else if (cue === 'item-use') {
+      // Muzzle ring at the root of the cone. The cone alone says the direction
+      // but not the instant — a ring is a discharge, and it is what separates
+      // "an item left" from the continuous backward cone of a boost release
+      // (which fires the same shape the other way).
+      spawnShockRing(context, {
+        aspect: 2.6,
+        brightness: 0.85,
+        count: mobile ? 7 : 11,
+        point: anchorToWorld(context, 0, 2, 5.4),
+        radius: 0.8,
+        size: 0.3,
+        speed: 11,
+        tint: lastItemTint,
+        ttl: 0.18,
+      });
       // Muzzle cone off the nose in the accent of the item that just left.
       spawnDirectionalBurst(context, {
         aim: 1,
@@ -2194,6 +2763,18 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         speed: 22,
         stretch: 1.8,
         ttl: 0.24,
+      });
+    } else if (cue === 'contact' || cue === 'bump' || cue === 'kart-contact') {
+      // Kart-to-kart contact. Dormant until the runtime sends it — the cue
+      // vocabulary this module shares with the audio has no contact event yet —
+      // but `onImpact` on the returned handle is the same call without a cue
+      // name, so a caller can fire it from a collision response directly.
+      // `impactPoint` is where the two bodies touched; `impactStrength` is the
+      // closing speed normalised to 0..1.
+      spawnImpactEvent(context, {
+        cue,
+        point: context.impactPoint,
+        strength: Number.isFinite(context.impactStrength) ? context.impactStrength : 1,
       });
     } else if (cue === 'spin-out') {
       spawnScuffCloud(context, currentLook, groundTint, mobile ? 10 : 18, 1);
@@ -2209,6 +2790,27 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         tint: groundTint,
         ttl: 0.5,
       });
+      // A spin-out is caused by an impact — that is the only way to earn one —
+      // so it fires the full contact event as well, which is what makes the
+      // contact vocabulary live TODAY through a cue the runtime already sends.
+      // The arcs are what separate the two afterwards: a hit that spins you puts
+      // three curling arms around the kart, a hit that does not is a ring and
+      // some sparks.
+      spawnImpactEvent(context, {
+        cue,
+        // Behind the axle unless the runtime says otherwise: a spin is nearly
+        // always something arriving from the rear, and putting the ring there
+        // keeps it clear of the scuff cloud already filling the kart's centre.
+        point: context.impactPoint || anchorToWorld(context, 0, 2.2, -2.4),
+        shakeAmount: SHAKE_SPIN_OUT,
+        strength: 1,
+      });
+      spawnSpinArcs(context, {
+        arms: 3,
+        perArm: mobile ? 4 : 6,
+        // Which way the kart is going round, when the runtime knows. Sign only.
+        spin: (context.spinDirection || 0) < 0 ? -1 : 1,
+      });
     } else if (cue.startsWith('tier-')) {
       // The moment the charge banks a stage. Small on purpose — the loud beat
       // belongs to the release, and a big flash here would spend it early.
@@ -2217,8 +2819,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // well or it reads as a floating pop.
       // Headcount up with the same factor spawnSpark's brightness came down by,
       // so the banked-tier flash keeps the weight it was tuned to have.
-      sparkTint.set(DRIFT_FEEL.sparkColors[Math.min(3, Number(cue.slice(5)) || 1)]);
+      const bankedTier = Math.min(3, Number(cue.slice(5)) || 1);
+      sparkTint.set(DRIFT_FEEL.sparkColors[bankedTier]);
       for (let index = 0; index < (mobile ? 12 : 20); index += 1) spawnSpark(context, sparkTint);
+      // ...and the countable half of the readout. See spawnTierPips: the tier is
+      // a NUMBER, and a number that only exists as a hue is a number half the
+      // viewers and every still frame will get wrong.
+      spawnTierPips(context, bankedTier, sparkTint);
     } else if (cue.startsWith('mini-turbo-')) {
       // Release. The one frame in a corner that has to punch: a cone of tier
       // sparks fired BACKWARD off the rear axle (the kart is being shoved
@@ -2226,18 +2833,29 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // the road, and a rising edge on the speed-line envelope so the screen
       // effect and the kart effect fire on the same beat.
       const releaseTier = Math.min(3, Number(cue.slice(11)) || 1);
-      spawnDirectionalBurst(context, {
-        aim: -1,
-        anchor: [0, 1.6, -4.6],
-        color: DRIFT_FEEL.sparkColors[releaseTier],
-        cone: 0.55,
-        count: mobile ? 10 : 16,
-        gravity: -14,
-        size: 0.9 + releaseTier * 0.16,
-        speed: 16 + releaseTier * 4,
-        stretch: 2,
-        ttl: 0.3,
+      sparkTint.set(DRIFT_FEEL.sparkColors[releaseTier]);
+      // Tier 1 fires one cone off the centre of the axle; tiers 2 and 3 fire one
+      // off EACH rear wheel. A single cone that merely gets bigger is the same
+      // shape three times, and the whole point of the tier is that the player
+      // held the drift longer — the frame has to show more of the kart working,
+      // not a louder version of the same thing.
+      const cones = releaseTier >= 2 ? [-1, 1] : [0];
+      cones.forEach((side) => {
+        spawnDirectionalBurst(context, {
+          aim: -1,
+          anchor: [side * 3.4, 1.6, -4.6],
+          color: DRIFT_FEEL.sparkColors[releaseTier],
+          cone: 0.55,
+          count: mobile ? 8 : 12,
+          gravity: -14,
+          size: 0.9 + releaseTier * 0.16,
+          speed: 16 + releaseTier * 4,
+          stretch: 2,
+          ttl: 0.3,
+        });
       });
+      // N chevrons on the road, N = the tier. See spawnTierChevrons.
+      spawnTierChevrons(context, releaseTier, sparkTint);
       spawnGroundRing(context, {
         brightness: 0.5,
         count: mobile ? 5 : 9,
@@ -2270,6 +2888,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         stretch: 1.8,
         ttl: 0.26,
       });
+    } else if (cue === 'finish') {
+      // The one cue in the vocabulary that has never had a visual. First wave
+      // now, the rest scheduled in update() — see CONFETTI_WAVES.
+      spawnConfetti(context, 0);
+      confettiPending = CONFETTI_WAVES - 1;
+      confettiTimer = CONFETTI_WAVE_GAP;
     } else if (cue === 'land') {
       // Landing is the one cue that carries data the caller does not send:
       // how far the kart fell. update() banks the peak, this spends it, and
@@ -2557,6 +3181,18 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     }
     wasAirborne = airborne;
 
+    // Confetti waves after the first. Driven from here rather than from onCue
+    // because `finish` fires exactly once and a celebration that arrives all in
+    // one frame is a muzzle flash — see the CONFETTI_* block.
+    if (confettiPending > 0) {
+      confettiTimer -= dt;
+      if (confettiTimer <= 0) {
+        confettiPending -= 1;
+        confettiTimer = CONFETTI_WAVE_GAP;
+        spawnConfetti(context, CONFETTI_WAVES - 1 - confettiPending);
+      }
+    }
+
     // Kart frame for the contact-footprint mask, hoisted out of both particle
     // loops — two trig calls a frame instead of two per live flat sprite.
     const kartCos = Math.cos(context.yaw);
@@ -2781,6 +3417,17 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // stack of overlapping additive sprites from summing into one static
       // silhouette. Zero on every emitter but the exhaust.
       const flicker = item.flicker > 0 ? 1 + 0.12 * Math.sin(clock * 46 + item.flicker) : 1;
+      // Tumble. A flat object in air is only legible AS flat because it turns
+      // edge-on: it loses its WIDTH and keeps its length. The rotation on its own
+      // is a spinning stick, and a uniform size pulse is a throb — it is the two
+      // together that read as paper. `tumbleWidth` therefore narrows the short
+      // axis and is divided back out of the long one, under a hard gain cap so a
+      // ribbon caught edge-on at the angular ceiling cannot become a rod.
+      let tumbleWidth = 1;
+      if (item.tumble > 0) {
+        item.roll += item.tumble * dt;
+        tumbleWidth = TUMBLE_WIDTH_FLOOR + (1 - TUMBLE_WIDTH_FLOOR) * Math.abs(Math.cos(item.roll));
+      }
       // An explicit per-emitter ceiling where one is authored, and the
       // size-derived heuristic elsewhere (which at least stops a 0.4-unit spark
       // reaching the same 77 px as a spin-out puff). The heuristic on its own is
@@ -2789,7 +3436,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // "large detached cyan lozenges" of comeback-city-p0_33 — see
       // SPARK_MAX_ANGLE.
       const angleCap = depth * (item.maxAngle || MAX_SPRITE_ANGLE * Math.min(1, item.size * 0.6));
-      const width = Math.min(item.size * (0.5 + fade * 0.8) * prox * flicker, angleCap);
+      const width = Math.min(item.size * (0.5 + fade * 0.8) * prox * flicker * tumbleWidth, angleCap);
       if (width < depth * MIN_SPRITE_ANGLE) {
         burstMesh.setMatrixAt(index, HIDDEN_POSE);
         return;
@@ -2838,7 +3485,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         scratchRoll.setFromAxisAngle(Z_AXIS, roll + item.roll * (1 - aim)).premultiply(scratchQuaternion);
         burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
       } else {
-        scratchScale.setScalar(width);
+        // The unstretched path is the only one that reads `aspect`, and every
+        // emitter that uses it authors an orientation to go with it: the shock
+        // ring sets `roll` to the tangent, the shards and confetti tumble it.
+        // 1 everywhere else, which is a plain square sprite exactly as before.
+        const aspect =
+          item.tumble > 0 ? Math.min(item.aspect / tumbleWidth, item.aspect * TUMBLE_ASPECT_GAIN) : item.aspect;
+        scratchScale.set(width, width * aspect, 1);
         scratchRoll.setFromAxisAngle(Z_AXIS, item.roll).premultiply(scratchQuaternion);
         burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
       }
@@ -2859,7 +3512,20 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     if (snowMesh) {
       const snowVisible = !context.reducedMotion;
       snowMesh.visible = snowVisible;
-      if (snowVisible) updateStormSnow(dt);
+      if (snowVisible) {
+        // Kart wake, refreshed per frame. Anchored at the bodywork rather than
+        // at the road so the cone is centred on the mass that is displacing the
+        // air, and scaled by speed alone — a parked kart punches no hole in a
+        // storm, which is also what keeps the pre-race camera's weather calm.
+        // Forward is the file's usual convention: local +z is world (sin, cos).
+        snowWake.x = kartX;
+        snowWake.y = context.kartPosition.y + 2;
+        snowWake.z = kartZ;
+        snowWake.fx = kartSin;
+        snowWake.fz = kartCos;
+        snowWake.strength = SNOW_WAKE_PUSH * clamp01(speed / maxSpeed);
+        updateStormSnow(dt);
+      }
     }
 
     // Speed-lines. Decorative — reducedMotion kills them outright.
@@ -2941,5 +3607,17 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     speedLines.material.dispose();
   };
 
-  return { dispose, group, onCue, speedLines, update };
+  // onImpact is the cue-free door into the contact event, for a caller whose
+  // collision response knows the point and the closing speed but has no cue name
+  // to hang them on (the cue vocabulary this module shares with the audio has no
+  // contact event today). `point` is a world Vector3, `strength` 0..1. It is the
+  // same code path as the 'contact' cue, so the two can never drift apart.
+  return {
+    dispose,
+    group,
+    onCue,
+    onImpact: (context, options) => spawnImpactEvent(context, options),
+    speedLines,
+    update,
+  };
 };

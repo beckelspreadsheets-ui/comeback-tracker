@@ -460,6 +460,42 @@ const TRACK_GRADES = {
     // storm bank's underlit rim (createMidGroundBelt.js), and the dome's own
     // horizon ramp. Do not re-attempt a warm band here without first changing
     // what the renderer hands over.
+    //
+    // WAVE 5 — THE ABOVE IS RE-VERIFIED AND STILL BINDING, AND HERE IS THE
+    // MEASUREMENT THAT SAYS SO, SO THE NEXT ROUND DOES NOT SPEND ITSELF HERE.
+    // Penguin Village's sky was measured on the nine wave4-r3 frames in three
+    // horizontal bands (the backdrop plate's 22.3-degree rim lands at row 115 of
+    // 900, the horizon near row 400), against Comeback City's same three:
+    //
+    //             saturation      R-B          luminance
+    //   PV  dome   0.28-0.38     +14..+44        87-144
+    //   PV  plate  0.12-0.18      -7..+17       123-167
+    //   PV  belt   0.11-0.22     -26..-2        141-162
+    //   CC  dome   0.60-0.72    +101..+163      116-161
+    //   CC  plate  0.64-0.73     +93..+165       98-146
+    //   CC  belt   0.55-0.63     +45..+104       66-110
+    //
+    // Two things follow, and neither of them is a curve.
+    //
+    // First, wave 4's root-cause fix is real: the band ABOVE the plate rim now
+    // carries a genuine sunset. It is simply only the top 13% of the frame.
+    //
+    // Second — and this is the fault this file could most plausibly be blamed
+    // for — Penguin Village's LUMINANCE RUNS BACKWARDS. The image gets brighter
+    // as it goes down; Comeback City gets darker. A tone curve cannot fix that,
+    // because it is a function of colour alone and the sky band and the ice band
+    // arrive here at the same value: the table under the deleted warm stage
+    // above measures the low sky and the lit ice as the same colour to within
+    // 4/255, and inverting the wave4-r3 pixels reproduces it. Any curve that
+    // darkens the horizon darkens every berg by the same amount, which is the
+    // "cut paper" read, and any curve that warms it turns them to sand.
+    //
+    // The fix therefore landed in the scene, where the surfaces can be told
+    // apart by WHICH WAY THEY FACE: a bearing-keyed wedge on the backdrop plate
+    // (createSkyDome.js RING_SUN_WEDGE, authored in penguinVillage.js), real
+    // body on the storm bank across the band it was only contributing ~12% of,
+    // and a fog colour that stops mixing tan into every distant surface. This
+    // file is deliberately unchanged.
     // -- Chroma guard. ---------------------------------------------------
     // Sky, snow and ice are all LOW-chroma; the neon curbs, the coins, the
     // aurora and the kart paint are not. Fading the stage out above a moderate

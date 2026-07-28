@@ -210,6 +210,55 @@ const CAMERA_LATERAL_MIN_HEIGHT = 12;
 // in this block: the frame loop must not allocate.
 const CONTACT_BOOST_FORWARD = new THREE.Vector3();
 const CONTACT_BOOST_NEUTRAL = Object.freeze({ opacity: 1, scale: 1 });
+
+// AAA wave 5 (b) — PENGUIN VILLAGE HAD NO GROUNDING CUE, AND THE REASON IS THE
+// SUN, NOT THE RIG.
+//
+// The shadow rig is per-scene and identical on both tracks: same map size, same
+// caster policy, same ortho box, and PV's scenery demonstrably casts. What is
+// per-track is where the shadow LANDS. `sunDirection.y` is the sine of the key
+// light's elevation, and a shadow's length is its caster's height divided by
+// tan(elevation):
+//
+//   Comeback City   21 degrees   a 7-unit kart throws 18 units
+//   Penguin Village 12 degrees   the same kart throws 33 units
+//
+// At 33 units the shadow is a thin ribbon spread over five kart-lengths instead
+// of a mass beside the wheels, and PV's azimuth (195) puts that ribbon behind
+// the kart, hidden by the kart, for most of the lap. Add the marks where the
+// kart is airborne — PV's course has the crest and the bridge — and the frame
+// has neither tier: no cast shadow the lens can see, and an AO patch that the
+// air fade has correctly reduced to 12%. That is the measured 4% delta, and it
+// is a rubric auto-blocker ("karts with no shadow / no contact with the ground")
+// on all nine PV marks.
+//
+// The answer is not to fight the art direction. PV's low raking sun is the
+// whole reason its ice faces read, and it is authored in a file this package
+// does not own. It is to make the tier-2 patch's strength a function of how
+// much of the job the key can actually do — which is exactly the split the
+// tier-2 header comment already describes, just never measured from the light.
+//
+// Returns 1 for any key that throws a shadow the chase camera can see, so
+// Comeback City's owner-confirmed grade is bit-identical.
+const CONTACT_KEY_READABLE_SIN = 0.34;
+const CONTACT_KEY_HOPELESS_SIN = 0.12;
+const contactPatchKeyStrength = (sunElevationSin) =>
+  1 +
+  smoothstep01(
+    (CONTACT_KEY_READABLE_SIN - clamp(sunElevationSin, 0, 1)) /
+      (CONTACT_KEY_READABLE_SIN - CONTACT_KEY_HOPELESS_SIN)
+  ) *
+    0.34;
+
+// Floor the air fade is allowed to reach on a track whose cast shadow is hidden.
+// contactPatchAirFade drops to 0.12 on purpose — a patch that is 30% present
+// under a kart metres off the deck reads as contact that is not happening. That
+// reasoning holds only while the SUN is still drawing a shadow somewhere in
+// shot to say where the kart is. When it is not, 12% of a patch is the whole
+// grounding budget for the frame, and the rubric fails it. 0.42 is a visibly
+// soft, visibly detached patch: it says "the kart is over that point on the
+// road" without ever reading as a wheel touching it.
+const CONTACT_AIR_HIDDEN_FLOOR = 0.42;
 // Scratch for the rival proximity-ghost cone test, same no-allocation rule.
 const GHOST_AXIS = new THREE.Vector3();
 const GHOST_OFFSET = new THREE.Vector3();
@@ -262,6 +311,14 @@ const markCameraExempt = (object) => {
   return object;
 };
 const wrap01 = (value) => ((value % 1) + 1) % 1;
+// GLSL smoothstep with the edges already normalised out. Used wherever a ramp
+// has to reach its limits with ZERO slope — a linear ramp that stops dead
+// leaves a visible crease at both ends, which on a terrain fade reads as a
+// ridge running parallel to whatever the fade was protecting.
+const smoothstep01 = (value) => {
+  const t = clamp(value, 0, 1);
+  return t * t * (3 - 2 * t);
+};
 const shortProgressDelta = (a, b) => {
   let delta = Math.abs(wrap01(a) - wrap01(b));
   if (delta > 0.5) delta = 1 - delta;
@@ -601,6 +658,12 @@ const createGroundedKartModel = ({
   // ?trackVisuals=1 look: stronger blob + accent contact glow standing in for
   // the disabled renderer shadow pass. Default keeps the approved shipped look.
   contactGrounding = false,
+  // AAA wave 5 (b). How much of the grounding cue this TRACK's key light is
+  // unable to carry — see contactPatchKeyStrength at the call site. 1 means the
+  // sun throws a shadow the chase camera can see and the AO patch stays the
+  // small footprint patch it was sized as; above 1 the patch takes over,
+  // because on that track the cast shadow lands where nobody can see it.
+  contactStrength = 1,
   scale = 1,
   // When the shadow map is live the sun owns the CAST shadow, so the decal
   // shrinks to an ambient-occlusion patch under the wheels. With shadows off it
@@ -704,6 +767,45 @@ const createGroundedKartModel = ({
     flame.userData.baseScale = flame.scale.x;
     idleFlames.push(flame);
   });
+
+  // AAA wave 5 (f) — LIT TAIL LAMPS.
+  //
+  // Every kart in the game is viewed from directly behind for the whole race
+  // and none of them had a brake light. The authored bodies bake a red lamp
+  // panel into their texture, which is a CONSTANT: it says nothing about what
+  // the kart is doing, and a still frame of a kart hard on the brakes was
+  // pixel-identical to one at full throttle.
+  //
+  // These are additive sprites sitting ON those baked panels, so the read is
+  // the kart's own lamps flaring rather than a new light appearing. They live
+  // on `model` and not in bodyGroup, so they survive the GLB swap — and
+  // replaceBody re-seats them onto the swapped body's real rear face, because
+  // the procedural kart's bumper and a Meshy kart's tail are nowhere near each
+  // other. Drawn at the glow-sprite order (28), i.e. UNDER the contact patch,
+  // so a brake flare can never repaint the grounding cue.
+  const brakeLamps = new THREE.Group();
+  model.add(brakeLamps);
+  const placeBrakeLamps = ({ halfWidth, height, length, minY, minZ }) => {
+    brakeLamps.children.forEach((lamp, index) => {
+      const side = index === 0 ? -1 : 1;
+      // Just OUTSIDE the rear face: an additive sprite that intersects the
+      // bodywork gets half of itself depth-rejected and reads as a crescent.
+      lamp.position.set(side * halfWidth * 0.52, minY + height * 0.42, minZ - length * 0.03);
+      // Scaled off the body so a wide kart gets wide lamps, but kept well under
+      // half the tail's width: an additive sprite big enough to spill past the
+      // bodywork stops reading as a lamp and starts reading as a light leak,
+      // which is a note this project has already collected twice.
+      lamp.userData.baseScale = halfWidth * 0.42;
+      lamp.scale.setScalar(lamp.userData.baseScale);
+    });
+  };
+  [-1, 1].forEach((side) => {
+    const lamp = addGlowSprite(brakeLamps, '#ff4a3d', 2.6, 0, 0);
+    lamp.position.set(side * 2.1, 2.95, -5.35);
+    lamp.userData.baseScale = lamp.scale.x;
+    lamp.castShadow = false;
+  });
+  brakeLamps.visible = false;
 
   // Chunky tires — the dominant silhouette read on the card. Lathe profile
   // gives rounded sidewalls instead of hard cylinder edges; geometry is shared
@@ -930,7 +1032,11 @@ const createGroundedKartModel = ({
       // a hole in it. The audit's failure case was a 4-value delta; the round-2
       // failure case was a black slab. See contactPatchProfile for the split
       // between "the sun casts and this is AO" and "this IS the shadow".
-      opacity: contactProfile.opacity,
+      // contactStrength is the track's half of that split — a key light that
+      // cannot put its shadow in shot hands the whole job back to this patch.
+      // Kept under the 0.7 wipe the frame loop caps at, so a strong track can
+      // never punch a hole in the road.
+      opacity: Math.min(0.7, contactProfile.opacity * contactStrength),
       // Sitting 0.16 above the road still loses to a banked curb lip, so the
       // decal also biases its depth toward the camera.
       polygonOffset: true,
@@ -943,7 +1049,12 @@ const createGroundedKartModel = ({
   // length. The gradient is solid to ~42% of the radius, so the SOLID core is
   // roughly 6.3 x 11 units — the kart's own footprint — and everything
   // outside that is the soft penumbra a low sun throws.
-  shadow.scale.set(contactProfile.width * scale, contactProfile.length * scale, 1);
+  // The AREA takes a softened share of contactStrength (sqrt), not the full
+  // multiplier: the patch has to cover the wheels, and past that a wider patch
+  // is a bigger smudge rather than a better grounding cue. Opacity is the term
+  // that carries the read.
+  const contactSpread = Math.sqrt(contactStrength);
+  shadow.scale.set(contactProfile.width * contactSpread * scale, contactProfile.length * contactSpread * scale, 1);
   shadow.rotation.x = -Math.PI / 2;
   // Draws AFTER every additive glow on the kart (glow sprites 28, drift rings
   // 35, particle spray 30/32) and before the boost VFX that legitimately overlay
@@ -1067,12 +1178,78 @@ const createGroundedKartModel = ({
     wheels.length = 0;
     bodyGroup.add(rig);
     refreshGhostMeshes();
-    KENNEY_WHEEL_NODES.forEach((name) => {
-      const wheel = rig.getObjectByName(name);
-      if (wheel) {
-        wheel.userData.front = name.includes('-f');
-        wheels.push(wheel);
-      }
+    // AAA wave 5 (f) — THE FRAME LOOP WAS ITERATING AN EMPTY ARRAY AT 289 KM/H.
+    //
+    // This block disposed the group holding the four procedural wheels, emptied
+    // `wheels`, and then refilled it from FOUR HARD-CODED KENNEY NODE NAMES. The
+    // Kenney drag racer has them; every authored body the game actually ships on
+    // — the Tripo hero kart and the four Meshy K5 karts — is a single fused mesh
+    // with one node called `Mesh_0`. So the moment the GLB landed, which is
+    // within a second of the countdown, `wheels` went to length 0 and stayed
+    // there for the whole race. Nothing threw and nothing logged; the wheels
+    // simply stopped being animated, on the player kart and on every rival.
+    //
+    // Two paths now, in order of fidelity:
+    //   1. Real wheel transforms if the body has any. Matched on a PREDICATE
+    //      rather than a fixed list, so the next kit to arrive with `Wheel_FL`
+    //      or `tyre_rear_l` works without another edit — the hard-coded list is
+    //      the reason this failed silently in the first place.
+    //   2. Otherwise the derived spin band (see analyseFusedKartBody), which is
+    //      what a fused body can carry. Verified against the shipped hero kart:
+    //      four hubs at radius 2.05-2.12 units with their centres 2.07-2.10 off
+    //      the deck (i.e. exactly one radius up, so the wheels are on the
+    //      ground) and the two sides agreeing to within 0.025 units of a 0.93
+    //      tolerance.
+    let named = 0;
+    rig.traverse((node) => {
+      const name = node.name || '';
+      if (!/wheel|tyre|tire/i.test(name)) return;
+      // Front/rear from the name where the kit says so, else from which half of
+      // the body the node sits in — the sign convention (+Z drives) is fixed by
+      // the time any body reaches this function.
+      node.userData.front = /(^|[^a-z])f($|[^a-z])|front/i.test(name) ? true : node.position.z > 0;
+      wheels.push(node);
+      named += 1;
+    });
+    const analysis = analyseFusedKartBody(rig);
+    // Brake lamps ride the body's own rear face, so they land on the tail of
+    // whichever GLB mounted rather than on the procedural kart's light bar.
+    // Every body has a rear face even when the wheel gates fail.
+    if (analysis) placeBrakeLamps(analysis.bounds);
+    if (named >= 2 || !analysis?.hubs) return;
+    // Fused body. Nothing in the graph owns a wheel, so build the four hubs the
+    // geometry implies and hang a speed-faded rotation band on each.
+    wheels.length = 0;
+    const spinTexture = makeWheelSpinTexture();
+    analysis.hubs.forEach((hub) => {
+      const pivot = new THREE.Group();
+      pivot.position.set(hub.side * hub.x, hub.y, hub.z);
+      pivot.userData.front = hub.front;
+      // Flagged so the frame loop can fade the band in with speed and leave a
+      // stationary kart exactly as it renders today.
+      pivot.userData.spinBand = true;
+      const band = new THREE.Mesh(
+        new THREE.PlaneGeometry(hub.radius * 2, hub.radius * 2),
+        new THREE.MeshBasicMaterial({
+          // Additive: a rotation cue may brighten a tyre, never darken one. A
+          // subtractive band on an already dark tyre would read as a hole.
+          blending: THREE.AdditiveBlending,
+          color: '#8d93a6',
+          depthWrite: false,
+          map: spinTexture,
+          opacity: 0,
+          transparent: true,
+        })
+      );
+      // The band lives ON the sidewall, a hair proud of it so the tyre's own
+      // depth never fights it, and faces outboard.
+      band.position.x = hub.side * 0.012;
+      band.rotation.y = hub.side > 0 ? Math.PI / 2 : -Math.PI / 2;
+      band.castShadow = false;
+      band.renderOrder = 30;
+      pivot.add(band);
+      bodyGroup.add(pivot);
+      wheels.push(pivot);
     });
   };
 
@@ -1084,6 +1261,7 @@ const createGroundedKartModel = ({
     // the contact read stays glued to the road while the kart breathes.
     bodyRig: model,
     boostFlame,
+    brakeLamps,
     contactGlow,
     driftIceTrailGroup,
     driftSparkGroup,
@@ -1093,7 +1271,11 @@ const createGroundedKartModel = ({
     group,
     idleFlames,
     miniTurboRing,
-    motion: { lean: 0 },
+    // AAA wave 5 (f): `lean` is the driver's; the rest are the chassis's own
+    // spring state, integrated per frame in updateKartBodyMotion. lastSpeed is
+    // null rather than 0 so the first frame differentiates against itself and
+    // the kart does not launch on a phantom acceleration spike.
+    motion: { accel: 0, lastSpeed: null, lean: 0, pitch: 0, roll: 0 },
     // 1 = fully opaque; the frame loop only touches materials when it moves.
     proximity: 1,
     refreshGhostMeshes,
@@ -1249,6 +1431,187 @@ const makeGlowTexture = () => {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
+};
+
+// AAA wave 5 (f) — ROTATION BLUR FOR A WHEEL THAT CANNOT BE ROTATED.
+//
+// The authored kart bodies are single fused meshes (verified against the
+// shipped GLBs: hero-kart-tripo.glb is ONE primitive of 23,172 triangles with
+// no wheel node, and the Meshy K5 bodies are the same shape), so there is no
+// transform anywhere in the scene graph that owns a wheel. Splitting the wheels
+// out geometrically was measured and rejected: the outer sidewalls cluster
+// cleanly, but a cylinder around each hub also swallows the floor pan and the
+// side pod, which pass straight through it — carving those out would spin
+// chassis fragments.
+//
+// What a wheel at 289 km/h actually looks like is not a rotating tread pattern
+// anyway. It is a smear. This is that smear: a band of soft radial ticks on the
+// tyre's outer sidewall, additive so it can only ever brighten, faded IN by
+// speed so a parked or grid kart is byte-identical to today's build. It rides
+// the hub the detector finds, spins at wheel speed and steers with the axle, so
+// the read is "that wheel is turning" rather than "there is a decal on it".
+let sharedWheelSpinTexture = null;
+const makeWheelSpinTexture = () => {
+  if (sharedWheelSpinTexture) return sharedWheelSpinTexture;
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const centre = size / 2;
+  // 13 ticks, a prime-ish count so the pattern never lands back on itself at a
+  // frame rate that could strobe it into standing still.
+  const TICKS = 13;
+  ctx.lineCap = 'round';
+  for (let tick = 0; tick < TICKS; tick += 1) {
+    const angle = (tick / TICKS) * Math.PI * 2;
+    // Alternating length so the band has a texture rather than a picket fence.
+    const inner = centre * (tick % 2 ? 0.5 : 0.6);
+    const outer = centre * 0.92;
+    const gradient = ctx.createLinearGradient(
+      centre + Math.cos(angle) * inner,
+      centre + Math.sin(angle) * inner,
+      centre + Math.cos(angle) * outer,
+      centre + Math.sin(angle) * outer
+    );
+    gradient.addColorStop(0, 'rgba(255,255,255,0)');
+    gradient.addColorStop(0.45, 'rgba(255,255,255,0.85)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = size * 0.035;
+    ctx.beginPath();
+    ctx.moveTo(centre + Math.cos(angle) * inner, centre + Math.sin(angle) * inner);
+    ctx.lineTo(centre + Math.cos(angle) * outer, centre + Math.sin(angle) * outer);
+    ctx.stroke();
+  }
+  sharedWheelSpinTexture = new THREE.CanvasTexture(canvas);
+  sharedWheelSpinTexture.colorSpace = THREE.SRGBColorSpace;
+  return sharedWheelSpinTexture;
+};
+
+/**
+ * Find the four wheel hubs of a fused kart body, or return null.
+ *
+ * Measured on the shipped assets, not guessed. In the body group's own space
+ * +Z is the driving direction and X is lateral for EVERY authored kart (the
+ * per-asset nose yaw is baked into the rig before this runs), so a wheel is the
+ * geometry on the lateral shell: take everything past 90% of the half-width,
+ * cluster it along Z, and a kart returns exactly two clusters per side, each a
+ * disc. hero-kart-tripo.glb returns 300/273 and 305/368 shell vertices in four
+ * clusters measuring 0.263 x 0.266, 0.279 x 0.266, 0.262 x 0.267 and
+ * 0.272 x 0.262 body-lengths — round to three decimal places, mirrored across
+ * both sides.
+ *
+ * Every one of those properties is a GATE below. A body that is not a kart —
+ * the ice block, a coin on wheels, anything a future wave drops in — fails one
+ * of them and gets null, which is exactly the behaviour that ships today.
+ */
+const analyseFusedKartBody = (rig) => {
+  rig.updateMatrix();
+  rig.updateMatrixWorld(true);
+  const toBody = new THREE.Matrix4();
+  const inverseRig = new THREE.Matrix4().copy(rig.matrixWorld).invert();
+  const vertex = new THREE.Vector3();
+  const points = [];
+  let maxAbsX = 0;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let vertices = 0;
+  rig.traverse((node) => {
+    const position = node.isMesh && node.geometry?.attributes?.position;
+    if (!position) return;
+    vertices += position.count;
+    toBody.copy(rig.matrix).multiply(inverseRig).multiply(node.matrixWorld);
+    for (let index = 0; index < position.count; index += 1) {
+      vertex.fromBufferAttribute(position, index).applyMatrix4(toBody);
+      points.push(vertex.x, vertex.y, vertex.z);
+      maxAbsX = Math.max(maxAbsX, Math.abs(vertex.x));
+      minZ = Math.min(minZ, vertex.z);
+      maxZ = Math.max(maxZ, vertex.z);
+      minY = Math.min(minY, vertex.y);
+      maxY = Math.max(maxY, vertex.y);
+    }
+  });
+  const length = maxZ - minZ;
+  if (!vertices || length <= 0 || maxAbsX <= 0) return null;
+  // Always returned, even when the wheel gates fail: the brake lamps only need
+  // to know where the rear face is, and every body has one.
+  const bounds = { halfWidth: maxAbsX, height: maxY - minY, length, maxZ, minY, minZ };
+  const findHubs = () => {
+    const shell = maxAbsX * 0.9;
+    const hubs = [];
+    for (const side of [-1, 1]) {
+      const lane = [];
+      for (let index = 0; index < points.length; index += 3) {
+        if (points[index] * side > shell) lane.push([points[index + 2], points[index + 1], points[index]]);
+      }
+      if (lane.length < 60) return null;
+      lane.sort((a, b) => a[0] - b[0]);
+      // One-dimensional gap clustering along the driving axis. The gap has to
+      // be a real void between the axles, not a tessellation seam, so it is
+      // scaled to the body: 6% of the kart's length is ~1 unit on a shipped kart.
+      const clusters = [];
+      let current = [lane[0]];
+      for (let index = 1; index < lane.length; index += 1) {
+        if (lane[index][0] - lane[index - 1][0] > length * 0.06) {
+          clusters.push(current);
+          current = [];
+        }
+        current.push(lane[index]);
+      }
+      clusters.push(current);
+      if (clusters.length !== 2) return null;
+      for (const cluster of clusters) {
+        if (cluster.length < 30) return null;
+        let z0 = Infinity;
+        let z1 = -Infinity;
+        let y0 = Infinity;
+        let y1 = -Infinity;
+        let outer = 0;
+        for (const [z, y, x] of cluster) {
+          z0 = Math.min(z0, z);
+          z1 = Math.max(z1, z);
+          y0 = Math.min(y0, y);
+          y1 = Math.max(y1, y);
+          outer = Math.max(outer, Math.abs(x));
+        }
+        const spanZ = z1 - z0;
+        const spanY = y1 - y0;
+        // A wheel is round. Anything whose two spans disagree by more than a
+        // third is a fairing, a skirt or a sled runner.
+        if (spanZ <= 0 || spanY <= 0) return null;
+        if (Math.abs(spanZ - spanY) > Math.max(spanZ, spanY) * 0.34) return null;
+        const radius = (spanZ + spanY) * 0.25;
+        if (radius < length * 0.07 || radius > length * 0.32) return null;
+        // ...and it stands ON the ground, so its centre is one radius up from
+        // the body's lowest point. 45% of tolerance covers a fitted body whose
+        // bodywork dips below the axle line.
+        const hubY = (y0 + y1) * 0.5;
+        if (Math.abs(hubY - minY - radius) > radius * 0.45) return null;
+        hubs.push({
+          front: (z0 + z1) * 0.5 > (minZ + maxZ) * 0.5,
+          radius,
+          side,
+          x: outer,
+          y: hubY,
+          z: (z0 + z1) * 0.5,
+        });
+      }
+    }
+    if (hubs.length !== 4) return null;
+    // Last gate: the two sides have to agree. A pair of axles derived
+    // independently from mirrored geometry that lands more than 6% of the body
+    // length apart means the clustering found something other than wheels.
+    const front = hubs.filter((hub) => hub.front);
+    const rear = hubs.filter((hub) => !hub.front);
+    if (front.length !== 2 || rear.length !== 2) return null;
+    if (Math.abs(front[0].z - front[1].z) > length * 0.06) return null;
+    if (Math.abs(rear[0].z - rear[1].z) > length * 0.06) return null;
+    return hubs;
+  };
+  return { bounds, hubs: findHubs() };
 };
 
 // Contact-shadow decal. The old blob was a hard-edged CircleGeometry in a
@@ -1824,6 +2187,12 @@ const KENNEY_BODY_SWATCHES = [
   { lightScale: 1.42, satScale: 0.3, u0: 192 / 512, u1: 256 / 512, v0: 256 / 512, v1: 384 / 512 },
 ];
 
+// How hard each body swatch's internal value range is expanded about its own
+// mean before the racer hue is written over it. See the use site — the shipped
+// atlas cells carry a 0.15 spread and a 0.00 spread respectively, and a toon
+// ramp cannot band a range that narrow.
+const KENNEY_SWATCH_CONTRAST = 2.1;
+
 const makeKartPaletteTexture = (colormapImage, bodyHex = null) => {
   const canvas = document.createElement('canvas');
   canvas.width = colormapImage.naturalWidth || colormapImage.width;
@@ -1846,15 +2215,58 @@ const makeKartPaletteTexture = (colormapImage, bodyHex = null) => {
       const x1 = Math.round(swatch.u1 * canvas.width);
       const y0 = Math.round(swatch.v0 * canvas.height);
       const y1 = Math.round(swatch.v1 * canvas.height);
-      const saturation = clamp(targetHsl.s * swatch.satScale, 0.45 * swatch.satScale, 1);
+      // AAA wave 5 (e) — THE WAVE-3 HUE-GATE FIX OVERSHOT. Correction applied
+      // with the evidence and the numbers the wave-3 rubric critic handed back
+      // and the wave-4 env-probe agent confirmed from the other side
+      // (kartMaterials.js: "a body that is channel-clipped in blue").
+      //
+      // Old: clamp(targetHsl.s * swatch.satScale, 0.45 * swatch.satScale, 1).
+      // With every KART_CHARACTERS colour at s >= 0.85, the ceiling of 1 meant
+      // the largest panel on the body took the racer's hue at FULL chroma —
+      // measured median S 0.94 on the Penguin Village blue rival, where the roll
+      // bar, pillars, chassis and bumper all render the same flat pure blue.
+      // 0.72 is the critic's number and it is also the point at which a toon
+      // ramp still has somewhere to put a shading band.
+      const saturation = clamp(targetHsl.s * swatch.satScale, 0.3 * swatch.satScale, 0.72);
+      // ...and the second half of the same finding: the value SPREAD.
+      //
+      // The old lightness line was `hsl.l * (0.65 + targetHsl.l * 0.5)`, a pure
+      // multiply — and a multiply cannot widen a range, it can only shrink it.
+      // Measured on the shipped atlas (toy-car-kit/Textures/colormap.png): the
+      // grey body cell runs L 0.396-0.578 (a 0.153 spread) and the kit-orange
+      // cell is L 0.633 at EVERY texel, i.e. literally flat. Scaling by ~0.94
+      // took the one cell that had a gradient down to a 0.14 spread, which is
+      // why the recoloured rivals read as a single value however the hue landed.
+      //
+      // Expanding about each swatch's OWN mean is what makes this safe: the mean
+      // is preserved exactly, so the racer's paint lands at the same overall
+      // level it does today and only its internal contrast moves. A fixed
+      // midpoint would have shifted the flat orange trim cell to a different
+      // brightness for nothing.
+      let meanLightness = 0;
+      let sampleCount = 0;
+      for (let y = y0; y < y1; y += 1) {
+        for (let x = x0; x < x1; x += 1) {
+          const index = (y * canvas.width + x) * 4;
+          probe.setRGB(pixels.data[index] / 255, pixels.data[index + 1] / 255, pixels.data[index + 2] / 255);
+          probe.getHSL(hsl);
+          meanLightness += hsl.l;
+          sampleCount += 1;
+        }
+      }
+      meanLightness = sampleCount ? meanLightness / sampleCount : 0.5;
+      const level = 0.65 + targetHsl.l * 0.5;
       for (let y = y0; y < y1; y += 1) {
         for (let x = x0; x < x1; x += 1) {
           const index = (y * canvas.width + x) * 4;
           probe.setRGB(pixels.data[index] / 255, pixels.data[index + 1] / 255, pixels.data[index + 2] / 255);
           probe.getHSL(hsl);
           // The source lightness is carried through so each cell keeps its own
-          // baked gradient; only hue and saturation are replaced.
-          probe.setHSL(targetHsl.h, saturation, clamp(hsl.l * (0.65 + targetHsl.l * 0.5) * swatch.lightScale, 0, 0.92));
+          // baked gradient; only hue and saturation are replaced. 2.1 takes the
+          // body cell's 0.153 spread to 0.32 before the level scale, which is
+          // the range a three-band toon ramp needs to show more than one band.
+          const spread = clamp(meanLightness + (hsl.l - meanLightness) * KENNEY_SWATCH_CONTRAST, 0, 1);
+          probe.setHSL(targetHsl.h, saturation, clamp(spread * level * swatch.lightScale, 0.04, 0.92));
           pixels.data[index] = Math.round(probe.r * 255);
           pixels.data[index + 1] = Math.round(probe.g * 255);
           pixels.data[index + 2] = Math.round(probe.b * 255);
@@ -1869,7 +2281,10 @@ const makeKartPaletteTexture = (colormapImage, bodyHex = null) => {
   return texture;
 };
 
-const KENNEY_WHEEL_NODES = ['wheel-fl', 'wheel-fr', 'wheel-bl', 'wheel-br'];
+// The Kenney kit's wheel nodes used to be listed here and matched by exact
+// name. They are now matched by predicate inside replaceBody — see the comment
+// there: a fixed list is what let five of six shipped bodies silently animate
+// nothing at all.
 
 // Rig facing is authored per asset and verified against the orientation lab
 // (orientation-lab.html → scripts/orientation-lab-capture.mjs), which renders
@@ -1882,7 +2297,11 @@ const KENNEY_BODY_YAW = Math.PI;
 
 // Seat the avatar on the kart's driver mount: toon-shaded with its baked
 // texture, normalized so the seated character reads MK-style oversized.
-const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height = 5.7, yaw = 0 } = {}) => {
+const mountDriverAvatar = (
+  kartModel,
+  driverScene,
+  { castsShadow = true, height = 5.7, lean = 0.13, yaw = 0 } = {}
+) => {
   const rig = driverScene.clone(true);
   rig.traverse((node) => {
     if (node.isMesh) {
@@ -1906,8 +2325,23 @@ const mountDriverAvatar = (kartModel, driverScene, { castsShadow = true, height 
   rig.position.x -= center.x;
   rig.position.z -= center.z;
   rig.position.y -= fitted.min.y;
+  // AAA wave 5 (f) — THE DRIVER SITS IN THE KART INSTEAD OF ON IT.
+  //
+  // The avatar was parented straight to driverMount with its own yaw baked in,
+  // which made a forward lean impossible to express: at yaw ±90 degrees (every
+  // Tripo avatar) an X rotation on the same object is a ROLL, not a pitch, so
+  // the figure would have tipped sideways out of the seat. A seat group OUTSIDE
+  // the yaw gives the pitch the kart's own axis, which is what turns "an avatar
+  // standing behind a steering wheel" into "a driver reaching for it".
+  //
+  // The mount itself keeps carrying the per-frame drift lean and boost tuck
+  // (updateKartBodyMotion writes driverMount.rotation.x/.z), so this is a
+  // constant rest pose those animate AROUND rather than a competing term.
+  const seat = new THREE.Group();
+  seat.rotation.x = lean;
+  seat.add(rig);
   kartModel.driverMount.clear();
-  kartModel.driverMount.add(rig);
+  kartModel.driverMount.add(seat);
   // The driver rides the same proximity ghost as the body it sits in — a
   // solid driver inside a faded kart reads worse than either. Rebuilt from
   // both mounts rather than appended: the body and the driver are two
@@ -2082,7 +2516,16 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math
   // This body is taller and cowled — seat the driver higher and further back
   // than the Kenney cockpit default. Nose is on +Z (lab-verified), so the
   // cockpit sits in the rear half at -z.
-  kartModel.driverMount.position.set(0, (fitted.max.y - fitted.min.y) * 0.58, -1.9);
+  //
+  // AAA wave 5 (f): 0.58 -> 0.46 of the fitted body height. 0.58 put the
+  // avatar's own bounding-box FLOOR — its feet — above the top of the seat
+  // back on every shipped body, so a 6.4-unit driver on a 7.8-unit kart stood
+  // clear of the tub with the cockpit empty beneath it. That is the "perched on
+  // the cowl" read the critics logged in all eighteen frames. 0.46 drops the
+  // hips behind the seat's own bolsters while keeping the helmet and shoulders
+  // proud of the bodywork, which is the part of the silhouette the shadow rig
+  // relies on the driver for.
+  kartModel.driverMount.position.set(0, (fitted.max.y - fitted.min.y) * 0.46, -2.1);
   kartModel.replaceBody(rig);
 };
 
@@ -2487,19 +2930,45 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
 	// camera looks down the road at — so without this the band reads as flat
 	// pale-blue paint at every point where the highlight is not on screen.
 	float roadGrazing = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 4.0);
-	// The flat term takes a ceiling, the highlight does not. Everything
-	// downstream blooms, and the old build let the FLAT term (0.5 of a pale
-	// blue, i.e. ~10x the lit road's own radiance) run unclamped across the
-	// whole pond sweep — which is what washed the kerb, the shoulder and the
-	// next track section into one glow with no geometry inside it. Capping the
-	// floor and leaving the 92-power lobe free is what makes the sharp moving
-	// highlight the only thing that crosses the threshold, which is the whole
-	// difference between a frozen road and an emissive decal.
+	// Both terms take a ceiling now — see the block below for why the highlight
+	// stopped being the exception. Everything downstream blooms, and the old
+	// build let the FLAT term (0.5 of a pale blue, i.e. ~10x the lit road's own
+	// radiance) run unclamped across the whole pond sweep, which is what washed
+	// the kerb, the shoulder and the next track section into one glow with no
+	// geometry inside it. Capping the floor is what keeps the sharp moving
+	// highlight the thing that reads, which is the whole difference between a
+	// frozen road and an emissive decal.
 	vec3 roadIceFloor = uRoadSheenColor * (roadGrazing * vRoadIce * uRoadFresnelStrength * roadIceFacet);
-	outgoingLight += uRoadSheenColor * (roadSheen * vRoadIce * uRoadSheenStrength) + min(roadIceFloor, vec3(0.34));`,
+	// AAA wave 5 (a) — THE CEILING THE LOBE NEVER HAD.
+	//
+	// This line used to add uRoadSheenColor * roadSheen * vRoadIce *
+	// uRoadSheenStrength with strength 2.4 and no clamp at all, while the
+	// fresnel floor SITTING ON THE SAME LINE was clamped to 0.34. The asymmetry
+	// was deliberate ("the flat term takes a ceiling, the highlight does not")
+	// and it is what shipped the measured (66,255,255) cyan column over road
+	// that samples (72,63,75): uRoadSheenColor is the track's rimLightColor,
+	// whose LINEAR red is exactly 0 on Penguin Village, so an unbounded multiple
+	// of it can only ever clip green and blue. The hue of a clipped highlight is
+	// not the hue of the light that made it.
+	//
+	// Clamping the SCALAR weight, not the resulting vec3, is the whole point.
+	// A per-channel min against the finished colour clips each channel at its
+	// own ceiling and therefore still rotates the hue toward whichever channel
+	// survives — the exact failure being fixed. Bounding the weight first keeps
+	// the sheen the colour it was authored as at every intensity, and only
+	// limits how much of it lands.
+	//
+	// 0.55 against a road whose own linear value is ~0.03 is still an order of
+	// magnitude brighter than the surface it sits on, i.e. unmistakably a
+	// specular highlight, but it cannot reach the 1.0 that clips a channel and
+	// it stays under the bloom threshold the post chain would otherwise smear
+	// across the apron.
+	float roadIceSpecular = min(roadSheen * vRoadIce * uRoadSheenStrength, uRoadSheenCeiling);
+	outgoingLight += uRoadSheenColor * roadIceSpecular + min(roadIceFloor, vec3(0.34));`,
     fragmentPars: /* glsl */ `varying float vRoadIce;
 uniform vec3 uRoadSheenColor;
 uniform float uRoadFresnelStrength;
+uniform float uRoadSheenCeiling;
 uniform float uRoadSheenStrength;`,
     name: 'road-surface-sheen-v2',
     uniforms: {
@@ -2507,6 +2976,10 @@ uniform float uRoadSheenStrength;`,
       // light direction in it at all), so it may only ever be the floor the
       // facets sit on; the highlight has to be what reads as ice.
       uRoadFresnelStrength: { value: 0.24 },
+      // Hard energy ceiling on the 92-power lobe. See the chunk above: this is
+      // a bound on the WEIGHT, so the sheen keeps uRoadSheenColor's hue at
+      // every intensity instead of clipping into whichever channel has headroom.
+      uRoadSheenCeiling: { value: 0.55 },
       uRoadSheenColor: { value: new THREE.Color(palette.rimLightColor || '#cfe9ff') },
       uRoadSheenStrength: { value: 2.4 },
     },
@@ -2598,6 +3071,117 @@ varying float vRoadIce;`,
       colors[index * 3 + 2] = mottle * (1 - warmth * 0.22);
     }
     groundGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    // AAA wave 5 (c) — THE TERRAIN GETS A SURFACE NORMAL.
+    //
+    // Everything above this line modulates ALBEDO, and albedo was never the
+    // problem. A PlaneGeometry has exactly one normal, so every vertex on this
+    // 2600-unit plate returns the identical N.L for the key and the identical
+    // hemisphere ratio for the fill: no palette value, no grade curve and no
+    // light intensity can put a shading gradient on it, which is why four waves
+    // of colour work still measured Penguin Village's snow field at a 4-count
+    // luminance spread across ~35% of every frame. Known trap #5.
+    //
+    // Two separate terms, deliberately decoupled:
+    //
+    //   * NORMALS carry the shading. They are the analytic gradient of a height
+    //     field evaluated at a RELIEF amplitude far larger than anything the
+    //     geometry moves by, because the eye reads a snow drift by its
+    //     terminator, not by its silhouette. This is what actually buys the
+    //     lit/shade split — and it is free, because a normal attribute costs the
+    //     same whatever is in it.
+    //   * DISPLACEMENT carries the horizon silhouette, and is held to a few
+    //     centimetres on purpose. Every roadside prop on both tracks is planted
+    //     at the ground plane's own height; a metre of real relief would sink
+    //     the snowmen and float the barrels, which is the exact artefact the
+    //     grounding rig spent wave 4 removing. 0.3 units is under the height of
+    //     a prop's own base plate and cannot do that.
+    //
+    // Both fade to zero across the verge. The road edge profile now extrudes a
+    // real kerb and bank, and terrain that keeps its relief up to the kerb foot
+    // pokes through it — so the fade starts well outside the widest section the
+    // width table can produce and only reaches full relief a bank-width beyond.
+    const reliefCfg = palette.ground?.relief || {};
+    // Virtual height amplitude the NORMALS are derived from, in world units.
+    // It is two orders of magnitude larger than the geometry actually moves,
+    // and that is not an inconsistency — it is the definition of a normal map.
+    // The number is chosen from the slope it produces, not from a height: the
+    // octave weights below give a mean |dh/dx| of ~0.0038 per unit of
+    // amplitude, so 34 is a mean face tilt of ~7.4 degrees and a peak of ~18.
+    // Against Penguin Village's 12-degree sun that swings N.L between 0.09 and
+    // 0.33 across the field — a 3.7:1 shading range on a surface that has
+    // measured 4 counts of spread for four waves.
+    const reliefNormal = reliefCfg.normalAmplitude ?? 34;
+    // ...and what the vertices actually move by. Deliberately smaller than a
+    // roadside prop's own base plate. See the note above: every prop and every
+    // tier-3 grounding patch on both tracks is planted at this plane's height.
+    const reliefDisplace = reliefCfg.displace ?? 0.3;
+    if (reliefNormal > 0 || reliefDisplace > 0) {
+      // Coarse centreline table for the road-clearance fade. 128 samples over a
+      // ~1400-unit lap is an 11-unit chord, well under the 27-unit vertex pitch
+      // this is being compared against, so the fade cannot alias into the ramp.
+      const CLEAR_SAMPLES = 128;
+      const centreline = new Float32Array(CLEAR_SAMPLES * 2);
+      let widestHalfRoad = 0;
+      for (let sample = 0; sample < CLEAR_SAMPLES; sample += 1) {
+        const p = sample / CLEAR_SAMPLES;
+        const { point } = sampler.pointAt(p);
+        centreline[sample * 2] = point.x;
+        centreline[sample * 2 + 1] = point.z;
+        widestHalfRoad = Math.max(widestHalfRoad, sampler.widthAt(p) * 0.44);
+      }
+      // Kerb + run-off bank + barrier foot live inside ~10 units past the road
+      // edge (roadEdgeSection); 16 is that with margin, and the relief only
+      // reaches full a further 40 units out so the ramp itself never reads as a
+      // ridge running parallel to the track.
+      const clearInner = widestHalfRoad + 16;
+      const clearOuter = clearInner + 40;
+      // Its own lattice, offset from the albedo mottle's, so drifts and colour
+      // patches do not coincide — coincident value and hue variation reads as
+      // one painted texture rather than as a surface under a light.
+      const heightAt = (x, z) =>
+        noiseAt(x + 4021, z - 1877, 340) * 0.55 + noiseAt(x - 733, z + 2551, 126) * 0.3 + noiseAt(x, z, 62) * 0.15;
+      const normals = new Float32Array(position.count * 3);
+      // Finite-difference step, held well under HALF the finest octave's cell
+      // (62). A step at or past half a cell puts the two probes a full period
+      // apart and the central difference collapses toward zero — the gradient
+      // would be blind to precisely the octave carrying the surface read, which
+      // is why the octaves and this number have to be chosen together.
+      const STEP = 16;
+      for (let index = 0; index < position.count; index += 1) {
+        const x = position.getX(index);
+        const z = position.getY(index);
+        let nearest = Infinity;
+        for (let sample = 0; sample < CLEAR_SAMPLES; sample += 1) {
+          const dx = x - centreline[sample * 2];
+          const dz = z - centreline[sample * 2 + 1];
+          const distanceSq = dx * dx + dz * dz;
+          if (distanceSq < nearest) nearest = distanceSq;
+        }
+        const fade = smoothstep01((Math.sqrt(nearest) - clearInner) / (clearOuter - clearInner));
+        // Central differences on the height field. dh/dx and dh/dz ARE the
+        // surface tangent slopes, so the world normal is (-dh/dx, 1, -dh/dz)
+        // normalised — the same construction a normal map bakes, evaluated at
+        // build time instead of sampled per fragment.
+        const scale = (reliefNormal * fade) / (2 * STEP);
+        const slopeX = (heightAt(x + STEP, z) - heightAt(x - STEP, z)) * scale;
+        const slopeZ = (heightAt(x, z + STEP) - heightAt(x, z - STEP)) * scale;
+        const inverseLength = 1 / Math.hypot(slopeX, 1, slopeZ);
+        // The plane is authored in XY and rotated -90 degrees about X, which
+        // maps local (x, y, z) onto world (x, z, -y). The normal has to be
+        // written in LOCAL space, i.e. world (nx, ny, nz) -> local (nx, -nz, ny).
+        normals[index * 3] = -slopeX * inverseLength;
+        normals[index * 3 + 1] = slopeZ * inverseLength;
+        normals[index * 3 + 2] = inverseLength;
+        // Local +z is world +y after the rotation, so this is a straight lift.
+        if (reliefDisplace > 0) {
+          position.setZ(index, (heightAt(x, z) - 0.5) * 2 * reliefDisplace * fade);
+        }
+      }
+      position.needsUpdate = true;
+      groundGeometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+      groundGeometry.computeBoundingSphere();
+    }
   }
   // Snow only: three carries a per-map uv transform, so the sparkle can run at
   // its own (much higher) repeat without disturbing the albedo tiling.
@@ -3185,48 +3769,115 @@ uniform float uToothFadeFull;`,
   // crowned sections so half of them read as clipped quads with nothing above
   // them. Authored chevron outline, additive and translucent so it reads as
   // paint/light on the tarmac rather than a stray plane lying on it.
-  const chevronShape = new THREE.Shape();
-  chevronShape.moveTo(0, 4.6);
-  chevronShape.lineTo(4.2, -1.4);
-  chevronShape.lineTo(4.2, -4.4);
-  chevronShape.lineTo(0, 1.6);
-  chevronShape.lineTo(-4.2, -4.4);
-  chevronShape.lineTo(-4.2, -1.4);
-  chevronShape.closePath();
-  const chevronGeometry = new THREE.ShapeGeometry(chevronShape);
+  // AAA wave 5 (d) — THE CHEVRONS NO LONGER TEAR.
+  //
+  // These were 22 rigid ShapeGeometry planes, each placed at ONE road sample
+  // and then rotated flat. That works on a ribbon with no crown, no bank and no
+  // twist. The road has carried all three since wave 3, and a rigid 8.4 x 9
+  // unit plate laid tangent to a single point cannot follow any of them: it
+  // pitches into the deck at the ends of a corner and lifts off it in the
+  // middle, so depth testing eats the sunk half and the surviving half reads as
+  // "disconnected triangles" — the artefact hunter's words, on both tracks.
+  // Raising the plate would have swapped one artefact (a torn decal) for the
+  // one the round-3 comment below already rejected (a hovering polygon).
+  //
+  // The fix is to stop treating the chevron as a plane at all. Every vertex is
+  // sampled through the SAME road-surface function the road mesh itself is
+  // built from (line offset = lane * width * 0.44, height = crown + bank), so
+  // the decal is a piece of the road surface by construction and cannot
+  // disagree with it however the ribbon twists. A bilinear patch per arm keeps
+  // the arrow's authored silhouette exactly; only its interior is tessellated.
+  //
+  // It also collapses 22 draw calls into 1: every chevron on the course is one
+  // merged buffer, because a conforming decal has no per-instance transform
+  // left to carry.
+  const CHEVRON_LIFT = 0.02;
+  const CHEVRON_SPAN = 6;
+  const CHEVRON_BAND = 3;
+  // Right arm as a bilinear patch: leading edge A->B, trailing edge D->C, in
+  // (lateral, longitudinal) world units about the chevron's own anchor. The
+  // left arm is this mirrored in x, which is what makes the two halves meet
+  // exactly on the centreline instead of leaving a hairline seam there.
+  const CHEVRON_ARM = {
+    leadInner: [0, 4.6],
+    leadOuter: [4.2, -1.4],
+    tailInner: [0, 1.6],
+    tailOuter: [4.2, -4.4],
+  };
+  const chevronPositions = [];
+  const chevronIndices = [];
+  for (let index = 0; index < 11; index += 1) {
+    const progress = (0.04 + index * 0.085) % 1;
+    [-0.38, 0.38].forEach((lane) => {
+      [1, -1].forEach((mirror) => {
+        const base = chevronPositions.length / 3;
+        for (let s = 0; s <= CHEVRON_SPAN; s += 1) {
+          const su = s / CHEVRON_SPAN;
+          const leadX = lerp(CHEVRON_ARM.leadInner[0], CHEVRON_ARM.leadOuter[0], su);
+          const leadZ = lerp(CHEVRON_ARM.leadInner[1], CHEVRON_ARM.leadOuter[1], su);
+          const tailX = lerp(CHEVRON_ARM.tailInner[0], CHEVRON_ARM.tailOuter[0], su);
+          const tailZ = lerp(CHEVRON_ARM.tailInner[1], CHEVRON_ARM.tailOuter[1], su);
+          for (let t = 0; t <= CHEVRON_BAND; t += 1) {
+            const tv = t / CHEVRON_BAND;
+            const localX = mirror * lerp(leadX, tailX, tv);
+            const localZ = lerp(leadZ, tailZ, tv);
+            // Arc length -> progress. The chevron is ~9 units long against a
+            // 6.5-unit ring pitch, so this genuinely spans more than one road
+            // quad and has to be resolved per vertex, not per chevron.
+            const vertexProgress = wrap01(progress + localZ / sampler.length);
+            const { normal, point } = sampler.pointAt(vertexProgress, 0);
+            // Identical arithmetic to the road mesh's own lane offset, so a
+            // chevron vertex and the road vertex beneath it resolve to the same
+            // surface even where the width table is changing.
+            const laneNorm = lane + localX / (sampler.widthAt(vertexProgress) * 0.44);
+            const offset = laneNorm * sampler.widthAt(vertexProgress) * 0.44;
+            chevronPositions.push(
+              point.x + normal.x * offset,
+              point.y + crownAt(laneNorm) + bankYOffsetAt(vertexProgress, laneNorm * 0.44) + CHEVRON_LIFT,
+              point.z + normal.z * offset
+            );
+          }
+        }
+        for (let s = 0; s < CHEVRON_SPAN; s += 1) {
+          for (let t = 0; t < CHEVRON_BAND; t += 1) {
+            const a = base + s * (CHEVRON_BAND + 1) + t;
+            const b = a + (CHEVRON_BAND + 1);
+            // Winding follows the mirror so both arms face up after the flip.
+            if (mirror > 0) chevronIndices.push(a, a + 1, b, a + 1, b + 1, b);
+            else chevronIndices.push(a, b, a + 1, a + 1, b, b + 1);
+          }
+        }
+      });
+    });
+  }
+  const chevronGeometry = new THREE.BufferGeometry();
+  chevronGeometry.setAttribute('position', new THREE.Float32BufferAttribute(chevronPositions, 3));
+  chevronGeometry.setIndex(chevronIndices);
+  chevronGeometry.computeVertexNormals();
   const arrowMat = new THREE.MeshBasicMaterial({
     blending: THREE.AdditiveBlending,
     color: '#2cc4e8',
     depthWrite: false,
     opacity: 0.42,
+    // Kept from the round-3 build and still the right tool: the decal is now
+    // genuinely coplanar with the road everywhere, which is exactly the case
+    // polygonOffset exists for. The 2cm lift above is only insurance for the
+    // grazing angles where the offset's depth slope term runs out.
     polygonOffset: true,
     polygonOffsetFactor: -3,
     polygonOffsetUnits: -3,
+    side: THREE.DoubleSide,
     transparent: true,
   });
-  for (let index = 0; index < 11; index += 1) {
-    const progress = (0.04 + index * 0.085) % 1;
-    [-0.38, 0.38].forEach((lane) => {
-      const { point, tangent } = sampler.pointAt(progress, lane);
-      const arrow = new THREE.Mesh(chevronGeometry, arrowMat);
-      arrow.position.copy(point);
-      // Sit ON the road, not 0.5 above it. The lift was a blunt fix for the
-      // old un-crowned ribbon; against a crowned, banked surface it left an
-      // unlit hard-edged cyan V hovering half a unit over the tarmac with no
-      // ground contact, which all three critics filed as a loose polygon /
-      // floating debris (comeback-city-p0_56, penguin-village-p0_9). The
-      // material already carries a polygon offset, which is the correct tool
-      // for coplanar decals; the remaining 2cm is only there so the offset
-      // never has to fight the crown at grazing angles.
-      arrow.position.y += crownAt(lane) + bankYOffsetAt(progress, lane * 0.44) + 0.02;
-      // Euler XYZ applies Z first: spin the chevron in its own plane to face
-      // the tangent, then lay the plane down. +PI because -X/-Z rotation
-      // maps the shape's +Y point onto the driving direction.
-      arrow.rotation.set(-Math.PI / 2, 0, Math.atan2(tangent.x, tangent.z) + Math.PI);
-      arrow.renderOrder = 3;
-      world.add(setFlatTransform(arrow));
-    });
-  }
+  const chevrons = new THREE.Mesh(chevronGeometry, arrowMat);
+  chevrons.renderOrder = 3;
+  chevrons.userData.kind = 'lane-direction-chevrons';
+  // Merging every chevron into one buffer gives it a lap-spanning AABB. The
+  // camera sweep would drop it anyway (depthWrite false keeps it out of the
+  // occluder set, and its 300-unit half-extent is past MAX_BLOCKER_EXTENT), but
+  // both of those are gates tuned for other reasons and either could move. A
+  // road decal is never something the camera can be inside, so say so.
+  world.add(markCameraExempt(setFlatTransform(chevrons)));
   let visualPropCount = 0;
   if (visualRoadEnabled) {
     const anchors = buildVisualPlacementAnchors(trackVisuals);
@@ -5843,11 +6494,18 @@ const createScene = ({
     groundMin: (Number.isFinite(courseMinY) ? courseMinY : 0) - 46,
   });
 
+  // AAA wave 5 (b). Solved ONCE for the race: how much of the grounding cue
+  // this track's key light can actually deliver to the lens. Comeback City's
+  // 21-degree sun returns exactly 1 (nothing about its shipped look moves);
+  // Penguin Village's 12-degree rake returns ~1.22 and its karts stop meeting
+  // the deck on a bare silhouette edge.
+  const contactKeyStrength = contactPatchKeyStrength(sunDirection.y);
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({
     accent: playerCharacter.accent,
     color: playerCharacter.color,
     contactGrounding: trackVisuals.enabled,
+    contactStrength: contactKeyStrength,
     scale: KART_SCALE,
     shadowsEnabled: shadowRig.active,
   });
@@ -6059,6 +6717,7 @@ const createScene = ({
       accent: rival.accent,
       color: rival.color,
       contactGrounding: trackVisuals.enabled,
+      contactStrength: contactKeyStrength,
       scale: KART_SCALE,
       // Per-kart, not per-scene: a rival that does not cast (phone tier) still
       // needs the big soft blob, because it is the only grounding it has.
@@ -7213,6 +7872,14 @@ export const ComebackCityThreeKartRace = ({
         ? race.contactShadowBoost
         : CONTACT_BOOST_NEUTRAL;
       contactRig.scale.set(fade.scale * boost.scale, 1, fade.scale * boost.scale);
+      // AAA wave 5 (b). contactPatchShadowBoost's opacity runs 1 -> 1.55 as the
+      // cast shadow rotates behind the kart, so (boost.opacity - 1) / 0.55 IS
+      // the frame's own measure of "tier 1 cannot be seen right now" — no new
+      // state, no second source of truth. Where that is 1, the air fade is not
+      // allowed below the hidden floor, because on those frames this patch is
+      // the only thing on screen tying the kart to a point on the road.
+      const castHidden = clamp((boost.opacity - 1) / 0.55, 0, 1);
+      const airOpacity = lerp(fade.opacity, Math.max(fade.opacity, CONTACT_AIR_HIDDEN_FLOOR), castHidden);
       contactRig.children.forEach((decal) => {
         // Capped, and the cap came DOWN with the blend change: on the
         // multiply path (see the contact decal's material) this number is the
@@ -7222,7 +7889,7 @@ export const ComebackCityThreeKartRace = ({
         // that used to overshoot the old cap now lands just under it.
         decal.material.opacity = Math.min(
           0.7,
-          decal.userData.contactOpacity * fade.opacity * boost.opacity
+          decal.userData.contactOpacity * airOpacity * boost.opacity
         );
       });
     };
@@ -7260,7 +7927,94 @@ export const ComebackCityThreeKartRace = ({
         !reducedMotion && !airborne && speed > 16
           ? Math.sin(race.raceTime * (7 + speedRatio * 8) + phase) * 0.05 * (0.35 + speedRatio)
           : 0;
-      kartModel.bodyRig.position.y = bob;
+
+      // AAA wave 5 (f) — WEIGHT TRANSFER. The kart had no mass.
+      //
+      // Everything the rig did before this was either kinematic (position, yaw)
+      // or decorative (the bob above, the driver's lean). A chassis reads as
+      // heavy because it LAGS its own inputs: it squats when the drive goes on,
+      // dives when it comes off, and rolls onto its outside springs a beat after
+      // the front wheels turn. None of that existed, which is most of why the
+      // kart axis has sat at 5 for four waves while the bodywork itself got
+      // better every round.
+      //
+      // It rides `bodyRig`, the same inner rig as the bob, for the same reason:
+      // the outer group carries the contact rig's yaw reference and the road
+      // pose, and a chassis that pitched the whole group would take the
+      // grounding cue with it — the exact defect the contact rig was split out
+      // to fix. The outer group already carries a slide-driven roll; this is the
+      // SPRING on top of it, which is why it is a separate, slower term.
+      //
+      // One interaction worth knowing: the outer group takes a non-uniform
+      // scale.y during a landing squash, and a non-uniform parent scale shears a
+      // rotated child. At the squash's own magnitude and a few degrees of body
+      // roll that is sub-pixel, and it only exists for the 0.18s of a landing —
+      // but if the squash is ever deepened, this is the term that will start to
+      // skew with it.
+      const motionState = kartModel.motion;
+      // Longitudinal load. Numerically differentiating speed is noisy at 289
+      // km/h, so the accelerometer is itself smoothed before it drives anything.
+      const acceleration = dt > 0 ? (speed - (motionState.lastSpeed ?? speed)) / dt : 0;
+      motionState.lastSpeed = speed;
+      motionState.accel = lerp(motionState.accel || 0, clamp(acceleration / 90, -1, 1), 1 - Math.pow(0.02, dt));
+      // Nose UP under power, DOWN under braking: negative pitch raises the nose
+      // in this rig's convention (see updateVehiclePose, which subtracts the air
+      // pitch). Airborne kills it — there is no load to transfer in the air, and
+      // the air pose owns rotation.x on the outer group at that point.
+      const pitchTarget = airborne ? 0 : -motionState.accel * 0.052;
+      motionState.pitch = lerp(motionState.pitch || 0, pitchTarget, 1 - Math.pow(0.004, dt));
+      kartModel.bodyRig.rotation.x = motionState.pitch;
+      // Lateral load. Same signal the driver leans on, half a beat slower and in
+      // the OPPOSITE sense: the driver leans into the corner, the chassis rolls
+      // out of it onto its loaded springs. That disagreement is the whole read —
+      // two bodies with different masses responding to one corner.
+      //
+      // 0.32, not more: the outer group ALREADY rolls the whole kart on the
+      // slide yaw, so this stacks on top of it. The two together peak near 17
+      // degrees, which is a kart-racer exaggeration and not a capsize.
+      const rollTarget = airborne ? 0 : -leanTarget * 0.32;
+      motionState.roll = lerp(motionState.roll || 0, rollTarget, 1 - Math.pow(0.008, dt));
+      kartModel.bodyRig.rotation.z = motionState.roll;
+      // Suspension travel, in units rather than degrees so it stays a
+      // translation the wheels can absorb. Only ACCELERATION squats the body:
+      // braking transfers load forward, which is a nose-down pitch (above), and
+      // adding a matching ride-height RISE to it would just lift the whole kart
+      // off its wheels every time the player lifted. Cornering compresses the
+      // outside springs, so roll squats too.
+      kartModel.bodyRig.position.y =
+        bob - Math.max(0, motionState.accel) * 0.06 - Math.abs(motionState.roll) * 0.14;
+      // Brake lamps. `accel` is already the smoothed load signal, so a lift is
+      // a glow and a hard stop is a flare — no separate brake flag needed, and
+      // the same term therefore works for a rival, whose AI never presses one.
+      if (kartModel.brakeLamps) {
+        const braking = clamp(-motionState.accel * 1.7, 0, 1);
+        kartModel.brakeLamps.visible = braking > 0.02 || speed > 16;
+        if (kartModel.brakeLamps.visible) {
+          kartModel.brakeLamps.children.forEach((lamp) => {
+            // Idle tail lamp at speed, ~4x the level on the brakes — enough
+            // that a still frame reads which of the two states it is in, low
+            // enough that the pair never blooms into one plate across the tail.
+            lamp.material.opacity = 0.12 + braking * 0.34;
+            lamp.scale.setScalar(lamp.userData.baseScale * (0.85 + braking * 0.5));
+          });
+        }
+      }
+    };
+
+    // AAA wave 5 (f). One entry point for both wheel paths so the player and
+    // the rivals cannot drift apart again. Real wheel transforms just turn; the
+    // derived spin band also fades with speed, because a rotation blur under 60
+    // km/h is a decal and over 200 is what the eye expects to see.
+    const driveKartWheels = (kartModel, speed, steerAngle, dt) => {
+      const blur = clamp((speed - 55) / 150, 0, 1);
+      kartModel.wheels.forEach((wheel) => {
+        wheel.rotation.x -= dt * speed * 0.12;
+        if (wheel.userData.front) wheel.rotation.y = steerAngle;
+        if (!wheel.userData.spinBand) return;
+        const band = wheel.children[0];
+        band.visible = blur > 0.01;
+        if (band.visible) band.material.opacity = blur * 0.34;
+      });
     };
 
     let cachedRendererStats = estimateSceneRenderStats(engine.world, engine.renderer);
@@ -8006,10 +8760,7 @@ export const ComebackCityThreeKartRace = ({
         ring.scale.setScalar(ringScale);
         ring.material.opacity = 0.95 * (1 - ringProgress);
       }
-      engine.playerModel.wheels.forEach((wheel) => {
-        wheel.rotation.x -= dt * race.speed * 0.12;
-        if (wheel.userData.front) wheel.rotation.y = race.steer * 0.38;
-      });
+      driveKartWheels(engine.playerModel, race.speed, race.steer * 0.38, dt);
       engine.playerModel.idleFlames.forEach((flame, flameIndex) => {
         flame.visible = race.speed > 16;
         const heat = clamp(race.speed / MAX_SPEED, 0, 1);
@@ -8085,10 +8836,7 @@ export const ComebackCityThreeKartRace = ({
             flame.userData.baseScale * (0.75 + Math.sin(race.raceTime * 24 + index * 3 + flameIndex * 2.1) * 0.16)
           );
         });
-        rival.model.wheels.forEach((wheel) => {
-          wheel.rotation.x -= dt * racer.speed * 0.12;
-          if (wheel.userData.front) wheel.rotation.y = clamp(racer.laneVel * 0.5, -0.5, 0.5);
-        });
+        driveKartWheels(rival.model, racer.speed, clamp(racer.laneVel * 0.5, -0.5, 0.5), dt);
         // Proximity ghost: a rival that ends up on the lens is a wall across
         // the whole play area with no road behind it, so it fades out rather
         // than blocking the frame.

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { tuneEnvResponse } from './raceEnvironment.js';
+import { applySurfaceForm, tuneEnvResponse } from './raceEnvironment.js';
 import { applyKartShading } from './toonRimShader.js';
 
 const DEFAULT_VEHICLE_PALETTE = {
@@ -51,8 +51,33 @@ const DEFAULT_VEHICLE_PALETTE = {
 // away from the camera. That is exactly the "nothing picks up bounce from the
 // sky it sits under" finding, and it is the cheapest possible answer to it:
 // zero bytes, zero draw calls, one float.
+//
+// ---- AAA wave 5: `form` -----------------------------------------------------
+//
+// The roughness note above ends by calling the probe "the cheapest possible
+// answer" to nothing picking up bounce from the sky it sits under. Re-measured
+// on wave4-r3, it is not an answer at all: penguin-village-p0_56's open road is
+// 99.9% adjacent-pixel-flat, comeback-city-p0_45's 99.6%, and the near-clip ice
+// wedge at penguin-village-p0_9 returns p05 144 / p50 145 over hundreds of
+// pixels. At metalness 0.02 the indirect specular resolves against a dielectric
+// F0 of 0.04, which puts the whole term around 0.005 of linear output — a
+// roughness change moves that by a factor, and any factor times invisible is
+// invisible. The probe's real product is ambient HUE.
+//
+// So form comes from an explicit analytic term instead, defaulted ON here.
+// Defaulting it is not a preference: this module owns the helper and not the
+// ~60 call sites that use it, so opt-in would ship another dead lever (which is
+// exactly how the probe itself spent a whole wave doing nothing). See
+// SURFACE_FORM in raceEnvironment.js for the four properties — grazing-only,
+// ground-suppressed, hue-borrowed-from-the-light-rig, headroom-metered and
+// clamped — that keep a default-on shading term from moving an owner-confirmed
+// grade, and for the measurements each was chosen against.
+//
+// `form: false` is the escape hatch for a surface that must stay analytically
+// flat. Like `env`, it is a helper flag rather than a THREE.Material property
+// and is destructured out before the constructor sees it.
 export const createBasicMaterial = (color, options = {}) => {
-  const { env = null, ...materialOptions } = options;
+  const { env = null, form = true, ...materialOptions } = options;
   const material = new THREE.MeshStandardMaterial({
     color,
     flatShading: true,
@@ -60,6 +85,7 @@ export const createBasicMaterial = (color, options = {}) => {
     roughness: 0.58,
     ...materialOptions,
   });
+  if (form) applySurfaceForm(material);
   return env ? tuneEnvResponse(material, env) : material;
 };
 
@@ -71,11 +97,18 @@ export const createBasicMaterial = (color, options = {}) => {
 // one code path for both means a procedural fallback body and an authored body
 // react to the key light the same way instead of reading as two art styles.
 
+// All three factories pass `form: false`. The generic grazing sheen and the
+// kart chunk's environment probe are the same job, and the kart chunk does it
+// strictly better on a vehicle: it weights the term per material class, and it
+// gives the rubber class ZERO, which is the contract these three exist to keep.
+// Stacking both would put a sky sheen back on the tyres by the back door and
+// double-count it everywhere else.
+
 // Glossy body paint: low roughness so the injected cel band sits on a surface
 // that is already tighter than the matte default.
 export const createKartPaintMaterial = (color, options = {}) =>
   applyKartShading(
-    createBasicMaterial(color, { metalness: 0.12, roughness: 0.3, ...options })
+    createBasicMaterial(color, { form: false, metalness: 0.12, roughness: 0.3, ...options })
   );
 
 // Chrome / trim. Metalness used to stay MODERATE here with an explicit note
@@ -88,7 +121,12 @@ export const createKartPaintMaterial = (color, options = {}) =>
 // rather than tuned for whichever one happened to ship first. The injected hot
 // band still carries the read either way.
 export const createKartChromeMaterial = (color = '#f6fbff', options = {}) => {
-  const material = createBasicMaterial(color, { metalness: 0.3, roughness: 0.18, ...options });
+  const material = createBasicMaterial(color, {
+    form: false,
+    metalness: 0.3,
+    roughness: 0.18,
+    ...options,
+  });
   // The preset supplies metalness and envMapIntensity; roughness is handed back
   // as an override so a caller's explicit `roughness` in options is not
   // silently reverted to the class default.
@@ -118,14 +156,28 @@ export const createKartChromeMaterial = (color = '#f6fbff', options = {}) => {
 // black tyre and a hole in the frame. The class's contract is "the value anchor
 // the other three are read against"; an anchor still has to be legible.
 export const createKartRubberMaterial = (color, options = {}) =>
-  applyKartShading(createBasicMaterial(color, { metalness: 0, roughness: 0.95, ...options }), {
-    chromeStrength: 0,
-    envChrome: 0,
-    envPaint: 0,
-    envPlastic: 0,
-    paintStrength: 0,
-    plasticStrength: 0,
-  });
+  applyKartShading(
+    createBasicMaterial(color, { form: false, metalness: 0, roughness: 0.95, ...options }),
+    {
+      chromeStrength: 0,
+      envChrome: 0,
+      envPaint: 0,
+      envPlastic: 0,
+      // AAA wave 5 — the sun's own image in the surface, split out of the
+      // ambient probe and therefore no longer covered by the three env weights
+      // above. Zeroed for the same reason they are: a glint is the most
+      // literally specular event in the file, and a mirror direction is the one
+      // thing a matte surface does not have. `viewFillStrength` is deliberately
+      // NOT in this list — it is the same distinction darkFill is kept out for:
+      // a fill is a value gradient, not gloss — and the chunk already excludes
+      // the rubber class from it per texel anyway.
+      glintChrome: 0,
+      glintPaint: 0,
+      glintPlastic: 0,
+      paintStrength: 0,
+      plasticStrength: 0,
+    }
+  );
 
 // NOT IN THE SHIPPED BUNDLE. The app's player/rival karts are built by the
 // `createKartModel` local inside ComebackCityThreeKartRace.jsx (~line 600) and

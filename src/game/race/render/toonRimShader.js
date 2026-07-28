@@ -215,7 +215,14 @@ uniform vec4 uKartPaintShape;
 uniform vec4 uKartTint;
 uniform vec4 uKartEnv;
 // (fresnel floor, probe ramp low, probe ramp high, unused)
-uniform vec4 uKartEnvShape;`;
+uniform vec4 uKartEnvShape;
+// (paint, chrome, plastic, fresnel floor) — the sun's own image, wave 5
+uniform vec4 uKartGlint;
+// (view-fill strength, view-fill N.V exponent)
+uniform vec2 uKartFill;
+// The SECOND headroom ceiling, for the terms allowed to blow out — see
+// SPEC_BLOOM_CEILING in kartMaterials.js.
+uniform float uKartSpecCeilHi;`;
 
 const KART_SHADING_CHUNK = /* glsl */ `
 	// Declares that the four class masks below exist in this scope. The rim
@@ -241,6 +248,11 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// exactly on the saturated surfaces that were escaping the meter and leaves
 	// the chrome and rubber cases it was tuned for unchanged.
 	#define KART_HEADROOM saturate((uKartSpecCeil - max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b))) / uKartSpecCeil)
+	// The same meter against the higher ceiling, for the two terms that are
+	// SUPPOSED to clip: the cel specular band and the sun glint. A fill that
+	// crosses 1.0 is a blown panel; a highlight that never crosses it is not a
+	// highlight. See SPEC_BLOOM_CEILING in kartMaterials.js for the measurement.
+	#define KART_SPEC_HEADROOM saturate((uKartSpecCeilHi - max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b))) / uKartSpecCeilHi)
 	vec3 kartAlbedo = diffuseColor.rgb;
 	float kartChroma =
 		max(kartAlbedo.r, max(kartAlbedo.g, kartAlbedo.b)) -
@@ -287,6 +299,29 @@ const KART_SHADING_CHUNK = /* glsl */ `
 		}
 	#endif
 	kartKeyDir = normalize(kartKeyDir);
+
+	// ---- The track's own light, as three normalised HUES --------------------
+	// Hoisted above the fill in wave 5 because two terms now need it (the
+	// camera-anchored fill and the sky probe) and a second copy would be a
+	// second place for the track's palette to be read differently.
+	//
+	// Hue from the track, MAGNITUDE from the weights that use these. The
+	// hemisphere and directional uniforms arrive premultiplied by intensity
+	// (WebGLLights), and borrowing their energy as well as their colour would
+	// make every consumer a second fill light and lift the whole kart — exactly
+	// the kind of ambient drift that would regress an owner-confirmed grade.
+	// Normalising to a max channel of 1 keeps each term's entire budget inside
+	// its own uniform.
+	vec3 kartEnvSky = vec3(0.30, 0.32, 0.52);
+	vec3 kartEnvGround = vec3(0.08, 0.07, 0.11);
+	#if NUM_HEMI_LIGHTS > 0
+		kartEnvSky = hemisphereLights[0].skyColor;
+		kartEnvGround = hemisphereLights[0].groundColor;
+	#endif
+	kartEnvSky /= max(1e-4, max(kartEnvSky.r, max(kartEnvSky.g, kartEnvSky.b)));
+	kartEnvGround /= max(1e-4, max(kartEnvGround.r, max(kartEnvGround.g, kartEnvGround.b)));
+	vec3 kartEnvHorizon = kartKeyColor / max(1e-4, max(kartKeyColor.r, max(kartKeyColor.g, kartKeyColor.b)));
+
 	// Half-vector against the key: the band slides across the cowl as the kart
 	// YAWS, which is the cue that reads as a solid glossy object rather than a
 	// painted sprite. pow() shapes the lobe, smoothstep cuts it into a cel band.
@@ -358,6 +393,55 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	float kartPaintPull = min(1.0, kartPaintTarget / max(1e-4, kartPaintPeak));
 	outgoingLight *= mix(1.0, mix(1.0, kartPaintPull, uKartPaintShape.z), kartPaintMask);
 
+	// ---- Camera-anchored fill (AAA wave 5) ---------------------------------
+	// Comeback City's sun is DOWN-TRACK, so the chase camera looks at the one
+	// face of the kart the key cannot reach and the hero measures as the darkest
+	// object in a blazing frame (rear paint rgb(83,60,67) against a mid-frame
+	// mean of rgb(99,69,80) in cc-p0_78). Every other term in this chunk makes
+	// that worse: the AO and the paint shade step both darken the away side, and
+	// the specular band is keyed on H = normalize(L + V), which is DEGENERATE
+	// when the sun is behind the subject — a backlit kart cannot have a
+	// half-vector highlight at all. That is the structural reason three critics
+	// read 18 frames and found no paint hotspot in any of them.
+	//
+	// Two gates make this a fill rather than an exposure lift. It is shaped on
+	// N.V with an exponent above 1, so it concentrates on the panels square to
+	// the lens — the exact half of the body the Schlick-shaped probe below does
+	// NOT cover, so the two are complements and their sum keeps orientation
+	// structure instead of averaging into a wash. And it is multiplied by
+	// (1 - kartLitMask), so it can only ever fill where the key does not reach:
+	// on a front-lit track it is ~0 and nothing moves, which is what stops it
+	// drifting an owner-confirmed grade.
+	//
+	// MULTIPLICATIVE, and that is the whole difference between this working and
+	// this making the kart worse. Measured on a backlit toon body under the
+	// Penguin Village rig, an ADDITIVE fill at the same effective lift moved the
+	// vertical profile from 130 / 70 / 112 to 131 / 104 / 127 — i.e. it raised
+	// the mean by 21 levels and destroyed 33 of the 60-level top-to-bottom value
+	// break in the process. That is arithmetic, not tuning: every additive term
+	// here is metered by KART_HEADROOM, headroom is largest exactly where the
+	// surface is darkest, so any additive fill necessarily lands hardest on the
+	// part of the body that is carrying the form. Brighter and flatter is the
+	// one trade this package must not make — flat is the finding.
+	//
+	// A gain preserves ratios. Same test, same lift, applied as (1 + k): the
+	// break costs 10 levels instead of 33 (60.3 -> 50.0), and with the probe and
+	// glint stacked on top the body's overall value SPREAD comes out ABOVE where
+	// it started (111.2 -> 121.6) with its peak up 24 levels. It is an exposure
+	// change scoped to one object — exactly what "the hero is the darkest thing
+	// in the frame" asks for, and exactly what must never be done to the scene.
+	// The residual ~8 levels of break is what a fill light costs; it is the
+	// intended trade, and it is a tenth of the frame's dynamic range rather than
+	// half of the body's.
+	//
+	// Still metered by KART_HEADROOM, so the gain tapers to nothing as a panel
+	// approaches the ceiling — Penguin Village's already-bright paint takes
+	// roughly a fifth of what Comeback City's dark rear does. Rubber excluded:
+	// the tyres are the value anchor, and an anchor that moves is not one.
+	float kartFillFace = pow(saturate(dot(geometryNormal, geometryViewDir)), uKartFill.y);
+	outgoingLight *= 1.0 + uKartFill.x * kartFillFace * (1.0 - kartLitMask)
+		* (1.0 - kartRubberMask) * KART_HEADROOM;
+
 	// Sky bounce — the only form cue that survives on a texel the classifier
 	// has retired (baked-white tyres, the frosted shell). Albedo-tinted so it
 	// reads as light the surface returned rather than as a grey wash, and
@@ -382,23 +466,9 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// Colours come out of the LIGHT RIG the track already authored — hemisphere
 	// sky/ground for the dome, the key light for the horizon band — rather than
 	// from uniforms, so this is correct per track with zero wiring and cannot
-	// drift out of agreement with the sky actually being rendered.
-	vec3 kartEnvSky = vec3(0.30, 0.32, 0.52);
-	vec3 kartEnvGround = vec3(0.08, 0.07, 0.11);
-	#if NUM_HEMI_LIGHTS > 0
-		kartEnvSky = hemisphereLights[0].skyColor;
-		kartEnvGround = hemisphereLights[0].groundColor;
-	#endif
-	// Hue from the track, MAGNITUDE from uKartEnv. The hemisphere and
-	// directional uniforms arrive premultiplied by intensity (WebGLLights), and
-	// borrowing their energy as well as their colour would make this a second
-	// fill light and lift the whole kart — which is exactly the kind of ambient
-	// drift that would regress an owner-confirmed grade. Normalising to a max
-	// channel of 1 keeps the entire budget inside the three weights below.
-	kartEnvSky /= max(1e-4, max(kartEnvSky.r, max(kartEnvSky.g, kartEnvSky.b)));
-	kartEnvGround /= max(1e-4, max(kartEnvGround.r, max(kartEnvGround.g, kartEnvGround.b)));
-	vec3 kartEnvHorizon = kartKeyColor / max(1e-4, max(kartKeyColor.r, max(kartKeyColor.g, kartKeyColor.b)));
-
+	// drift out of agreement with the sky actually being rendered. Resolved
+	// above, next to the key light they are read from.
+	//
 	// World space throughout: the kart yaws every frame, so a view-space
 	// reflection would slide with the CAMERA instead of with the body.
 	vec3 kartWorldView = inverseTransformDirection(geometryViewDir, viewMatrix);
@@ -415,9 +485,6 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// roughly the bottom 25 degrees of the reflected hemisphere, which is where
 	// both tracks author their hot horizon stop.
 	kartProbe = mix(kartProbe, kartEnvHorizon, pow(1.0 - min(1.0, abs(kartRefl.y)), 2.4) * 0.62);
-	// The sun's own image in the surface. This is the glint that travels across
-	// a cowl through a bend; without it the probe is just a smarter ambient.
-	kartProbe += kartEnvHorizon * pow(max(dot(kartRefl, kartKeyWorld), 0.0), uKartEnv.w);
 	// Schlick-shaped: a facet turned edge-on to the eye returns far more of the
 	// sky than one facing it. This is what puts the sheen on the SHOULDER of a
 	// panel and off its centre, and it is most of why the term reads as a
@@ -445,6 +512,44 @@ const KART_SHADING_CHUNK = /* glsl */ `
 		uKartEnv.z * (kartPlasticMask + kartNeutral * kartBrightRetire)
 	);
 	outgoingLight += kartProbe * kartEnvWeight * KART_HEADROOM;
+
+	// ---- The sun's own image in the surface (AAA wave 5) -------------------
+	// Through wave 4 this was one line INSIDE kartProbe, which meant it
+	// inherited the ambient reflection's fresnel floor, its class weights and
+	// its headroom meter. All three are wrong for a glint, and the product of
+	// the three is why nobody has ever seen it: on a rear panel it evaluated to
+	// 0.09 (ambient floor) x 0.22 (paint weight) x 0.19 (fill headroom) = 0.4%
+	// of the horizon colour. Four parts in a thousand.
+	//
+	// WHAT THIS IS NOT — stated because the obvious argument for splitting it
+	// out is wrong, and someone will re-derive it. This does NOT reach geometry
+	// the cel band cannot: dot(reflect(-V, N), L) is maximised at exactly
+	// N = normalize(L + V), so it is the Phong statement of the same Blinn
+	// condition and it is degenerate on a fully backlit subject for the same
+	// reason. NOTHING keyed on the sun's position can put a highlight on a face
+	// the sun cannot see. That case belongs to the camera-anchored fill above
+	// and to the fresnel-shaped ambient probe, and those are the two terms
+	// carrying Comeback City.
+	//
+	// What the split buys is that on every stretch where the sun is NOT directly
+	// behind the kart — most of a lap on both tracks, since the body yaws
+	// through the full circle while the sun stays put — the glint is finally
+	// strong enough to see. It gets its own fresnel floor (high: a glint is
+	// largely orientation-independent once it fires, and it is the LOBE that
+	// localises it, not the fresnel), its own per-class weights, and the BLOOM
+	// ceiling, because a highlight that cannot cross 1.0 is not a highlight.
+	// uKartEnv.w at 26 is a ~13 degree half-angle window: a hot spot travelling
+	// across a cowl through a bend, not a second key light.
+	float kartGlintFresnel = mix(uKartGlint.w, 1.0, pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 3.0));
+	float kartGlintLobe = pow(max(dot(kartRefl, kartKeyWorld), 0.0), uKartEnv.w);
+	// Same four-class partition as the ambient probe, including the retired
+	// bright band folded in at the plastic weight. Rubber gets nothing: a matte
+	// surface has no mirror direction to return the sun from.
+	outgoingLight += kartEnvHorizon * kartGlintLobe * kartGlintFresnel * (
+		uKartGlint.x * kartPaintMask +
+		uKartGlint.y * kartChromeMask +
+		uKartGlint.z * (kartPlasticMask + kartNeutral * kartBrightRetire)
+	) * KART_SPEC_HEADROOM;
 
 	// ---- Dark-class form fill (AAA wave 4 round 2) -------------------------
 	// The one term in this file that does anything at all on a near-black
@@ -489,8 +594,18 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// fires. Measured against the LIT result instead, the band lifts dark and
 	// mid surfaces hard and eases to nothing on anything the key has already
 	// taken to white, so the highlight can no longer flatten a panel into a
-	// featureless blob or hand the bloom pass one.
-	outgoingLight += kartSpec * KART_HEADROOM;
+	// featureless blob.
+	//
+	// AAA wave 5 — against the BLOOM ceiling, not the fill ceiling. The band is
+	// a 13-24 degree lobe landing on a handful of facets; the terms above it are
+	// broad washes. Sharing one meter meant the flash was bounded by a number
+	// authored to stop a wash blowing out a whole panel, and on the rivals that
+	// measure 97% adjacent-flat with 64% of their fill budget unspent, chrome's
+	// 0.95 came out at 0.27 of add — a lighter shade of paint rather than light.
+	// See SPEC_BLOOM_CEILING. Still bounded, still eases to nothing on a surface
+	// the key already took to white; it is now allowed to cross 1.0 and reach
+	// the post chain's bloom threshold, which is the whole read.
+	outgoingLight += kartSpec * KART_SPEC_HEADROOM;
 
 	// ---- Rubber's soft ceiling (AAA wave 4 round 2) ------------------------
 	// The class contract is "dead matte, and the value anchor the other three
@@ -555,6 +670,18 @@ export const applyKartShading = (material, overrides = null) => {
       uKartEnvShape: {
         value: new THREE.Vector4(params.envFresnelFloor, params.envRamp[0], params.envRamp[1], 0),
       },
+      // (view-fill strength, N.V exponent)
+      uKartFill: { value: new THREE.Vector2(params.viewFillStrength, params.viewFillExponent) },
+      // (paint, chrome, plastic, the glint's OWN fresnel floor — deliberately
+      //  much higher than the ambient probe's; see ENV_PROBE.glintFloor)
+      uKartGlint: {
+        value: new THREE.Vector4(
+          params.glintPaint,
+          params.glintChrome,
+          params.glintPlastic,
+          params.glintFloor
+        ),
+      },
       uKartGloss: { value: new THREE.Vector2(params.paintGloss, params.chromeGloss) },
       uKartPaintChroma: { value: new THREE.Vector2(...params.paintChroma) },
       // (shadow-side step, compressor knee, how much of the correction to take,
@@ -573,6 +700,7 @@ export const applyKartShading = (material, overrides = null) => {
       uKartSkyBounce: { value: params.skyBounce },
       uKartSpecBlend: { value: params.specTintBlend },
       uKartSpecCeil: { value: params.specCeiling },
+      uKartSpecCeilHi: { value: params.specBloomCeiling },
       uKartSpecStrength: {
         value: new THREE.Vector3(params.paintStrength, params.chromeStrength, params.plasticStrength),
       },

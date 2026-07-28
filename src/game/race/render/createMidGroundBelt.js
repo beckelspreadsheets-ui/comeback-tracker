@@ -312,7 +312,39 @@ const TRACK_TUNING = {
     // it dissolve into the fog colour (#bfa08c) rather than sitting in front of
     // it, and the near ring's 0.34 is the only saturated ice in the frame, which
     // is where the eye now reads "close".
-    ringColors: ['#6f8ca8', '#8ba3b8', '#aab2bb'],
+    //
+    // WAVE 5 — THE WAVE-4 HANDOFF, ANSWERED WITH A MEASUREMENT. That agent
+    // flagged that its fill rebalance slightly darkens the belt and said to look
+    // here if the bergs stopped separating from the new sky. They did not stop
+    // separating; they separate the WRONG WAY. Measured over the nine wave4-r3
+    // marks, the belt band (rows 240-380 of a 900px frame) runs luminance
+    // 141-162 against 123-167 for the plate band above it and 87-144 for the
+    // dome above that — so the mid-ground is the brightest thing in the image
+    // and the frame gets brighter as it goes down. Comeback City runs 120 / 110
+    // / 90, top to bottom.
+    //
+    // The direction of the round-3 ladder is right and it is kept. What is
+    // wrong is the far end's ABSOLUTE value and its near-neutrality: ring 2 at
+    // saturation 0.09 and the shelf at 0.03 are white paper, and paper is what
+    // the artefact hunter has measured them as ("a giant featureless pale slab",
+    // "one flat value across the whole face") for three waves running.
+    //
+    // The correction is deliberately SMALL in value and larger in chroma:
+    //
+    //   ring 0   92u  #6f8ca8  sat 0.34  luma 0.53   unchanged
+    //   ring 1  172u  #7f97ae  sat 0.27  luma 0.57   was 0.25 / 0.61
+    //   ring 2  296u  #98a2b4  sat 0.16  luma 0.63   was 0.09 / 0.69
+    //
+    // and NOT a big darkening, because the naive fix — pull the belt under the
+    // sky to satisfy the "snow darker than sky" rule this palette keeps citing —
+    // is wrong under a storm. An anvil IS darker than the ice beneath it and a
+    // break is brighter; that is the whole image this track is chasing. The
+    // ordering the belt needs is "under the break, over the anvil", which is a
+    // BEARING relationship, and a bearing is what the plate wedge
+    // (penguinVillage.js backdropHaze) and this layer's own storm bank supply.
+    // Flattening the belt globally to sit under a bearing-blind average would
+    // delete the very contrast those two exist to create.
+    ringColors: ['#6f8ca8', '#7f97ae', '#98a2b4'],
     // Per-instance hue jitter, the other half of "the density stops reading as a
     // tiling". The rings already jitter per-instance VALUE (0.74-1.06) and that
     // is not enough on a low-chroma palette: at 0.09-0.34 saturation a 30% value
@@ -406,7 +438,19 @@ const TRACK_TUNING = {
       // backwards at the far end. Near-neutral (saturation 0.03) on purpose:
       // this row's whole job is to stop the snow plain ending on a hard line,
       // and a chromatic silhouette out there competes with the front instead.
-      color: '#b7bcbe',
+      // WAVE 5: #b7bcbe -> #a4a8b8. The round-3 rule is kept — this row takes
+      // the SKY's value — but the sky it is taking is now measured rather than
+      // predicted, and it is about to move again: the storm bank behind this
+      // ring gains real body this round and the plate behind THAT gains a
+      // bearing wedge, so the band this shelf dissolves into is a bruised slate
+      // and no longer a bright neutral. At luma 0.735 and saturation 0.03 the
+      // old value was the single brightest surface in the frame, which is what
+      // put the whole belt band above the sky. 0.66 at saturation 0.11 keeps it
+      // the palest ring in the ladder — it must stay above ring 2, or the depth
+      // stepping runs backwards at the far end again — while giving fog
+      // (#9c8b9e, itself re-authored this round) something with a hue to mix
+      // into rather than a paper white.
+      color: '#a4a8b8',
       density: 0.58,
       peak: { height: [18, 58], radius: [14, 34] },
       shapes: [
@@ -544,10 +588,26 @@ const TRACK_TUNING = {
       // WAVE 4 ROUND 3: 0.66 -> 0.54. See the colour note above — this wall
       // stands in front of the one band of the dome that carries the sunset,
       // and every point of opacity it spends is a point of the break it hides.
-      // 0.54 still reads as a solid front where the crest is thick (the body
-      // term peaks at 1.0 well below the crest) and lets nearly half the ember
-      // through where it is thinning, which is what an actual break looks like.
-      opacity: 0.54,
+      // WAVE 5: 0.54 -> 0.72, and the round-3 argument above is sound but it is
+      // aimed at the wrong thing standing behind this wall. "Every point of
+      // opacity it spends is a point of the break it hides" is true where the
+      // wall silhouettes against the DOME. It does not for most of this wall's
+      // height: the bank sits at radius 548 and the backdrop plate at 780, and
+      // the plate is opaque from 0 to ~12 degrees of elevation and only
+      // dissolves out at its 22.3-degree rim. Solving the geometry the way
+      // createSkyDome.js's header does, the bank's body occupies 0-24 degrees —
+      // so from the horizon up to 22 degrees this wall is not standing in front
+      // of the ember at all. It is standing in front of a PAINTING, and the
+      // painting is the brightest, flattest thing in the frame (measured rows
+      // 115-240 of the wave4-r3 marks: luminance 123-167 at saturation
+      // 0.12-0.18, i.e. BRIGHTER than the sky above it).
+      //
+      // Opacity in that band therefore trades a bright neutral plate for a dark
+      // storm slate, which is the trade this track has needed since wave 1. The
+      // tear survives it untouched — `gap` still multiplies alpha down by 0.8
+      // toward the sun, so the break opens exactly as far as it did, on a wall
+      // that is now genuinely solid on the anvil side.
+      opacity: 0.72,
       radius: 548,
       // Follows the wave-4 key (#ffd2a4) down in green and blue for the same
       // reason it does: the rim is the sun transmitted through cloud, so it
@@ -2406,8 +2466,22 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
             // so the bank never meets the ice on a ruled line — a hard bottom
             // edge is the "flat 2D cutout" read this whole layer exists to
             // avoid.
+            //
+            // WAVE 5 — THE BASE RAMP WAS EATING THE BAND THIS WALL EXISTS FOR.
+            // The mesh spans wall-Y 0 to 300 at radius 548 with the eye near
+            // Y 10, so vUv.y 0.30 is 8.3 degrees of elevation and the whole
+            // ramp from 0.30 down is BELOW the horizon line, where the snow
+            // plain and the belt occlude the wall anyway. Above the horizon the
+            // ramp was still climbing: at the crest's own height the two terms
+            // multiplied out to a measured ~0.23 of body, so the wall
+            // contributed roughly 12% of the pixel across rows 115-220 and the
+            // bright plate supplied the other 88% — which is why every critic
+            // has read this band as a grey wash and attributed it to the dome.
+            // 0.18 completes the ramp at ~3.9 degrees, just above the horizon,
+            // so the fade still stops the wall meeting the ice on a ruled line
+            // and the wall actually has a body where the camera frames it.
             float body = (1.0 - smoothstep(crest - 0.22, crest + 0.08, vUv.y))
-              * smoothstep(-0.05, 0.30, vUv.y);
+              * smoothstep(-0.05, 0.18, vUv.y);
             // The sun burns a hole in the bank. This is what makes a wall of
             // cloud read as a FRONT rather than as a lid, and it is the one
             // place the warm sky gets through to the ice.

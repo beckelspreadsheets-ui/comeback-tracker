@@ -170,6 +170,35 @@ const SPEC_TINT_BLEND = 0.45;
 // that it is the only kart texel per frame that gets there.
 const SPEC_CEILING = 1.18;
 
+// ...and the SECOND ceiling, for the two terms that are supposed to clip.
+//
+// AAA wave 5 — one meter was doing two incompatible jobs. SPEC_CEILING is a
+// FILL budget: the sky bounce, the ambient probe and the dark-class fill are
+// broad, low-frequency terms that cover most of a body, and letting any of them
+// past the display range is how a kart turns into a white marshmallow. The
+// specular BAND is the opposite kind of term — a ~13-24 degree lobe that lands
+// on a handful of facets — and the whole point of a chrome flash is that it
+// blows out and feeds the bloom threshold. Metering both against 1.18 meant the
+// broad terms were correctly bounded and the flash was bounded with them.
+//
+// Measured, wave4-r3, the surfaces that should be carrying a flash:
+//   pv-p0_56 blue rival body   mean (49,50,163)  97.4% adjacent-pixel-flat
+//   pv-p0_56 blue rival wing   mean (44,34,143)  97.1% adjacent-pixel-flat
+//   cc-p0_45 blue rival slab   mean (64,68,185)  80.6% adjacent-pixel-flat
+// Note the RED and GREEN channels: 44-68 out of 255. These bodies are nowhere
+// near clipping — they sit around 0.4 scene-linear at the peak channel, i.e.
+// they have ~64% of the fill budget still unspent. The flash is not missing
+// because the surface ran out of room; it is missing because 0.95 (chrome)
+// times a 0.28 headroom is 0.27 of add on a term that has to clear 1.0 to read
+// as light rather than as a lighter shade of paint.
+//
+// At 1.75 the same chrome band on the same texel lands at 0.49 and crosses the
+// post chain's 1.0 bloom threshold, which is the difference between "that trim
+// is pale" and "that trim caught the sun". The fill terms keep 1.18 — nothing
+// broad moves, so the marshmallow guard the round-2 measurements bought is
+// untouched. Two ceilings, two jobs.
+const SPEC_BLOOM_CEILING = 1.75;
+
 // Curvature AO. `floor` is the multiplier on a fully down-facing normal:
 // undertrays, wheel wells and seat interiors darken independent of the light
 // direction, which is what gives the pale karts on Penguin Village a
@@ -336,6 +365,63 @@ const DARK_FILL = 0.05;
 // and clearly the darkest thing on the vehicle — which is the job.
 const RUBBER_CEILING = 0.055;
 
+// ---- AAA wave 5: the camera-anchored fill ----------------------------------
+//
+// THE FINDING, which two critics filed independently: "the hero kart is the
+// darkest object in Comeback City's frame". It is not a grade bug and it is not
+// fixable in the grade — it is geometry. Comeback City's sun is DOWN-TRACK, so
+// a chase camera looks at the one face of the kart the key light cannot reach,
+// and every existing term in this file makes that worse rather than better:
+//
+//   * the specular band is keyed on the half-vector H = normalize(L + V). With
+//     the sun beyond the kart, L points away from the eye, so H is degenerate
+//     and N.H is meaningless. A backlit kart cannot have a half-vector
+//     highlight. This is why three critics read 18 frames and none of them
+//     found a specular hotspot on paint — the band was not too narrow or too
+//     weak, it was structurally unable to fire on the shot the game is played
+//     in.
+//   * kartLitMask gates the band on N.L as well, which is correct and which
+//     independently zeroes it on the same face.
+//   * the curvature AO and the paint shade step both DARKEN the away-facing
+//     side, by design.
+//
+// So the rear of a Comeback City kart collects nothing but ambient. Measured on
+// wave4-r3/comeback-city-p0_78: rear paint mean rgb(83,60,67) against a
+// mid-frame mean of rgb(99,69,80) and a sky at rgb(241,108,51).
+//
+// A fill light is the standard answer and it is what this is: a low, broad,
+// view-anchored term that lands hardest where the surface faces the CAMERA.
+// Two shaping decisions make it a fill rather than an exposure lift:
+//
+//   `[0]` strength, `[1]` the N.V exponent. Above 1 so the term concentrates on
+//   the panels square to the lens and falls away on the shoulders — which is
+//   exactly the half of the body the environment probe does NOT cover (the
+//   probe is Schlick-shaped and lives on the shoulders). The two are
+//   complements on purpose: between them every facet gets one of the two, and
+//   because they peak in opposite places their SUM still has orientation
+//   structure instead of being a wash.
+//
+//   And it is gated on (1 - kartLitMask), i.e. it only fills where the key
+//   cannot reach. On a track that front-lights the kart the term is ~0 and
+//   nothing moves; on Comeback City's backlit chase it does the whole job. That
+//   gate is also what stops this becoming a second key light and drifting an
+//   owner-confirmed grade — it cannot brighten anything the sun already lit.
+//
+// It is applied as a GAIN, not as an addition, and `strength` is therefore a
+// fraction of the surface's own value rather than an absolute lift. That is not
+// a stylistic choice — measured on a backlit toon body under the Penguin
+// Village rig, the additive form of this term at the same mean lift took the
+// body's top-to-bottom value break from 60 levels to 27. Every additive term in
+// this file is metered by remaining headroom and headroom is largest where the
+// surface is darkest, so an additive fill always lands hardest on the part of
+// the body carrying the form. See the chunk for the full profile.
+//
+// Excluded from the rubber class in the chunk. Tyres stay the value anchor.
+// Headroom-metered against SPEC_CEILING like every other fill, so Penguin
+// Village's already-bright paint (measured rgb(224,40,37)) self-limits to
+// roughly a fifth of the gain the dark Comeback City rear panel collects.
+const VIEW_FILL = { exponent: 1.6, strength: 0.55 };
+
 // ---- AAA wave 4: the analytic sky probe ------------------------------------
 //
 // Per-class weight on the environment reflection injected by the kart shading
@@ -374,8 +460,33 @@ const RUBBER_CEILING = 0.055;
 // penguin-village-p0_56's blue rival is 81.7% adjacent-pixel-flat and
 // comeback-city-p0_45's rival 84.6%, i.e. essentially unmoved. The weights are
 // not the reason; `fresnelFloor` is. See below.
+//
+// AAA wave 5 — the floor fix was right and it was HALF the problem. Re-measured
+// on wave4-r3 the two bodies got worse, not better: pv-p0_56's blue rival is
+// now 97.4% adjacent-pixel-flat (its wing 97.1%) and cc-p0_45's 80.6%. Dropping
+// the floor 0.28 -> 0.09 correctly stopped the term being a flat tint, but it
+// also took ~70% of the mean contribution out with it and nothing replaced it,
+// so the reflection went from "a wash" to "not there".
+//
+// The weights are the reason now, and the arithmetic that says so is the same
+// arithmetic that says raising them is safe. That blue rival measures
+// rgb(49,50,163) — its RED and GREEN channels are at 49 and 50 out of 255, and
+// its peak channel sits around 0.42 scene-linear, so KART_HEADROOM reports 0.64
+// of the fill budget unspent on the exact body the term was written for. At
+// paint 0.22 with the 0.09 floor, a facet square to the lens collected
+// 0.22 * 0.09 * 0.64 = 1.3% of a normalised probe colour and an edge-on facet
+// 14%: a 10:1 ratio, which is the right SHAPE, applied at a magnitude nothing
+// can see.
+//
+// Raised so the shoulder actually lands (paint 0.34 puts an edge-on facet at
+// ~22% of the probe against ~2% square-on), and the headroom meter is what
+// makes that safe rather than a repeat of round 1's desaturation: the bodies
+// that were desaturating are the ones sitting near the ceiling, and they meter
+// themselves down to a sixth of what these dark rivals collect. Round 1's
+// failure was a FLOOR applied unconditionally; this is a shoulder gain applied
+// against remaining headroom, which is the opposite operation.
 const ENV_PROBE = {
-  chrome: 0.5,
+  chrome: 0.7,
   // Lower bound of the Schlick shaping, i.e. how much of the probe a facet
   // pointing STRAIGHT AT THE CAMERA still collects.
   //
@@ -401,8 +512,43 @@ const ENV_PROBE = {
   // while the mean contribution goes down — which is exactly the trade that
   // fixes flatness and desaturation at the same time.
   fresnelFloor: 0.09,
-  paint: 0.22,
-  plastic: 0.14,
+  // The sun's own image in the surface, SPLIT OUT of the ambient probe in wave
+  // 5 and given its own weights, its own fresnel floor and its own headroom
+  // meter. Through wave 4 it was one line inside `kartProbe`, which meant it
+  // inherited all three of the ambient term's settings — and every one of them
+  // is wrong for a glint:
+  //
+  //   * it took the ambient FRESNEL FLOOR (0.09). A sky reflection genuinely
+  //     should vanish on a facet square to the lens; the sun's image should
+  //     not. Multiplying the two together put the glint on a rear panel at
+  //     0.09 * 0.22 * 0.19 = 0.4% of the horizon colour — four parts in a
+  //     thousand.
+  //   * it was metered against the FILL ceiling. A glint is a highlight; it is
+  //     supposed to cross the bloom threshold. See SPEC_BLOOM_CEILING.
+  //
+  // What this does NOT fix, recorded so it is not re-argued: it is keyed on the
+  // reflection vector, and dot(reflect(-V, N), L) peaks at exactly N = H, so it
+  // is the Phong form of the cel band's own Blinn condition and it is equally
+  // dead on a fully backlit kart. Comeback City's backlit case belongs to
+  // VIEW_FILL and to the fresnel-shaped ambient probe. What the split buys is
+  // the rest of the lap, where the body has yawed away from the sun's bearing
+  // and a travelling glint is both correct and, at these weights, visible.
+  //
+  // Weighted chrome-heaviest for the same reason the ambient term is: a mirror
+  // returns the sun almost intact, paint scatters it, unpainted plastic barely
+  // holds it. `glintFloor` is high (a glint is mostly orientation-independent
+  // once it fires — the LOBE is what localises it, not the fresnel) but not 1,
+  // so an edge-on facet still catches more.
+  //
+  // Localisation comes entirely from `sunSharp`: at exponent 26 the lobe is a
+  // ~13 degree half-angle window, so this is a hot spot travelling across a
+  // cowl through a bend, not a second key light.
+  glintChrome: 0.9,
+  glintFloor: 0.5,
+  glintPaint: 0.42,
+  glintPlastic: 0.22,
+  paint: 0.34,
+  plastic: 0.18,
   // Vertical span of the probe's ground -> sky ramp, in reflected-Y.
   //
   // Was (-0.30, 0.42). A chase camera sits behind and slightly above the kart,
@@ -446,6 +592,10 @@ export const KART_SHADING_DESKTOP = Object.freeze({
   envPlastic: ENV_PROBE.plastic,
   envRamp: [ENV_PROBE.rampLo, ENV_PROBE.rampHi],
   envSunSharp: ENV_PROBE.sunSharp,
+  glintChrome: ENV_PROBE.glintChrome,
+  glintFloor: ENV_PROBE.glintFloor,
+  glintPaint: ENV_PROBE.glintPaint,
+  glintPlastic: ENV_PROBE.glintPlastic,
   paintCeiling: PAINT_SHAPE.ceiling,
   paintChroma: PAINT_CHROMA,
   paintGloss: GLOSS.paint,
@@ -458,9 +608,12 @@ export const KART_SHADING_DESKTOP = Object.freeze({
   rubberDarken: RUBBER_DARKEN,
   rubberLuminance: RUBBER_LUMINANCE,
   skyBounce: SKY_BOUNCE,
+  specBloomCeiling: SPEC_BLOOM_CEILING,
   specCeiling: SPEC_CEILING,
   specTintBlend: SPEC_TINT_BLEND,
   textureAnisotropy: HERO_TEXTURE_ANISOTROPY,
+  viewFillExponent: VIEW_FILL.exponent,
+  viewFillStrength: VIEW_FILL.strength,
 });
 
 // Phone tier. The classifier, the specular bands and the AO all stay — they
@@ -485,11 +638,24 @@ export const KART_SHADING_DESKTOP = Object.freeze({
 // flat clipped panel has no other cue left. The probe's fresnel floor and ramp
 // are not re-tiered either: they cost nothing and they are the term carrying
 // per-facet variation, which a downscale needs most.
+//
+// AAA wave 5, on the two new terms. VIEW_FILL is not re-tiered — it is a broad
+// low-frequency lift on the panels facing the lens, which is the single most
+// downscale-proof thing in the file and the term a 0.6-scale render needs most.
+// The GLINT is, and only because of a coupling: `envSunSharp` already widens
+// 26 -> 15 on mobile so a tight lobe cannot strobe between samples, and a lobe
+// spread over ~1.7x the solid angle at the desktop weight would stop reading as
+// a travelling hot spot and start reading as a second key. Paint and plastic
+// come down to hold the term's total energy roughly constant across the two
+// tiers; chrome keeps its weight because the trim it lands on is small enough
+// that even the widened lobe stays local.
 export const KART_SHADING_MOBILE = Object.freeze({
   ...KART_SHADING_DESKTOP,
   aoCrease: 0,
   chromeGloss: 34,
   envSunSharp: 15,
+  glintPaint: 0.26,
+  glintPlastic: 0.14,
   paintGloss: 8,
   textureAnisotropy: 2,
 });

@@ -526,6 +526,13 @@ uniform vec2 uGlow;
 uniform vec3 uHazeColor;
 uniform vec3 uHaze;
 uniform float uHazeBottomFade;
+#ifdef RING_SUN_WEDGE
+// x = how far the sun-facing plate rotates onto the sun's hue, y = how far the
+// anti-sun plate is knocked down in value, z = the half-width of the bearing
+// window in sun-dot.
+uniform vec3 uWedge;
+uniform vec3 uWedgeTint;
+#endif
 #ifdef RING_RIM_TAME
 // x = amount, y/z = the plate-saturation window the tame ramps across.
 uniform vec3 uRimTame;
@@ -559,6 +566,60 @@ void main() {
 	// saturation and the fringe itself sits at 0.80-0.96; the shadow bands top
 	// out around 0.55. Both Comeback City plates are 100% above 0.62, which is
 	// why this can only ever be per-track authoring and never a default.
+	// WAVE 5 — THE TAME WAS AIMED AT THE WRONG AXIS, WHICH IS WHY THREE ROUNDS
+	// OF RAISING ITS AMOUNT CHANGED NOTHING. The fringe is still in the shipped
+	// frames (gold -> lime -> magenta down a five-pixel ramp on the plate spires
+	// of penguin-village-p0_67 and -p0_15 at 3x). The round-2/3 window was
+	// measured on the DECODED PLATE, where the hairline sits at saturation
+	// 0.80-0.96 — but nothing samples the decoded plate. A 2560px image wrapped
+	// 5x onto a radius-780 ring is heavily minified, so what the frame actually
+	// samples is a MIP in which a one-texel hairline has been averaged with the
+	// ice either side of it. Measured through the sRGB decode:
+	//
+	//   painted lime (241,255,64)          saturation 0.949
+	//   the same lime, mip-averaged 50/50  saturation 0.650
+	//   the same lime, mip-averaged 25/75  saturation 0.354
+	//   plate's LEGITIMATE blue shadow band saturation 0.533
+	//
+	// The mip-averaged fringe is LESS saturated than the art the gate exists to
+	// protect. No opening on this axis can separate them — at 0.56 the 25/75
+	// texel is under the window entirely and the 50/50 texel takes a 13% chroma
+	// cut and a third of a hue rotation, and a PARTIAL rotation between two very
+	// different hues travels through the hues in between. The round-3 note
+	// identified that staircase mechanism correctly and then fed it a wider
+	// input, which is why the artefact got smoother rather than smaller.
+	//
+	// So the gate moves onto the axis the fringe actually lives on: how far the
+	// GREEN channel sits off the midpoint of red and blue, normalised by the
+	// pixel's own luminance so it is exposure-independent. Every colour on an
+	// arctic plate — ice, snow, storm sky, the sun catching a crest — lies on
+	// the blue<->amber axis, where green sits between red and blue. The painted
+	// fringe is the only thing that does not:
+	//
+	//   plate snow                          +0.009
+	//   warm sun-catch on a crest           -0.067
+	//   plate blue shadow band              +0.092
+	//   -- the window, 0.14 -> 0.30 --
+	//   lime mip-averaged 25/75             +0.250
+	//   lime mip-averaged 50/50             +0.413
+	//   painted lime                        +0.590
+	//
+	// i.e. a gap five times wider than the window sitting in it, against a
+	// saturation axis on which the two populations OVERLAP. The correction is a
+	// subtraction bounded by the excess itself, so it can only ever land a texel
+	// ON the axis and never past it — monotone, no edge anywhere in the map, and
+	// incapable of clipping. It runs BEFORE the chroma compression below so that
+	// what the compression then sees is ordinary blue<->amber chroma.
+	//
+	// POSITIVE SIDE ONLY. The plate's magenta counter-fringe measures -1.146 on
+	// this axis and would be catchable with a window around -0.55 to -0.90 (the
+	// storm violet it has to be told apart from sits at -0.299), but the warm
+	// de-sun sky this shader writes back into the plate is also negative here and
+	// the counter-fringe is much the fainter of the two artefacts. Measurement
+	// recorded rather than acted on.
+	float rimGreen = col.g - (col.r + col.b) * 0.5;
+	float rimLuma = max(dot(col, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
+	col.g -= rimGreen * smoothstep(0.14, 0.30, rimGreen / rimLuma) * uRimTame.x;
 	float rimSat = 1.0 - min(col.r, min(col.g, col.b)) / max(max(col.r, max(col.g, col.b)), 1e-4);
 	// ROUND 3 — A HUE ROTATION CANNOT REMOVE A HUE STAIRCASE, AND THAT IS WHAT
 	// SURVIVED. Round 2 mixed the fringe toward the sun's colour on a
@@ -601,11 +662,55 @@ void main() {
 	// off toward the open sky at the top. uHaze = (amount, vLo, vHi).
 	float hazeFall = mix(1.0, 0.28, smoothstep(uHaze.y, uHaze.z, vUv.y));
 	col = mix(col, uHazeColor, clamp(uHaze.x * hazeFall, 0.0, 1.0));
+	vec3 d = normalize(vWorld - cameraPosition);
+#ifdef RING_SUN_WEDGE
+	// WAVE 5 — AERIAL PERSPECTIVE HAS A BEARING, AND THE PLATE IS WHERE PENGUIN
+	// VILLAGE'S SKY ACTUALLY LIVES. Wave 4 root-caused the arctic sky as a
+	// geometry problem and fixed it, and the fix is real: measured over the nine
+	// wave4-r3 marks, the band of frame ABOVE the plate's 22.3-degree rim (rows
+	// 0-115 at 900px) now runs saturation 0.28-0.38 with R-B +14..+44 under a
+	// violet ceiling at R-B -36. That is a sunset. It is also only the top 13%
+	// of the image. Everything from the rim down — rows 115-380, which is the
+	// whole horizon, the storm bank and the far belt — is THIS PLATE, and it
+	// measured saturation 0.12-0.18 at R-B -7..+17.
+	//
+	// Worse, it measured BRIGHTER than the sky above it: mean luminance 110 in
+	// the dome band, 140 in the plate band, 150 at the belt. Comeback City runs
+	// the other way on both axes (120 / 110 / 90 at saturation 0.55-0.73), which
+	// is why one track reads as weather and the other as a lit fog bank with a
+	// coloured lid.
+	//
+	// The cause is that the ring's only atmosphere term is keyed on plate HEIGHT.
+	// Height is not a direction, so the horizon is the same colour at every
+	// compass bearing — and a horizon that is the same colour all the way round
+	// is the definition of overcast, whatever colour it is painted. It is the
+	// identical fault, one layer further out, that uCloudFront fixed on the deck.
+	//
+	// So the plate takes the axis it is missing. Toward the sun it ROTATES onto
+	// the sun's hue (skyHueMix, at the pixel's own luminance) and away from it,
+	// it loses value — one warm wedge sitting on one bearing with an anvil's
+	// shadow opposite, which is what a break in a front looks like from the
+	// ground. Both terms are gated by hazeFall, so the wedge shares the depth
+	// haze's own profile: strongest where the plate roots into the fogged
+	// ground, easing off toward the rim where the dome takes over — the plate
+	// and the dome therefore still meet at a shared colour rather than seaming.
+	//
+	// NEITHER TERM CAN CLIP, and that is deliberate rather than incidental: the
+	// hue mix is luminance-preserving with a clamped amount, and the shade term
+	// is a multiply that is <= 1 by construction. Every warm term this pair of
+	// files has shipped that was ADDITIVE measured as a desaturator or a clip
+	// (the wide sun lobe, the cloud lit-add, the aurora); there is no additive
+	// lobe here at all.
+	vec2 flatView = normalize(d.xz + vec2(1e-5, 0.0));
+	vec2 flatSun = normalize(uSunDir.xz + vec2(1e-5, 0.0));
+	float wedge = smoothstep(-uWedge.z, uWedge.z, dot(flatView, flatSun));
+	col = skyHueMix(col, uWedgeTint, clamp(wedge * uWedge.x * hazeFall, 0.0, 1.0));
+	col *= mix(1.0 - clamp(uWedge.y * hazeFall, 0.0, 0.9), 1.0, wedge);
+#endif
 	// The plate is opaque across the horizon band, so the dome's glow lobe
 	// can never reach it — the ring has to carry the same lobe itself or the
 	// haze around the sun stops at the skyline. No disc term: the disc is the
 	// dome's, and additive over a building silhouette would read as a bug.
-	vec3 d = normalize(vWorld - cameraPosition);
 	col += skySunLobes(max(dot(d, uSunDir), 0.0), uSunColor, 0.0, uGlow);
 	// The ring's lower rim co-planes with the ground plane, which showed up as
 	// a full-width tone step along the horizon. Dissolving the bottom of the
@@ -622,13 +727,23 @@ ${OUTPUT_TAIL}
 // for scene.fog. The FAR ring must always run a higher amount than the NEAR
 // one; that difference IS the depth ramp across the skyline.
 //
-// THE band[2..3] TAIL, and the same monolith constraint as the dome's glow
-// tail: the scene builder spreads `haze` into a fresh object carrying exactly
+// THE TWO TAILS, and the monolith constraint that forces them: the scene
+// builder spreads `haze` into a fresh object carrying exactly
 // { amount, band, bottomFade, color }, so a `haze.tame` key authored in a track
-// palette is dropped on the way here. `band` survives verbatim, so the de-fringe
-// rides its tail — band[2] is the amount, band[3] the saturation the ramp opens
-// at. `haze.tame` is read first and is the real interface; delete the tail when
-// the monolith forwards it.
+// palette is dropped on the way here — but `band` and `glow` both survive
+// verbatim. Each tail carries the parameters that belong beside the number
+// already at its head:
+//   band[2..3] the rim de-fringe — amount, and the saturation the ramp opens at.
+//              It rides `band` because it is a per-height plate correction and
+//              band[0..1] is the plate-height window.
+//   glow[2..5] the wave-5 sun wedge — warm rotation, anti-sun shade, the
+//              half-width of the bearing window, and the ember colour packed as
+//              a hex integer (THREE.Color takes one directly). It rides `glow`
+//              because glow[0..1] are the ring's other two SUN-BEARING terms,
+//              and putting a bearing parameter on the height tail is how the
+//              two get confused later.
+// `haze.tame` and `haze.wedge` are read first and are the real interface;
+// delete both tails when the monolith forwards the whole objects.
 export const createBackdropRingMaterial = ({
   deSun = null,
   glow = [0, 0],
@@ -647,8 +762,21 @@ export const createBackdropRingMaterial = ({
   // (which top out near 0.55) stay untouched, and it is one number to tune
   // instead of two that have to be kept in order.
   const tameFrom = tame?.from ?? 0.62;
+  const wedge = haze?.wedge
+    || (glow.length > 2 ? { color: glow[5], reach: glow[4], shade: glow[3], warm: glow[2] } : null);
+  // Comeback City authors no wedge, so the branch never compiles and its
+  // owner-confirmed Miami plate is bit-identical. Its sky is warm at EVERY
+  // bearing on purpose (measured R-B +101..+165 across all nine marks, in every
+  // band of the frame) — a boulevard at golden hour has the whole dome lit, and
+  // putting a directional break in it would be inventing weather it does not
+  // have.
+  const wedgeWarm = wedge?.warm ?? 0;
+  const wedgeShade = wedge?.shade ?? 0;
+  const defines = {};
+  if (tameAmount > 0) defines.RING_RIM_TAME = '';
+  if (wedgeWarm > 0 || wedgeShade > 0) defines.RING_SUN_WEDGE = '';
   return new THREE.ShaderMaterial({
-    defines: tameAmount > 0 ? { RING_RIM_TAME: '' } : {},
+    defines,
     depthWrite: false,
     fog: false,
     fragmentShader: RING_FRAGMENT,
@@ -676,6 +804,29 @@ export const createBackdropRingMaterial = ({
       uRimTameTint: { value: normalizedTint(skyUniforms.uSunColor.value) },
       uSunColor: skyUniforms.uSunColor,
       uSunDir: skyUniforms.uSunDir,
+      // Same normalisation and the same reason as the rim tame's tint: mixing
+      // toward `luma * tint` rotates hue and leaves brightness alone. A raw
+      // colour here would brighten the plate as well as warming it, which is
+      // the additive mistake in a different costume.
+      //
+      // THE COLOUR IS AUTHORED RATHER THAN TAKEN FROM THE SUN, and that is a
+      // measured requirement, not a preference. Replaying this exact arithmetic
+      // over the plate pixels sampled from the wave4-r3 frames: normalising the
+      // key (#ffd2a4) gives a tint whose linear min/max is 0.376, so even a
+      // FULL rotation onto it tops out at 0.62 linear saturation, which is 0.24
+      // in HSV after the sRGB encode — short of the >= 0.42 the rubric asks for
+      // however hard the amount is driven. The sun's own disc colour is a
+      // near-white by definition; the EMBER a low sun paints on a horizon is
+      // not the same colour and never was. An authored ember at 0.93 linear
+      // saturation lands the sun-facing plate near 0.49 HSV before the grade's
+      // 1.36 chroma, which clears the target with the margin the deck, the bank
+      // and the fog each take a share of.
+      uWedge: { value: new THREE.Vector3(wedgeWarm, wedgeShade, wedge?.reach ?? 0.55) },
+      uWedgeTint: {
+        value: normalizedTint(
+          wedge?.color === undefined || wedge?.color === null ? skyUniforms.uSunColor.value : wedge.color
+        ),
+      },
     },
     vertexShader: RING_VERTEX,
   });

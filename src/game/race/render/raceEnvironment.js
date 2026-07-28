@@ -55,6 +55,7 @@
 // one small cubeUV render target.
 import * as THREE from 'three';
 import { sunDirectionFrom } from './createSkyDome.js';
+import { addShaderInjection } from './toonRimShader.js';
 
 // The dome's sun lobes, re-stated in JS. These are the SAME three terms and the
 // same exponents as skySunLobes() in createSkyDome.js — if the probe used its
@@ -151,6 +152,205 @@ export const ENV_RESPONSE = Object.freeze({
 // will opt into; but nothing in it can explain a shipped pixel today, and the
 // one lever this package really does pull on the whole track is
 // `installRaceEnvironment` below.
+//
+// AAA wave 5 — the same conclusion now covers a SECOND finding filed against
+// this table. A wave-4 artefact hunter blamed `ENV_RESPONSE.ice` for the Ice
+// Racer kart rendering as "a melted glass blob" in comeback-city-p0_45. It
+// cannot be: a kart body is a MeshToonMaterial, and WebGLRenderer.js:2165 gates
+// `scene.environment` on isMeshStandardMaterial/Lambert/Phong, so no probe of
+// any strength can reach one. Measured on that exact crop, the Ice Racer's
+// shell is 63.5% adjacent-pixel-flat — the LEAST flat surface in the frame,
+// against 80.6% on the blue rival's paint, 93.7% on the white rival's body,
+// 97.6% on the road and 98.7% on the sky. Whatever is wrong with that kart, it
+// is the only object in the shot that is not suffering from a missing highlight,
+// and the fix is mesh/silhouette work, not a material clamp.
+
+// ---- AAA wave 5: analytic surface form -------------------------------------
+//
+// THE MEASUREMENT that makes this term necessary, taken across wave4-r3:
+//
+//   surface                                  adjacent-pixel flatness
+//   penguin-village-p0_56 open road          99.9%
+//   comeback-city-p0_45  open road           99.6%
+//   penguin-village-p0_9  near-clip ice wedge 97.3%   (p05 144, p50 145)
+//   penguin-village-p0_56 snow field          96.9%
+//
+// The probe installed in wave 4 was supposed to answer this and did not, and
+// the reason is arithmetic rather than tuning. `createBasicMaterial` builds
+// every one of those surfaces at metalness 0.02, so three's split-sum indirect
+// specular evaluates at the DIELECTRIC F0 of 0.04: at roughness 0.58 the DFG
+// term lands around 0.03-0.05, times a probe radiance near 0.3, times
+// ENV_SCENE_INTENSITY 0.34, gives a specular contribution on the order of 0.005
+// of linear output. There is no value of `envMapIntensity` that fixes that
+// without also multiplying the DIFFUSE wash by the same factor and moving an
+// owner-confirmed grade — the two share one scene-level intensity (see
+// ENV_SCENE_INTENSITY). The probe's real product is ambient HUE. It was never
+// going to be form.
+//
+// And form is what the rubric fails these frames for. Worse, the specific case
+// assigned to this file is the near-clip ice wedge, which is a large FLAT face:
+// one normal over hundreds of pixels, so no light value, no palette entry and
+// no hemisphere term can put a gradient on it. Exactly one quantity varies
+// across a flat face under perspective — the VIEW direction — so a grazing
+// fresnel is not merely the cheapest fix available, it is the only class of
+// term that can work at all.
+//
+// This is that term: an explicit, bounded, sky-tinted grazing sheen, injected
+// into every standard material the race builds. Zero bytes, zero draw calls,
+// no new textures, ~12 ALU on surfaces the frame is already shading.
+//
+// FOUR PROPERTIES KEEP IT FROM BECOMING AN EXPOSURE CHANGE, which is the way a
+// term like this regresses a locked grade:
+//
+//  1. GRAZING ONLY. Shaped by pow(1 - N.V, exponent) at exponent 4, so a facet
+//     square to the lens collects essentially nothing (N.V 0.8 -> 0.16% of the
+//     budget) and only the last ~25 degrees before the silhouette lights up
+//     (N.V 0.2 -> 41%, N.V 0.05 -> 81%). Most of a Comeback City frame — the
+//     building faces, the road under the kart, every prop the camera is
+//     pointed at — is untouched by construction.
+//  2. GROUND-SUPPRESSED. Up-facing surfaces keep only `groundKeep` of it. The
+//     road and the snow plain both run to the horizon, so they present a huge
+//     grazing area, and letting them take the full term would read as haze
+//     rather than as sheen — and the Comeback City road is 40% of the frame and
+//     is the surface whose grade is signed off. The masses this is FOR (the ice
+//     wedge, cliffs, mid-ground buildings, barrels, rails) are vertical.
+//  3. HUE FROM THE LIGHT RIG, not from a uniform. Hemisphere sky above,
+//     hemisphere ground below, and the key light's own colour on faces turned
+//     into it — each normalised to a max channel of 1, so this borrows the
+//     track's colour and none of its energy. It cannot invent a hue the palette
+//     did not author, which is what makes it safe on a track whose identity is
+//     the thing being protected.
+//  4. HEADROOM-METERED AND CLAMPED. Metered against remaining peak-channel
+//     headroom, so an emissive neon strip or an already-white snow face gets
+//     nothing and the term can never feed the bloom threshold; then clamped
+//     outright at `strength` per channel. That clamp is belt-and-braces today
+//     (every factor is already <= 1) and it is deliberate: the standing lesson
+//     from the road ice sheen is that a shipped additive lobe with no ceiling
+//     eventually finds a colour it can clip — that one could only clip green
+//     and blue and produced a measured (66,255,255) column.
+//
+// Chosen against the numbers above rather than by eye: the p0_9 wedge sits near
+// 0.35 scene-linear, so 0.08 at full grazing is roughly a 20% swing from the
+// face's near edge to its far one — a legible gradient on a plane that
+// currently returns p05 144 / p50 145, and well short of anything that reads as
+// a second light.
+export const SURFACE_FORM = Object.freeze({
+  // Phone tier. Lower, not off: a 0.6-scale render eats every high-frequency
+  // cue in the frame, and a low-frequency value gradient across a big face is
+  // precisely what survives a downscale — so this matters MORE on a phone, it
+  // just needs less of it to read at that pixel count.
+  desktop: 0.08,
+  exponent: 4,
+  // How much of the term an up-facing surface keeps. See property 2.
+  groundKeep: 0.28,
+  mobile: 0.06,
+});
+
+// ONE shared strength across every surface-form material, so the tier is a
+// single float write at probe-install time instead of a heuristic duplicated
+// into a helper that runs during asset load. Defaults to the desktop value so a
+// track that never installs a probe (headless harnesses, the ?skyLab controls)
+// still renders the term rather than silently losing it — this is analytic and
+// has no dependency on the probe existing.
+export const SURFACE_FORM_STRENGTH = { value: SURFACE_FORM.desktop };
+
+const SURFACE_FORM_PARS = /* glsl */ `uniform float uSurfStrength;
+uniform vec3 uSurfShape;`;
+
+// Symbols verified against the INSTALLED three r184 sources, not from memory:
+// at `#include <opaque_fragment>` meshphysical.glsl.js:216 has `outgoingLight`
+// (declared :198) in scope, `geometryNormal` / `geometryViewDir` come from
+// <lights_fragment_begin> (:186), `saturate` and `inverseTransformDirection`
+// from <common>, `viewMatrix` and `luminance()` from the renderer's fragment
+// prefix (WebGLProgram.js:780), and `hemisphereLights` / `directionalLights`
+// are declared by <lights_pars_begin> under the same NUM_*_LIGHTS guards used
+// here. `surf`-prefixed locals throughout so this can compose with any other
+// injection landing at the same anchor in the same scope.
+const SURFACE_FORM_CHUNK = /* glsl */ `
+	vec3 surfSky = vec3(0.34, 0.36, 0.54);
+	vec3 surfGround = vec3(0.09, 0.08, 0.12);
+	#if NUM_HEMI_LIGHTS > 0
+		surfSky = hemisphereLights[0].skyColor;
+		surfGround = hemisphereLights[0].groundColor;
+	#endif
+	// Hue only — normalising to a max channel of 1 leaves the whole magnitude
+	// budget inside uSurfStrength, so retuning the track's fill can never
+	// silently change how strong this is.
+	surfSky /= max(1e-4, max(surfSky.r, max(surfSky.g, surfSky.b)));
+	surfGround /= max(1e-4, max(surfGround.r, max(surfGround.g, surfGround.b)));
+	vec3 surfKeyDir = vec3(0.42, 0.72, 0.55);
+	vec3 surfKeyColor = vec3(1.0);
+	#if NUM_DIR_LIGHTS > 0
+		float surfKeyWeight = -1.0;
+		for (int surfLightIdx = 0; surfLightIdx < NUM_DIR_LIGHTS; surfLightIdx++) {
+			float surfLightLum = luminance(directionalLights[surfLightIdx].color);
+			if (surfLightLum > surfKeyWeight) {
+				surfKeyWeight = surfLightLum;
+				surfKeyDir = directionalLights[surfLightIdx].direction;
+				surfKeyColor = directionalLights[surfLightIdx].color;
+			}
+		}
+	#endif
+	surfKeyColor /= max(1e-4, max(surfKeyColor.r, max(surfKeyColor.g, surfKeyColor.b)));
+	vec3 surfWorldNormal = inverseTransformDirection(geometryNormal, viewMatrix);
+	// Two-band hemisphere, then the key's own colour on the faces turned into
+	// it. This is what gives a berg a warm sun-facing rim and a cold shadow
+	// side off ONE term — the rubric's ask for the arctic masses, and the thing
+	// no palette value can supply to a single-normal plane.
+	vec3 surfTint = mix(surfGround, surfSky, smoothstep(-0.25, 0.55, surfWorldNormal.y));
+	surfTint = mix(surfTint, surfKeyColor, 0.62 * smoothstep(-0.12, 0.7, dot(geometryNormal, normalize(surfKeyDir))));
+	// The only quantity that varies across a FLAT face under perspective.
+	float surfGraze = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), uSurfShape.x);
+	// Ground suppression: the road and the snow plain present an enormous
+	// grazing area running to the horizon, and at full weight that reads as
+	// haze rather than as a surface catching the sky.
+	surfGraze *= mix(1.0, uSurfShape.y, smoothstep(0.45, 0.9, surfWorldNormal.y));
+	// Peak channel, not luminance: a saturated or emissive surface can have one
+	// channel past 1.0 while its Rec709 luminance still reports a mid value, and
+	// a meter that misses that case is how an additive term ends up clipping the
+	// one colour it was supposed to leave alone.
+	float surfPeak = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b));
+	float surfHead = saturate((uSurfShape.z - surfPeak) / uSurfShape.z);
+	// Hard ceiling. Every factor above is already <= 1, so this cannot bind
+	// today; it is here so that it still cannot bind after someone hands
+	// surfTint an unnormalised colour. See the note above about the road sheen.
+	outgoingLight += min(surfTint * (uSurfStrength * surfGraze * surfHead), vec3(uSurfStrength));`;
+
+/**
+ * Give a standard material the analytic grazing form term.
+ *
+ * Applied by default to everything `createBasicMaterial` builds — see the block
+ * above for why that has to be a default rather than an opt-in (this package
+ * owns the helper, not the ~60 call sites that use it) and for the four
+ * properties that keep a default-on shading term from moving a locked grade.
+ *
+ * No-op on anything that is not a standard material: the toon half of the frame
+ * gets the same job done inside the kart shading chunk, where it can be weighted
+ * per material class.
+ *
+ * @param {THREE.Material} material
+ * @param {object} [opts]
+ * @param {number} [opts.ceiling] Peak-channel value the headroom meter measures
+ *        against. Matches the kart chunk's fill ceiling so a prop and a kart
+ *        stop taking fill at the same output level.
+ */
+export const applySurfaceForm = (material, { ceiling = 1.18 } = {}) => {
+  if (!material?.isMeshStandardMaterial) return material;
+  return addShaderInjection(material, {
+    fragmentAnchor: '#include <opaque_fragment>',
+    fragmentChunk: SURFACE_FORM_CHUNK,
+    fragmentPars: SURFACE_FORM_PARS,
+    name: 'surface-form-v1',
+    uniforms: {
+      uSurfShape: {
+        value: new THREE.Vector3(SURFACE_FORM.exponent, SURFACE_FORM.groundKeep, ceiling),
+      },
+      // Shared object, not a per-material value — one write retiers every
+      // surface in the scene.
+      uSurfStrength: SURFACE_FORM_STRENGTH,
+    },
+  });
+};
 
 // The installed probe, so tuneEnvResponse can be called from anywhere without
 // threading the texture through. Null until installRaceEnvironment runs, and
@@ -389,8 +589,9 @@ const applyEnvParams = (material, params) => {
  *        and the probe is a straight ambient ADD — only do that on a track
  *        whose grade is not yet locked.
  * @param {boolean}  [opts.mobile] Halves the source resolution and the scene
- *        intensity. The probe is a one-off build plus one cubeUV sampler, so
- *        the phone tier is about upload bandwidth, not per-frame cost.
+ *        intensity, and picks the surface-form tier. The probe is a one-off
+ *        build plus one cubeUV sampler, so the phone tier is about upload
+ *        bandwidth, not per-frame cost.
  * @param {object}   opts.palette  The track palette (sky / sun / sunColor /
  *        hemi / skyGlow / skyHorizonPower).
  * @param {THREE.WebGLRenderer} opts.renderer
@@ -407,6 +608,11 @@ export const installRaceEnvironment = ({
   skyStops = null,
 } = {}) => {
   const noop = { dispose: () => {}, mean: null, texture: null };
+  // Set the surface-form tier FIRST, before any early return. That term is
+  // analytic and has no dependency on the probe existing — it must still be at
+  // the right strength on a context where PMREM refuses its render targets, and
+  // on a track that installs no probe at all.
+  SURFACE_FORM_STRENGTH.value = mobile ? SURFACE_FORM.mobile : SURFACE_FORM.desktop;
   // Headless test harnesses build scenes with no renderer; a missing probe must
   // degrade to "no probe", never to a throw.
   if (!renderer || !scene) return noop;

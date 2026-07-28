@@ -537,7 +537,51 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // warmth over the plate's cool grey rows bleaches rather than warms. What
     // replaces it is backdropHaze below, which MIXES the plate toward the
     // horizon colour and therefore keeps a hue.
-    backdropGlow: [0.26, 0.08],
+    // WAVE 5 — THE [2..5] TAIL IS THE SUN WEDGE, AND IT IS THE FIX FOR THE ONE
+    // THING FOUR WAVES OF SKY WORK HAVE NOT REACHED. Measured over the nine
+    // wave4-r3 marks, in three horizontal bands of a 900px frame (the plate's
+    // 22.3-degree rim lands at row 115, the horizon near row 400):
+    //
+    //   rows            saturation   R-B        luminance
+    //   0-115  (dome)   0.28-0.38    +14..+44   87-144
+    //   115-240 (plate) 0.12-0.18     -7..+17   123-167
+    //   240-380 (belt)  0.11-0.22    -26..-2    141-162
+    //
+    // against Comeback City at 0.55-0.73 saturation, R-B +45..+165, luminance
+    // 120 / 110 / 90. Wave 4's root-cause fix WORKED — the band above the rim
+    // genuinely carries a sunset now — and that band is the top 13% of the
+    // image. The plate owns the horizon, and on the horizon this track is not
+    // merely desaturated: its LUMINANCE RUNS BACKWARDS. The frame gets brighter
+    // as it goes down where Comeback City gets darker, which is a lit fog bank
+    // with a coloured lid rather than a sunset.
+    //
+    // The cause is that the plate's only atmosphere term is keyed on plate
+    // HEIGHT, and height is not a direction — so the horizon is the same colour
+    // at every compass bearing, which is what "overcast" means whatever colour
+    // it is painted. It is the identical fault, one layer further out, that
+    // uCloudFront fixed on the cloud deck in wave 4 round 2.
+    //
+    //   [2] 0.68 — the warm rotation toward the ember, at the pixel's own
+    //     luminance (createSkyDome.js RING_SUN_WEDGE; the mix is
+    //     luminance-preserving and clamped, so it cannot bleach or clip).
+    //   [3] 0.34 — the anvil's shade side. Replayed over the plate pixels
+    //     actually sampled from the wave4-r3 frames, this takes the anti-sun
+    //     horizon from luminance 146 to ~100, i.e. under the dome band above it
+    //     — the ordering Comeback City already has and this track never has.
+    //   [4] 0.55 — the half-width in sun-dot. Full ember within ~57 degrees of
+    //     bearing 195, full anvil past ~124, a smooth ramp between. Wider is a
+    //     tint on the whole horizon, which is the wave-3 storm-bank mistake;
+    //     much narrower is a spotlight.
+    //   [5] 0xd0703c — the ember, and it is deliberately NOT the sun colour.
+    //     Normalising #ffd2a4 gives a tint at 0.376 linear min/max, so even a
+    //     full rotation onto it tops out at 0.24 HSV saturation — the sun's
+    //     DISC is a near-white by definition and the ember a low sun paints on
+    //     a horizon is a different colour. This one is 0.93 linear saturated and
+    //     lands the sun-facing plate near 0.49 HSV before the grade's 1.36
+    //     chroma. Hot enough to be a sunset and no hotter: the failure mode this
+    //     track has walked into twice is a field of tan desert cones, and the
+    //     wedge is confined to the backdrop plate, which lights nothing.
+    backdropGlow: [0.26, 0.08, 0.68, 0.34, 0.55, 0xd0703c],
     // Aerial perspective for the fog-exempt backdrop rings. The haze colour is
     // DARKER than the plate on purpose: the audit's blind judge found the snow
     // and the storm sky sitting in the same value band around the horizon, so
@@ -606,7 +650,53 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // a 0.96-saturated fringe texel comes out at 0.63 instead of 0.65, and the
     // opening moves down to just above the plate's legitimate 0.55 shadow bands
     // so the fringe's own soft shoulder is caught with its core.
-    backdropHaze: { band: [0.28, 0.86, 0.93, 0.56], bottomFade: 0.18, color: '#b58a6e', far: 0.24, near: 0.11 },
+    //
+    // WAVE 5 — THE HAZE COLOUR, AND THE band[4..6] WEDGE. Measured over the nine
+    // wave4-r3 marks, in three horizontal bands of a 900px frame (the plate's
+    // 22.3-degree rim lands at row 115 and the horizon near row 400):
+    //
+    //   rows            saturation   R-B        luminance   what is drawn there
+    //   0-115  (dome)   0.28-0.38    +14..+44   87-144      wave 4's fixed sky
+    //   115-240 (plate) 0.12-0.18     -7..+17   123-167     THIS
+    //   240-380 (belt)  0.11-0.22    -26..-2    141-162     plate + far bergs
+    //
+    // Comeback City's own three bands, for scale: 0.55-0.73 saturation, R-B
+    // +45..+165, luminance 120 / 110 / 90.
+    //
+    // Two readings, and the second is the one four waves have not stated.
+    // First: wave 4's root-cause fix WORKED — the band above the plate's rim
+    // genuinely carries a sunset now, and nothing in this package should undo
+    // it. Second: that band is the top 13% of the frame. The plate owns the
+    // horizon, and on the horizon Penguin Village is not merely desaturated,
+    // its luminance runs BACKWARDS — the image gets brighter as it goes down,
+    // where Comeback City gets darker. A sky dimmer and more colourful than the
+    // ground under it is not a sunset; it is a lit fog bank with a coloured lid,
+    // and that is what every critic has been describing since wave 1.
+    //
+    // So the colour goes from #b58a6e (a tan, luma 0.66) to #6f6a8e (a bruised
+    // storm slate, luma 0.44), and the amounts come back up. #b58a6e was chosen
+    // in wave 4 to match a predicted low-sky "hue 32-42 / value 0.89-0.95" — the
+    // measurement above is what that prediction actually shipped as, and a warm
+    // tan hazing a plate that is already too bright can only make the horizon
+    // brighter and blander. A haze DARKER than the plate is also the "snow must
+    // sit under the sky" rule this line has restated for four waves, applied for
+    // the first time to a plate that had drifted above it.
+    //
+    // The BEARING half of the same finding rides backdropGlow[2..5] above — see
+    // that note. This line is only the bearing-blind half: what the plate does
+    // at every compass point before the wedge tells it which way it is facing.
+    //
+    // band[2..3] is unchanged and is still the rim de-fringe. Its opening was
+    // re-measured this round and the AXIS it gates on has changed in
+    // createSkyDome.js; the two numbers here are still the right ones for what
+    // is left of the artefact after that.
+    backdropHaze: {
+      band: [0.28, 0.86, 0.93, 0.56],
+      bottomFade: 0.18,
+      color: '#6f6a8e',
+      far: 0.3,
+      near: 0.14,
+    },
     // Icebergs collapsed into one white value under the old 4-band ramp; the
     // 5-band set keeps a readable step between the two lit bands where all
     // the arctic geometry sits, and the deeper floor (40, not 64) is what
@@ -797,7 +887,32 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // the same ring takes 27%, the near-to-far ramp the colour note below
     // exists for survives (2% at 100 units, 14% at 300, 46% at 600), and the
     // far belt keeps a silhouette against the sky. Colour unchanged.
-    fog: { color: '#bfa08c', density: 0.0013, near: 230, far: 820 },
+    // WAVE 5 — #bfa08c -> #9c8b9e, AND THIS IS THE TRACK'S LARGEST TAN SOURCE.
+    // The rule this line keeps restating is right: fog hazes toward the sky a
+    // surface recedes into. It has now been applied twice to a PREDICTED sky.
+    // Wave 4 set a tan because the low sky was predicted at "hue 32-42, value
+    // 0.89-0.95"; measured on the frames it shipped as, that band is saturation
+    // 0.12-0.18 at R-B -7..+17 — near-neutral, and about to become a bruised
+    // storm slate now that the plate carries a wedge and the bank carries body.
+    //
+    // The consequence of the tan is not subtle and it is not confined to the
+    // sky. FogExp2 is a bearing-blind, colour-only stage: at 0.0013 it takes 14%
+    // by 300 units and 46% by 600, so a warm tan is mixed into the far snow
+    // plain, every mid-ground berg and the whole belt at once — and "the arctic
+    // is a field of tan desert cones / three of my eighteen frames read as a
+    // desert" is the finding that has survived every wave in which this colour
+    // was warm. The belt's own coolClamp (createMidGroundBelt.js) exists purely
+    // to subtract warmth that arrives after lighting; fog arrives after the
+    // clamp, so no clamp can reach it.
+    //
+    // #9c8b9e is a bruised mauve: R-B -2, i.e. it sits BETWEEN the wedge's warm
+    // bearing and its cold one, which is what a bearing-blind stage should be
+    // when the thing it approximates has a direction. It is also 12% darker in
+    // Rec.709 luma than #bfa08c, which is the half of "the frame gets brighter
+    // as it goes down" that the fog owns. Density and range unchanged: the
+    // near-to-far ramp is not the fault and re-tuning it would move the belt's
+    // measured lit/shade split, which is not this round's business.
+    fog: { color: '#9c8b9e', density: 0.0013, near: 230, far: 820 },
     // Fill UN-inverted. Round 2 put warm cream in the sky term to buy chroma,
     // and it worked in exactly the wrong direction: a HemisphereLight's sky
     // colour lands on every UP-FACING surface, so the warm term went onto the

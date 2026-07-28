@@ -122,6 +122,18 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
     // chroma to move through and not just value.
     ground: {
       base: '#152b33',
+      // AAA wave 5 (c). The ground plane now derives real surface normals from
+      // a height field (see the relief block in addTrack); this is Comeback
+      // City's half of that, tuned DOWN from the default because the two tracks
+      // are not the same landform. Penguin Village is an open snow field where
+      // wind drifts are the whole read; this is a city verge — kerbed shoulders,
+      // service roads and plaza edges — which is flatter by nature, and the
+      // owner-confirmed Miami dusk grade is calibrated on the values this
+      // surface currently returns. 21 keeps a mean face tilt of ~4.5 degrees:
+      // enough that the warm key finds a terminator on the infield instead of
+      // returning one constant, not so much that the verge starts reading as
+      // dunes beside a boulevard.
+      relief: { displace: 0.22, normalAmplitude: 21 },
       repeat: 38,
       speckles: [
         { color: '#255049', count: 420, size: 3.4 },
