@@ -26,6 +26,37 @@
 // Zero new asset bytes: the gradient is the existing makeSkyTexture canvas
 // read as a 1D elevation LUT, and the cloud noise is generated procedurally
 // at scene build.
+//
+// WAVE 4 — WHY TWO WAVES OF "PUT A SUNSET IN PENGUIN VILLAGE" NEVER REACHED
+// THE SKY. Both previous attempts authored warm stops into the track's
+// elevation LUT and both measured no change in the frames. The cause is
+// geometric and it is worth writing down, because it is invisible from the
+// palette:
+//
+//   * the far backdrop ring is radius 780, height 380, centred at y 140, so
+//     its rim sits at atan(320 / 780) = 22.3 degrees, and the plate's own
+//     alpha channel is 0 at that rim and reaches 255 by 12 degrees (decoded
+//     from pv-far.webp: alpha 0 / 73 / 146 / 219 / 255 down the first 40% of
+//     the image). Below ~12 degrees the dome is not visible AT ALL.
+//   * the chase camera runs a 76-degree vertical FOV pitched ~6 degrees down,
+//     so a 900px frame spans roughly -44 to +32 degrees and the sky the player
+//     sees is the band from 20 to 34 degrees.
+//   * with Penguin Village's horizonPower of 1.7 that band samples LUT offsets
+//     0.63 to 0.84. Every warm stop the last two waves authored lived at 0.86
+//     to 1.00, i.e. between 0 and 13 degrees of elevation — entirely behind
+//     an opaque painted plate. The sunset was real; nothing could see it.
+//   * and the cloud deck's coverage mask, smoothstep(0.09, 0.30, d.y), is
+//     fully closed above 17.5 degrees, so 100% of the visible band was deck
+//     BODY COLOUR. penguin-village-p0_15 samples rgb(125,127,160) at the top
+//     of frame against a deck authored #7d7ba0 = rgb(125,123,160). The sky
+//     was not a gradient at all. It was one uniform.
+//
+// So wave 4 does two things here, both zero-cost: the deck's coverage now
+// THICKENS with elevation (uCloudDeck) instead of closing over the whole
+// visible band, and the deck carries a warm base / cold top pair (uCloudTone)
+// with a hue-preserving sun-side mix (uCloudMix.x) instead of an additive
+// highlight that turned violet into grey. The elevation ladder itself is the
+// track's (penguinVillage.js), re-authored against the angles above.
 import * as THREE from 'three';
 
 // Azimuth 0 = +Z, 90 = +X (the convention the track palettes are authored
@@ -145,8 +176,16 @@ uniform float uHorizonPower;
 #ifdef SKY_CLOUDS
 uniform sampler2D uCloudNoise;
 uniform vec3 uCloudColor;
+uniform vec3 uCloudBaseColor;
 uniform vec3 uCloudLitColor;
 uniform vec2 uCloudBand;
+uniform vec2 uCloudDeck;
+uniform vec2 uCloudLowDeck;
+uniform vec2 uCloudTone;
+// x = how much of the deck's BODY colour the sun side replaces (a mix), y =
+// the legacy ADDITIVE lit term. See the deck block below for why the two are
+// separate knobs rather than one.
+uniform vec2 uCloudMix;
 uniform float uCloudScale;
 uniform float uCloudStrength;
 uniform float uTime;
@@ -179,12 +218,47 @@ void main() {
 	// The fbm taps sit at mean 0.52 with sigma ~0.10, so the coverage band has
 	// to straddle that or the deck simply never appears. The low deck runs a
 	// tighter band so it stays scattered against the high deck's ceiling.
-	float cHigh = smoothstep(uCloudBand.x, uCloudBand.y, high) * smoothstep(0.09, 0.30, d.y);
-	float cLow = smoothstep(uCloudBand.x + 0.07, uCloudBand.y + 0.11, low) * smoothstep(0.20, 0.50, d.y);
-	col = mix(col, uCloudColor, cHigh * uCloudStrength * 0.78);
-	col = mix(col, uCloudColor * 1.07, cLow * uCloudStrength);
+	// COVERAGE IS ELEVATION-KEYED, and on Penguin Village that is the whole
+	// difference between a front and a lid. The old mask was
+	// smoothstep(0.09, 0.30, d.y), i.e. FULLY closed above 17.5 degrees — and
+	// the band the chase camera actually frames above the backdrop plate's rim
+	// starts at 22.3 degrees. So every visible sky pixel was 100% deck, the
+	// dome's own elevation ramp was never on screen, and the measured sky was
+	// simply the deck's body colour (sampled rgb(125,127,160) against a body
+	// authored #7d7ba0 = rgb(125,123,160)). uCloudDeck moves the mask's upper
+	// edge INTO the visible band so the deck thickens with height: thin over
+	// the horizon break, closed over the ceiling.
+	float cHigh = smoothstep(uCloudBand.x, uCloudBand.y, high) * smoothstep(uCloudDeck.x, uCloudDeck.y, d.y);
+	float cLow = smoothstep(uCloudBand.x + 0.07, uCloudBand.y + 0.11, low) * smoothstep(uCloudLowDeck.x, uCloudLowDeck.y, d.y);
+	// TWO BODY COLOURS, not one. A cloud base over a low sun is lit from
+	// underneath and a cloud top is not, so a deck painted in one colour can
+	// only ever be an overcast — which is the word all three wave-3 critics
+	// used for this sky. uCloudTone ramps base -> top with elevation.
+#ifdef SKY_CLOUD_TONE
+	float deckTone = smoothstep(uCloudTone.x, uCloudTone.y, d.y);
+	vec3 deckBody = mix(uCloudBaseColor, uCloudColor, deckTone);
+#else
+	// A track that authors one body colour compiles to exactly the pre-wave-4
+	// shader here — no tone ramp, no second colour, no extra ALU.
+	float deckTone = 0.0;
+	vec3 deckBody = uCloudColor;
+#endif
+#ifdef SKY_CLOUD_MIX
+	// Sun-side warmth as a MIX rather than an addition. Adding a warm lobe on
+	// top of a violet deck is what collapsed the hue: measured, the shipped
+	// sky's saturation fell to 0.02-0.10 with an UNDEFINED hue, because
+	// violet + additive amber is grey. A mix rotates the deck toward the warm
+	// colour instead of bleaching it, and the (1 - tone) factor keeps it on the
+	// bases where the light physically reaches.
+	deckBody = mix(deckBody, uCloudLitColor, min(1.0, pow(sd, 3.0) * uCloudMix.x * (1.0 - deckTone * 0.65)));
+#endif
+	col = mix(col, deckBody, cHigh * uCloudStrength * 0.78);
+	col = mix(col, deckBody * 1.07, cLow * uCloudStrength);
 	// Lit undersides: the cloud edge facing the sun is what sells the hour.
-	col += uCloudLitColor * ((cHigh + cLow) * pow(sd, 4.0) * 0.4);
+	// Comeback City still runs this (uCloudMix.y = 0.4) because its deck body
+	// IS the warm colour, so an additive highlight reads as a hotter cloud
+	// rather than as a bleach. Penguin Village authors 0 and uses the mix above.
+	col += uCloudLitColor * ((cHigh + cLow) * pow(sd, 4.0) * uCloudMix.y);
 #endif
 	gl_FragColor = vec4(col, 1.0);
 ${OUTPUT_TAIL}
@@ -201,16 +275,35 @@ export const createSkyDome = ({ clouds = null, horizonPower = 2.6, glow = [0.3, 
     uSunDir: skyUniforms.uSunDir,
   };
   if (clouds) {
+    // Every default below reproduces the pre-wave-4 shader EXACTLY, so a track
+    // that authors only { band, color, litColor, scale, strength } — which is
+    // Comeback City — renders bit-identically: baseColor falls back to color
+    // (so the base/top mix is a no-op), the deck ramps are the old literals,
+    // litMix is 0 (so the body mix is a no-op) and litAdd is the old 0.4.
     uniforms.uCloudBand = { value: new THREE.Vector2(clouds.band?.[0] ?? 0.46, clouds.band?.[1] ?? 0.64) };
+    uniforms.uCloudBaseColor = { value: new THREE.Color(clouds.baseColor || clouds.color || '#ff9a5e') };
     uniforms.uCloudColor = { value: new THREE.Color(clouds.color || '#ff9a5e') };
+    uniforms.uCloudDeck = { value: new THREE.Vector2(clouds.deck?.[0] ?? 0.09, clouds.deck?.[1] ?? 0.3) };
     uniforms.uCloudLitColor = { value: new THREE.Color(clouds.litColor || '#ffd9a0') };
+    uniforms.uCloudLowDeck = { value: new THREE.Vector2(clouds.lowDeck?.[0] ?? 0.2, clouds.lowDeck?.[1] ?? 0.5) };
+    uniforms.uCloudMix = { value: new THREE.Vector2(clouds.litMix ?? 0, clouds.litAdd ?? 0.4) };
     uniforms.uCloudNoise = { value: getCloudNoise() };
     uniforms.uCloudScale = { value: clouds.scale ?? 0.65 };
     uniforms.uCloudStrength = { value: clouds.strength ?? 0.55 };
+    uniforms.uCloudTone = { value: new THREE.Vector2(clouds.tone?.[0] ?? 0, clouds.tone?.[1] ?? 1) };
     uniforms.uTime = { value: 0 };
   }
+  // Defines, not runtime branches: a track that authors one body colour and no
+  // sun-side mix (Comeback City) compiles to the pre-wave-4 shader exactly, so
+  // its measurably-correct sky cannot drift by so much as a rounding step.
+  const defines = {};
+  if (clouds) {
+    defines.SKY_CLOUDS = '';
+    if (clouds.baseColor && clouds.baseColor !== clouds.color) defines.SKY_CLOUD_TONE = '';
+    if ((clouds.litMix ?? 0) > 0) defines.SKY_CLOUD_MIX = '';
+  }
   const material = new THREE.ShaderMaterial({
-    defines: clouds ? { SKY_CLOUDS: '' } : {},
+    defines,
     // depthTest stays ON and the dome renders LAST in the opaque queue. It
     // used to run first with the test off, which meant this shader — two
     // texture taps, three sun lobes and two cloud decks — was evaluated for

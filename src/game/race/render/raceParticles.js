@@ -2,7 +2,8 @@
 // docs/GRAPHICS_CEILING_RAISE_PLAN.md — that approval formally supersedes the
 // crisis-era "no particle systems" scope rule).
 //
-// Budget contract: FOUR added draw calls total, everything pooled up front —
+// Budget contract: FIVE added draw calls total (four on Comeback City),
+// everything pooled up front —
 //   1. surface particles ONE InstancedMesh (208 quads, 96 on mobile) shared by
 //                       the drift spray, the rolling-contact wash and plume,
 //                       the landing puff and the ground shockwave rings
@@ -16,7 +17,18 @@
 //   4. boost speed-lines ONE full-screen NDC quad + fragment shader (a polar
 //                       streak field; the pixels do all the work, so there is
 //                       no geometry to spin and nothing to occlude the kart)
+//   5. storm snow       ONE InstancedMesh, PENGUIN VILLAGE ONLY (154 quads, 70
+//                       on mobile) — the wind-driven near-field layer of the
+//                       arctic storm. See the storm-snow contract below.
 // Adding a cue means adding an emitter into one of these pools, never a mesh.
+//
+// Attribution (wave 4): the ambient snow CLOUD filling the arctic sky is NOT
+// this module. It is a THREE.Points system built in the monolith
+// (ComebackCityThreeKartRace.jsx, the `G2 snowfall` block) at size 1.15 with
+// sizeAttenuation, which is what balloons a near flake into the ~45 px opaque
+// disc the critics keep logging; it also falls straight down at a fixed rate.
+// This module cannot clamp it from here. What it CAN do is own the layer that
+// cloud has never had — see the storm-snow contract below.
 //
 // Sync contract: one-shot bursts fire off the SAME pure cue derivation the
 // race audio uses (kartAudio.cuesForTransition) — the caller feeds cues in,
@@ -43,8 +55,30 @@
 // for smoke). Every one of those terms is 1 or 0 on Comeback City, which is
 // measurably correct today and must not move.
 //
-// reducedMotion: speed-lines, ice glints and idle exhaust hide entirely (all
-// decorative), spray/sparks/boost-exhaust halve (gameplay-critical tier and
+// Storm-snow contract (wave 4): Penguin Village's brief is a SUNSET STORM
+// FRONT, and the only weather in the build is a cloud of identical white discs
+// falling straight down. Three properties separate driven snow from falling
+// snow, and none of them were present:
+//   WIND      a shared horizontal drift plus a per-flake gust phase, so the
+//             field has a direction and a bit of turbulence. A vertical fall
+//             is calm weather no matter how much of it there is.
+//   DEPTH     two shells at fixed distance bands from the camera, each with its
+//             own world size and its own value. Near flakes are SMALLER in
+//             world units, not larger, so the layer that is closest to the lens
+//             is the one that can least become a disc.
+//   STREAK    every flake is stretched along its own true screen velocity for a
+//             fixed shutter interval, which at racing speed turns the near
+//             shell into hairlines and leaves the far shell as specks. That
+//             velocity gradient IS the storm; it is also what makes the
+//             ambient cloud's round dots read as the far distance rather than
+//             as the whole of the weather.
+// The shells wrap in a box carried by the CAMERA, but the flakes themselves
+// move in world space, so parallax is real and nothing is glued to the lens.
+// Nothing here fades to zero over a lifetime — a flake is retired only when the
+// box edge passes it, at a distance where it is a fraction of a pixel.
+//
+// reducedMotion: storm snow, speed-lines, ice glints and idle exhaust hide
+// entirely (all decorative), spray/sparks/boost-exhaust halve (gameplay-critical tier and
 // boost feedback stays readable), the contact wash drops to 0.4 rather than
 // zero — after this wave it is the only thing telling the player what they are
 // driving on, which is information and not ambience — and one-shot bursts keep
@@ -79,7 +113,14 @@ const CRYSTAL_TINT = new THREE.Color('#F4FDFF');
 //           is tyre smoke and not ground at all. Deliberately 0 for off-road:
 //           dirt keeps its own colour on Comeback City, and the arctic floor
 //           below still forces it white on Penguin Village.
-//   glint   sun-sparkle rate on the surface itself (ice only).
+//   glint   sun-sparkle rate on the surface itself. Every FROZEN look carries
+//           one now, not just the polished `ice` band: Penguin Village's bands
+//           call 82% of the lap 'asphalt', so gating the sparkle on the one
+//           band that names itself ice meant the cue fired over about a sixth
+//           of the track and the rest of the arctic surface had no specular
+//           behaviour at all. Zero on every Comeback City look — that track has
+//           no surfaceBands at all, so it resolves to `asphalt`/`offroad` and
+//           can never reach these.
 //   tint    the surface's own colour.
 //   linger  multiplier on how long a displaced puff survives. Tyre smoke is
 //           shear-torn and gone; powder hangs in the air behind the kart. All
@@ -119,7 +160,7 @@ const SURFACE_LOOK = {
   // track gets out of the trade is the right thing — the same amount of
   // material on screen, hanging for half again as long.
   arcticTarmac: {
-    crystal: 0.7, density: 1.2, gate: 0.44, grow: 1.2, lift: 0.44, linger: 1.25, powder: 1,
+    crystal: 0.7, density: 1.2, gate: 0.44, glint: 0.45, grow: 1.2, lift: 0.44, linger: 1.25, powder: 1,
     tint: '#EAF6FF', value: 1.5,
   },
   // Tracks dry tarmac up, and a little past it: the kart is putting its hardest
@@ -130,11 +171,11 @@ const SURFACE_LOOK = {
     tint: '#DCEEFF', value: 1.35,
   },
   snow: {
-    crystal: 1, density: 1.5, gate: 0.3, grow: 1.4, lift: 0.55, linger: 1.35, powder: 1,
+    crystal: 1, density: 1.5, gate: 0.3, glint: 0.55, grow: 1.4, lift: 0.55, linger: 1.35, powder: 1,
     tint: '#F4FBFF', value: 1.6,
   },
   slipZone: {
-    crystal: 0.8, density: 1.2, gate: 0.42, grow: 1.25, lift: 0.45, linger: 1.2, powder: 0.8,
+    crystal: 0.8, density: 1.2, gate: 0.42, glint: 0.7, grow: 1.25, lift: 0.45, linger: 1.2, powder: 0.8,
     tint: '#CBD8E6', value: 1.3,
   },
   offroad: { crystal: 0, density: 1.8, gate: 0.2, grow: 1.7, lift: 0.5, linger: 1.1, powder: 0, tint: '#8E7A5E', value: 1 },
@@ -145,7 +186,7 @@ const SURFACE_LOOK = {
   // rubric critic could find "no distinct off-road plume when a kart touches
   // the snow verge". Deep snow throws MORE, throws it HIGHER, and it hangs.
   arcticOffroad: {
-    crystal: 1.1, density: 1.7, gate: 0.15, grow: 1.8, lift: 0.62, linger: 1.4, powder: 1,
+    crystal: 1.1, density: 1.7, gate: 0.15, glint: 0.4, grow: 1.8, lift: 0.62, linger: 1.4, powder: 1,
     tint: '#F4FBFF', value: 1.7,
   },
 };
@@ -265,6 +306,25 @@ const FLAT_PROX_FADE_FULL = 4.5;
 // slips through the fade window still cannot spike into a frame-filling blob.
 // 0.11 is roughly 77 px tall at 900 p on the 60-65 degree chase fov.
 const MAX_SPRITE_ANGLE = 0.11;
+// Per-emitter angular ceilings, in the same units as MAX_SPRITE_ANGLE.
+//
+// The burst pool used to derive its cap from the sprite's authored size
+// (`min(1, size * 0.6)`), which for a 0.5-unit drift spark works out at 0.033
+// rad — 23 px wide at 900 p. A 23 px-wide additive sprite with a bright core is
+// a LOZENGE however far you stretch it, and eight of them scattered behind the
+// kart is exactly what the critics have now logged three waves running
+// (comeback-city-p0_33, still present in wave3-r3). Width is the whole defect:
+// a spark reads as a spark when it is a hairline that happens to be long.
+//
+// These are hard ceilings, not sizes — a sprite further away is still drawn at
+// its authored world size. They only bite once the camera has closed on it,
+// which is precisely the frame in which it would otherwise become an object.
+const SPARK_MAX_ANGLE = 0.011;
+const CRYSTAL_MAX_ANGLE = 0.009;
+// The glint's cap governs its SHORT axis; `aspect` then multiplies the long one
+// by up to ~5.8, so the ceiling on the flash as a whole is ~0.07 rad before the
+// road's foreshortening takes most of that back.
+const GLINT_MAX_ANGLE = 0.012;
 // ...and a floor. Below about a pixel a soft additive sprite cannot resolve as
 // anything except a twinkling speck, which at fifty of them across the far
 // road is indistinguishable from sensor noise — and reads as debris for the
@@ -296,6 +356,47 @@ const ICE_GROUND_POWDER = 0.92;
 // Below a hop's worth of air there is nothing to displace; a puff on every
 // kerb bump would be constant noise.
 const LANDING_MIN_DROP = 1.2;
+
+// Storm snow. Two shells, both wrapped in a box carried by the camera.
+//
+//   half     half-extents of that wrap box, in world units. A flake leaving it
+//            is teleported to the opposite face; the FAR box is deliberately
+//            deep enough that the teleport lands at a distance where the flake
+//            subtends well under a pixel, so the wrap is never a pop.
+//   count    flakes in the shell (desktop; the mobile tier scales these).
+//   size     world width of one flake. The NEAR shell is the smaller of the two
+//            — it is the one the lens gets closest to, so it is the one that
+//            must never be able to balloon.
+//   tint     multiplied into the white base through instanceColor. Set once at
+//            build time and never touched again: a flake stays in its own
+//            distance band for its whole life, so its value never has to move.
+//   shutter  seconds of motion each flake is smeared over. Length is
+//            |velocity relative to the camera| * shutter, so the streaking is
+//            an outcome of the kart's speed rather than a hand-tuned number,
+//            and a parked kart in the pre-race camera gets specks, not lines.
+const SNOW_SHELLS = [
+  { count: 118, half: [70, 34, 78], name: 'far', shutter: 0.0035, size: 0.3, tint: '#B9CFE4' },
+  { count: 36, half: [15, 9.5, 17], name: 'near', shutter: 0.0065, size: 0.11, tint: '#FAFDFF' },
+];
+// Shared horizontal drift. A storm front has a BEARING; this is it. Magnitude
+// is deliberately a fair fraction of the fall rate so the flakes come down at a
+// visible slant even from a standing start, which is the one framing where the
+// camera's own motion cannot supply the slant for free.
+const SNOW_WIND = new THREE.Vector3(-14, 0, 6.5);
+const SNOW_FALL = -8.5;
+// Per-flake gust: a slow lateral wander so the field is turbulent rather than a
+// rigid sheet sliding sideways. Cheap — one sine per flake per frame.
+const SNOW_GUST = 5.5;
+const SNOW_GUST_RATE = 0.9;
+// Hard screen ceiling, tighter than anything else in the module. Nothing in the
+// weather may EVER become a disc: this is the defect the ambient Points cloud
+// in the monolith exhibits, and the whole point of this layer is to be the
+// counter-example rather than a second instance of it.
+const SNOW_MAX_ANGLE = 0.006;
+// Both ends of the visibility window. Inside SNOW_NEAR_FADE a flake is at the
+// lens and swipes across the whole frame; the outer ramp hides the wrap.
+const SNOW_NEAR_FADE = 1.6;
+const SNOW_EDGE_FADE = 0.24;
 
 // Speed-line exclusion ellipse, in WORLD units around the kart. It used to be
 // a constant uv radius tuned at one boom length, which is only correct at that
@@ -625,11 +726,25 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     gravity: SPRAY_GRAVITY,
     life: 0,
     position: new THREE.Vector3(),
+    // Per-particle silhouette roll, applied on top of the velocity roll and
+    // weighted out as the sprite stretches (see the update loop). The puff
+    // texture is five asymmetric lobes: without this, every unstretched puff in
+    // the frame shows the SAME lobe pattern at the SAME angle, which is how a
+    // dozen soft puffs resolve into a row of identical stamped shapes — the
+    // "evenly spaced and identically sized" read the critics keep logging.
+    roll: 0,
     sizeEnd: 0.45,
     sizeStart: 1.4,
     spin: 0,
     spinRate: 0,
     stretch: 1,
+    // Per-particle ceiling on how long the screen-velocity smear may make this
+    // sprite. It has to be per-particle: the smear term saturates its cap at
+    // anything above about 40 km/h, so a shared ceiling means every sprite in
+    // the frame lands on EXACTLY the same length-to-width ratio — which is the
+    // measurable half of "evenly spaced and identically sized". Jittering the
+    // ceiling is what gives a trail a distribution of shapes for free.
+    stretchMax: 2.4,
     tint: new THREE.Color(),
     ttl: 0,
     velocity: new THREE.Vector3(),
@@ -653,9 +768,14 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   // Banked at pickup so the muzzle flash on `item-use` is the colour of the
   // item that just left — by then the runtime has already cleared it.
   let lastItemTint = DEFAULT_ITEM_TINT;
+  // Assigned here rather than in each emitter so no spawner can forget it: a
+  // silhouette that is identical across the field is the failure mode, and it
+  // costs one random per particle to make it impossible.
   const nextSpray = () => {
     const item = sprayPool[sprayCursor];
     sprayCursor = (sprayCursor + 1) % sprayCount;
+    item.roll = Math.random() * Math.PI * 2;
+    item.stretchMax = 1.5 + Math.random() * 1.8;
     return item;
   };
 
@@ -742,12 +862,29 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   // jitter (0 = steady, which is what every other emitter wants). stretchMax is
   // the per-particle length ceiling described above.
   const burstPool = Array.from({ length: burstCount }, () => ({
+    // Length-to-width ratio for a `flat` sprite. A specular flash on a frozen
+    // surface is anisotropic — that is what makes it read as light caught by a
+    // facet rather than as a bead sitting on top of the road.
+    aspect: 1,
     brightness: 1,
+    // Ground-aligned instead of camera-facing, for the same reason the wash is
+    // (see the grounding contract at the top of the file).
+    flat: false,
     flicker: 0,
     gravity: -7.5,
     life: 0,
+    // Per-particle multiplier on stretchMax, for the same reason the spray pool
+    // carries a jittered ceiling: the smear saturates, so without it every
+    // sprite an emitter throws lands on one identical aspect ratio.
+    lengthJitter: 1,
+    // Hard angular ceiling, or 0 to use the size-derived default. See the
+    // SPARK/CRYSTAL/GLINT constants.
+    maxAngle: 0,
     position: new THREE.Vector3(),
+    roll: 0,
     size: 1,
+    // Ground yaw, for `flat` sprites only.
+    spin: 0,
     stretch: 0,
     stretchMax: BURST_STRETCH_MAX,
     tint: new THREE.Color(),
@@ -758,9 +895,17 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   let sparkAccumulator = 0;
   let flameAccumulator = 0;
   const sparkTint = new THREE.Color();
+  // The three fields a recycled slot must NOT inherit — a coin sparkle landing
+  // in a slot the ice glint last used would otherwise be drawn as a flat
+  // elongated sliver lying on the road.
   const nextBurst = () => {
     const item = burstPool[burstCursor];
     burstCursor = (burstCursor + 1) % burstCount;
+    item.aspect = 1;
+    item.flat = false;
+    item.lengthJitter = 0.62 + Math.random() * 0.5;
+    item.maxAngle = 0;
+    item.roll = Math.random() * Math.PI * 2;
     return item;
   };
 
@@ -858,6 +1003,135 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   // Shared animation clock for anything that has to wobble independently of
   // its own lifetime. Wrapped so the phase keeps float precision over a race.
   let clock = 0;
+
+  // -- 5. Storm snow (Penguin Village only) ---------------------------------
+  // Built only on the arctic track, so Comeback City's draw-call count and its
+  // measured-correct neon dusk are both untouched by this system existing.
+  const snowShells = isIce
+    ? SNOW_SHELLS.map((shell) => ({ ...shell, count: Math.max(8, Math.round(shell.count * (mobile ? 0.45 : 1))) }))
+    : [];
+  const snowCount = snowShells.reduce((total, shell) => total + shell.count, 0);
+  const snowMesh = snowCount
+    ? makeBillboardPool(snowCount, {
+        // NORMAL, not additive, and it is the only system in this module that
+        // is. Every other emitter sits over the road, which is dark on both
+        // tracks; snow sits over the SKY, which on Penguin Village measures
+        // near 200 sRGB. An additive white flake against that is invisible,
+        // and the one place it would show is the road — i.e. it would read as
+        // ground debris, which is the opposite of weather.
+        blending: THREE.NormalBlending,
+        map: getSoftDotTexture(),
+        opacity: 0.9,
+        size: 1,
+      })
+    : null;
+  // Shell index per flake, its world position, and its gust phase. Plain typed
+  // arrays rather than an object pool: nothing here has a lifetime, a tint or a
+  // per-frame colour, so there is no state to carry beyond these three.
+  const snowShellOf = new Uint8Array(snowCount);
+  const snowPositions = new Float32Array(snowCount * 3);
+  const snowPhase = new Float32Array(snowCount);
+  const snowPosition = new THREE.Vector3();
+  const snowVelocity = new THREE.Vector3();
+  // Seeded on the first frame rather than at build time: the box is carried by
+  // the camera, and the camera does not exist at the position it will race from
+  // until the countdown has run.
+  let snowSeeded = false;
+  if (snowMesh) {
+    snowMesh.renderOrder = 28;
+    group.add(snowMesh);
+    let index = 0;
+    snowShells.forEach((shell, shellIndex) => {
+      for (let n = 0; n < shell.count; n += 1, index += 1) {
+        snowShellOf[index] = shellIndex;
+        snowPhase[index] = Math.random() * Math.PI * 2;
+        // Per-flake value jitter so the field is not one flat stencil of dots.
+        snowMesh.setColorAt(index, scratchColor.set(shell.tint).multiplyScalar(0.82 + Math.random() * 0.3));
+      }
+    });
+    snowMesh.instanceColor.needsUpdate = true;
+  }
+
+  // Places one flake at a uniformly random point inside its own shell's box.
+  const seedFlake = (index) => {
+    const half = snowShells[snowShellOf[index]].half;
+    const base = index * 3;
+    snowPositions[base] = cameraPosition.x + (Math.random() * 2 - 1) * half[0];
+    snowPositions[base + 1] = cameraPosition.y + (Math.random() * 2 - 1) * half[1];
+    snowPositions[base + 2] = cameraPosition.z + (Math.random() * 2 - 1) * half[2];
+  };
+
+  const updateStormSnow = (dt) => {
+    if (!snowSeeded) {
+      for (let index = 0; index < snowCount; index += 1) seedFlake(index);
+      snowSeeded = true;
+    }
+    for (let index = 0; index < snowCount; index += 1) {
+      const shell = snowShells[snowShellOf[index]];
+      const half = shell.half;
+      const base = index * 3;
+      const phase = snowPhase[index];
+      // Two gust axes on different periods so the wander never resolves into
+      // the whole field swinging as one sheet.
+      snowVelocity.set(
+        SNOW_WIND.x + Math.sin(clock * SNOW_GUST_RATE + phase) * SNOW_GUST,
+        SNOW_FALL,
+        SNOW_WIND.z + Math.cos(clock * SNOW_GUST_RATE * 0.83 + phase * 1.7) * SNOW_GUST
+      );
+      let x = snowPositions[base] + snowVelocity.x * dt;
+      let y = snowPositions[base + 1] + snowVelocity.y * dt;
+      let z = snowPositions[base + 2] + snowVelocity.z * dt;
+      // Wrap in the camera-carried box. Written as a while rather than a single
+      // subtraction because the camera can move further than a box half-extent
+      // in one frame after a hitch, and a flake left outside would then be
+      // drawn at a garbage depth.
+      let relX = x - cameraPosition.x;
+      let relY = y - cameraPosition.y;
+      let relZ = z - cameraPosition.z;
+      while (relX > half[0]) { x -= half[0] * 2; relX -= half[0] * 2; }
+      while (relX < -half[0]) { x += half[0] * 2; relX += half[0] * 2; }
+      while (relY > half[1]) { y -= half[1] * 2; relY -= half[1] * 2; }
+      while (relY < -half[1]) { y += half[1] * 2; relY += half[1] * 2; }
+      while (relZ > half[2]) { z -= half[2] * 2; relZ -= half[2] * 2; }
+      while (relZ < -half[2]) { z += half[2] * 2; relZ += half[2] * 2; }
+      snowPositions[base] = x;
+      snowPositions[base + 1] = y;
+      snowPositions[base + 2] = z;
+
+      snowPosition.set(x, y, z);
+      const depth = screenVelocityOf(snowPosition, snowVelocity);
+      if (depth <= 0.2) {
+        snowMesh.setMatrixAt(index, HIDDEN_POSE);
+        continue;
+      }
+      // Two fades, both geometric. Under normal blending there is no
+      // per-instance alpha to ramp, so a flake leaves by shrinking under the
+      // sub-pixel floor — which is also the honest thing for snow, since a
+      // flake that is about to leave the box is a long way off.
+      const edge = 1 - Math.max(Math.abs(relX) / half[0], Math.abs(relY) / half[1], Math.abs(relZ) / half[2]);
+      const nearFade = clamp01((depth - SNOW_NEAR_FADE) / (SNOW_NEAR_FADE * 1.4));
+      const fade = clamp01(edge / SNOW_EDGE_FADE) * nearFade * nearFade;
+      const width = Math.min(shell.size * fade, depth * SNOW_MAX_ANGLE);
+      if (width < depth * MIN_SPRITE_ANGLE) {
+        snowMesh.setMatrixAt(index, HIDDEN_POSE);
+        continue;
+      }
+      // Length is the distance this flake covers relative to the lens over one
+      // shutter interval, converted back from screen units to world units at
+      // its own depth (a screen offset of u half-heights is u * depth /
+      // focalLength world units). So the same flake is a speck at a standstill
+      // and a hairline at 285 — which is the storm.
+      const screenSpeed = scratchScreenVelocity.length();
+      const length = Math.max(width, Math.min(width * 26, (screenSpeed * shell.shutter * depth) / focalLength));
+      const roll =
+        screenSpeed > 0.02
+          ? Math.atan2(scratchScreenVelocity.y, scratchScreenVelocity.x) - Math.PI / 2
+          : snowPhase[index];
+      scratchRoll.setFromAxisAngle(Z_AXIS, roll).premultiply(scratchQuaternion);
+      snowMesh.setMatrixAt(index, scratchMatrix.compose(snowPosition, scratchRoll, scratchScale.set(width, length, 1)));
+    }
+    snowMesh.instanceMatrix.needsUpdate = true;
+  };
 
   // Shared per-frame kinematics: the caller may not supply speed yet, and the
   // skid step / boost envelope both need it, so derive it from the kart's own
@@ -1098,6 +1372,45 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     item.life = item.ttl;
   };
 
+  // Scuffed-up surface thrown into the air by an impact. Drawn out of the SPRAY
+  // pool rather than the burst pool, which is the whole point of it existing:
+  // the burst pool is the soft DOT, a perfect circle with a bright core, and
+  // ten of those at 1.7 units and 0.75 s of life is a cluster of white balls
+  // hanging over the kart — the single loudest "opaque floating ball" in the
+  // module and the one the rubric's floating-debris clause is aimed at. The
+  // spray pool draws the five-lobe puff, which has no silhouette a viewer can
+  // resolve into a sphere. More of them, each a fraction as bright, so the read
+  // comes from the cloud and not from any one member of it.
+  const spawnScuffCloud = (context, look, tint, count, strength) => {
+    for (let index = 0; index < count; index += 1) {
+      const item = nextSpray();
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 1.4 + Math.random() * 3.4;
+      item.position.set(
+        context.kartPosition.x + Math.cos(angle) * radius,
+        context.groundY + 0.9 + Math.random() * 1.6,
+        context.kartPosition.z + Math.sin(angle) * radius
+      );
+      const out = (2.5 + Math.random() * 4.5) * strength;
+      item.velocity.set(Math.cos(angle) * out, 1.4 + Math.random() * 2.6, Math.sin(angle) * out);
+      item.drag = 2.8;
+      item.fadeCurve = 1.3;
+      item.flat = false;
+      item.floorY = context.groundY - 1;
+      item.gravity = -2.6;
+      item.sizeStart = 1.4 * look.grow;
+      item.sizeEnd = (3 + Math.random() * 1.4) * look.grow;
+      item.spinRate = 0;
+      // Barely streaked: this is displaced material hanging, not something
+      // being fired. Above ~0.25 the screen-velocity term turns each puff back
+      // into a countable lozenge (see spawnContactPlume).
+      item.stretch = 0.2;
+      item.tint.copy(tint).multiplyScalar((isIce ? 0.2 : 0.17) * look.value);
+      item.ttl = 0.34 + Math.random() * 0.28;
+      item.life = item.ttl;
+    }
+  };
+
   // A flat ring of ground-aligned puffs pushed outward from a point on the
   // road. Shared by the landing puff and the spin-out shockwave: both are the
   // same physical event (something hit the surface hard) and both have to read
@@ -1185,6 +1498,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   // the road and not of the car. Tiny and very short-lived — the whole read is
   // "the ice caught the light for a frame", and anything long enough to track
   // with your eye becomes a floating speck instead.
+  //
+  // Wave 4: laid FLAT on the surface and stretched across it, rather than
+  // billboarded. A camera-facing dot hovering at road height is a bead sitting
+  // on the ice; a foreshortened sliver lying in the road plane is the ice
+  // itself catching the key light, and it is the only thing it can be read as.
+  // The elongation is what carries the specular read — a round highlight is a
+  // sphere, an anisotropic one is a facet.
   const spawnGlint = (context) => {
     const cos = Math.cos(context.yaw);
     const sin = Math.sin(context.yaw);
@@ -1193,16 +1513,28 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     const item = nextBurst();
     item.position.set(
       context.kartPosition.x + cos * lx + sin * lz,
-      context.groundY + 0.2,
+      // Ride the same lift the ground wash uses. The glint is emitted up to 50
+      // units ahead of the kart while `groundY` is sampled UNDER it, so on a
+      // crest or a banked entry the road there is above the sample and a quad
+      // laid at it is depth-tested away; 0.35 covers the measured worst case
+      // (see FLAT_LIFT) and is sub-pixel parallax at that distance.
+      context.groundY + FLAT_LIFT,
       context.kartPosition.z - sin * lx + cos * lz
     );
     // Static in the world: the sparkle belongs to a facet of the ice, so it is
     // the camera passing it that gives it motion.
     item.velocity.set(0, 0, 0);
     item.brightness = 0.55 + Math.random() * 0.6;
+    item.flat = true;
     item.flicker = 0;
     item.gravity = 0;
-    item.size = 0.34 + Math.random() * 0.24;
+    // Wider than the old billboard because it is foreshortened into the road —
+    // a grazing chase view compresses the across-track axis to a fraction of
+    // its world size, so the same authored width lands far smaller on screen.
+    item.size = 0.5 + Math.random() * 0.4;
+    item.aspect = 3.2 + Math.random() * 2.6;
+    item.spin = Math.random() * Math.PI * 2;
+    item.maxAngle = GLINT_MAX_ANGLE;
     item.stretch = 0;
     item.stretchMax = BURST_STRETCH_MAX;
     item.tint.set('#EAF9FF');
@@ -1248,6 +1580,11 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     item.flicker = 0;
     item.gravity = -34;
     item.size = 0.2 + Math.random() * 0.16;
+    // Same reasoning as SPARK_MAX_ANGLE, one step tighter: a crystal is
+    // supposed to be the SMALLEST thing in frame. The size-derived heuristic
+    // would have let it reach 0.021 rad (~15 px) at the lens, which is where a
+    // chip of ice stops being a chip and becomes a bead.
+    item.maxAngle = CRYSTAL_MAX_ANGLE;
     // Streaked, but only a little: a crystal caught mid-flight is a short dash,
     // whereas a mini-turbo spark (stretch 1.6) is a full-length tracer. Keeping
     // them visibly different is what stops the surface cue from being mistaken
@@ -1362,11 +1699,21 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     const vx = side * (3 + Math.random() * 4.5);
     const vz = -(2.5 + Math.random() * 4);
     item.velocity.set(cos * vx + sin * vz, 3.4 + Math.random() * 3, -sin * vx + cos * vz);
-    item.brightness = 1;
+    // Wave 4: three times as many, each a little over a third as bright, and
+    // hard-capped to a hairline. comeback-city-p0_33 still shows eight discrete
+    // cyan pills scattered behind the kart in wave3-r3 — the previous rounds
+    // fixed where they are and how long they live, but not the one property
+    // that was actually producing the read. At the old size-derived ceiling a
+    // spark rendered up to 23 px WIDE, and a 23 px-wide additive sprite with a
+    // bright core is a lozenge at any length. A spark is legible as a spark
+    // because it is a hairline; a shower is legible because there are enough of
+    // them to be a shower. The sum on screen is held roughly constant.
+    item.brightness = 0.42;
     item.flicker = 0;
     item.stretchMax = BURST_STRETCH_MAX;
     item.gravity = -26;
-    item.size = 0.34 + Math.random() * 0.26;
+    item.size = 0.24 + Math.random() * 0.18;
+    item.maxAngle = SPARK_MAX_ANGLE;
     item.stretch = 1.6;
     item.tint.copy(tint);
     item.ttl = 0.11 + Math.random() * 0.08;
@@ -1482,11 +1829,17 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   // from a still — which is the acceptance bar for this package.
   const onCue = (cue, context) => {
     if (cue === 'coin') {
+      // `stretch` where there was none: at 0.9 units these were the second
+      // widest round sprites in the module (~37 px at the lens) and gold, which
+      // is the one hue on either track that nothing else in frame competes
+      // with. Smeared along their own screen motion they read as thrown motes;
+      // left round they are the "opaque floating ball" verbatim.
       spawnBurst(context, {
         color: '#FFD34F',
         count: mobile ? 5 : 7,
         size: 0.9,
         speed: 5.5,
+        stretch: 0.9,
         ttl: 0.5,
         upBias: 4.2,
       });
@@ -1551,14 +1904,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         ttl: 0.24,
       });
     } else if (cue === 'spin-out') {
-      spawnBurst(context, {
-        color: isIce ? '#e8f4ff' : '#d9dfec',
-        count: mobile ? 7 : 10,
-        size: 1.7,
-        speed: 4.2,
-        ttl: 0.75,
-        upBias: 2.2,
-      });
+      spawnScuffCloud(context, currentLook, groundTint, mobile ? 10 : 18, 1);
       // ...plus a shockwave ON the road. The airborne burst alone reads as a
       // puff floating over the kart; the ring is what says the kart hit
       // something and the surface felt it.
@@ -1577,8 +1923,10 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // Fired through the wheel emitter rather than as a radial ball at the
       // kart's centre: the charge lives in the tyres, so the flash has to as
       // well or it reads as a floating pop.
+      // Headcount up with the same factor spawnSpark's brightness came down by,
+      // so the banked-tier flash keeps the weight it was tuned to have.
       sparkTint.set(DRIFT_FEEL.sparkColors[Math.min(3, Number(cue.slice(5)) || 1)]);
-      for (let index = 0; index < (mobile ? 5 : 8); index += 1) spawnSpark(context, sparkTint);
+      for (let index = 0; index < (mobile ? 12 : 20); index += 1) spawnSpark(context, sparkTint);
     } else if (cue.startsWith('mini-turbo-')) {
       // Release. The one frame in a corner that has to punch: a cone of tier
       // sparks fired BACKWARD off the rear axle (the kart is being shoved
@@ -1865,7 +2213,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     // it outright and it never fires while the wash is already busy throwing
     // powder over the same pixels.
     if (look.glint && !context.reducedMotion && !spraying) {
-      glintAccumulator += dt * (mobile ? 9 : 16) * look.glint * poolScale;
+      // Raised from 9/16: every arctic look carries a glint now rather than the
+      // one band that names itself `ice`, and at the old rate the sparsest of
+      // them (arcticTarmac, 82% of the lap) had under two flecks alive at a
+      // time — which is a stray speck, not a surface property. Each fleck is
+      // also a fraction of the screen area it used to be now that it lies in
+      // the road plane, so the headcount has to carry the read.
+      glintAccumulator += dt * (mobile ? 20 : 40) * look.glint * poolScale;
       while (glintAccumulator >= 1) {
         glintAccumulator -= 1;
         spawnGlint(context);
@@ -1941,12 +2295,19 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         scratchScale.set(width, width, 1);
         scratchRoll.setFromAxisAngle(Y_AXIS, item.spin).multiply(FLAT_QUAT);
       } else {
-        const stretch = 1 + Math.min(2.4, screenSpeed * 1.1 * item.stretch);
+        const stretch = 1 + Math.min(item.stretchMax, screenSpeed * 1.1 * item.stretch);
         scratchScale.set(width, width * stretch, 1);
         // Below a pixel or two of travel the direction is numerically junk and
         // the sprite should stay round anyway.
-        const roll = screenSpeed > 0.02 ? Math.atan2(scratchScreenVelocity.y, scratchScreenVelocity.x) - Math.PI / 2 : 0;
-        scratchRoll.setFromAxisAngle(Z_AXIS, roll).premultiply(scratchQuaternion);
+        const aimed = screenSpeed > 0.02 ? Math.atan2(scratchScreenVelocity.y, scratchScreenVelocity.x) - Math.PI / 2 : 0;
+        // ...and the flatter the sprite is, the less its orientation is
+        // determined by anything physical, so the per-particle roll takes over.
+        // A stretched sprite MUST keep the velocity roll or the streak points
+        // the wrong way; a round one has no correct angle at all, and giving
+        // every one of them the same angle is what turns a field of five-lobe
+        // puffs into a row of identical stamps.
+        const aim = clamp01((stretch - 1) / 0.5);
+        scratchRoll.setFromAxisAngle(Z_AXIS, aimed + item.roll * (1 - aim)).premultiply(scratchQuaternion);
       }
       sprayMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
       // Fade brightness as well as size — a sprite that only shrinks pops out.
@@ -2001,12 +2362,19 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     const tier = Math.min(3, Math.max(0, context.miniTurboTier | 0));
     const sparking = spraying && context.tier >= 1;
     if (sparking) {
-      sparkAccumulator += dt * (26 + context.tier * 20) * emitScale;
+      // Tripled against the halved brightness in spawnSpark, and budgeted like
+      // every other emitter in the file so a frame-time spike cannot dump a
+      // second of shower into one instant. ~24 of the 160-slot burst pool alive
+      // at tier 3, which the pool absorbs because a spark's ttl is ~0.15 s.
+      sparkAccumulator += dt * (78 + context.tier * 60) * emitScale;
       sparkTint.set(DRIFT_FEEL.sparkColors[context.tier] || DRIFT_FEEL.sparkColors[1]);
-      while (sparkAccumulator >= 1) {
+      let sparkBudget = mobile ? 6 : 12;
+      while (sparkAccumulator >= 1 && sparkBudget > 0) {
         sparkAccumulator -= 1;
+        sparkBudget -= 1;
         spawnSpark(context, sparkTint);
       }
+      if (sparkBudget <= 0) sparkAccumulator = 0;
     } else {
       sparkAccumulator = 0;
     }
@@ -2062,8 +2430,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       item.position.addScaledVector(item.velocity, dt);
       const fade = Math.max(0, item.life / item.ttl);
       const depth = screenVelocityOf(item.position, item.velocity);
-      // Every burst emitter is camera-billboarded, so the tight window applies.
-      const prox = proximityAt(depth, false);
+      // Billboards take the tight window; the ground-aligned glint takes the
+      // flat one for the same reason the wash does — a quad parallel to the
+      // plane it is lying on cannot balloon into the frame, and retiring it at
+      // depth 22 would kill the sparkle over the nearest, best-lit, most-looked
+      // at band of ice.
+      const prox = proximityAt(depth, item.flat);
       if (prox <= 0.001) {
         // Same retirement rule as the spray pool above.
         item.life = 0;
@@ -2074,15 +2446,33 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // stack of overlapping additive sprites from summing into one static
       // silhouette. Zero on every emitter but the exhaust.
       const flicker = item.flicker > 0 ? 1 + 0.12 * Math.sin(clock * 46 + item.flicker) : 1;
-      // The angular cap scales with the sprite's AUTHORED size, so a 0.4-unit
-      // spark can never balloon to the same 77 px on screen as a 1.7-unit
-      // spin-out puff. The shared flat cap is what let the drift sparks read as
-      // "large detached cyan lozenges" (comeback-city-p0_33) once the camera
-      // had closed to within a few units of them.
-      const angleCap = depth * MAX_SPRITE_ANGLE * Math.min(1, item.size * 0.6);
+      // An explicit per-emitter ceiling where one is authored, and the
+      // size-derived heuristic elsewhere (which at least stops a 0.4-unit spark
+      // reaching the same 77 px as a spin-out puff). The heuristic on its own is
+      // what let the drift sparks reach 23 px of WIDTH once the camera closed on
+      // them, at which point no amount of length stops them reading as the
+      // "large detached cyan lozenges" of comeback-city-p0_33 — see
+      // SPARK_MAX_ANGLE.
+      const angleCap = depth * (item.maxAngle || MAX_SPRITE_ANGLE * Math.min(1, item.size * 0.6));
       const width = Math.min(item.size * (0.5 + fade * 0.8) * prox * flicker, angleCap);
       if (width < depth * MIN_SPRITE_ANGLE) {
         burstMesh.setMatrixAt(index, HIDDEN_POSE);
+        return;
+      }
+      if (item.flat) {
+        // Ground-aligned and anisotropic: the surface caught the light. A
+        // billboard here would be a bead sitting ON the road instead — the
+        // exact difference the grounding contract at the top of the file is
+        // about, applied to the one emitter that is a property of the road
+        // rather than of the kart.
+        scratchScale.set(width * item.aspect, width, 1);
+        scratchRoll.setFromAxisAngle(Y_AXIS, item.spin).multiply(FLAT_QUAT);
+        burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
+        burstMesh.setColorAt(
+          index,
+          scratchColor.copy(item.tint).multiplyScalar(item.brightness * fade * (0.3 + fade * 0.7) * prox)
+        );
+        burstColorDirty = true;
         return;
       }
       const screenSpeed = scratchScreenVelocity.length();
@@ -2092,12 +2482,18 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // reading as gas and starts reading as a rod.
       if (item.stretch > 0 && screenSpeed > 0.02) {
         const roll = Math.atan2(scratchScreenVelocity.y, scratchScreenVelocity.x) - Math.PI / 2;
-        scratchScale.set(width, width * (1 + Math.min(item.stretchMax, screenSpeed * 2.4 * item.stretch)), 1);
-        scratchRoll.setFromAxisAngle(Z_AXIS, roll).premultiply(scratchQuaternion);
+        const stretch = 1 + Math.min(item.stretchMax * item.lengthJitter, screenSpeed * 2.4 * item.stretch);
+        scratchScale.set(width, width * stretch, 1);
+        // Same rule as the spray pool: keep the velocity roll while the sprite
+        // is a streak, hand the angle to the per-particle roll once it is round
+        // enough that no angle is correct.
+        const aim = clamp01((stretch - 1) / 0.5);
+        scratchRoll.setFromAxisAngle(Z_AXIS, roll + item.roll * (1 - aim)).premultiply(scratchQuaternion);
         burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
       } else {
         scratchScale.setScalar(width);
-        burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchQuaternion, scratchScale));
+        scratchRoll.setFromAxisAngle(Z_AXIS, item.roll).premultiply(scratchQuaternion);
+        burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
       }
       // Eased to zero, not floored at 0.25 — a sprite that dies at a quarter
       // brightness blinks out and reads as a dropped object.
@@ -2109,6 +2505,15 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     });
     burstMesh.instanceMatrix.needsUpdate = true;
     if (burstColorDirty) burstMesh.instanceColor.needsUpdate = true;
+
+    // Storm snow. Ambient by definition, so reducedMotion hides it outright
+    // rather than freezing it — static flakes hanging in mid-air read as a
+    // rendering fault, not as calm weather.
+    if (snowMesh) {
+      const snowVisible = !context.reducedMotion;
+      snowMesh.visible = snowVisible;
+      if (snowVisible) updateStormSnow(dt);
+    }
 
     // Speed-lines. Decorative — reducedMotion kills them outright.
     const intensity = Math.min(1.5, boostEnergy * 0.85 + boostPunch * 0.75);
@@ -2178,6 +2583,11 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   const dispose = () => {
     sprayMesh.dispose();
     burstMesh.dispose();
+    if (snowMesh) {
+      snowMesh.geometry.dispose();
+      snowMesh.material.dispose();
+      snowMesh.dispose();
+    }
     skidGeometry.dispose();
     skidMesh.material.dispose();
     speedLines.geometry.dispose();

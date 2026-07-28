@@ -196,6 +196,50 @@ const SKY_BOUNCE = 0.16;
 // another ~10% is what makes them read as rubber.
 const RUBBER_DARKEN = 0.9;
 
+// ---- AAA wave 4: the analytic sky probe ------------------------------------
+//
+// Per-class weight on the environment reflection injected by the kart shading
+// chunk. Read raceEnvironment.js first — these are the KART half of one
+// feature, and the reason the kart half is analytic is that three r184's toon
+// shader carries no envMap chunk, so `scene.environment` can never reach a hero
+// body however the probe is installed.
+//
+// What this buys that no existing term does. Every specular event in this file
+// is a LOBE: it fires when the half-vector lands inside a narrow window and is
+// black everywhere else. On the flat-shaded low-poly bodies that ship, a facet
+// is either inside the window or outside it, so a kart is a small number of
+// facets each holding one constant value — which is precisely the measured
+// failure the critics keep filing: "one flat colour across a curved body with
+// zero value change" (the blue rival in comeback-city-p0_45 and
+// penguin-village-p0_56 are the same slab in both). A reflection is not a lobe.
+// It returns a DIFFERENT sky colour for every facet normal, so twenty facets
+// get twenty values off one term, and it slides continuously as the kart yaws.
+// That is the single cheapest way to put value variation back on a body whose
+// baked albedo has none — and it is the only one that also survives the
+// saturation overshoot in the Kenney rival recolour (which is monolith-side and
+// not fixed here), because a body that is channel-clipped in blue still has
+// full headroom in red and green for a sky-coloured sheen to move through.
+//
+// Chrome is roughly 2.3x paint on purpose. A reflection is what distinguishes
+// metal from paint far more than a highlight does — paint scatters, chrome
+// returns the sky nearly intact — and the ratio is what keeps the two classes
+// disagreeing now that they both carry a reflection.
+//
+// Rubber gets nothing at all, which is the same one-line contract the rest of
+// this file keeps: matte is the whole point of the class, and the tyres are the
+// value anchor the other three classes are read against.
+const ENV_PROBE = {
+  chrome: 0.5,
+  paint: 0.22,
+  plastic: 0.14,
+  // Exponent on the sun lobe in the REFLECTION direction. Much tighter than the
+  // paint gloss lobe (14) because this one is not gated on a half-vector: it is
+  // the sun's own image in the surface, and a wide one would read as a second
+  // key light washing the whole body rather than as a glint travelling across
+  // a cowl.
+  sunSharp: 26,
+};
+
 // Anisotropic filtering for hero albedo maps.
 //
 // Every kart panel in the close frames (comeback-city-p0_24/p0_45,
@@ -214,6 +258,10 @@ export const KART_SHADING_DESKTOP = Object.freeze({
   chromeGloss: GLOSS.chrome,
   chromeLuminance: CHROME_LUMINANCE,
   chromeStrength: SPEC_STRENGTH.chrome,
+  envChrome: ENV_PROBE.chrome,
+  envPaint: ENV_PROBE.paint,
+  envPlastic: ENV_PROBE.plastic,
+  envSunSharp: ENV_PROBE.sunSharp,
   paintChroma: PAINT_CHROMA,
   paintGloss: GLOSS.paint,
   paintStrength: SPEC_STRENGTH.paint,
@@ -234,10 +282,17 @@ export const KART_SHADING_DESKTOP = Object.freeze({
 // Anisotropy drops to 2: the phone renders at 0.6 scale into a viewport a
 // third of the width, so the grazing-angle detail 8x buys is already below a
 // physical pixel, and texture bandwidth is the scarce thing on a tile GPU.
+// The sky probe STAYS on mobile — it is ~15 ALU with no texture fetch, which is
+// the cheapest form cue in the whole file and the one a 0.6-scale render needs
+// most, since every lobe-based highlight is exactly the kind of high-frequency
+// detail a downscale eats. Only the sun lobe widens: at 0.6 scale a 26-exponent
+// glint can land between samples and strobe, and 15 spreads the same energy
+// over roughly 1.7x the solid angle so it survives resampling.
 export const KART_SHADING_MOBILE = Object.freeze({
   ...KART_SHADING_DESKTOP,
   aoCrease: 0,
   chromeGloss: 34,
+  envSunSharp: 15,
   paintGloss: 10,
   textureAnisotropy: 2,
 });
@@ -253,20 +308,17 @@ export const resolveKartShading = (windowRef = globalThis.window) => {
   return KART_SHADING_DESKTOP;
 };
 
-// AAA wave 2 hero-rim normalisation.
-//
-// Comeback City ships heroRim { power 3.2, strength 0.22 } and Penguin
-// Village { power 2.2, strength 0.45 } — the DARK track carries half the rim
-// of the bright one, which is why the player kart is the darkest object on
-// screen in comeback-city-p0_06. The plan assigned that palette fix to this
-// package; the track files moved to another owner mid-wave, so the floor is
-// applied here instead. It is one-directional on purpose: PV's shipped
-// values already clear it and pass through untouched.
-//
-// DELETE THIS once comebackCity.js carries { power 2.4, strength 0.40 }
-// itself — a floor in the shader helper is not where art direction belongs.
-export const HERO_RIM_MIN_STRENGTH = 0.4;
-export const HERO_RIM_MAX_POWER = 2.5;
+// AAA wave 4: the wave-2 hero-rim floor (HERO_RIM_MIN_STRENGTH 0.4 /
+// HERO_RIM_MAX_POWER 2.5) is GONE, along with the two clamps in
+// applyToonRim. It existed because wave 2 could not reach the track palettes
+// and Comeback City was shipping half of Penguin Village's rim strength on the
+// darker of the two tracks. Wave 3 landed the real numbers:
+//   comebackCity.js:151    heroRim { power 2.4, strength 0.40, tint '#4fd8ff' }
+//   penguinVillage.js:432  heroRim { power 2.2, strength 0.45, tint '#00d5ff' }
+// Both clear the retired floor exactly (2.4 <= 2.5, 0.40 >= 0.40; 2.2 <= 2.5,
+// 0.45 >= 0.40), so removing it is a verified no-op on every shipped track
+// rather than a change of look — and a third track can now author a soft rim
+// without a helper silently overriding it.
 
 // How the rim is redistributed around the silhouette by KEY DIRECTION.
 //

@@ -164,6 +164,18 @@
 // the renderer hands the grade an image in which the low sky and the lit ice
 // are the same colour to within 4/255. It is being fixed where it can be —
 // the dome's elevation ramp and the belt's storm bank.
+//
+// WAVE 4. The sentence above ends "without first changing what the renderer
+// hands over", and wave 4 changed it: the sky dome, the key light, the fill
+// and the cloud deck are all re-authored in this wave (createSkyDome.js,
+// penguinVillage.js, createMidGroundBelt.js), so the image arriving here is no
+// longer the near-monochrome one the wave-3 table inverted. Comeback City is
+// STILL untouched — verified again, all 4913 cube nodes reproduce to 0.0000 —
+// and the Penguin Village edit is a RETREAT rather than a new stage: the cool
+// deepen drops from 0.9 to 0.26 because the storm ceiling now comes from
+// geometry, and because inverting shipped pixels through this function showed
+// it firing on the snow field and NOT on the sky it was written for. The
+// numbers and the evidence are on the parameters themselves.
 import * as THREE from 'three';
 
 // The grade runs on sRGB-ENCODED values, mounted after ToneMappingEffect with
@@ -293,12 +305,44 @@ const TRACK_GRADES = {
     // luminance ratio. The ceiling is the bluest thing in frame so it takes
     // the most; the mid sky and the cloud breaks take none, so the sky comes
     // out with a real vertical gradient instead of one flat slate.
-    coolAmount: 0.9,
+    // WAVE 4 — 0.9 -> 0.26, AND THE MEASUREMENT THAT FORCES IT. Two facts
+    // about the SHIPPED frames, both found by inverting real pixels back
+    // through this exact function rather than by predicting forward:
+    //
+    //   1. THE STAGE IS A KNIFE EDGE AND IT MOSTLY DOES NOT FIRE ON THE SKY.
+    //      penguin-village-p0_15's upper sky is rgb(126,128,160). Searched over
+    //      a 73^3 input cube, the ONLY input that grades to it is
+    //      rgb(145,142,149) — blueness 0.016, i.e. below coolLo, i.e. the cool
+    //      stage contributes nothing. The window 0.055-0.105 sits exactly on
+    //      the sky's own blueness, so an 8/255 difference in what the renderer
+    //      hands over flips the sky between "untouched" and "crushed to
+    //      rgb(71,104,175)". Wave 3 predicted L 0.59 -> 0.42 for the ceiling
+    //      and the frames moved by ~1 count; this is why.
+    //   2. IT DOES FIRE, HARD, ON THE SNOW. The measured snow patch of
+    //      penguin-village-p0_56 is rgb(70,135,171): blueness 0.141, chroma
+    //      0.141 (under guardLo, so unguarded), luma 0.47 (past coolFloor).
+    //      Weight 0.86 of 0.9. The largest surface on the track was being
+    //      pulled 77% of the way onto a single luminance x #33538f line —
+    //      which is a colour-space projection, and a projection is exactly what
+    //      "one flat value with no form" looks like.
+    //
+    // So the stage stops trying to BE the storm. The dome now paints its own
+    // bruised ceiling from geometry that knows which way is up
+    // (penguinVillage.js's re-authored ladder, verified at hue 229-244 /
+    // val 0.68-0.78 at the top of frame), and what is left here is a gentle
+    // cool deepen on genuinely blue-dominant pixels. Replayed over the measured
+    // snow patch with the wave-4 rig it lands at rgb(89,132,143) — B-R falls
+    // from +101 to +54 and the vertex mottle's luminance spread widens from 64
+    // to 68 counts instead of being flattened onto the tint line.
+    coolAmount: 0.26,
     coolTint: '#33538f',
     // The pull target is 0.60 of the source luminance: this is where the
     // storm's depth comes from. Replayed over the nine shipped frames the
     // upper sky band lands at L 0.42-0.45, down from 0.59-0.61.
-    coolDrop: 0.6,
+    // 0.6 -> 0.74. The stage runs at less than a third of its old weight, so
+    // the pull TARGET can sit closer to the source without the stage becoming
+    // inert — what comes off is the violence, not the direction.
+    coolDrop: 0.74,
     // 0.02-0.115 -> 0.055-0.105. The old ramp opened at 0.02, i.e. on
     // everything in the frame that was not actually warm, so the mid sky was
     // deepened along with the ceiling and the front had nothing to break
@@ -306,13 +350,22 @@ const TRACK_GRADES = {
     // (~0.05 at mid height, ~0.10 at the zenith) and is deliberately no
     // narrower than that gap: a tighter ramp puts a visible terminator across
     // a smooth sky.
-    coolLo: 0.055,
-    coolHi: 0.105,
+    // 0.055-0.105 -> 0.08-0.19. A 0.05-wide window centred on the sky's own
+    // blueness is not a ramp, it is a switch with a 8/255 hysteresis band, and
+    // finding 1 above shows it landing on the wrong side of that switch in the
+    // shipped build. A window 2.4x wider cannot flip on render noise, it opens
+    // ABOVE the near-neutral mid sky the front's warm break now occupies, and
+    // it still reaches the road and the shaded ice, which are the bluest
+    // surfaces on the track.
+    coolLo: 0.08,
+    coolHi: 0.19,
     // Luminance floor, 0.2 -> 0.3. The road (L 0.15-0.22) is the bluest
     // surface on the track after the sky and it is ALREADY the darkest thing
     // in frame; deepening it costs the one place where the ice band and the
     // lane paint have to stay legible.
-    coolFloor: 0.3,
+    // 0.3 -> 0.34, one notch, for the same reason the amount came down: the
+    // snow field sits at luma 0.47 and was taking 96% of the luminance gate.
+    coolFloor: 0.34,
     // -- AND NO WARM STAGE. ----------------------------------------------
     // Round 1 of wave 3 shipped a `gild` that was meant to be the other half
     // of the sunset, and this round's first attempt replaced it with a

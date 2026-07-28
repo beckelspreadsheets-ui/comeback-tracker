@@ -64,6 +64,17 @@
 // are the same colour, so any warm band it adds to the sky lands on every berg
 // in the frame (raceGrade.js carries the numbers).
 //
+// WAVE 4 CORRECTION TO THE PARAGRAPH ABOVE. It was true and it was a symptom.
+// The sunset was not missing from the sky because the grade could not put it
+// there — it was missing because the dome's warm stops were authored at 0-13
+// degrees of elevation, which is entirely behind an opaque backdrop plate, and
+// because the cloud deck's coverage mask was fully closed over every degree
+// the camera actually frames. Both are fixed at source in wave 4
+// (createSkyDome.js carries the measured angles). The consequence for THIS
+// file is that the storm bank is no longer the only warm geometry in the
+// frame and no longer has to shout: its ceiling deepens, its rim follows the
+// key's own hue, and the arctic clamp comes down.
+//
 // ROUND 3, and the first thing to record is what round 2's clamp correction
 // ACTUALLY measured, because the round-3 critics asked for more of it and the
 // frames say no. Warm-pixel share (R-B > 20) over the mid-ground band
@@ -369,7 +380,20 @@ const TRACK_TUNING = {
     // relative to everything around them without letting them land on sand.
     // Replayed against the shipped frames' own warmth measure: a lit face keeps
     // roughly a third of its warm excess instead of all of it.
-    coolClamp: 0.85,
+    // WAVE 4 — THE CLAMP COMES DOWN, 0.85 -> 0.78, and the arithmetic for why
+    // it comes down rather than out. This clamp exists because the rig was
+    // wrong: a #ffbe78 key at 5.2 under a warm hemi sky left every lit ice face
+    // with red more than twice blue before any albedo could argue. Wave 4 fixes
+    // the rig at source — the fill's blue drops 25% while its red holds
+    // (penguinVillage.js hemi), and the key gets warmer by LOSING green and
+    // blue rather than gaining red (linear R is 1.0 in both #ffdcb4 and
+    // #ffd2a4). Net on a lit face: the key's own warm excess rises ~26%
+    // (R/B 2.11 -> 2.66) while the clamp keeps 22% instead of 15% of it, so
+    // the warm share this file has been tracking for three waves moves by
+    // roughly a third of one of its own historical steps and stays inside the
+    // 5.9-13.6% band the critics scored as the win. Taking the clamp OUT under
+    // a warmer key is the wave-3-round-1 experiment, and it measured 19.8%.
+    coolClamp: 0.78,
     coolClampLit: 0.62,
     iceTint: [0.95, 1, 1.09],
     // ICE STRATA. Penguin Village's masses carry no window grid — there is no
@@ -406,7 +430,12 @@ const TRACK_TUNING = {
       // the crest (0.58 takes #2c3f5e's value 0.37 down to 0.21, which is the
       // "value ~0.25 threatening half" the A/B judge asked for) and leaves the
       // warm rim below completely untouched, because the rim is mixed in after.
-      ceiling: 0.58,
+      // Wave 4: 0.58 -> 0.50. The bank is no longer the only thing carrying
+      // this track's weather — the dome above it now runs a bruised indigo
+      // ceiling of its own from 30 degrees up — so the bank's job narrows to
+      // being the EDGE where that ceiling meets the warm break, and an edge
+      // needs its dark side darker than the thing behind it.
+      ceiling: 0.5,
       gap: 0.8,
       // 190 -> 240. At radius 548 the old wall topped out at 19 degrees of
       // elevation, so on a frame whose horizon sits near the middle the front
@@ -415,10 +444,21 @@ const TRACK_TUNING = {
       // upper third of the frame where the sky was measured achromatic. The
       // crest fraction is authored in UV so the opaque body does not grow with
       // it — what grows is the dissolve, i.e. the gradient, not the lid.
-      height: 240,
+      // 240 -> 300. At radius 548 the body (which dissolves through its own
+      // crest at uv ~0.54) topped out around 10 degrees of elevation, i.e.
+      // entirely inside the band where the backdrop plate is already opaque —
+      // the bank was drawing weather onto a painting. 300 lifts the crest line
+      // to ~14.5 degrees and its dissolve to ~17, which is where pv-far.webp's
+      // alpha has fallen to ~0.6 and the bank can actually be seen against the
+      // dome. The opaque body does not grow with it (the crest fraction is
+      // authored in UV); what grows is the gradient.
+      height: 300,
       opacity: 0.66,
       radius: 548,
-      rim: '#ffb473',
+      // Follows the wave-4 key (#ffd2a4) down in green and blue for the same
+      // reason it does: the rim is the sun transmitted through cloud, so it
+      // cannot be warmer in HUE than the sun behind it.
+      rim: '#ffae66',
     },
     // 0.58 in the plan sat inside PV's bridge band (0.55-0.67, peak 17), so
     // that stand would have been sunk 15 units under the deck it faces.

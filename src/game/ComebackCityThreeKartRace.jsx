@@ -132,6 +132,17 @@ import { createMomentSample, resolveMoments, sampleMoments } from './race/palett
 import { SURFACE_ROAD_SHEEN, SURFACE_ROAD_TINT, surfaceTypeAt } from './race/physics/surfacePhysics.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import {
+  contactPatchAirFade,
+  contactPatchProfile,
+  createRaceShadowRig,
+} from './race/render/raceShadowRig.js';
+import {
+  advanceChaseFeel,
+  createChaseFeelState,
+  impulseChaseShake,
+  solveFramingCorrection,
+} from './race/camera/chaseCameraFeel.js';
+import {
   buildRoadEdgeProfile,
   roadEdgeBarrierMul,
   roadEdgeSection,
@@ -163,6 +174,53 @@ const lerp = (from, to, amount) => from + (to - from) * amount;
 // is 60 garbage Vector3s a second for the whole session.
 const CAMERA_GUARD_HEAD = new THREE.Vector3();
 const CAMERA_GUARD_DIR = new THREE.Vector3();
+// Chase-camera scratch, same reasoning: the block below runs every frame and
+// allocates nothing.
+const CHASE_DESIRED = new THREE.Vector3();
+const CHASE_SUBJECT = new THREE.Vector3();
+const CHASE_LOOK = new THREE.Vector3();
+const CHASE_GAP = new THREE.Vector3();
+const CHASE_DELTA = new THREE.Vector3();
+const CHASE_FORWARD = new THREE.Vector3();
+const CHASE_RIGHT = new THREE.Vector3();
+const CHASE_UP = new THREE.Vector3();
+const CAMERA_DODGE_DIR = new THREE.Vector3();
+// Lateral-dodge sweep, in radians, ALWAYS starting at 0 (the undodged bearing)
+// so an active dodge unwinds the instant its bearing is clear. ~14/28/43
+// degrees each way: past that the shot is no longer a chase shot and the guard
+// would rather show the obstruction.
+const CAMERA_DODGE_OFFSETS = [0, 0.25, -0.25, 0.5, -0.5, 0.75, -0.75];
+// Height of the kart's visual centre above its road point, and the bounding
+// radius the framing solver treats it as. Measured off the shipped bodies: the
+// silhouette from behind is ~7 units across and ~7 tall with the driver, so a
+// 5.4 radius is the disc that has to stay inside the viewport. Both feed
+// FRAMING_DEFAULTS' size window, which is expressed in the same units — change
+// one and the window moves with it.
+const CHASE_SUBJECT_CENTRE = 3.4;
+const CHASE_SUBJECT_RADIUS = 5.4;
+// Camera basis in world space. The race camera is parented straight to the
+// scene (which is at identity), so its local quaternion IS its world
+// orientation and this needs no matrix update.
+const readChaseBasis = (camera) => {
+  CHASE_FORWARD.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  CHASE_RIGHT.set(1, 0, 0).applyQuaternion(camera.quaternion);
+  CHASE_UP.set(0, 1, 0).applyQuaternion(camera.quaternion);
+};
+// Project CHASE_SUBJECT through the current camera and ask the feel model what
+// (if anything) is wrong with the framing. readChaseBasis must have run for the
+// camera's CURRENT orientation first.
+const solveChaseFraming = (camera, lookDistance) => {
+  CHASE_DELTA.copy(CHASE_SUBJECT).sub(camera.position);
+  return solveFramingCorrection({
+    aspect: camera.aspect,
+    depth: CHASE_DELTA.dot(CHASE_FORWARD),
+    lookDistance,
+    radius: CHASE_SUBJECT_RADIUS,
+    right: CHASE_DELTA.dot(CHASE_RIGHT),
+    tanHalfFov: Math.tan(THREE.MathUtils.degToRad(camera.fov) * 0.5),
+    up: CHASE_DELTA.dot(CHASE_UP),
+  });
+};
 // Opt OUT of the occlusion cast. Round-1 shipped a guard that hit-tested
 // against everything under `world`, which includes the thing it is framing:
 // the player kart, the rivals beside it, the contact rigs, the march rig and
@@ -511,7 +569,12 @@ const createGroundedKartModel = ({
   // the disabled renderer shadow pass. Default keeps the approved shipped look.
   contactGrounding = false,
   scale = 1,
+  // When the shadow map is live the sun owns the CAST shadow, so the decal
+  // shrinks to an ambient-occlusion patch under the wheels. With shadows off it
+  // has to be the whole grounding cue on its own. See contactPatchProfile.
+  shadowsEnabled = false,
 } = {}) => {
+  const contactProfile = contactPatchProfile(shadowsEnabled, contactGrounding);
   const group = new THREE.Group();
   group.userData.kind = 'grounded-3d-kart';
   const model = new THREE.Group();
@@ -797,10 +860,11 @@ const createGroundedKartModel = ({
       color: '#03060c',
       depthWrite: false,
       map: makeContactShadowTexture(),
-      // ~44% below the lit road inside the core, which is where a contact
-      // shadow has to land: darker reads as a hole on this dark asphalt,
-      // lighter is the invisible 4-value delta the audit measured.
-      opacity: contactGrounding ? 0.52 : 0.46,
+      // Deep enough to read against dark asphalt, shallow enough not to punch
+      // a hole in it. The audit's failure case was a 4-value delta; the round-2
+      // failure case was a black slab. See contactPatchProfile for the split
+      // between "the sun casts and this is AO" and "this IS the shadow".
+      opacity: contactProfile.opacity,
       // Sitting 0.16 above the road still loses to a banked curb lip, so the
       // decal also biases its depth toward the camera.
       polygonOffset: true,
@@ -813,7 +877,7 @@ const createGroundedKartModel = ({
   // length. The gradient is solid to ~42% of the radius, so the SOLID core is
   // roughly 6.3 x 11 units — the kart's own footprint — and everything
   // outside that is the soft penumbra a low sun throws.
-  shadow.scale.set(12 * scale, 21 * scale, 1);
+  shadow.scale.set(contactProfile.width * scale, contactProfile.length * scale, 1);
   shadow.rotation.x = -Math.PI / 2;
   shadow.renderOrder = 2;
   shadow.frustumCulled = false;
@@ -832,7 +896,11 @@ const createGroundedKartModel = ({
         transparent: true,
       })
     );
-    contactGlow.scale.set(13 * scale, 22 * scale, 1);
+    contactGlow.scale.set(
+      contactProfile.width * contactProfile.glowScale * scale,
+      contactProfile.length * contactProfile.glowScale * scale,
+      1
+    );
     contactGlow.rotation.x = -Math.PI / 2;
     contactGlow.position.y = 0.02;
     contactGlow.renderOrder = 3;
@@ -4999,15 +5067,10 @@ const createScene = ({
   if (!renderer) return null;
   renderer.setClearColor(palette.clearColor || '#131a36', 1);
   renderer.toneMappingExposure = 1.05;
-  // The ?trackVisuals=1 experiment trades real-time shadows for stronger
-  // blob/contact grounding; the shipped default keeps the approved
-  // shadow-mapped look until the owner signs the §9 default-on gate.
-  renderer.shadowMap.enabled = !trackVisualsEnabled;
-  // BasicShadowMap has NO filtering at all, so the 384-texel map below drew
-  // the kart's shadow as a stair-stepped polygon with holes punched through
-  // it. PCF soft costs a few tenths of a millisecond against ~14ms of
-  // headroom and is the difference between "shadow" and "decal".
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Shadow-map configuration now lives in raceShadowRig (created once the key
+  // light exists, below). The ?trackVisuals=1 experiment trades real-time
+  // shadows for stronger blob/contact grounding, so it is the rig's master
+  // switch.
 
   const scene = new THREE.Scene();
   // AAA sky pass: scene.background is DELIBERATELY null. A non-cube Texture
@@ -5084,27 +5147,20 @@ const createScene = ({
   // at 46 degrees elevation (noon shading under a sunset sky).
   const sun = new THREE.DirectionalLight(palette.sunColor || '#ffae72', palette.sunIntensity ?? 4.4);
   sun.position.copy(sunDirection).multiplyScalar(sunDistance);
-  sun.castShadow = !trackVisualsEnabled;
-  // 384 texels across a 128-unit frustum was 0.33 world units per texel —
-  // literally the size of the staircase steps the audit measured on the
-  // kart's silhouette. 1024 over 84 units is 0.082, a 4x density gain, and
-  // the frustum still covers the kart plus the two rivals framed with it.
-  sun.shadow.mapSize.set(mobile ? 512 : 1024, mobile ? 512 : 1024);
-  sun.shadow.camera.left = -42;
-  sun.shadow.camera.right = 42;
-  sun.shadow.camera.top = 42;
-  sun.shadow.camera.bottom = -42;
-  // A low sun throws long shadows: at 20 degrees a kart's shadow is ~2.7x its
-  // height, so the near plane has to sit well inside the light distance or
-  // the caster itself falls outside the frustum.
-  sun.shadow.camera.near = 10;
-  sun.shadow.camera.far = 460;
-  // normalBias, not a bigger depth bias: at 0.082 units/texel a constant
-  // bias large enough to kill acne also detaches the shadow from the wheels.
-  sun.shadow.bias = -0.0002;
-  sun.shadow.normalBias = 0.5;
   scene.add(sun);
   scene.add(sun.target);
+  // Everything about the depth pass — map size, frustum extent, bias, the
+  // caster policy and the per-frame texel snap that stops shadow edges
+  // crawling as the light rides the kart — is the rig's. Desktop moved 1024 ->
+  // 2048 over a 92-unit frustum (0.045 world units per texel, ~2x the old
+  // density) because the shadow pass only ever draws what is inside that
+  // frustum, which is the karts plus a handful of roadside props.
+  const shadowRig = createRaceShadowRig({
+    enabled: !trackVisualsEnabled,
+    mobile,
+    renderer,
+    sun,
+  });
   const rimLight = new THREE.DirectionalLight(palette.rimLightColor || '#4fd8ff', 1.6);
   rimLight.position.set(92, 56, 74);
   scene.add(rimLight);
@@ -5626,35 +5682,34 @@ const createScene = ({
     addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals, ambient) + trackVisualPropCount;
   if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef, ambient);
 
-  // Trackside props CAST now. Every prop factory ends with a blanket
-  // `castShadow = false` — cheap, and it is why the palm, the lamp posts, the
-  // haybales, the barrels, the snowmen and the crates all met the ground on a
-  // hard silhouette edge with no darkening under them and read as stickers in
-  // the audit. The key light's shadow frustum is only 84 units wide and rides
-  // the kart, so per-object frustum culling keeps the shadow pass to the
-  // handful of props actually beside the player; everything else costs one
-  // cull test, which the main pass already pays. Runs BEFORE the kart models
-  // mount, so the rivals keep their deliberate no-cast rule. Skipped on
-  // phones and whenever the shadow map is off.
-  if (!mobile && renderer.shadowMap.enabled) {
-    world.updateMatrixWorld(true);
-    world.traverse((node) => {
-      if (!node.isMesh || !node.geometry || node.castShadow) return;
-      if (node.userData.kind === 'real-3d-track-mesh') return;
-      // Ground/road/decal quads receive, they do not cast; alpha-blended
-      // sprites (glow halos, contact decals) would cast their bounding quad.
-      if (node.geometry.type === 'PlaneGeometry' || node.geometry.type === 'CircleGeometry') return;
-      const material = node.material;
-      if (!material || material.transparent || material.wireframe) return;
-      if (!node.geometry.boundingSphere) node.geometry.computeBoundingSphere();
-      const radius = (node.geometry.boundingSphere?.radius || 0) * node.matrixWorld.getMaxScaleOnAxis();
-      // Under 0.4 units the caster is smaller than a shadow texel; over 40 it
-      // is architecture the frustum can only ever see a slice of, and that
-      // slice self-shadows into acne.
-      if (radius < 0.4 || radius > 40) return;
-      node.castShadow = true;
-    });
+  // GROUNDING, tier 1 + tier 3. Both sweeps run HERE — after every prop is in
+  // the world and BEFORE the karts mount, so kart caster policy stays with the
+  // karts and no kart can pick up a static ground patch.
+  //
+  // Tier 1: trackside props enter the depth pass. Every prop factory ends with
+  // a blanket `castShadow = false`, which is why the palms, lamp posts,
+  // haybales, barrels, snowmen and crates all met the ground on a hard
+  // silhouette edge and read as stickers in the audit.
+  const sceneryCasters = shadowRig.markSceneryCasters(world);
+  // Tier 3: the far field. The shadow frustum is 92 units wide and rides the
+  // player, so it can never reach the mid-ground belt, the skyline blocks or a
+  // prop half a lap away — and those are most of the frame. A one-off instanced
+  // multiply patch under each of them costs two draw calls, zero per-frame work
+  // and zero bytes, and it is the only answer that scales to the whole course.
+  //
+  // The allowed ground band is derived from the course's own elevation so a
+  // bridge deck or an ice shelf counts as ground while a hanging sign does not.
+  let courseMinY = Infinity;
+  let courseMaxY = -Infinity;
+  for (let index = 0; index < 96; index += 1) {
+    const y = sampler.pointAt(index / 96).point.y;
+    if (y < courseMinY) courseMinY = y;
+    if (y > courseMaxY) courseMaxY = y;
   }
+  const groundPatches = shadowRig.buildFarFieldGrounding(world, {
+    groundMax: (Number.isFinite(courseMaxY) ? courseMaxY : 0) + 26,
+    groundMin: (Number.isFinite(courseMinY) ? courseMinY : 0) - 46,
+  });
 
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({
@@ -5662,6 +5717,7 @@ const createScene = ({
     color: playerCharacter.color,
     contactGrounding: trackVisuals.enabled,
     scale: KART_SCALE,
+    shadowsEnabled: shadowRig.active,
   });
   const player = playerModel.group;
   player.userData.kind = 'player-kart';
@@ -5872,13 +5928,23 @@ const createScene = ({
       color: rival.color,
       contactGrounding: trackVisuals.enabled,
       scale: KART_SCALE,
+      // Per-kart, not per-scene: a rival that does not cast (phone tier) still
+      // needs the big soft blob, because it is the only grounding it has.
+      shadowsEnabled: shadowRig.rivalsCast,
     });
     model.group.userData.kind = 'grounded-rival-kart';
-    // Rivals keep only blob shadows — their cast shadows read as nothing at
-    // race distance but triple the shadow pass draw count.
-    model.group.traverse((node) => {
-      node.castShadow = false;
-    });
+    // Rivals CAST on desktop now. The old rule ("their cast shadows read as
+    // nothing at race distance") was measured wrong: the rivals a player can
+    // see are the ones alongside him, well inside the shadow frustum, and with
+    // no cast shadow they visibly levitate — the original audit measured the
+    // road under a rival at RGB(17,28,51) against RGB(17,28,52) a hundred
+    // pixels away. Distant rivals cost one frustum-cull test each, not a draw.
+    // Phones keep the no-cast rule.
+    if (!shadowRig.rivalsCast) {
+      model.group.traverse((node) => {
+        node.castShadow = false;
+      });
+    }
     world.add(markCameraExempt(model.group));
     world.add(markCameraExempt(model.contactRig));
     return { ...rival, model };
@@ -6111,6 +6177,12 @@ const createScene = ({
     scene,
     shieldBubble,
     shieldUniforms,
+    // Grounding rig + its build-time counters. The counters are telemetry, not
+    // decoration: "shadows are on" and "anything is actually casting" are two
+    // different claims and the audit only ever verified the first.
+    shadowRig,
+    groundPatches,
+    sceneryCasters,
     sun,
     trackVisualsEnabled: trackVisuals.enabled,
     world,
@@ -6258,6 +6330,10 @@ const publishTelemetry = (
     audioMuted: runtimeStats.audioMuted ?? null,
     audioRunning: runtimeStats.audioRunning ?? false,
     bakedSpike: runtimeStats.bakedSpike ?? null,
+    // Wave-6 camera + grounding proof hooks; see the call site for what the
+    // harness is expected to assert on them.
+    cameraFraming: runtimeStats.cameraFraming ?? null,
+    grounding: runtimeStats.grounding ?? null,
     // W0 loud-failure guard: kart-playable asserts mounted === requested
     // and failed === 0 on comeback-city (module-level counters — they
     // accumulate across scene rebuilds, growing in lockstep).
@@ -6615,6 +6691,12 @@ export const ComebackCityThreeKartRace = ({
     if (typeof window !== 'undefined') window.__g3ParticlesDebug = particles;
     let particlePrevSnapshot = null;
     const race = createInitialRace(rivalSeats, trackDef);
+    // Chase-camera feel state (springs, drift lead, air/landing, shake, FOV).
+    // Lives beside `race` rather than inside it because it is presentation, not
+    // simulation: nothing in the sim may read it, and a restart throws it away
+    // with the rest of the engine.
+    const cameraFeel = createChaseFeelState();
+    const rivalsCastShadows = engine.shadowRig.rivalsCast;
     // ?itemShowcase=1 parks one of each item visual just past the spawn and
     // raises the ice shield — deterministic close-ups for the approval
     // previews (the live moments are too fast for polled screenshots).
@@ -6749,11 +6831,18 @@ export const ComebackCityThreeKartRace = ({
           const kartKind = isPlayer ? kartKey : characterEntry.kart;
           const authoredKart =
             kartKind !== 'kenney' && !(isPlayer && wantsKenneyKart) ? kartScenes[kartKind] : null;
+          // Caster policy for the swapped-in GLBs. The kart FACTORY's defaults
+          // are re-applied here because a GLB mount replaces the meshes the
+          // factory tagged. Rivals cast on desktop (see the rival build above);
+          // the driver casts too — the helmet and shoulders are the part of a
+          // kart's silhouette that sits proud of the bodywork, so without them
+          // the shadow is a rectangle and the kart still reads as a decal.
+          const bodyCasts = isPlayer || engine.shadowRig.rivalsCast;
           if (authoredKart) {
             attachTripoKartBody(
               model,
               authoredKart,
-              isPlayer,
+              bodyCasts,
               KART_NOSE_YAW[kartKind] ?? -Math.PI / 2,
               characterEntry
             );
@@ -6764,7 +6853,7 @@ export const ComebackCityThreeKartRace = ({
               model,
               racerScene,
               makeKartPaletteTexture(colormapImage, characterEntry.color),
-              isPlayer,
+              bodyCasts,
               18.2,
               characterEntry
             );
@@ -6772,7 +6861,7 @@ export const ComebackCityThreeKartRace = ({
           const driverScene = driverScenes[characterEntry.key];
           if (driverScene) {
             mountDriverAvatar(model, driverScene, {
-              castsShadow: false,
+              castsShadow: bodyCasts && engine.shadowRig.driversCast,
               height: characterEntry.driverHeight,
               yaw: characterEntry.driverYaw,
             });
@@ -6953,11 +7042,12 @@ export const ComebackCityThreeKartRace = ({
       contactRig.position.copy(sample.point);
       contactRig.position.y += 0.16;
       contactRig.rotation.y = group.rotation.y;
-      const air = pose?.hop || 0;
-      const lift = clamp(1 - air * 0.05, 0.42, 1);
-      contactRig.scale.set(lift, 1, lift);
+      // A rising caster's contact patch shrinks AND softens — shrinking alone
+      // made a mid-hop kart look like it had a smaller kart parked under it.
+      const fade = contactPatchAirFade(pose?.hop || 0);
+      contactRig.scale.set(fade.scale, 1, fade.scale);
       contactRig.children.forEach((decal) => {
-        decal.material.opacity = decal.userData.contactOpacity * lift;
+        decal.material.opacity = decal.userData.contactOpacity * fade.opacity;
       });
     };
     const spinOutYaw = (spinTimer) =>
@@ -7841,6 +7931,11 @@ export const ComebackCityThreeKartRace = ({
             mesh.material.transparent = ghosted;
             mesh.material.depthWrite = !ghosted;
             mesh.material.opacity = proximity;
+            // A ghosted rival must stop CASTING too. The shadow pass ignores
+            // material opacity, so a body faded to 15% on the lens would still
+            // throw a fully solid shadow across the road ahead — a black kart
+            // silhouette with no kart attached to it.
+            if (rivalsCastShadows) mesh.castShadow = proximity > 0.55;
           });
           rival.model.group.visible = proximity > 0.02;
           rival.model.contactRig.visible = proximity > 0.2;
@@ -7943,6 +8038,15 @@ export const ComebackCityThreeKartRace = ({
       if (!race.blockersRefreshed && race.raceTime > 3) {
         race.blockersRefreshed = true;
         engine.collectCameraBlockers();
+        // Same reason, same one-off: the static grounding sweeps (which props
+        // cast, which props get a contact patch) also ran before the GLBs
+        // existed, and the ungrounded objects the critics measured — the belt
+        // towers, the roadside sign, the Miami blocks — are exactly the ones
+        // that mount late. Piggy-backing on the blocker refresh keeps this to
+        // one extra world walk per race instead of a per-frame cost.
+        const grounding = engine.shadowRig.refresh();
+        engine.sceneryCasters += grounding.casters;
+        engine.groundPatches = grounding.patches;
       }
       let targetFov;
       if (proofCameraMode === 'top') {
@@ -7952,9 +8056,27 @@ export const ComebackCityThreeKartRace = ({
         engine.camera.lookAt(target);
         targetFov = viewport.mobile ? 58 : 54;
       } else {
-        // Arcade chase camera: low, close, and locked to the track path behind
-        // the kart — the camera rides the road, so corners can never put it
-        // inside walls or buildings. Slight duck under the bridge.
+        // Arcade chase camera. The shape of it, top to bottom:
+        //
+        //   boom DIRECTION  = the kart's own trailing heading, blended toward
+        //                     the trailing spline point only while the two
+        //                     agree, then run through a damped angular spring;
+        //   boom LENGTH     = the authored chase distance, stretched by speed
+        //                     and then modulated so the kart's PROJECTED size
+        //                     stays inside a window;
+        //   AIM             = ahead down the road, plus drift lead, plus impact
+        //                     shake, plus a framing correction that guarantees
+        //                     the kart never touches a viewport edge.
+        //
+        // Why the direction is not simply the spline: the camera trails by ARC
+        // length, so a hairpin tighter than the trail distance puts the spline
+        // anchor across the corner from the kart. The straight-line gap
+        // collapses, the kart swells and slides to the edge of frame, and the
+        // old min/max gap clamp then shoved the eye SIDEWAYS to fix the
+        // distance — which is exactly the frame where the hero ends up
+        // guillotined by the bottom-left corner. Trailing the kart's heading
+        // instead always lands the eye on road the kart has just driven.
+        // Slight duck under the bridge.
         const underpass = race.progress > 0.15 && race.progress < 0.24;
         // Owner 2026-07-12: "you look tiny ... hard to control" + "the
         // camera changes ... and looks wild" — phones get ONE pinned
@@ -7987,28 +8109,114 @@ export const ComebackCityThreeKartRace = ({
             hopHeightFor(race.driftState.hopTimer) +
             (race.shortcut.active ? shortcutArcHeight(race.shortcut, trackDef.shortcut) : 0)
         );
-        race.cameraAirLift = lerp(race.cameraAirLift || 0, kartAir * 0.62, 1 - Math.pow(0.02, dt));
-        const desiredCamera = cameraSample.point
-          .clone()
-          .add(new THREE.Vector3(0, cameraHeight + clamp(race.speed / 90, 0, 2.2) + race.cameraAirLift, 0));
-        engine.camera.position.lerp(desiredCamera, 1 - Math.pow(0.00003, dt));
-        // Vertical follow stays tight so bridge climbs/descents keep the kart
-        // framed instead of the camera floating above the drop.
-        engine.camera.position.y = lerp(engine.camera.position.y, desiredCamera.y, 1 - Math.pow(0.0000005, dt));
-        // The camera trails by ARC length, so a hairpin tighter than the trail
-        // distance collapses the straight-line gap and the kart swells to fill
-        // the frame (measured: one continuous run went from a 90px dot to a
-        // mesh clipped off the left AND bottom edges across two lap marks).
-        // Push back along the camera->kart vector so the subject's projected
-        // size has a hard floor and a hard ceiling regardless of the spline.
-        const kartToCamera = engine.camera.position.clone().sub(playerSample.point);
-        const gap = kartToCamera.length();
-        const minGap = cameraBackUnits * 0.72;
-        const maxGap = cameraBackUnits * 1.5;
-        if (gap > 0.001 && (gap < minGap || gap > maxGap)) {
-          engine.camera.position
-            .copy(playerSample.point)
-            .addScaledVector(kartToCamera.divideScalar(gap), clamp(gap, minGap, maxGap));
+        // Boom direction. `agreement` is the dot of the kart's trailing heading
+        // with the direction of the spline anchor: 1 on a straight (take the
+        // road-hugging anchor, which is the approved shipped look), collapsing
+        // toward 0 through a hairpin (take the kart's own tail, which is the
+        // only direction guaranteed to be behind it).
+        const tangent = playerSample.tangent;
+        const trailX = -tangent.x;
+        const trailZ = -tangent.z;
+        let anchorX = cameraSample.point.x - playerSample.point.x;
+        let anchorZ = cameraSample.point.z - playerSample.point.z;
+        const anchorLength = Math.hypot(anchorX, anchorZ) || 1;
+        anchorX /= anchorLength;
+        anchorZ /= anchorLength;
+        const anchorWeight = 0.65 * clamp(trailX * anchorX + trailZ * anchorZ, 0, 1);
+        const boomDirX = trailX + (anchorX - trailX) * anchorWeight;
+        const boomDirZ = trailZ + (anchorZ - trailZ) * anchorWeight;
+        const boomDirLength = Math.hypot(boomDirX, boomDirZ) || 1;
+
+        // Impact impulses, all derived from rising edges of state the sim
+        // already keeps. Nothing else in the frame loop had to learn about the
+        // camera, and a new hit type gets a shake by adding one line here.
+        // (Landing is not in this list: it is passed as `landed` below, because
+        // the feel model has to dip the eye and pinch the FOV on the same edge.)
+        const landingNow = race.landSquashTimer > 0;
+        if (race.spinTimer > (race.cameraPrevSpin ?? 0) + 0.01) impulseChaseShake(cameraFeel, 0.9);
+        if (race.wallContact && !race.cameraWasWall) impulseChaseShake(cameraFeel, 0.45);
+        if (race.boostTimer > (race.cameraPrevBoost ?? 0) + 0.01) impulseChaseShake(cameraFeel, 0.26);
+        const landedThisFrame = landingNow && !race.cameraWasLanding;
+        race.cameraWasLanding = landingNow;
+        race.cameraPrevSpin = race.spinTimer;
+        race.cameraWasWall = Boolean(race.wallContact);
+        race.cameraPrevBoost = race.boostTimer;
+
+        const feel = advanceChaseFeel(cameraFeel, {
+          airHeight: kartAir,
+          airborne:
+            race.airState.airborne || race.driftState.hopTimer > 0 || race.shortcut.active,
+          boomBase: cameraBackUnits,
+          boosting: race.boostTimer > 0,
+          driftCharge: race.driftState.charge,
+          driftDirection: race.driftState.direction || 0,
+          drifting: race.drift,
+          dt,
+          eyeBase: cameraHeight,
+          fovBase: phoneWide ? 58 : viewport.mobile ? 61 : 60,
+          fovSeed: engine.camera.fov,
+          landed: landedThisFrame,
+          lookUpBase: race.finished ? 6 : camLab?.lookUp ?? (viewport.mobile && !phoneWide ? 5.5 : 4.5),
+          miniTurbo: miniTurboActive,
+          reducedMotion,
+          speed01: clamp(race.speed / MAX_SPEED, 0, 1),
+          targetYaw: Math.atan2(boomDirX / boomDirLength, boomDirZ / boomDirLength),
+        });
+        // FOV is resolved HERE, before the framing solve below, because the
+        // framing solve is a projection and a projection needs a field of view.
+        // The generic lerp further down then finds nothing left to do.
+        targetFov = feel.fov;
+        if (Math.abs(engine.camera.fov - targetFov) > 0.01) {
+          engine.camera.fov = targetFov;
+          engine.camera.updateProjectionMatrix();
+        }
+
+        // The lateral dodge (solved at the end of the previous frame, see the
+        // occlusion guard below) is a yaw offset on the boom, not a shove on
+        // the eye: swinging the bearing keeps the chase distance and the eye
+        // height the shot was composed for.
+        const boomYaw = feel.boomYaw + (race.cameraDodgeYaw || 0);
+        const desiredCamera = CHASE_DESIRED.set(
+          playerSample.point.x + Math.sin(boomYaw) * feel.boomLength,
+          cameraSample.point.y + feel.eyeLift,
+          playerSample.point.z + Math.cos(boomYaw) * feel.boomLength
+        );
+        // Separate position and height damping, deliberately: the horizontal
+        // follow is loose enough to lag through a corner (weight), the vertical
+        // one is tight so a bridge climb or a drop never leaves the eye hanging
+        // above the deck the kart just left.
+        engine.camera.position.lerp(desiredCamera, feel.positionAlpha);
+        engine.camera.position.y = lerp(engine.camera.position.y, desiredCamera.y, feel.heightAlpha);
+
+        // The framing subject is the kart's VISUAL centre — road point plus
+        // body height plus whatever air it is carrying — not the road point.
+        // Framing the road point is why a launched kart could exit the top of
+        // frame while the camera was, by its own arithmetic, perfectly aimed.
+        CHASE_SUBJECT.copy(playerSample.point);
+        CHASE_SUBJECT.y += CHASE_SUBJECT_CENTRE + kartAir;
+
+        // Pass 1 of the framing solve, run BEFORE the world push-out below,
+        // because this is the pass that may move the EYE. Everything after the
+        // push-out is orientation only and can never re-enter geometry.
+        readChaseBasis(engine.camera);
+        const sizeSolve = solveChaseFraming(engine.camera, feel.boomLength);
+        if (!sizeSolve.behind && sizeSolve.boomScale !== 1) {
+          const kartToCamera = CHASE_GAP.copy(engine.camera.position).sub(playerSample.point);
+          const gap = kartToCamera.length();
+          if (gap > 0.001) {
+            // The authored chase distance stays the anchor: the size solver may
+            // modulate it, never replace it. Worst case if the subject-radius
+            // estimate is wrong is a shot 28% tight or 55% wide, not a shot the
+            // camera invented.
+            const scaled = clamp(
+              gap * sizeSolve.boomScale,
+              cameraBackUnits * 0.72,
+              cameraBackUnits * 1.55
+            );
+            engine.camera.position
+              .copy(playerSample.point)
+              .addScaledVector(kartToCamera.divideScalar(gap), scaled);
+          }
         }
         // World pushout. Two rules, in this order:
         //   1. never inside a blocker — if the camera lands inside a prop's
@@ -8123,26 +8331,129 @@ export const ComebackCityThreeKartRace = ({
               );
             }
           }
+
+          // LATERAL DODGE — the answer the previous round explicitly deferred
+          // ("the good answer is a lateral dodge, which is wave 6's camera
+          // work"). Shortening the boom cannot clear penguin-village-p0_9: the
+          // ice mass fills the corridor between the kart and the eye, so every
+          // legal boom length along that bearing is inside it. Swinging the
+          // bearing does clear it, because the obstruction is beside the road,
+          // not around it.
+          //
+          // The sweep is evaluated against the IDEAL boom (the feel model's
+          // bearing at its authored length), never against the eye's current
+          // position, and the result is fed back into the desired position on
+          // the NEXT frame. That ordering is what makes it hysteresis-free: a
+          // dodge that is working does not read as "clear, unwind" and start
+          // oscillating, because offset 0 in the sweep below is always the
+          // undodged bearing and is always tested first.
+          //
+          // It only runs while jammed or already dodging, so a clear frame pays
+          // for exactly one cast, as before.
+          const jammed = Number.isFinite(hitDistance) && hitDistance < guardFloor;
+          if (jammed || Math.abs(race.cameraDodgeYaw || 0) > 0.001) {
+            const idealRise = cameraSample.point.y + feel.eyeLift - guardHead.y;
+            const idealLength = Math.hypot(feel.boomLength, idealRise) || 1;
+            let dodgeTarget = 0;
+            for (let index = 0; index < CAMERA_DODGE_OFFSETS.length; index += 1) {
+              const candidate = CAMERA_DODGE_OFFSETS[index];
+              const yaw = feel.boomYaw + candidate;
+              engine.cameraRay.set(
+                guardHead,
+                CAMERA_DODGE_DIR.set(
+                  Math.sin(yaw) * feel.boomLength,
+                  idealRise,
+                  Math.cos(yaw) * feel.boomLength
+                ).divideScalar(idealLength)
+              );
+              engine.cameraRay.near = 9;
+              engine.cameraRay.far = idealLength + 1.2;
+              engine.cameraRayHits.length = 0;
+              engine.cameraRay.intersectObjects(engine.cameraOccluders, false, engine.cameraRayHits);
+              if (!engine.cameraRayHits.length) {
+                dodgeTarget = candidate;
+                break;
+              }
+            }
+            // Surrounded (nothing clear) leaves dodgeTarget at 0 and the boom
+            // shortening above stays the fallback — one broken frame beats a
+            // camera cartwheeling looking for an exit.
+            race.cameraDodgeYaw = lerp(
+              race.cameraDodgeYaw || 0,
+              dodgeTarget,
+              1 - Math.pow(0.0002, dt)
+            );
+          }
         }
-        const lookAt = race.finished
-          ? playerSample.point.clone().add(new THREE.Vector3(0, 6, 0))
-          : playerSample.point
-              .clone()
-              .addScaledVector(playerSample.tangent, camLab?.lookAhead ?? (phoneWide ? 28 : viewport.mobile ? 26 : 30))
-              .add(new THREE.Vector3(0, (camLab?.lookUp ?? (viewport.mobile && !phoneWide ? 5.5 : 4.5)) + race.cameraAirLift, 0));
-        engine.camera.lookAt(lookAt);
-        // Mini-turbo gets a small extra FOV kick on top of the speed widening.
+        // AIM. Base target is the road ahead — the "readable amount of road"
+        // the rubric asks for — plus the drift lead, which slides the target
+        // INTO the corner the kart has locked onto while the boom yaw above
+        // has already swung the eye to the OUTSIDE of it. Those two together
+        // are the whole MK8 drift camera; either one alone reads as a bug.
         //
-        // These are VERTICAL fovs. 70 + 7 at speed on a 16:9 canvas is a 109
-        // degree HORIZONTAL field — which is why the kart measured ~160px
-        // wide from a 38-unit chase and why roadside props exploded into the
-        // frame as the camera passed them. 60 + 5.5 puts it at ~95 degrees:
-        // still an arcade-wide read, but the hero reads as the subject and
-        // the perspective stretch on near geometry roughly halves.
-        targetFov =
-          (phoneWide ? 58 : viewport.mobile ? 61 : 60) +
-          clamp(race.speed / MAX_SPEED, 0, 1.15) * 5.5 +
-          (miniTurboActive ? 3.5 : 0);
+        // Object3D.lookAt reads the eye position out of matrixWorld, NOT out of
+        // .position — and matrixWorld is still whatever the last render left
+        // behind, which at 230km/h is a metre back down the road. Every aim
+        // below (and the framing solve, which projects from .position) has to
+        // agree on where the lens is, so the world matrix is refreshed once
+        // here, after the last thing that moves the eye.
+        engine.camera.updateMatrixWorld();
+        const lookAhead = race.finished
+          ? 0
+          : camLab?.lookAhead ?? (phoneWide ? 28 : viewport.mobile ? 26 : 30);
+        CHASE_LOOK.copy(playerSample.point)
+          .addScaledVector(playerSample.tangent, lookAhead)
+          .addScaledVector(playerSample.normal, feel.lookLateral);
+        CHASE_LOOK.y += feel.lookHeight;
+        engine.camera.lookAt(CHASE_LOOK);
+
+        // FRAMING GUARANTEE. Two solve/apply passes: the correction below is a
+        // small-angle approximation, so pass 1 lands the kart very close to the
+        // box and pass 2 removes the residual. Cost is two dot-product triples
+        // and two lookAt calls, and the payoff is the single measured fault the
+        // camera axis has been failing on for three waves — the hero going from
+        // a 90px dot above the horizon to a mesh clipped by the bottom-left
+        // corner inside one continuous race.
+        //
+        // Only the ORIENTATION moves here. It runs after the blocker push-out
+        // and the occlusion guard precisely so that guaranteeing the framing
+        // can never walk the eye back into the geometry those two just left.
+        for (let pass = 0; pass < 2; pass += 1) {
+          readChaseBasis(engine.camera);
+          const lookDistance = CHASE_LOOK.distanceTo(engine.camera.position);
+          const framing = solveChaseFraming(engine.camera, lookDistance);
+          race.cameraFraming = framing;
+          if (framing.behind) {
+            // Degenerate: the subject is level with or behind the lens (a spin-
+            // out into a wall can do it). There is no framing to solve, only a
+            // subject to point at.
+            engine.camera.lookAt(CHASE_SUBJECT);
+            break;
+          }
+          if (Math.abs(framing.lookShiftRight) < 0.01 && Math.abs(framing.lookShiftUp) < 0.01) break;
+          CHASE_LOOK.addScaledVector(CHASE_RIGHT, framing.lookShiftRight).addScaledVector(
+            CHASE_UP,
+            framing.lookShiftUp
+          );
+          engine.camera.lookAt(CHASE_LOOK);
+        }
+
+        // Impact shake goes on LAST and is deliberately outside the framing
+        // loop: a shake the framing solver immediately cancelled would be a
+        // shake nobody can see. It is angular only — yaw and pitch, never roll,
+        // because a rolled horizon on a toon track reads as a rendering fault
+        // rather than a hit. The magnitudes are small enough (max ~1.3 degrees)
+        // that they cannot push the kart past the safe box the loop just
+        // enforced.
+        if (feel.shakeYaw !== 0 || feel.shakePitch !== 0) {
+          readChaseBasis(engine.camera);
+          const shakeReach = CHASE_LOOK.distanceTo(engine.camera.position);
+          CHASE_LOOK.addScaledVector(CHASE_RIGHT, feel.shakeYaw * shakeReach).addScaledVector(
+            CHASE_UP,
+            feel.shakePitch * shakeReach
+          );
+          engine.camera.lookAt(CHASE_LOOK);
+        }
       }
       if (Math.abs(engine.camera.fov - targetFov) > 0.1) {
         engine.camera.fov = lerp(engine.camera.fov, targetFov, 1 - Math.pow(0.001, dt));
@@ -8150,13 +8461,11 @@ export const ComebackCityThreeKartRace = ({
       }
       // Key light rides the action but its DIRECTION is the sky's: the same
       // vector the dome puts the sun disc on, so shading, shadows and the
-      // painted horizon glow all agree on one time of day.
-      engine.sun.position
-        .copy(engine.sunDirection)
-        .multiplyScalar(engine.sunDistance)
-        .add(playerSample.point);
-      engine.sun.target.position.copy(playerSample.point);
-      engine.sun.target.updateMatrixWorld();
+      // painted horizon glow all agree on one time of day. The rig snaps the
+      // light's target to whole shadow texels on the way — a light that rides a
+      // moving subject resamples the depth map on a new grid every frame, and
+      // the result is shadow edges that visibly crawl along every silhouette.
+      engine.shadowRig.update(playerSample.point, engine.sunDirection, engine.sunDistance);
       // Horizon behaves like distance: the far band is fully camera-locked
       // (infinite), the near silhouette row trails at 0.72 for parallax.
       if (engine.backdrop) {
@@ -8198,6 +8507,26 @@ export const ComebackCityThreeKartRace = ({
         frameWorkMs: rollingAverage(frameWorkSamples),
         proofCameraMode,
         rendererStats: rendererStatsForFrame(now),
+        // Camera framing, published so the capture harness can ASSERT the
+        // guarantee instead of a critic having to eyeball 18 stills for a
+        // clipped kart. ndcX/ndcY are the hero's screen position (-1..1, +y up)
+        // and ndcRadius its projected half-height; |ndc| + radius >= 1 on any
+        // frame is a framing failure by definition.
+        cameraFraming: race.cameraFraming
+          ? {
+              dodgeYaw: Number((race.cameraDodgeYaw || 0).toFixed(3)),
+              fov: Number(engine.camera.fov.toFixed(2)),
+              ndcRadius: Number(race.cameraFraming.ndcRadius.toFixed(3)),
+              ndcX: Number(race.cameraFraming.ndcX.toFixed(3)),
+              ndcY: Number(race.cameraFraming.ndcY.toFixed(3)),
+            }
+          : null,
+        grounding: {
+          groundPatches: engine.groundPatches,
+          rivalsCast: engine.shadowRig.rivalsCast,
+          sceneryCasters: engine.sceneryCasters,
+          shadowMapSize: engine.shadowRig.mapSize,
+        },
       });
       snapshotTimer += dt;
       if (snapshotTimer > 0.14 || race.finished) {
@@ -8252,6 +8581,10 @@ export const ComebackCityThreeKartRace = ({
       // Scene traversal below handles geometry/material; the instance
       // matrix attribute needs the InstancedMesh's own dispose.
       engine.coinInstanced?.mesh?.dispose();
+      // Grounding decals are InstancedMeshes: the scene traversal below frees
+      // their geometry and material, but the instance matrix attribute needs
+      // the mesh's own dispose, same as the coin field.
+      engine.shadowRig?.dispose?.();
       particles.dispose();
       engine.scene.traverse((object) => {
         object.geometry?.dispose?.();

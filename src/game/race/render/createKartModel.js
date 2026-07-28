@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { tuneEnvResponse } from './raceEnvironment.js';
 import { applyKartShading } from './toonRimShader.js';
 
 const DEFAULT_VEHICLE_PALETTE = {
@@ -12,14 +13,33 @@ const DEFAULT_VEHICLE_PALETTE = {
 // shading on every barrel and lamp post is exactly the "rim on everything"
 // cheapening the rim comment warns about, and it would cost a per-fragment
 // classifier on the whole track.
-export const createBasicMaterial = (color, options = {}) =>
-  new THREE.MeshStandardMaterial({
+//
+// AAA wave 4 — about `metalness: 0.02`. That number was never a decision: it is
+// what a material helper written before the scene had any environment settles
+// on, because with `scene.environment` null three's indirect specular term
+// drops out entirely and metalness only ever subtracts diffuse. Now that
+// raceEnvironment.js can install a probe, metalness is a live lever for the
+// first time — but raising this DEFAULT would re-shade every barrel, verge,
+// building and rail in both tracks at once, and Comeback City's grade is
+// owner-confirmed. So the default is unchanged and the lever is opt-in:
+//
+//     createBasicMaterial('#9fd9ef', { env: 'ice' })
+//
+// `env` is a helper flag, not a THREE.Material property, so it is destructured
+// out before the constructor sees it — setValues() warns on unknown keys. See
+// ENV_RESPONSE in raceEnvironment.js for the classes and tuneEnvResponse for
+// why metalness is only applied when a probe actually exists.
+export const createBasicMaterial = (color, options = {}) => {
+  const { env = null, ...materialOptions } = options;
+  const material = new THREE.MeshStandardMaterial({
     color,
     flatShading: true,
     metalness: 0.02,
     roughness: 0.68,
-    ...options,
+    ...materialOptions,
   });
+  return env ? tuneEnvResponse(material, env) : material;
+};
 
 // ---- The three kart material classes --------------------------------------
 // applyKartShading splits paint/chrome/rubber per TEXEL for the fused authored
@@ -36,15 +56,22 @@ export const createKartPaintMaterial = (color, options = {}) =>
     createBasicMaterial(color, { metalness: 0.12, roughness: 0.3, ...options })
   );
 
-// Chrome / trim. Metalness stays MODERATE on purpose: the race scene has no
-// environment map, and a MeshStandardMaterial at metalness ~0.9 with nothing
-// to reflect renders near-black. The metal read comes from the injected hot
-// band, not from the BRDF — same as the authored toon bodies, which have no
-// metalness parameter at all.
-export const createKartChromeMaterial = (color = '#f6fbff', options = {}) =>
-  applyKartShading(
-    createBasicMaterial(color, { metalness: 0.3, roughness: 0.18, ...options })
-  );
+// Chrome / trim. Metalness used to stay MODERATE here with an explicit note
+// that "the race scene has no environment map, and a MeshStandardMaterial at
+// metalness ~0.9 with nothing to reflect renders near-black". That is still
+// exactly right when there is no probe — and it is why this now asks
+// raceEnvironment for the `metal` class instead of hard-coding a number.
+// tuneEnvResponse applies the full metalness ONLY when a probe is live and
+// leaves 0.3 standing otherwise, so this material is correct in both worlds
+// rather than tuned for whichever one happened to ship first. The injected hot
+// band still carries the read either way.
+export const createKartChromeMaterial = (color = '#f6fbff', options = {}) => {
+  const material = createBasicMaterial(color, { metalness: 0.3, roughness: 0.18, ...options });
+  // The preset supplies metalness and envMapIntensity; roughness is handed back
+  // as an override so a caller's explicit `roughness` in options is not
+  // silently reverted to the class default.
+  return applyKartShading(tuneEnvResponse(material, 'metal', { roughness: material.roughness }));
+};
 
 // Rubber: the same injection with every specular strength at zero. Dead matte
 // is not "no shading" — round 1 left this material out of the injection
@@ -54,9 +81,17 @@ export const createKartChromeMaterial = (color = '#f6fbff', options = {}) =>
 // actual distinction from the two classes above. `plastic` has to be zeroed
 // explicitly: a mid-grey tyre colour lands in the leftover class, not the
 // rubber one, so leaving it at its default would hand a known tyre a highlight.
+// The env weights are zeroed alongside the specular ones. On a tyre's dark
+// neutral albedo the classifier already scores plasticMask ~0, so this is
+// belt-and-braces rather than a fix — but the contract of this class is "the
+// value anchor the other three are read against", and a class that quietly
+// picks up a sky reflection when someone recolours a tyre pale is not that.
 export const createKartRubberMaterial = (color, options = {}) =>
   applyKartShading(createBasicMaterial(color, { metalness: 0, roughness: 0.95, ...options }), {
     chromeStrength: 0,
+    envChrome: 0,
+    envPaint: 0,
+    envPlastic: 0,
     paintStrength: 0,
     plasticStrength: 0,
   });

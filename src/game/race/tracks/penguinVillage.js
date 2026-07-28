@@ -159,15 +159,53 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // for that). It does not need to: backdropHaze below took the same warm
     // step, so the plate and the dome still meet at a shared colour — they just
     // meet at a warmer one.
+    //
+    // WAVE 4 — AND THE REASON EVERY WORD ABOVE IS TRUE AND STILL PRODUCED AN
+    // OVERCAST. The ladder above was authored against the wrong angles. The
+    // camera does not see the horizon: the far backdrop plate is opaque from
+    // 0 to ~12 degrees of elevation and only dissolves out at its rim, 22.3
+    // degrees (radius 780, height 380, centre y 140 — see createSkyDome.js,
+    // where the decoded alpha ramp is written down). With horizonPower 1.7 the
+    // band the player ACTUALLY sees, 20 to 34 degrees, samples offsets 0.63 to
+    // 0.84. Wave 3's warm break lived at 0.86-1.00, which is 0-13 degrees:
+    // painted, correct, and behind a plate.
+    //
+    // So the whole ladder moves DOWN the offset axis by roughly one band. The
+    // warm break now lands at 0.85-0.91 (17-21 degrees, where the plate's alpha
+    // has fallen to 0.3-0.7 and the dome shows through), the turn-over sits at
+    // 0.71-0.78 (25-30 degrees) and the bruised indigo ceiling occupies
+    // 0.52-0.63 (34-40 degrees), which is the top of frame. Replayed through
+    // the shipped dome shader, ACES at the chain's effective 1.80x, the
+    // vignette and the track LUT, over seven bearings:
+    //
+    //   elev 34   hue 229-244  sat 0.37-0.79  val 0.68-0.78   storm ceiling
+    //   elev 30   hue 234-247  sat 0.38-0.55  val 0.66-0.75
+    //   elev 26   hue 250-309  sat 0.22-0.31  val 0.67        the front's edge
+    //   elev 23   hue 328-354  sat 0.21-0.22  val 0.67-0.79
+    //   elev 20   hue  10-30   sat 0.20-0.40  val 0.79-0.92   the warm break
+    //   elev 16   hue  32-38   sat 0.42-0.53  val 0.89-0.95
+    //
+    // against a shipped build measured at hue 233-238 / sat 0.21-0.25 at the
+    // top of frame decaying to sat 0.02-0.10 with an UNDEFINED hue below it.
+    // The same replay reproduces Comeback City's captured sky to rms 13/255,
+    // which is what makes those numbers worth quoting.
+    //
+    // Chroma is deliberately LOW in the stops themselves (the widest is 0.44
+    // saturation): the track grade runs sat 1.30 on top, so an authored stop at
+    // 0.6 comes out of the pipeline past 0.85 and the ladder turns into a
+    // magenta bruise on the way from indigo to amber. The stops carry the HUE
+    // rotation and the VALUE ladder; the grade supplies the chroma.
     sky: [
-      [0, '#0d1440'],
-      [0.28, '#1c2a5e'],
-      [0.52, '#32487c'],
-      [0.7, '#5c7095'],
-      [0.78, '#8f8ba0'],
-      [0.86, '#c39d8c'],
-      [0.93, '#dfae86'],
-      [1, '#f2c894'],
+      [0, '#16204a'],
+      [0.3, '#22305c'],
+      [0.52, '#384780'],
+      [0.63, '#4e5a8c'],
+      [0.71, '#6a6b8b'],
+      [0.78, '#877a83'],
+      [0.85, '#a58270'],
+      [0.91, '#c4966a'],
+      [0.96, '#dcae74'],
+      [1, '#efc68d'],
     ],
     // Arctic SUNSET, and round 1 did not deliver one: the only disc in 18
     // frames was small, WHITE and high, which is midday. 22 -> 15 degrees puts
@@ -177,7 +215,15 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // now grazes the far plate's ridge line rather than floating clear of it;
     // that is the intended read (sun behind the mountains), and the glow lobes
     // below are what carry it when the ridge is in front.
-    sun: { azimuthDeg: 195, distance: 190, elevationDeg: 15 },
+    // Wave 4: 15 -> 12 degrees, which is the elevation the wave-3 rubric critic
+    // prescribed by name and which no previous agent owned the file to set. It
+    // does two things at once: it puts the disc and its glow lobes down into
+    // the band where the backdrop plate is still translucent (12 degrees is
+    // where pv-far.webp's alpha first reaches 255), and it drops the flat
+    // snow's share of the key from sin(15) = 0.259 to sin(12) = 0.208 while
+    // leaving a sun-facing vertical ice face at cos(12) = 0.978 — so the rake
+    // moves off the ground plane and onto the geometry that has form.
+    sun: { azimuthDeg: 195, distance: 190, elevationDeg: 12 },
     // Wave 3: 5.2 -> 4.2, and see sunColor. Penguin Village was running a
     // HOTTER and MORE intense key than Comeback City (#ffb85a at 4.4) over a
     // white track, and the arithmetic only goes one way: a cool #a9c2d2 belt
@@ -188,13 +234,26 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // 4.2 also stops the lit faces clipping past the toon ramp's top band,
     // which is what flattened the warm belt masses into single-value slabs and
     // blew the ice kart's bodywork to pure white in penguin-village frames.
-    sunIntensity: 4.2,
-    // A wide broad lobe (0.36 against Comeback City's 0.12) is the whole
-    // storm-front read: it is what puts a warm break in an otherwise cold
-    // ceiling, which is the one thing a grey sky needs to stop being fog. Both
-    // lobes up again this round — with the disc low and often occluded, the
-    // lobes are now the primary carrier of "where the light comes from".
-    skyGlow: [0.4, 0.36],
+    // Wave 4: 4.2 -> 4.6, and this is a value correction, not a warmth one.
+    // Dropping the sun to 12 degrees costs the flat snow 20% of its key
+    // (sin 15 -> sin 12); 4.6 gives that back on the ground plane and hands a
+    // sun-facing vertical face 10% MORE than it had, which is the whole point
+    // of lowering the sun. Still well under the 5.2 that wave 3 measured
+    // clipping past the toon ramp's top band.
+    sunIntensity: 4.6,
+    // WAVE 4: 0.36 -> 0.08 on the broad lobe, and this is one of the two
+    // mechanisms that made the sky measure as neutral grey. Both lobes are
+    // ADDITIVE, and a wide additive amber over a violet dome is arithmetically
+    // a desaturator: the shipped frames sample rgb(198,198,198) and
+    // rgb(150,147,150) in the sky column, i.e. an undefined hue, because
+    // pow(sd,3) * 0.36 covers most of the visible hemisphere and adds
+    // (0.26, 0.19, 0.12) of linear warmth to a body whose own chroma is
+    // smaller than that. The warm half of the sky is now carried by the
+    // ELEVATION LADDER and by the deck's own base colour, both of which rotate
+    // hue instead of washing it out. The tight halo stays (0.4 -> 0.30): it
+    // sits within a few degrees of the disc, where a real sun genuinely does
+    // burn its surroundings toward white.
+    skyGlow: [0.3, 0.08],
     // Heavy overcast, not scattered cumulus: a lower coverage floor plus a
     // cool body, so the deck reads as one storm ceiling.
     // Wave 2: the deck was BRIGHTER than the sky it sat in (#b9cad8 over a
@@ -224,7 +283,43 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // 0.26), which turns a lid into a front with gaps in it; and the body goes
     // storm-violet, which is what a cloud base actually is when it is lit from
     // under by a low sun, instead of the daylight blue-grey it was.
-    clouds: { band: [0.44, 0.68], color: '#7d7ba0', litColor: '#ffc888', scale: 0.5, strength: 0.84 },
+    // WAVE 4, and this is the OTHER half of the measured cause. The deck's
+    // coverage mask used to be smoothstep(0.09, 0.30, d.y) — fully closed above
+    // 17.5 degrees — while the sky the camera frames above the plate's rim
+    // starts at 22.3. So 100% of every visible sky pixel was deck body colour,
+    // and the shipped frames prove it: penguin-village-p0_15 samples
+    // rgb(125,127,160) at the top of frame against a body authored #7d7ba0 =
+    // rgb(125,123,160). The dome's elevation ladder was never on screen at all.
+    //
+    // Three changes, all in the shader's new (defaulted) knobs:
+    //   deck [0.20, 0.62] — coverage now THICKENS with height instead of
+    //     closing at 17 degrees: ~39% at the plate rim, ~70% at 30 degrees,
+    //     ~94% at the top of frame. That is a front with gaps under it rather
+    //     than a lid, and it is what lets the warm ladder below reach the eye.
+    //   color / baseColor — two body colours, ramped by `tone`. A cloud base
+    //     over a 12-degree sun is lit from underneath and a cloud top is not;
+    //     one body colour can only ever be an overcast. #8b7684 is a warm
+    //     storm base, #525778 the bruised ceiling above it.
+    //   litMix 0.42 / litAdd 0 — the sun side is now a MIX toward #dc9f79
+    //     rather than an addition of it. Additive amber over violet is grey,
+    //     which is exactly the sat 0.02-0.10 / undefined-hue the wave-3 critic
+    //     measured. Comeback City keeps the additive path (its deck body is
+    //     already the warm colour, so an additive highlight reads as a hotter
+    //     cloud) and is bit-identical: every new key defaults to the old
+    //     literal.
+    clouds: {
+      band: [0.44, 0.68],
+      baseColor: '#8b7684',
+      color: '#525778',
+      deck: [0.2, 0.62],
+      litAdd: 0,
+      litColor: '#dc9f79',
+      litMix: 0.42,
+      lowDeck: [0.3, 0.62],
+      scale: 0.5,
+      strength: 0.84,
+      tone: [0.3, 0.56],
+    },
     // De-sun key for pv-far.webp (see createSkyDome.js). PV's disc is a soft
     // cream inside a warm glow band, so no brightness threshold separates the
     // two — RED-MINUS-BLUE does, because the storm band, the mountains and
@@ -242,7 +337,12 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // Up with skyGlow, and for the same reason: the far plate is opaque across
     // the band the sun now sits in, so the ring's re-emitted lobes are the only
     // place the sunset can appear on the horizon itself.
-    backdropGlow: [0.32, 0.2],
+    // Wave 4 takes the same step the dome's own lobes did (skyGlow above) and
+    // for the same measured reason: the broad lobe is additive, and additive
+    // warmth over the plate's cool grey rows bleaches rather than warms. What
+    // replaces it is backdropHaze below, which MIXES the plate toward the
+    // horizon colour and therefore keeps a hue.
+    backdropGlow: [0.26, 0.08],
     // Aerial perspective for the fog-exempt backdrop rings. The haze colour is
     // DARKER than the plate on purpose: the audit's blind judge found the snow
     // and the storm sky sitting in the same value band around the horizon, so
@@ -262,7 +362,18 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // two directions across three rounds. #a2a0bc is the same value as
     // #7e9ab5 (within 3/255) and 34 units warmer in R-minus-B, so the "snow
     // must sit under the sky" rule and the plate/dome match both survive.
-    backdropHaze: { band: [0.28, 0.86], bottomFade: 0.18, color: '#a2a0bc', far: 0.34, near: 0.16 },
+    // Wave 4: the haze finally hazes toward a colour that exists in the sky.
+    // #a2a0bc was chosen to match a warm horizon band that, as the sky note
+    // above establishes, was never visible — so in the shipped frames it was a
+    // cool violet mixed into a plate sitting under an amber break that was not
+    // there. The dome's low band now renders at hue 32-42 / value 0.89-0.95,
+    // and #b58a6e sits under it in value (0.71) and inside it in hue (25), so
+    // the plate recedes INTO the sky instead of across it. Amounts come down a
+    // touch (0.34/0.16 -> 0.30/0.14) because the sky behind the plate is now
+    // doing chromatic work of its own and the haze no longer has to be the
+    // only warm thing on the horizon; the far/near DIFFERENCE — the depth ramp
+    // this line exists for — is preserved at 0.16.
+    backdropHaze: { band: [0.28, 0.86], bottomFade: 0.18, color: '#b58a6e', far: 0.3, near: 0.14 },
     // Icebergs collapsed into one white value under the old 4-band ramp; the
     // 5-band set keeps a readable step between the two lit bands where all
     // the arctic geometry sits, and the deeper floor (40, not 64) is what
@@ -279,15 +390,30 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // by ~25 units, and this is the other half of that gap. It also gives the
     // grade's (now luminance-neutral) warm highlight tint somewhere to land —
     // snow that is already at 240 cannot be gilded, only clipped.
+    // Wave 4: #adc4da -> #b4c6d6. The fill above lost 23% of its green and 25%
+    // of its blue (hemi below), and this is the half of that which the snow
+    // gets back — with the recovery weighted toward RED, so the plane comes
+    // back to its shipped luminance without coming back to its shipped cast.
+    // Replayed through the exact grade over the measured snow patch of
+    // penguin-village-p0_56 (rgb(70,135,171)), the field lands at rgb(89,132,143):
+    // same value band, B-R falls from +101 to +54. Snow reads as snow rather
+    // than as one flat indigo sheet, and it still sits well under the new sky.
     ground: {
-      base: '#adc4da',
+      base: '#b4c6d6',
       repeat: 38,
       // ~7.6 world units per sparkle tile (2600 / 340).
       sparkle: { color: '#dff1ff', intensity: 0.5, repeat: 340 },
+      // Wave 4 re-spreads these against the new base. Two of the three used to
+      // sit within 10/255 of #adc4da, so the tiling map carried a total value
+      // range of 78 counts on a surface the rubric critic measured as "one
+      // flat value across ~35% of every frame". The set now spans 129-230
+      // (+29%), and the extra range is deliberately taken DOWNWARD: on a
+      // bright field it is the dark end that describes form, and the bright end
+      // is already the background.
       speckles: [
-        { color: '#aac2d6', count: 300, size: 3.4 },
-        { color: '#e2eef8', count: 340, size: 4.2 },
-        { color: '#94b0c8', count: 160, size: 2 },
+        { color: '#9db5cb', count: 300, size: 3.4 },
+        { color: '#e6f1fa', count: 340, size: 4.2 },
+        { color: '#8199b4', count: 160, size: 2 },
       ],
     },
     // AAA wave 3 — edge LEGIBILITY, not decoration. The old curb ran
@@ -319,7 +445,24 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // well clear of the tarmac, which is the same relationship Comeback City's
     // red/white pair has to its own asphalt, and the block's rise/fall faces
     // (shaded 0.8 / 0.58 in buildRoadEdgeProfile) still step it off the shelf.
-    curb: { a: '#e9f6ff', b: '#00c6ee' },
+    // WAVE 4 — THE PERIWINKLE TOOTH, MEASURED AND FIXED AT THE ALBEDO. The
+    // wave-3 artefact hunter filed "kerb white teeth render periwinkle blue"
+    // against Comeback City; it is worse here. Sampled in penguin-village-p0_15
+    // and -p0_78, the white tooth renders rgb(101,163,206) / rgb(110,180,228)
+    // while the cyan tooth beside it renders rgb(4,130,192) — the two teeth of
+    // a red/white-style checker are BOTH blue, and the edge stops reading as a
+    // checker at all.
+    //
+    // The cause is that the kerb is a MeshStandardMaterial (wave 3's Basic ->
+    // Standard swap, correct) whose crest faces UP, and every up-facing surface
+    // on this track is dominated by the hemisphere's SKY term. #e9f6ff is
+    // itself blue of neutral (linear B/R = 1.24); multiplied by a fill that is
+    // bluer still, it can only land periwinkle. So the authored colour is
+    // pre-corrected: #fff2dc is warm in the palette and NEUTRAL on screen.
+    // Replayed through the exact grade with the wave-4 rig, the tooth lands at
+    // rgb(137,159,178) — B-R falls from +118 to +41, and it now separates from
+    // the cyan tooth by hue as well as by value.
+    curb: { a: '#fff2dc', b: '#00c6ee' },
     rail: '#00E5FF',
     wall: { a: '#1c4a63', b: '#00E5FF' },
     // Run-off shelf and embankment. Same fault as Comeback City's and the
@@ -382,7 +525,16 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // "snow darker than sky" rule holds, and — because fog only bites past
     // ~250 units — it does this WITHOUT gilding the near snow, which is the
     // failure mode the wave-2 key light walked into. Density unchanged.
-    fog: { color: '#a89caf', density: 0.0016, near: 230, far: 820 },
+    // Wave 4: same correction as backdropHaze, same reason. The rule this line
+    // keeps restating — "fog hazes toward the sky a surface recedes into" — was
+    // being applied to a sky nobody could see. The visible low sky now renders
+    // at hue 32-42 / value 0.89-0.95, so #bfa08c is the colour the snow plane
+    // is actually receding into, and it is the one lever this package owns that
+    // gives the flat ground plane a genuine near-to-far ramp: FogExp2 at 0.0016
+    // is 2.5% at 100 units, 21% at 300 and 60% at 600, so the same snow albedo
+    // walks from cool-white at the kart to warm haze at the horizon. Density
+    // unchanged.
+    fog: { color: '#bfa08c', density: 0.0016, near: 230, far: 820 },
     // Fill UN-inverted. Round 2 put warm cream in the sky term to buy chroma,
     // and it worked in exactly the wrong direction: a HemisphereLight's sky
     // colour lands on every UP-FACING surface, so the warm term went onto the
@@ -407,7 +559,45 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // field bounces a lot of light, so a lighter, less saturated bounce is both
     // truer and stops down-facing geometry reading as an unlit void.
     // Intensity 1.5 -> 1.7 pays back the luminance the cooler sky term costs.
-    hemi: { sky: '#93b4dc', ground: '#33517d', intensity: 1.7 },
+    //
+    // WAVE 4 — THE FILL, MEASURED. The wave-3 note above is right about the
+    // SHAPE of the rig and wrong about its numbers, and the frames say so. On
+    // an up-facing surface the three lights deliver, in linear irradiance:
+    //
+    //   hemi #93b4dc x 1.7   (0.489, 0.766, 1.216)
+    //   key  #ffdcb4 x 4.2 x sin(15)   (1.087, 0.770, 0.515)
+    //   rim  #00d5ff x 1.6 x 0.423     (0.000, 0.431, 0.676)
+    //   ------------------------------------------------------
+    //   total                (1.576, 1.967, 2.407)   B/R = 1.53
+    //
+    // A fill whose blue is 2.5x its red is not a "cool navy sky", it is a
+    // colour cast, and it is why every white surface on this track — kerb
+    // teeth, snow, run-off shelf — measures periwinkle. The wave-4 rig keeps
+    // the same RED (so nothing gets darker where it counts) and takes the
+    // excess out of green and blue:
+    //
+    //   hemi #7e96c6 x 1.7   (0.355, 0.519, 0.960)
+    //   key  #ffd2a4 x 4.6 x sin(12)   (0.957, 0.610, 0.360)
+    //   rim  #a4ccdb x 1.6 x 0.423     (0.251, 0.413, 0.489)
+    //   ------------------------------------------------------
+    //   total                (1.563, 1.542, 1.809)   B/R = 1.16
+    //
+    // i.e. red within 1% of where it was, blue down 25%. That is the whole
+    // "cool navy fill" prescription expressed as a rebalance rather than as a
+    // dimming, and it is what lets the KEY's warmth read as a terminator
+    // instead of being buried under a blue wash.
+    //
+    // The ground bounce comes off pure navy for the third time and this time
+    // with a reason it can keep: #33517d has a linear red of 0.033, so a
+    // down-facing plane on this track received essentially NO red at all and
+    // rendered as the "unlit blue slab" the wave-2 note describes. #5a5f7e is
+    // still cool and still dark — it is snow bounce under a storm, not sunlit
+    // snow — but its red is 3.1x higher, which is the difference between a
+    // shaded underside and a hole. Deliberately NOT the warm bounce the
+    // physics of a lit snowfield would suggest: replayed, a warm ground term
+    // multiplies a down-face's red by ~15x and lands the undersides of the
+    // ice masses on tan, which is the exact failure wave 3 round 1 shipped.
+    hemi: { sky: '#7e96c6', ground: '#5a5f7e', intensity: 1.7 },
     // Wave 3: #ffbe78 -> #ffdcb4. Still amber, and still the colour the dome
     // tints the disc and its lobes with, but at 0.29 saturation instead of
     // 0.53. The wave-2 note below was right that the KEY should be warm and the
@@ -421,8 +611,40 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // The disc and glow lobes lose the same chroma. That is deliberate: they
     // sit inside the sky's own warm horizon band now, so they no longer have to
     // be the only warm thing in the frame.
-    sunColor: '#ffdcb4',
-    rimLightColor: '#00d5ff',
+    //
+    // Wave 4: #ffdcb4 -> #ffd2a4, and note WHERE the warmth comes from. Both
+    // colours have a linear red of exactly 1.0; what changes is that green
+    // drops 0.708 -> 0.638 and blue 0.474 -> 0.376. The key gets warmer by
+    // losing its cool channels, not by gaining red — which is precisely the
+    // move that wave 3 round 1's #ffbe78 (linear R/B = 5.14) got wrong and
+    // that turned the bergs to sand. This sits at R/B = 2.66 against wave 3's
+    // 2.11 and that sand's 5.14, and the belt's clamp (createMidGroundBelt.js)
+    // comes down in the same wave to keep the net warm-pixel share inside the
+    // 5.9-13.6% band the critics scored as the win.
+    sunColor: '#ffd2a4',
+    // WAVE 4 — TWO MEASURED ARTEFACTS, ONE PALETTE KEY. `rimLightColor` has
+    // exactly two live consumers on this track and neither of them is the
+    // owner-approved hero rim (heroRim.tint below pins that to #00d5ff and
+    // wins at both call sites):
+    //
+    //   1. the rim DirectionalLight, #00d5ff at intensity 1.6. Its LINEAR RED
+    //      IS EXACTLY ZERO. On an up-facing surface it contributes
+    //      (0.000, 0.431, 0.676) — a third of the fill, with no red in it at
+    //      all — which is half of why the white kerb tooth measures
+    //      rgb(101,163,206) instead of white.
+    //   2. the road's ice sheen, ComebackCityThreeKartRace.jsx:2350, which
+    //      adds `uRoadSheenColor * roadSheen * 2.4` with NO ceiling. A colour
+    //      with zero red multiplied by 2.4 can only ever clip green and blue,
+    //      which is the (66,255,255) / (55,215,255) column measured over the
+    //      road in penguin-village-p0_33 — a highlight that is mathematically
+    //      incapable of turning white however hot it gets.
+    //
+    // #a4ccdb is the same aurora ice-blue at the same luminance (0.568 against
+    // #00d5ff's 0.528, +7%) with a real red channel (0.371 linear). It fixes
+    // the fill's half of the periwinkle outright and it stops the road sheen
+    // being a two-channel clip. The sheen's missing CEILING is still a defect
+    // and is not in a file this package owns — see the note in the report.
+    rimLightColor: '#a4ccdb',
     // B3 hero fresnel rim — owner RE-PICK 2026-07-07 after seeing V5
     // live: V3 "bold" ("v3 for penguin") — stronger, wider edge in the
     // track's own aurora tint (V3 carries no tint override, so the shader

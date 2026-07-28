@@ -16,8 +16,6 @@
 import * as THREE from 'three';
 import {
   HERO_RIM_KEY_BIAS,
-  HERO_RIM_MAX_POWER,
-  HERO_RIM_MIN_STRENGTH,
   KART_PAINT_TINT_AMOUNT,
   resolveKartShading,
   tuneHeroTexture,
@@ -193,7 +191,8 @@ uniform float uKartSpecBlend;
 uniform float uKartSpecCeil;
 uniform float uKartSkyBounce;
 uniform float uKartRubberDarken;
-uniform vec4 uKartTint;`;
+uniform vec4 uKartTint;
+uniform vec4 uKartEnv;`;
 
 const KART_SHADING_CHUNK = /* glsl */ `
 	vec3 kartAlbedo = diffuseColor.rgb;
@@ -229,6 +228,7 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// whatever sun each track authored with zero per-track wiring, and it stays
 	// correct if a later wave re-aims the key.
 	vec3 kartKeyDir = vec3(0.42, 0.72, 0.55);
+	vec3 kartKeyColor = vec3(1.0);
 	#if NUM_DIR_LIGHTS > 0
 		float kartKeyWeight = -1.0;
 		for (int kartLightIdx = 0; kartLightIdx < NUM_DIR_LIGHTS; kartLightIdx++) {
@@ -236,6 +236,7 @@ const KART_SHADING_CHUNK = /* glsl */ `
 			if (kartLightWeight > kartKeyWeight) {
 				kartKeyWeight = kartLightWeight;
 				kartKeyDir = directionalLights[kartLightIdx].direction;
+				kartKeyColor = directionalLights[kartLightIdx].color;
 			}
 		}
 	#endif
@@ -276,6 +277,72 @@ const KART_SHADING_CHUNK = /* glsl */ `
 		* saturate(kartWorldNormal.y)
 		* kartAlbedo
 		* saturate((uKartSpecCeil - luminance(outgoingLight)) / uKartSpecCeil);
+
+	// ---- Analytic sky probe (AAA wave 4) ----------------------------------
+	// scene.environment cannot reach a kart: WebGLRenderer.js:2165 gates it on
+	// isMeshStandardMaterial/Lambert/Phong, and every hero body is toon. This is
+	// the same probe raceEnvironment.js installs for the track, evaluated in
+	// closed form, and it is the term that answers the standing critic note
+	// that a rival kart is "one flat colour across a curved body with zero
+	// value change": every other event in this chunk is a lobe that a
+	// flat-shaded facet either contains or does not, whereas a reflection
+	// returns a different sky colour per facet normal and slides continuously
+	// as the kart yaws.
+	//
+	// Colours come out of the LIGHT RIG the track already authored — hemisphere
+	// sky/ground for the dome, the key light for the horizon band — rather than
+	// from uniforms, so this is correct per track with zero wiring and cannot
+	// drift out of agreement with the sky actually being rendered.
+	vec3 kartEnvSky = vec3(0.30, 0.32, 0.52);
+	vec3 kartEnvGround = vec3(0.08, 0.07, 0.11);
+	#if NUM_HEMI_LIGHTS > 0
+		kartEnvSky = hemisphereLights[0].skyColor;
+		kartEnvGround = hemisphereLights[0].groundColor;
+	#endif
+	// Hue from the track, MAGNITUDE from uKartEnv. The hemisphere and
+	// directional uniforms arrive premultiplied by intensity (WebGLLights), and
+	// borrowing their energy as well as their colour would make this a second
+	// fill light and lift the whole kart — which is exactly the kind of ambient
+	// drift that would regress an owner-confirmed grade. Normalising to a max
+	// channel of 1 keeps the entire budget inside the three weights below.
+	kartEnvSky /= max(1e-4, max(kartEnvSky.r, max(kartEnvSky.g, kartEnvSky.b)));
+	kartEnvGround /= max(1e-4, max(kartEnvGround.r, max(kartEnvGround.g, kartEnvGround.b)));
+	vec3 kartEnvHorizon = kartKeyColor / max(1e-4, max(kartKeyColor.r, max(kartKeyColor.g, kartKeyColor.b)));
+
+	// World space throughout: the kart yaws every frame, so a view-space
+	// reflection would slide with the CAMERA instead of with the body.
+	vec3 kartWorldView = inverseTransformDirection(geometryViewDir, viewMatrix);
+	vec3 kartRefl = reflect(-kartWorldView, kartWorldNormal);
+	vec3 kartKeyWorld = inverseTransformDirection(kartKeyDir, viewMatrix);
+	vec3 kartProbe = mix(kartEnvGround, kartEnvSky, smoothstep(-0.30, 0.42, kartRefl.y));
+	// The warm band sits where the sun does — low. pow() on |y| keeps it inside
+	// roughly the bottom 25 degrees of the reflected hemisphere, which is where
+	// both tracks author their hot horizon stop.
+	kartProbe = mix(kartProbe, kartEnvHorizon, pow(1.0 - min(1.0, abs(kartRefl.y)), 2.4) * 0.62);
+	// The sun's own image in the surface. This is the glint that travels across
+	// a cowl through a bend; without it the probe is just a smarter ambient.
+	kartProbe += kartEnvHorizon * pow(max(dot(kartRefl, kartKeyWorld), 0.0), uKartEnv.w);
+	// Schlick-shaped: a facet turned edge-on to the eye returns far more of the
+	// sky than one facing it. This is what puts the sheen on the SHOULDER of a
+	// panel and off its centre, and it is most of why the term reads as a
+	// reflection rather than as a wash.
+	float kartEnvFresnel = mix(0.28, 1.0, pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 3.0));
+	float kartEnvWeight = kartEnvFresnel * (
+		uKartEnv.x * kartPaintMask +
+		uKartEnv.y * kartChromeMask +
+		// The bright-neutral band CHROME_CEILING retires (baked-white tyres, the
+		// Ice Racer's frosted shell, the Kenney atlas's white panels) is folded
+		// in at the plastic weight rather than dropped. It is the class carrying
+		// the least form information of the four — it is retired precisely
+		// BECAUSE nothing additive fits on it — and a reflection is the one
+		// directional term it can still take, since the headroom meter below
+		// falls to zero exactly where those texels already sit. Rubber is the
+		// only class with no share at all; matte is the whole point of it.
+		uKartEnv.z * (kartPlasticMask + kartNeutral * kartBrightRetire)
+	);
+	outgoingLight += kartProbe * kartEnvWeight
+		* saturate((uKartSpecCeil - luminance(outgoingLight)) / uKartSpecCeil);
+
 	vec3 kartSpec = kartLitMask * (
 		mix(vec3(1.0), uKartSpecTint, uKartSpecBlend) * (uKartSpecStrength.x * kartPaintBand * kartPaintMask) +
 		// Unpainted plastic borrows the paint lobe (no extra pow) at a third of
@@ -314,6 +381,14 @@ export const applyKartShading = (material, overrides = null) => {
       uKartAo: { value: new THREE.Vector2(params.aoFloor, params.aoCrease) },
       uKartChromeCeil: { value: new THREE.Vector2(...params.chromeCeiling) },
       uKartChromeLum: { value: new THREE.Vector2(...params.chromeLuminance) },
+      uKartEnv: {
+        value: new THREE.Vector4(
+          params.envPaint,
+          params.envChrome,
+          params.envPlastic,
+          params.envSunSharp
+        ),
+      },
       uKartGloss: { value: new THREE.Vector2(params.paintGloss, params.chromeGloss) },
       uKartPaintChroma: { value: new THREE.Vector2(...params.paintChroma) },
       uKartRubberDarken: { value: params.rubberDarken },
@@ -355,7 +430,8 @@ export const setKartPaintTint = (material, tint, amount = KART_PAINT_TINT_AMOUNT
 // `shading: null` for a hero material that should stay flat-toon.
 // Consequence worth knowing: applyHeroRim no-ops entirely when a track ships
 // no palette.heroRim (and under the ?rimLab=0 diagnostic), so a track without
-// that key now loses the material classes too, not just the rim.
+// that key now loses the material classes too, not just the rim — including,
+// since wave 4, the sky probe that is the karts' only environment term.
 export const applyToonRim = (material, { strength = 0.32, power = 2.6, shading } = {}) => {
   if (shading !== null) applyKartShading(material, shading || null);
   return addShaderInjection(material, {
@@ -370,8 +446,13 @@ export const applyToonRim = (material, { strength = 0.32, power = 2.6, shading }
       // only; PV's authored values already clear it. Temporary — it belongs
       // in the track palette.
       uRimKeyBias: { value: new THREE.Vector2(...HERO_RIM_KEY_BIAS) },
-      uRimPower: { value: Math.min(power, HERO_RIM_MAX_POWER) },
-      uRimStrength: { value: Math.max(strength, HERO_RIM_MIN_STRENGTH) },
+      // Authored values, unclamped. Wave 2's floor/ceiling here retired in
+      // wave 4 — see the note in kartMaterials.js: both shipped tracks now
+      // carry their real heroRim numbers and clear the old floor exactly, so
+      // the clamps were a verified no-op that could only ever silently
+      // override a third track's art direction.
+      uRimPower: { value: power },
+      uRimStrength: { value: strength },
       uRimStrengthScale: TOON_RIM_STRENGTH_SCALE,
     },
   });
