@@ -16,6 +16,7 @@
 import * as THREE from 'three';
 import {
   HERO_RIM_KEY_BIAS,
+  HERO_RIM_RUBBER_SCALE,
   KART_PAINT_TINT_AMOUNT,
   resolveKartShading,
   tuneHeroTexture,
@@ -57,12 +58,29 @@ export const TOON_RIM_CHUNK = /* glsl */ `
 		uRimKeyBias.y,
 		smoothstep(-0.45, 0.35, dot(geometryNormal, normalize(rimKeyDir)))
 	);
-	outgoingLight += uRimColor * uRimStrength * uRimStrengthScale * toonRimFresnel * toonRimKey;`;
+	// AAA wave 4 round 2 — the rim finally honours the "not on the tyres" rule
+	// it has been documented as following since it shipped.
+	//
+	// This chunk always lands AFTER the kart-shading chunk in the composed
+	// fragment shader (addShaderInjection re-replaces the same anchor, so a
+	// later entry is inserted between the earlier one and the anchor) and both
+	// sit in the same scope, so the classifier's masks are already computed and
+	// in scope here — free. The #ifdef is the contract that makes that safe:
+	// applyToonRim(material, { shading: null }) is a supported call, and on such
+	// a material kartRubberMask simply does not exist. KART_SHADING_CLASSES is
+	// #defined by the shading chunk itself, so the guard tracks whether the
+	// masks are really there rather than trusting call order.
+	float toonRimClass = 1.0;
+	#ifdef KART_SHADING_CLASSES
+		toonRimClass = mix(1.0, uRimRubberScale, kartRubberMask);
+	#endif
+	outgoingLight += uRimColor * uRimStrength * uRimStrengthScale * toonRimFresnel * toonRimKey * toonRimClass;`;
 
 const TOON_RIM_PARS = /* glsl */ `uniform vec3 uRimColor;
 uniform float uRimStrength;
 uniform float uRimStrengthScale;
 uniform float uRimPower;
+uniform float uRimRubberScale;
 uniform vec2 uRimKeyBias;`;
 
 // ONE shared multiplier on every hero rim, so a later wave can push the rim
@@ -191,10 +209,35 @@ uniform float uKartSpecBlend;
 uniform float uKartSpecCeil;
 uniform float uKartSkyBounce;
 uniform float uKartRubberDarken;
+uniform float uKartDarkFill;
+uniform vec3 uKartPaintShape;
 uniform vec4 uKartTint;
 uniform vec4 uKartEnv;`;
 
 const KART_SHADING_CHUNK = /* glsl */ `
+	// Declares that the four class masks below exist in this scope. The rim
+	// chunk (which is appended after this one, same scope) branches on it so it
+	// can weight itself per class without assuming it was registered alongside
+	// a shading pass — see TOON_RIM_CHUNK.
+	#define KART_SHADING_CLASSES 1
+	// Remaining headroom before the additive terms clip, measured against the
+	// PEAK CHANNEL rather than against luminance.
+	//
+	// A macro rather than a local because every additive term below has to
+	// re-read the CURRENT outgoingLight — the sky bounce, the probe and the
+	// specular each spend from what the ones before them left, and a snapshot
+	// taken once at the top would let three terms all spend the same headroom.
+	//
+	// Why peak and not luminance: luminance is Rec709-weighted, so red counts
+	// 0.21 and blue 0.07. A hot pink or a deep blue body can have a channel
+	// past 1.0 while its luminance still reads as a mid surface, and the old
+	// meter therefore reported full headroom on a panel that was already
+	// clipped — measured at 97% of the Miami Cruiser's flank in
+	// comeback-city-p0_15 (see PAINT_SHAPE in kartMaterials.js). peak >=
+	// luminance for every colour with equality on neutrals, so this bites
+	// exactly on the saturated surfaces that were escaping the meter and leaves
+	// the chrome and rubber cases it was tuned for unchanged.
+	#define KART_HEADROOM saturate((uKartSpecCeil - max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b))) / uKartSpecCeil)
 	vec3 kartAlbedo = diffuseColor.rgb;
 	float kartChroma =
 		max(kartAlbedo.r, max(kartAlbedo.g, kartAlbedo.b)) -
@@ -268,6 +311,29 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	vec3 kartTinted = uKartTint.rgb * (luminance(outgoingLight) / max(1e-4, luminance(uKartTint.rgb)));
 	outgoingLight = mix(outgoingLight, kartTinted, kartPaintMask * uKartTint.a);
 	outgoingLight *= kartAo * mix(1.0, uKartRubberDarken, kartRubberMask);
+
+	// Paint gets a THIRD value. The curvature AO above is light-independent by
+	// design, so on a body lit by one broad key the whole flank lands on a
+	// single toon ramp step: measured spread across the Miami Cruiser's side
+	// panel was 24 out of 255. This is the shadow-side step the AO deliberately
+	// is not — keyed on N.L so it describes where the sun is, and restricted to
+	// the paint class so it cannot deepen a tyre that RUBBER_DARKEN has already
+	// taken down.
+	float kartPaintShade = mix(uKartPaintShape.x, 1.0, smoothstep(-0.10, 0.42, dot(geometryNormal, kartKeyDir)));
+	outgoingLight *= mix(1.0, kartPaintShade, kartPaintMask);
+
+	// ...and paint gets its range back. A saturated body spends its whole range
+	// in one channel and pins there, so the gradation the bake and the two
+	// terms above are producing exists entirely above 1.0 where nothing can
+	// show it. Scaling the colour uniformly back under the knee is hue-exact
+	// (all three channels take the same factor — this moves exposure, never
+	// tint) and it is what makes every additive term below land ON a panel
+	// instead of being metered away against a surface that was already clipped.
+	// Ordered here, before the additive terms, for exactly that reason.
+	float kartPaintPeak = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b));
+	float kartPaintPull = uKartPaintShape.y / max(uKartPaintShape.y, kartPaintPeak);
+	outgoingLight *= mix(1.0, mix(1.0, kartPaintPull, uKartPaintShape.z), kartPaintMask);
+
 	// Sky bounce — the only form cue that survives on a texel the classifier
 	// has retired (baked-white tyres, the frosted shell). Albedo-tinted so it
 	// reads as light the surface returned rather than as a grey wash, and
@@ -276,7 +342,7 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	outgoingLight += uKartSkyBounce
 		* saturate(kartWorldNormal.y)
 		* kartAlbedo
-		* saturate((uKartSpecCeil - luminance(outgoingLight)) / uKartSpecCeil);
+		* KART_HEADROOM;
 
 	// ---- Analytic sky probe (AAA wave 4) ----------------------------------
 	// scene.environment cannot reach a kart: WebGLRenderer.js:2165 gates it on
@@ -340,8 +406,25 @@ const KART_SHADING_CHUNK = /* glsl */ `
 		// only class with no share at all; matte is the whole point of it.
 		uKartEnv.z * (kartPlasticMask + kartNeutral * kartBrightRetire)
 	);
-	outgoingLight += kartProbe * kartEnvWeight
-		* saturate((uKartSpecCeil - luminance(outgoingLight)) / uKartSpecCeil);
+	outgoingLight += kartProbe * kartEnvWeight * KART_HEADROOM;
+
+	// ---- Dark-class form fill (AAA wave 4 round 2) -------------------------
+	// The one term in this file that does anything at all on a near-black
+	// texel. Everything else either darkens it (AO, RUBBER_DARKEN), multiplies
+	// by its albedo and returns nothing (SKY_BOUNCE), or excludes the class on
+	// purpose (the probe weights above) — which is why the player's driver
+	// measures as a solid black shape with no readable form at 300px in
+	// comeback-city-p0_06, held off the road by the rim alone.
+	//
+	// Deliberately NOT albedo-tinted and deliberately not a lobe: it is the
+	// same two-band hemisphere the probe is built on, so an up-facing surface
+	// returns the sky's hue and a down-facing one the ground's, giving a black
+	// body a top-to-bottom value break that follows the track's own palette.
+	// Reuses kartRubberMask so the tyres' contract still holds — this adds no
+	// gloss and no highlight, only the value gradient that stops a matte black
+	// surface reading as a hole. Headroom-metered like everything else.
+	outgoingLight += mix(kartEnvGround, kartEnvSky, smoothstep(-0.55, 0.85, kartWorldNormal.y))
+		* uKartDarkFill * kartRubberMask * KART_HEADROOM;
 
 	vec3 kartSpec = kartLitMask * (
 		mix(vec3(1.0), uKartSpecTint, uKartSpecBlend) * (uKartSpecStrength.x * kartPaintBand * kartPaintMask) +
@@ -357,7 +440,7 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// mid surfaces hard and eases to nothing on anything the key has already
 	// taken to white, so the highlight can no longer flatten a panel into a
 	// featureless blob or hand the bloom pass one.
-	outgoingLight += kartSpec * saturate((uKartSpecCeil - luminance(outgoingLight)) / uKartSpecCeil);`;
+	outgoingLight += kartSpec * KART_HEADROOM;`;
 
 // Adds the paint / chrome / plastic / rubber split to a hero material. Composed through
 // addShaderInjection like everything else — never assigned directly — so it
@@ -381,6 +464,7 @@ export const applyKartShading = (material, overrides = null) => {
       uKartAo: { value: new THREE.Vector2(params.aoFloor, params.aoCrease) },
       uKartChromeCeil: { value: new THREE.Vector2(...params.chromeCeiling) },
       uKartChromeLum: { value: new THREE.Vector2(...params.chromeLuminance) },
+      uKartDarkFill: { value: params.darkFill },
       uKartEnv: {
         value: new THREE.Vector4(
           params.envPaint,
@@ -391,6 +475,10 @@ export const applyKartShading = (material, overrides = null) => {
       },
       uKartGloss: { value: new THREE.Vector2(params.paintGloss, params.chromeGloss) },
       uKartPaintChroma: { value: new THREE.Vector2(...params.paintChroma) },
+      // (shadow-side step, unclip knee, how much of the unclip to take)
+      uKartPaintShape: {
+        value: new THREE.Vector3(params.paintShade, params.paintKnee, params.paintPull),
+      },
       uKartRubberDarken: { value: params.rubberDarken },
       uKartRubberLum: { value: new THREE.Vector2(...params.rubberLuminance) },
       uKartSkyBounce: { value: params.skyBounce },
@@ -452,6 +540,9 @@ export const applyToonRim = (material, { strength = 0.32, power = 2.6, shading }
       // the clamps were a verified no-op that could only ever silently
       // override a third track's art direction.
       uRimPower: { value: power },
+      // Per-class rim weight. See HERO_RIM_RUBBER_SCALE — this is what stops
+      // the rim tracing the tyres it was always documented as skipping.
+      uRimRubberScale: { value: HERO_RIM_RUBBER_SCALE },
       uRimStrength: { value: strength },
       uRimStrengthScale: TOON_RIM_STRENGTH_SCALE,
     },

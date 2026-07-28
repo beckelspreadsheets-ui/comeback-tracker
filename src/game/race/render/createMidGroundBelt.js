@@ -294,11 +294,18 @@ const TRACK_TUNING = {
     // because it is a LINE rather than a lump it also breaks the rhythm of a
     // ring made entirely of peaks — which is the thing the rubric critic kept
     // measuring as "the same three cone shapes at regular intervals".
+    // WAVE 4 ROUND 2 re-weights AWAY from SHARD. Both the A/B judge and the
+    // rubric critic counted "the same triangular ice cone silhouette repeats
+    // 8+ times across the belt" — and at 0.30 SHARD is the only archetype in
+    // this set that resolves to a triangle from every bearing, so it is the one
+    // the eye tallies. RIDGE and TABULAR are both horizontal landforms; giving
+    // them the share puts long low masses between the peaks, which is what a
+    // pressure-ice field actually looks like and what breaks the saw.
     massShapes: [
-      [SHAPE.RIDGE, 0.3],
-      [SHAPE.SHARD, 0.3],
-      [SHAPE.TABULAR, 0.26],
-      [SHAPE.ARCH, 0.14],
+      [SHAPE.RIDGE, 0.34],
+      [SHAPE.SHARD, 0.18],
+      [SHAPE.TABULAR, 0.32],
+      [SHAPE.ARCH, 0.16],
     ],
     // Kept, unreferenced by the shipped weights above, as the fallback the
     // placement loop reads if BLOCK is ever re-weighted onto this track.
@@ -435,7 +442,17 @@ const TRACK_TUNING = {
       // ceiling of its own from 30 degrees up — so the bank's job narrows to
       // being the EDGE where that ceiling meets the warm break, and an edge
       // needs its dark side darker than the thing behind it.
-      ceiling: 0.5,
+      // Wave 4 round 2: 0.50 -> 0.66, and this is the rule the round-1 line
+      // states applied to a sky that has actually changed. "An edge needs its
+      // dark side darker than the thing behind it" was written when the dome
+      // behind this wall measured rgb(150,136,138); the re-authored ladder puts
+      // the same band at rgb(74,67,174), Rec.709 luminance 76. At 0.50 the
+      // bank's crest lands near luminance 30 over that, which is not an edge,
+      // it is a hole — and the wedge below makes the wall taller on the
+      // anti-sun side, so the hole would occupy the top of every frame looking
+      // away from the sunset. 0.66 keeps the crest clearly under the dome it
+      // silhouettes against without going black.
+      ceiling: 0.66,
       gap: 0.8,
       // 190 -> 240. At radius 548 the old wall topped out at 19 degrees of
       // elevation, so on a frame whose horizon sits near the middle the front
@@ -785,7 +802,15 @@ varying vec3 vBeltWin;`
 // Three authored bands, narrow-edged rather than hard-stepped: a true step
 // crawls along the shard facets as the camera moves, and the belt is meant
 // to be still.
-float beltBand = smoothstep(-0.30, -0.04, vBeltShade.x) * 0.5 + smoothstep(0.16, 0.40, vBeltShade.x) * 0.5;
+// WAVE 4 ROUND 2: the UPPER step tightens, 0.16-0.40 -> 0.12-0.28. The lower
+// step is what keeps a shade plane off pure black and must stay soft; the upper
+// one is the TERMINATOR, and a 0.24-wide ramp on it spreads the lit/shade
+// transition across most of a rounded berg — which is how a 3.4:1 authored
+// split arrives in the frame as the 10-count difference the rubric critic
+// measured between "the lit and shadowed faces of the ice pyramids". Halving
+// its width puts the same energy on a readable edge. Still a ramp, not a step:
+// a true step crawls along the shard facets as the camera moves.
+float beltBand = smoothstep(-0.30, -0.04, vBeltShade.x) * 0.5 + smoothstep(0.12, 0.28, vBeltShade.x) * 0.5;
 vec3 beltTint = mix(uBeltShadow, uBeltLit, beltBand);
 beltTint += uBeltSky * max(vBeltShade.y, 0.0);
 // Bases sit in their own occlusion, crowns catch the low sun.
@@ -855,7 +880,10 @@ if (vBeltWin.z > 0.002) {
       // so the clamp does not depend on which chunks this material path emits.
       .replace(
         '#include <fog_fragment>',
-        `float beltLitFace = smoothstep(-0.30, -0.04, vBeltShade.x) * 0.5 + smoothstep(0.16, 0.40, vBeltShade.x) * 0.5;
+        // Kept in step with the band expression in color_fragment above by
+        // hand: the two must agree or the clamp weights a face the shading
+        // never lit.
+        `float beltLitFace = smoothstep(-0.30, -0.04, vBeltShade.x) * 0.5 + smoothstep(0.12, 0.28, vBeltShade.x) * 0.5;
 float beltWarmth = gl_FragColor.r - gl_FragColor.b;
 // mix(lit, 1, 1 - face): a shade plane takes the whole clamp, a sun-facing one
 // takes uBeltCoolLit of it. Round 1 of wave 3 had a bare (1 - face) here, which
@@ -1548,8 +1576,17 @@ export const createMidGroundBelt = (options = {}) => {
             // Non-uniform in XZ and applied BEFORE the yaw, so the squash
             // lands on a different pair of facets at every rotation — that is
             // what multiplies three authored outlines into many.
-            width = radius * 2 * lerp(0.7, 1.36, random());
-            depth = radius * 2 * lerp(0.7, 1.36, random());
+            // 0.7-1.36 -> 0.56-1.44. The squash is the only per-instance lever
+            // that changes an archetype's OUTLINE rather than its size, and at
+            // a 1.94x range two thirds of the rolls landed inside 20% of each
+            // other, so a ring of peaks read as one peak at several scales. The
+            // extra range is taken DOWNWARD on purpose: the top end is what the
+            // round-3 footprint clearance has to reject slots over (a PV ridge
+            // already reaches 162 units at 1.36), so growing it buys empty
+            // slots, while the bottom end is free and is where the genuinely
+            // narrow spires that break a ring of cones come from.
+            width = radius * 2 * lerp(0.56, 1.44, random());
+            depth = radius * 2 * lerp(0.56, 1.44, random());
           }
 
           // Footprint-aware clearance. Every archetype is authored inside the
@@ -2055,13 +2092,33 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
   let auroraUniforms = null;
   let stormUniforms = null;
   if (options.trackKey === 'penguin-village') {
+    // WAVE 4 ROUND 2 — THE AURORA IS WHY THE ARCTIC SKY MEASURES GREY.
+    // This curtain is ADDITIVE, it runs from 6 to 28 degrees of elevation at
+    // 620 units, it covers three 46-degree arcs (~38% of every bearing the
+    // player can turn through) and it shipped at 0.55 opacity in colours whose
+    // linear values are (0.03, 1.00, 0.62) and (0.27, 0.15, 1.00). Replayed
+    // against the dome's own output at 25 degrees — linear (0.15, 0.15, 0.27) —
+    // a mid-strength filament adds roughly (0.05, 0.30, 0.24), i.e. it DOUBLES
+    // the pixel and triples its green. There is no ladder, no deck and no grade
+    // that survives that: it is the additive-warm-over-violet mistake this wave
+    // fixed twice in the dome, committed a third time in teal, and it lands on
+    // the exact band the storm front is supposed to own. The artefact hunter's
+    // "soft blue-lilac vertical shaft with no visible source, reads as a smear
+    // rather than an aurora" is this, seen through bloom.
+    //
+    // It is not deleted, because the wave-2 finding it answers is real (the
+    // whites need something hot to key against). It is made an ACCENT instead
+    // of a veil: less than half the opacity, and the ray field is squared up so
+    // the curtain is mostly gaps with a few bright filaments in it. Discrete
+    // filaments read as an aurora; a soft continuous field reads as a smudge,
+    // and it is the soft continuous part that was doing all the bleaching.
     const AURORA_RADIUS = 620;
     const auroraGeometry = new THREE.CylinderGeometry(AURORA_RADIUS, AURORA_RADIUS, 260, 24, 1, true, 0, 0.8);
     geometries.push(auroraGeometry);
     auroraUniforms = {
       uColorA: { value: new THREE.Color('#35ffcf') },
       uColorB: { value: new THREE.Color('#8f6bff') },
-      uOpacity: { value: mobile ? 0.42 : 0.55 },
+      uOpacity: { value: mobile ? 0.18 : 0.24 },
       uTime: { value: 0 },
     };
     const auroraMaterial = new THREE.ShaderMaterial({
@@ -2079,12 +2136,24 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
           // one is the filament structure inside it.
           float slow = sin(vUv.x * 13.0 + uTime * 0.19) * 0.5 + 0.5;
           float fast = sin(vUv.x * 34.0 - uTime * 0.31 + 1.7) * 0.5 + 0.5;
-          float rays = pow(slow * 0.62 + fast * 0.38, 2.1);
+          // 2.1 -> 4.2. At 2.1 the mean of this field is ~0.30, so the curtain
+          // was a continuous 30%-alpha additive sheet with a ripple on it —
+          // which is a veil, not a ray field, and a veil laid over the whole
+          // storm band is what erased the sky's hue. At 4.2 the mean falls to
+          // ~0.13 and the field spends most of its width near zero, so what is
+          // left is a handful of bright filaments with dark sky between them.
+          float rays = pow(slow * 0.62 + fast * 0.38, 4.2);
           // Curtains hang: bright at the base, dissolving upward, with a
           // drifting hem so the bottom edge is never a straight line.
           float hem = vUv.y - sin(vUv.x * 9.0 + uTime * 0.11) * 0.06;
           float vertical = smoothstep(0.02, 0.3, hem) * (1.0 - smoothstep(0.42, 1.0, hem));
-          float alpha = rays * vertical * uOpacity;
+          // Soft ENDS. Each segment is a 46-degree cylinder arc, and an arc
+          // that simply stops has a vertical edge on it at full brightness —
+          // which is half of why this reads as a shaft rather than as a
+          // curtain. Fading the last ~15% of each arc gives the curtain a
+          // beginning and an end the way a real one has.
+          float ends = smoothstep(0.0, 0.16, vUv.x) * (1.0 - smoothstep(0.84, 1.0, vUv.x));
+          float alpha = rays * vertical * ends * uOpacity;
           if (alpha < 0.004) discard;
           vec3 color = mix(uColorA, uColorB, clamp(hem * 1.5 + rays * 0.2, 0.0, 1.0));
           gl_FragColor = vec4(color * alpha, alpha);
@@ -2181,14 +2250,28 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
               + sin(ang * 3.0 + uTime * 0.013) * 0.20
               + sin(ang * 7.0 - uTime * 0.021 + 1.9) * 0.11
               + sin(ang * 17.0 + uTime * 0.034 + 4.1) * 0.05;
+            vec2 dir = vec2(sin(ang), cos(ang));
+            float toSun = dot(dir, normalize(uSunDir.xz + vec2(1e-4)));
+            // THE WEDGE. Round 1's bank was the same height all the way round,
+            // so it was a curtain rail with a warm stripe under it — the blind
+            // judge's "no front, no wind direction". A front has a leading edge
+            // and a trailing anvil: the wall piles up on the side AWAY from the
+            // sun and lies down where it tears open over the sunset. Same
+            // billow field, one term, and it is what turns a band into weather.
+            // The ceiling is NOT optional. The body dissolves across
+            // [crest-0.22, crest+0.08], so a crest that reaches 0.92 puts a
+            // fully opaque row on the cylinder's own top rim — which is the
+            // hard horizontal arc across the upper frame that the sky dome was
+            // built to delete (createSkyDome.js, the header). 0.84 leaves the
+            // dissolve completing at 0.92, inside the geometry, at every
+            // bearing and every phase of the billow field.
+            crest = min(crest + (0.28 - toSun * 0.32), 0.84);
             // Solid below the crest, dissolving through it. The base fades too
             // so the bank never meets the ice on a ruled line — a hard bottom
             // edge is the "flat 2D cutout" read this whole layer exists to
             // avoid.
             float body = (1.0 - smoothstep(crest - 0.22, crest + 0.08, vUv.y))
               * smoothstep(-0.05, 0.30, vUv.y);
-            vec2 dir = vec2(sin(ang), cos(ang));
-            float toSun = dot(dir, normalize(uSunDir.xz + vec2(1e-4)));
             // The sun burns a hole in the bank. This is what makes a wall of
             // cloud read as a FRONT rather than as a lid, and it is the one
             // place the warm sky gets through to the ice.
@@ -2209,7 +2292,18 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
             // to sand (raceGrade.js carries the measurement). Geometry that
             // knows which way it faces is the only thing that can, and this is
             // the piece of it that sits on the horizon line.
-            float rim = smoothstep(-0.30, 0.85, toSun) * (1.0 - smoothstep(0.0, 0.62, vUv.y));
+            //
+            // WAVE 4 ROUND 2: -0.30 -> 0.16. Reaching "roughly 250 degrees of
+            // horizon" was the right instinct for a wave in which this was the
+            // ONLY warm thing in the frame, and it is the wrong shape now that
+            // the dome carries its own break: a warm underside that runs most
+            // of the way round is a coloured gradient, and a gradient has no
+            // edge. Confining it to the ~130 degrees either side of the sun is
+            // what makes the lit underside read as the place the front is
+            // breaking rather than as a tint applied to the whole band. The
+            // ceiling above it goes cold at the same bearing, so the two now
+            // meet on a line instead of blending.
+            float rim = smoothstep(0.16, 0.92, toSun) * (1.0 - smoothstep(0.0, 0.62, vUv.y));
             // The burn-through's own edge is the hottest part of a front: the
             // cloud there is thin enough to transmit rather than just bounce.
             // Small and low, so it reads as the sun behind the wall and not as

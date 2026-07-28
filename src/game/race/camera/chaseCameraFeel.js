@@ -110,11 +110,18 @@ export const CHASE_FEEL_DEFAULTS = {
   // Speed. FOV widens and the boom stretches: together they keep the kart's
   // apparent size roughly constant while the periphery accelerates, which is
   // how every kart racer since Double Dash sells velocity.
-  fovSpeedGain: 6.5,
+  // FOV carries the speed cue; the boom barely moves. The captures measured
+  // the hero's apparent height swinging 11-23% of frame height across one lap
+  // of Comeback City (against a tight 13-19% on Penguin Village, same rig), and
+  // every unit of chase distance the speed term spends is a unit the framing
+  // solver then has to argue with. Widening the lens sells velocity through the
+  // PERIPHERY, which is where the speed actually reads, and costs the subject
+  // far less apparent size than pulling the eye back does.
+  fovSpeedGain: 7.5,
   fovMiniTurbo: 3.5,
   fovBoost: 2,
   fovSmoothing: 0.0015,
-  boomSpeedStretch: 0.1,
+  boomSpeedStretch: 0.04,
   eyeSpeedLift: 2.2,
   // Follow damping. Position is slower than orientation on purpose: a camera
   // that translates lazily but AIMS crisply reads as heavy, whereas the reverse
@@ -313,15 +320,30 @@ export const FRAMING_DEFAULTS = {
   edgePad: 0.07,
   softGain: 1,
   // Apparent-size window, expressed as the subject's NDC radius against the
-  // VERTICAL half-frame. A well-framed capture (comeback-city-p0_67/p0_78)
-  // measures ~0.22 here; the "dot on the horizon" frames measure under 0.06 and
-  // the clipped-by-the-corner frames over 0.4.
-  sizeMin: 0.14,
-  // 0.34, not 0.30: the shipped desktop shot measures 0.288 here and the pinned
-  // phone shot 0.318, and the owner signed off on both. The window has to
-  // CONTAIN the approved framing and reject only the failures — the "dot on the
-  // horizon" frames measure under 0.06 and the clipped-by-the-corner ones 0.4+.
-  sizeMax: 0.34,
+  // VERTICAL half-frame.
+  //
+  // ROUND 2 NARROWS IT, and this is the whole fix for the measured 2.1x swing
+  // in the hero's apparent size across one Comeback City lap (23% of frame
+  // height at 83 km/h, 11% at 287). [0.14, 0.34] is a 2.4x window — almost
+  // exactly the swing that was measured, because a window that wide is not a
+  // guarantee, it is permission. The calibration between the two units is
+  // stable and checkable: the approved desktop shot sits at ndcRadius 0.288 and
+  // measures ~16% of frame height, the pinned phone shot 0.318 / ~17.5%, so the
+  // critics' requested 14-19% band is ndcRadius 0.25-0.35.
+  //
+  // Both owner-approved framings therefore sit INSIDE the new window, which is
+  // the constraint that matters — the window has to contain the shipped look
+  // and reject only the failures. The boom-scale clamps below (and the caller's
+  // own 0.72/1.55 clamp on the authored chase distance) remain the backstop, so
+  // a bad subject-radius estimate still cannot invent a shot.
+  //
+  // The floor is 0.24 rather than the 0.25 the band implies for one reason: the
+  // non-wide mobile tier composes at 0.232 (boom 38, fov 61) and the phone
+  // framing is pinned and owner-checked. 0.24 asks it for a 3% nudge instead of
+  // a 7% one, and still takes the window from 2.4x down to 1.46x, which is what
+  // the swing was.
+  sizeMin: 0.24,
+  sizeMax: 0.35,
   // The size solver may only MODULATE the authored chase distance, never
   // replace it. If the subject-radius estimate the caller passes is off, the
   // worst case is a camera 30% closer or 55% further out than authored — not a

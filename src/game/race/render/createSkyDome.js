@@ -57,6 +57,38 @@
 // with a hue-preserving sun-side mix (uCloudMix.x) instead of an additive
 // highlight that turned violet into grey. The elevation ladder itself is the
 // track's (penguinVillage.js), re-authored against the angles above.
+//
+// WAVE 4 ROUND 2 — WHAT THE ABOVE STILL MISSED, AND IT IS THE WHOLE STORY.
+// Round 1's angle work is correct and it is not enough, because a gradient is
+// not weather. Replaying the shipped dome shader forward (the same replay that
+// reproduces Comeback City's captured sky to rms 13/255) predicts hue 229-244 /
+// sat 0.41-0.79 at the top of a Penguin Village frame; the captured frames
+// measure sat 0.073-0.166 with R-B between -18 and +27 on all nine marks. So
+// the ladder is right and something in front of it is grey. Three things are,
+// and all three are addressed here or in the two files that author them:
+//
+//   1. THE DECK IS A LID, NOT A FRONT. Its coverage is a function of ELEVATION
+//      alone, so it is the same thickness at every bearing — which is the
+//      definition of overcast and cannot read as a front however it is
+//      coloured. uCloudFront adds the missing axis: coverage now also keys on
+//      the SUN BEARING, so the deck piles into an anvil on the far side and
+//      tears open over the sunset. Same two taps, one extra smoothstep.
+//   2. THE WIDE SUN LOBE IS AN ADDITIVE DESATURATOR. Round 1 already cut it
+//      0.36 -> 0.08 for exactly that reason, which fixed the bleach and left
+//      the sun with no scatter at all ("a plain circle with no surrounding
+//      glow gradient"). uScatter puts the halo back as a hue-preserving MIX at
+//      the pixel's own luminance: near the sun the sky ROTATES toward the
+//      scatter colour instead of being washed toward white.
+//   3. THE PLATE'S BAKED RIM IS A LIME-GREEN FRINGE. Decoded, pv-near.webp
+//      carries 5,370 texels at HSV saturation 0.80-0.96 — a yellow-green
+//      (241,255,64) hairline painted along every ice crest, plus magenta
+//      counter-fringe below it. That is the "iridescent oil-slick on every ice
+//      ridge" all three critics filed against the ice MATERIAL; no material is
+//      involved, it is the art. uRimTame keys on the plate's own saturation
+//      (only 4.2% of pv-near is above 0.62, and 100% of BOTH Comeback City
+//      plates is, which is why this can never be a global) and re-tints the
+//      excess to the track's own sun colour at its own luminance — one warm
+//      sun-catch instead of a spectrum.
 import * as THREE from 'three';
 
 // Azimuth 0 = +Z, 90 = +X (the convention the track palettes are authored
@@ -167,12 +199,30 @@ void main() {
 	gl_Position = (projectionMatrix * modelViewMatrix * vec4(position, 1.0)).xyww;
 }`;
 
+// Luminance-preserving hue rotation. `col` keeps its own brightness and only
+// moves toward `tint` in hue, which is the difference between a sunset and a
+// bleach: every additive warm term this file has shipped over three waves
+// measured as a DESATURATOR, because adding amber to violet is grey.
+// `tint` must arrive luminance-normalised (see normalizedTint below).
+const HUE_MIX = /* glsl */ `
+vec3 skyHueMix(vec3 col, vec3 tint, float amount) {
+	return mix(col, dot(col, vec3(0.2126, 0.7152, 0.0722)) * tint, amount);
+}`;
+
 const DOME_FRAGMENT = /* glsl */ `
 uniform sampler2D uSky;
 uniform vec3 uSunColor;
 uniform vec3 uSunDir;
 uniform vec2 uGlow;
 uniform float uHorizonPower;
+#ifdef SKY_SUN_SCATTER
+// x = how far the sky rotates toward uScatterColor straight down the sun
+// vector, y = the falloff exponent on (sd*0.5+0.5) — LOW numbers on purpose,
+// this is the wide veil the tight halo is not, z = a small additive mid-lobe
+// so the disc still has a bright collar around it.
+uniform vec3 uScatter;
+uniform vec3 uScatterColor;
+#endif
 #ifdef SKY_CLOUDS
 uniform sampler2D uCloudNoise;
 uniform vec3 uCloudColor;
@@ -189,9 +239,15 @@ uniform vec2 uCloudMix;
 uniform float uCloudScale;
 uniform float uCloudStrength;
 uniform float uTime;
+#ifdef SKY_CLOUD_FRONT
+// x = how hard the front piles up / tears open, y and z = the sun-dot window
+// the tear opens across. See the coverage block.
+uniform vec3 uCloudFront;
+#endif
 #endif
 varying vec3 vDir;
 ${SUN_LOBES}
+${HUE_MIX}
 void main() {
 	vec3 d = normalize(vDir);
 	// uHorizonPower >> 1 spends most of the LUT on the first ~25 degrees,
@@ -230,6 +286,22 @@ void main() {
 	// the horizon break, closed over the ceiling.
 	float cHigh = smoothstep(uCloudBand.x, uCloudBand.y, high) * smoothstep(uCloudDeck.x, uCloudDeck.y, d.y);
 	float cLow = smoothstep(uCloudBand.x + 0.07, uCloudBand.y + 0.11, low) * smoothstep(uCloudLowDeck.x, uCloudLowDeck.y, d.y);
+#ifdef SKY_CLOUD_FRONT
+	// THE FRONT'S MISSING AXIS. Everything above keys coverage on ELEVATION,
+	// so the deck is the same thickness at every compass bearing — a lid, and a
+	// lid is what "overcast" means whatever colour it is painted. A weather
+	// front has a leading EDGE: it stacks into an anvil on one side of the sky
+	// and tears open on the other, and the side it tears open on is the side
+	// the low sun is coming from, because that is the only reason you can see a
+	// sunset through a storm at all. One smoothstep on the sun dot the shader
+	// has already computed. The clamp matters: away from the sun the gate
+	// exceeds 1 and saturates, so the anvil goes SOLID rather than merely
+	// denser, which is what puts a hard cloud edge in the frame.
+	float frontOpen = smoothstep(uCloudFront.y, uCloudFront.z, sd);
+	float frontGate = mix(1.0 + uCloudFront.x, 1.0 - uCloudFront.x, frontOpen);
+	cHigh = clamp(cHigh * frontGate, 0.0, 1.0);
+	cLow = clamp(cLow * frontGate, 0.0, 1.0);
+#endif
 	// TWO BODY COLOURS, not one. A cloud base over a low sun is lit from
 	// underneath and a cloud top is not, so a deck painted in one colour can
 	// only ever be an overcast — which is the word all three wave-3 critics
@@ -260,13 +332,58 @@ void main() {
 	// rather than as a bleach. Penguin Village authors 0 and uses the mix above.
 	col += uCloudLitColor * ((cHigh + cLow) * pow(sd, 4.0) * uCloudMix.y);
 #endif
+#ifdef SKY_SUN_SCATTER
+	// THE SCATTER VEIL, and it runs LAST on purpose: the deck has to take it
+	// too. A cloud base a few degrees off a low sun is the warmest thing in the
+	// sky, and a veil applied under the deck would be painted over by exactly
+	// the geometry it is supposed to light. Because this is a hue rotation at
+	// the pixel's own luminance it cannot bleach the storm ceiling on the far
+	// side (where sd is small the amount is near zero anyway) and it cannot
+	// clip: the only additive term is uScatter.z, a narrow collar on the disc.
+	float scatterFall = pow(sd * 0.5 + 0.5, uScatter.y);
+	col = skyHueMix(col, uScatterColor, clamp(scatterFall * uScatter.x, 0.0, 1.0));
+	col += uSunColor * pow(sd, 6.0) * uScatter.z;
+#endif
 	gl_FragColor = vec4(col, 1.0);
 ${OUTPUT_TAIL}
 }`;
 
+// A colour divided by its own Rec.709 luminance, so mixing toward
+// `luma * tint` rotates hue and leaves brightness alone. Same trick raceGrade
+// uses for its split tone, and the same reason: every warm term in this file
+// that did NOT do this measured as a desaturator.
+const normalizedTint = (source, fallback = '#ffffff') => {
+  const color = source instanceof THREE.Color ? source.clone() : new THREE.Color(source || fallback);
+  const luma = color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722;
+  return color.multiplyScalar(1 / Math.max(1e-4, luma));
+};
+
 // lut: the makeSkyTexture canvas, read as a 1D elevation ramp (v=0 horizon,
 // v=1 zenith). clouds:null gates the deck off for the phone tier.
-export const createSkyDome = ({ clouds = null, horizonPower = 2.6, glow = [0.3, 0.08], lut, skyUniforms }) => {
+//
+// scatter: { amount, power, disc, color } — the wide hue-preserving sun veil.
+// Omit it and the shader compiles exactly as it did before wave 4 round 2.
+//
+// THE glow[2..4] TAIL IS NOT A STYLE CHOICE. The scene builder that calls this
+// lives in the monolith, which wave 4 does not own, and it forwards exactly
+// five named keys — so a new top-level parameter cannot reach here from a track
+// palette this wave. `glow` IS forwarded verbatim (palette.skyGlow), so the
+// three scatter numbers ride its tail and the colour comes from the sun uniform
+// the dome already holds, which is where a scatter veil's colour physically
+// comes from anyway. The named `scatter` parameter is the real interface and
+// wins whenever it is supplied; delete the tail when the monolith can pass it.
+export const createSkyDome = ({
+  clouds = null,
+  horizonPower = 2.6,
+  glow = [0.3, 0.08],
+  lut,
+  scatter = null,
+  skyUniforms,
+}) => {
+  const veil = scatter
+    || (glow.length > 2
+      ? { amount: glow[2] ?? 0, disc: glow[4] ?? 0, power: glow[3] ?? 3 }
+      : null);
   const uniforms = {
     uGlow: { value: new THREE.Vector2(glow[0], glow[1]) },
     uHorizonPower: { value: horizonPower },
@@ -292,6 +409,21 @@ export const createSkyDome = ({ clouds = null, horizonPower = 2.6, glow = [0.3, 
     uniforms.uCloudStrength = { value: clouds.strength ?? 0.55 };
     uniforms.uCloudTone = { value: new THREE.Vector2(clouds.tone?.[0] ?? 0, clouds.tone?.[1] ?? 1) };
     uniforms.uTime = { value: 0 };
+    if (clouds.front) {
+      uniforms.uCloudFront = {
+        value: new THREE.Vector3(
+          clouds.front.amount ?? 0,
+          clouds.front.tear?.[0] ?? 0.1,
+          clouds.front.tear?.[1] ?? 0.9
+        ),
+      };
+    }
+  }
+  if (veil) {
+    uniforms.uScatter = { value: new THREE.Vector3(veil.amount ?? 0, veil.power ?? 3, veil.disc ?? 0) };
+    uniforms.uScatterColor = {
+      value: normalizedTint(veil.color || skyUniforms.uSunColor.value),
+    };
   }
   // Defines, not runtime branches: a track that authors one body colour and no
   // sun-side mix (Comeback City) compiles to the pre-wave-4 shader exactly, so
@@ -301,7 +433,9 @@ export const createSkyDome = ({ clouds = null, horizonPower = 2.6, glow = [0.3, 
     defines.SKY_CLOUDS = '';
     if (clouds.baseColor && clouds.baseColor !== clouds.color) defines.SKY_CLOUD_TONE = '';
     if ((clouds.litMix ?? 0) > 0) defines.SKY_CLOUD_MIX = '';
+    if ((clouds.front?.amount ?? 0) > 0) defines.SKY_CLOUD_FRONT = '';
   }
+  if ((veil?.amount ?? 0) > 0 || (veil?.disc ?? 0) > 0) defines.SKY_SUN_SCATTER = '';
   const material = new THREE.ShaderMaterial({
     defines,
     // depthTest stays ON and the dome renders LAST in the opaque queue. It
@@ -375,9 +509,15 @@ uniform vec2 uGlow;
 uniform vec3 uHazeColor;
 uniform vec3 uHaze;
 uniform float uHazeBottomFade;
+#ifdef RING_RIM_TAME
+// x = amount, y/z = the plate-saturation window the tame ramps across.
+uniform vec3 uRimTame;
+uniform vec3 uRimTameTint;
+#endif
 varying vec2 vUv;
 varying vec3 vWorld;
 ${SUN_LOBES}
+${HUE_MIX}
 void main() {
 	// Sample through the hardware wrap so mip derivatives stay continuous;
 	// the tile-local u is recomputed separately for the de-sun ellipse, whose
@@ -393,6 +533,18 @@ void main() {
 	float key = smoothstep(uDeSunRange.x, uDeSunRange.y, measure) * patchMask;
 	vec3 plateSky = mix(uDeSunSkyLo, uDeSunSkyHi, smoothstep(uDeSunSkyBand.x, uDeSunSkyBand.y, vUv.y));
 	vec3 col = mix(tex.rgb, plateSky, key);
+#ifdef RING_RIM_TAME
+	// DE-FRINGE. Runs on the plate's OWN saturation (1 - min/max), not on its
+	// absolute chroma: the arctic plates are bright pastels, so a harmless
+	// blue shadow band at (168,214,236) carries more absolute chroma than a
+	// mid-tone would and an absolute threshold cannot separate it from the
+	// painted rim. Measured over the decoded plate, pv-near is 4.2% above 0.62
+	// saturation and the fringe itself sits at 0.80-0.96; the shadow bands top
+	// out around 0.55. Both Comeback City plates are 100% above 0.62, which is
+	// why this can only ever be per-track authoring and never a default.
+	float rimSat = 1.0 - min(col.r, min(col.g, col.b)) / max(max(col.r, max(col.g, col.b)), 1e-4);
+	col = skyHueMix(col, uRimTameTint, smoothstep(uRimTame.y, uRimTame.z, rimSat) * uRimTame.x);
+#endif
 	// AERIAL PERSPECTIVE. The rings are fog-exempt (the art is pre-hazed and
 	// they are camera-anchored, so scene.fog would grade them by a distance
 	// that never changes), and the consequence was measurable: a vertical scan
@@ -424,6 +576,14 @@ ${OUTPUT_TAIL}
 // haze: { color, amount, band:[vLo,vHi], bottomFade } — the ring's stand-in
 // for scene.fog. The FAR ring must always run a higher amount than the NEAR
 // one; that difference IS the depth ramp across the skyline.
+//
+// THE band[2..3] TAIL, and the same monolith constraint as the dome's glow
+// tail: the scene builder spreads `haze` into a fresh object carrying exactly
+// { amount, band, bottomFade, color }, so a `haze.tame` key authored in a track
+// palette is dropped on the way here. `band` survives verbatim, so the de-fringe
+// rides its tail — band[2] is the amount, band[3] the saturation the ramp opens
+// at. `haze.tame` is read first and is the real interface; delete the tail when
+// the monolith forwards it.
 export const createBackdropRingMaterial = ({
   deSun = null,
   glow = [0, 0],
@@ -435,7 +595,15 @@ export const createBackdropRingMaterial = ({
 }) => {
   const patch = deSun?.patch || [0.5, 0.5, 0.0001, 0.0001];
   const hazeBand = haze?.band || [0.32, 0.86];
+  const tame = haze?.tame || (hazeBand.length > 2 ? { amount: hazeBand[2], from: hazeBand[3] } : null);
+  const tameAmount = tame?.amount ?? 0;
+  // The window is authored by its OPENING only: a fixed 0.22-wide ramp is what
+  // keeps the fringe (0.80-0.96) fully tamed while the plate's own shadow bands
+  // (which top out near 0.55) stay untouched, and it is one number to tune
+  // instead of two that have to be kept in order.
+  const tameFrom = tame?.from ?? 0.62;
   return new THREE.ShaderMaterial({
+    defines: tameAmount > 0 ? { RING_RIM_TAME: '' } : {},
     depthWrite: false,
     fog: false,
     fragmentShader: RING_FRAGMENT,
@@ -456,6 +624,11 @@ export const createBackdropRingMaterial = ({
       uMirror: { value: mirrored ? 1 : 0 },
       uOpacity: { value: 1 },
       uRepeat: { value: repeats },
+      // The plate's rim is meant to be the sun catching an ice crest, so the
+      // colour it resolves to is the sun's — no second authored colour to drift
+      // out of step with the key light.
+      uRimTame: { value: new THREE.Vector3(tameAmount, tameFrom, tameFrom + 0.22) },
+      uRimTameTint: { value: normalizedTint(skyUniforms.uSunColor.value) },
       uSunColor: skyUniforms.uSunColor,
       uSunDir: skyUniforms.uSunDir,
     },

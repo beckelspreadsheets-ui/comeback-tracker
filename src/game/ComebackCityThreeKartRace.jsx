@@ -134,8 +134,10 @@ import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/creat
 import {
   contactPatchAirFade,
   contactPatchProfile,
+  contactPatchShadowBoost,
   createRaceShadowRig,
 } from './race/render/raceShadowRig.js';
+import { installRaceEnvironment } from './race/render/raceEnvironment.js';
 import {
   advanceChaseFeel,
   createChaseFeelState,
@@ -185,6 +187,14 @@ const CHASE_FORWARD = new THREE.Vector3();
 const CHASE_RIGHT = new THREE.Vector3();
 const CHASE_UP = new THREE.Vector3();
 const CAMERA_DODGE_DIR = new THREE.Vector3();
+// Scratch for the once-per-frame tier-2 grounding solve, plus the frozen answer
+// for the degenerate cases. Module scope for the same reason as everything else
+// in this block: the frame loop must not allocate.
+const CONTACT_BOOST_FORWARD = new THREE.Vector3();
+const CONTACT_BOOST_NEUTRAL = Object.freeze({ opacity: 1, scale: 1 });
+// Scratch for the rival proximity-ghost cone test, same no-allocation rule.
+const GHOST_AXIS = new THREE.Vector3();
+const GHOST_OFFSET = new THREE.Vector3();
 // Lateral-dodge sweep, in radians, ALWAYS starting at 0 (the undodged bearing)
 // so an active dodge unwinds the instant its bearing is clear. ~14/28/43
 // degrees each way: past that the shot is no longer a chase shot and the guard
@@ -358,6 +368,11 @@ const createInitialRace = (
   boostTimer: 0,
   bumpCooldown: 0,
   countdown: 2.2,
+  // Tier-2 grounding strength for this frame, solved from the camera/sun angle
+  // once per frame and read by every kart's pose update (see
+  // contactPatchShadowBoost). Seeded neutral so the first pose update — which
+  // runs before the first camera update — has something to read.
+  contactShadowBoost: { opacity: 1, scale: 1 },
   drift: false,
   driftCharge: 0,
   driftState: createDriftState(),
@@ -853,6 +868,11 @@ const createGroundedKartModel = ({
   // a shrink+fade instead of a lift.
   const contactRig = new THREE.Group();
   contactRig.userData.kind = 'kart-contact-rig';
+  // The per-frame "the cast shadow is hidden, grow the AO patch back" boost only
+  // makes sense when there IS a cast shadow to be hidden. On the ?trackVisuals=1
+  // branch this patch is already the full blob and is the only grounding cue on
+  // screen, so boosting it further would just punch a hole in the road.
+  contactRig.userData.shadowBoostEligible = shadowsEnabled;
   const shadowGeometry = new THREE.PlaneGeometry(1, 1);
   const shadow = new THREE.Mesh(
     shadowGeometry,
@@ -879,7 +899,15 @@ const createGroundedKartModel = ({
   // outside that is the soft penumbra a low sun throws.
   shadow.scale.set(contactProfile.width * scale, contactProfile.length * scale, 1);
   shadow.rotation.x = -Math.PI / 2;
-  shadow.renderOrder = 2;
+  // Draws AFTER every additive glow on the kart (glow sprites 28, drift rings
+  // 35, particle spray 30/32) and before the boost VFX that legitimately overlay
+  // it (40/41). At renderOrder 2 the patch was laid down first and the neon
+  // underglow — same footprint, additive, sitting 0.6 units off the deck — was
+  // then added straight back over it. The measured result was a contact
+  // "shadow" that left the road under the kart BRIGHTER than the road beside it
+  // on 13 of 18 capture marks. A grounding cue has to be the last thing that
+  // touches those pixels.
+  shadow.renderOrder = 38;
   shadow.frustumCulled = false;
   shadow.userData.contactOpacity = shadow.material.opacity;
   contactRig.add(shadow);
@@ -903,7 +931,9 @@ const createGroundedKartModel = ({
     );
     contactGlow.rotation.x = -Math.PI / 2;
     contactGlow.position.y = 0.02;
-    contactGlow.renderOrder = 3;
+    // Under the patch above, not over it: this is an accent halo around the
+    // kart's footprint, not a light source aimed at the contact point.
+    contactGlow.renderOrder = 37;
     contactGlow.frustumCulled = false;
     contactGlow.userData.contactOpacity = contactGlow.material.opacity;
     contactRig.add(contactGlow);
@@ -923,7 +953,14 @@ const createGroundedKartModel = ({
   shadow.castShadow = false;
 
   // Neon underglow — color-codes each racer against the dark road.
-  addGlowSprite(group, accent, 9.5, 0.3, 0.6);
+  //
+  // Lifted and pulled in from 9.5/0.30/y0.6. A 9.5-unit billboard centred 0.6
+  // above the kart origin hangs ~4 units BELOW the road, so its brightest band
+  // sat exactly on the wheel line and additively erased the contact patch (the
+  // critics read the result as "a warm exhaust glow where a shadow should be").
+  // Centring it on the chassis keeps the colour-coding read — which is what the
+  // sprite is for — and hands the deck back to the grounding cue.
+  addGlowSprite(group, accent, 7.8, 0.22, 1.5);
   // Cached for the proximity fade — a rival parked on the lens has to ghost,
   // and re-traversing four karts every frame to find that out is not worth the
   // cycles. Rebuilt from BOTH mounts every time either of them changes, which
@@ -5176,6 +5213,35 @@ const createScene = ({
   activeHeroRim = labRim !== undefined ? labRim : palette.heroRim || null;
   TOON_RIM_SHARED_TINT.value.set(activeHeroRim?.tint || palette.rimLightColor || '#4fd8ff');
 
+  // THE ENVIRONMENT PROBE, at the call site raceEnvironment.js documents.
+  //
+  // It shipped as dead code: `installRaceEnvironment` had no caller anywhere in
+  // src/, so `scene.environment` stayed null, and with it null `tuneEnvResponse`
+  // takes its degraded branch and applies roughness ONLY — every metalness and
+  // envMapIntensity in ENV_RESPONSE was inert. That is the whole materials axis
+  // (4.7/10 for three waves): three multiplies indirect specular by a null
+  // envMap and drops the term, so no surface in the frame could carry a
+  // highlight that was not a directional light's analytic one.
+  //
+  // Must run HERE — above every line that builds track geometry — because
+  // tuneEnvResponse resolves its preset once, at material-build time, and a
+  // probe installed later would arrive after every material had already decided
+  // it had nothing to reflect.
+  //
+  // Zero bytes: the probe is generated from the same sky stops the dome's LUT
+  // is built from, and its source equirect is disposed as soon as PMREM has
+  // consumed it. `hemi` is passed so the probe's diffuse energy is CHARGED
+  // against the hemisphere fill rather than added on top — Comeback City's
+  // grade is owner-confirmed and a straight ambient lift would move it.
+  const raceEnvironment = installRaceEnvironment({
+    hemi,
+    mobile,
+    palette,
+    renderer,
+    scene,
+    skyStops,
+  });
+
   // Generated backdrop (SHIPPED DEFAULT since W0): two parallax billboard
   // rings — an opaque far band (its own sky + horizon glow, top 35%
   // alpha-faded into the procedural gradient) and an alpha-keyed nearer
@@ -5999,13 +6065,19 @@ const createScene = ({
   // AABB straddles the deck only registers when the ray genuinely crosses it.
   const cameraOccluders = [];
   const blockerBox = new THREE.Box3();
-  // Occluders need a SECOND, higher floor than blockers. `MIN_BLOCKER_EXTENT`
-  // (6) admits anything roughly 12x12x6 — which is a kart, an item-box holder,
-  // a barrel, a shield shell. None of those is a mass the camera can be
-  // swallowed by, but every one of them passes between the kart and the eye
-  // constantly, and each pass collapsed the boom. Only things big enough to
-  // genuinely hide the shot get a vote.
+  // Occluders are gated on SPAN, not on mass. `MIN_BLOCKER_EXTENT` (6) is a
+  // thickness test — the right question for "can the eye be swallowed by this",
+  // the wrong one for "can this hide the shot" — and it admits anything roughly
+  // 12x12x6, which is a kart, an item-box holder, a barrel, a shield shell.
+  // None of those is a mass the camera can be swallowed by, but every one of
+  // them passes between the kart and the eye constantly, and each pass
+  // collapsed the boom. Only things big enough to genuinely hide the shot get a
+  // vote — and, since round 4, that includes tall THIN ones (see the fork in
+  // visitCameraCandidate).
   const MIN_OCCLUDER_EXTENT = 15;
+  // ...but a silhouette still has to be a SOLID, so a floor on the short axis
+  // keeps single quads, banner cloth and sign faces out of the cast.
+  const OCCLUDER_MIN_THICKNESS = 2.5;
   // Re-runnable: the Miami building GLBs mount asynchronously, so a single
   // pass at scene-build time would miss every one of them. The frame loop
   // calls this again once the loaders have had time to land.
@@ -6024,10 +6096,7 @@ const createScene = ({
       blockerBox.copy(node.geometry.boundingBox).applyMatrix4(node.matrixWorld);
       const halfX = (blockerBox.max.x - blockerBox.min.x) * 0.5;
       const halfZ = (blockerBox.max.z - blockerBox.min.z) * 0.5;
-      // Only masses the camera could be swallowed by; the small dressing it is
-      // meant to skim past stays out of the set.
-      if (Math.min(halfX, halfZ) < MIN_BLOCKER_EXTENT) return;
-      if (blockerBox.max.y - blockerBox.min.y < MIN_BLOCKER_EXTENT) return;
+      const boxHeight = blockerBox.max.y - blockerBox.min.y;
       // Occluder set forks here, BEFORE both the extent ceiling and the
       // corridor test, because those two filters are exactly what hid the
       // masses the camera actually drove into: an ice shelf that spans the
@@ -6040,6 +6109,17 @@ const createScene = ({
       // domes, additive VFX pools) and anything hidden this frame. `opacity`
       // rather than `transparent` alone, so translucent-but-solid ice still
       // counts as something you cannot film from inside.
+      //
+      // ROUND 4 — the fork now comes before MIN_BLOCKER_EXTENT too, and this is
+      // the last reason the arctic cliffs kept escaping the guard. That gate
+      // asks for min(halfX, halfZ) >= 6, i.e. six units of THICKNESS, which is
+      // the right question for "can the eye be swallowed by this" and the wrong
+      // one for "can this hide the shot": a tall thin ice slab — 60 long, 8
+      // through — has a half-thickness of 4 and was rejected before the occluder
+      // test ever ran, which is exactly the wall filling the right third of
+      // penguin-village-p0_9. An occluder is a SILHOUETTE, so it is gated on
+      // silhouette: 15 units of span and 15 of height, with only enough
+      // thickness (2.5) to keep single quads, banner cloth and sign faces out.
       const occluderMaterial = Array.isArray(node.material) ? node.material[0] : node.material;
       if (
         cameraOccluders.length < MAX_OCCLUDERS &&
@@ -6050,7 +6130,8 @@ const createScene = ({
         // See MIN_OCCLUDER_EXTENT: prop-sized geometry never gets to shorten
         // the boom, however solid it is.
         Math.max(halfX, halfZ) >= MIN_OCCLUDER_EXTENT &&
-        blockerBox.max.y - blockerBox.min.y >= MIN_OCCLUDER_EXTENT &&
+        Math.min(halfX, halfZ) >= OCCLUDER_MIN_THICKNESS &&
+        boxHeight >= MIN_OCCLUDER_EXTENT &&
         // Ceiling raised over the pushout set's 120, but still well under the
         // lap-spanning merged ribbons (300-600 half-extent): those cover the
         // whole level, so their bounding sphere passes every ray test and the
@@ -6059,6 +6140,11 @@ const createScene = ({
       ) {
         cameraOccluders.push(node);
       }
+      // Pushout set only from here down. Its floor is about MASS — the camera
+      // has to be able to end up inside the thing before ejecting from it makes
+      // any sense — which is why it is stricter than the occluder gate above.
+      if (Math.min(halfX, halfZ) < MIN_BLOCKER_EXTENT) return;
+      if (boxHeight < MIN_BLOCKER_EXTENT) return;
       // Anything with a footprint this large is not a prop — it is a curb,
       // wall or rail ribbon merged across the whole lap, whose AABB covers the
       // level. Treating one of those as solid would eject the camera to the
@@ -6170,6 +6256,9 @@ const createScene = ({
     paletteMoments,
     playerModel,
     propCount,
+    // Owns the PMREM cubeUV target — the one thing in the scene that the
+    // teardown traversal below cannot reach, because it is not a scene child.
+    raceEnvironment,
     renderer,
     rimLight,
     rivalModels,
@@ -7045,9 +7134,21 @@ export const ComebackCityThreeKartRace = ({
       // A rising caster's contact patch shrinks AND softens — shrinking alone
       // made a mid-hop kart look like it had a smaller kart parked under it.
       const fade = contactPatchAirFade(pose?.hop || 0);
-      contactRig.scale.set(fade.scale, 1, fade.scale);
+      // ...and it grows back toward the pre-shadow-map blob on the frames where
+      // the sun's own cast shadow is hidden behind the kart. Solved ONCE per
+      // frame from the camera and the sun (see contactPatchShadowBoost); every
+      // kart shares the answer because they all share the lens and the sky.
+      const boost = contactRig.userData.shadowBoostEligible
+        ? race.contactShadowBoost
+        : CONTACT_BOOST_NEUTRAL;
+      contactRig.scale.set(fade.scale * boost.scale, 1, fade.scale * boost.scale);
       contactRig.children.forEach((decal) => {
-        decal.material.opacity = decal.userData.contactOpacity * fade.opacity;
+        // Capped: past ~0.8 an alpha-blended patch stops reading as a shadow on
+        // the road and starts reading as a hole cut through it.
+        decal.material.opacity = Math.min(
+          0.8,
+          decal.userData.contactOpacity * fade.opacity * boost.opacity
+        );
       });
     };
     const spinOutYaw = (spinTimer) =>
@@ -7914,22 +8015,73 @@ export const ComebackCityThreeKartRace = ({
           if (wheel.userData.front) wheel.rotation.y = clamp(racer.laneVel * 0.5, -0.5, 0.5);
         });
         // Proximity ghost: a rival that ends up on the lens is a wall across
-        // the whole play area with no road behind it. Inside ~14 units it
-        // fades out rather than blocking the frame; the chase camera sits ~32
-        // units back, so this only ever fires on an overtake collision.
+        // the whole play area with no road behind it, so it fades out rather
+        // than blocking the frame.
         //
-        // The fade now runs all the way to ZERO and hides the whole group.
+        // The fade runs all the way to ZERO and hides the whole group.
         // Flooring at 0.2 was worse than not fading: bodyMeshes covers the
         // bodywork but not the driver, so a rival at 3 metres shipped as a
         // see-through hull with a solid black helmet inside it, sliced open by
         // the near plane (comeback-city-p0_78, penguin-village-p0_78).
-        const proximity = clamp((engine.camera.position.distanceTo(rival.model.group.position) - 5) / 9, 0, 1);
+        //
+        // Round 2 adds the case the absolute window could not see. The 5..14
+        // band only caught a rival literally on the lens; the failure the
+        // captures actually shipped is one step short of that — a rival 14-18
+        // units out, well inside the 32-unit boom, fully opaque, and either
+        // covering the player completely (comeback-city-p0_15 measured the hero
+        // at zero visible pixels) or filling the bottom third as a near-plane
+        // slab (penguin-village-p0_56/p0_78).
+        //
+        // The right question is not "how close is this kart to the lens" but
+        // "is it between the lens and the thing the shot is about", so the test
+        // is a CONE from the eye that just contains the player's disc, widened
+        // by a kart radius. Distance alone would have ghosted a rival racing
+        // eighteen units off to the side — visible, legitimate, and none of the
+        // camera's business. Two dot products and a square root per rival.
+        const camPos = engine.camera.position;
+        GHOST_AXIS.copy(engine.playerModel.group.position).sub(camPos);
+        const subjectDistance = Math.max(12, GHOST_AXIS.length());
+        GHOST_AXIS.divideScalar(subjectDistance);
+        GHOST_OFFSET.copy(rival.model.group.position).sub(camPos);
+        const rivalDistance = GHOST_OFFSET.length();
+        const along = GHOST_OFFSET.dot(GHOST_AXIS);
+        const perp = Math.sqrt(Math.max(0, rivalDistance * rivalDistance - along * along));
+        // How far down the boom it is. Solid once it is level with the player,
+        // gone by the time it is a quarter of the way out.
+        const nearBand = clamp(
+          (along - Math.max(5, subjectDistance * 0.26)) /
+            Math.max(1, Math.max(16, subjectDistance * 0.62) - Math.max(5, subjectDistance * 0.26)),
+          0,
+          1
+        );
+        // Radius of the occluding cone at that depth: the player's own disc
+        // scaled back along the boom, plus a kart's half-width, because any
+        // overlap at all is what hides the hero.
+        const blockRadius = 5 + CHASE_SUBJECT_RADIUS * clamp(along / subjectDistance, 0, 1);
+        const lateral = clamp(
+          (perp - blockRadius * 0.6) / Math.max(1, blockRadius * 0.4),
+          0,
+          1
+        );
+        // The original absolute rule survives as a floor: anything this close to
+        // the lens gets sliced by the near plane whatever direction it is in.
+        const lensBand = clamp((rivalDistance - 5) / 7, 0, 1);
+        // Cubic on the axial term only. The band is wide enough now that a
+        // linear fade would leave a rival visibly translucent while it is still
+        // a legitimate part of the shot; off-axis rivals never reach it at all.
+        const proximity = Math.min(lensBand, Math.max(nearBand * nearBand * nearBand, lateral));
         if (proximity !== rival.model.proximity) {
           rival.model.proximity = proximity;
           const ghosted = proximity < 1;
           rival.model.bodyMeshes.forEach((mesh) => {
             mesh.material.transparent = ghosted;
-            mesh.material.depthWrite = !ghosted;
+            // depthWrite survives the shallow end of the fade. Dropping it the
+            // instant alpha leaves 1.0 is what produced the see-through hull
+            // with a solid helmet inside it: with the body no longer writing
+            // depth, its own interior draws through it in whatever order the
+            // transparent pass happens to sort. A mostly-opaque kart that still
+            // writes depth self-sorts correctly and reads as a kart.
+            mesh.material.depthWrite = proximity > 0.55;
             mesh.material.opacity = proximity;
             // A ghosted rival must stop CASTING too. The shadow pass ignores
             // material opacity, so a body faded to 15% on the lens would still
@@ -8231,8 +8383,14 @@ export const ComebackCityThreeKartRace = ({
         const blockers = engine.cameraBlockers;
         const camPos = engine.camera.position;
         // Clearance: enough that the mesh's real silhouette inside its AABB
-        // cannot reach the 0.8 near plane on the next frame's motion.
-        const margin = 1.4;
+        // cannot reach the near plane on the next frame's motion. 1.4 cleared
+        // the near plane (1.0) by four tenths of a unit and nothing else, so a
+        // camera legally 1.5 units off an ice cliff passed the test while the
+        // cliff filled a third of the frame as an unshaded pale wedge
+        // (penguin-village-p0_9). 3.0 is still a small nudge — the eject is
+        // capped by the nearest face either way — but it puts a kart's width of
+        // air between the lens and any mass it has drifted onto.
+        const margin = 3;
         for (let index = 0; index < blockers.length; index += 1) {
           const blocker = blockers[index];
           if (camPos.x < blocker.minX - margin || camPos.x > blocker.maxX + margin) continue;
@@ -8466,6 +8624,31 @@ export const ComebackCityThreeKartRace = ({
       // moving subject resamples the depth map on a new grid every frame, and
       // the result is shadow edges that visibly crawl along every silhouette.
       engine.shadowRig.update(playerSample.point, engine.sunDirection, engine.sunDistance);
+      // Tier-2 grounding strength for the NEXT pose update. The cast shadow is
+      // thrown along the ground projection of -sunDirection; when that runs the
+      // same way the lens is looking, the shadow is behind its own caster and
+      // the frame has no grounding cue unless the AO patch grows back. Solved
+      // here, once, because the answer is identical for every kart on screen.
+      // Both vectors are flattened to XZ — the sun's elevation changes how LONG
+      // the shadow is, not which side of the kart it lands on.
+      {
+        const sunX = -engine.sunDirection.x;
+        const sunZ = -engine.sunDirection.z;
+        const sunLen = Math.hypot(sunX, sunZ);
+        CONTACT_BOOST_FORWARD.set(0, 0, -1).applyQuaternion(engine.camera.quaternion);
+        const viewLen = Math.hypot(CONTACT_BOOST_FORWARD.x, CONTACT_BOOST_FORWARD.z);
+        // A sun straight overhead (or a lens straight down) has no ground
+        // direction at all; neutral is the honest answer, not a divide by zero.
+        if (sunLen > 1e-3 && viewLen > 1e-3) {
+          contactPatchShadowBoost(
+            (sunX * CONTACT_BOOST_FORWARD.x + sunZ * CONTACT_BOOST_FORWARD.z) / (sunLen * viewLen),
+            race.contactShadowBoost
+          );
+        } else {
+          race.contactShadowBoost.opacity = 1;
+          race.contactShadowBoost.scale = 1;
+        }
+      }
       // Horizon behaves like distance: the far band is fully camera-locked
       // (infinite), the near silhouette row trails at 0.72 for parallax.
       if (engine.backdrop) {
@@ -8585,6 +8768,12 @@ export const ComebackCityThreeKartRace = ({
       // their geometry and material, but the instance matrix attribute needs
       // the mesh's own dispose, same as the coin field.
       engine.shadowRig?.dispose?.();
+      // The probe's cubeUV render target hangs off scene.environment, not off a
+      // scene child, so the traversal below never sees it. Its own dispose also
+      // clears the module-level "is there a probe" flag tuneEnvResponse reads,
+      // which matters because the next race builds its materials before it
+      // builds its probe.
+      engine.raceEnvironment?.dispose?.();
       particles.dispose();
       engine.scene.traverse((object) => {
         object.geometry?.dispose?.();

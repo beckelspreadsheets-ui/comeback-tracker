@@ -86,6 +86,15 @@ export const createKartChromeMaterial = (color = '#f6fbff', options = {}) => {
 // belt-and-braces rather than a fix — but the contract of this class is "the
 // value anchor the other three are read against", and a class that quietly
 // picks up a sky reflection when someone recolours a tyre pale is not that.
+//
+// AAA wave 4 round 2 — `darkFill` is deliberately NOT in the zero list below,
+// and the distinction is worth stating because it looks like an omission. The
+// env weights above are SPECULAR: a reflection is gloss, and gloss is the thing
+// this class is defined by not having. darkFill is not gloss — it is a
+// two-band hemisphere gradient with no view dependence and no lobe, i.e. a
+// value break from top to bottom, which is the difference between a matte
+// black tyre and a hole in the frame. The class's contract is "the value anchor
+// the other three are read against"; an anchor still has to be legible.
 export const createKartRubberMaterial = (color, options = {}) =>
   applyKartShading(createBasicMaterial(color, { metalness: 0, roughness: 0.95, ...options }), {
     chromeStrength: 0,

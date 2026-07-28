@@ -39,9 +39,16 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 // desaturates the road and reads as a hole punched in it, which is the note the
 // boost pad's backing quad already picked up.
 //
-// The strength has to live in the TEXTURE and not in material.opacity: three's
-// MultiplyBlending is (blendSrc ZERO, blendDst SRC_COLOR), an equation with no
-// alpha term at all, so opacity on a multiply material is silently a no-op.
+// THE BLEND STATE IS NOT OPTIONAL — see buildGroundingDecals below. Wave 4
+// round 1 shipped `blending: MultiplyBlending` WITHOUT `premultipliedAlpha`,
+// and three r184 (WebGLState.setBlending, three.module.js:10316) logs
+// "MultiplyBlending requires material.premultipliedAlpha = true" and then
+// falls through WITHOUT binding any blend func at all. The decal therefore
+// composited with whatever the previous draw had left bound — in practice the
+// additive state from a glow sprite — so this near-white ramp landed as a hard
+// -edged, fully opaque WHITE plate. Measured at 11.4% of the lower frame on
+// comeback-city-p0_24, plus 40 console errors per capture. Both fixed by the
+// one flag on the material.
 const sharedGroundPatchTextures = new Map();
 const getGroundPatchTexture = (core) => {
   const key = core.toFixed(2);
@@ -157,10 +164,10 @@ const collectGroundingBuckets = (world, { cellSize, groundMin, groundMax, maxFoo
 };
 
 /**
- * Build the tier-3 instanced patches. Two meshes, split by footprint: MULTIPLY
- * blending has no per-instance strength control (see getGroundPatchTexture), so
- * strength lives in the texture and the split lives in the bucketing. Two draw
- * calls for every prop on the course.
+ * Build the tier-3 instanced patches. Two meshes, split by footprint: there is
+ * no PER-INSTANCE strength control on a multiply material however it is blended,
+ * so strength lives in the texture and the split lives in the bucketing. Two
+ * draw calls for every prop on the course.
  */
 const buildGroundingDecals = (world, options) => {
   const entries = collectGroundingBuckets(world, options);
@@ -187,9 +194,24 @@ const buildGroundingDecals = (world, options) => {
     const material = new THREE.MeshBasicMaterial({
       blending: THREE.MultiplyBlending,
       depthWrite: false,
+      // FOG OFF. Fog is mixed in BEFORE the premultiply, so a fogged multiply
+      // decal stops multiplying by 1.0 at its rim and starts multiplying by the
+      // fog colour — i.e. every far-field patch would tint the ground it was
+      // only supposed to darken, and tier 3 is by definition the tier that
+      // lives out in the haze.
+      fog: false,
       map: getGroundPatchTexture(tier.core),
-      // Not for alpha (multiply has none) — this puts the patch in the
-      // transparent pass so it draws AFTER the ground it is darkening.
+      // REQUIRED, not decoration: without it three binds NO blend func for
+      // MultiplyBlending and this ramp lands as an opaque white plate. See the
+      // block above getGroundPatchTexture. The premultiplied path binds
+      // (DST_COLOR, ONE_MINUS_SRC_ALPHA) and the shader pre-scales rgb by
+      // alpha, which for an opaque ramp is exactly dst * src — and, as a bonus
+      // over the old preset, material.opacity becomes a real lerp between
+      // "full multiply" and "no-op" instead of the silent no-op it used to be.
+      premultipliedAlpha: true,
+      // Primarily to put the patch in the transparent pass, so it draws AFTER
+      // the ground it is darkening — the alpha term is a bonus of the
+      // premultiplied path, not the reason this flag is here.
       transparent: true,
       // The world's ground is not flat (bridge decks, ice shelves, banked
       // aprons). Biasing toward the lens is cheaper and more reliable than
@@ -234,18 +256,24 @@ const buildGroundingDecals = (world, options) => {
  */
 export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = true }) => {
   const active = Boolean(enabled && renderer && sun);
-  // Tier budget. The frame has ~14ms of headroom against a 16.7ms target, and a
-  // 2048 depth pass over a 45-unit frustum costs a fraction of a millisecond
-  // because per-object frustum culling keeps it to the karts plus whatever
-  // roadside props are actually beside the player.
+  // Tier budget. The frame has ~14ms of headroom against a 16.7ms target, and
+  // the depth pass costs a fraction of a millisecond because per-object frustum
+  // culling keeps it to the karts plus whatever roadside props are actually
+  // beside the player.
   //
-  // The phone tier is deliberately UNCHANGED from what shipped (512 over a
-  // slightly tighter frustum, player kart only). Phone framerate is owner-
-  // visible and the phone's grounding win comes from tiers 2 and 3, which cost
-  // it nothing.
+  // Round 2 spends more of that headroom. 2048 over a 92-unit box gave a
+  // 0.045-unit texel and the captures read the result as "ragged ink splats
+  // larger than their caster, with no wheel or bodywork silhouette in them".
+  // 3072 over 76 units is a 0.0247-unit texel — 1.8x the density — and 76 units
+  // still covers the player, every rival within a full kart-length and the
+  // props actually beside the shot. Everything past that is tier 3's job.
+  //
+  // The phone tier is deliberately UNCHANGED from what shipped (512, player
+  // kart only). Phone framerate is owner-visible and the phone's grounding win
+  // comes from tiers 2 and 3, which cost it nothing.
   const tier = mobile
     ? { mapSize: 512, extent: 38, rivalsCast: false, driversCast: false, propsCast: false }
-    : { mapSize: 2048, extent: 46, rivalsCast: true, driversCast: true, propsCast: true };
+    : { mapSize: 3072, extent: 38, rivalsCast: true, driversCast: true, propsCast: true };
 
   if (renderer) {
     renderer.shadowMap.enabled = active;
@@ -264,12 +292,21 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
       // standoff and the far plane has to reach past the casters behind it.
       sun.shadow.camera.near = 8;
       sun.shadow.camera.far = 520;
-      // normalBias over depth bias: at 2048 over 92 units a texel is 0.045
-      // world units, and a constant bias big enough to kill acne on the chunky
-      // low-poly bodywork also detaches the shadow from the wheels. normalBias
-      // pushes the sample along the surface normal, which is where the acne is.
-      sun.shadow.bias = -0.00016;
-      sun.shadow.normalBias = 0.55;
+      // normalBias over depth bias: a constant bias big enough to kill acne on
+      // the chunky low-poly bodywork also detaches the shadow from the wheels,
+      // whereas normalBias pushes the sample along the surface normal, which is
+      // where the acne is.
+      //
+      // 0.55 was TWELVE texels at the old density and twenty-two at the new
+      // one, which is how the captures ended up with a blob wider than its
+      // caster, offset ~90px from it (comeback-city-p0_33) and a detached dark
+      // smear behind the kart with clear road in between (penguin-village-
+      // p0_67). That is textbook peter-panning, not a shadow-map resolution
+      // problem. 0.12 is ~5 texels at 3072/38 — still enough to keep the
+      // faceted bodywork off its own surface, small enough that the silhouette
+      // stays attached to the wheels.
+      sun.shadow.bias = -0.00009;
+      sun.shadow.normalBias = 0.12;
       sun.shadow.camera.updateProjectionMatrix();
     }
   }
@@ -436,8 +473,47 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
  */
 export const contactPatchProfile = (shadowsEnabled, contactGrounding) =>
   shadowsEnabled
-    ? { width: 8.4, length: 12.6, opacity: contactGrounding ? 0.38 : 0.34, glowScale: 1.1 }
+    ? // Round 2 raises the floor. 0.34 was chosen against a road the audit
+      // measured at 46-55 luminance and should have read as a ~17-value drop;
+      // the captures measured +0.6 to +31.5 instead, because the kart's own
+      // additive underglow paints the identical footprint. The monolith now
+      // draws this patch AFTER that glow (renderOrder) — but a patch that only
+      // just wins the argument is not grounding, so the base comes up too.
+      { width: 8.4, length: 12.6, opacity: contactGrounding ? 0.46 : 0.42, glowScale: 1.1 }
     : { width: 12, length: 21, opacity: contactGrounding ? 0.52 : 0.46, glowScale: 1.05 };
+
+/**
+ * Tier-2 boost for the frames where tier 1 cannot be seen.
+ *
+ * The whole premise of shrinking the AO patch (see contactPatchProfile) is that
+ * the sun is carrying the cast shadow. On Penguin Village it mostly is not: the
+ * shadow is thrown almost directly AWAY from the lens for over half the lap, so
+ * it lands behind the kart, hidden by the kart, and the frame has no grounding
+ * cue at all — measured on 5 of 9 penguin-village marks, where the road under
+ * the kart came back BRIGHTER than the open road beside it.
+ *
+ * `awayDot` is the dot product of the direction the shadow is thrown (the
+ * ground projection of -sunDirection, normalised) with the camera's forward
+ * vector (also ground-projected and normalised). +1 = the shadow runs straight
+ * away from the lens and is entirely behind its own caster; -1 = it runs
+ * straight at the lens and is the most visible it can ever be.
+ *
+ * Growing the patch back toward the old 12x21 blob EXACTLY when the cast shadow
+ * is hidden is the case the tier-2 header comment says this tier exists for.
+ * The two cues never both run hot, so nothing double-darkens.
+ */
+export const contactPatchShadowBoost = (awayDot, out = { opacity: 1, scale: 1 }) => {
+  // Smoothstep rather than a linear ramp: the transition happens as the camera
+  // yaws through a corner, and a linear term makes the patch visibly breathe
+  // through the middle of the turn.
+  const t = clamp((awayDot - 0.05) / 0.75, 0, 1);
+  const hidden = t * t * (3 - 2 * t);
+  // Written into a caller-owned record. This runs once a frame for the whole
+  // race; returning a fresh object would be ~4KB/s of garbage for two numbers.
+  out.opacity = 1 + hidden * 0.55;
+  out.scale = 1 + hidden * 0.45;
+  return out;
+};
 
 /**
  * Air fade for a contact patch.

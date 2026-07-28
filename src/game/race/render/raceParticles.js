@@ -6,7 +6,8 @@
 // everything pooled up front —
 //   1. surface particles ONE InstancedMesh (208 quads, 96 on mobile) shared by
 //                       the drift spray, the rolling-contact wash and plume,
-//                       the landing puff and the ground shockwave rings
+//                       the landing puff, the ground shockwave rings and the
+//                       arctic ground spindrift
 //   2. skid marks       ONE Mesh over ONE ring-buffer BufferGeometry (256/128)
 //   3. additive sprites ONE InstancedMesh (160 quads, 72 mobile) shared by the
 //                       coin sparkle, the coin spill, the item pickup and use
@@ -77,8 +78,25 @@
 // Nothing here fades to zero over a lifetime — a flake is retired only when the
 // box edge passes it, at a distance where it is a fraction of a pixel.
 //
-// reducedMotion: storm snow, speed-lines, ice glints and idle exhaust hide
-// entirely (all decorative), spray/sparks/boost-exhaust halve (gameplay-critical tier and
+// Ground half of the same storm (wave 4, round 2): the shells above carry a
+// bearing but cannot SHOW one, because at 285 the streak direction is set by the
+// lens tearing past the flake and every streak in a still therefore points back
+// down the track. Four waves of critics have read that as "no front, no wind
+// direction". The road plane is the one surface immune to it — a quad lying on
+// it, elongated along the wind, holds the bearing at an angle to the track no
+// matter how fast the camera moves. See the SPINDRIFT_* block.
+//
+// Contact contract (wave 4): every flat quad in this module is additive and
+// draws long after the shadow package's grounding decals, contact shadow and
+// contact glow. The rubric critic measured the consequence — under-kart road
+// luminance at 0.89-1.62x the open road on 13 of 18 marks, i.e. this module was
+// brightening the exact pixels the grounding rig darkens. Flat emitters are now
+// masked out inside the kart's own footprint (CONTACT_MASK_*); the one exemption
+// is the impact shockwave, which is an event centred on the kart. Nothing here
+// can fix the shadow rig's own additive glow — that is the monolith's.
+//
+// reducedMotion: storm snow, ground spindrift, speed-lines, ice glints and idle
+// exhaust hide entirely (all decorative), spray/sparks/boost-exhaust halve (gameplay-critical tier and
 // boost feedback stays readable), the contact wash drops to 0.4 rather than
 // zero — after this wave it is the only thing telling the player what they are
 // driving on, which is information and not ambience — and one-shot bursts keep
@@ -344,6 +362,59 @@ const MIN_SPRITE_ANGLE = 0.0013;
 // the wash cutting out on the outer line, the real fix is a per-wheel ground
 // sample in the particle context, not more lift.
 const FLAT_LIFT = 0.35;
+
+// Contact-footprint mask (wave 4). Every flat quad in this module is ADDITIVE
+// and every one of them draws at renderOrder 28-32, i.e. after the grounding
+// decals (1), the contact shadow (2) and the contact glow (3) that the shadow
+// package lays under the kart. So the one patch of road that the whole
+// grounding rig exists to DARKEN is also the patch this module was brightening
+// hardest, and the wave-4 rubric critic measured the result directly: under-kart
+// road luminance came out at 0.89-1.62x the open road on 13 of 18 marks, i.e.
+// the same or BRIGHTER, with red rising on the arctic frames.
+//
+// The wash is thrown by a tyre; a tyre throws material BEHIND its contact patch,
+// never underneath it. Masking the additive contribution inside the kart's own
+// footprint is therefore the physically honest read as well as the one that
+// stops this module fighting the shadow rig.
+//
+// Half-extents are the SOLID core of the contact shadow the monolith lays
+// (~6.3 x 11 units, i.e. the chassis footprint), rounded up a little; the ramp
+// then runs out to 1.75x that. Checked against the emitters rather than guessed:
+// the wash is laid at |x| 3.9-5.3, z -3.6 to -5.8, which lands at 0.14-0.79 of
+// value at birth and reaches full about five units further back — roughly 50 ms
+// at the 100 units/s the wash needs before it emits at all, out of a 160-800 ms
+// life, and those are the frames the file already documents as sitting behind
+// the kart's own bodywork. So this costs the trail almost nothing and takes the
+// additive lift off the one box the grounding measurement samples.
+const CONTACT_MASK_HALF_WIDTH = 4.2;
+const CONTACT_MASK_HALF_LENGTH = 6;
+const CONTACT_MASK_FEATHER = 0.75;
+
+// Ground spindrift (wave 4, Penguin Village only). The brief is a SUNSET STORM
+// FRONT and four waves of critics have said the same thing about it: "no front,
+// no wind direction". The airborne shells above DO carry a bearing, but at
+// racing speed a flake's screen velocity is dominated by the lens tearing past
+// it, so in a still every streak points back down the track and the wind is
+// unreadable. The ground plane is the one place that cannot happen: a quad lying
+// on the road, elongated along the wind bearing, holds that bearing at an angle
+// to the road's own direction no matter how fast the camera is moving. It is
+// also material on a surface the critics measure as value-flat, for zero bytes
+// and zero extra draw calls (it emits into the existing surface pool).
+//
+// Kept deliberately narrow in lane terms: this module gets ONE ground sample per
+// frame (context.groundY, taken under the kart), so a streamer placed far off
+// the racing line would sit at the wrong height on a banked corner. +-9 at spawn
+// (plus the bounded drift derived in spawnSpindrift) keeps the worst case inside
+// ~3 units of height error on the 9-degree bank the road package ships, and the
+// lift below sits above the wash's 0.35 so the two never z-fight.
+const SPINDRIFT_LIFT = 0.52;
+const SPINDRIFT_SPAN_X = 9;
+const SPINDRIFT_AHEAD = 24;
+const SPINDRIFT_BEHIND = -6;
+// Per second, not per unit of track: this is weather, and it must be in the
+// frame when the kart is parked on the grid as well as at 285.
+const SPINDRIFT_RATE = 26;
+
 // How much of the drift/ground hue survives on a track that is white underfoot
 // no matter what the surface bands call it. Two separate floors on purpose:
 // the thrown spray has to keep enough tier colour to read as a charge stage,
@@ -393,6 +464,11 @@ const SNOW_GUST_RATE = 0.9;
 // in the monolith exhibits, and the whole point of this layer is to be the
 // counter-example rather than a second instance of it.
 const SNOW_MAX_ANGLE = 0.006;
+// Ground yaw that points a flat quad's LONG axis (local +X, the same convention
+// the ice glint already uses) along the wind bearing. Derived from SNOW_WIND so
+// the surface streamers and the airborne shells can never disagree about which
+// way the storm is blowing.
+const SPINDRIFT_YAW = Math.atan2(-SNOW_WIND.z, SNOW_WIND.x);
 // Both ends of the visibility window. Inside SNOW_NEAR_FADE a flake is at the
 // lens and swipes across the whole frame; the outer ramp hides the wrap.
 const SNOW_NEAR_FADE = 1.6;
@@ -455,6 +531,19 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
 const FLAT_QUAT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
 
 const clamp01 = (value) => (value < 0 ? 0 : value > 1 ? 1 : value);
+
+// 0 inside the kart's contact footprint, ramping to 1 over CONTACT_MASK_FEATHER
+// of a footprint beyond it. See the CONTACT_MASK_* block for why this exists.
+// dx/dz are world-space offsets from the kart; cos/sin are the kart's yaw, in
+// the same convention the emitters use to place particles (world = kart +
+// [cos, sin; -sin, cos] * local), so the ellipse is oriented along the chassis
+// rather than along the world axes.
+const contactMaskAt = (dx, dz, cos, sin) => {
+  const lx = (cos * dx - sin * dz) / CONTACT_MASK_HALF_WIDTH;
+  const lz = (sin * dx + cos * dz) / CONTACT_MASK_HALF_LENGTH;
+  const radius = Math.sqrt(lx * lx + lz * lz);
+  return radius >= 1 + CONTACT_MASK_FEATHER ? 1 : clamp01((radius - 1) / CONTACT_MASK_FEATHER);
+};
 
 // Item accents, so a pickup and a use are the colour of the thing picked up.
 // The runtime does not put the held item in the particle context today, so
@@ -719,6 +808,16 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   // for those, because a flat quad has a visible orientation and a field of
   // identically-aligned rectangles reads as tiling.
   const sprayPool = Array.from({ length: sprayCount }, () => ({
+    // Length-to-width ratio for a `flat` quad, measured along its own yaw. 1 for
+    // every emitter but the spindrift, whose whole cue is that it is a STREAMER
+    // pointing along the wind rather than another round puff.
+    aspect: 1,
+    // 1 = this particle's additive contribution is suppressed inside the kart's
+    // own contact footprint (see CONTACT_MASK_*), 0 = exempt. Default on: every
+    // surface system in this pool is thrown BY the contact patch and so has no
+    // business lighting it. Only the spin-out shockwave opts out, because it is
+    // an event centred on the kart and masking its centre would delete it.
+    contactMask: 1,
     drag: 0,
     fadeCurve: 0.6,
     flat: false,
@@ -754,6 +853,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   let contactAccumulator = 0;
   let crystalAccumulator = 0;
   let glintAccumulator = 0;
+  let spindriftAccumulator = 0;
   const sprayTint = new THREE.Color();
   const surfaceTint = new THREE.Color();
   // The surface tint after the powder wash — what the systems that throw
@@ -776,6 +876,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     sprayCursor = (sprayCursor + 1) % sprayCount;
     item.roll = Math.random() * Math.PI * 2;
     item.stretchMax = 1.5 + Math.random() * 1.8;
+    // Reset here rather than in each spawner, for the same reason `roll` is: a
+    // recycled slot that inherited the spindrift's 4:1 aspect would draw a wash
+    // puff as a sliver, and one that inherited the shockwave's exemption would
+    // put the wash back on top of the contact patch.
+    item.aspect = 1;
+    item.contactMask = 1;
     return item;
   };
 
@@ -867,6 +973,11 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     // facet rather than as a bead sitting on top of the road.
     aspect: 1,
     brightness: 1,
+    // See the spray pool's field of the same name. Only the FLAT emitters in
+    // this pool (the ice glint) can ever land on the contact patch — an airborne
+    // spark or exhaust sprite is above it, not on it — so the mask is applied on
+    // the flat path only and costs nothing anywhere else.
+    contactMask: 1,
     // Ground-aligned instead of camera-facing, for the same reason the wash is
     // (see the grounding contract at the top of the file).
     flat: false,
@@ -902,6 +1013,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     const item = burstPool[burstCursor];
     burstCursor = (burstCursor + 1) % burstCount;
     item.aspect = 1;
+    item.contactMask = 1;
     item.flat = false;
     item.lengthJitter = 0.62 + Math.random() * 0.5;
     item.maxAngle = 0;
@@ -1324,6 +1436,67 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
     item.life = item.ttl;
   };
 
+  // Ground spindrift: snow torn off the surface and driven across the road by
+  // the same wind the airborne shells fall in. See the SPINDRIFT_* block for
+  // why the ground plane is the only place a wind BEARING survives at racing
+  // speed. Nothing here is tied to the kart's motion — this is weather, and it
+  // has to be in the frame whether the player is at 285 or on the grid.
+  const spawnSpindrift = (context, tint) => {
+    const item = nextSpray();
+    const cos = Math.cos(context.yaw);
+    const sin = Math.sin(context.yaw);
+    const lx = (Math.random() * 2 - 1) * SPINDRIFT_SPAN_X;
+    const lz = SPINDRIFT_BEHIND + Math.random() * (SPINDRIFT_AHEAD - SPINDRIFT_BEHIND);
+    item.position.set(
+      context.kartPosition.x + cos * lx + sin * lz,
+      context.groundY + SPINDRIFT_LIFT,
+      context.kartPosition.z - sin * lx + cos * lz
+    );
+    // WORLD-space velocity, not kart-relative: the streamer has to cross the
+    // road at the wind's angle, which means it must not inherit the heading of
+    // the thing it happens to have been spawned next to.
+    //
+    // A FRACTION of the airborne wind, and deliberately: this is snow being
+    // dragged over a surface, and — the reason it is capped rather than tuned by
+    // eye — the quad rides the single ground sample taken under the kart, so how
+    // far it may travel before that sample stops describing the road under it is
+    // a correctness bound, not a taste call. |wind| 15.4 * 0.85 * a 0.9 s life is
+    // ~12 units, which with the +-9 spawn span keeps every streamer inside ~21
+    // units of the racing line; on the 9-degree bank the road package ships that
+    // is under ~3 units of height error, at which a dim soft-edged additive quad
+    // fades or sinks rather than reading as a stray plate.
+    const gust = 0.45 + Math.random() * 0.4;
+    item.velocity.set(SNOW_WIND.x * gust, 0, SNOW_WIND.z * gust);
+    item.drag = 0;
+    item.fadeCurve = 1.1;
+    item.flat = true;
+    item.floorY = context.groundY - 1e3;
+    item.gravity = 0;
+    // The one anisotropic emitter in this pool. A round puff blowing sideways is
+    // just another puff; a streamer IS the direction. Longer than the ice
+    // glint's ratio on purpose — the glint is a flash caught by one facet, this
+    // has to read as material being dragged over a distance.
+    item.aspect = 4.2 + Math.random() * 3;
+    item.sizeStart = 0.55 + Math.random() * 0.45;
+    // Widens as it tears apart, so the field has a size distribution rather than
+    // one stamped ribbon repeated across the road. Held down because `aspect`
+    // multiplies it: at 1.5 wide and the 7.2 aspect ceiling the longest streamer
+    // in the field is ~11 units on a 56-unit road, which is a streamer. Twice
+    // that and it is a stripe painted down the track.
+    item.sizeEnd = 1 + Math.random() * 0.5;
+    item.spin = SPINDRIFT_YAW + (Math.random() - 0.5) * 0.42;
+    // Barely any: a streamer that visibly rotates stops reading as wind. This is
+    // only enough that no two are exactly parallel.
+    item.spinRate = (Math.random() - 0.5) * 0.3;
+    item.stretch = 0;
+    // Dimmer than the wash on purpose. The wash is a gameplay readout (what am I
+    // driving on, how hard am I loading it); the spindrift is atmosphere, and if
+    // a single streamer is legible on its own it has become debris.
+    item.tint.copy(tint).multiplyScalar(0.19 * (0.6 + Math.random() * 0.55));
+    item.ttl = 0.5 + Math.random() * 0.4;
+    item.life = item.ttl;
+  };
+
   // The airborne half of rolling contact: displaced material that actually
   // leaves the ground. Rare on tarmac (`lift` 0.3), most of the emission on
   // snow — that split is what makes powder look like powder from a still.
@@ -1434,6 +1607,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       item.drag = 3.2;
       item.fadeCurve = 1.25;
       item.flat = true;
+      // The one flat emitter exempt from the contact-footprint mask. A landing
+      // or a spin-out is an event centred on the kart itself and its whole read
+      // is the disturbance spreading OUT from under it — masking the first few
+      // frames would delete the moment of impact, which is the opposite of the
+      // continuous wash the mask exists for.
+      item.contactMask = 0;
       item.floorY = context.groundY - 1e3;
       item.gravity = 0;
       item.sizeStart = size;
@@ -2228,6 +2407,29 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       glintAccumulator = 0;
     }
 
+    // Ground spindrift. Arctic only, and ambient — so it hides outright under
+    // reducedMotion for the same reason the airborne shells do, and it is the
+    // one emitter in this file whose rate is per SECOND rather than per unit of
+    // track, because weather does not stop when the kart does. 26/s against a
+    // ~0.7 s mean life is ~18 of the 208 desktop slots in the steady state (less
+    // in practice, since the flat proximity ramp retires them at the lens),
+    // against the wash's measured 66 — so it cannot starve the gameplay tier.
+    if (isIce && !context.reducedMotion) {
+      spindriftAccumulator += dt * SPINDRIFT_RATE * poolScale;
+      // Budgeted like every other emitter here: a frame-time spike must not dump
+      // a second of weather into one instant and recycle the wash out of the
+      // pool behind it.
+      let spindriftBudget = mobile ? 3 : 6;
+      while (spindriftAccumulator >= 1 && spindriftBudget > 0) {
+        spindriftAccumulator -= 1;
+        spindriftBudget -= 1;
+        spawnSpindrift(context, SPRAY_SNOW);
+      }
+      if (spindriftBudget <= 0) spindriftAccumulator = 0;
+    } else {
+      spindriftAccumulator = 0;
+    }
+
     // Landing puff fallback. `land` (onCue) is the primary path because it is
     // the frame the audio lands on; this covers a caller that feeds no cues at
     // all, and onCue clears wasAirborne so the two can never both fire.
@@ -2241,6 +2443,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       peakAirHeight = 0;
     }
     wasAirborne = airborne;
+
+    // Kart frame for the contact-footprint mask, hoisted out of both particle
+    // loops — two trig calls a frame instead of two per live flat sprite.
+    const kartCos = Math.cos(context.yaw);
+    const kartSin = Math.sin(context.yaw);
+    const kartX = context.kartPosition.x;
+    const kartZ = context.kartPosition.z;
 
     let sprayColorDirty = false;
     sprayPool.forEach((item, index) => {
@@ -2287,12 +2496,25 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         sprayMesh.setMatrixAt(index, HIDDEN_POSE);
         return;
       }
+      // Contact-footprint mask. Hidden rather than drawn at zero brightness: an
+      // additive sprite at zero adds nothing but still rasterises, and these are
+      // the biggest quads in the pool sitting on the nearest band of road.
+      const mask =
+        item.flat && item.contactMask
+          ? contactMaskAt(item.position.x - kartX, item.position.z - kartZ, kartCos, kartSin)
+          : 1;
+      if (mask <= 0) {
+        sprayMesh.setMatrixAt(index, HIDDEN_POSE);
+        return;
+      }
       if (item.flat) {
         // Ground-aligned: no billboard, no velocity stretch (a flat quad's
         // apparent motion is already the road's own parallax), and a slow yaw
         // so the wash never resolves into a grid of identical rectangles.
+        // `aspect` is 1 for everything but the spindrift, whose long axis is
+        // local +X — the same convention the ice glint uses in the burst pool.
         item.spin += item.spinRate * dt;
-        scratchScale.set(width, width, 1);
+        scratchScale.set(width * item.aspect, width, 1);
         scratchRoll.setFromAxisAngle(Y_AXIS, item.spin).multiply(FLAT_QUAT);
       } else {
         const stretch = 1 + Math.min(item.stretchMax, screenSpeed * 1.1 * item.stretch);
@@ -2315,7 +2537,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // dissolve on both tracks and the proximity term applies on both.
       sprayMesh.setColorAt(
         index,
-        scratchColor.copy(item.tint).multiplyScalar(Math.pow(fade, item.fadeCurve) * prox)
+        scratchColor.copy(item.tint).multiplyScalar(Math.pow(fade, item.fadeCurve) * prox * mask)
       );
       sprayColorDirty = true;
     });
@@ -2460,6 +2682,16 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         return;
       }
       if (item.flat) {
+        // Same contact-footprint mask as the spray pool: a specular flash on the
+        // road is a property of the road, and the strip of road under the kart
+        // is the strip the grounding rig is trying to keep dark.
+        const flatMask = item.contactMask
+          ? contactMaskAt(item.position.x - kartX, item.position.z - kartZ, kartCos, kartSin)
+          : 1;
+        if (flatMask <= 0) {
+          burstMesh.setMatrixAt(index, HIDDEN_POSE);
+          return;
+        }
         // Ground-aligned and anisotropic: the surface caught the light. A
         // billboard here would be a bead sitting ON the road instead — the
         // exact difference the grounding contract at the top of the file is
@@ -2470,7 +2702,9 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
         burstMesh.setColorAt(
           index,
-          scratchColor.copy(item.tint).multiplyScalar(item.brightness * fade * (0.3 + fade * 0.7) * prox)
+          scratchColor
+            .copy(item.tint)
+            .multiplyScalar(item.brightness * fade * (0.3 + fade * 0.7) * prox * flatMask)
         );
         burstColorDirty = true;
         return;

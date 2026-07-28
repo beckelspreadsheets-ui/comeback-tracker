@@ -86,11 +86,37 @@ export const ENV_SCENE_INTENSITY = { desktop: 0.34, mobile: 0.26 };
 // at 0.02 — that value was never a decision, it was the default of a material
 // helper written before there was anything to reflect.
 export const ENV_RESPONSE = Object.freeze({
-  // Ice shelf / frozen rails: high specular, still dielectric. Ice is not
-  // metal — the read is a broad sky-coloured sheen across the shelf that goes
-  // near-white at grazing angles, which is the "(a) fresnel/rim sheen" cue the
-  // rubric critic asked for on the Penguin Village band.
-  ice: { envMapIntensity: 0.9, metalness: 0.16, roughness: 0.24 },
+  // Ice shelf / frozen rails: specular, still dielectric. Ice is not metal —
+  // the read is a broad sky-coloured sheen across the shelf that goes bright at
+  // grazing angles, which is the "(a) fresnel/rim sheen" cue the rubric critic
+  // asked for on the Penguin Village band.
+  //
+  // AAA wave 4 round 2 — pulled back from { 0.9, 0.16, 0.24 }. Two critics
+  // filed a rainbow/oil-slick fringe on the Penguin Village ridges against this
+  // class. It is NOT the cause (see the note below), but the numbers were
+  // authored for a smooth surface and this geometry is flat-shaded low-poly:
+  // roughness 0.24 on a facet whose normal is constant across its whole face
+  // gives that face ONE mirror-sharp probe sample, so adjacent facets return
+  // widely separated points on a sky whose only chromatic energy is a narrow
+  // hot horizon band — one facet catches amber, its neighbour catches indigo,
+  // and a ridge line becomes a hue staircase rather than a sun-catch. Roughened
+  // to 0.34 (the PMREM mip a facet lands on now spans enough of the dome to
+  // average that band instead of sampling across it), intensity down to 0.5 so
+  // the sheen is a highlight and not a second exposure, metalness down to 0.10
+  // because a dielectric's grazing response should come from fresnel, not from
+  // tinting the reflection with the albedo.
+  //
+  // Honest scope note for whoever re-measures: the fringe visible in
+  // tmp/aaa-visual/wave4-r1/penguin-village-p0_15.png cannot be coming from
+  // here. `installRaceEnvironment` has no call site anywhere in src/, so
+  // `activeEnvTexture` is null, and tuneEnvResponse's degraded branch applies
+  // ROUGHNESS ONLY — envMapIntensity and metalness in this table have never
+  // reached a shipped frame. The measured fringe is the mid-ground belt's own
+  // cloud-bank shader (createMidGroundBelt.js:2156/2227: uRimColor '#ffae66'
+  // mixed in at 0.92, i.e. a near-total replacement at the silhouette, plus an
+  // additive ember on top) against the cool dome behind it. That file is not in
+  // this package.
+  ice: { envMapIntensity: 0.5, metalness: 0.1, roughness: 0.34 },
   // Everything that should read as unfinished: snow verge, terrain, cloth,
   // stucco. Kept non-zero so the surface still tilts with the sky.
   matte: { envMapIntensity: 0.12, metalness: 0, roughness: 0.9 },
@@ -106,6 +132,23 @@ export const ENV_RESPONSE = Object.freeze({
 // tuneEnvResponse degrades to a pure BRDF tweak in that case rather than
 // throwing — a track that never installs a probe must still render.
 let activeEnvTexture = null;
+
+// Materials that asked for a response class BEFORE a probe existed.
+//
+// AAA wave 4 round 2. This module shipped an ORDER DEPENDENCY as documented
+// behaviour: "the probe must already be installed when this runs — which is
+// what the documented call site guarantees". That is a landmine, and round 1
+// stepped on it in the largest possible way — the install line was never added
+// to the monolith at all, so every tuneEnvResponse call in the tree took the
+// degraded branch and the whole materials axis stayed inert. A silent,
+// invisible, all-or-nothing failure whose only symptom is "the wave did
+// nothing", which is precisely the failure mode a build cannot catch.
+//
+// So the order dependency is gone: a class asked for before the probe lands is
+// remembered and re-applied the moment it does. The list is dropped on install
+// (and on dispose), so it holds material references only across the window
+// between scene build and probe install — it cannot grow across track reloads.
+let pendingTunes = [];
 
 // Mirror of DUSK_SKY_STOPS (ComebackCityThreeKartRace.jsx:1035). Comeback City
 // authors no `palette.sky` at all — it IS the default — so without this the
@@ -261,10 +304,31 @@ const buildSkyEquirect = ({ ground, height, horizonPower, glow, ramp, sunColor, 
 // come from. Floored so a very bright probe can never black out the fill.
 const HEMI_TAKEOVER_FLOOR = 0.55;
 
+// The half of a response class that needs something to reflect. Split out of
+// tuneEnvResponse so the deferred replay applies EXACTLY the same writes as the
+// immediate path — two copies of this would drift.
+const applyEnvParams = (material, params) => {
+  material.metalness = params.metalness;
+  material.envMap = activeEnvTexture;
+  material.envMapIntensity = params.envMapIntensity;
+  // Assigning envMap changes the material's shader permutation (USE_ENVMAP), so
+  // a material that has already compiled needs the version bump or the write is
+  // invisible until something else dirties it.
+  material.needsUpdate = true;
+};
+
 /**
  * Build the track's environment probe and install it on the scene.
  *
- * THE ONE CALL SITE. In ComebackCityThreeKartRace.jsx's createScene, put this
+ * THE ONE CALL SITE — STILL MISSING AS OF WAVE 4 ROUND 1. Verified by grep
+ * over all of src/: nothing calls this function, so every frame captured in
+ * tmp/aaa-visual/wave4-r1 was rendered with `scene.environment` null and with
+ * ENV_RESPONSE's metalness and envMapIntensity columns unreached. The line
+ * below is a ONE-LINE monolith edit and it is the whole materials axis; it
+ * cannot be made from inside this package, which owns no file that ever sees a
+ * renderer and a scene together.
+ *
+ * In ComebackCityThreeKartRace.jsx's createScene, put this
  * immediately after the rim light is added and `activeHeroRim` is resolved —
  * i.e. directly below the `TOON_RIM_SHARED_TINT.value.set(...)` line (currently
  * :5121), which is the first point where `renderer`, `scene`, `palette`, `hemi`
@@ -360,12 +424,29 @@ export const installRaceEnvironment = ({
   }
 
   activeEnvTexture = target.texture;
+  // Everything that asked for a class while there was nothing to reflect gets
+  // its metalness and envMap now. Materials built AFTER this point take the
+  // immediate path and never enter the list.
+  const replayed = pendingTunes;
+  pendingTunes = [];
+  replayed.forEach(({ material, params }) => applyEnvParams(material, params));
+
   return {
     dispose: () => {
       if (scene.environment === target.texture) scene.environment = null;
-      if (activeEnvTexture === target.texture) activeEnvTexture = null;
+      if (activeEnvTexture === target.texture) {
+        activeEnvTexture = null;
+        // Anything queued after this probe was disposed belongs to a scene that
+        // no longer exists; holding those material references would keep a torn
+        // down track's materials alive until the next install flushed them.
+        pendingTunes = [];
+      }
       target.dispose();
     },
+    // How many materials the replay caught. Zero on a correctly ordered build,
+    // and a fast way for the capture harness to prove the probe reached the
+    // track rather than inferring it from pixels.
+    replayed: replayed.length,
     // Exposed for the capture harness: a probe whose mean luminance drifts
     // between waves is the first thing to check if a track's exposure moves.
     hemiScale,
@@ -384,10 +465,9 @@ export const installRaceEnvironment = ({
  * the material is riding scene.environment), so this must set BOTH.
  *
  * Safe before the probe is installed and safe on a material that is not a
- * standard material. Note the ORDER dependency: the preset is resolved once,
- * here, so the probe must already be installed when this runs — which is what
- * the documented call site above guarantees, since it sits above every line
- * that builds track geometry.
+ * standard material, and ORDER-INDEPENDENT since wave 4 round 2: call it
+ * whenever the material is built and it will pick the probe up whenever the
+ * probe arrives (see pendingTunes).
  *
  * Roughness always applies; METALNESS only applies when a probe exists. That
  * asymmetry is deliberate and it is the safety property that makes this
@@ -406,12 +486,11 @@ export const tuneEnvResponse = (material, preset, overrides = null) => {
   const params = overrides ? { ...spec, ...overrides } : spec;
   if (!material.isMeshStandardMaterial) return material;
   material.roughness = params.roughness;
-  if (activeEnvTexture) {
-    material.metalness = params.metalness;
-    material.envMap = activeEnvTexture;
-    material.envMapIntensity = params.envMapIntensity;
-    material.needsUpdate = true;
-  }
+  if (activeEnvTexture) applyEnvParams(material, params);
+  // Resolved params, not the preset name: an `overrides` object handed in here
+  // has to survive to the replay or a caller's explicit roughness/intensity
+  // would be silently reverted to the class default when the probe lands.
+  else pendingTunes.push({ material, params });
   return material;
 };
 

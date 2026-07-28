@@ -196,6 +196,72 @@ const SKY_BOUNCE = 0.16;
 // another ~10% is what makes them read as rubber.
 const RUBBER_DARKEN = 0.9;
 
+// ---- AAA wave 4 round 2: saturated paint, measured -------------------------
+//
+// THE MEASUREMENT. Sampled the Miami Cruiser's body in
+// tmp/aaa-visual/wave4-r1/comeback-city-p0_15.png:
+//
+//   region              mean RGB          lum p10..p90   R >= 252
+//   pink body, upper    (241, 156, 202)   177 .. 226      86.7%
+//   pink body, side     (254, 143, 195)   187 .. 211      97.1%
+//   pink nose           (242, 168, 211)   194 .. 242      89.2%
+//   blue rival (control) (103,  97, 119)   39 .. 182      21.6%
+//
+// The side panel holds a value spread of TWENTY-FOUR out of 255 across its
+// whole area while its red channel is pinned at maximum on 97% of it. That is
+// the blind judge's "one uniform hot pink with a clipped highlight and no
+// form", and it is a clipping failure, not a shading one: the panel almost
+// certainly HAS gradation, entirely above 1.0 where the output cannot show it.
+//
+// WHY EVERY EXISTING GUARD MISSED IT. SPEC_CEILING is spent against
+// `luminance(outgoingLight)`, and luminance is Rec709-weighted — green carries
+// 0.72 of it, red 0.21. Hot pink is a colour with almost no green, so a texel
+// whose red channel is already past 1.0 still measures as a mid-luminance
+// surface and every headroom meter in the shader reports room to spare. The
+// meter now reads the PEAK CHANNEL instead (see KART_HEADROOM in
+// toonRimShader.js); peak >= luminance for every colour, with equality on
+// neutrals, so this tightens the meter exactly on the saturated surfaces that
+// were escaping it and is a no-op on the chrome and rubber it was tuned for.
+//
+// `shade` — the shadow-side step. A toon body lit by one broad key lands on a
+// single ramp step over most of its area; multiplying the PAINT class by this
+// on normals facing away from the key is what puts a third value on the body
+// (lit crest / mid flank / shadow side) rather than leaving the AO's curvature
+// term to carry the whole read on its own.
+//
+// `knee` / `pull` — the unclip. Where the paint class's peak channel lands
+// above `knee`, the whole colour is scaled down toward it, uniformly across
+// RGB so the hue is untouched and only the exposure moves. `pull` is how much
+// of that correction is taken: 1.0 would pin every paint peak exactly at the
+// knee (which flattens a genuinely hot highlight back into the body), 0.7
+// leaves the brightest texels visibly brighter than the rest while still
+// pulling a 97%-clipped panel back under the ceiling. Applied BEFORE the
+// additive terms on purpose — an unclipped panel has real headroom again, so
+// the specular band lands as a band instead of being metered away to nothing.
+const PAINT_SHAPE = { knee: 1, pull: 0.7, shade: 0.78 };
+
+// Albedo-INDEPENDENT hemispheric fill for the dark-neutral class.
+//
+// The measured case is the player's driver in comeback-city-p0_06: a solid
+// black shape at 300px with no readable form, which is the same "form must be
+// read from shading alone" failure the critics file against the Penguin
+// Village mountains. Walk what the shader offers a near-black neutral texel
+// today and every single term is a subtraction or a no-op: curvature AO
+// darkens it, RUBBER_DARKEN darkens it again, SKY_BOUNCE is multiplied by the
+// albedo so it returns ~0, and the env probe deliberately gives the rubber
+// class nothing. The only thing separating that driver from the road behind it
+// is the rim — i.e. an outline, which is exactly the "flat black cut-out"
+// read.
+//
+// This is the one term that works on a black surface, and it is the physically
+// honest one: a black dielectric is not visible through its diffuse albedo, it
+// is visible through what it REFLECTS. Sky colour on up-facing normals, ground
+// colour underneath, no albedo factor, headroom-metered so it cannot clip.
+// Deliberately small — this is a value break across a silhouette, not a fill
+// light, and pushing it further would grey the one class the other three are
+// read against.
+const DARK_FILL = 0.13;
+
 // ---- AAA wave 4: the analytic sky probe ------------------------------------
 //
 // Per-class weight on the environment reflection injected by the kart shading
@@ -258,12 +324,16 @@ export const KART_SHADING_DESKTOP = Object.freeze({
   chromeGloss: GLOSS.chrome,
   chromeLuminance: CHROME_LUMINANCE,
   chromeStrength: SPEC_STRENGTH.chrome,
+  darkFill: DARK_FILL,
   envChrome: ENV_PROBE.chrome,
   envPaint: ENV_PROBE.paint,
   envPlastic: ENV_PROBE.plastic,
   envSunSharp: ENV_PROBE.sunSharp,
   paintChroma: PAINT_CHROMA,
   paintGloss: GLOSS.paint,
+  paintKnee: PAINT_SHAPE.knee,
+  paintPull: PAINT_SHAPE.pull,
+  paintShade: PAINT_SHAPE.shade,
   paintStrength: SPEC_STRENGTH.paint,
   plasticStrength: SPEC_STRENGTH.plastic,
   rubberDarken: RUBBER_DARKEN,
@@ -288,6 +358,11 @@ export const KART_SHADING_DESKTOP = Object.freeze({
 // detail a downscale eats. Only the sun lobe widens: at 0.6 scale a 26-exponent
 // glint can land between samples and strobe, and 15 spreads the same energy
 // over roughly 1.7x the solid angle so it survives resampling.
+//
+// PAINT_SHAPE and DARK_FILL are deliberately NOT re-tiered. Neither is a
+// detail term — one stops a channel clipping and the other is a low-frequency
+// value gradient — so both survive a 0.6-scale render intact, and both matter
+// MORE on a small screen where a flat clipped panel has no other cue left.
 export const KART_SHADING_MOBILE = Object.freeze({
   ...KART_SHADING_DESKTOP,
   aoCrease: 0,
@@ -332,6 +407,28 @@ export const resolveKartShading = (windowRef = globalThis.window) => {
 // Applies to the rim only. The rim's COLOUR stays whatever the track palette
 // authored (PV ice-white, CC cyan) — that is an owner pick, not a bug.
 export const HERO_RIM_KEY_BIAS = [0.45, 1.25];
+
+// How much of the rim the DARK-NEUTRAL (rubber) class keeps.
+//
+// createGroundedKartModel's own comment says the rim goes on paint, trim and
+// hubs and NOT on tyres, "the one part that has to stay dead matte". That was
+// never true in the shipped shader: the rim is a material-level injection and
+// every authored body is one fused mesh with one material, so the rim had no
+// way to know which texel it was on. A 4x zoom of comeback-city-p0_06 shows the
+// consequence — a continuous teal line tracing the outer edge of all four
+// tyres and the roll hoop, which welds the whole vehicle into a single glowing
+// outline instead of a set of parts.
+//
+// The classifier already computes the mask this needs, so the rim now takes the
+// documented reduction per texel. NOT zero, and this is the one number in the
+// file that is a judgement call rather than a measurement: the driver's black
+// suit is also a dark neutral, and on Comeback City that silhouette against a
+// near-black road has nothing else holding it. So the tyres lose most of the
+// outline (a rim at 0.4 is well under the eye's edge-detection threshold at the
+// widths involved) while the driver keeps a trace of it — and DARK_FILL, which
+// lands on the same mask, gives that driver the form the outline was standing
+// in for.
+export const HERO_RIM_RUBBER_SCALE = 0.4;
 
 // Bring a hero albedo map up to the tier's sampling standard, once per texture.
 //

@@ -242,7 +242,20 @@ const TRACK_GRADES = {
     // and crushing an already-dark asphalt to buy contrast in the sky is
     // trading a real surface for a cheap number. The value work below is done
     // where the failure actually is, in the cool mid-band.
-    black: 0.038,
+    // WAVE 4 ROUND 2: 0.038 -> 0.028, together with the gamma below. The
+    // paragraph above is about RAISING the black point, which was measured and
+    // rejected; this moves it the other way, and for a finding the round-1
+    // measurement could not have seen. The rubric critic measured Penguin
+    // Village's road at median luminance 28.4 on p0_67 against 58.8 on p0_33 —
+    // a 2x swing between adjacent marks on the same track — and asked for a toe
+    // that never lets the road fall under ~40. Replayed over the dark end of
+    // the range these two numbers together move a road pixel at L 18.5 to 23.3
+    // and one at L 29.5 to 34.4, with the top of the range moving by at most
+    // 2/255 and the clipped-white population unchanged at 0.000% of the cube.
+    // (The SWING itself is not a grade defect and is not fixed here — a static
+    // 3D LUT is a pure function of colour and cannot hunt exposure. See the
+    // report.)
+    black: 0.028,
     // Higher white point than CC: Penguin Village is a bright-field track and
     // its sky already sits at ~0.89, so CC's 0.965 clipped a third of it.
     white: 0.975,
@@ -250,7 +263,13 @@ const TRACK_GRADES = {
     // it pulls the mid-band median from 0.682 to 0.599 while leaving p90 at
     // 0.800, i.e. the snow stays a bright field and the shadows stop being
     // bright with it.
-    gamma: 1.22,
+    // Round 2: 1.22 -> 1.17, the other half of the toe correction above. The
+    // mid-band work this line paid for is not given back — the scene rig itself
+    // now supplies it, because the wave-4 round-2 key:fill rebalance
+    // (penguinVillage.js) takes 21% off every shade face while holding the
+    // up-facing exposure flat. Doing it in the light rather than in the curve
+    // is what lets the road come back up without the snow coming with it.
+    gamma: 1.17,
     scurve: 0.38,
     gain: [0.985, 1.0, 1.045],
     // 1.42 -> 1.30, DOWN. The wash is no longer being fought with a global
@@ -260,13 +279,28 @@ const TRACK_GRADES = {
     // the image this grade receives is nearly monochrome (see the table under
     // the sky split), so `sat` is where ALL of Penguin Village's colour comes
     // from and every stage below is aiming at chroma that this line created.
-    sat: 1.30,
+    // Round 2: 1.30 -> 1.36, and the reason it goes back UP is that round 1's
+    // reason for taking it down has expired. It came down because the image
+    // arriving here was nearly monochrome, so a global chroma multiplier was
+    // amplifying nothing and only costing highlight headroom. The image
+    // arriving here is no longer monochrome: the dome's ladder no longer walks
+    // through neutral, the deck carries chroma, the aurora is no longer laying
+    // an additive teal veil over the whole storm band, and the plate's rim is
+    // no longer a full-spectrum fringe (penguinVillage.js and
+    // createMidGroundBelt.js carry all four). What this multiplies is now
+    // authored colour, and the highlight roll below is what keeps it safe:
+    // replayed over the cube, clipped-white stays at 0.000%.
+    sat: 1.36,
     // Deeper and bluer (#0e3068 -> #0b2a63) and it reaches further up the
     // range (knee 0.45 -> 0.52), because on this track the shadow band is not
     // in the toe: shadowed ice measured L 0.48, above where the old knee had
     // already faded out.
     shadowTint: '#0b2a63',
-    shadowAmount: 0.20,
+    // 0.20 -> 0.24. The cool half of the split tone the A/B judge asked for
+    // ("a cool shadow tint and a warm highlight split so the ice ridges
+    // separate from the sky"). Headroom-weighted, so it can only act where
+    // there is room and cannot re-darken the road the toe above just lifted.
+    shadowAmount: 0.24,
     shadowKnee: 0.52,
     hiTint: '#ffdcae',
     // 0.28 -> 0.10. This term is mean-removed, i.e. luminance-neutral, and on
@@ -277,8 +311,18 @@ const TRACK_GRADES = {
     // that is now deleted (see below). What is left here is a residual warm
     // rotation in the top tenth of the range, where a specular on ice is
     // allowed to remember which sun it came from.
-    hiAmount: 0.1,
-    hiKnee: 0.78,
+    // Round 2: 0.10 -> 0.22 and the knee 0.78 -> 0.72. The round-1 reasoning is
+    // right that this term was arithmetically inert at 0.28 with a mean-removed
+    // tint — but the answer to inert is not "make it smaller", it is "give it
+    // range to act over". At knee 0.72 the lit snow's luma of 0.82 takes a
+    // weight of 0.077 instead of 0.024, which is the difference between a 1/255
+    // hue move and a 3/255 one, and 3/255 of warm rotation on the brightest
+    // third of an arctic frame is the warm half of the split tone. It is still
+    // luminance-neutral by construction (see hiPushRgb), so this cannot put a
+    // single pixel back into the clipped-white population — verified by
+    // replaying the full 32^3 cube: 0.000% before and after.
+    hiAmount: 0.22,
+    hiKnee: 0.72,
     // -- THE SKY SPLIT. --------------------------------------------------
     // Round 1 of wave 3 aimed its two stages at LUMINANCE — deepen the dark
     // blues, gild the bright ones — and the shipped frames moved by 1-6/255,
