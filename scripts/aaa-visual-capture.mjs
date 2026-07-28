@@ -43,6 +43,10 @@ const EXTRA_QUERY = arg('query', '');
 const OUT_ROOT = arg('out', path.join(root, 'tmp', 'aaa-visual'));
 const TIMEOUT_MS = Number(arg('timeout', 150000));
 const KEEP = flag('keep');
+// Software rasterisation (CI, no GPU) is roughly two orders of magnitude
+// slower than a real GPU here, so every browser-side deadline needs widening.
+const SOFTWARE_GL = process.env.AAA_CAPTURE_GL === 'swiftshader';
+const SHOT_TIMEOUT_MS = SOFTWARE_GL ? 120000 : 30000;
 
 // Progress marks chosen to cover every visual system on both tracks:
 // start pack, straight, corner + curb, elevated/bridge section, item boxes,
@@ -148,7 +152,7 @@ try {
     // Software rasterisation compiles every shader on the CPU and this scene
     // has ~45 programs, so first paint takes minutes rather than seconds. A
     // 45s boot budget is a GPU-machine assumption.
-    const bootMs = process.env.AAA_CAPTURE_GL === 'swiftshader' ? 300000 : 45000;
+    const bootMs = SOFTWARE_GL ? 300000 : 45000;
     await page.waitForFunction(
       () => window.__comebackCityKartTelemetry?.renderer === 'three-kart',
       null,
@@ -207,7 +211,11 @@ try {
         if (crossed || Math.abs(telemetry.progress - target) < 0.008) {
           pending.delete(target);
           const file = `${track}-p${String(target).replace('.', '_')}.png`;
-          await page.screenshot({ path: path.join(outDir, file) });
+          // Playwright's 30s screenshot default assumes a GPU. Under
+          // SwiftShader the page renders at 1-2fps and a single capture can
+          // exceed it — that is what killed the second CI run after it had
+          // already booted and raced successfully.
+          await page.screenshot({ path: path.join(outDir, file), timeout: SHOT_TIMEOUT_MS });
           captured.push({ point: target, file, ...telemetry });
         }
       }
