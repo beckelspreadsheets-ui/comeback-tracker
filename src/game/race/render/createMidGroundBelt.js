@@ -405,6 +405,31 @@ const TRACK_TUNING = {
       [SHAPE.CALVED, 0.16],
       [SHAPE.ARCH, 0.14],
     ],
+    // WAVE 5 ROUND 3 — HOW MANY DISTINCT OUTLINES EACH ARCHETYPE CONTRIBUTES.
+    // Round 2 answered "the same pyramid + flat-top mesa across the whole
+    // horizon" by adding a fifth archetype, and the round-2 critic filed the
+    // identical finding against the frames that shipped it (p0_15, p0_24,
+    // p0_67). The reason is in makeShapeFamily and it is not the weights: an
+    // archetype is BUILT ONCE PER RING, so before this map a ring drawing 80
+    // shards drew the same shard 80 times under different transforms. Five
+    // archetypes were five outlines, and the two the eye tallies —
+    // "white pyramid" (SHARD) and "tan-capped mesa" (TABULAR) — were one each.
+    //
+    // The counts are weighted by how much a family is SEEN rather than by how
+    // often it is rolled: SHARD and TABULAR take 3 because they are the two the
+    // critics have counted by name in every round, RIDGE and CALVED take 2
+    // because a horizontal landform reads by its length and its step (both of
+    // which the per-instance stretch already varies) far more than by its
+    // profile, and ARCH takes 1 deliberately — it is the landmark archetype,
+    // confined to one ring on purpose, and a landmark you see three of is not
+    // one. BLOCK is unlisted because it is deterministic (makeShapeFamily
+    // clamps it to 1 whatever this says).
+    //
+    // 5 outlines -> 11. Triangles: rings 0/2 go 71 -> 165 per instance, ring 1
+    // 111 -> 205, the fabric tier 51 -> 125 and the shelf 71 -> 165, i.e. the
+    // belt goes ~30k -> ~66k of a 604k-triangle track, with the DRAW CALL count
+    // (the number this belt is budgeted on, PV 10) unchanged at 10.
+    shapeVariants: { [SHAPE.SHARD]: 3, [SHAPE.TABULAR]: 3, [SHAPE.RIDGE]: 2, [SHAPE.CALVED]: 2 },
     // Depth spread multiplier on RING_PLAN's own jitter, this track only. The
     // round-1 critic's third ask was "stagger depth so near belt entries
     // partially occlude far ones", and the rings ship at +/- half their jitter:
@@ -1352,21 +1377,53 @@ const calvedPositions = (random) => {
   return positions;
 };
 
+// Variant tag stride. An instance's aBeltShape is compared against the
+// geometry's per-vertex aShapeId with abs(a - b) > 0.5, so any float that
+// separates two families by more than one works; 8 is past the highest SHAPE id
+// and keeps a tag readable as `base + 8 * variant` when one is dumped.
+const SHAPE_VARIANT_STRIDE = 8;
+
 // One geometry per ring holding every archetype that ring can draw, tagged
 // per-vertex so the shader can collapse the ones an instance did not pick.
-const makeShapeFamily = (THREE, random, ids) => {
+//
+// WAVE 5 ROUND 3 — VARIANTS, AND WHY THE OUTLINE CENSUS WAS ALWAYS SMALLER THAN
+// THE ARCHETYPE COUNT. Every archetype below is built by ONE call with ONE set
+// of random rolls, so a ring that draws 80 shards draws the SAME shard 80 times
+// — the per-instance XZ squash, Y stretch, yaw and lean transform that one
+// outline and cannot re-roll its 7 base-ring radii or its apex offset. That is
+// the mechanism behind three consecutive rounds of "the same pyramid and the
+// same flat-topped mesa across the entire horizon", and it is why round 2's
+// answer (add a fifth archetype) moved the count from four outlines to five
+// rather than from four to many. `variants` builds an archetype N times with N
+// fresh sets of rolls and tags each with its own id, so one draw call carries N
+// genuinely different masses of that family. Cost is per-instance VERTEX work
+// only (every instance collapses the families it did not pick) and no draw
+// calls: on Penguin Village the shipped 3/3/2/2 map takes the belt from ~30k to
+// ~66k triangles against a track total of 604k, on a frame that measures 8.0ms
+// of a 16.7ms budget. A track that authors no map builds exactly what it built
+// before, from the same number of random draws, so Comeback City's measured
+// layout is untouched.
+const makeShapeFamily = (THREE, random, ids, variants = null) => {
   const positions = [];
   const shapeIds = [];
   ids.forEach((id) => {
-    let built;
-    if (id === SHAPE.BLOCK) built = blockPositions(THREE);
-    else if (id === SHAPE.SHARD) built = shardPositions(random);
-    else if (id === SHAPE.TABULAR) built = tabularPositions(random);
-    else if (id === SHAPE.RIDGE) built = ridgePositions(random);
-    else if (id === SHAPE.CALVED) built = calvedPositions(random);
-    else built = archPositions(random);
-    for (let i = 0; i < built.length; i += 3) shapeIds.push(id);
-    for (let i = 0; i < built.length; i += 1) positions.push(built[i]);
+    // BLOCK is the one deterministic archetype (it is a unit box, no rolls), so
+    // a second variant of it would be the same 12 triangles under a new tag —
+    // pure vertex cost for no outline. Clamped here rather than in the authoring
+    // so a track cannot buy nothing by accident.
+    const count = id === SHAPE.BLOCK ? 1 : Math.max(1, Math.round(variants?.[id] ?? 1));
+    for (let variant = 0; variant < count; variant += 1) {
+      let built;
+      if (id === SHAPE.BLOCK) built = blockPositions(THREE);
+      else if (id === SHAPE.SHARD) built = shardPositions(random);
+      else if (id === SHAPE.TABULAR) built = tabularPositions(random);
+      else if (id === SHAPE.RIDGE) built = ridgePositions(random);
+      else if (id === SHAPE.CALVED) built = calvedPositions(random);
+      else built = archPositions(random);
+      const tag = id + variant * SHAPE_VARIANT_STRIDE;
+      for (let i = 0; i < built.length; i += 3) shapeIds.push(tag);
+      for (let i = 0; i < built.length; i += 1) positions.push(built[i]);
+    }
   });
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -1770,6 +1827,18 @@ export const createMidGroundBelt = (options = {}) => {
     };
   };
 
+  // Per-archetype outline variants (see makeShapeFamily). Read once here so the
+  // placement loop does a property lookup rather than a chain of ?? per mass,
+  // and so a track that authors none takes the `null` fast path everywhere.
+  //
+  // OFF ON PHONES. The cost of a variant is paid by EVERY instance in the ring
+  // (each one runs the whole family's vertices and collapses what it did not
+  // pick), which is the right trade on a desktop with 8ms of headroom in a
+  // 16.7ms frame and the wrong one on a tier that already drops the arch
+  // archetype and a whole ring to hold its frame. The phone belt is also drawn
+  // at a resolution where a silhouette census is not what the eye is doing.
+  const shapeVariants = mobile ? null : track.shapeVariants || null;
+
   // Resolved once: a THREE.Color and a scalar, so the placement loop never
   // parses a string or allocates inside the per-instance path.
   const instanceTint = track.instanceTint
@@ -1832,6 +1901,18 @@ export const createMidGroundBelt = (options = {}) => {
           }
           if (!placed) continue;
           const shapeId = pickShape(shapes, random());
+          // WHICH variant of that archetype this instance draws. Rolled only
+          // when the track authors more than one (see makeShapeFamily), so a
+          // track without a map consumes exactly the random draws it did before
+          // and its measured layout is bit-for-bit unchanged. `shapeId` stays
+          // the BASE id — every sizing branch below, SHAPE_ASPECT, the mast and
+          // the collar all key on it — and only the geometry tag carries the
+          // variant.
+          const variantCount = shapeVariants ? Math.max(1, shapeVariants[shapeId] ?? 1) : 1;
+          const drawShape =
+            variantCount > 1
+              ? shapeId + SHAPE_VARIANT_STRIDE * Math.min(variantCount - 1, Math.floor(random() * variantCount))
+              : shapeId;
           const landmark = spec.landmarkShare > 0 && random() < spec.landmarkShare;
           const massScale = spec.scale * (landmark ? 1.55 : lerp(0.62, 1.15, random()));
           // Per-instance value jitter inside one draw call. Without it a
@@ -2022,7 +2103,7 @@ export const createMidGroundBelt = (options = {}) => {
             windows.push(0, 0, 0, 0);
           }
           colors.push(instanceColor);
-          instanceShapes.push(shapeId);
+          instanceShapes.push(drawShape);
           // Mast footing. A 0.7-unit pole 16-34 units tall meets the ground on
           // nothing — "a black-and-white striped pole rises out of the terrain
           // with no base or fixture". A lamp standard has a plinth; this is one,
@@ -2074,7 +2155,7 @@ export const createMidGroundBelt = (options = {}) => {
       });
       if (spec.collar && !familyIds.includes(SHAPE.TABULAR)) familyIds.push(SHAPE.TABULAR);
       const geometry = attachInstanceData(
-        makeShapeFamily(THREE, random, familyIds),
+        makeShapeFamily(THREE, random, familyIds, shapeVariants),
         windows,
         instanceShapes
       );

@@ -211,6 +211,9 @@ uniform float uKartSkyBounce;
 uniform float uKartRubberDarken;
 uniform float uKartDarkFill;
 uniform float uKartRubberCeil;
+// Multiplier on the surface's OWN albedo peak, which is the other half of the
+// rubber ceiling — see the block at the end of KART_SHADING_CHUNK.
+uniform float uKartRubberAlbedoCeil;
 uniform vec4 uKartPaintShape;
 uniform vec4 uKartTint;
 uniform vec4 uKartEnv;
@@ -656,9 +659,55 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// adds its own silhouette term afterwards. That is intended — the rim is
 	// what holds a black tyre off a black road — and it is why
 	// HERO_RIM_RUBBER_SCALE has to stay small independently of this.
+	//
+	// ---- AAA wave 5 round 3: THE CEILING IS RELATIVE TO ALBEDO NOW ----------
+	//
+	// It was an ABSOLUTE number, and an absolute ceiling on a MATTE class states
+	// the contract only for the one albedo it was measured against. The
+	// measurement was a TYRE (#10121c, linear peak 0.011); the class is a
+	// luminance window (RUBBER_LUMINANCE [0.1, 0.38]) and therefore also claims,
+	// partially, every mid-dark neutral on the vehicle — seat shells, roll
+	// hoops, wheel arches, undertrays. A texel whose own albedo peak is 0.13
+	// (sRGB ~100) was being pulled toward the same ~0.055 output ceiling as a
+	// texel whose albedo peak is 0.011, i.e. toward roughly sRGB 64 through the
+	// tone map, which is a quarter of the value its albedo says it should have.
+	// That is the blind judge's finding: "the seat, roll cage and driver torso
+	// collapse into a single near-black mass; the kart silhouette survives but
+	// its internal form is gone against the dark road."
+	//
+	// Matte means output tracks albedo. So the ceiling is now the greater of the
+	// absolute floor and k times the surface's own albedo peak, which restates
+	// the contract in the terms the class is actually defined by. k = 2.6 is
+	// chosen so the two ANCHOR cases do not move at all, and that is arithmetic
+	// rather than judgement — the floor wins for anything below albedo peak
+	// 0.021, and every near-black surface on the roster is well under it:
+	//
+	//   tyre           #10121c        albedo peak 0.0110   2.6x = 0.029  floor
+	//   tyre           #0b1019        albedo peak 0.0110   2.6x = 0.029  floor
+	//   crrt-bunny driver, decoded from the shipped GLB's own baked map:
+	//                  its dark texels  albedo peak 0.008-0.016  2.6x <= 0.042  floor
+	//   seth-penguin driver, same method:
+	//                  its dark texels  albedo peak 0.006-0.016  2.6x <= 0.042  floor
+	//   mid-dark seat/roll-bar grey (sRGB ~100)  peak 0.127  2.6x = 0.33  relaxed
+	//
+	// SO BE CLEAR ABOUT WHAT THIS DOES AND DOES NOT FIX. It does not move the
+	// DRIVER, and the rubric critic's separate "the driver is the least legible
+	// character on the track" finding is NOT closed by it. That was checked
+	// rather than assumed: the drivers are GLB avatars whose black is baked at
+	// linear peak 0.008-0.016 — statistically identical to, and in places darker
+	// than, the tyre's 0.011 — so there is no per-texel quantity in this shader
+	// that can separate a driver from a tyre, and any lift that reaches one
+	// reaches the other. (The dead procedural fallback in createKartModel.js
+	// uses suit '#202837' at peak 0.038, which is 3.5x the tyre and would have
+	// separated cleanly. It renders nowhere. Do not tune against it.) The driver
+	// needs a per-MATERIAL class, which is reachable in one line from the
+	// monolith and not at all from here — see KART_SHADING_DRIVER in
+	// kartMaterials.js for the preset and the exact call site.
+	float kartRubberAlbedoPeak = max(kartAlbedo.r, max(kartAlbedo.g, kartAlbedo.b));
+	float kartRubberCeil = max(uKartRubberCeil, uKartRubberAlbedoCeil * kartRubberAlbedoPeak);
 	float kartRubberPeak = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b));
-	float kartRubberOver = max(0.0, kartRubberPeak - uKartRubberCeil);
-	float kartRubberTarget = uKartRubberCeil + kartRubberOver * uKartRubberCeil / (kartRubberOver + uKartRubberCeil);
+	float kartRubberOver = max(0.0, kartRubberPeak - kartRubberCeil);
+	float kartRubberTarget = kartRubberCeil + kartRubberOver * kartRubberCeil / (kartRubberOver + kartRubberCeil);
 	// One-sided, for the same reason the paint compressor is: below the ceiling
 	// the raw ratio exceeds 1 and would LIFT a genuinely black texel up to it,
 	// turning a ceiling into a floor and greying the exact surface this class
@@ -724,6 +773,7 @@ export const applyKartShading = (material, overrides = null) => {
           params.paintCeiling
         ),
       },
+      uKartRubberAlbedoCeil: { value: params.rubberAlbedoCeiling },
       uKartRubberCeil: { value: params.rubberCeiling },
       uKartRubberDarken: { value: params.rubberDarken },
       uKartRubberLum: { value: new THREE.Vector2(...params.rubberLuminance) },

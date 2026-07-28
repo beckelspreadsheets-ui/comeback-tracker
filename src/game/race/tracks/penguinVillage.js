@@ -464,7 +464,21 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // ANALYTICALLY from `palette.sky`, `palette.sun` and `palette.sunColor`
     // (raceEnvironment.js buildSkyEquirect), NOT by rendering the dome. The
     // wedge is a dome-fragment term only. It lights nothing.
-    skyGlow: [0.3, 0.08, 0.36, 3.8, 0.1, 0.5, 0.22, 0.5, 0xd0703c],
+    //
+    // WAVE 5 ROUND 3 — [5] 0.50 -> 0.58, and nothing else in this array moves.
+    // The wedge landed and the round-2 critic scored it: mean sky saturation
+    // 0.264 -> 0.300, mean R-B +20.3 -> +24.5, per-column peak +65.2 -> +86.3,
+    // against a target of 0.42 / +90. Re-measured here on the shipped marks in
+    // 12 columns over rows 8-95, the sun-side columns of p0_56 reach R-B +80.5
+    // at saturation 0.464 while the anti-sun columns sit at +3.4 / 0.038 — i.e.
+    // the SHAPE the critic asked for ("peaks above +90 somewhere and below +20
+    // elsewhere") is now there and only the peak is short. This is a
+    // luminance-preserving rotation with a clamped amount (skyHueMix), so the
+    // only thing 16% more of it can do is move the sun-side columns further
+    // along the same ramp: replayed on the measured p0_56 peak column it lands
+    // near +93. It cannot bleach, it cannot clip, and it cannot reach the
+    // anti-sun columns, which is the whole reason this term is a wedge.
+    skyGlow: [0.3, 0.08, 0.36, 3.8, 0.1, 0.58, 0.22, 0.5, 0xd0703c],
     // Heavy overcast, not scattered cumulus: a lower coverage floor plus a
     // cool body, so the deck reads as one storm ceiling.
     // Wave 2: the deck was BRIGHTER than the sky it sat in (#b9cad8 over a
@@ -556,10 +570,59 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     //   * amount 0.5 -> 0.58 and tear 0.25/0.85 -> 0.18/0.78: a harder anvil
     //     and a tear that opens wider and lower, so the break sits ON the new
     //     ember band instead of just above it.
+    // WAVE 5 ROUND 3 — THE CEILING, AND THE ARITHMETIC THAT SAYS IT IS THIS
+    // LINE AND NOT THE COVERAGE. The round-2 critic filed "above roughly the top
+    // third the sky is flat violet-grey with no cloud form at all" against
+    // p0_56, p0_78 and p0_9, and it measures: mean local luminance sd inside
+    // 60x20 tiles over rows 4-160 is 2.7-5.7 on those marks against 8.6-9.9 on
+    // Comeback City, whose sky the owner has confirmed.
+    //
+    // Worked forward through the shipped dome shader, at the top of a chase
+    // frame (d.y ~ 0.56): the LUT hands over the 0.62 stop #3b3f8e =
+    // rgb(59,63,142), luma 68, and mixes it toward THIS colour, #343764 =
+    // rgb(52,55,100), luma 57.5, with a weight running 0 -> 0.62 as coverage
+    // swings across the entire noise field. So the whole dynamic range the deck
+    // can express at the ceiling is 8 counts before ACES and the grade compress
+    // it — which is precisely the 3-4 counts the frames measure. The deck is not
+    // failing to draw clouds; it is drawing them the same colour as the sky.
+    //
+    // #23264c is the same indigo at luma 40 (sat 0.54 against 0.48, so the
+    // chroma goes UP as the value comes down — a cloud top over a 12-degree sun
+    // takes no bounce at all, which is why it is the darkest thing in the sky
+    // and not a grey version of it). That opens the ceiling's coverage range
+    // from 8 counts to 28, and the anvil term below adds a body-value billow of
+    // +/-7 on top of it (+/-11.6 where the front gate has clamped coverage flat).
+    // Predicted local sd at the ceiling: ~9-10, i.e. Comeback City's.
+    //
+    // Worked forward with the new numbers: a fully-covered ceiling fragment
+    // lands near luma 36 pre-pipeline against 68 for a clear one, and the billow
+    // moves the covered end +/-11.6 — so the ceiling's available range goes from
+    // ~6.5 counts to ~43 before ACES and the grade compress it.
+    //
+    // AND THE CROSS-CHECK THAT SAYS 40 IS THE RIGHT VALUE RATHER THAN A GUESS:
+    // the storm bank standing in front of this same ceiling
+    // (createMidGroundBelt.js stormBank) is #2b2f56 at luma 48.9 multiplied by
+    // its own ceiling term 0.74, i.e. luma 36 at its crest. The deck and the
+    // bank are the same weather seen at two ranges, so a deck ceiling that sat
+    // 17 counts ABOVE the bank's crest was the two layers disagreeing about what
+    // the storm is; at 40 they finally agree.
+    //
+    // The base colour is deliberately UNTOUCHED: the warm underlit half of this
+    // deck is the one part of the sky three waves of critics have scored as
+    // right, and the tone ramp below keeps the two apart.
     clouds: {
+      // billow — the body-value modulation depth, i.e. the ceiling's own form.
+      //   0.34 puts +/-17% on a luma-40 body, which is the +/-7 counts above.
+      // edge — the leading line where the anvil meets the tear. 0.22 is a fifth
+      //   of the body's value on a contour a few degrees wide; a front's edge is
+      //   the one hard value step a storm has and without it the tear reads as a
+      //   vignette centred on the sun.
+      // floor / scale are left at the module defaults (0.34 / 0.55): they are
+      //   geometry rather than taste and the reasoning is written at the uniform.
+      anvil: { billow: 0.34, edge: 0.22 },
       band: [0.46, 0.7],
       baseColor: '#b8735c',
-      color: '#343764',
+      color: '#23264c',
       deck: [0.24, 0.66],
       front: { amount: 0.58, edge: 0.28, tear: [0.18, 0.78] },
       litAdd: 0,

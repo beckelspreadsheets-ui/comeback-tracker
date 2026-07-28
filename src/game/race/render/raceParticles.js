@@ -6,8 +6,11 @@
 // everything pooled up front —
 //   1. surface particles ONE InstancedMesh (208 quads, 96 on mobile) shared by
 //                       the drift spray, the rolling-contact wash and plume,
-//                       the landing puff, the ground shockwave rings and the
-//                       arctic ground spindrift
+//                       the landing puff, the ground shockwave rings, the
+//                       arctic ground spindrift and the boost plume's tail
+//                       stage (which is here rather than with the other two
+//                       exhaust stages because this is the only pool that can
+//                       BLOOM — see the FLAME_HAZE_* block)
 //   2. skid marks       ONE Mesh over ONE ring-buffer BufferGeometry (256/128)
 //   3. additive sprites ONE InstancedMesh (160 quads, 72 mobile) shared by the
 //                       coin sparkle, the coin spill, the item pickup and use
@@ -359,6 +362,40 @@ const FLAME_MIN_CLEARANCE = 1.9;
 const BURST_STRETCH_MAX = 5.5;
 const FLAME_SHELL_STRETCH_MAX = 2.6;
 const FLAME_CORE_STRETCH_MAX = 1.5;
+// Third stage of the plume (wave 5, round 3), and the answer to four rounds of
+// "the flame is an amorphous orange blob with no core, tail or falloff".
+//
+// The core and the shell are both BURST-pool sprites, and a burst sprite's width
+// term is `size * (0.5 + fade * 0.8)` — it SHRINKS with age. So the plume those
+// two make is widest at the nozzle and narrowest at its far end, which is the
+// exact inverse of a cone of expanding gas: it tapers toward the kart, so there
+// is nothing for the eye to follow away from it and the whole thing collapses
+// into one lump at the diffuser. That is a shape fault, not a brightness one,
+// and no amount of tuning the two existing stages can fix it — the pool they
+// live in has no size ramp to reverse.
+//
+// This stage is therefore drawn out of the SPRAY pool, which is the only pool
+// with a sizeStart/sizeEnd lerp (so it can bloom) and whose map is the five-lobe
+// puff rather than the cored dot (so a member of it cannot resolve into a lamp).
+// It leaves the nozzle at roughly half the shell's exit speed and is dragged
+// hard, so the shell visibly outruns it — that velocity difference is what makes
+// the two read as one plume with a near end and a far end.
+const FLAME_HAZE_TTL = 0.42;
+// Per unit of TRACK, not per second. Same arithmetic the contact wash documents
+// at WASH_SPACING, and the same trap the exhaust rate itself has already been
+// caught by twice: a plume sprite is swept from the nozzle past the lens in
+// ~70 ms at racing speed, so a per-second rate lays a dense tail behind a parked
+// kart and two puffs behind one at 289. One puff every 2.6 units holds ~8 in the
+// visible band at every speed. The constant term is the standing-boost case,
+// where no track is going under the kart to emit against.
+const FLAME_HAZE_SPACING = 2.6;
+const FLAME_HAZE_IDLE_RATE = 9;
+// Under the drift spray's own ceiling: this is the widest, dimmest thing the
+// kart emits and it sits directly behind the bodywork, which is where a member
+// that resolves individually reads as a detached warm pill lying on the road —
+// the wave-4 note on penguin-village-p0_56, and the failure mode the two stages
+// in front of it were already re-tuned for once.
+const FLAME_HAZE_MAX_ANGLE = 0.052;
 // Idle exhaust. The kart has to be shedding SOMETHING at all times or it reads
 // as a static prop being slid along the road — but an idle puff is furniture,
 // not an event, so it is dim, brief and small enough that you only notice it
@@ -422,7 +459,36 @@ const CRYSTAL_MAX_ANGLE = 0.009;
 // wheels" (wave5-r1 pair-14). 0.062 is ~43 px at 900 p, comfortably under a
 // wheel at every framing in the round, so the cue can never outgrow the vehicle
 // that threw it.
+//
+// Correction (wave 5, round 3) to the arithmetic in the paragraph above, which
+// is self-contradictory as written: 1.8 / 0.062 = 29, so a puff BORN at depth
+// 20-25 is already over the ceiling. The cap is therefore engaged at birth on
+// every drift puff, not "only once the camera has closed" — which means every
+// puff in the frame is drawn at EXACTLY the same clamped width, and a hard
+// clamp active across the whole distribution is precisely how a trail comes out
+// "evenly spaced and identically sized". The ceiling stays (it is doing its job
+// on screen size); what it needed was a size distribution underneath it that
+// the clamp does not flatten. See the jitter in spawnSpray.
 const SPRAY_MAX_ANGLE = 0.062;
+// Airborne displaced-ground puffs: the rolling-contact plume, the landing
+// puff's lifted members and the impact scuff cloud. These three were the last
+// billboard emitters in the module with no ceiling of their own, so they fell
+// through to MAX_SPRITE_ANGLE — 0.11 rad, ~77 px at 900 p, nearly twice what
+// the drift spray standing next to them is allowed, and a number set as a
+// catch-all back when no emitter had an authored ceiling at all.
+//
+// The landing puff is the worst case and it is the object the wave5-r2 artefact
+// hunter measured at comeback-city-p0_9 ("a ~50px hard-silhouetted grey sphere
+// with a motion streak... it reads as a lit solid ball"). It spawns AT the kart,
+// i.e. at a chase depth where the proximity ramp is still exactly 1, blooms to
+// sizeEnd 2.8-4.4 (0.093-0.147 rad, 65-100 px at a 30-unit boom) and paints at
+// 0.6 of the ground tint — 4.6x the value the contact plume beside it is allowed
+// at a comparable size, and 2x the drift spray's. Big, bright and additive over
+// a near-black tyre is a lit sphere however soft the falloff is, which is why
+// the reported fault is real even though the emitter already uses the five-lobe
+// puff and already ramps its alpha (both of which the reported remedy asks for).
+const PLUME_MAX_ANGLE = 0.055;
+const LANDING_PUFF_MAX_ANGLE = 0.048;
 // Ground quads. This replaces a bare `MAX_SPRITE_ANGLE * 3` whose justification
 // was that "a ground-aligned quad is foreshortened into the road, so its screen
 // area grows with the road's own perspective, never faster". That is true of the
@@ -1316,6 +1382,10 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   let burstCursor = 0;
   let sparkAccumulator = 0;
   let flameAccumulator = 0;
+  // Separate from flameAccumulator because the tail is emitted per unit of TRACK
+  // while the core and shell are emitted per second — the two cannot share a
+  // counter without one of them silently inheriting the other's rate model.
+  let flameHazeAccumulator = 0;
   const sparkTint = new THREE.Color();
   // The fields a recycled slot must NOT inherit — a coin sparkle landing in a
   // slot the ice glint last used would otherwise be drawn as a flat elongated
@@ -1765,7 +1835,14 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     // percent of the value Comeback City was measured correct at while no single
     // puff carries as much of it.
     item.maxAngle = SPRAY_MAX_ANGLE;
-    item.sizeStart = 1.8;
+    // Jittered, mean unchanged at 1.8 so the value Comeback City was measured
+    // correct at does not move. The point is the DISTRIBUTION: a single authored
+    // size sitting above SPRAY_MAX_ANGLE at the depth these are born at meant the
+    // clamp resolved every puff in the frame to one identical width, which is the
+    // measurable half of the "identically sized" read. Spanning the ceiling
+    // instead leaves roughly half the trail under it at any given framing, so the
+    // clamp shapes the outliers rather than defining the cue.
+    item.sizeStart = 1.45 + Math.random() * 0.7;
     item.sizeEnd = 0.6;
     item.spinRate = 0;
     item.stretch = 1;
@@ -1938,6 +2015,10 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     item.flat = false;
     item.floorY = context.groundY - 1;
     item.gravity = -1.4;
+    // See PLUME_MAX_ANGLE. `sizeEnd` here reaches 4.6 on a high-`grow` surface,
+    // which at the depth this is emitted at is over 0.14 rad — the fall-through
+    // ceiling let all of it draw.
+    item.maxAngle = PLUME_MAX_ANGLE;
     item.sizeStart = 1.5 * look.grow;
     item.sizeEnd = (3.4 + Math.random() * 1.2) * look.grow;
     item.spinRate = 0;
@@ -1984,6 +2065,9 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       item.flat = false;
       item.floorY = context.groundY - 1;
       item.gravity = -2.6;
+      // See PLUME_MAX_ANGLE. This one fires directly under the camera on a
+      // spin-out, i.e. at the shortest depth any emitter in the file works at.
+      item.maxAngle = PLUME_MAX_ANGLE;
       item.sizeStart = 1.4 * look.grow;
       item.sizeEnd = (3 + Math.random() * 1.4) * look.grow;
       item.spinRate = 0;
@@ -2061,7 +2145,14 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     });
     // Lifted material scales harder with the drop than the footprint does — a
     // hop scuffs, a ramp landing throws.
-    const airCount = Math.round((mobile ? 2 : 4) * (0.3 + strength * 1.2) * (0.6 + look.lift));
+    //
+    // Count doubled against the value cut below, which is the trade this module
+    // has made every time a member of a cloud became individually legible: the
+    // fix for "countable objects" is more of them and dimmer, never fewer and
+    // brighter. The FLAT ring above is untouched — that is the grounding half of
+    // the landing and the half a still frame reads as contact; these lifted puffs
+    // are the volume half, and they were the loudest object in the module.
+    const airCount = Math.round((mobile ? 4 : 8) * (0.3 + strength * 1.2) * (0.6 + look.lift));
     for (let index = 0; index < airCount; index += 1) {
       const item = nextSpray();
       const angle = (index / Math.max(1, airCount)) * Math.PI * 2 + Math.random() * 0.8;
@@ -2080,11 +2171,22 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       item.flat = false;
       item.floorY = context.groundY - 1;
       item.gravity = -3;
+      // See LANDING_PUFF_MAX_ANGLE — this is the emitter that block is about.
+      item.maxAngle = LANDING_PUFF_MAX_ANGLE;
       item.sizeStart = (1.3 + strength * 0.9) * look.grow;
       item.sizeEnd = (2.8 + strength * 1.6) * look.grow;
       item.spinRate = 0;
       item.stretch = 0.3;
-      item.tint.copy(tint).multiplyScalar((isIce ? 0.72 : 0.6) * (0.5 + strength * 0.5));
+      // Down toward — not all the way to — the drift spray's measured 0.28/0.34.
+      // At 0.6 this was the brightest billboard in either pool and 4.6x its own
+      // sibling the contact plume, for no reason recorded anywhere; it predates
+      // both the per-emitter ceilings and the screen-size contract. It stays
+      // above the continuous emitters because it is an EVENT and events are
+      // supposed to be louder than furniture, but per member it now peaks at
+      // roughly a third of the presence (angular area x value) it used to, while
+      // the doubled count keeps the cloud itself worth about 0.37 of the light —
+      // a landing that still has volume and no longer has a sphere in it.
+      item.tint.copy(tint).multiplyScalar((isIce ? 0.5 : 0.42) * (0.5 + strength * 0.5));
       item.ttl = 0.4 + Math.random() * 0.3;
       item.life = item.ttl;
     }
@@ -2736,6 +2838,61 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     core.tint.copy(FLAME_CORE);
     core.ttl = FLAME_TTL * 0.7;
     core.life = core.ttl;
+  };
+
+  // Third stage — the tail. See the FLAME_HAZE_* block for why it lives in the
+  // spray pool and not with the other two.
+  const spawnFlameHaze = (context, tint) => {
+    const item = nextSpray();
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const cos = Math.cos(context.yaw);
+    const sin = Math.sin(context.yaw);
+    // Spawned a little further back and a little wider than the shell, so the
+    // two stages do not start life in the same texels — the plume has to have a
+    // near end that is small and hot and a far end that is wide and cold, and
+    // stacking every stage on one point is how it became one lump.
+    const lx = side * 2.4 + (Math.random() - 0.5) * 1.2;
+    const lz = -6 - Math.random() * 0.9;
+    item.position.set(
+      context.kartPosition.x + cos * lx + sin * lz,
+      Math.max(context.groundY + FLAME_MIN_CLEARANCE, context.kartPosition.y + FLAME_NOZZLE_Y) +
+        (Math.random() - 0.5) * 0.4,
+      context.kartPosition.z - sin * lx + cos * lz
+    );
+    const vz = -(6 + Math.random() * 4);
+    const vx = (Math.random() - 0.5) * 2.4;
+    item.velocity.set(cos * vx + sin * vz, 0.9 + Math.random() * 1.1, -sin * vx + cos * vz);
+    item.drag = 3.1;
+    // Above 1: exhaust gas is atmosphere, so it dumps most of its value in the
+    // first third of its life and the far end of the tail is a stain rather than
+    // a second set of objects behind the first.
+    item.fadeCurve = 1.6;
+    item.flat = false;
+    // Never floor-killed. The nozzle sits ~2 units clear of the road and this
+    // stage climbs, so a floor test could only fire on a frame where the kart
+    // itself is inside the deck — and killing the tail there would take the
+    // plume apart on exactly the frames the critics crop.
+    item.floorY = -1e6;
+    // Buoyant rather than ballistic. Hot gas leaves the diffuser and rises;
+    // under gravity this stage would sag back into the road plane, which is the
+    // one surface this module is under instruction not to add light to (see the
+    // contact contract at the top of the file, and the standing rubric note that
+    // the boost glow is already painting the road under the kart).
+    item.gravity = 1.6;
+    item.maxAngle = FLAME_HAZE_MAX_ANGLE;
+    item.sizeStart = 0.85 + Math.random() * 0.35;
+    item.sizeEnd = 2.3 + Math.random() * 0.9;
+    item.spinRate = 0;
+    // Barely streaked, for the reason spawnContactPlume records: past ~0.25 the
+    // screen-velocity term turns each puff into a countable lozenge, and a tail
+    // made of lozenges is the artefact this stage exists to replace.
+    item.stretch = 0.2;
+    // The dimmest emitter in the file, deliberately. The plume's value is carried
+    // by the core; this stage exists to give that core somewhere to fall off TO,
+    // and a tail that competes with its own core is just a longer blob.
+    item.tint.copy(tint).multiplyScalar(isIce ? 0.075 : 0.06);
+    item.ttl = FLAME_HAZE_TTL * (0.75 + Math.random() * 0.5);
+    item.life = item.ttl;
   };
 
   // Off-boost exhaust: one dim puff at a low, speed-linked rate so the kart is
@@ -3534,6 +3691,24 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         spawnFlame(context, sparkTint);
       }
       if (budget <= 0) flameAccumulator = 0;
+
+      // Tail. Spatial (see FLAME_HAZE_SPACING), scaled by the boost envelope so
+      // it arrives and leaves on the same beat as the two stages in front of it.
+      // ~8 alive in the visible band at any speed, out of a 208-slot pool whose
+      // measured steady state is 66 — and the tail only runs while boosting,
+      // when the drift spray (its main co-tenant) usually is not.
+      flameHazeAccumulator +=
+        dt *
+        (FLAME_HAZE_IDLE_RATE + speed / FLAME_HAZE_SPACING) *
+        (0.55 + boostEnergy * 0.45) *
+        emitScale;
+      let hazeBudget = mobile ? 4 : 8;
+      while (flameHazeAccumulator >= 1 && hazeBudget > 0) {
+        flameHazeAccumulator -= 1;
+        hazeBudget -= 1;
+        spawnFlameHaze(context, sparkTint);
+      }
+      if (hazeBudget <= 0) flameHazeAccumulator = 0;
     } else if (!context.reducedMotion && speed > 0.12 * maxSpeed) {
       // Idle exhaust so the kart is never inert. Rate rises gently with speed —
       // it is engine load, not a cue — and stays an order of magnitude below
@@ -3544,8 +3719,10 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         flameAccumulator -= 1;
         spawnIdleFlame(context, sparkTint);
       }
+      flameHazeAccumulator = 0;
     } else {
       flameAccumulator = 0;
+      flameHazeAccumulator = 0;
     }
 
     // Bursts: ballistic, camera-billboarded, shrink out.

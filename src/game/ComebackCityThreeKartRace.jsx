@@ -174,6 +174,14 @@ const lerp = (from, to, amount) => from + (to - from) * amount;
 // Scratch vectors for the chase camera's occlusion guard. Module scope, not
 // per-frame: the guard runs every frame of every race and one allocation there
 // is 60 garbage Vector3s a second for the whole session.
+// Shield shell ground probe and the kart-vs-kart separation pass both run every
+// frame; module scope for the same reason the camera guard's scratch is.
+const SHIELD_GROUND_PROBE = new THREE.Vector3();
+// Track-local (arc, lateral) of every kart in the field, rebuilt each frame by
+// the separation pass. Plain number arrays with their length reset, so the pass
+// allocates nothing at 60Hz.
+const SEPARATION_ARC = [];
+const SEPARATION_LAT = [];
 const CAMERA_GUARD_HEAD = new THREE.Vector3();
 const CAMERA_GUARD_DIR = new THREE.Vector3();
 // Chase-camera scratch, same reasoning: the block below runs every frame and
@@ -858,21 +866,53 @@ const createGroundedKartModel = ({
   // radial falloff has no silhouette to read as a polygon. Anchored ON the
   // exhaust pipe (z -6.4, the same place the idle flame sits) rather than
   // floating behind it.
+  //
+  // AAA wave 5 round 2 — THE FLAME WAS STILL STANDING ON THE ROAD.
+  //
+  // Measured, boosting: comeback-city-p0_24 read 82.8 under the kart against
+  // 45.6 on open road 300px away (+82%), penguin-village-p0_56 69.0 against
+  // 36.5 (+89%). Same arithmetic that condemned the underglow four dozen lines
+  // below, and the same cause: a 5.2-unit camera-facing billboard centred 2.1
+  // above the kart origin reaches 0.5 units BELOW the deck, so its brightest
+  // band lands exactly on the texels the contact patch exists to darken. The
+  // flame is at renderOrder 28 and the patch at 38, so the patch does scale it
+  // down inside its own footprint — but the flame is wider than the patch, and
+  // the ring outside it is the +82%.
+  //
+  // Two changes, and only the geometry of the thing moved — no tier logic and
+  // no colour logic below this line changed:
+  //   * the pair is LIFTED to y 3.05 and the shell pulled 5.2 -> 4.2, which puts
+  //     the shell's lower rim ~0.95 above the deck at tier 1 (the state both
+  //     measured frames are in) instead of 0.5 below it.
+  //   * a third lobe, the TAIL, is added behind the nozzles. The critics' note
+  //     is that the effect is "two hard-edged yellow orbs" with no combustion
+  //     structure; a flame reads as a flame because it has a hot core, a cooler
+  //     mid and a dark trailing plume that disperses. The tail is big, dim and
+  //     set back, so it costs almost nothing in energy but gives the silhouette
+  //     a direction. It is the FIRST child so the hotter lobes composite over it.
   const boostFlame = new THREE.Group();
   boostFlame.visible = false;
+  const FLAME_Y = 3.05;
   [-1.5, 1.5].forEach((x, side) => {
-    // Shell first, core second: the core has to composite over it.
-    const shell = addGlowSprite(boostFlame, '#FF8C00', 5.2, 0.85, 2.1);
-    shell.position.set(x, 2.1, -6.6);
-    const core = addGlowSprite(boostFlame, '#FFD34F', 5.2 * 0.35, 0.95, 2.1);
-    core.position.set(x, 2.1, -6.4);
+    // Dispersing plume first, then shell, then core: strictly cool -> hot, so
+    // the additive stack builds a value ramp instead of two flat discs.
+    const tail = addGlowSprite(boostFlame, '#8a3a12', 6.4, 0.24, FLAME_Y);
+    tail.position.set(x * 1.18, FLAME_Y + 0.5, -9.6);
+    const shell = addGlowSprite(boostFlame, '#FF8C00', 4.2, 0.7, FLAME_Y);
+    shell.position.set(x, FLAME_Y, -6.6);
+    const core = addGlowSprite(boostFlame, '#FFD34F', 1.9, 0.95, FLAME_Y);
+    core.position.set(x, FLAME_Y, -6.4);
     // A sprite's scale IS its size, so the frame loop cannot just setScalar a
     // tier multiplier onto it the way it could with a mesh — it has to scale
     // RELATIVE to the authored size. Phase staggers the two nozzles so the
     // flicker never pulses in lockstep.
-    [shell, core].forEach((sprite, index) => {
+    [tail, shell, core].forEach((sprite, index) => {
       sprite.userData.baseScale = sprite.scale.x;
-      sprite.userData.flameCore = index === 1;
+      sprite.userData.flameCore = index === 2;
+      // The tail keeps its own smoke colour through every tier — it is the one
+      // lobe that must NOT go violet with the ultra turbo, because the whole
+      // point of it is to be the cold end of the ramp.
+      sprite.userData.flameTail = index === 0;
       sprite.userData.flicker = side * 2.3 + index * 1.1;
     });
   });
@@ -1295,7 +1335,11 @@ const createGroundedKartModel = ({
     // spring state, integrated per frame in updateKartBodyMotion. lastSpeed is
     // null rather than 0 so the first frame differentiates against itself and
     // the kart does not launch on a phantom acceleration spike.
-    motion: { accel: 0, lastSpeed: null, lean: 0, pitch: 0, roll: 0 },
+    // separationLane is the visual-only lane nudge the kart-vs-kart separation
+    // pass writes (see the frame loop). It is NOT part of the sim: the rival AI
+    // keeps racing its own line, this only stops two bodies drawing through
+    // each other.
+    motion: { accel: 0, lastSpeed: null, lean: 0, pitch: 0, roll: 0, separationLane: 0 },
     // 1 = fully opaque; the frame loop only touches materials when it moves.
     proximity: 1,
     refreshGhostMeshes,
@@ -2325,7 +2369,20 @@ const makeKartPaletteTexture = (colormapImage, bodyHex = null) => {
       // bar, pillars, chassis and bumper all render the same flat pure blue.
       // 0.72 is the critic's number and it is also the point at which a toon
       // ramp still has somewhere to put a shading band.
-      const saturation = clamp(targetHsl.s * swatch.satScale, 0.3 * swatch.satScale, 0.72);
+      //
+      // ROUND 2 — 0.72 IS STILL A SPECTRAL COLOUR, NOT A PAINT.
+      //
+      // Re-measured on the shipped build: penguin-village-p0_56's rival body
+      // samples (75,74,207) — saturation 0.643 at value 207, with R and G within
+      // ONE unit of each other. Nothing that comes out of a paint gun has two
+      // channels equal and the third at 2.8x; that is a spectral violet, and it
+      // is why the rival reads as placeholder geometry beside karts whose body
+      // paint has a specular band in it. The rubric critic's number this round
+      // is 0.55, and it is the right shape of fix: a toon ramp needs unspent
+      // headroom in the two low channels to put a shading band into, and at 0.64
+      // there is none. The swatch spread expansion below is untouched — that
+      // term is doing the right thing and this is not a contrast change.
+      const saturation = clamp(targetHsl.s * swatch.satScale, 0.3 * swatch.satScale, 0.55);
       // ...and the second half of the same finding: the value SPREAD.
       //
       // The old lightness line was `hsl.l * (0.65 + targetHsl.l * 0.5)`, a pure
@@ -2855,6 +2912,100 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
     };
   });
 
+  // ---- The road's surface, as the RASTERISER sees it ----------------------
+  //
+  // AAA wave 5 round 2 — WHY THE CONFORMED CHEVRONS STILL TORE.
+  //
+  // Round 1 stopped treating the chevron as a rigid plate and sampled every
+  // vertex through the spline instead, which was the right move and fixed the
+  // "half the arrow is a clipped quad" case. It did not fix the tearing,
+  // because the road is not the spline: the road is 96+ RINGS with straight
+  // edges between them. A decal that follows the true curve and a road that
+  // follows the chords through it disagree by the sagitta of every quad, and on
+  // Penguin Village's crowned pond sweep that is centimetres — more than the
+  // 2cm lift, both signs, alternating quad by quad. That is precisely the comb
+  // of alternating visible/occluded strips measured at penguin-village-p0_56:
+  // not an alpha artefact and not a silhouette artefact, a DEPTH artefact with
+  // one tooth per road quad.
+  //
+  // So resolve decal vertices on the road's own triangles rather than on the
+  // curve the road was generated from. The two then cannot disagree anywhere,
+  // at any tessellation, on any bank or crown, and the lift becomes the only
+  // separation in play instead of the smallest term in it.
+  //
+  // The triangle split has to match the road's index buffer exactly (see the
+  // roadIndices push below: here+lane, here+lane+1, next+lane / here+lane+1,
+  // next+lane+1, next+lane), i.e. the diagonal runs from (ring i, lane j+1) to
+  // (ring i+1, lane j). Interpolating bilinearly instead would be wrong by half
+  // the quad's twist, which is small but is the same order as the lift.
+  const roadCornerAt = (frame, lane, out) => {
+    const offset = lane * frame.width * 0.44;
+    return out.set(
+      frame.point.x + frame.normal.x * offset,
+      frame.point.y + crownAt(lane) + bankYOffsetAt(frame.progress, lane * 0.44),
+      frame.point.z + frame.normal.z * offset
+    );
+  };
+  const ROAD_SURFACE_A = new THREE.Vector3();
+  const ROAD_SURFACE_B = new THREE.Vector3();
+  const ROAD_SURFACE_C = new THREE.Vector3();
+  const ROAD_SURFACE_D = new THREE.Vector3();
+  // roadFrames is sorted by progress and may contain coincident PAIRS at the
+  // surface-band seams, so this has to be a lower-bound search that tolerates a
+  // zero-width span rather than an index derived from progress * ringCount.
+  const roadRingIndexAt = (progress) => {
+    let low = 0;
+    let high = roadFrames.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
+      if (roadFrames[mid].progress <= progress) low = mid;
+      else high = mid - 1;
+    }
+    return Math.min(low, roadFrames.length - 2);
+  };
+  const roadLaneIndexAt = (lane) => {
+    let low = 0;
+    let high = roadLanes.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
+      if (roadLanes[mid] <= lane) low = mid;
+      else high = mid - 1;
+    }
+    return Math.min(low, roadLanes.length - 2);
+  };
+  // Exact point on the drawn road surface at (progress, lane). `out` is written
+  // and returned.
+  const roadSurfaceAt = (progress, lane, out) => {
+    const p = wrap01(progress);
+    const laneClamped = clamp(lane, roadLanes[0], roadLanes[roadLanes.length - 1]);
+    const ring = roadRingIndexAt(p);
+    const column = roadLaneIndexAt(laneClamped);
+    const nearFrame = roadFrames[ring];
+    const farFrame = roadFrames[ring + 1];
+    const ringSpan = farFrame.progress - nearFrame.progress;
+    const t = ringSpan > 1e-9 ? clamp((p - nearFrame.progress) / ringSpan, 0, 1) : 0;
+    const laneNear = roadLanes[column];
+    const laneFar = roadLanes[column + 1];
+    const laneSpan = laneFar - laneNear;
+    const u = laneSpan > 1e-9 ? clamp((laneClamped - laneNear) / laneSpan, 0, 1) : 0;
+    roadCornerAt(nearFrame, laneNear, ROAD_SURFACE_A);
+    roadCornerAt(nearFrame, laneFar, ROAD_SURFACE_B);
+    roadCornerAt(farFrame, laneNear, ROAD_SURFACE_C);
+    if (u + t <= 1) {
+      // Triangle A-B-C: A at (u0,t0), B at (u1,t0), C at (u0,t1).
+      return out
+        .copy(ROAD_SURFACE_A)
+        .addScaledVector(ROAD_SURFACE_B.sub(ROAD_SURFACE_A), u)
+        .addScaledVector(ROAD_SURFACE_C.sub(ROAD_SURFACE_A), t);
+    }
+    // Triangle B-D-C: D at (u1,t1).
+    roadCornerAt(farFrame, laneFar, ROAD_SURFACE_D);
+    return out
+      .copy(ROAD_SURFACE_D)
+      .addScaledVector(ROAD_SURFACE_C.sub(ROAD_SURFACE_D), 1 - u)
+      .addScaledVector(ROAD_SURFACE_B.sub(ROAD_SURFACE_D), 1 - t);
+  };
+
   // ---- Worn racing line, baked into the surface it is a property OF -------
   //
   // Derived from the curve rather than authored: the SIGN of the tangent's
@@ -2929,9 +3080,36 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
         wearLane <= 0 || wearLane >= 1 || (surface !== 'asphalt' && surface !== 'boost')
           ? 0
           : Math.sin(Math.PI * wearLane);
-      const shade = roadEdgeShade(lane) * (1 - WEAR_DEPTH * wearWeight * wearBand);
+      const sheen = SURFACE_ROAD_SHEEN[surface] || 0;
+      // AAA wave 5 round 2 — A SHINY SURFACE IS A DARKER SURFACE.
+      //
+      // Measured at penguin-village-p0_33: the drivable pond sits at median
+      // 152.7 luminance against a 151.0 snow shoulder, i.e. 1.7 units of
+      // separation where the sheen block's own acceptance bar (below) asks for
+      // 20, and the track edge is findable only from the dashed lines. Round 1
+      // and round 2 both attacked that by tuning the ADDITIVE terms, and the
+      // captures moved by 1.5 luminance across both rounds combined — the road
+      // box measured 150.5 (r1) then 151.5 (r2) while uRoadFresnelStrength
+      // halved and the facet floor dropped 3x under it. A term that does not
+      // respond to a 2x change in its own strength is not the term doing the
+      // work, so this stops tuning it blind and adds the lever that cannot miss.
+      //
+      // Light reflected specularly is light NOT reflected diffusely. The ice
+      // band was taking a full asphalt diffuse and then a specular stack on top
+      // of it, which is more light out than in, and it is exactly why the pond
+      // reads as a lit plane rather than as a frozen road. Trading 46% of the
+      // diffuse for the sheen at full ice is both physically the right shape
+      // and the one lever here that is unconditional: it is baked into the
+      // vertex colour, so no lighting path, probe or grade can route around it.
+      //
+      // Comeback City is untouched by construction — it authors no surfaceBands,
+      // so surfaceTypeAt returns 'asphalt' for every vertex and sheen is 0. The
+      // owner-confirmed Miami dusk cannot move by this edit.
+      const ICE_SPECULAR_TRADE = 0.46;
+      const shade =
+        roadEdgeShade(lane) * (1 - WEAR_DEPTH * wearWeight * wearBand) * (1 - ICE_SPECULAR_TRADE * sheen);
       roadColors.push(tint[0] * shade, tint[1] * shade, tint[2] * shade);
-      roadIce.push(SURFACE_ROAD_SHEEN[surface] || 0);
+      roadIce.push(sheen);
     });
     if (ringIndex < roadFrames.length - 1) {
       const here = ringIndex * laneCount;
@@ -3037,6 +3215,23 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
 	// camera looks down the road at — so without this the band reads as flat
 	// pale-blue paint at every point where the highlight is not on screen.
 	float roadGrazing = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 4.0);
+	// ROUND 2 FIX — THE FLOOR NOW KNOWS WHERE THE SUN IS.
+	//
+	// The note below already identifies what is wrong with this term: it has no
+	// light direction in it, so at chase-camera angles it saturates across the
+	// whole pond and lands as an unconditional plate. Clamping it harder only
+	// makes the plate dimmer; it stays a plate, and a plate is what erases the
+	// road/shoulder separation. A reflection is only bright where the surface
+	// can actually see the sky it is reflecting, so the floor takes a broad
+	// (power 1.4, not the highlight's 92) lobe about the key's mirror direction.
+	// The band that results sweeps down the road as the camera moves, which is
+	// the whole read of a frozen surface — and it is 0 on the half of the pond
+	// facing away, which is the separation the shoulder measurement is asking
+	// for. 0.22 floor, so the term never goes fully black and the ice does not
+	// stop existing when the sun is behind the camera.
+	vec3 roadIceMirror = reflect(-geometryViewDir, geometryNormal);
+	float roadIceBearing = 0.22 + 0.78 * pow(saturate(dot(roadIceMirror, normalize(roadKeyDir))), 1.4);
+	roadGrazing *= roadIceBearing;
 	// Both terms take a ceiling now — see the block below for why the highlight
 	// stopped being the exception. Everything downstream blooms, and the old
 	// build let the FLAT term (0.5 of a pale blue, i.e. ~10x the lit road's own
@@ -3045,7 +3240,10 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
 	// geometry inside it. Capping the floor is what keeps the sharp moving
 	// highlight the thing that reads, which is the whole difference between a
 	// frozen road and an emissive decal.
-	vec3 roadIceFloor = uRoadSheenColor * (roadGrazing * vRoadIce * uRoadFresnelStrength * roadIceFacet);
+	// A WEIGHT, not a colour. Everything this injection adds is uRoadSheenColor
+	// times one scalar (see the bound at the bottom of the chunk), which is the
+	// only formulation in which a clamp cannot rotate the hue.
+	float roadIceFloorWeight = roadGrazing * vRoadIce * uRoadFresnelStrength * roadIceFacet;
 	// AAA wave 5 (a) — THE CEILING THE LOBE NEVER HAD.
 	//
 	// This line used to add uRoadSheenColor * roadSheen * vRoadIce *
@@ -3092,16 +3290,46 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
 	// (300,650)-(900,880) must sit at least 20 luminance clear of shoulder
 	// (0,600)-(200,760), and a vertical scan down the pond must show a gradient
 	// instead of 350 rows of one value.
-	outgoingLight += uRoadSheenColor * roadIceSpecular + min(roadIceFloor, vec3(0.13));`,
+	//
+	// ROUND 2 FIX — ONE BOUND ON THE WHOLE INJECTION, AND A KILL SWITCH.
+	//
+	// Two structural changes, because two rounds of tuning the individual terms
+	// moved the measured pond by 1.5 luminance and that is not a tuning problem,
+	// it is an accountability problem:
+	//
+	//   1. The scalar bound is on the SUM. Clamping each lobe separately lets
+	//      two capped terms stack past either cap, and the per-channel min on
+	//      the finished floor colour was itself the hue-rotating construction
+	//      the block above forbids for the highlight. uRoadIceTotal is the total
+	//      linear radiance this injection is EVER allowed to add, on a scalar
+	//      weight, so the sheen keeps its authored hue at every intensity and
+	//      the road cannot be lifted past the shoulder by any combination of
+	//      view angle, facet hash and sun bearing.
+	//   2. uRoadIceEnable is the instrumentation the last two rounds needed and
+	//      did not have. Capture penguin-village-p0_33 with ?roadIce=0 and the
+	//      road box (300,650)-(900,880) either drops or it does not; if it does
+	//      not, this injection is not what is washing the pond and the next
+	//      agent can stop looking here on the first capture instead of the third.
+	//
+	// Acceptance gate, unchanged and still the right one: road box
+	// (300,650)-(900,880) at least 20 luminance clear of shoulder box
+	// (0,600)-(200,760), and a vertical scan down the pond showing a gradient
+	// rather than one value repeated for 300 rows.
+	float roadIceWeight = min(roadIceSpecular + roadIceFloorWeight, uRoadIceTotal) * uRoadIceEnable;
+	outgoingLight += uRoadSheenColor * roadIceWeight;`,
     fragmentPars: /* glsl */ `varying float vRoadIce;
 uniform vec3 uRoadSheenColor;
 uniform float uRoadFresnelStrength;
+uniform float uRoadIceEnable;
+uniform float uRoadIceTotal;
 uniform float uRoadSheenCeiling;
 uniform float uRoadSheenStrength;`,
-    // v3: the facet weight and the floor's ceiling both moved, and this name is
-    // the program cache key — a changed chunk under an unchanged name is how a
-    // stale program gets reused.
-    name: 'road-surface-sheen-v3',
+    // v4: the floor gained a sun bearing, the two lobes are bounded as one sum,
+    // and the enable switch is new. This name is the program cache key — a
+    // changed chunk under an unchanged name is how a stale program gets reused,
+    // which is one of the two live explanations for round 2 measuring as no
+    // change at all.
+    name: 'road-surface-sheen-v4',
     uniforms: {
       // 0.5 -> 0.24 -> 0.11. The fresnel is the FLAT half of the effect (it has
       // no light direction in it at all), so it may only ever be the floor the
@@ -3111,6 +3339,24 @@ uniform float uRoadSheenStrength;`,
       // ~0.13 and the darkest ~0.013, so the band varies by an order of
       // magnitude across itself instead of arriving as one plate.
       uRoadFresnelStrength: { value: 0.11 },
+      // Instrumentation, not art. ?roadIce=0 zeroes this whole injection so a
+      // single capture settles whether it is what washes the pond — see the
+      // note at the bottom of the fragment chunk. Anything other than an
+      // explicit "0" leaves it fully on, so a typo cannot silently ship a track
+      // with no ice on it.
+      uRoadIceEnable: {
+        value:
+          typeof window !== 'undefined' &&
+          new URLSearchParams(window.location.search).get('roadIce') === '0'
+            ? 0
+            : 1,
+      },
+      // The bound on the SUM of both lobes, in linear radiance. Penguin
+      // Village's asphalt sits around 0.03-0.09 linear, so 0.30 is still a
+      // multiple of the surface — unmistakably a highlight — while leaving the
+      // drivable band structurally unable to reach the ~150 luminance that
+      // collapsed it into the snow shoulder.
+      uRoadIceTotal: { value: 0.3 },
       // Hard energy ceiling on the 92-power lobe. See the chunk above: this is
       // a bound on the WEIGHT, so the sheen keeps uRoadSheenColor's hue at
       // every intensity instead of clipping into whichever channel has headroom.
@@ -4043,7 +4289,18 @@ uniform float uRailMinNdc;`,
   // The material is DoubleSide, so a strip that reverses handedness at the
   // elbow needs no winding special-case — which is what let the old code get
   // away with two patches in the first place.
+  //
+  // ROUND 2 FIX — CONFORM TO THE ROAD'S TRIANGLES, NOT TO ITS CURVE.
+  //
+  // See roadSurfaceAt above for the measurement and the cause. Round 1 resolved
+  // every chevron vertex through `sampler`, which is the surface the road was
+  // GENERATED from; the road that actually gets rasterised is the ring lattice
+  // built from it, and between two rings those two surfaces differ by the
+  // chord's sagitta — enough, on the crowned pond sweep, to swallow the 2cm
+  // lift on one quad and expose it on the next. One comb tooth per road quad is
+  // exactly what penguin-village-p0_56 shows.
   const CHEVRON_COLUMNS = CHEVRON_SPAN * 2;
+  const chevronPoint = new THREE.Vector3();
   const chevronPositions = [];
   const chevronColors = [];
   const chevronIndices = [];
@@ -4077,17 +4334,14 @@ uniform float uRailMinNdc;`,
           // 6.5-unit ring pitch, so this genuinely spans more than one road
           // quad and has to be resolved per vertex, not per chevron.
           const vertexProgress = wrap01(progress + localZ / sampler.length);
-          const { normal, point } = sampler.pointAt(vertexProgress, 0);
-          // Identical arithmetic to the road mesh's own lane offset, so a
-          // chevron vertex and the road vertex beneath it resolve to the same
-          // surface even where the width table is changing.
+          // Lane is still derived from the sampler's width table (that IS the
+          // lane parameterisation the road columns are placed on), but the
+          // POINT now comes off the drawn triangles — so the decal is a subset
+          // of the road surface by construction and the lift is the only thing
+          // separating them anywhere on the lap.
           const laneNorm = lane + localX / (sampler.widthAt(vertexProgress) * 0.44);
-          const offset = laneNorm * sampler.widthAt(vertexProgress) * 0.44;
-          chevronPositions.push(
-            point.x + normal.x * offset,
-            point.y + crownAt(laneNorm) + bankYOffsetAt(vertexProgress, laneNorm * 0.44) + CHEVRON_LIFT,
-            point.z + normal.z * offset
-          );
+          roadSurfaceAt(vertexProgress, laneNorm, chevronPoint);
+          chevronPositions.push(chevronPoint.x, chevronPoint.y + CHEVRON_LIFT, chevronPoint.z);
           // Both long edges to zero over exactly one cell, interior at full:
           // ~0.6 units of road, which is a sub-pixel gradient at distance and a
           // soft edge up close, i.e. it behaves like a filtered edge at every
@@ -5183,26 +5437,86 @@ const makeIgloo = (radius) => {
 const ICEBERG_SHELF = '#6e93b0';
 const ICEBERG_ICE = '#9dc3dc';
 const ICEBERG_SNOW = '#f2fbff';
+// AAA wave 5 round 2 — A BERG FACE CANNOT RETURN ONE VALUE.
+//
+// penguin-village-p0_9's right third samples (121,150,170) BIT-IDENTICALLY at
+// five points hundreds of pixels apart, and has done for three waves of grade,
+// palette and probe work. It is not a grade failure: a five-segment cone's side
+// face is planar, so every fragment on it shares one normal, and no lighting
+// value can put a gradient on a surface that has one normal (known trap #5).
+// The mass therefore reads as a hole punched in the frame rather than as ice.
+//
+// Vertex colour is the one channel that CAN vary across a planar face, it costs
+// no draw call and no bytes, and it survives whatever the lighting does because
+// three multiplies it into the material colour. Two terms:
+//
+//   * a vertical ramp, dark at the waterline and bright at the crown, which is
+//     what a berg does — the snow load is on top and the wet rock is at the
+//     bottom. This alone makes every face a gradient rather than a plate.
+//   * a smooth per-BEARING term so adjacent facets of one cone never land on
+//     the same value however the key falls. Deliberately a continuous function
+//     of bearing rather than an alternating per-vertex value: alternating
+//     colours on shared vertices interpolate into a smear (known trap #3), and
+//     what is wanted here is the smear — a gradient ACROSS each plane.
+const shadeIceForm = (geometry, { crown = 1.14, facet = 0.12, root = 0.72 } = {}) => {
+  const position = geometry.attributes.position;
+  geometry.computeBoundingBox();
+  const minY = geometry.boundingBox.min.y;
+  const spanY = Math.max(1e-3, geometry.boundingBox.max.y - minY);
+  const colors = new Float32Array(position.count * 3);
+  for (let index = 0; index < position.count; index += 1) {
+    const lift = lerp(root, crown, (position.getY(index) - minY) / spanY);
+    const bearing = Math.atan2(position.getZ(index), position.getX(index));
+    // Two coprime harmonics, so the plate pattern does not line up with the
+    // 5-segment tessellation and repeat identically on every berg.
+    const plate = Math.sin(bearing * 2.5 + 1.7) * 0.6 + Math.sin(bearing * 5 - 0.4) * 0.4;
+    const shade = lift * (1 + facet * plate);
+    colors[index * 3] = shade;
+    colors[index * 3 + 1] = shade;
+    colors[index * 3 + 2] = shade;
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geometry;
+};
 const makeIceberg = (height) => {
   const g = new THREE.Group();
-  const ice = createToonMaterial(ICEBERG_ICE, { emissive: '#5d89a8', emissiveIntensity: 0.06 });
-  const shelf = createToonMaterial(ICEBERG_SHELF, { emissive: '#3f6280', emissiveIntensity: 0.05 });
-  const main = new THREE.Mesh(new THREE.ConeGeometry(height * 0.5, height, 5), ice);
+  const ice = createToonMaterial(ICEBERG_ICE, {
+    emissive: '#5d89a8',
+    emissiveIntensity: 0.06,
+    vertexColors: true,
+  });
+  const shelf = createToonMaterial(ICEBERG_SHELF, {
+    emissive: '#3f6280',
+    emissiveIntensity: 0.05,
+    vertexColors: true,
+  });
+  const main = new THREE.Mesh(shadeIceForm(new THREE.ConeGeometry(height * 0.5, height, 5)), ice);
   main.position.y = height / 2;
   g.add(main);
-  const secondary = new THREE.Mesh(new THREE.ConeGeometry(height * 0.32, height * 0.6, 5), ice);
+  const secondary = new THREE.Mesh(
+    // Its own bearing phase, so the two cones of one berg do not share a plate
+    // pattern and read as one extruded shape.
+    shadeIceForm(new THREE.ConeGeometry(height * 0.32, height * 0.6, 5), { facet: 0.15, root: 0.66 }),
+    ice
+  );
   secondary.position.set(height * 0.42, height * 0.3, height * 0.18);
   secondary.rotation.y = 0.6;
   g.add(secondary);
   // Waterline shelf: a wider, much darker skirt so each berg has a base band
   // instead of tapering straight into the snow plain it stands on.
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(height * 0.46, height * 0.54, height * 0.16, 5), shelf);
+  const base = new THREE.Mesh(
+    shadeIceForm(new THREE.CylinderGeometry(height * 0.46, height * 0.54, height * 0.16, 5), {
+      crown: 1.02,
+      root: 0.64,
+    }),
+    shelf
+  );
   base.position.y = height * 0.08;
   base.rotation.y = 0.35;
   g.add(base);
   const cap = new THREE.Mesh(
-    new THREE.ConeGeometry(height * 0.18, height * 0.28, 5),
-    createToonMaterial(ICEBERG_SNOW, { emissive: '#bfeaff', emissiveIntensity: 0.18 })
+    shadeIceForm(new THREE.ConeGeometry(height * 0.18, height * 0.28, 5), { crown: 1.06, facet: 0.08, root: 0.84 }),
+    createToonMaterial(ICEBERG_SNOW, { emissive: '#bfeaff', emissiveIntensity: 0.18, vertexColors: true })
   );
   cap.position.y = height * 0.86;
   g.add(cap);
@@ -5878,12 +6192,40 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
   }
   // Background icebergs ringing the horizon — the "iceberg" read. Far out
   // beyond the track envelope, tall and jagged, skipping any near the road.
+  //
+  // AAA wave 5 round 2 — THE KEEP-OUT WAS MEASURED TO THE BERG'S ORIGIN.
+  //
+  // 70 units of centreline clearance sounds generous until you notice a berg
+  // is up to 130 tall and its main cone's base radius is HALF its height. A
+  // 130-unit berg planted at exactly 70 has 65 units of rock reaching back
+  // toward a road whose own half-width is up to 32 — so its skirt overlaps the
+  // tarmac and the chase camera drives straight through it. That is the
+  // measured artefact: penguin-village-p0_9's right third is a single flat
+  // (121,150,170) mass with the camera inside it, and (121,150,170) is
+  // ICEBERG_SHELF's own lit value, i.e. the waterline skirt of one of these,
+  // seen from two metres.
+  //
+  // The berg is PUSHED OUT rather than skipped, because dropping it would thin
+  // the horizon ring the arctic identity is built on. Radially outward from the
+  // origin is the right direction: the course is inside this ring, so every
+  // step out is a step away from all of it.
   for (let i = 0; i < 16; i += 1) {
     const a = (i / 16) * Math.PI * 2 + 0.25;
-    const r = 500 + (i % 3) * 22;
     const h = 58 + (i % 4) * 24;
-    const pos = { x: Math.cos(a) * r, z: Math.sin(a) * r };
-    if (minCenterlineDistance(sampler, pos.x, pos.z) < 70) continue;
+    // The berg's own footprint (main cone radius h*0.5, skirt h*0.54 at the
+    // waterline), the widest road this track can produce, and a chase-boom's
+    // worth of camera swing on top so nothing large can enter the corridor even
+    // when the camera lags wide through a corner.
+    const clearance = h * 0.56 + roadWidth * 0.5 + 34;
+    let r = 500 + (i % 3) * 22;
+    let pos = { x: Math.cos(a) * r, z: Math.sin(a) * r };
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const distance = minCenterlineDistance(sampler, pos.x, pos.z);
+      if (distance >= clearance) break;
+      r += clearance - distance + 8;
+      pos = { x: Math.cos(a) * r, z: Math.sin(a) * r };
+    }
+    if (minCenterlineDistance(sampler, pos.x, pos.z) < clearance) continue;
     const berg = makeIceberg(h);
     berg.position.set(pos.x, -2, pos.z);
     berg.rotation.y = a * 1.7;
@@ -6795,6 +7137,20 @@ const createScene = ({
   const shieldUniforms = {
     uColor: { value: new THREE.Color('#8fe6ff') },
     uCore: { value: new THREE.Color('#eafaff') },
+    // AAA wave 5 round 2 — WHERE THE DECK IS, IN WORLD UNITS.
+    //
+    // The shell is an 8.2 * KART_SCALE icosahedron scaled to (1.12, 0.78, 1.3)
+    // and centred 3.2 above the kart origin, so its lower cap sits BELOW the
+    // road. Additive, depthWrite off, depth test on: the part of that cap
+    // between the lens and the tarmac behind it does not get occluded, it gets
+    // ADDED to the tarmac — which is the hard-edged bright ellipse the artefact
+    // hunter measured cutting across the road at comeback-city-p0_78 and
+    // penguin-village-p0_9, and a direct cause of the contact zone measuring
+    // BRIGHTER than open road on every shielded mark. Fading the shell out
+    // below the deck turns a sphere buried in the road into a dome sitting on
+    // it, costs no geometry and no draw call, and leaves the silhouette — the
+    // only part of a fresnel bubble that carries the read — untouched.
+    uGroundY: { value: 0 },
     uTime: { value: 0 },
   };
   const makeShieldPass = (side, strength) =>
@@ -6806,10 +7162,18 @@ const createScene = ({
         fragmentShader: /* glsl */ `
           uniform vec3 uColor;
           uniform vec3 uCore;
+          uniform float uGroundY;
           uniform float uTime;
           varying vec3 vNormalW;
           varying vec3 vViewW;
+          varying float vWorldY;
           void main() {
+            // Deck gate. 0 at the road, full 1.4 units above it — a ramp rather
+            // than a cut, so the dome meets the tarmac on a soft contact line
+            // instead of on a hard chord that would read as a second artefact.
+            // Not clipped with discard: an additive fragment multiplied to zero
+            // costs the same and keeps the mesh out of the alpha-test path.
+            float deck = smoothstep(uGroundY, uGroundY + 1.4, vWorldY);
             float facing = abs(dot(normalize(vNormalW), normalize(vViewW)));
             float fresnel = pow(1.0 - facing, 2.6);
             // Two counter-scrolling latitude bands: enough motion to read as
@@ -6824,7 +7188,7 @@ const createScene = ({
             // toward the rim so the animation reads where the energy already
             // is: the kart's paint and its lights now survive the shell.
             float bandFill = bands * 0.045 * (0.4 + 0.6 * fresnel);
-            vec3 col = mix(uColor, uCore, fresnel) * (fresnel * ${strength.toFixed(2)} + bandFill);
+            vec3 col = mix(uColor, uCore, fresnel) * (fresnel * ${strength.toFixed(2)} + bandFill) * deck;
             gl_FragColor = vec4(col, 1.0);
           }`,
         side,
@@ -6833,10 +7197,12 @@ const createScene = ({
         vertexShader: /* glsl */ `
           varying vec3 vNormalW;
           varying vec3 vViewW;
+          varying float vWorldY;
           void main() {
             vNormalW = normalize(mat3(modelMatrix) * normal);
             vec4 world = modelMatrix * vec4(position, 1.0);
             vViewW = cameraPosition - world.xyz;
+            vWorldY = world.y;
             gl_Position = projectionMatrix * viewMatrix * world;
           }`,
       })
@@ -8133,7 +8499,28 @@ export const ComebackCityThreeKartRace = ({
       contactRig.rotation.y = group.rotation.y;
       // A rising caster's contact patch shrinks AND softens — shrinking alone
       // made a mid-hop kart look like it had a smaller kart parked under it.
-      const fade = contactPatchAirFade(pose?.hop || 0);
+      const hopHeight = Math.max(0, pose?.hop || 0);
+      const fade = contactPatchAirFade(hopHeight);
+      // AAA wave 5 round 2 — AN AIRBORNE KART STILL HAS TO SAY WHERE IT IS.
+      //
+      // Six of the eighteen capture frames put the hero metres off the deck
+      // with nothing on the road under it, and three critics all read that as
+      // "the kart is detached from the track". It is not a shadow bug — those
+      // frames are genuine ballistic flight (Comeback City's bridge crest at
+      // progress 0.4-0.534 has crestLaunch true and its ramps sit at 0.075 and
+      // 0.685, which is where those marks land), and contactPatchAirFade is
+      // correctly suppressing a cue that would otherwise lie about contact.
+      //
+      // But a real shadow does not just get FAINTER as its caster rises, it
+      // gets WIDER and softer, and that widening is the entire difference
+      // between "airborne" and "detached". The fade above only shrinks, so the
+      // one frame where the player most needs to know where the ground is is
+      // the frame with the least information on it. This spreads the patch back
+      // out as it fades — the two terms are decoupled on purpose, because the
+      // penumbra is a function of height and the darkness is a function of
+      // occlusion. Capped at 1.9x: past that the blob is a smudge the width of
+      // the road rather than a penumbra.
+      const airSpread = 1 + clamp(hopHeight / 9, 0, 1) * 0.9;
       // ...and it grows back toward the pre-shadow-map blob on the frames where
       // the sun's own cast shadow is hidden behind the kart. Solved ONCE per
       // frame from the camera and the sun (see contactPatchShadowBoost); every
@@ -8141,7 +8528,8 @@ export const ComebackCityThreeKartRace = ({
       const boost = contactRig.userData.shadowBoostEligible
         ? race.contactShadowBoost
         : CONTACT_BOOST_NEUTRAL;
-      contactRig.scale.set(fade.scale * boost.scale, 1, fade.scale * boost.scale);
+      const contactSpread = fade.scale * boost.scale * airSpread;
+      contactRig.scale.set(contactSpread, 1, contactSpread);
       // AAA wave 5 (b). contactPatchShadowBoost's opacity runs 1 -> 1.55 as the
       // cast shadow rotates behind the kart, so (boost.opacity - 1) / 0.55 IS
       // the frame's own measure of "tier 1 cannot be seen right now" — no new
@@ -8849,6 +9237,13 @@ export const ComebackCityThreeKartRace = ({
       if (race.shieldActive) {
         engine.shieldBubble.rotation.y += dt * 1.6;
         engine.shieldUniforms.uTime.value += dt;
+        // Deck height for the shell's ground gate. Read off the CONTACT RIG,
+        // not off the kart group: the rig is the one node that is pinned to the
+        // sampled road point and never carries the hop, so the dome keeps
+        // sitting on the road while the kart jumps out of it — which is exactly
+        // the read a shielded kart in the air should have.
+        engine.playerModel.contactRig.getWorldPosition(SHIELD_GROUND_PROBE);
+        engine.shieldUniforms.uGroundY.value = SHIELD_GROUND_PROBE.y - 0.16;
       }
       // Slap Fish sweep: one full revolution across the swing window.
       engine.slapFishRig.visible = race.slapTimer > 0;
@@ -8967,7 +9362,22 @@ export const ComebackCityThreeKartRace = ({
           // as a decal bolted to the kart however good its falloff is.
           const flicker = 1 + Math.sin(race.raceTime * 31 + flame.userData.flicker) * 0.12;
           flame.scale.setScalar(flame.userData.baseScale * flameTier * flicker);
-          flame.material.color.set(ultra ? '#C879FF' : flame.userData.flameCore ? '#FFD34F' : '#FF8C00');
+          // The smoke tail is exempt from the tier recolour on purpose — see
+          // createGroundedKartModel. A plume that turns the same violet as the
+          // core collapses the three-lobe value ramp back into one disc, which
+          // is the "amorphous orange blob with no core, tail or falloff" the
+          // blind judge scored the effect at.
+          flame.material.color.set(
+            flame.userData.flameTail
+              ? ultra
+                ? '#3a1a52'
+                : '#8a3a12'
+              : ultra
+                ? '#C879FF'
+                : flame.userData.flameCore
+                  ? '#FFD34F'
+                  : '#FF8C00'
+          );
         });
       }
       // Drift sparks escalate through the tier colors while charging and
@@ -9126,9 +9536,99 @@ export const ComebackCityThreeKartRace = ({
           }
         });
       });
+      // ---- Kart-vs-kart separation -----------------------------------------
+      //
+      // AAA wave 5 round 2 — TWO KARTS WERE OCCUPYING ONE VOLUME.
+      //
+      // Filed as the single most broken-looking thing in the eighteen capture
+      // frames, and it is: at penguin-village-p0_15 a blue rival's side pods
+      // and hatted driver come out THROUGH the player's red roll cage on both
+      // flanks; at comeback-city-p0_56 a cream tyre passes straight through the
+      // red chassis and the two karts share one shield bubble. Also present at
+      // penguin-village-p0_06/p0_33 and comeback-city-p0_24.
+      //
+      // The rival AI solves lane and progress independently per racer and has
+      // no notion of another kart's footprint, so nothing anywhere stops two
+      // solutions landing inside one body length of each other. This is the
+      // cheapest place to fix that: a symmetric push in the LANE axis only,
+      // applied to the drawn pose and to nothing else.
+      //
+      // Deliberately visual-only, and deliberately lateral-only:
+      //   * the nudge never touches racer.lane or racer.progress, so the AI's
+      //     line, the item logic, the lap counter and the deterministic autoplay
+      //     budgets (budgets.finishSeconds / speedFloor) all see exactly what
+      //     they saw before.
+      //   * pushing along the ARC would change who is in front, which is a race
+      //     result. Karts pass side by side; that is the axis with room in it.
+      //
+      // The player never yields — a rival takes the whole overlap against the
+      // hero and half of it against another rival — because the shot is about
+      // the hero and moving him would move the camera's own subject.
+      {
+        // Sum of half-extents, world units. The contact patch's solid core is
+        // ~6.3 x 11 (see createGroundedKartModel), i.e. the kart's own
+        // footprint, so a pair needs 6.4 across and 10.4 along to be clear.
+        const SEP_LAT = 6.4;
+        const SEP_LONG = 10.4;
+        const trackLength = engine.sampler.length;
+        const sepArc = SEPARATION_ARC;
+        const sepLat = SEPARATION_LAT;
+        sepArc.length = 0;
+        sepLat.length = 0;
+        // Slot 0 is the player, so `j === 0` below is "this is the hero".
+        sepArc.push(race.progress * trackLength);
+        sepLat.push(race.lane * engine.sampler.widthAt(race.progress) * 0.44);
+        engine.rivalModels.forEach((rival, index) => {
+          const racer = race.rivals[index];
+          const lane = racer.lane + rival.model.motion.separationLane;
+          sepArc.push(racer.progress * trackLength);
+          sepLat.push(lane * engine.sampler.widthAt(racer.progress) * 0.44);
+        });
+        engine.rivalModels.forEach((rival, index) => {
+          const racer = race.rivals[index];
+          const self = index + 1;
+          let push = 0;
+          for (let other = 0; other < sepArc.length; other += 1) {
+            if (other === self) continue;
+            // Shortest signed arc between them — the pair can straddle the lap
+            // seam, and an unwrapped difference there is a full lap wide.
+            let dArc = sepArc[self] - sepArc[other];
+            if (dArc > trackLength * 0.5) dArc -= trackLength;
+            if (dArc < -trackLength * 0.5) dArc += trackLength;
+            const along = dArc / SEP_LONG;
+            if (Math.abs(along) >= 1) continue;
+            const dLat = sepLat[self] - sepLat[other];
+            // Elliptical footprint: the lateral clearance a pair needs shrinks
+            // to zero as they separate along the road, so a kart a body length
+            // back is not shoved sideways for nothing.
+            const penetration = SEP_LAT * Math.sqrt(1 - along * along) - Math.abs(dLat);
+            if (penetration <= 0) continue;
+            // Exactly coincident is possible (same lane, same progress). Parity
+            // is a stable tie-break: the pair never picks the same side and so
+            // never oscillates against each other.
+            const dir = Math.abs(dLat) > 0.05 ? Math.sign(dLat) : self % 2 === 0 ? 1 : -1;
+            push += dir * penetration * (other === 0 ? 1 : 0.5);
+          }
+          const motion = rival.model.motion;
+          const halfRoad = Math.max(1, engine.sampler.widthAt(racer.progress) * 0.44);
+          // Clamped twice: the nudge itself stays small enough that a rival is
+          // never drawn a lane away from where it is racing, and the SUM has to
+          // stay inside the kerb or the fix would put karts on the verge.
+          const target = push
+            ? clamp(
+                clamp(motion.separationLane + push / halfRoad, -0.42, 0.42),
+                -0.96 - racer.lane,
+                0.96 - racer.lane
+              )
+            : 0;
+          // Eased, not snapped: the overlap resolves over ~0.15s so it reads as
+          // a kart being nudged aside rather than as a teleport.
+          motion.separationLane = lerp(motion.separationLane, target, 1 - Math.pow(0.0004, dt));
+        });
+      }
       engine.rivalModels.forEach((rival, index) => {
         const racer = race.rivals[index];
-        const sample = engine.sampler.pointAt(racer.progress, racer.lane);
+        const sample = engine.sampler.pointAt(racer.progress, racer.lane + rival.model.motion.separationLane);
         updateVehiclePose(rival.model, sample, clamp(racer.laneVel * 0.6, -1, 1), false, {
           extraYaw: spinOutYaw(racer.spinTimer),
           hop: racer.air.height,

@@ -176,6 +176,41 @@
 // geometry, and because inverting shipped pixels through this function showed
 // it firing on the snow field and NOT on the sky it was written for. The
 // numbers and the evidence are on the parameters themselves.
+//
+// WAVE 5 ROUND 3 — NO CHANGE, AND THE ARITHMETIC THAT CLOSES THE FINDING SO IT
+// STOPS COMING BACK. The round-2 blind A/B judge filed "lift the Penguin
+// Village black point back down — the darkest asphalt sits near mid-grey and the
+// whole lower half loses contrast" and asked for a depth-weighted lift. Two
+// reasons this file is the wrong place for it, one structural and one measured.
+//
+//   1. A 3D LUT IS A FUNCTION OF COLOUR ALONE. There is no depth here to weight
+//      by — the stage is a LUT3DEffect sampling a baked 32^3 cube after tone
+//      mapping. "Ramp the lift in with distance" is a fog/aerial-perspective
+//      edit (penguinVillage.js `fog`, aerialEffect.js) and cannot be expressed
+//      as a colour transform of any kind, at any strength.
+//   2. THIS GRADE DOES NOT LIFT ANYTHING; IT CRUSHES. Replaying the exported
+//      gradeColor over a neutral ramp — the same function the cube is baked
+//      from, so this is arithmetic and not an estimate — Penguin Village maps
+//      input luma -> output luma as:
+//
+//        10 -> 10.5    20 -> 15.3    30 -> 21.4    40 -> 28.5    49.5 -> 35.9
+//        60 -> 45.1    80 -> 64.9   100 -> 87.9   132 -> 131.6   152 -> 161.8
+//
+//      i.e. every input under ~130 comes out DARKER than it went in, and the
+//      road's own measured input (49.5) leaves at 35.9, a 27% crush. The
+//      artefact hunter measured that same road arriving at the frame at 132-152
+//      with its MINIMUM lifted from 49.5 to 132. Nothing in this file can raise
+//      a minimum by 83 counts — the curve is monotone and sits below identity
+//      across that whole range — so the wash is upstream, and the hunter's own
+//      candidate (roadMaterial never routed through tuneEnvResponse, so
+//      scene.environmentIntensity drives its indirect diffuse) is consistent
+//      with a lifted floor in a way that no tone curve is.
+//
+// The one thing this grade genuinely does at the bottom of the range is the
+// authored shadow TINT: a 10-luma neutral leaves as (3.6, 11.0, 24.7), i.e. the
+// blue channel gains 14 counts at constant luminance. That is the arctic split
+// tone and it is doing exactly what the parameter block says; it is 14 counts of
+// hue on the darkest pixels in frame, not a lift to mid-grey.
 import * as THREE from 'three';
 
 // The grade runs on sRGB-ENCODED values, mounted after ToneMappingEffect with

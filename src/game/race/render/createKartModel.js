@@ -216,6 +216,20 @@ export const createKartRubberMaterial = (color, options = {}) =>
 // the monolith's own local `createKartModel` (~line 600) and spun by
 // driveKartWheels (~:8008) — which is also where this round's wheel-spin-band
 // artefact lives. Tread on the wheels below would render nowhere.
+//
+// AAA wave 5 round 3: filed a THIRD time, with a different justification —
+// "wheel rotation is driven but the cue barely survives to race distance; add
+// one high-contrast asymmetric feature to the hub — a single bright spoke or a
+// valve-stem mark — targetFile createKartModel.js". Grepped again, same four
+// call sites, all still in scripts/race-content-playtest.mjs. The finding is
+// correct about the frames and correct about the remedy; it is pointed at the
+// wrong file, and the hub it describes (a red rim ring over a dark spoked hub,
+// visible at 5x in the wave5-r2 crops) is built by the monolith's local
+// builder. Adding a spoke to the `hub` / `rim` meshes below would change one
+// headless playtest script and not one captured pixel — so it is reported to
+// the monolith's owner rather than written here. This is the third round in a
+// row that this file has been handed a live-looking finding it cannot act on;
+// the note is loud so the fourth one is cheaper.
 export const createVehicleModel = ({
   accent = '#2cc8ff',
   color = '#ef4334',

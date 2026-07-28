@@ -67,6 +67,48 @@ import {
 // Re-cut so every roster paint clears it while true neutrals stay out:
 // lifoladen lands at 0.91 paint, layer23 at 1.00, a white trim band (0.078)
 // and a black tyre (0.006) still score 0.00.
+//
+// ---- AAA wave 5 round 3: THE KENNEY ATLAS, DECODED ------------------------
+//
+// A critic filed "the Kenney rival's wheels sample (155,169,195) — a flat
+// bluish grey BRIGHTER than the body it sits under, so the rubber/paint
+// distinction inverts", against penguin-village-p0_56. Decoding the actual
+// atlas (src/assets/game/models/toy-car-kit/colormap.png, 18 swatches) shows
+// the classifier is genuinely mis-reading two of them, and also shows that the
+// obvious fix would make the reported symptom WORSE. Recorded in full because
+// the obvious fix is very tempting and I nearly shipped it.
+//
+//   swatch              linear chroma  linear lum  paintMask today
+//   (56,56,61)  tyre        0.007        0.040       0.00   (rubber)
+//   (79,82,96)  dark grey   0.039        0.085       0.00   (rubber)
+//   (134,139,161) mid grey  0.118        0.261       0.08   (plastic/rubber)
+//   (160,168,201) cool grey 0.233        0.397       0.78   <- PAINT
+//   (253,228,199) cream     0.426        0.805       1.00   <- PAINT
+//
+// The last two are neutrals with a colour cast, and raw chroma cannot see the
+// difference between "a desaturated grey that is fairly bright" and "a
+// saturated colour that is fairly dark" — which is the whole reason the window
+// had to be cut down to 0.08 to admit lifoladen's dark wine at 0.260 in the
+// first place. Saturation (chroma / peak channel) separates them cleanly:
+// every roster paint scores 0.92-0.99 and every atlas grey 0.18-0.43.
+//
+// AND IT IS THE WRONG FIX HERE, which the arithmetic says before any capture:
+// moving those two swatches out of the paint class removes them from
+// PAINT_SHAPE's compressor and from `shade`, the two terms that currently pull
+// them DOWN — the cream's albedo peak is 0.991 against a knee of 0.72, so the
+// compressor is doing real work on it — and hands them to the plastic class,
+// which has neither. The neutrals would come out brighter and flatter, i.e.
+// the inversion the finding is about would widen. It would also drop the Ice
+// Racer's frosted shell (chroma 0.340, saturation ~0.38) out of paint, and that
+// shell is the one kart surface all three critics have praised.
+//
+// The real cause of the inversion is in the albedo, not the classifier: that
+// rival's body is a dark saturated violet at linear luminance 0.113 while the
+// neutral panel beside it sits at 0.397, three and a half times brighter,
+// before any shading runs. That is the recolour's saturation overshoot
+// (ComebackCityThreeKartRace.jsx, makeKartPaletteTexture / KENNEY_SWATCH_
+// CONTRAST) and it belongs to whoever owns that file. No per-texel classifier
+// can invert an albedo relationship it did not create.
 const PAINT_CHROMA = [0.08, 0.3];
 // Luminance window for "chrome/trim": bright AND neutral. Only near-white
 // texels qualify, which on the shipped bodies is exactly the trim bands,
@@ -395,6 +437,56 @@ const DARK_FILL = 0.05;
 // and clearly the darkest thing on the vehicle — which is the job.
 const RUBBER_CEILING = 0.055;
 
+// ...and the OTHER half of that ceiling, added in AAA wave 5 round 3.
+//
+// THE FINDING (blind judge, pair-01L and pair-02L): "the seat, roll cage and
+// driver torso collapse into a single near-black mass; the kart silhouette
+// survives but its internal form is gone against the dark road."
+//
+// WHY THE ABSOLUTE FORM PRODUCES THAT. RUBBER_CEILING is one number and the
+// class it bounds is a LUMINANCE WINDOW — RUBBER_LUMINANCE [0.1, 0.38] — so it
+// does not claim only tyres. A neutral at linear luminance 0.2 (sRGB ~124)
+// scores 0.68 rubber, and its output is then pulled 68% of the way toward a
+// ceiling that was measured on a tyre whose albedo is TWELVE TIMES darker
+// (#10121c, linear peak 0.011). Seat shells, roll hoops, wheel arches and
+// undertrays are all in that band, which is why they arrive at the same value
+// as the tyres regardless of what they were painted.
+//
+// THE FIX IS TO STATE THE CONTRACT PROPERLY. "Matte" is a statement about the
+// relationship between output and ALBEDO, not an absolute value. So the ceiling
+// becomes max(RUBBER_CEILING, this x the texel's own albedo peak): an absolute
+// floor for the true blacks, proportional above it.
+//
+// 2.6 puts the crossover at albedo peak 0.021, and every near-black surface on
+// the roster sits well under that — decoded from the shipped assets, not
+// assumed:
+//
+//   tyre  #10121c / #0b1019      albedo peak 0.0110   2.6x = 0.029  floor wins
+//   crrt-bunny driver, dark texels of its baked map, peak 0.008-0.016   floor
+//   seth-penguin driver, same,                        peak 0.006-0.016   floor
+//   mid-dark seat/roll-bar grey, sRGB ~100,           peak 0.127   -> relaxed
+//
+// So the tyres render bit-identically and every wave-4 measurement that tuned
+// this class against a tyre still stands, while the mid-dark structural greys
+// stop being flattened onto the tyre's value. That is the blind judge's finding
+// and it is the whole of what this closes.
+//
+// WHAT IT EXPLICITLY DOES NOT CLOSE — recorded because the two findings look
+// like one and are not. The rubric critic's "the player's own driver is the
+// least legible character on the track" is a DIFFERENT problem with the same
+// symptom, and this cannot touch it: the shipped drivers are GLB avatars whose
+// black is baked at linear peak 0.008-0.016, i.e. at or below the tyre's own
+// 0.011. No per-texel quantity in this shader distinguishes them, so any term
+// that lifts the driver lifts the tyres by the same amount — which is the
+// wave-4 regression this ceiling was added to stop. See KART_SHADING_DRIVER.
+//
+// Deliberately modest. At 2.6 a matte surface can reach about two and a half
+// times its own albedo — a lit matte dielectric under a key plus a hemisphere
+// fill — and well short of the ~5x that would let a grey seat shell start
+// competing with the paint. The class stays the value anchor; it just stops
+// being the same value for every member.
+const RUBBER_ALBEDO_CEILING = 2.6;
+
 // ---- AAA wave 5: the camera-anchored fill ----------------------------------
 //
 // THE FINDING, which two critics filed independently: "the hero kart is the
@@ -634,6 +726,7 @@ export const KART_SHADING_DESKTOP = Object.freeze({
   paintShade: PAINT_SHAPE.shade,
   paintStrength: SPEC_STRENGTH.paint,
   plasticStrength: SPEC_STRENGTH.plastic,
+  rubberAlbedoCeiling: RUBBER_ALBEDO_CEILING,
   rubberCeiling: RUBBER_CEILING,
   rubberDarken: RUBBER_DARKEN,
   rubberLuminance: RUBBER_LUMINANCE,
@@ -688,6 +781,63 @@ export const KART_SHADING_MOBILE = Object.freeze({
   glintPlastic: 0.14,
   paintGloss: 8,
   textureAnisotropy: 2,
+});
+
+// ---- AAA wave 5 round 3: the DRIVER class, and why it needs one line -------
+//
+// THE FINDING (rubric critic): "the whole figure renders as one near-uniform
+// very dark navy with no material separation, so at race distance it collapses
+// into a black lump with two ears against an equally black seat and roll hoop.
+// Meanwhile comeback-city-p0_45's pirate penguin has a white belly, goggle
+// lenses, a hat trim and a scarf — the RIVALS read better than the hero."
+//
+// Measured on wave5-r2/comeback-city-p0_33, tight boxes inside the player's own
+// driver: head luminance p50 36.5 (min 3.1, max 89.5), ears p50 22.2, against
+// the tyre beside it at p50 41.8 and the road behind it at ~50-60. The hero's
+// driver is DARKER than both the tyre it sits above and the asphalt it is read
+// against, which is the whole finding in one line.
+//
+// WHY IT CANNOT BE FIXED PER TEXEL, checked rather than assumed. Both shipped
+// driver avatars bake their black at linear peak 0.008-0.016 (crrt-bunny.glb
+// and seth-penguin.glb, images decoded from the GLBs directly); the tyre colour
+// is 0.011. The driver is not merely IN the same class as the tyre, it is
+// indistinguishable from it by albedo, luminance, chroma and normal alike. Any
+// term this shader adds to lift the driver lifts the tyres identically — which
+// is exactly the wave-4 regression that put a #10121c tyre at a measured median
+// luminance of 108 and cost the class its anchor.
+//
+// WHAT SEPARATES THEM IS THAT THEY ARE DIFFERENT MATERIALS. mountDriverAvatar
+// builds the driver its own MeshToonMaterial (one per mesh) and hands it to
+// applyHeroRim; the kart body is a different material entirely. So the split is
+// a per-MATERIAL class, which is what applyKartShading's `overrides` argument
+// has always been for — this package simply cannot reach the call site.
+//
+// UNWIRED, AND SAYING SO LOUDLY because this file has shipped two dead levers
+// already (KART_PAINT_TINTS and ENV_RESPONSE's road/ice classes, both still
+// dead). It is two lines in the monolith and they are both in this file's
+// terms:
+//
+//   const applyHeroRim = (material, shading) =>
+//     activeHeroRim ? applyToonRim(material, shading
+//       ? { ...activeHeroRim, shading }
+//       : activeHeroRim) : material;
+//
+//   ...then at mountDriverAvatar's applyHeroRim call:
+//     applyHeroRim(new THREE.MeshToonMaterial({...}), KART_SHADING_DRIVER)
+//
+// The numbers: `darkFill` is the one term in the shader that does anything at
+// all on a near-black texel (it is the two-band hemisphere crown light, not a
+// gloss), tripled from the value that has to keep a tyre matte; the ceilings
+// are lifted to let that crown actually land. 0.16 linear encodes to roughly
+// sRGB 110 through the tone map, so the driver's lit crown lands at about the
+// value the ROAD sits at instead of half of it, and its underside stays black —
+// a figure with a top and a bottom rather than a hole. Nothing else moves: the
+// classifier, the specular bands, the AO and the rim are all untouched, so the
+// driver still shades as the same material family as the kart it is sitting in.
+export const KART_SHADING_DRIVER = Object.freeze({
+  darkFill: 0.15,
+  rubberAlbedoCeiling: 12,
+  rubberCeiling: 0.16,
 });
 
 // Same rule the renderer uses for raceViewport.mobile (createRaceScene.js:74)
@@ -876,3 +1026,36 @@ export const KART_PAINT_TINTS = Object.freeze({
 // — so tyres, glass and trim never take the racer colour. That half of the ask
 // has shipped since wave 2.
 export const KART_PAINT_TINT_AMOUNT = 0.55;
+
+// ---- AAA wave 5 round 3: THE NEAR-VOLUME RIVAL FADE, DECLINED --------------
+//
+// The ask: "give every rival body/tyre/trim material a per-frame
+// distance-to-eye uniform and ramp alpha from 1.0 at ~6 units to ~0.05 at ~2.5,
+// driven by the same value on every submesh of one kart so it dissolves as a
+// unit", as a material-class way to defuse the six frames where a rival fills
+// the near volume. The camera pushout that actually fixes those frames is
+// wave 6 and the critic says so; this was offered as the wave-5 lever.
+//
+// Declined, and the reason is that this package cannot build the version that
+// would work, only the version that would not:
+//
+//   * PER-OBJECT is the requirement — "dissolves as a unit rather than in
+//     pieces" — and per-object needs a per-frame write from something that
+//     knows which kart a material belongs to and where the eye is. The only
+//     code that knows both is the race loop, in the monolith. Nothing in this
+//     module gets a frame callback: THREE.Material has no onBeforeRender, and
+//     the six applyHeroRim call sites hand the shader a material and nothing
+//     else (the same wiring gap KART_PAINT_TINTS is still blocked on, above).
+//   * The version this file COULD ship — distance taken per-fragment from
+//     length(geometryPosition) — is the failure mode the ask explicitly rules
+//     out. The near end of a kart would dissolve while its far end stayed
+//     solid, so a body would tear across its own length instead of ghosting.
+//   * And it would have to make every hero body `transparent: true` to have an
+//     alpha to ramp, which moves the entire roster out of the opaque pass into
+//     depth-sorted blending — against the additive shield shell, the boost
+//     flame and the drift spray, in the exact frames that already have the most
+//     overlapping VFX. Trading a framing problem for a sorting problem in the
+//     six worst frames of the set is not a trade worth making on a wave that
+//     has to hold zero regressions.
+//
+// Reported, not fixed. The lever is the chase camera's near-volume pushout.
