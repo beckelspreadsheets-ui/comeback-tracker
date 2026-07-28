@@ -1,0 +1,437 @@
+[
+  {
+    "lens": "blind-ab",
+    "verdict": "FAIL",
+    "headline": "One build swept 18/18 (16 decisive, 2 clear, zero ties) — the side with a full sky, 3D rumble curbs, cast shadows and a typographic HUD. No pair was a tie, so the round accomplished something real. But the winner still FAILs at 77/110: camera 5, kart 5, materials 6. Four of eighteen winning frames have geometry inside the camera near volume.",
+    "scores": {
+      "sky": 8,
+      "lighting": 7,
+      "materials": 6,
+      "trackLegibility": 8,
+      "environment": 8,
+      "kart": 5,
+      "vfx": 7,
+      "camera": 5,
+      "post": 8,
+      "hud": 8,
+      "frameIntegrity": 7
+    },
+    "total": 77,
+    "blockers": [
+      "Geometry inside the camera near volume in 4 of 18 winning frames: pair-05 a rival kart fills the right third and is sliced by the near plane; pair-12 an ice-blue kart intrudes across the left third, clipped; pair-15 a blue rival occupies the right quarter, clipped; pair-18 a rival tyre clips the bottom-right corner while an ice mesa fills the right third. The chase camera has no collision or occlusion push-out.",
+      "Rival karts render as flat-shaded untextured blocks with no rim, gloss or specular (pair-15 right, pair-17 left, pair-18 right). Next to the player's glossy red body with matte tyres and hot red hub rims, they read as missing-material placeholders, not as karts.",
+      "Karts with no readable ground contact. pair-06 both karts are airborne over the road with only a smeared grey blob beneath; pair-12 the player kart's shadow is nearly absent on the asphalt; pair-15 and pair-18 rivals sit on the road with no discernible contact darkening at all."
+    ],
+    "nextFixes": [
+      {
+        "title": "Chase camera has no collision / near-plane push-out",
+        "frame": "pair-05, pair-12, pair-15, pair-18",
+        "severity": "blocker",
+        "fix": "Sweep the desired camera position against rival kart capsules and track-side geometry each frame before committing it. On a hit, shorten the boom and raise pitch until the near plane clears by a margin, then ease back out over ~0.4s so the recovery is not a snap. pair-12's ice kart and pair-18's mesa both sit visibly INSIDE the near plane — sliced flat with no depth. Same guard already exists inline for track occlusion; extend it to dynamic actors.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Rival karts occlude the player instead of the camera yielding",
+        "frame": "pair-05, pair-15",
+        "severity": "blocker",
+        "fix": "Define a screen-space exclusion box around the player kart anchor. When a rival's projected bounds overlap it above a threshold, lift the camera height and widen FOV slightly rather than letting the rival paint over the player. In pair-05 the player kart is buried behind two rivals crowding both frame edges; in pair-15 the blue rival covers the entire right quarter at 286 km/h — the exact moment the player most needs to see their own kart.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Kart screen anchor drifts frame to frame",
+        "frame": "pair-08 vs pair-13 vs pair-14",
+        "severity": "major",
+        "fix": "The rubric wants a consistent screen position. pair-08 puts the kart dead centre, pair-13 pushes it right of centre, pair-14 pushes it left with a large empty road to the right. Anchor the kart to a fixed screen point via a critically-damped spring on the look-at offset, and let only a bounded lateral lead (proportional to steering/drift angle) move it — so the offset reads as the camera LEADING the drift, not as the anchor wandering.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Contact shadows are inconsistent — present on the player, absent on rivals",
+        "frame": "pair-04 (good) vs pair-15, pair-18 (absent)",
+        "severity": "blocker",
+        "fix": "pair-04 proves the rig can do it — both karts throw long soft directional shadows across the asphalt and it is the single most convincing frame in the round. But pair-15 and pair-18 rivals have none. Ensure every kart instance, rival included, is in the shadow-caster set, and add a cheap always-on contact blob that fades by height above the road so airborne karts (pair-06) still read as tethered to a point on the track.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Rival kart material class is flat and unlit",
+        "frame": "pair-15, pair-17, pair-18",
+        "severity": "blocker",
+        "fix": "The rivals get a flat colour with no toon rim, no specular band, no tyre/metal distinction — pair-17's pale blue kart is a slab wing on two grey cylinders. Route rivals through the same material classes the player uses (glossy body / matte rubber / hot metal rim) with per-racer tints. This is the material CLASS, not the mesh — the mesh swap is wave 5.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/kartMaterials.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "No environment probe — kart colour ignores the track's light",
+        "frame": "pair-08 (Miami orange) vs pair-17 (PV violet)",
+        "severity": "major",
+        "fix": "The player's red body is the identical red under Comeback City's orange dusk and under Penguin Village's violet storm. Sample the sky dome into a small env probe (or drive an ambient/hemisphere tint from the sky's own gradient uniforms) so bodywork picks up warm orange bounce in CC and cold violet in PV. Zero-byte, and it is what makes the two tracks read as two lighting environments rather than two backdrops.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village upper sky is a featureless gradient above the storm band",
+        "frame": "pair-12, pair-17, pair-18",
+        "severity": "major",
+        "fix": "The sunset storm front is finally reading at the horizon — warm orange/magenta over a blue-grey cloud deck is correct and is the single biggest PV win in this round. But everything above roughly a third of frame height is dead flat violet-grey. Extend the cloud deck upward with a second, slower-parallax layer so the storm has a ceiling and the frame top is not empty.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/createSkyDome.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village snow ground plane is a large near-flat expanse",
+        "frame": "pair-16, pair-17",
+        "severity": "major",
+        "fix": "The mesas now have a legible warm-rim / cool-shadow rig, but the snow field they stand on is one near-uniform value from the road edge to the horizon. Add a low-frequency drift/dune break in the key light response plus long shadows cast by the mesas onto the snow, so the ground reads as scattering snow rather than untextured paper. Rubric explicitly fails large flat untextured expanses.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Mid-ground belt repeats a visible alphabet",
+        "frame": "pair-14, pair-16",
+        "severity": "moderate",
+        "fix": "PV's mid band is the same pyramid + flat-top mesa silhouettes repeated across the horizon; CC reuses four or five building profiles (visible in pair-01 and pair-02). Add per-instance non-uniform scale, yaw jitter and a second silhouette family, and stagger depth so near belt entries partially occlude far ones. Rubric: density that never repeats visibly.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/createMidGroundBelt.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Boost flame is a single orange blob sprite",
+        "frame": "pair-13, pair-15",
+        "severity": "moderate",
+        "fix": "The boost reads as one soft orange puff behind the kart. Stage it: a hot white-yellow core at the exhaust, an orange mid, and a dark smoke tail that lags and disperses. pair-13 already shows the boost pad throwing a real light pool onto the road and casting a striped shadow through the sign post — the pad light is doing more work than the flame it triggers.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/raceParticles.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Drift sparks are sparse dashes, not staged tiers",
+        "frame": "pair-04",
+        "severity": "moderate",
+        "fix": "pair-04's cyan drift streaks are the only drift evidence in eighteen frames and they read as four or five loose dashes. Increase count, bind emission rate and colour to the drift charge tier, and bias emission to the outside wheel so the effect describes which way the kart is sliding. Rubric wants drift sparks to stage visibly.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/raceParticles.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Snowfall does not react to the kart",
+        "frame": "pair-11, pair-14, pair-18",
+        "severity": "polish",
+        "fix": "Snow particles fall straight through the play space at a fixed rate regardless of a kart passing at 279 km/h. Add a velocity-driven deflection cone around the player so flakes streak past and part around the kart. Cheap, and it converts ambient weather into something that responds to the player — the rubric's bar for surface particles.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/raceParticles.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Distance haze is hiding resolution rather than describing air",
+        "frame": "pair-14, pair-16",
+        "severity": "polish",
+        "fix": "The mid-distance in both PV frames goes soft early — the haze ramp starts close enough that the belt loses all silhouette definition, which reads as blur rather than atmosphere. Push the fog near distance out and steepen the curve so near-belt geometry keeps a hard edge and only the far band dissolves. Match the haze tint to the sky's horizon colour exactly so there is no seam between the two.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/raceGrade.js",
+        "inScopeForWave4": true
+      }
+    ],
+    "outOfScopeNoted": [
+      "Rival kart BODIES are lookalike placeholder geometry (pair-15, pair-17, pair-18 show a slab wing on grey cylinders). The flat MATERIAL is wave-4 and listed above; the mesh replacement is wave 5 — not requested here.",
+      "Wheels do not visibly rotate or steer and the driver does not lean or react in any of the eighteen frames. This is what holds the kart axis at 5. Wave 5 — not requested here.",
+      "No impact, item-hit or celebration VFX appear in any frame; the shield dome and boost flame are the only item-adjacent effects visible. Wave 5 — not requested here.",
+      "Track legibility loses a point in the mid-distance where two or three road ribbons fork ambiguously (pair-14, pair-16) and you cannot tell which is yours. That is layout/arc-length, wave 6 — not requested here.",
+      "HUD item slot sits empty-dashed and alone in a large corner, and there is no minimap or rival ordering. Structure/markup is wave 6 — not requested here."
+    ]
+  },
+  {
+    "lens": "Rubric critic — wave4-r3, all 18 frames read at full res plus targeted 2x crops, scored against docs/AAA_KART_RUBRIC.md on the 11-axis / 88-total scale given in the brief (the rubric doc's own header says 88/120 across 12 axes because it counts \"Motion & feel\", which stills cannot judge — I scored the 11 the brief names). Every claim below is backed by a pixel measurement or a named frame, not an impression. Sky/ground statistics computed with PIL over downsampled bands; near-clip flatness verified by direct pixel sampling; camera framing cross-checked against the source (chase block at ComebackCityThreeKartRace.jsx:8468 and collectCameraBlockers at :6151).",
+    "verdict": "FAIL",
+    "headline": "71/110 — the best total yet (w1 57/64/42 → w2 63/67/62 → w3 65/63/60 → 71 now) and the first wave where the headline axis actually moved: Comeback City now throws real directional cast shadows (the kart-shaped mass on the road in p0_33/p0_67/p0_78/p0_9 is a genuine tier-1 shadow, not a blob decal), the item slot renders real icons, and zero console errors. But camera is still 5/10 and lighting 6/10, and both fail for the same reason: the guard that was rebuilt this wave only knows about STATIC scenery. Rival karts are explicitly excluded from both the blocker and occluder sets (MIN_OCCLUDER_EXTENT = 15 with the comment \"None of those is a mass the camera can be swallowed by\"), and in comeback-city-p0_45 and penguin-village-p0_24 the camera is swallowed by exactly that — a rival kart at near clip filling 30-40% of the frame, cut by two frame edges, with zero road visible. penguin-village-p0_9 still ships the ice wedge the round-4 code comment claims to have fixed: RGB(121,150,170) sampled identically at four points across the right third, a mathematically flat plane with no form at all. And Penguin Village's arctic-sunset identity is measurably unchanged after four waves: sky saturation 0.223 vs Comeback City's 0.672, R−B +12.7 vs +131.8, per-column R−B peak +32 vs +191. It is a hazy grey twilight with a thin coral stripe pasted along the zenith, not a storm front.",
+    "scores": {
+      "sky": 7,
+      "lighting": 6,
+      "materials": 6,
+      "trackLegibility": 7,
+      "environment": 7,
+      "kart": 6,
+      "vfx": 6,
+      "camera": 5,
+      "post": 7,
+      "hud": 8,
+      "frameIntegrity": 6
+    },
+    "total": 71,
+    "blockers": [
+      "penguin-village-p0_06 — RUBRIC AUTO-BLOCKER \"karts with no shadow / no contact with the ground\". All three karts in shot (red player, pink rival, blue rival) meet the asphalt on a hard silhouette edge with no cast shadow and no contact patch. The 2x crop shows the pink rival's cream tyres ending on bare road with the identical value on both sides of the tyre edge. The rig ships a tier-2 contact decal (raceShadowRig.js) and Comeback City clearly gets it — CC p0_78's crop has both a directional cast shadow and an under-wheel patch — so this is Penguin Village not receiving a tier that exists.",
+      "comeback-city-p0_45 — camera inside a rival. A white/blue rival body and its driver's head/arm occupy the right 40% of the 1600x900 frame at near-clip, guillotined by both the right and bottom edges; a second orange kart is cut by the left edge. No road surface, no racing line and no identifiable player kart anywhere in the image. Cause is structural: collectCameraBlockers walks the static `world` graph once, so no vehicle can ever push the camera, and the occluder fork's MIN_OCCLUDER_EXTENT = 15 deliberately drops karts.",
+      "penguin-village-p0_24 — same failure, different actor. The Ice Racer rival fills the entire lower-left quadrant at near clip, clipped by the left and bottom edges, its front wing spearing across the SPEED tile. Roughly 22% of the frame is one kart the player is not driving.",
+      "penguin-village-p0_9 — the ice wedge the wave-4 code comment names by filename is still there. A pale mass slices from the top-right corner to the bottom edge; sampled at (1300,300),(1350,450),(1400,600),(1450,250) it returns (147,157,170),(121,150,170),(121,150,170),(120,148,169) — bit-identical over hundreds of pixels, i.e. an unlit flat plane with zero form. A blue rival kart is clipped by the bottom-right corner behind it. The margin was raised 1.4 -> 3.0 but MAX_BLOCKER_EXTENT = 120 plus the corridor test still exempts the largest masses, which are precisely the ones that fill the frame.",
+      "comeback-city-p0_56 — both the player kart and the Ice Racer rival read as floating in mid-air with the road plane far below and behind them, the rival hovering at rooftop height over off-track terrain; a giant Bitcoin coin is clipped by the bottom-left corner at near clip. Whatever the physics is doing, the frame reads as broken geometry to a player.",
+      "Penguin Village mid-race GPU pacing cliff (capture-manifest.json). frameElapsedMs runs 7.95-8.70 for the first five marks then jumps to 13.86 at p0_56 and never recovers (12.24 / 12.03 / 11.79); fps 115-125 -> 71 -> 82/83/85. frameWorkMs stays flat at 2.2-3.7, so this is GPU/upload, not CPU. Texture count climbs 72 -> 76 -> 77 -> 79 inside a single run while drawCalls hold at 707 — something is minting textures during the race. That is a stable-frame-pacing failure under the frame-integrity blocker list."
+    ],
+    "nextFixes": [
+      {
+        "title": "Rival karts must be camera pushout candidates, not just scenery",
+        "frame": "comeback-city-p0_45, penguin-village-p0_24",
+        "severity": "blocker",
+        "fix": "collectCameraBlockers walks the static `world` graph once at build time, so the only things that can eject the camera are buildings and bergs. Both of this round's worst frames are a rival kart at near clip. Add a small dynamic pass in the chase block: for each rival, build a cheap world AABB from its model group (position + a fixed 6x4x9 half-extent, no bounding-box recompute) and run it through the SAME nearest-face pushout the static blockers use, with a smaller margin (~1.6) so ordinary side-by-side racing is not disturbed. Gate the push on the rival actually being in front of the eye (dot(camForward, rivalPos - camPos) > 0) so a kart the player has just passed never shoves the shot.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "The extent ceiling still exempts the masses that fill the frame",
+        "frame": "penguin-village-p0_9",
+        "severity": "blocker",
+        "fix": "MAX_BLOCKER_EXTENT = 120 plus the corridor test drops the biggest ice cliffs from the pushout set — and those are the only ones large enough to occupy a third of the image. The round-4 comment explicitly cites penguin-village-p0_9 as fixed by raising margin to 3; the frame proves it is not, because the cliff is not in the set at all. Split the ceiling: keep 120 for the cheap per-frame box test but admit oversize masses as a separate small array of up to 16 face-planes (the pushout only needs the nearest face, not the whole box), so a 200-unit shelf can still eject the eye.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village karts receive no grounding tier at all",
+        "frame": "penguin-village-p0_06 (all three karts), p0_15, p0_45, p0_67, p0_78",
+        "severity": "blocker",
+        "fix": "Comeback City gets both tiers — the p0_78 crop shows a directional kart-shaped cast shadow AND an under-wheel patch. Penguin Village gets neither on any kart, while its scenery DOES cast (the chevron sign in p0_33 throws a long shadow), which proves the shadow map is enabled and the key light is casting. So the fault is per-track: either the PV kart meshes are not in the shadow frustum's ride target, or the tier-2 contact decal is being culled/alpha-zeroed against the darker PV asphalt. Verify buildGroundingDecals actually mounts for the PV theme and that the ortho frustum follows the player on both tracks; then floor the tier-2 decal opacity so it survives a dark road.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village sky is still a grey wash — measured, not asserted",
+        "frame": "all 9 PV frames; worst at p0_06, p0_15, p0_67",
+        "severity": "blocker",
+        "fix": "Mean sky saturation 0.223 vs Comeback City 0.672; mean R-B +12.7 vs +131.8; per-column R-B peak across the top 25% of frame is +32 vs CC's +191. The warm band that was added sits at the ZENITH with cold grey at the horizon, which is inverted from any sunset and is why it reads as smog rather than light. Author the break at the horizon and give it a bearing: a bruised indigo storm mass filling the upper hemisphere, a hot coral/amber wedge sitting ON the horizon at one compass bearing (not a uniform band), and a hard-ish value step at the meeting line. Target sat >= 0.42 and per-column R-B peak >= +90 so the two tracks differ by hue and direction, not only by desaturation.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/createSkyDome.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Kart screen position swings 23% of frame width across the 9 marks",
+        "frame": "penguin-village-p0_45 (cx ~0.38) vs penguin-village-p0_33 (cx ~0.61); comeback-city-p0_67 (~0.46) vs comeback-city-p0_33 (~0.61)",
+        "severity": "major",
+        "fix": "The kart wanders from just left of the third-line to hard against the right HUD column and back. MK8's chase holds the kart within roughly +/-4% of centre except during a staged drift lead. Add a screen-space correction to the boom solver: project the kart to NDC each frame, and if |ndc.x| exceeds ~0.10 apply a critically-damped yaw correction to the boom bearing (not a translation of the eye) that pulls it back, with the correction disabled while a drift is actively staging so leading the drift still reads as intent rather than error.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/camera/chaseCameraFeel.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Vertical framing is unbounded — karts float to the top third",
+        "frame": "comeback-city-p0_56, penguin-village-p0_24",
+        "severity": "major",
+        "fix": "Kart vertical centre ranges from ~0.39 of frame height (p0_56, both karts apparently airborne over a road plane far below) to ~0.62. Clamp the same way as the horizontal fix: solve the boom pitch so the kart's projected centre stays in a 0.52-0.62 band, and add a landing settle so a launch does not let the horizon drop out of shot. Also raise the eye's minimum height above the sampled road point (currently point.y + 2.4) during airtime, so the shot does not end up looking UP at the kart.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/camera/chaseCameraFeel.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Near-clip geometry has no form — one flat value over hundreds of pixels",
+        "frame": "penguin-village-p0_9 (right third), penguin-village-p0_24 (lower-left)",
+        "severity": "major",
+        "fix": "The p0_9 wedge samples RGB(121,150,170) identically at four widely separated points. Even after the camera guard stops filming from inside these masses they will still pass close to the lens, and at that distance a constant-colour plane reads as a rendering fault. Drive the ice/snow material from an environment probe with a strong up-vs-down hemisphere split (warm break colour above, cold blue bounce below) plus a shallow-angle fresnel, so a face turned toward the sunset break rims warm and a face turned away goes cold. That single term buys form on every berg for zero draw calls and is the cheapest fix on this list.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceEnvironment.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village mints textures mid-race and loses 40% of its frame rate",
+        "frame": "capture-manifest.json — PV p0_56 onward",
+        "severity": "major",
+        "fix": "textures 72 -> 76 -> 77 -> 79 within one run while drawCalls stay at 707 and frameWorkMs stays flat; frameElapsedMs goes 8.2 -> 13.9 and holds at ~12. Something is creating GPU textures per event rather than reusing a cached one — the prime suspects are the per-strength CanvasTexture cache in raceShadowRig (keyed by core.toFixed(2), so a continuously-varying strength mints a new 128x128 canvas per distinct value) and per-burst particle textures. Key the shadow cache to a quantised bucket (e.g. 8 steps) and pre-warm all buckets at scene build; audit raceParticles for any THREE.Texture constructed inside an emit path.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "The hero kart is the darkest object in Comeback City's frame",
+        "frame": "comeback-city-p0_78, p0_06, p0_15, p0_67",
+        "severity": "major",
+        "fix": "Player kart rear paint samples (130,65,60) and (121,68,40) against a curb 300px away at (224,88,71) — the same nominal red family, a full stop darker. In Penguin Village the identical paint reads (224,40,37). Comeback City backlights the kart (the sun is down-track), which is physically right and dramatically wrong: the hero object is a black mass in the middle of a blazing orange frame. Add a camera-anchored fill to the kart material class only — a low-intensity light parented to the boom, or a view-dependent ambient term in kartMaterials — targeting rear-panel luminance within ~25% of the mid-frame average, plus a hotter rim so the silhouette still separates from the road.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/kartMaterials.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village props have no base contact darkening",
+        "frame": "penguin-village-p0_15, p0_45, p0_67",
+        "severity": "major",
+        "fix": "Icebergs, pyramids and the snowman props meet the snow plain on a hard silhouette edge with identical value either side — the same sticker read the rig's tier 3 was built to kill. Tier 3 is described as two draw calls for the whole world; confirm the PV static sweep is actually reaching the iceberg/berg pools (they may be pruned as an excluded subtree, the same way the shadow rig prunes VFX) and that the multiply patch is visible against near-white snow, which needs a darker core than the value tuned on Comeback City's dark asphalt.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village off-track snow is still the largest flat expanse in either track",
+        "frame": "penguin-village-p0_45, p0_67, p0_78",
+        "severity": "major",
+        "fix": "Carried unfixed from wave 3. The snow plain runs to the horizon as one value with no drift ripple, no grain and no specular break, and it is roughly 35% of the PV frame — a direct hit on the rubric's 'no large flat untextured expanses' clause. Add a procedural term to the PV ground material: low-frequency noise pushing cold blue shadow bands aligned with the new sky break's bearing, plus a high-frequency sparkle threshold in the specular so the plain glints only near the light direction. Zero bytes, one shader chunk.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceSceneTheme.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "PV fog is milky and eats the mid-ground belt's identity",
+        "frame": "penguin-village-p0_45, p0_56, p0_9",
+        "severity": "moderate",
+        "fix": "The belt cliffs sit at the same tan-grey value as the sky behind them, so the layered depth read that Comeback City nails (near dressing -> mid buildings -> hazed skyline, all in one hue family) collapses into an undifferentiated smear. Once the sky break exists, drive the fog colour from the WARM break rather than from the sky average and add a small vertical gradient, so belt silhouettes turned toward the break separate from those turned away instead of all dissolving.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Blown-out white specular blob on the PV ice patch",
+        "frame": "penguin-village-p0_33 (road, left of centre)",
+        "severity": "moderate",
+        "fix": "A pure-white smear sits on the ice band with no falloff and no shape — it reads as a lens/light leak rather than as ice reflecting the sky. Clamp the ice specular lobe and give it an anisotropic stretch along the road direction so it reads as a wet-ice sheen with a direction, and keep it out of the bloom threshold so the post chain stops amplifying it.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceSceneTheme.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Particle quads read as grey lens smudges on Penguin Village",
+        "frame": "penguin-village-p0_78 (lower left), p0_67, p0_15",
+        "severity": "moderate",
+        "fix": "The snow/spray quads render as soft grey blobs of roughly uniform value scattered over the lower frame with no motion direction and no lighting — at a glance they look like dirt on the lens rather than snow in the air. Give the arctic emitter a lit soft-particle look: tint from the sky's cold hemisphere, a bright edge on the side facing the sun break, an elongated streak aligned to the velocity vector at speed, and a depth-fade so a flake near the road surface softens instead of ending on a hard disc.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceParticles.js",
+        "inScopeForWave4": true
+      }
+    ],
+    "outOfScopeNoted": [
+      "Rival kart BODIES are still crude primitive assemblies — the blue rival in penguin-village-p0_56 and comeback-city-p0_45 is a slab body with grey cylinder wheels and a box wing. Credit where due: they are no longer UNLIT (pink rival samples run 255,166,217 -> 238,110,135; blue runs 90,120,176 -> 33,30,123), so wave 3's flat-colour-block blocker is genuinely fixed. The remaining crudeness is mesh work — WAVE 5.",
+      "No wheel rotation, no visible steering angle, no brake/tail lights and no weight transfer on any kart in any of the 18 frames — WAVE 5.",
+      "Driver figures are static blobs with no lean or head turn even through the drift in comeback-city-p0_33 and penguin-village-p0_33 — WAVE 5.",
+      "Item/impact/celebration event VFX: the shield bubble and boost plume are present and read well, but there is no impact or pickup burst staged in any capture — WAVE 5.",
+      "HUD structure: hierarchy is now genuinely good (real rendered item icons for FISH BONE and SHIELD, gold-accented POSITION tile, LAP and COINS stacked, nothing clipped by the viewport), and it is the only axis at 8. The remaining note — the empty item slot's dashed placeholder is inert and the coin counter does not appear to animate on pickup — is markup/structure, WAVE 6.",
+      "Track length and layout, the repeated-pyramid density in Penguin Village's mid-field, and the arc-length progress fix — WAVE 6."
+    ]
+  },
+  {
+    "lens": "Artefact hunter — seams, voids, clipped/piercing geometry, z-fighting, shimmer, popping, floating objects, stray planes, camera-inside-geometry, shadow acne/peter-panning, HUD clipping. frameIntegrity weighted heaviest. All 18 wave4-r3 frames read at full res plus targeted crops and pixel measurements, diffed against wave3-r3.",
+    "verdict": "FAIL",
+    "headline": "Comeback City finally has real cast shadows; Penguin Village has NONE — measured 4% delta under the kart at p0_06, and the contact zone reads BRIGHTER than open road on 2 of 3 sampled PV marks. Zero console errors, but two frames put the camera inside a rival kart and the boost glow paints a +120% brighter orange puddle where the grounding cue is supposed to be.",
+    "scores": {
+      "sky": 7,
+      "lighting": 4,
+      "materials": 5,
+      "trackLegibility": 7,
+      "environment": 6,
+      "kart": 5,
+      "vfx": 5,
+      "camera": 4,
+      "post": 6,
+      "hud": 8,
+      "frameIntegrity": 4
+    },
+    "total": 61,
+    "blockers": [
+      "BLOCKER — karts with no shadow / no contact with the ground, Penguin Village, ALL 9 MARKS. Measured penguin-village-p0_06: road directly under the player kart's contact patch lum 49.3 rgb(47,48,66) vs open road 200px left 51.1 and 200px right 51.8 — a 4% delta, i.e. no grounding cue at all. The wave-4 claim (a) 'every kart including rivals now has a shadow anchored under its contact patches' is FALSE on this track. All three karts in that frame (player, pink rival, blue rival) meet the deck on a hard silhouette edge exactly as the original pillar audit measured. crops confirm it visually: the tyre ends and the asphalt continues at identical value.",
+      "BLOCKER — the contact zone measures BRIGHTER than open road on Penguin Village. p0_45: under-kart 51.4 vs road to the right 42.4 (+21%). p0_78: under-kart 58.5 vs road right 38.1 (+54%). This is an INVERTED grounding cue and it is the same failure the round-3 comment in contactPatchProfile claims to have fixed.",
+      "BLOCKER — camera inside geometry. comeback-city-p0_45: a rival kart fills the right third of the frame at near-clip (wheel hub alone is ~330px across, driver's arm and torso cut by the frame) with no road ahead visible. penguin-village-p0_24: the Ice Racer fills the left 30% at near-clip. Root cause verified in the import graph: collectCameraBlockers (ComebackCityThreeKartRace.jsx:6267) iterates world.children and returns early on userData.cameraOccluderExempt — which is the flag stamped on every kart — so rival karts can NEVER be camera blockers. The wave-4 claim (c) 'the camera never enters geometry' is FALSE.",
+      "BLOCKER — geometry a player reads as broken: the boost/exhaust additive glow paints the road under the kart into a bright orange plate that erases the grounding cue entirely. comeback-city-p0_45 measured under-kart rgb(165,105,55) lum 114.1 against road lum 51.9 — the contact zone is 120% BRIGHTER and the wrong hue. Same at comeback-city-p0_67: 124.9 vs 53.7. Two hard-edged yellow orbs sit on that plate as free-floating sprites, and the plate itself shows a razor-straight horizontal quad edge at y≈658 and a diagonal edge at x≈1240 — a visible stray plane on the asphalt.",
+      "BLOCKER — stray decals on open asphalt with no caster above them. comeback-city-p0_24 has two soft dark ellipses in the middle of the racing line: lum 35.8 and 44.0 against reference road 49.5/50.1 (up to 29% darker), with nothing overhead to cast them. They read as oil stains, not shade.",
+      "BLOCKER — Penguin Village's cyan light column is NOT gone. penguin-village-p0_33 still carries a blown-out white-cyan vertical smear painted down the ice apron from the far barrier into the foreground (x≈380-560, y≈420-720). It has been desaturated from wave 3's cyan to near-white, which makes it read as a specular blowout rather than a light shaft, but it is the same unmotivated column. Wave-4 claim (d) is half false — the periwinkle kerb teeth do appear resolved, the column does not."
+    ],
+    "nextFixes": [
+      {
+        "title": "Penguin Village karts have zero grounding — give tier 2 an unconditional floor that survives a 12-degree away-facing sun",
+        "frame": "penguin-village-p0_06 (measured 4% delta), p0_15, p0_24, p0_45, p0_78",
+        "severity": "blocker",
+        "fix": "contactPatchShadowBoost() exists and is documented for exactly this case (sun azimuth 195 / elevation 12 throws the shadow away from the lens for most of the PV lap) but its effect is not reaching the frame. Verify the awayDot term is actually being fed the ground-projected camera forward each frame and that its output is applied to shadow.material.opacity, not just to scale. Then raise the PV floor: the profile's shadowsEnabled branch (width 8.4, length 12.6, opacity 0.58) is sized on the premise that the sun carries the cast shadow — on PV it never does, so PV needs the 12x21 blob branch's coverage with the ZERO/ONE_MINUS_SRC_ALPHA darkening. Target is >=25% darker than open road at the contact patch on every PV mark.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Camera can sit inside a rival kart — the blocker sweep excludes every kart by design",
+        "frame": "comeback-city-p0_45, penguin-village-p0_24",
+        "severity": "blocker",
+        "fix": "collectCameraBlockers walks world.children and returns on userData.cameraOccluderExempt, which every kart carries, so the chase guard has no knowledge of the pack. Karts are also the only geometry that moves relative to the boom. Add a per-frame dynamic blocker pass over the rival transforms (5 AABBs, one sphere test each) that pushes the boom up/out when a rival's bounds fall between camera and player, or fade the offending rival's material to near-zero opacity inside ~3 units of the lens. Do NOT reuse the static sweep — it runs once at build time.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Boost/exhaust additive glow overwrites the grounding cue with a +120% orange plate",
+        "frame": "comeback-city-p0_45 (114.1 vs 51.9), comeback-city-p0_67 (124.9 vs 53.7), comeback-city-p0_24",
+        "severity": "blocker",
+        "fix": "The contact patch draws at renderOrder 38, but the boost VFX at 40/41 are explicitly allowed to overlay it, and on Miami asphalt they win outright. Either re-order the boost ground glow BELOW 38 so the multiply-style patch scales it down along with the road (the same argument the comment makes for the underglow at renderOrder 28), or lift the boost flame's ground contribution off the deck entirely so it is a body glow rather than a floor projection. The current state is a kart floating on a lit puddle.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Contact / glow decal quads show hard straight boundaries on the road",
+        "frame": "comeback-city-p0_45 (horizontal edge y≈658, diagonal edge x≈1240)",
+        "severity": "major",
+        "fix": "The radial ramp in makeContactShadowTexture is not reaching zero at the quad rim, so the plane's own edge is visible against the asphalt. Push the final gradient stop to a true 0 (and add a 2px transparent border in the canvas so bilinear sampling cannot clamp a non-zero value out to the edge). Same treatment for getGroundPatchTexture's tier-3 ramp.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Cast shadows are structureless ink blobs with no kart silhouette in them",
+        "frame": "comeback-city-p0_33, p0_78, p0_9",
+        "severity": "major",
+        "fix": "At 3072/32 the texel is 0.021 units and there is plenty of density, yet the shadow shows no wheel gaps, no axle, no gap under the chassis — it reads as one solid bird-shaped cutout larger than its caster. That points at the caster set, not the resolution: check that the kart's wheels and chassis are entering the depth pass as separate meshes rather than a single merged proxy, and that normalBias 0.12 is not still fattening the silhouette enough to close the wheel gaps. A 0.06 test pass plus a screenshot of just the depth map would settle it in one round.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Detached secondary shadow blob left of the player with clear road between it and the caster",
+        "frame": "comeback-city-p0_9 (dark patch x≈500-800 y≈780-900, separated from the kart's contact patch by lit asphalt)",
+        "severity": "major",
+        "fix": "Classic peter-panning survivor. The main silhouette is attached at the wheels, but a second lobe floats free. Likely the tier-2 patch and the tier-1 cast shadow disagreeing about the kart's ground height while the chassis is banked mid-drift. Anchor the contact rig's Y to the sampled road surface under the kart rather than to the chassis origin, and zero the rig's roll so the patch stays flat — which is also the unverified half of wave-4 claim (b).",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Tier-3 grounding decals landing on open asphalt with nothing above them",
+        "frame": "comeback-city-p0_24 (two ellipses at 35.8 and 44.0 vs road 49.5)",
+        "severity": "major",
+        "fix": "collectGroundingBuckets keys on the XZ centre of a bounding box. A gantry, an overhead sign or a barrier that spans the road has its centre ON the road, so the patch lands mid-racing-line. Add a receiver test: skip a bucket whose base sits above the road surface sampled at that XZ by more than ~0.5 units, and skip any bucket whose centre falls inside the drivable ribbon unless something in it actually touches the deck.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village cyan light column survives as a white specular blowout",
+        "frame": "penguin-village-p0_33",
+        "severity": "major",
+        "fix": "Compare against wave3-r3/penguin-village-p0_33 — same column, same place, now desaturated to near-white and clipping. If it is the ice apron's specular response to the new environment probe, cap envMapIntensity on the apron material class; if it is an authored emissive strip, remove it. Either way it is the single loudest unmotivated bright object on the track and it survived a wave that owns PV's key-light and grade.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/tracks/penguinVillage.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Environment probe overdrives the ice material class into an unreadable glossy lump",
+        "frame": "comeback-city-p0_45 and p0_56 — the Ice Racer has no readable kart silhouette at all, it is a melted glass blob",
+        "severity": "major",
+        "fix": "installRaceEnvironment is now live (verified: ComebackCityThreeKartRace.jsx:5302, previously dead) and tuneEnvResponse's envMapIntensity/metalness terms finally do something. That is a genuine win on asphalt and paint, but the ice/glass class is taking the whole gain: in wave3 the same kart was a readable blue chassis, in wave4 it is a specular smear. Clamp envMapIntensity for the translucent/ice class in ENV_RESPONSE and keep a matte break-up term so the silhouette survives.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceEnvironment.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Roadside props still meet the ground on a bare silhouette edge, and the barrier rail pierces the barrel",
+        "frame": "penguin-village-p0_45 (barrel at x≈1310 y≈430 — no contact darkening, and the neon barrier rail passes straight through its face)",
+        "severity": "moderate",
+        "fix": "Grounding half: the barrel is 1.6-2 units across and ~2 tall, so it should clear minFootprint 0.8 / minHeight 0.7 — but refresh() only re-runs after the async GLB mounts land, and PV's authored props may be mounting after that hook. Confirm the refresh actually catches them (log the patch count before and after). Piercing half is prop placement and belongs to a later wave; flag it, do not move it.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Airborne karts leave hard splats and float at building-roof height",
+        "frame": "comeback-city-p0_56 (two karts ~200px above the deck; ice kart is level with the skyline)",
+        "severity": "moderate",
+        "fix": "contactPatchAirFade's new 0.12/0.30 floors are the right direction and the splat is fainter than wave 3, but at full hop height there is still a hard-edged patch under a kart that is metres up. Add a blur/softness term alongside the opacity ramp — a shadow does not just fade with height, its penumbra widens. The hop height itself is gameplay, not this wave.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "NEW REGRESSION — Penguin Village back half loses 30-40% of its framerate to the shadow pass",
+        "frame": "capture-manifest.json, penguin-village p0_56 through p0_9",
+        "severity": "moderate",
+        "fix": "PV fps fell 97->71 at p0_56, 130->82 at p0_67, 127->83 at p0_78, 119->85 at p0_9 versus wave 3, while frameWorkMs actually DROPPED (5.2->3.2ms) — so this is GPU cost, not CPU: a 3072x3072 PCFSoftShadowMap depth pass plus soft filtering. Still comfortably above 60 on this machine but it is a real new cost and the desktop tier tripled the map size in one wave. Consider 2048 with the same 32-unit box (0.031-unit texel) and measure whether the silhouette actually gets worse — the silhouette problem is more likely the caster set (see the ink-blob finding) than density.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceShadowRig.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Penguin Village snow now reads as sand",
+        "frame": "penguin-village-p0_06, p0_15, p0_78, p0_9 — cliffs and drifts are tan/beige, not snow",
+        "severity": "moderate",
+        "fix": "The wave-4 sunIntensity 5.1 with sunColor pushed warm and hemi dropped to #7e96c6 x1.34 has rotated the whole snow field toward Rec.709 warm. A storm-front sunset should warm the SUN-FACING faces and leave the shadowed and flat-up faces cold blue — right now everything is one beige. Widen the key/fill hue separation rather than the intensity ratio. Marked moderate not major because it is a grade call, not an artefact, but three of my 18 frames read as a desert.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/tracks/penguinVillage.js",
+        "inScopeForWave4": true
+      },
+      {
+        "title": "Large flat untextured slabs in the Comeback City near/mid ground",
+        "frame": "comeback-city-p0_06 (purple trapezoid x≈1230-1400), p0_15, p0_56 (dark rectangles x 0-110 and 240-350)",
+        "severity": "polish",
+        "fix": "Pre-existing, not a wave-4 regression — the same shapes are in the wave-3 set, they are just larger now that the camera dropped and came forward. They render as single-value untextured wedges with no grain and no grounding. Cheapest fix is a tier-3 patch at their base plus the asphalt-grain term the environment probe now enables. Low priority against the blockers above.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave4": true
+      }
+    ],
+    "outOfScopeNoted": [
+      "Rival kart BODIES — the white/blue lookalike in comeback-city-p0_45 and penguin-village-p0_56 is an untextured low-poly block kart with a cylinder for a driver's arm. Wave 5, already scheduled, not counted against wave 4.",
+      "Wheels not rotating and no steering angle — visible on every mark. Wave 5.",
+      "Coin scale and pop-in — penguin-village-p0_67 has two coins rendered ~230px across flanking the kart, and comeback-city-p0_56 has one at ~200px in the lower-left corner. They read as items materialising at the lens rather than approaching. Item/event VFX, wave 5.",
+      "The terrain wedge intruding at penguin-village-p0_9 right (x 1180-1600, hard bottom edge at y≈700, effectively on the racing line) is prop/terrain placement — wave 6 layout.",
+      "HUD is clean: no clipping, no truncation, corners respected in all 18 frames. No wave-6 HUD work implied by anything I found.",
+      "capture-manifest.json consoleErrors is EMPTY for both tracks, all 9 marks each. No missed captures. The 40-errors-per-capture MultiplyBlending regression documented in raceShadowRig.js is genuinely gone."
+    ]
+  }
+]
