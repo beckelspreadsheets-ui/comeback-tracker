@@ -97,11 +97,20 @@ try {
   const up = await waitForServer(`http://127.0.0.1:${PORT}/`, 60000);
   if (!up) throw new Error(`server ${SERVER_MODE} never came up on port ${PORT}`);
 
-  // GPU-less CI runners have no ANGLE backend to fall back from, so the GL
-  // flags are overridable: AAA_CAPTURE_GL=swiftshader on GitHub Actions.
+  // GPU-less CI runners need software rasterisation. Current Chromium dropped
+  // --use-gl=swiftshader; the working combination is ANGLE pointed at the
+  // SwiftShader backend, and without --enable-unsafe-swiftshader the context
+  // creation fails SILENTLY and the app falls back to its 2D renderer with no
+  // console error at all — which is exactly how the first CI run wasted 45s.
   const glArgs =
     process.env.AAA_CAPTURE_GL === 'swiftshader'
-      ? ['--use-gl=swiftshader', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']
+      ? [
+          '--use-gl=angle',
+          '--use-angle=swiftshader',
+          '--enable-unsafe-swiftshader',
+          '--disable-gpu-sandbox',
+          '--no-sandbox',
+        ]
       : ['--use-gl=angle', '--enable-gpu', '--ignore-gpu-blocklist'];
   browser = await chromium.launch({ args: glArgs });
 
@@ -115,16 +124,41 @@ try {
 
     const url = `http://127.0.0.1:${PORT}/?playableAutoplay=1&track=${track}${EXTRA_QUERY}`;
     await page.goto(url, { waitUntil: 'domcontentloaded' });
+
+    // A dead WebGL context makes the app fall back to its 2D renderer WITHOUT
+    // logging anything, so waiting on the telemetry just times out with no
+    // explanation. Probe the context first and say what is actually wrong.
+    const gl = await page.evaluate(() => {
+      try {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (!context) return { ok: false, reason: 'no webgl context' };
+        const info = context.getExtension('WEBGL_debug_renderer_info');
+        return {
+          ok: true,
+          renderer: info ? context.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown',
+        };
+      } catch (error) {
+        return { ok: false, reason: String(error).slice(0, 200) };
+      }
+    });
+    if (!gl.ok) throw new Error(`WebGL unavailable in this browser (${gl.reason}) — the app will fall back to 2D and never report the three-kart renderer`);
+    log(`${track}: WebGL via ${gl.renderer}`);
+
+    // Software rasterisation compiles every shader on the CPU and this scene
+    // has ~45 programs, so first paint takes minutes rather than seconds. A
+    // 45s boot budget is a GPU-machine assumption.
+    const bootMs = process.env.AAA_CAPTURE_GL === 'swiftshader' ? 300000 : 45000;
     await page.waitForFunction(
       () => window.__comebackCityKartTelemetry?.renderer === 'three-kart',
       null,
-      { timeout: 45000 }
+      { timeout: bootMs }
     );
     // Let GLBs stream in and the countdown clear before the first frame counts.
     await page.waitForFunction(
       () => (window.__comebackCityKartTelemetry?.countdown ?? 99) <= 0,
       null,
-      { timeout: 45000 }
+      { timeout: bootMs }
     );
     await page.waitForTimeout(600);
 
@@ -156,12 +190,21 @@ try {
           speed: t.speed ?? null,
         };
       });
+      const previousProgress = lastProgress;
       if (telemetry.progress < lastProgress - 0.5) laps += 1;
       lastProgress = telemetry.progress;
       if (telemetry.finished) break;
 
       for (const target of [...pending]) {
-        if (Math.abs(telemetry.progress - target) < 0.008) {
+        // Fire on CROSSING the mark, not on landing within an epsilon of it.
+        // Under software rendering the frame rate drops far enough that
+        // progress steps straight over a narrow window — that is how the first
+        // CI run captured 0/9. Compare against the PREVIOUS sample, not the
+        // one we just stored, or the test can never be true. previousProgress
+        // starts at -1 so the first sample cannot spuriously satisfy it, and a
+        // lap wrap (progress jumping back toward 0) fails the < target half.
+        const crossed = previousProgress >= 0 && previousProgress < target && telemetry.progress >= target;
+        if (crossed || Math.abs(telemetry.progress - target) < 0.008) {
           pending.delete(target);
           const file = `${track}-p${String(target).replace('.', '_')}.png`;
           await page.screenshot({ path: path.join(outDir, file) });
