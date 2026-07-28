@@ -1,3 +1,12 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the owner
+// ever sees. The shipped chase camera is inline in
+// ComebackCityThreeKartRace.jsx (grep "Arcade chase camera: low, close").
+//
+// DO NOT DELETE. Not orphaned: scripts/race-content-playtest.mjs
+// (npm run test:race) and src/game/ArcadeRace3D.jsx both import
+// createRaceCameraRuntime. See ./raceSceneRuntime.js for the full
+// legacy-stack reachability graph and why the leaves cannot go alone.
+
 import * as THREE from 'three';
 import { updateChaseCameraFrame } from './camera/chaseCamera.js';
 import { VEHICLES } from './physics/kartTuning.js';

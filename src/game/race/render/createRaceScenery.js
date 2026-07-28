@@ -1,3 +1,15 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the
+// owner ever sees. The racer that ships is the ComebackCityThreeKartRace.jsx
+// monolith, which imports NONE of this module tree (its only render-layer
+// imports are raceParticles / toonRimShader / gltfLoader / createRaceScene
+// (renderer+canvas fit only) / createBasicMaterial).
+//
+// The shipped scenery is built inline in the monolith and from the GLB pools
+// in src/game/race/tracks/. Kept: npm run test:race imports createRaceScenery
+// directly. NOTE for the midground/parallax work: the procedural Ferris
+// wheel inside addCitySkyline (the wheelGroup block, ~1183) is the only bit
+// of this file worth salvaging — torus + 10 spokes + 2 legs, zero bytes.
+
 import * as THREE from 'three';
 
 import { createBillboardText } from './createBillboardText.js';

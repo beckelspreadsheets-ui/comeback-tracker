@@ -1,0 +1,111 @@
+name: AAA visual capture
+
+# Runs the AAA overhaul's 18-frame capture on GitHub's runners instead of the
+# owner's laptop. He runs Godot, Codex and a browser stack concurrently, and
+# local load above ~7 corrupts these measurements (documented: load fakes proof
+# failures — greens under load are trustworthy, reds need a quiet retry). This
+# moves vite + headless Chromium off his machine entirely.
+#
+# IMPORTANT: use the FRAMES from this job, not the fps numbers. A GitHub runner
+# has no GPU, so WebGL falls back to SwiftShader — visually equivalent for
+# critique, meaningless for performance. Frame budget still gets measured
+# locally at a quiet moment.
+
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: 'Capture label (becomes the artifact name)'
+        required: true
+        default: 'ci-capture'
+      tracks:
+        description: 'Comma-separated track keys'
+        required: false
+        default: 'comeback-city,penguin-village'
+      points:
+        description: 'Comma-separated routeProgress marks'
+        required: false
+        default: '0.06,0.15,0.24,0.33,0.45,0.56,0.67,0.78,0.9'
+  push:
+    branches:
+      - 'aaa-**'
+    paths:
+      - 'src/game/**'
+      - 'src/kart/**'
+      - 'scripts/aaa-visual-capture.mjs'
+      - 'vite.config.kart.js'
+
+concurrency:
+  group: aaa-capture-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Build the kart app
+        run: npm run build:kart
+
+      - name: Bundle budget
+        continue-on-error: true
+        run: npm run test:bundle:kart
+
+      - name: Capture frames
+        env:
+          LABEL: ${{ github.event.inputs.label || 'push-capture' }}
+          TRACKS: ${{ github.event.inputs.tracks || 'comeback-city,penguin-village' }}
+          POINTS: ${{ github.event.inputs.points || '0.06,0.15,0.24,0.33,0.45,0.56,0.67,0.78,0.9' }}
+          AAA_CAPTURE_GL: swiftshader
+        run: |
+          node scripts/aaa-visual-capture.mjs \
+            --label "$LABEL" \
+            --server preview:kart \
+            --track "$TRACKS" \
+            --points "$POINTS" \
+            --port 5411
+
+      - name: Summarise
+        if: always()
+        run: |
+          LABEL="${{ github.event.inputs.label || 'push-capture' }}"
+          M="tmp/aaa-visual/$LABEL/capture-manifest.json"
+          if [ -f "$M" ]; then
+            node -e "
+              const m = require('./$M');
+              let rows = [];
+              for (const [t, d] of Object.entries(m.tracks || {})) {
+                rows.push(\`| \${t} | \${d.captured.length} | \${d.missed.length} | \${d.consoleErrors.length} |\`);
+              }
+              console.log('## AAA capture: $LABEL\n');
+              console.log('| track | captured | missed | console errors |');
+              console.log('|---|---|---|---|');
+              console.log(rows.join('\n'));
+              const errs = (m.consoleErrors || []).slice(0, 10);
+              if (errs.length) console.log('\n### Console errors\n\n' + errs.map(e => '- ' + e).join('\n'));
+            " >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No manifest produced — capture failed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aaa-frames-${{ github.event.inputs.label || 'push-capture' }}
+          path: tmp/aaa-visual/
+          retention-days: 14
+          if-no-files-found: error

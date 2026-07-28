@@ -1,3 +1,13 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the owner
+// ever sees. The shipped VFX are ./raceParticles.js (drift spray, skid decals,
+// boost speed-lines, coin/spin-out bursts) — a different module, despite the
+// similar name. Do not confuse the two when editing.
+//
+// DO NOT DELETE. Not orphaned: ./syncRaceMeshes.js imports these helpers, and
+// syncRaceMeshes is itself pulled in by scripts/race-content-playtest.mjs
+// (npm run test:race) and src/game/ArcadeRace3D.jsx. See
+// ../raceSceneRuntime.js for the full legacy-stack reachability graph.
+
 export const DRIFT_SPARK_COLORS = {
   charge: '#f7fbff',
   tier1: '#46d9ef',

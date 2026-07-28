@@ -1,3 +1,43 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the owner
+// ever sees. It assembles the legacy scene from the modules below it; the
+// shipped racer (ComebackCityThreeKartRace.jsx) assembles its scene inline.
+//
+// CANONICAL REACHABILITY NOTE for the legacy runtime tree — raceSceneRuntime,
+// raceCameraRuntime, render/syncRaceMeshes, render/raceVfx, camera/chaseCamera.
+// Audits keep re-flagging these five as orphans because the monolith does not
+// import them. That check is too narrow — DO NOT DELETE THEM. Two live
+// consumers reach every one:
+//   1. scripts/race-content-playtest.mjs (npm run test:race) imports
+//      createRaceRuntimeScene, createRaceCameraRuntime, syncRaceMeshes and
+//      chaseCamera's helpers directly, by name.
+//   2. src/game/ArcadeRace3D.jsx, mounted by race-playtest.html through
+//      RacePlaytestHarness.jsx, which four scripts navigate to by URL:
+//      check-race-route.mjs, phase5-sustained-capture.mjs (PHASE5_TARGET=legacy),
+//      page-lifecycle-audio-smoke-test.mjs and fresh-user-clip-capture.mjs.
+// raceVfx is reached transitively via syncRaceMeshes. So the leaves cannot be
+// removed on their own: retiring this stack means retiring ArcadeRace3D.jsx,
+// RacePlaytestHarness.jsx, race-playtest.html and those scripts in one change.
+//
+// Shipped-bundle cost is already zero, so deleting them saves no bytes:
+// vite.config.kart.js builds from index.kart.html alone (rollupOptions.input),
+// and race-playtest.html is not an input, so none of this tree reaches
+// dist-kart. That zero is enforced, not incidental —
+// scripts/release-artifact-safety-test.mjs FAILS the release if a
+// race-playtest/RacePlaytestHarness artifact ever appears in the build output.
+// A byte-saving argument for deleting these five is therefore always wrong.
+//
+// Scope note: "legacy" means these five files, NOT race/render/ as a whole. The
+// monolith does share other modules in that folder (raceParticles, toonRimShader,
+// kartMaterials, gltfLoader, createSkyDome, createMidGroundBelt, racePostChain,
+// buildRoadEdgeProfile, createRaceScene, createKartModel).
+//
+// registerCameraCollider below caches a bounding sphere onto
+// userData.raceCameraCollider for the legacy camera's broadphase. It is NOT a
+// gap the shipped game still has: the monolith collects its own camera blockers
+// and occluders once at assembly (grep "Camera occluders, collected ONCE"),
+// using world-space AABBs precisely because the sphere baked here proved too
+// conservative on tall ice geometry. See camera/chaseCamera.js before salvaging.
+
 import * as THREE from 'three';
 import {
   createRaceRenderer,

@@ -10,6 +10,34 @@
   overflow: hidden;
   position: relative;
   width: 100%;
+
+  /* Neon-dusk HUD tokens. One palette for both tracks — the sky swings from
+     Miami orange to arctic white between them, so the chips carry their own
+     contrast (dark plate + gold/cyan accents) instead of tinting per track. */
+  --tkr-gold: #ffd34f;
+  --tkr-cyan: #7eefff;
+  --tkr-text: #f2f7ff;
+  --tkr-muted: rgba(226, 238, 255, 0.52);
+  --tkr-accent-a: var(--tkr-cyan);
+  --tkr-accent-b: rgba(126, 239, 255, 0.25);
+  /* Plate = four stacked layers: accent tick, tick bleed, top gloss, moulded
+     face. The face is near-opaque on purpose — see the no-backdrop-filter note
+     on .three-kart-race__badge. */
+  --tkr-face: linear-gradient(168deg, rgba(48, 66, 94, 0.97) 0%, rgba(18, 26, 42, 0.96) 46%, rgba(9, 14, 24, 0.97) 100%);
+  /* Continuous falloff, no stop pair: the previous 40%/41% pair drew a hard
+     horizontal seam straight across every plate, and because the plates are
+     six different heights it landed in a different place on each one. */
+  --tkr-gloss: linear-gradient(180deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.06) 24%, rgba(255, 255, 255, 0) 58%, rgba(126, 180, 255, 0.06) 100%);
+  /* Bevel = inner top highlight + inner bottom shade + hairline rim + cast
+     shadow. This is what turns a flat rect into a physical plate. */
+  --tkr-bevel:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(126, 239, 255, 0.09),
+    0 2px 4px rgba(3, 6, 12, 0.45),
+    0 12px 26px rgba(3, 6, 12, 0.5);
+  --tkr-display: system-ui, -apple-system, 'Inter', 'Segoe UI', sans-serif;
+  --tkr-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* K3: on touch devices the container must never exceed the visible
@@ -42,99 +70,559 @@
   width: 100%;
 }
 
+/* ── HUD ──────────────────────────────────────────────────────────────
+   The JSX still emits ONE flex row of identical badges; the corner-cluster
+   layout below is done entirely in CSS by turning the strip into a
+   full-bleed layer and placing each badge absolutely. Read order is
+   position → speed → lap → coins → item, and size/colour encode that.
+   The nth-child indexes are coupled to the badge order in
+   ComebackCityThreeKartRace.jsx (position, speed, lap, boosts, items,
+   coins, mute, held item) — keep them in sync if that row is reordered.
+   Badges 4 and 5 (boost-pad / item-box tallies) are display:none here; see
+   the note on that rule. */
 .three-kart-race__hud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  left: calc(16px + env(safe-area-inset-left, 0px));
+  display: block;
+  inset: 0;
   pointer-events: none;
   position: absolute;
-  top: calc(72px + env(safe-area-inset-top, 0px));
   z-index: 4;
 }
 
 .three-kart-race__badge {
-  align-items: center;
-  background: rgba(13, 20, 30, 0.72);
-  border: 1px solid rgba(248, 251, 255, 0.18);
-  display: inline-flex;
-  gap: 7px;
-  min-height: 34px;
-  min-width: 62px;
-  padding: 0 10px;
-  font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  align-content: center;
+  align-items: flex-end;
+  /* Every plate below is sized to the pixel so the corner clusters can be
+     collision-checked; don't inherit whatever box model is upstream. */
+  box-sizing: border-box;
+  background:
+    /* Inset by its own width so the 13px corner radius can't shave the tick's
+       ends — flush left it read as a loose sliver hanging off the plate. */
+    linear-gradient(180deg, var(--tkr-accent-a), var(--tkr-accent-b)) 3px center / 3px 58% no-repeat,
+    radial-gradient(26px 62% at 0% 50%, var(--tkr-accent-b), rgba(0, 0, 0, 0) 74%),
+    var(--tkr-gloss),
+    var(--tkr-face);
+  border: 0;
+  border-radius: 13px;
+  box-shadow: var(--tkr-bevel);
+  color: var(--tkr-text);
+  display: flex;
+  flex-wrap: wrap;
+  font: 900 13px/1 var(--tkr-display);
+  font-variant-numeric: tabular-nums;
+  gap: 0 8px;
+  min-height: 0;
+  min-width: 0;
+  padding: 8px 12px 9px 14px;
+  position: absolute;
   text-transform: uppercase;
+  /* No backdrop-filter. Eight blurred regions stacked over a canvas that
+     repaints every frame forces the compositor to re-sample and re-blur the
+     frame eight times per present — it was measurable in the capture's frame
+     pacing — and at 0.96+ face alpha there was nothing left to see through
+     anyway. The plate carries its own material instead. */
+}
+
+/* Eyebrow label. The markup has no room for one, so every chip grows its
+   caption from ::before — flex-basis pushes the value onto its own line. */
+.three-kart-race__badge::before {
+  color: var(--tkr-muted);
+  flex-basis: 100%;
+  font: 700 9px/1 var(--tkr-mono);
+  letter-spacing: 0.2em;
+  margin-bottom: 6px;
+  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.8);
+}
+
+/* Numerals sit on sky that runs from near-white snow to orange sunset, so
+   the type carries its own contrast rather than relying on the plate. */
+.three-kart-race__badge > span {
+  paint-order: stroke fill;
+  text-shadow: 0 2px 0 rgba(4, 7, 14, 0.45), 0 4px 14px rgba(4, 7, 14, 0.55);
+  -webkit-text-stroke: 2px rgba(6, 10, 18, 0.85);
 }
 
 .three-kart-race__badge svg {
-  color: #ffd34f;
+  color: var(--tkr-cyan);
+  filter: drop-shadow(0 1px 2px rgba(4, 7, 14, 0.8));
+  height: 15px;
+  /* ::before is first in the box tree, so the glyph needs an explicit order
+     to lead its own caption. */
+  order: -1;
+  width: 15px;
+}
+
+/* POSITION — bottom-right hero plate. Biggest thing on the HUD by a wide
+   margin; at a 400px thumbnail it is still the first readable element. */
+.three-kart-race__badge[data-testid='race-position-badge'] {
+  --tkr-accent-a: var(--tkr-gold);
+  --tkr-accent-b: rgba(255, 211, 79, 0.2);
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  /* Hairline gold rim plus a soft outer bloom — the one plate allowed to throw
+     light onto the frame, which is what makes it read as the hero at thumbnail
+     size before any of the numerals resolve. */
+  box-shadow: var(--tkr-bevel), 0 0 0 1px rgba(255, 211, 79, 0.32), 0 0 30px rgba(255, 211, 79, 0.16);
+  height: 108px;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  width: 162px;
+}
+
+.three-kart-race__badge[data-testid='race-position-badge']::before {
+  content: 'POSITION';
+  /* Shares line 1 with the trophy (20px icon + 8px gap) so the ordinal owns
+     line 2 by itself. */
+  flex-basis: calc(100% - 28px);
+  margin-bottom: 8px;
+}
+
+.three-kart-race__badge[data-testid='race-position-badge'] svg {
+  align-self: center;
+  color: var(--tkr-gold);
+  height: 20px;
+  width: 20px;
+}
+
+.three-kart-race__badge[data-testid='race-position-badge'] > span {
+  color: var(--tkr-gold);
+  font-size: 66px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 4px 0 rgba(4, 7, 14, 0.5), 0 8px 26px rgba(4, 7, 14, 0.6), 0 0 34px rgba(255, 211, 79, 0.28);
+  -webkit-text-stroke: 4px rgba(6, 10, 18, 0.9);
+}
+
+/* SPEED — bottom-left, second in the hierarchy. */
+.three-kart-race__badge:nth-child(2) {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  height: 94px;
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  width: 166px;
+}
+
+.three-kart-race__badge:nth-child(2)::before {
+  content: 'SPEED';
+  flex-basis: calc(100% - 26px);
+  margin-bottom: 8px;
+}
+
+.three-kart-race__badge:nth-child(2) svg {
+  align-self: center;
+  height: 18px;
+  width: 18px;
+}
+
+.three-kart-race__badge:nth-child(2) > span {
+  font-size: 46px;
+  letter-spacing: -0.02em;
+  text-shadow: 0 3px 0 rgba(4, 7, 14, 0.5), 0 6px 20px rgba(4, 7, 14, 0.6);
+  -webkit-text-stroke: 3px rgba(6, 10, 18, 0.88);
+}
+
+/* The readout had no unit at all — km/h is what the telemetry publishes. */
+.three-kart-race__badge:nth-child(2)::after {
+  color: var(--tkr-muted);
+  content: 'KM/H';
+  font: 700 10px/1 var(--tkr-mono);
+  letter-spacing: 0.14em;
+  margin-bottom: 5px;
+}
+
+/* LAP + COINS — top-right column, matched width so they read as one stack. */
+.three-kart-race__badge:nth-child(3) {
+  height: 82px;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  top: calc(68px + env(safe-area-inset-top, 0px));
+  width: 112px;
+}
+
+.three-kart-race__badge:nth-child(3)::before {
+  content: 'LAP';
+  flex-basis: calc(100% - 24px);
+  margin-bottom: 7px;
+}
+
+.three-kart-race__badge:nth-child(3) svg {
+  align-self: center;
+  height: 16px;
+  width: 16px;
+}
+
+/* Lap is the third thing the rubric asks to be big — 34px keeps the ladder
+   (66 position / 46 speed / 34 lap / 28 coins) unambiguous at thumbnail size
+   while still clearing the plate's 82px box. */
+.three-kart-race__badge:nth-child(3) > span {
+  font-size: 34px;
+  -webkit-text-stroke: 2.5px rgba(6, 10, 18, 0.88);
+}
+
+.three-kart-race__badge[data-testid='race-coins'] {
+  --tkr-accent-a: var(--tkr-gold);
+  --tkr-accent-b: rgba(255, 211, 79, 0.2);
+  height: 72px;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  top: calc(158px + env(safe-area-inset-top, 0px));
+  width: 112px;
+  /* Restart trick: React only changes data-coins, and a changing
+     animation-name is the one thing CSS can hang a re-trigger on. Odd/even
+     rules below flip between two identical keyframes so every pickup pops. */
+  animation: tkr-coin-pop 0.34s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.three-kart-race__badge[data-testid='race-coins'][data-coins$='1'],
+.three-kart-race__badge[data-testid='race-coins'][data-coins$='3'],
+.three-kart-race__badge[data-testid='race-coins'][data-coins$='5'],
+.three-kart-race__badge[data-testid='race-coins'][data-coins$='7'],
+.three-kart-race__badge[data-testid='race-coins'][data-coins$='9'] {
+  animation-name: tkr-coin-pop-alt;
+}
+
+.three-kart-race__badge[data-testid='race-coins']::before {
+  content: 'COINS';
+  flex-basis: calc(100% - 26px);
+  margin-bottom: 6px;
+}
+
+.three-kart-race__badge[data-testid='race-coins'] svg {
+  align-self: center;
+  color: var(--tkr-gold);
+  height: 18px;
+  width: 18px;
+}
+
+.three-kart-race__badge[data-testid='race-coins'] > span {
+  color: var(--tkr-gold);
+  font-size: 28px;
+  -webkit-text-stroke: 2.5px rgba(6, 10, 18, 0.88);
+}
+
+/* Scale alone was a shrug at 1600px wide. The brightness spike is what actually
+   catches the eye in peripheral vision, which is the only vision a coin pickup
+   gets — the player is looking at the road. */
+@keyframes tkr-coin-pop {
+  0% { filter: brightness(1.5) drop-shadow(0 0 12px rgba(255, 211, 79, 0.7)); transform: scale(1.16); }
+  100% { filter: brightness(1) drop-shadow(0 0 0 rgba(255, 211, 79, 0)); transform: scale(1); }
+}
+
+@keyframes tkr-coin-pop-alt {
+  0% { filter: brightness(1.5) drop-shadow(0 0 12px rgba(255, 211, 79, 0.7)); transform: scale(1.16); }
+  100% { filter: brightness(1) drop-shadow(0 0 0 rgba(255, 211, 79, 0)); transform: scale(1); }
+}
+
+/* Boost-pad and item-box tallies (nth-child 4 and 5) are retired. Two rounds of
+   restyling could not fix what they are: run telemetry the player can neither
+   act on nor spend, sitting in the corner a racing HUD reserves for the thing
+   you are holding. Dressing them up only made a small matched pair of chips
+   more prominent. They stay in the JSX — the snapshot still publishes the
+   counts and the results panel is where a tally belongs — but they are off the
+   race HUD. nth-child indexing is unaffected: display:none does not renumber
+   siblings, so the chips below keep their positions. */
+.three-kart-race__badge:nth-child(4),
+.three-kart-race__badge:nth-child(5) {
+  display: none;
 }
 
 /* The audio toggle is a real <button> wearing the badge look. The HUD strip
    is pointer-events:none so it never steals from the canvas — the button
-   opts back in. */
+   opts back in. Parked in the top-right corner as a system control, out of
+   the racing hierarchy entirely — but demoted by glyph contrast, not by
+   element opacity: at 0.5 the whole plate went translucent and the chip
+   dissolved into a smear of whatever sky sat behind it, so it was the one
+   control on screen with no bevel or rim. */
 .three-kart-race__audio-toggle {
-  color: inherit;
-  cursor: pointer;
-  justify-content: center;
-  min-width: 40px;
-  pointer-events: auto;
-}
-
-.three-kart-race__audio-toggle[data-audio-muted='1'] svg {
-  color: rgba(248, 251, 255, 0.4);
-}
-
-.three-kart-race__countdown {
+  --tkr-accent-a: transparent;
+  --tkr-accent-b: transparent;
+  align-content: center;
   align-items: center;
-  background: rgba(13, 20, 30, 0.66);
-  border: 1px solid rgba(255, 211, 79, 0.34);
-  color: #ffd34f;
-  display: flex;
-  font: 900 74px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  height: 124px;
+  border-radius: 11px;
+  color: rgba(226, 238, 255, 0.55);
+  cursor: pointer;
+  height: 38px;
   justify-content: center;
+  min-width: 0;
+  padding: 0;
+  pointer-events: auto;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  transition: color 0.16s ease;
+  width: 38px;
+  /* Same animation-name flip as the coin chip: toggling mute swaps the
+     attribute, which restarts the tap pulse. */
+  animation: tkr-chip-tap 0.26s ease-out;
+}
+
+.three-kart-race__audio-toggle svg {
+  color: currentColor;
+  height: 17px;
+  width: 17px;
+}
+
+/* Muted reads dimmer still — on `color`, so hover/focus can recover it. */
+.three-kart-race__audio-toggle[data-audio-muted='1'] {
+  animation-name: tkr-chip-tap-alt;
+  color: rgba(226, 238, 255, 0.38);
+}
+
+/* After the muted rule on purpose: same specificity, so source order is what
+   lets hover win back the glyph while muted. */
+.three-kart-race__audio-toggle:hover,
+.three-kart-race__audio-toggle:focus-visible {
+  color: var(--tkr-cyan);
+}
+
+@keyframes tkr-chip-tap {
+  0% { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+@keyframes tkr-chip-tap-alt {
+  0% { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+/* ITEM SOCKET — top-left, framed as a recessed slot rather than a chip so
+   the held item stops reading as one more number in a row. */
+.three-kart-race__badge[data-testid='race-held-item'] {
+  --tkr-accent-a: transparent;
+  --tkr-accent-b: transparent;
+  align-content: center;
+  align-items: center;
+  border-radius: 18px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 26px rgba(4, 8, 16, 0.75),
+    0 14px 30px rgba(3, 6, 12, 0.5);
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 7px;
+  height: 104px;
+  justify-content: center;
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  padding: 9px 8px 10px;
+  top: calc(20px + env(safe-area-inset-top, 0px));
+  width: 104px;
+}
+
+.three-kart-race__badge[data-testid='race-held-item']::before {
+  content: 'ITEM';
+  flex-basis: auto;
+  margin-bottom: 0;
+}
+
+/* HeldItemIcon ships width/height attributes at 15px — CSS wins over the
+   presentational hint, so the socket renders the same tile at full size.
+   The radius is inline-styled, hence the override. */
+.three-kart-race__badge[data-testid='race-held-item'] img {
+  border-radius: 13px !important;
+  box-shadow: 0 6px 14px rgba(3, 6, 12, 0.55);
+  height: 54px;
+  width: 54px;
+}
+
+.three-kart-race__badge[data-testid='race-held-item'] > span:last-child {
+  color: rgba(226, 238, 255, 0.74);
+  font: 700 10px/1 var(--tkr-mono);
+  letter-spacing: 0.08em;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.8);
+  white-space: nowrap;
+  -webkit-text-stroke: 0;
+}
+
+/* Empty slot: the JSX renders a greyed snowball as a placeholder, which
+   reads as "you are holding a snowball". Hide it — the first child is only
+   a <span> in the empty state (armed and shield states start with <img>). */
+.three-kart-race__badge[data-held-item='none'] > span:first-child {
+  display: none;
+}
+
+.three-kart-race__badge[data-testid='race-held-item']::after {
+  border-radius: 18px;
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+/* :has() splits "empty" from "shield active" — both publish
+   data-held-item="none", but only the shield state renders an <img>. */
+.three-kart-race__badge[data-held-item='none']:not(:has(> img))::after {
+  border: 2px dashed rgba(226, 238, 255, 0.24);
+  inset: 26px 14px 24px;
+}
+
+.three-kart-race__badge[data-held-item='none']:not(:has(> img)) > span:last-child {
+  opacity: 0;
+}
+
+/* Shield up reads cyan; a held throwable reads gold and breathes. */
+.three-kart-race__badge[data-held-item='none']:has(> img)::after {
+  border: 2px solid rgba(126, 239, 255, 0.7);
+  box-shadow: 0 0 18px rgba(126, 239, 255, 0.3), inset 0 0 16px rgba(126, 239, 255, 0.14);
+}
+
+/* Shield is the one state whose caption the JSX writes as a state ("ON")
+   rather than as a name, so the socket read "ITEM / ON" while every other
+   state read "ITEM / FISH BONE". Collapse the type and re-label from the
+   span's own ::after, in the cyan the ring above already uses. */
+.three-kart-race__badge[data-held-item='none']:has(> img) > span:last-child {
+  font-size: 0;
+}
+
+.three-kart-race__badge[data-held-item='none']:has(> img) > span:last-child::after {
+  color: var(--tkr-cyan);
+  content: 'SHIELD';
+  font: 700 10px/1 var(--tkr-mono);
+  letter-spacing: 0.08em;
+}
+
+.three-kart-race__badge[data-testid='race-held-item']:not([data-held-item='none']) {
+  animation: tkr-slot-arm 0.5s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.three-kart-race__badge[data-testid='race-held-item']:not([data-held-item='none'])::after {
+  animation: tkr-slot-breathe 1.7s ease-in-out infinite;
+  border: 2px solid rgba(255, 211, 79, 0.85);
+}
+
+.three-kart-race__badge[data-testid='race-held-item']:not([data-held-item='none']) > span:last-child {
+  color: var(--tkr-gold);
+}
+
+@keyframes tkr-slot-arm {
+  0% { transform: scale(1.24); }
+  100% { transform: scale(1); }
+}
+
+@keyframes tkr-slot-breathe {
+  0%, 100% { box-shadow: 0 0 14px rgba(255, 211, 79, 0.24), inset 0 0 14px rgba(255, 211, 79, 0.1); }
+  50% { box-shadow: 0 0 30px rgba(255, 211, 79, 0.5), inset 0 0 22px rgba(255, 211, 79, 0.2); }
+}
+
+/* ── Countdown ────────────────────────────────────────────────────────
+   No box: a stroked gold numeral over the grid, MK8-style. The 1s beat is
+   offset 0.2s so it lands on each digit change (countdown starts at 2.2s,
+   so the roll-overs are at 0.2 / 1.2 / 2.2). */
+.three-kart-race__countdown {
+  animation: tkr-count-beat 1s cubic-bezier(0.2, 0.9, 0.3, 1) 0.2s infinite;
+  background: none;
+  border: 0;
+  color: var(--tkr-gold);
+  display: block;
+  font: 900 clamp(110px, 16vw, 236px)/1 var(--tkr-display);
+  font-variant-numeric: tabular-nums;
+  height: auto;
+  left: 50%;
+  paint-order: stroke fill;
+  pointer-events: none;
+  position: absolute;
+  text-shadow: 0 12px 40px rgba(4, 7, 14, 0.75), 0 0 64px rgba(255, 211, 79, 0.5);
+  /* Centred stroke: half of it lands under the fill, so this reads as ~5px. */
+  -webkit-text-stroke: 10px rgba(6, 10, 18, 0.94);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  z-index: 5;
+}
+
+.three-kart-race__countdown::before {
+  animation: tkr-count-ring 1s ease-out 0.2s infinite;
+  border: 5px solid rgba(255, 211, 79, 0.7);
+  border-radius: 50%;
+  content: '';
+  height: 1.35em;
   left: 50%;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 124px;
-  z-index: 5;
+  width: 1.35em;
+  z-index: -1;
 }
 
-/* K7 pickup pop (owner pick B): the new item's icon springs oversized at
-   mid-screen for ~0.6s, then hands off to the chip/button display. */
+@keyframes tkr-count-beat {
+  0% { opacity: 0.25; transform: translate(-50%, -50%) scale(1.85); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(0.92); }
+  30% { transform: translate(-50%, -50%) scale(1.03); }
+  100% { opacity: 0.95; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes tkr-count-ring {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  20% { opacity: 0.85; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); }
+}
+
+/* K7 pickup pop (owner pick B): the new item's icon springs oversized, then
+   hands off to the chip/button display. It used to open at ~130px dead
+   centre at top:34% — which on both tracks is the horizon line, so the one
+   moment the player most needs the road ahead was the moment a gold-bordered
+   card sat on it, and it was the largest element in the frame. Now it plays
+   over the item socket and settles into it: same celebration, and the flight
+   itself says where the item went. */
 .three-kart-race__item-pop {
-  animation: three-kart-item-pop 0.66s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
-  border: 2px solid rgba(255, 211, 79, 0.65);
-  border-radius: 20px;
-  box-shadow: 0 0 36px rgba(0, 229, 255, 0.45);
-  left: 50%;
+  animation: three-kart-item-pop 0.54s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  background: linear-gradient(160deg, rgba(30, 42, 62, 0.9), rgba(10, 15, 25, 0.86));
+  border: 3px solid rgba(255, 211, 79, 0.8);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 34px rgba(0, 229, 255, 0.42),
+    0 14px 32px rgba(3, 6, 12, 0.55);
+  /* Socket centre: 20px inset + half of its 104px box. */
+  left: calc(72px + env(safe-area-inset-left, 0px));
   overflow: hidden;
+  padding: 6px;
   pointer-events: none;
   position: absolute;
-  top: 34%;
+  top: calc(72px + env(safe-area-inset-top, 0px));
   transform: translate(-50%, -50%);
   z-index: 6;
 }
 
-@keyframes three-kart-item-pop {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
-  24% { opacity: 1; transform: translate(-50%, -50%) scale(1.26); }
-  58% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+/* JSX asks for size=112 (and an inline radius scaled off it); at 94px the box
+   lands on the socket instead of swallowing the frame. */
+.three-kart-race__item-pop img {
+  border-radius: 14px !important;
+  height: 76px;
+  width: 76px;
 }
 
+@keyframes three-kart-item-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.62); }
+  22% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+  56% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+}
+
+/* Corner-anchored twin of the above for the compact strip, where the pop is
+   pinned by its top-left rather than centred. */
+@keyframes three-kart-item-pop-corner {
+  0% { opacity: 0; transform: scale(0.62); }
+  22% { opacity: 1; transform: scale(1.24); }
+  56% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+
+/* ── Results ──────────────────────────────────────────────────────────
+   The 100vmax spread is a scrim: it dims the whole frame from the panel's
+   own box-shadow, which no extra element in the JSX could do. */
 .three-kart-race__results {
   align-items: center;
-  background: rgba(13, 20, 30, 0.86);
-  border: 1px solid rgba(255, 211, 79, 0.36);
+  animation: tkr-results-in 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  background: linear-gradient(165deg, rgba(34, 47, 70, 0.96), rgba(10, 15, 25, 0.96));
+  border: 0;
+  border-radius: 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(255, 211, 79, 0.38),
+    0 26px 60px rgba(3, 6, 12, 0.6),
+    0 0 0 100vmax rgba(5, 9, 16, 0.66);
   display: flex;
-  gap: 18px;
+  gap: 22px;
   justify-content: space-between;
   left: 50%;
-  min-width: min(440px, calc(100vw - 32px));
-  padding: 16px;
+  min-width: min(520px, calc(100vw - 40px));
+  padding: 22px 24px;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -142,18 +630,28 @@
 }
 
 .three-kart-race__results span {
-  color: #b6c6d6;
+  color: var(--tkr-gold);
   display: block;
-  font: 800 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.16em;
+  font: 700 11px/1 var(--tkr-mono);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
 .three-kart-race__results strong {
   color: #f8fbff;
   display: block;
-  font: 900 34px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  margin-top: 6px;
+  font: 900 46px/1 var(--tkr-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  margin-top: 10px;
+  paint-order: stroke fill;
+  text-shadow: 0 4px 18px rgba(4, 7, 14, 0.6);
+  -webkit-text-stroke: 3px rgba(6, 10, 18, 0.75);
+}
+
+@keyframes tkr-results-in {
+  0% { opacity: 0; transform: translate(-50%, -46%) scale(0.9); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 .three-kart-race__results button,
@@ -169,6 +667,18 @@
   min-height: 44px;
   padding: 0 12px;
   text-transform: uppercase;
+}
+
+.three-kart-race__results button {
+  background: linear-gradient(180deg, rgba(255, 211, 79, 0.22), rgba(255, 211, 79, 0.08));
+  border-color: rgba(255, 211, 79, 0.6);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 18px rgba(3, 6, 12, 0.45);
+  color: var(--tkr-gold);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  min-height: 52px;
+  padding: 0 22px;
 }
 
 /* K3 mobile controls V2: analog joystick bottom-left, brake/drift/item
@@ -299,9 +809,14 @@
 }
 
 .three-kart-race__touch button.three-kart-race__item-button--armed {
+  animation: tkr-smash-breathe 1.7s ease-in-out infinite;
   background: rgba(255, 211, 79, 0.16);
   border-color: #ffd34f;
-  box-shadow: 0 0 16px rgba(255, 211, 79, 0.45);
+}
+
+@keyframes tkr-smash-breathe {
+  0%, 100% { box-shadow: 0 0 12px rgba(255, 211, 79, 0.35); }
+  50% { box-shadow: 0 0 28px rgba(255, 211, 79, 0.6); }
 }
 
 .three-kart-race__fallback {
@@ -317,38 +832,251 @@
   z-index: 10;
 }
 
-@media (max-width: 760px) {
+/* ── Compact HUD ──────────────────────────────────────────────────────
+   Landscape phones are 844x390 with the joystick zone bottom-left and the
+   smash cluster bottom-right, so there is no free corner: the clusters
+   collapse back into one top-left strip. Hierarchy survives — the position
+   and speed numerals stay ~2x everything else. Widths are explicit so the
+   ::before eyebrows resolve their 100% flex-basis and wrap. */
+@media (max-width: 900px), (max-height: 620px), (pointer: coarse) {
   .three-kart-race {
     min-height: 100svh;
   }
 
   .three-kart-race__hud {
-    left: 12px;
-    right: 12px;
-    top: 64px;
+    bottom: auto;
+    display: flex;
+    /* Bounded by `right` and allowed to wrap so a genuinely narrow viewport
+       (portrait, before the tilt soft-lock rotates the board) gets a second
+       row instead of chips squashed or pushed off-screen. */
+    flex-wrap: wrap;
+    gap: 6px;
+    inset: auto;
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    top: calc(10px + env(safe-area-inset-top, 0px));
   }
 
-  /* Six badges must fit one row on phones: compact, icon-led, no wrap. */
-  .three-kart-race__hud {
-    flex-wrap: nowrap;
-    gap: 5px;
+  /* Descendant form on purpose: it ties the per-chip corner anchors above
+     (same specificity, earlier in the file) so the strip really is a strip. */
+  .three-kart-race__hud > .three-kart-race__badge {
+    align-content: center;
+    border-radius: 10px;
+    flex: 0 0 auto;
+    font-size: 13px;
+    gap: 0 5px;
+    height: 46px;
+    inset: auto;
+    padding: 0 8px 0 10px;
+    position: relative;
   }
 
-  .three-kart-race__badge {
-    font-size: 10px;
-    gap: 4px;
-    min-height: 28px;
-    min-width: 0;
-    padding: 0 6px;
+  .three-kart-race__badge::before {
+    flex-basis: 100%;
+    font-size: 8px;
+    letter-spacing: 0.16em;
+    margin-bottom: 4px;
   }
 
-  .three-kart-race__badge[data-testid='race-held-item'] span {
+  /* Full-width captions here, so the glyph rides the value line instead of
+     claiming a third row inside a 46px plate. */
+  .three-kart-race__hud > .three-kart-race__badge svg {
+    align-self: center;
+    order: 0;
+  }
+
+  .three-kart-race__badge[data-testid='race-position-badge'] {
+    width: 80px;
+  }
+
+  .three-kart-race__badge[data-testid='race-position-badge']::before {
+    content: 'POS';
+    flex-basis: 100%;
+    margin-bottom: 4px;
+  }
+
+  /* The two hero chips drop their glyph here: at 80px wide the caption
+     already names them, and the icon would push the value onto a third
+     line inside a 46px plate. */
+  .three-kart-race__badge[data-testid='race-position-badge'] svg,
+  .three-kart-race__badge:nth-child(2) svg {
     display: none;
   }
 
+  .three-kart-race__badge[data-testid='race-position-badge'] > span {
+    font-size: 23px;
+    -webkit-text-stroke: 2px rgba(6, 10, 18, 0.88);
+  }
+
+  .three-kart-race__badge:nth-child(2) {
+    width: 92px;
+  }
+
+  .three-kart-race__badge:nth-child(2)::before {
+    flex-basis: 100%;
+    margin-bottom: 4px;
+  }
+
+  .three-kart-race__badge:nth-child(2) > span {
+    font-size: 21px;
+    -webkit-text-stroke: 2px rgba(6, 10, 18, 0.88);
+  }
+
+  .three-kart-race__badge:nth-child(2)::after {
+    font-size: 8px;
+    margin-bottom: 2px;
+  }
+
+  .three-kart-race__badge:nth-child(3) {
+    height: 46px;
+    top: auto;
+    width: 66px;
+  }
+
+  .three-kart-race__badge:nth-child(3)::before {
+    flex-basis: 100%;
+  }
+
+  .three-kart-race__badge:nth-child(3) svg {
+    height: 13px;
+    width: 13px;
+  }
+
+  .three-kart-race__badge:nth-child(3) > span {
+    font-size: 15px;
+    -webkit-text-stroke: 1.5px rgba(6, 10, 18, 0.8);
+  }
+
+  /* The retired tallies took 110px of the strip with them: at 844x390 the row
+     is now 388px of chips plus 30px of gaps inside ~820px of usable width, so
+     it cannot wrap even with both safe-area insets at their iPhone maximum. */
+  .three-kart-race__badge[data-testid='race-coins'] {
+    height: 46px;
+    top: auto;
+    width: 60px;
+  }
+
+  .three-kart-race__badge[data-testid='race-coins']::before {
+    flex-basis: 100%;
+  }
+
+  .three-kart-race__badge[data-testid='race-coins'] svg {
+    height: 14px;
+    width: 14px;
+  }
+
+  .three-kart-race__badge[data-testid='race-coins'] > span {
+    font-size: 15px;
+    -webkit-text-stroke: 1.5px rgba(6, 10, 18, 0.8);
+  }
+
+  .three-kart-race__audio-toggle {
+    height: 46px;
+    top: auto;
+    width: 44px;
+  }
+
+  .three-kart-race__badge[data-testid='race-held-item'] {
+    border-radius: 12px;
+    gap: 0;
+    height: 46px;
+    padding: 0;
+    width: 46px;
+  }
+
+  .three-kart-race__badge[data-testid='race-held-item']::before {
+    content: none;
+  }
+
+  .three-kart-race__badge[data-testid='race-held-item'] img {
+    border-radius: 8px !important;
+    height: 28px;
+    width: 28px;
+  }
+
+  /* The smash button already carries the item name on touch layouts. */
+  .three-kart-race__badge[data-testid='race-held-item'] > span:last-child {
+    display: none;
+  }
+
+  .three-kart-race__badge[data-testid='race-held-item']::after {
+    border-radius: 12px;
+    inset: 0;
+  }
+
+  .three-kart-race__badge[data-held-item='none']:not(:has(> img))::after {
+    border-radius: 7px;
+    inset: 9px;
+  }
+
+  /* Compact collapses the HUD into one flex strip, so the socket has no fixed
+     coordinate to centre on — the pop parks under the strip's left end and
+     grows out of the corner instead. (Under its RIGHT end would sit on the
+     socket, but that is also where the gyro opt-in pill lives.) Still
+     HUD-side, still nowhere near the horizon or the thumb zones. */
+  .three-kart-race__item-pop {
+    animation-name: three-kart-item-pop-corner;
+    border-radius: 14px;
+    border-width: 2px;
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    transform: none;
+    transform-origin: left top;
+  }
+
+  .three-kart-race__item-pop img {
+    border-radius: 9px !important;
+    height: 50px;
+    width: 50px;
+  }
+
   .three-kart-race__countdown {
-    font-size: 58px;
-    height: 104px;
-    width: 104px;
+    font-size: clamp(84px, 20vw, 150px);
+    -webkit-text-stroke: 7px rgba(6, 10, 18, 0.94);
+  }
+
+  .three-kart-race__results {
+    border-radius: 16px;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+
+  .three-kart-race__results strong {
+    font-size: 34px;
+  }
+
+  .three-kart-race__results button {
+    min-height: 46px;
+    padding: 0 16px;
+  }
+}
+
+/* Portrait is the one case where the compact strip wraps to a second row, so
+   the pop has to clear ~108px instead of ~56px. (The tilt soft-lock rotates
+   the board but not the viewport, so a landscape-locked phone still reports
+   orientation: portrait — it just gets the pop a little lower down, which is
+   harmless, and there is no media feature that can see the rotated box.) */
+@media (orientation: portrait) and (max-width: 900px),
+  (orientation: portrait) and (max-height: 620px),
+  (orientation: portrait) and (pointer: coarse) {
+  .three-kart-race__item-pop {
+    top: calc(118px + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* The component already receives a reducedMotion prop for the 3D layer; the
+   HUD's pulses are decoration, so they stop here too. */
+@media (prefers-reduced-motion: reduce) {
+  .three-kart-race *,
+  .three-kart-race *::before,
+  .three-kart-race *::after {
+    animation-duration: 0.01ms !important;
+    /* Dropping the fill matters as much as the duration: every keyframe set
+       here ends at a hidden or shrunk state, so without this the countdown,
+       the pickup pop and the results panel would flash out of existence
+       instead of settling into their base styles. */
+    animation-fill-mode: none !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

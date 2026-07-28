@@ -1,0 +1,228 @@
+{
+  "branch": "aaa-kart-overhaul",
+  "baselineCommit": "d01e8830",
+  "baselineMeasured": {
+    "comeback-city": {
+      "fps": 144,
+      "drawCalls": 464,
+      "triangles": 702228,
+      "frameWorkMs": 1.22
+    },
+    "penguin-village": {
+      "fps": 144,
+      "drawCalls": 785,
+      "triangles": 502000,
+      "frameWorkMs": 1.55
+    }
+  },
+  "pillarScoresAtBaseline": {
+    "hud": 26,
+    "trackSurface": 27,
+    "lightingShadows": 27,
+    "sky": 31,
+    "camera": 31,
+    "vfx": 34,
+    "materials": 34,
+    "post": 34,
+    "environment": 42,
+    "physics": 42,
+    "kartRender": 46,
+    "perf": 48
+  },
+  "waves": [
+    {
+      "wave": 1,
+      "packages": [
+        "sky-and-key-light",
+        "speedlines-and-trails",
+        "hud-css-pass",
+        "dead-code-and-telemetry"
+      ],
+      "status": "committed-failing",
+      "runId": "wf_29044fad-270",
+      "commit": "8111ed42",
+      "rounds": [
+        {
+          "round": 1,
+          "totals": [
+            70,
+            58,
+            49
+          ],
+          "verdicts": [
+            "FAIL",
+            "FAIL",
+            "FAIL"
+          ],
+          "blockers": 21,
+          "note": "blind A/B picked new build 18/18; sky void + twin suns + grey speed-line sticks all gone"
+        },
+        {
+          "round": 2,
+          "totals": [
+            65,
+            55,
+            54
+          ],
+          "verdicts": [
+            "FAIL",
+            "FAIL",
+            "FAIL"
+          ],
+          "blockers": 22,
+          "note": "net flat. camera -2.0 and frameIntegrity -2.0 REGRESSED: chase camera now clips inside ice geometry (pv-p0_67), contact shadow became a hard rectangle (pv-p0_24)"
+        },
+        {
+          "round": 3,
+          "totals": [
+            57,
+            64,
+            42
+          ],
+          "verdicts": [
+            "FAIL",
+            "FAIL",
+            "FAIL"
+          ],
+          "blockers": 22,
+          "note": "CC transformed (sky/HUD/clouds). PV boost trails render as solid sticks piercing the road. Camera inside iceberg pv-p0_67/p0_9. Both tracks drifted pale, lost neon-dusk / arctic-sunset identity."
+        }
+      ],
+      "blindAB": "new build wins 17/18 pairs, sides randomised, no key",
+      "bundle": "10874/12000 KiB gz (+14 vs baseline), 13.14/16 MiB",
+      "deferred": [
+        "VFX redesign (3 rounds no movement) -> wave 2 P4",
+        "camera collision guard -> pulled forward to wave 2 P1",
+        "contact shadow rectangle -> wave 4",
+        "track mood/identity restoration -> wave 2 P1 (OWNER TASTE CALL PENDING)"
+      ]
+    },
+    {
+      "wave": 2,
+      "packages": [
+        "post-chain-rebuild+camera-guard+mood",
+        "kart-shading-injections",
+        "midground-belt",
+        "vfx-redesign"
+      ],
+      "status": "committed-failing",
+      "runId": "wf_b60a0719-45d",
+      "commit": "ff707fa1",
+      "rounds": [
+        {
+          "round": 1,
+          "totals": [
+            47,
+            52,
+            45
+          ]
+        },
+        {
+          "round": 2,
+          "totals": [
+            55,
+            58,
+            55
+          ]
+        },
+        {
+          "round": 3,
+          "totals": [
+            63,
+            67,
+            62
+          ],
+          "verdicts": [
+            "FAIL",
+            "FAIL",
+            "FAIL"
+          ]
+        }
+      ],
+      "axisDeltaVsWave1": {
+        "vfx": 2.3,
+        "frameIntegrity": 1.7,
+        "environment": 1.3,
+        "post": 1.3,
+        "sky": 1,
+        "lighting": 0.7,
+        "materials": 0.3,
+        "kart": 0.3,
+        "camera": 0.3,
+        "hud": 0.3,
+        "trackLegibility": 0
+      },
+      "perf": "CC 431 draws (was 464) 1.92ms; PV 753 draws (was 785) 2.56ms; 0 console errors; bundle 10930/12000 gz",
+      "decisions": [
+        "camera guard KEPT not reverted: 3.7 now beats wave1 no-guard 3.3, so the pre-committed revert rule had a stale premise",
+        "artefact-hunter claim that 5 modules were orphaned verified FALSE for 4 of them"
+      ]
+    },
+    {
+      "wave": 3,
+      "packages": [
+        "road-and-edge-rebuild",
+        "surface-and-ambient-vfx"
+      ],
+      "status": "pending",
+      "runId": null,
+      "commit": null
+    },
+    {
+      "wave": 4,
+      "packages": [
+        "shadows-and-grounding",
+        "env-probe"
+      ],
+      "status": "pending",
+      "runId": null,
+      "commit": null
+    },
+    {
+      "wave": 5,
+      "packages": [
+        "kart-rig-and-lights",
+        "event-vfx"
+      ],
+      "status": "pending",
+      "runId": null,
+      "commit": null
+    },
+    {
+      "wave": 6,
+      "packages": [
+        "camera-and-hud-feel",
+        "quality-tiers"
+      ],
+      "status": "pending",
+      "runId": null,
+      "commit": null
+    }
+  ],
+  "rules": [
+    "Never deploy. Never switch branches. Never force-push.",
+    "One monolith (ComebackCityThreeKartRace.jsx) owner per wave — file ownership is disjoint within a wave.",
+    "Each wave: implement -> build+capture -> 3 harsh critics (rubric / blind A/B / artefact hunt) -> fix, up to 3 rounds.",
+    "test:bundle:kart measures the EXISTING dist-kart — always build:kart first or the number is stale.",
+    "Machine load fakes proof-test reds above load1 ~7: greens count, reds need a retry at a quiet moment."
+  ],
+  "finalGate": [
+    "npm run build:kart",
+    "npm run test:bundle:kart",
+    "npm run test:kart-playable",
+    "npm run test:race-proof",
+    "npm run test:audio:kart",
+    "final 18-frame capture + blind A/B vs tmp/aaa-visual/baseline"
+  ],
+  "lessons": [
+    "SCOPE LEAK: critics report every fault they see, including ones owned by a LATER wave (camera=wave6, shadows=wave4, materials=wave2). Wave-1 fix agents fed those findings tried to fix them inside the monolith they happened to own, and regressed camera + frameIntegrity by 2.0 each. FIX for waves 2-6: critics must tag each finding in-scope/out-of-scope for the current wave, and fix agents must defer out-of-scope findings to the owning wave instead of attempting them.",
+    "NO ROLLBACK POINT: rounds are not committed, so a round that regresses cannot be rolled back to the previous round. FIX for waves 2-6: commit a checkpoint after every capture round so the best round can be recovered."
+  ],
+  "wave3Scope": [
+    "road-and-edge-rebuild (monolith): crowned arc-length road, one extruded edge profile, real checker on unshared vertices, continuous edge lines, start apron, visible ice band on PV",
+    "ALSO monolith, small and unblocking wave-2 work already written: wire setKartPaintTint after each attach call (+ attachAuthoredKartBody signature); fix makeKartPaletteTexture hue gate so the 3 Kenney rivals stop shipping identical grey; applyHeroRim+MeshToonMaterial on solid item props in fitItemPropScene; rim:true on the procedural fallback kart",
+    "PENGUIN VILLAGE ARCTIC IDENTITY via the GRADE and the BELT (raceGrade.js + createMidGroundBelt.js) — the grade is what solved Comeback City. PV is currently pale overcast, not an arctic sunset storm front, and the belt puts TAN DESERT CONES on an ice track",
+    "surface-and-ambient-vfx (raceParticles.js): surface-typed tyre haze, snow spray, off-road plume, landing puffs; kill remaining floating-debris reads",
+    "cleanup: chaseCamera.js, raceVfx.js and their dead importers raceCameraRuntime.js / syncRaceMeshes.js are genuinely orphaned"
+  ]
+}

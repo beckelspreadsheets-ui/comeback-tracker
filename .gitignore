@@ -34,3 +34,11 @@ tmp/k7-item-lab/raw-*.glb
 tmp/k7-item-lab/props-smoke/
 tmp/k8-kart-seats/raw-*.glb
 tmp/k8-kart-seats/w[0-9]*.glb
+
+# AAA overhaul iteration captures (baseline is kept as the "before" evidence)
+tmp/aaa-visual/*
+!tmp/aaa-visual/baseline/
+tmp/aaa-blind/
+tmp/aaa-blind-keys/
+tmp/aaa-review-dist/
+tmp/aaa-approval/

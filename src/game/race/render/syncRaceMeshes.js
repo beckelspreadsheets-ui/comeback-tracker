@@ -1,3 +1,13 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the owner
+// ever sees. The shipped per-frame mesh sync is inline in the
+// ComebackCityThreeKartRace.jsx frame loop.
+//
+// DO NOT DELETE. Not orphaned: scripts/race-content-playtest.mjs
+// (npm run test:race) and src/game/ArcadeRace3D.jsx both import
+// syncRaceMeshes, and this file is the only thing keeping ./raceVfx.js
+// reachable. See ../raceSceneRuntime.js for the full legacy-stack
+// reachability graph and why the leaves cannot go alone.
+
 import {
   DRIFT_TUNING,
   FLIGHT_ALTITUDE_LIMITS,

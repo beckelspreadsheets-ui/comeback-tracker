@@ -1,3 +1,29 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the owner
+// ever sees. The racer that ships is the ComebackCityThreeKartRace.jsx
+// monolith, whose chase camera is inline (grep "Arcade chase camera: low,
+// close") and shares no code with this.
+//
+// DO NOT DELETE. This file is not orphaned: scripts/race-content-playtest.mjs
+// (npm run test:race) imports updateChaseCameraFrame,
+// cameraCollisionCandidatesFor and applyCameraCollisionAvoidance from here by
+// name and asserts against them. Deleting it breaks that script. See
+// ../raceSceneRuntime.js for the full legacy-stack reachability graph.
+//
+// SUPERSEDED — DO NOT PORT THE COLLISION HELPERS INTO THE MONOLITH.
+// An earlier note here advertised cameraCollisionCandidateFor /
+// cameraCollisionCandidatesFor / applyCameraCollisionAvoidance as ready-made
+// salvage for the camera driving inside an iceberg (penguin-village-p0_67).
+// That salvage has since happened independently, and the monolith made the
+// OPPOSITE broadphase call on purpose: grep "Camera occluders, collected ONCE"
+// in ComebackCityThreeKartRace.jsx, which records why a bounding SPHERE was
+// rejected — a sphere over a 130-unit iceberg cone has a ~92-unit radius, so it
+// would shove the camera around every berg the track merely passes near. It
+// collects world-space AABBs instead. cameraCollisionCandidateFor below IS that
+// rejected sphere test (collider.radius + padding), so importing it would undo
+// a reasoned, already-measured decision.
+//
+// Wave-6 camera work should extend the monolith's guard, not import from here.
+
 import * as THREE from 'three';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));

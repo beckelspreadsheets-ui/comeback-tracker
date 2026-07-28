@@ -1,0 +1,403 @@
+[
+  {
+    "lens": "Rubric critic — 11-axis scoring of tmp/aaa-visual/wave2-r3 (18 frames + capture-manifest.json) against docs/AAA_KART_RUBRIC.md, with per-frame pixel statistics (mean/saturation/sky chroma/clipped-white) and source reads of raceGrade.js, racePostChain.js, kartMaterials.js, camera/chaseCamera.js.",
+    "verdict": "FAIL",
+    "headline": "Track identity is genuinely SOLVED — CC measures orange-dusk (sky 178-224 R / 58-79 B, sat 0.24-0.34) and PV measures cold blue (sky ~132,159,177, sat 0.15-0.20), and the grade behind it is a real authored filmic curve, not a dump. But the frame still fails on four hard blockers: the camera ends up INSIDE a rival kart in penguin-village-p0_67, three rival bodies still render as untextured grey placeholder boxes, hard rectangular shadow quads sit detached on the PV road, and drift/pickup VFX read as floating debris. 63/110.",
+    "scores": {
+      "sky": 7,
+      "lighting": 5,
+      "materials": 5,
+      "trackLegibility": 6,
+      "environment": 7,
+      "kart": 6,
+      "vfx": 5,
+      "camera": 3,
+      "post": 7,
+      "hud": 7,
+      "frameIntegrity": 5
+    },
+    "total": 63,
+    "blockers": [
+      "CAMERA INSIDE GEOMETRY — penguin-village-p0_67.png is unreadable: a rival kart is drawn at ~3x scale upside-down across the top third of frame, the horizon is rolled ~40 degrees, and brown terrain wraps the right edge. camera/chaseCamera.js only ray-tests `collisionObjects`, which does not include the dynamic rival karts, so nothing lifts the camera off them. This alone is an automatic fail.",
+      "UNTEXTURED PLACEHOLDER KART BODIES — the kenney-fallback rivals render as flat light-grey boxes with grey box wheels and untinted white/purple/orange slabs: penguin-village-p0_9 (right of frame, full size, next to a fully-shaded red hero kart for direct comparison), penguin-village-p0_78, penguin-village-p0_56, comeback-city-p0_45. No gloss, no rim, no matte-tyre separation. Reads as a missing asset. kartMaterials.js line 58 already names this exact failure mode ('reads as a missing asset / a procedural greybox fallback') — it was not closed.",
+      "STRAY DARK PLANES ON THE ROAD — hard-edged, axis-aligned rectangular dark quads with sharp corners sit on the road surface detached from any visible caster: penguin-village-p0_24 (under/behind the ice kart, a clean grey rectangle), penguin-village-p0_15 (right of the kart at ~x1050,y570), penguin-village-p0_45 (large straight-edged dark slab across the right lane). A player reads these as broken geometry, not as shadow.",
+      "FLOATING DEBRIS VFX — drift sparks render as large detached cyan lozenges scattered a full kart-width off the wheels (comeback-city-p0_33, comeback-city-p0_9), and coin pickups spawn big flat opaque blue chevron quads that sit on the road with no depth or fade (comeback-city-p0_56, comeback-city-p0_9, penguin-village-p0_9). The rubric names this exact failure: 'nothing reads as floating debris or stray geometry'.",
+      "NEAR-PLANE OCCLUDERS — an iceberg slab fills ~28% of penguin-village-p0_9 and a grey kart mass fills the bottom third of penguin-village-p0_78, both intersecting the near plane with no fade and no camera lift."
+    ],
+    "nextFixes": [
+      {
+        "title": "Register rival karts (and their bounding radii) as camera collision candidates",
+        "frame": "penguin-village-p0_67.png — rival kart drawn at 3x scale over the camera, world rolled ~40deg, frame unreadable. Also penguin-village-p0_78 (grey kart mass fills bottom third at near plane).",
+        "severity": "blocker",
+        "fix": "In camera/chaseCamera.js the guard already works — cameraCollisionCandidatesFor() filters `collisionObjects` by a sphere test and resolveChaseCameraCollision() applies `collisionLift` (8.4 desktop / 6.6 mobile). The bug is the input set: only static scenery is registered, so dynamic rivals are never tested. Push the rival kart group objects into the collisionObjects array each frame with a conservative radius (~1.6 world units, kart half-diagonal), and add a cheap fallback that is independent of the raycast: if any registered collider's centre is within (camera.near + radius) of the camera position, lift the camera by collisionLift regardless of ray hit. The ray misses when the occluder is BESIDE rather than in front of the ray, which is exactly the p0_67 case.",
+        "targetFile": "src/game/race/camera/chaseCamera.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Give the kenney-fallback kart bodies the same three material classes the hero bodies get",
+        "frame": "penguin-village-p0_9.png — flat grey/purple/white box kart on the right sits beside a glossy red hero kart; the contrast is what makes it read as an unfinished asset. Repeats in penguin-village-p0_78, penguin-village-p0_56, comeback-city-p0_45.",
+        "severity": "blocker",
+        "fix": "kartMaterials.js classifies texels into paint/chrome/rubber/plastic by chroma+luma thresholds tuned against authored GLB albedo. The Kenney palette atlas is near-flat mid-grey/white for these bodies, so every texel falls into `plastic` (the give-up class) and the kart gets no paint specular, no chrome rim and no rubber darkening. Two options, cheapest first: (a) branch the classifier on a `userData.fallbackBody` flag and, for those bodies, classify by MESH NAME instead of texel chroma (wheels -> rubber, body -> paint, trim -> chrome) since the Kenney meshes are consistently named; (b) failing that, force the whole body into the paint class with KART_PAINT_TINTS[characterEntry.key] at amount 0.7 so it at least gets a specular highlight and a racer hue. Note KART_PAINT_TINTS is documented at kartMaterials.js:313-336 as NOT WIRED — the three `kart: 'kenney'` racers are excluded there on the assumption makeKartPaletteTexture already recolours them; the frames show that recolour is not producing a readable material.",
+        "targetFile": "src/game/race/render/kartMaterials.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Land the arctic SUNSET in Penguin Village — the sky currently measures achromatic",
+        "frame": "penguin-village-p0_33.png and p0_45.png are the two frames that are supposed to BE the sunset; their sky bands measure (178,182,185) and (170,178,184) — neutral grey to within 7 counts. Whole-frame saturation across all 9 PV frames is 0.149-0.204 vs Comeback City's 0.238-0.338.",
+        "severity": "major",
+        "fix": "raceGrade.js TRACK_GRADES['penguin-village'] already carries the right INTENT (hiTint #ffdcae, hiAmount 0.28, hiKnee dropped to 0.78 specifically to gild the snow) but hiPush is mean-removed and therefore luminance-neutral, so on an already-near-white snow field it moves hue by almost nothing. Two changes: (1) raise sat from 1.42 and pull `gain` further apart than [0.985, 1.0, 1.045] so the blue lift actually separates sky from ice; (2) more importantly, the warm end must come from the LIGHT not the grade — the sun-side of every iceberg is currently unlit ambient, so there is no warm luminance for hiTint to tint. Drive a warm key colour into the PV sun in createSkyDome.js/the track light rig and let the grade shape it. Right now the grade is correcting a frame that has no sunset in it.",
+        "targetFile": "src/game/race/render/raceGrade.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Rebuild drift sparks and pickup chevrons as camera-facing, depth-fading, wheel-anchored particles",
+        "frame": "comeback-city-p0_33.png — cyan lozenges scattered across the full road width, some a kart-length from any wheel. comeback-city-p0_9.png and penguin-village-p0_9.png — flat opaque blue chevron quads sitting on the road under collected coins.",
+        "severity": "major",
+        "fix": "In raceParticles.js/raceVfx.js: (1) anchor spark emission to the rear wheel contact points and cap lateral spread to ~0.4 units so sparks read as coming off rubber, not raining on the track; (2) give each spark a short velocity-aligned stretch plus an alpha ramp over its last 30% of life so it dies instead of vanishing; (3) the pickup chevrons need additive blending with a soft radial falloff and a depth-fade against the road so they stop reading as opaque cut-out geometry — currently they have hard polygon edges and a constant alpha.",
+        "targetFile": "src/game/race/render/raceParticles.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Cut the aerial-haze/bloom veil that erases Comeback City's distance",
+        "frame": "comeback-city-p0_45.png and p0_56.png — the road ahead dissolves into a milky wash and the mid-ground Art Deco buildings lose all value separation from the sky; these are also the two highest-mean CC frames (101.9 and 89.1) with the highest CC clipped-white (0.118% / 0.007%).",
+        "severity": "major",
+        "fix": "racePostChain.js runs bloomWide before tone mapping, then the aerial haze in pass 2. On a saturated-orange sky the wide lobe's mipmap blur pulls sky luminance across the entire skyline silhouette. Lower the wide lobe's radius/levels for comeback-city specifically (it is already tier-switched at line ~251 for mobile — add a per-track factor), and cap the aerial haze density so the far skyline retains at least ~15 counts of value separation from the sky band. The near-far read is the whole point of a boulevard track.",
+        "targetFile": "src/game/race/render/racePostChain.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Break up the repeated silhouettes in both mid-ground belts",
+        "frame": "comeback-city-p0_45.png — the far skyline is a row of near-identical flat purple rectangles with no crown variation. penguin-village-p0_78.png and p0_9.png — the same three cone shapes repeat across the entire berg field at obviously regular intervals.",
+        "severity": "moderate",
+        "fix": "createMidGroundBelt.js: add per-instance non-uniform scale jitter (y especially, 0.7-1.6x) and a small rotation offset, and interleave at least two silhouette archetypes per belt ring (CC: setback/stepped crown vs flat slab; PV: tabular berg vs spire vs arch). The rubric's environment axis specifically calls out 'density that never repeats visibly'.",
+        "targetFile": "src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Kill the flat untextured off-track expanse in Comeback City",
+        "frame": "comeback-city-p0_33.png, p0_67.png, p0_78.png, p0_9.png — the ground beyond the neon curb is a single flat olive/khaki colour occupying up to a third of the frame with zero grain, zero variation and no relationship to a neon-dusk city.",
+        "severity": "moderate",
+        "fix": "This is the largest single-colour region in the CC frames and it is why 'materials' scores 5. It needs either a procedural noise/grain term (zero bytes — same technique already used on the asphalt, which DOES have visible speckle) or mid-ground belt dressing pushed out onto it. Colour is also wrong for the art direction: olive-brown against a neon-dusk boulevard should be deep navy-purple. If the ground plane mesh lives in the monolith rather than the belt, the belt owner should still push dressing over it.",
+        "targetFile": "src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Make PV snow read as a storm front, not as uniform dots",
+        "frame": "penguin-village-p0_06.png through p0_9.png — snowflakes are identical white circles at identical size and opacity, falling straight down with no wind and no size-by-depth, on a track whose brief is a STORM front.",
+        "severity": "moderate",
+        "fix": "raceParticles.js: vary particle size by distance, add a lateral wind term shared with the cloud deck direction, and stretch the near flakes into short streaks at speed. Add a second, much larger and fainter near-camera layer for depth. Zero-byte, and it is the cheapest way to give PV the weather its art direction promises.",
+        "targetFile": "src/game/race/render/raceParticles.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Gate the road speed-smear on actual speed",
+        "frame": "comeback-city-p0_33.png (285 km/h) and comeback-city-p0_06.png (81 km/h) carry visibly similar radial road streaking; penguin-village-p0_15.png at 221 km/h shows the same full-screen smear.",
+        "severity": "moderate",
+        "fix": "speedBlurEffect.js — ramp the effect's strength from 0 across roughly the 60-70% of top-speed band rather than running near-constant. At the moment the smear is a texture that is always on, so it costs the frame its sharpness without ever selling acceleration, and it makes the asphalt grain unreadable.",
+        "targetFile": "src/game/race/render/speedBlurEffect.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Make the vignette perceptible",
+        "frame": "All 18 frames — corner luminance is essentially equal to centre luminance; the frame edges have no containment at all despite a vignette being present in pass 2 of the chain.",
+        "severity": "polish",
+        "fix": "racePostChain.js pass 2 lists a vignette between ACES and the LUT but it is not measurable in the output. Raise darkness/offset until corners sit ~8-12% below centre. Cheap, and it is one of the four things the rubric's post axis explicitly asks for.",
+        "targetFile": "src/game/race/render/racePostChain.js",
+        "inScopeForWave2": true
+      }
+    ],
+    "outOfScopeNoted": [
+      "WAVE 4 (shadows/grounding) — the hard-edged rectangular dark quads on the PV road (penguin-village-p0_15, p0_24, p0_45) are almost certainly the directional light's shadow-camera frustum boundary showing as a visible box, or a blob decal with a square footprint. I have listed it as a scoring blocker because it is what a player sees, but the fix belongs to the shadows owner, not wave 2. Comeback City by contrast has genuinely good soft cast shadows under the kart at p0_33 / p0_67 / p0_78 — whatever CC is doing, PV is not.",
+      "WAVE 4 (lighting) — no iceberg in Penguin Village takes a directional key. Every berg face reads the same value, so you cannot tell where the sun is from the geometry, only from the sky. This is the root cause of my 'the sunset never arrives' finding: the grade has nothing warm to work on. The lighting owner should raking-key the berg field; wave 2 can only shape what the rig produces.",
+      "WAVE 3 (road/curbs) — the neon edge treatment multiplies into 3-4 parallel stripes per side (cyan + white + red + pink) in comeback-city-p0_06 / p0_78 / p0_9, which is decal spaghetti by the rubric's wording. Lane markings are also inconsistent between tracks and between frames of the same track (penguin-village-p0_15 has no centre line, p0_9 has a dashed white one). Penguin Village's road is also brown-grey asphalt (penguin-village-p0_33, p0_67), which is the wrong surface for an ice track.",
+      "WAVE 5 (kart rig) — no wheel rotation and no visible steering angle in any of the 18 frames; wheels are frozen in every capture including the 289 km/h ones.",
+      "WAVE 6 (camera feel) — the player kart is clipped by the viewport edge in comeback-city-p0_15 and comeback-city-p0_9 (roughly half the kart is outside the frame) and kart screen size swings wildly between frames. Distinct from the collision guard I have scoped in as a blocker.",
+      "WAVE 6 (HUD) — the empty ITEM slot renders as a dashed grey ghost box (comeback-city-p0_06 through p0_67) which reads as an unfinished placeholder rather than an empty slot; the filled state at penguin-village-p0_9 with the gold frame is genuinely good and shows what the empty state should be aiming at. Also SPEED and POSITION use the identical navy pill treatment, so hierarchy between them rests entirely on font size.",
+      "GEOMETRY (owner unclear) — rival karts interpenetrate each other in comeback-city-p0_06 and comeback-city-p0_33 (bodies overlapping, not side by side). Flagging so it is tracked; it is a physics/separation issue rather than a render one."
+    ]
+  },
+  {
+    "lens": "Blind A/B judge — wave2-r3, 18 pairs, sides randomised, keys not read",
+    "verdict": "FAIL",
+    "headline": "Clean 18-of-18 sweep for one build — but the losing side carries wave-1-era defects (black dome arc, pill-row HUD, stick speed-lines), so this set is current-vs-original-baseline, not a wave-2 isolation; the winner still scores 67/110 and fails on camera collision and flat untextured ground.",
+    "scores": {
+      "sky": 7,
+      "lighting": 6,
+      "materials": 5,
+      "trackLegibility": 6,
+      "environment": 6,
+      "kart": 6,
+      "vfx": 7,
+      "camera": 5,
+      "post": 6,
+      "hud": 7,
+      "frameIntegrity": 6
+    },
+    "total": 67,
+    "blockers": [
+      "pair-16: the camera has penetrated a rival kart. The horizon rolls ~90 degrees, a blurred grey/orange kart body fills the top third at near-plane distance and a brown wall fills the right third. The frame is unreadable as a racing frame. This is the single worst frame in the winning set and it is squarely in wave-2 scope (camera collision guard).",
+      "pair-17 and pair-18: a rival kart's rear wing sits dead centre of frame at near-plane distance, occluding the player kart and the road ahead. The camera never pushes off blocking geometry, so 3 of 18 frames are occlusion failures.",
+      "Axis-3 automatic blocker, large flat untextured expanses. Comeback City off-track is a single flat olive-brown plate with zero grain or variation (pair-04 right third, pair-07 both shoulders, pair-09 whole right side). Penguin Village snow is a single flat pale plate (pair-10, pair-12) and in pair-13/pair-14 the bottom-left off-track reads as grey-brown MUD, not snow, which is a grade fault tinting white terrain warm.",
+      "pair-12: the contact shadow under the ice kart renders as a hard-edged grey RECTANGLE with visible square corners, not a shadow. Reads as a stray plane lying on the road. (Shadow SHAPE is wave 4, tracked below, but it is a visible frame-integrity artifact today.)"
+    ],
+    "nextFixes": [
+      {
+        "title": "Camera collision guard is absent — camera enters rival kart geometry",
+        "frame": "pair-16 (world rolled, kart body filling top third at near-plane); pair-17 and pair-18 (rival rear wing occluding frame centre)",
+        "severity": "blocker",
+        "fix": "Add a minimal sphere-cast guard in the chase camera: each frame, cast from the kart anchor toward the desired camera position against rival kart bounding spheres and track-side collider proxies only (not the full scene). On a hit, pull the camera in along the cast ray to hit distance minus a 0.4 unit skin, and blend back out over ~0.25s so it does not pop. Do NOT touch fov, lag, spring or framing — only the collision push-in. Also raise the near plane fade: alpha-fade any rival kart whose distance to camera is under ~2.5 units instead of letting it render solid across the lens.",
+        "targetFile": "src/game/race/camera/chaseCamera.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Penguin Village has no warm low sun — it reads as a grey overcast, not an arctic sunset storm front",
+        "frame": "pair-10, pair-11, pair-12 winners: sky is a flat blue-grey band, ice is desaturated pale grey, the only warmth is a thin gold rim on distant cliff tops. Compare pair-13 and pair-14 where a warm peach band DOES appear behind the ice cones — that is the target and it is inconsistent frame to frame.",
+        "severity": "major",
+        "fix": "In the PV track theme, drive the key light to a low warm sun (roughly 3400K, elevation ~12) raking across the ice from screen-left, and set the fill/ambient to a cool navy (not neutral grey) so the shadow side of every ice cone goes blue while the lit face goes warm cream. The two-value warm/cool split is what makes ice read as ice. Then bias the grade's shadow lift toward navy and the highlight roll-off toward peach so the identity holds even in frames where the sun is off-screen.",
+        "targetFile": "src/game/race/render/raceSceneTheme.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Comeback City grade flattens toward a single warm orange, losing the neon-dusk contrast",
+        "frame": "pair-04 and pair-09 winners: sky, buildings, off-track AND the asphalt are all within a narrow orange-brown band. The road in pair-09 is warm grey-brown, not the deep navy asphalt the direction calls for, and the cyan/red curb neon has almost no value separation from the surface it sits on.",
+        "severity": "major",
+        "fix": "Split the grade per luminance band rather than tinting globally: push shadows hard toward deep navy-purple (the direction's stated shadow colour), keep midtones neutral-to-cool so asphalt stays dark, and let ONLY the top luminance band carry the sunset orange. That restores the contrast that makes the neon curbs glow instead of sitting flush. Verify against pair-01 and pair-03 winners, where the dark road plus saturated sky already works — pair-04 and pair-09 are the regressions.",
+        "targetFile": "src/game/race/render/raceGrade.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Aerial-perspective haze is too strong — the far skyline dissolves into undifferentiated grey",
+        "frame": "pair-06 and pair-09 winners: everything past the mid-ground is a flat grey-mauve with no silhouette, no window lights, no landmark. pair-07 and pair-08 winners get this right (far towers still read as purple with lit windows), so the fog curve is inconsistent per track section.",
+        "severity": "major",
+        "fix": "Tighten the fog: raise the near distance so the mid-ground belt stays saturated, and cap the maximum fog blend at roughly 0.75 so distant geometry retains a readable silhouette instead of washing fully to the sky colour. Tint the fog to the sky's HORIZON colour, not its average — that is what stops it reading as grey.",
+        "targetFile": "src/game/race/render/raceSceneTheme.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Mid-ground belt has holes — large empty plains on one side of frame",
+        "frame": "pair-04 winner: the entire right half beyond the curb is bare brown ground with three purple boxes. pair-09 winner: same, a flat plain with scattered low blocks. pair-07 winner: both shoulders bare. By contrast pair-03 and pair-08 winners are well dressed (ferris wheel, lifeguard hut, food truck, palms).",
+        "severity": "major",
+        "fix": "Fill the belt with a distance-banded scatter so no frame can see a bare plate: near band gets low dressing (barriers, planters, parked props), mid band gets building masses of varied height and footprint, far band gets skyline. Drive placement off track-side normals with a minimum-density rule per angular sector of the camera frustum, so a bare sector cannot occur. Reuse the existing prop pools — this is placement, not new assets.",
+        "targetFile": "src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Stray hard-edged white spheres float over the road",
+        "frame": "pair-13 winner (one large white ball centre-bottom over the asphalt, another mid-right); pair-14 winner (white ball beside the kart's rear wheel). They read as solid geometry, not snow.",
+        "severity": "moderate",
+        "fix": "These snow/impact billboards are rendering with an opaque hard edge at close camera distance. Give them a soft radial alpha falloff, clamp their screen-space size so a near-camera particle cannot balloon to a 40px disc, and fade alpha to zero inside ~1.5 units of the camera. Rubric axis 7 explicitly fails 'floating debris'.",
+        "targetFile": "src/game/race/render/raceParticles.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Bloom clips to a flat yellow band on Penguin Village ice rims",
+        "frame": "pair-13 and pair-17 winners: the warm rim along the top of the far ice cliffs blows out into a solid yellow-white stripe with a hard inner edge, losing all gradient. pair-14 winner shows the same on the left cliff.",
+        "severity": "moderate",
+        "fix": "The bloom threshold is catching rim-lit non-emitters. Raise the threshold so only genuine emitters (boost pad, coins, item crate, neon curbs, lamp globes, sun disc) cross it, and reduce the rim shader's output multiplier on ice materials so it lands under the threshold. Rubric: 'bloom only on genuine emitters'.",
+        "targetFile": "src/game/race/render/racePostChain.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Kart material classes only read at close range — mid-distance karts go matte and flat",
+        "frame": "pair-12 and pair-08 winners show the target (gloss on the ice kart nose, specular on the shield, matte tyres, red wheel rims). But pair-01, pair-10 and pair-11 winners have the same karts reading as flat dark shapes with no highlight at all at ~10 units.",
+        "severity": "moderate",
+        "fix": "The specular response is falling off with distance. Add a distance-independent rim/spec term to the kart body material class so the glossy panel highlight survives at mid-range, and keep tyre roughness pinned high so the matte/gloss contrast between rubber and bodywork still reads at 200px silhouette size.",
+        "targetFile": "src/game/race/render/kartMaterials.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Drift shards read as stray geometry rather than spray",
+        "frame": "pair-04 winner: four long cyan darts with hard edges trail behind the kart, evenly spaced and identically sized, sitting flat on the road plane. They look like placed meshes, not thrown particles.",
+        "severity": "moderate",
+        "fix": "Randomise per-particle scale, rotation and lifetime so no two shards match; add a fast alpha decay over life so they dissolve rather than vanish; and give them a slight upward velocity component so they lift off the road plane instead of sliding along it. Rubric axis 7: 'dust and surface particles respond to what you're driving on'.",
+        "targetFile": "src/game/race/render/raceVfx.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Speed-blur streaks vanish entirely below a speed threshold, leaving no motion cue",
+        "frame": "pair-03 winner at 285 km/h has excellent radial streaks; pair-01 winner at 81 km/h and pair-10 winner at 67 km/h have none at all — the frames read as static screenshots. The transition is a hard on/off.",
+        "severity": "polish",
+        "fix": "Ramp the streak opacity and length continuously from ~40 km/h upward rather than gating on a threshold, so there is always some motion signal. Keep the peak strength where it is — the high-speed look is already right.",
+        "targetFile": "src/game/race/render/speedBlurEffect.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Coin ground markers read as flat blue arrows lying on the asphalt",
+        "frame": "pair-06 winner: two cyan chevrons sit under the coins as untextured flat decals with hard edges and no perspective softening — they look pasted on rather than projected.",
+        "severity": "polish",
+        "fix": "Soften the chevron edges and give them a subtle pulse tied to the coin's spin so they read as a projected guide light rather than paint. Fade their alpha with distance so they do not stack into decal spaghetti when several coins are in frame.",
+        "targetFile": "src/game/race/render/createRacePickups.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Comeback City sky has almost no zenith-to-horizon value range in some frames",
+        "frame": "pair-04 and pair-09 winners: the whole upper frame is one orange value with the cloud deck barely visible. pair-05 and pair-08 winners have a proper gradient with cloud form — the difference is per-frame, not per-track.",
+        "severity": "polish",
+        "fix": "This is the mood/grade layer washing the dome, not the dome itself. Add a per-track sky contrast term in the theme so the zenith stays a deeper warm red-violet while the horizon holds the bright orange, and make sure the grade's highlight compression is not crushing the two together. Do not modify createSkyDome.js geometry — this is a colour/mood change only.",
+        "targetFile": "src/game/race/render/raceSceneTheme.js",
+        "inScopeForWave2": true
+      }
+    ],
+    "outOfScopeNoted": [
+      "WAVE 4 — contact shadow shape: pair-12 winner renders the shadow under the ice kart as a hard-edged grey RECTANGLE with square corners. pair-17 winner has the same square quad under the shielded kart. Visible artifact today, but shadow shape is wave 4's file.",
+      "WAVE 4 — no ambient occlusion or contact darkening on props: the purple blocks in pair-04 and pair-09 winners, the barrel in pair-14 winner, and the mid-ground buildings in pair-07 winner all meet the ground with a hard seam and no darkening, so they read as sitting ON a plane rather than IN a world.",
+      "WAVE 5 — wheels never rotate and show no steering angle in any of the 18 winning frames; no tail lights on any kart even in the darker Penguin Village frames; drivers hold one static pose through drift, boost and air.",
+      "WAVE 6 — kart screen size is wildly inconsistent: pair-02 winner has the kart consuming the bottom third and clipped by the viewport edge, pair-07 winner has it at a sensible mid-frame size, pair-10 winner has it small and centred. Same for road-ahead readability.",
+      "WAVE 6 — HUD: the ITEM slot is an empty dashed-outline placeholder in 12 of the 18 winning frames, which reads as unfinished UI rather than an empty inventory state. When it IS filled (pair-08, pair-09, pair-17, pair-18 winners) it looks good.",
+      "WAVE 3 — road surface has no grain at any distance; lane markings read as flat painted tape with hard edges (pair-07, pair-14, pair-15 winners); Comeback City curbs are painted stripes on the same plane as the road in most frames while pair-09 winner shows a properly extruded 3D curb — inconsistent within the same track.",
+      "WAVE 3 — Penguin Village start-apron and shoulder transitions: in pair-13 and pair-14 winners the snow shoulder meets the asphalt with a hard unblended line and no snow build-up at the edge."
+    ]
+  },
+  {
+    "lens": "Artefact hunter — frame integrity only. All 18 wave2-r3 frames read at full res, diffed against the matching wave1-r3 frame, with pixel decoding (PIL) to confirm hard edges, stray-quad fills and particle tints, plus an import-graph trace of the wave-2 modules to explain why two blocker classes are byte-identical to wave 1.",
+    "verdict": "FAIL",
+    "headline": "Wave 2's two wired modules (mid-ground belt + post chain) are a genuine, large win — boost trails no longer read as sticks in a single frame, the starting-grid slab and the pure-black road void are gone, and both tracks finally read as different places. But five wave-2 modules (chaseCamera.js, kartMaterials.js, raceGrade.js, raceVfx.js, speedBlurEffect.js) were written into the DEAD ArcadeRace3D harness tree and are never imported by the shipped monolith, so the camera-inside-geometry and placeholder-kart blockers are unchanged: penguin-village-p0_67 is still unshippable, 4 of 18 frames put the near plane inside a rival, and the hard-cut rectangle under the ice kart at p0_24 survived. 62/110.",
+    "scores": {
+      "sky": 8,
+      "lighting": 6,
+      "materials": 4,
+      "trackLegibility": 6,
+      "environment": 7,
+      "kart": 4,
+      "vfx": 6,
+      "camera": 3,
+      "post": 7,
+      "hud": 8,
+      "frameIntegrity": 3
+    },
+    "total": 62,
+    "blockers": [
+      "WIRING — ROOT CAUSE OF EVERY BLOCKER BELOW. The shipped path is src/kart/KartApp.jsx -> src/game/ComebackCityThreeKartRace.jsx. Grepping that file: createMidGroundBelt (2 refs) and racePostChain (4 refs) are wired; kartMaterials.js, raceGrade.js, raceVfx.js and speedBlurEffect.js have ZERO importers anywhere in src/, and chaseCamera.js is imported only by raceCameraRuntime.js / raceSceneRuntime.js, which are reachable only from ArcadeRace3D.jsx — the harness that RacePlaytestHarness.jsx itself comments is 'not the racer that ships'. The two wired modules produced the wave's only visible wins. The five dead ones map 1:1 to the blockers that did not move.",
+      "penguin-village-p0_67 — STILL CATASTROPHIC, and the occluder got worse. A giant rival kart/character hangs inverted from the top edge clipped by the near plane (two black wheels, dark chassis, orange body, x 620-1220 / y 0-460), and a smooth UNTEXTURED mass now fills the entire right third (x 1330-1600, full height) and the whole lower frame. Decoded it is warm mud-brown — rgb(109,82,83) hue 359 sat 0.25 on the right mass, rgb(106,73,71) hue 4 bottom-right — on the ARCTIC track. It occludes the sky and the road ahead. In wave1 this same occluder was blue-grey iceberg; the wave-2 grade re-tinted it to mud without removing it.",
+      "penguin-village-p0_67 stray unlit planes SURVIVED, only recoloured. A flat, completely unshaded royal-PURPLE quad floats in mid-air at x 1135-1215 / y 145-275 (wave1 called out the identical quad in royal blue), a second flat purple quad sits at x 645-725 / y 20-115, and the untextured mid-grey BAR with square-cut ends still spans x 680-990 / y 285-390. Rubric: 'stray planes' + 'geometry a player would read as broken'.",
+      "The PROCEDURAL FALLBACK KART still ships on both tracks — comeback-city-p0_45 (x 880-1150 / y 460-660) and penguin-village-p0_56 (x 860-1010 / y 455-600). Cropped and confirmed: flat untextured pale-grey boxes, a slab wing on two bare posts, plain grey cylinders for wheels with no tyre material, no body colour, no gloss, no trim split, near-black sphere for the driver head, and no shadow / no ground contact. This is precisely what the kartMaterials.js package was written to kill; that file is dead code.",
+      "Camera near plane inside a rival kart in 4 of 18 frames — penguin-village-p0_78 (a flat untextured white/grey rear-wing box fills x 620-1080 / y 640-900 with hard edges and zero fade or dither, plus a solid black head sphere at x 760-905 / y 545-660), penguin-village-p0_67, comeback-city-p0_15 (rival kart + rider clipped by the bottom-left edge, x 230-720 / y 440-900), comeback-city-p0_9 (Ice Racer clipped by the left and bottom edges, x 0-560 / y 430-900). Identical to wave 1. chaseCamera.js exports cameraCollisionCandidatesFor and a collisionLift, and its own header says it was written because 'the wave-1 captures put the shipped camera INSIDE an iceberg' — the monolith never imports it. Note also that the real intruders here are DYNAMIC rivals, not static scenery, so a scenery-only raycast guard would not have fixed p0_67 or p0_78 even if wired.",
+      "penguin-village-p0_24 — the hard-cut RECTANGLE under the Ice Racer is still printed on the road, and the darker wave-2 asphalt made it more obvious. Column decode: at x=450, 500, 600 and 700 the region terminates at a constant y=709-711 dropping straight to road black (10,27,52); the left border is a razor-straight VERTICAL edge at x=424 running y 678-709. It is LIGHTER than the surrounding road, so it is an additive/lit quad, not a shadow. A world-space decal would be a perspective trapezoid — this is a screen-axis-aligned box, exactly as wave 1 measured.",
+      "penguin-village-p0_9 — the giant pale wedge still occludes the entire right third (hard diagonal silhouette from ~(1030,900) to ~(1400,0)), still has an internal seam splitting two flat untextured tones, still has NO ground contact (the road runs under it and is cut off), and a rival kart is drawn on top of it with no contact. Unchanged from wave 1."
+    ],
+    "nextFixes": [
+      {
+        "title": "Wire the five orphaned wave-2 modules into the shipped monolith (or delete them)",
+        "frame": "all 18 — root cause",
+        "severity": "blocker",
+        "fix": "chaseCamera.js, kartMaterials.js, raceGrade.js, raceVfx.js and speedBlurEffect.js are unreachable from src/kart/KartApp.jsx -> ComebackCityThreeKartRace.jsx. Import them in the monolith the same way createMidGroundBelt and racePostChain already are, or if the intent was for ArcadeRace3D to be the target, that target is wrong — RacePlaytestHarness.jsx documents ComebackCityThreeKartRace.jsx as the shipping racer. Verify with `grep -c` on the monolith after wiring; a module with 0 refs did not ship.",
+        "targetFile": "src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "penguin-village-p0_67: camera inside a near-plane rival; frame is unshippable",
+        "frame": "penguin-village-p0_67",
+        "severity": "blocker",
+        "fix": "The occluder is a dynamic rival, not scenery, so a scenery raycast alone will not fix it. Add rival kart root objects to the camera collision candidate set AND add a near-plane treatment on kart materials: fade-to-zero (dithered alpha) for any kart fragment inside ~1.5x the near plane, so a rival that reaches the camera dissolves instead of filling 45% of the frame with an untextured interior.",
+        "targetFile": "src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Procedural fallback kart ships untextured on both tracks",
+        "frame": "comeback-city-p0_45, penguin-village-p0_56",
+        "severity": "blocker",
+        "fix": "Wire kartMaterials.js so every rival body gets a real material class (body colour + gloss + tyre/trim split). Until it is wired, at minimum give createBasicMaterial-built fallback bodies a per-racer body tint and a distinct dark tyre material — flat pale grey slabs on bare grey cylinders read as a placeholder mesh that shipped.",
+        "targetFile": "src/game/race/render/kartMaterials.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "penguin-village-p0_78 / comeback-city-p0_15 / p0_9: rival geometry fills the frame with hard-edged untextured slabs",
+        "frame": "penguin-village-p0_78, comeback-city-p0_15, comeback-city-p0_9",
+        "severity": "blocker",
+        "fix": "Same near-plane dither fade as above, applied on the rival kart material rather than the camera. A 400x260px flat white box with hard cut edges (pv p0_78) reads as broken geometry, not as proximity. Fade should start before the wing is large enough to read as a wall.",
+        "targetFile": "src/game/race/render/kartMaterials.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "penguin-village-p0_24: additive VFX quad renders as a screen-aligned rectangle on the road",
+        "frame": "penguin-village-p0_24",
+        "severity": "blocker",
+        "fix": "A lighter-than-road quad with a razor-straight vertical edge at x=424 and a constant bottom terminator at y=709-711. Find the quad in the particle/VFX layer (it is brighter than the road so it is additive, not a shadow) and either give it a radial/soft alpha falloff so it has no straight border, or project it into world space so its silhouette follows perspective. A hard-cut box stamped on the track is an automatic blocker.",
+        "targetFile": "src/game/race/render/raceParticles.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "penguin-village-p0_67: flat unlit purple quads and a stray grey bar floating in mid-air",
+        "frame": "penguin-village-p0_67",
+        "severity": "blocker",
+        "fix": "Two completely unshaded flat purple quads (x 1135-1215/y 145-275 and x 645-725/y 20-115) and an untextured mid-grey bar with square-cut ends (x 680-990/y 285-390). These take no light at all — they are either MeshBasicMaterial props or detached mesh parts. Identify them, give them the scene's lit material, or cull them.",
+        "targetFile": "src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "penguin-village-p0_9: iceberg mesh intersects the track with no contact and an internal seam",
+        "frame": "penguin-village-p0_9",
+        "severity": "major",
+        "fix": "The pale wedge occluding x 1030-1600 has a hard cut where the road passes under it (~x1050,y600) and an internal seam between two flat untextured tones. Push it out of the racing line in the mid-ground belt layout so it stops occluding the lookahead, and break the two-tone seam with a shared material or a matched vertex split.",
+        "targetFile": "src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Arctic drift/spray particles render rust-brown on Penguin Village",
+        "frame": "penguin-village-p0_24, p0_33, p0_45, p0_56",
+        "severity": "major",
+        "fix": "The stick SHAPE is genuinely fixed — good — but the tint was not. Scanning the road region for warm pixels finds 267-1604 hits per frame at values like (129,42,48), (149,85,55), (135,66,17), (114,67,32) — mud/rust lozenges on an ice track. Wave 1 measured (168,131,107) for the sticks, so this is the same unauthored warm tint surviving in a new shape. Drive the particle tint from the per-track theme: snow-white / pale-cyan on Penguin Village, warm amber only on Comeback City.",
+        "targetFile": "src/game/race/render/raceParticles.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Oversized opaque white spheres float over the road as solid balls",
+        "frame": "penguin-village-p0_33, p0_45, p0_15",
+        "severity": "moderate",
+        "fix": "A ~45px hard-edged opaque white sphere hangs in mid-air at ~(667,622) in p0_33 with no shadow and no motion cue; smaller ones at ~(515,590) and ~(1060,580). At this size a snow particle stops reading as snow and reads as floating geometry. Cap near-camera snow particle screen size and give them alpha falloff plus a motion streak instead of a solid disc.",
+        "targetFile": "src/game/race/render/raceParticles.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "penguin-village-p0_33: hard-edged unlit black parallelogram lying on the verge",
+        "frame": "penguin-village-p0_33",
+        "severity": "moderate",
+        "fix": "A flat black quad with razor edges sits on the snow verge at roughly x 430-490 / y 535-565, taking no light. Reads as a hole in the ground. Trace it in the mid-ground belt / scenery placement and either light it or remove it.",
+        "targetFile": "src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Untextured purple placeholder slabs float on the Comeback City ground belt",
+        "frame": "comeback-city-p0_9, comeback-city-p0_06",
+        "severity": "moderate",
+        "fix": "Flat single-tone purple boxes with no contact darkening and no detail at x 60-140/y 415-475 and x 1290-1420/y 490-530 (p0_9) and x 27-195/y 452-502 (p0_06). Next to the new food truck, deco tower and ferris wheel they read as untouched placeholders. Either give them a facade treatment consistent with the rest of the belt or cull them.",
+        "targetFile": "src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "Iridescent rainbow fringing on every Penguin Village ice silhouette edge",
+        "frame": "penguin-village — all 9 frames",
+        "severity": "moderate",
+        "fix": "Every iceberg and peak carries a saturated yellow-orange-pink-green band along its silhouette (clearest across y 150-330 in p0_06, p0_15, p0_45, p0_56, p0_78). It is uniform on every edge regardless of light direction, so it reads as a chromatic-aberration / hue-cycling rim artifact rather than authored ice refraction. Clamp the rim hue shift to a single warm sun tint on the sun-facing side, or drop the hue cycle entirely.",
+        "targetFile": "src/game/race/render/toonRimShader.js",
+        "inScopeForWave2": true
+      },
+      {
+        "title": "comeback-city-p0_56: ₿ coin geometry half-buried in the road with a white UV sliver",
+        "frame": "comeback-city-p0_56",
+        "severity": "moderate",
+        "fix": "Cropped and confirmed: the left coin's lower arc is cut by a straight horizontal edge exactly at the road surface, and a white untextured UV sliver shows on its face at ~(455,760). The boost chevron quad also passes straight through both coins. Raise the coin instance Y so the disc clears the road, and fix the face UV seam. Not owned by any later wave — the chevron interpenetration itself is wave 3.",
+        "targetFile": "src/game/race/raceCoins.js",
+        "inScopeForWave2": false
+      },
+      {
+        "title": "Comeback City sand/ground belt is a large flat untextured expanse",
+        "frame": "comeback-city-p0_78, comeback-city-p0_9",
+        "severity": "polish",
+        "fix": "The cyan water plane the wave-1 critic flagged is gone — real win — but the tan ground that replaced it (x 0-620/y 430-560 in p0_78, and the belt at y 400-460 in p0_9) is a single flat tone with no texture, no shoreline and a hard horizon cut where the skyline buildings meet it with no ground contact. A cheap procedural gradient plus a darkened contact band at the building bases would close it at zero bundle cost.",
+        "targetFile": "src/game/race/render/createMidGroundBelt.js",
+        "inScopeForWave2": true
+      }
+    ],
+    "outOfScopeNoted": [
+      "WAVE 4 (shadows/grounding) — karts still hover with no contact in comeback-city-p0_56 (both karts a full kart-height above the asphalt), penguin-village-p0_06, p0_24, p0_45, p0_56. The player kart now has a soft shadow blob in most Comeback City frames, which is progress, but Penguin Village karts have no shadow at all.",
+      "WAVE 4 (shadows) — razor-straight, zero-penumbra shadow terminators cut across the drivable surface: comeback-city-p0_67 (hard diagonal from ~(830,900) to ~(1020,500) splitting the road into two tones), penguin-village-p0_45 (hard-edged wedge x 830-1350/y 570-720), penguin-village-p0_15 (dark polygon x 830-1130/y 545-620). Also present in wave 1, so not a regression.",
+      "WAVE 4 (shadows) — comeback-city-p0_33: the player kart's cast shadow is a long detached ellipse extending well to the left of the kart (x 700-1050/y 560-700) rather than sitting under it.",
+      "WAVE 3 (road decals) — boost chevrons render as hard-aliased opaque quads with visible stair-stepping and pass through other props (comeback-city-p0_56, p0_9, penguin-village-p0_33). Also the p0_33 chevrons are painted on the verge, off the drivable surface.",
+      "WAVE 3 (road/apron) — comeback-city-p0_45: the new raised boost-pad chevron block hangs a dark unlit side wall along its bottom edge (x 300-1130/y 845-880) and its extruded chevron is a washed pale beige with no material identity.",
+      "WAVE 3 (road surface) — Penguin Village asphalt is near-black navy (~rgb 14,36,67) against pale ice, a very large tonal jump that flattens the lower third of every arctic frame.",
+      "WAVE 6 (camera framing) — the player kart is clipped by the bottom viewport edge and occupies ~40% of frame height in comeback-city-p0_15 and comeback-city-p0_9, leaving almost no lookahead. Distinct from the collision blockers above.",
+      "NOT A REGRESSION, CONFIRMED FIXED, for the record: (a) the boost/trail sticks are dead in every frame I checked — comeback-city-p0_24 and p0_78, penguin-village-p0_15 and p0_33 all had opaque tan sticks piercing the road in wave1 and now show soft cyan/warm lozenges with real falloff; (b) the black dome seam and unlit void are gone from all 18 frames; (c) the pure-black road void at comeback-city-p0_06 is gone (scanning y 500-700 for near-black runs returns zero); (d) the dark slab across the starting grid at comeback-city-p0_06 is gone; (e) the flat cyan water plane at comeback-city-p0_78 is gone; (f) the wave-1 desaturation regression is reversed — Penguin Village verge saturation went 0.13 -> 0.38 and far-snow 0.10 -> 0.30, and the two tracks now read as unmistakably different places; (g) capture-manifest.json reports zero console errors and zero missed points on both tracks."
+    ]
+  }
+]

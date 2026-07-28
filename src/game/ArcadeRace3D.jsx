@@ -1,3 +1,15 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the
+// owner ever sees. The racer that ships is the ComebackCityThreeKartRace.jsx
+// monolith, which imports NONE of this module tree (its only render-layer
+// imports are raceParticles / toonRimShader / gltfLoader / createRaceScene
+// (renderer+canvas fit only) / createBasicMaterial).
+//
+// Kept in the repo because race-playtest.html mounts it and four committed
+// suites drive that page — npm run test:lifecycle, check-race-route.mjs,
+// fresh-user-clip-capture.mjs and phase5-sustained-capture.mjs
+// (PHASE5_TARGET=legacy). Deleting it reds the battery; it is dead weight
+// only in the sense that nothing it draws reaches a player.
+
 import { useEffect, useRef, useState } from 'react';
 import {
   CAMERA_PRESETS,

@@ -1,3 +1,12 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the
+// owner ever sees. The racer that ships is the ComebackCityThreeKartRace.jsx
+// monolith, which imports NONE of this module tree (its only render-layer
+// imports are raceParticles / toonRimShader / gltfLoader / createRaceScene
+// (renderer+canvas fit only) / createBasicMaterial).
+//
+// The shipped item boxes and hazards are built in the monolith from the
+// item-box GLBs. Kept: npm run test:race imports this directly.
+
 import * as THREE from 'three';
 import { ITEM_COLORS } from '../../raceItems.js';
 import { getHazardDefinition } from '../../raceHazards.js';

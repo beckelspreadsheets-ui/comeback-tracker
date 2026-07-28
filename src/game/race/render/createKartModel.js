@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { applyKartShading } from './toonRimShader.js';
 
 const DEFAULT_VEHICLE_PALETTE = {
   cyan: '#46d9ef',
@@ -6,6 +7,11 @@ const DEFAULT_VEHICLE_PALETTE = {
   tire: '#0b1019',
 };
 
+// The generic workhorse: 60+ call sites across the monolith, most of them
+// scenery. Deliberately NOT given the kart shading treatment — hero-class
+// shading on every barrel and lamp post is exactly the "rim on everything"
+// cheapening the rim comment warns about, and it would cost a per-fragment
+// classifier on the whole track.
 export const createBasicMaterial = (color, options = {}) =>
   new THREE.MeshStandardMaterial({
     color,
@@ -15,6 +21,56 @@ export const createBasicMaterial = (color, options = {}) =>
     ...options,
   });
 
+// ---- The three kart material classes --------------------------------------
+// applyKartShading splits paint/chrome/rubber per TEXEL for the fused authored
+// GLB bodies, which is the only option there. For procedurally built karts the
+// split is already known per MESH, so these factories set the base response to
+// match and then let the same injection do the specular band and the AO. Using
+// one code path for both means a procedural fallback body and an authored body
+// react to the key light the same way instead of reading as two art styles.
+
+// Glossy body paint: low roughness so the injected cel band sits on a surface
+// that is already tighter than the matte default.
+export const createKartPaintMaterial = (color, options = {}) =>
+  applyKartShading(
+    createBasicMaterial(color, { metalness: 0.12, roughness: 0.3, ...options })
+  );
+
+// Chrome / trim. Metalness stays MODERATE on purpose: the race scene has no
+// environment map, and a MeshStandardMaterial at metalness ~0.9 with nothing
+// to reflect renders near-black. The metal read comes from the injected hot
+// band, not from the BRDF — same as the authored toon bodies, which have no
+// metalness parameter at all.
+export const createKartChromeMaterial = (color = '#f6fbff', options = {}) =>
+  applyKartShading(
+    createBasicMaterial(color, { metalness: 0.3, roughness: 0.18, ...options })
+  );
+
+// Rubber: the same injection with every specular strength at zero. Dead matte
+// is not "no shading" — round 1 left this material out of the injection
+// entirely, which also cost it the curvature AO, so tyres came back as flat
+// pale ovals with no top/bottom value break at all. It keeps the AO, the sky
+// bounce and the rubber darkening and loses only the highlight, which is the
+// actual distinction from the two classes above. `plastic` has to be zeroed
+// explicitly: a mid-grey tyre colour lands in the leftover class, not the
+// rubber one, so leaving it at its default would hand a known tyre a highlight.
+export const createKartRubberMaterial = (color, options = {}) =>
+  applyKartShading(createBasicMaterial(color, { metalness: 0, roughness: 0.95, ...options }), {
+    chromeStrength: 0,
+    paintStrength: 0,
+    plasticStrength: 0,
+  });
+
+// NOT IN THE SHIPPED BUNDLE. The app's player/rival karts are built by the
+// `createKartModel` local inside ComebackCityThreeKartRace.jsx (~line 600) and
+// dressed by raceParticles.js; nothing under src/ imports this function. Its
+// only consumer is scripts/race-content-playtest.mjs, which runs headless.
+//
+// Flagged loudly because all three wave-2 critics filed live VFX blockers
+// (opaque drift-spray crystals, the opaque shield dome, the flat yellow boost
+// chevron) against this file or against raceParticles.js, when the geometry
+// actually on screen is the monolith's. Editing the boostFlame / driftSpark /
+// shield groups below changes nothing in any captured frame.
 export const createVehicleModel = ({
   accent = '#2cc8ff',
   color = '#ef4334',
@@ -27,16 +83,12 @@ export const createVehicleModel = ({
 
   const chassis = color || palette.redKart;
   const glow = accent || palette.cyan;
-  const bodyMat = createBasicMaterial(chassis, {
-    emissive: chassis,
-    emissiveIntensity: 0.08,
-    metalness: 0.1,
-    roughness: 0.32,
-  });
+  // Three classes, not one: glossy shell, matte rubber, hot trim.
+  const bodyMat = createKartPaintMaterial(chassis, { emissive: chassis, emissiveIntensity: 0.08 });
   const accentMat = createBasicMaterial(glow, { emissive: glow, emissiveIntensity: 0.48 });
-  const darkMat = createBasicMaterial(palette.tire);
-  const cockpitMat = createBasicMaterial('#202837');
-  const trimMat = createBasicMaterial('#f6fbff');
+  const darkMat = createKartRubberMaterial(palette.tire);
+  const cockpitMat = createKartRubberMaterial('#202837');
+  const trimMat = createKartChromeMaterial('#f6fbff');
   const headlightMat = createBasicMaterial(palette.cyan, {
     emissive: palette.cyan,
     emissiveIntensity: 0.78,
@@ -94,8 +146,10 @@ export const createVehicleModel = ({
   addBox({ x: 4.2, y: 0.32, z: 0.44 }, { y: 5.72, z: -2.18 }, darkMat);
 
   const wheelGroup = new THREE.Group();
-  const wheelMat = createBasicMaterial(palette.tire);
-  const hubMat = createBasicMaterial(glow, { emissive: glow, emissiveIntensity: 0.34 });
+  const wheelMat = createKartRubberMaterial(palette.tire);
+  // Hubs keep their accent glow but shade as metal — the band sliding across
+  // four hubs as the kart yaws is half the "these wheels are round" read.
+  const hubMat = createKartChromeMaterial(glow, { emissive: glow, emissiveIntensity: 0.34 });
   const wheels = [];
   [
     [-4.4, 1.02, -3.55],

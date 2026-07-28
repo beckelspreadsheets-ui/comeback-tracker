@@ -1,0 +1,457 @@
+{
+  "headline": "Today this reads as a competent WebGL demo, not a kart racer: the sky literally does not close (a hard near-black arc sits across the top third of all 18 baseline frames), there are two suns in one shot on Comeback City, the boost speed-lines are opaque grey sticks drawn over the skyline and over the player's own kart in 18/18 frames including a 88 km/h start frame, nothing in the mid-field is lit (every authored GLB prop is forced to MeshBasicMaterial and casts nothing), and the road edge is three disconnected flat painted ribbons with bare ground showing between them. Three changes close most of the gap: (1) one coherent time-of-day — a real sky dome with a single world-space sun that the key light agrees with, a 3:1 key:fill rebalance, and fog that hazes toward the horizon instead of away from it; (2) a real post chain — split the merged EffectPass so SMAA stops deleting bloom, add dithering, buy back a white point, and give each track a procedural LUT so CC and PV stop sharing one un-graded ACES dump; (3) make the road a built object — one extruded edge profile welded to a crowned road with a crisp arc-length checker, continuous edge lines and real shadows/contact under everything. The hard planning constraint is that ~90% of shipped rendering lives in one 6,703-line file, so the plan runs exactly one monolith-owning package per wave, with every sibling package confined to new or standalone modules.",
+  "blockers": [
+    "Sky does not close. The far backdrop is an open-top CylinderGeometry whose rim sits at ~22.6 degrees elevation inside a 66-degree FOV (ComebackCityThreeKartRace.jsx:3957), and above it the raw screen-space scene.background gradient (line 3863, top stop #0a0f28) is exposed. Every one of the 18 baseline frames has a hard black arc stamped across the upper third — confirmed in comeback-city-p0_06/-p0_33/-p0_67 and penguin-village-p0_06/-p0_45/-p0_78.",
+    "Two suns in one shot. cc-far.webp has a sun disc baked in and is wrapped MirroredRepeatWrapping with repeat.x = 5 (lines 3940-3941, 3957). comeback-city-p0_67 shows two identical yellow discs ~35 degrees apart; p0_33 and p0_06 show partial twins. The mirroring also makes the skyline bilaterally symmetric.",
+    "Boost speed-lines read as a rendering bug. raceParticles.js:154-201 builds 14 fixed opaque wedges at z=-1.6 with depthTest:false, spun about Z, opacity re-randomised per frame. They draw across the sun, the skyline and the player kart (comeback-city-p0_06 at 88 km/h, p0_67, penguin-village-p0_15) and are present in 18/18 baseline frames, so they carry no information at all.",
+    "Karts do not touch the ground. Rivals explicitly cast no shadow (ComebackCityThreeKartRace.jsx:4503-4507) and visibly levitate in penguin-village-p0_06/-p0_56; the player's blob shadow is parented to the OUTER group that receives hop, roll, pitch and squash (723-736 vs 5362-5374), so it flies and tilts with the kart — the code comment at 5384 claims the opposite of what the code does.",
+    "The default kart has frozen wheels. replaceBody (772-787) disposes bodyGroup — which is where the four procedural wheel Groups live — then repopulates wheels[] only from Kenney node names that the Tripo/Meshy GLBs do not have. All 6 KART_NOSE_YAW entries including the gate default 'hero' take that path, so the frame loop at 6135 iterates an empty array at 289 km/h.",
+    "The horizon is world-fixed geometry. Both backdrop rings are added to the scene at origin and never repositioned, while the track spans ~350 units off origin. Skyline apparent scale swings ~2.6x per lap on CC and ~4x on PV — penguin-village-p0_78 shows an ice wall filling the right third that is a thin strip at p0_33.",
+    "Drift trails erase themselves mid-road. raceParticles.js:27-30: 64 quads shared between two wheels at a 1.25-unit step = 40 units of trail per wheel, so the ring recycles in ~0.17s at race speed and the 6-second fade can never run. comeback-city-p0_9 shows both tyre lines terminating on a hard edge three kart-lengths back.",
+    "Curb checkers do not exist. buildCheckerRibbon (1694-1738) writes the alternating colour per-vertex on SHARED vertices, so smooth interpolation turns the intended teeth into a continuous red-to-white gradient smear — visible on both edges of comeback-city-p0_06 and p0_33. checkerEvery is functionally dead code.",
+    "Sky gradients contour badly. The composer is HalfFloat but the final EffectPass never sets dithering, so a vertical scan of comeback-city-p0_33 shows constant-colour runs of 7-15px. Reads as a browser demo artefact, not a style.",
+    "PROCESS BLOCKER — several auditor fixes point at DEAD files and would ship nothing. The shipped kart runtime imports only raceParticles.js, toonRimShader.js, gltfLoader.js, createRaceScene.js (renderer + fit only) and createBasicMaterial from createKartModel.js. chaseCamera.js, raceHud.jsx, raceCameraRuntime.js, raceSceneRuntime.js, createTrackMesh.js, createRaceScenery.js, createRaceVehicles.js, createRacePickups.js, syncRaceMeshes.js, raceVfx.js, createBillboardText.js and raceSceneTheme.js are reachable only from ArcadeRace3D.jsx. The shipped HUD is JSX inside the monolith at line 6542 + comebackCityThreeKartRace.css, and the shipped chase camera is inline at ~6300-6340. Note also that the post auditor's light values (hemi 3.15 / sun 3.55, createRaceScene.js:104-112) are the DEAD shell; the shipped rig is hemi 3.3 / sun 2.6 / rim 2.0 at ComebackCityThreeKartRace.jsx:3874-3897.",
+    "The fps budget is currently unmeasurable. tmp/aaa-visual/baseline/capture-manifest.json records fps, drawCalls and triangles as null for all 18 frames even though the runtime already publishes them into window.__comebackCityKartTelemetry (6356-6358). Nothing in waves 2-6 that costs GPU time can be signed off until scripts/aaa-visual-capture.mjs is fixed."
+  ],
+  "workPackages": [
+    {
+      "id": "sky-and-key-light",
+      "name": "Sky dome, single sun, and the light rig that agrees with it",
+      "goal": "Make one coherent time-of-day: a closed procedural sky dome with exactly one world-space sun, backdrop layers that behave like distance, and a key/fill/fog rig that all points at that sun. This is the single largest visual delta available and it is entirely zero-byte.",
+      "ownedFiles": [
+        "src/game/ComebackCityThreeKartRace.jsx",
+        "src/game/race/render/createSkyDome.js",
+        "src/game/race/tracks/comebackCity.js",
+        "src/game/race/tracks/penguinVillage.js",
+        "src/assets/game/generated/backdrops/cc-far.webp",
+        "src/assets/game/generated/backdrops/pv-far.webp"
+      ],
+      "tasks": [
+        "NEW src/game/race/render/createSkyDome.js: BackSide SphereGeometry(1,32,20), ShaderMaterial {depthWrite:false, depthTest:false, fog:false}, frustumCulled=false, renderOrder=-1000. Vertex pins to the far plane: gl_Position = (projectionMatrix*modelViewMatrix*vec4(position,1.0)).xyww. Fragment samples the EXISTING makeSkyTexture canvas as a 1D elevation LUT: v = 1.0 - pow(clamp(d.y/0.85,0.0,1.0), 0.65).",
+        "Sun into the dome as a world-space element: uniforms uSunDir/uSunColor; col += uSunColor * (smoothstep(0.9985,0.9994,sd)*2.2 + pow(sd,14.0)*0.30 + pow(sd,3.0)*0.08). The third term is the broad glow lobe that makes a sunset read as lit air; the 2.2x disc is deliberately above 1.0 so P5's bloom catches it.",
+        "Procedural 2-octave fbm cloud deck in the same fragment (zero bytes): cuv = d.xz/max(d.y,0.055)*0.020, two scrolling samples at 0.0018 and -0.0031, c = smoothstep(0.52,0.78,c)*smoothstep(0.05,0.28,d.y). CC uCloudColor #ff9a5e strength 0.55 plus a sun-facing additive underside term; PV #cfe2ee strength 0.75 with floor smoothstep(0.40,0.72) so it reads as storm overcast. Gate off behind viewport.mobile if the harness shows a phone cost.",
+        "Monolith line 3863: scene.background = null; add the dome. Keep makeSkyTexture only as the LUT source (ClampToEdgeWrapping, LinearFilter, generateMipmaps false).",
+        "ONE source of truth for the sun: add sun:{azimuthDeg, elevationDeg, distance} to both track palettes (CC 248/9/190, PV 195/11/190). Compute the direction once and drive BOTH skyMaterial.uniforms.uSunDir and the DirectionalLight — replacing the hardcoded frame-loop offset at line 6336 (currently -95/+110/-45 = 46 degrees elevation, i.e. noon shading under a sunset sky).",
+        "Backdrop de-tiling: far ring repeats 5 -> 1 with ClampToEdgeWrapping; near ring switches MirroredRepeatWrapping -> RepeatWrapping (kills the mirror symmetry in the skyline); anisotropy = renderer.capabilities.getMaxAnisotropy() capped at 8 on mobile; radialSegments 64 -> 96; far ring height 380 -> 560 and y 140 -> 210 so its rim leaves the normal framing band.",
+        "Repaint cc-far.webp and pv-far.webp: erase the baked sun disc and its glow, widen the top alpha ramp to ~60% of plate height. This is byte-NEGATIVE. Re-run npm run test:bundle:kart against a FRESH build (stale-dist measurement is a known trap).",
+        "Camera-anchor the backdrop: two Groups, far follows camera at 1.0 (infinite horizon), near at 0.72 (controlled parallax), updated in the frame loop beside the ambient block. Two Vector3 writes per frame.",
+        "Light rebalance for a real key:fill: hemi 3.3 -> 1.5 (CC) and 3.0 -> 1.4 (PV), sun 2.6 -> 4.4, rim 2.0 -> 1.6. Leave overall exposure compensation to P5 so the two packages do not fight.",
+        "Fog that runs the right way: CC gains fog:{color:'#c9541f', near:300, far:1000}; PV changes to {color:'#9fb8c4', near:260, far:900}. Delete the stale 'fog.far must stay <= 840' comment at 3866 — camera.far is already 1800 when the backdrop is on.",
+        "Ground plane 1120x1060 -> 2600x2600 (24x24 segs) with palette ground repeat 16 -> 38, so the razor-straight ground terminator visible in comeback-city-p0_33 and penguin-village-p0_06 falls outside the fog.",
+        "Re-author DUSK_SKY_STOPS so the LUT value at the plate's top-of-fade elevation matches cc-far row 375 within deltaE 8, and lift the zenith off #0a0f28 so the vignette cannot crush it to (0,0,8). Same for the PV sky array against pv-far.",
+        "Replace the 4-band neutral toon ramp [90,150,215,255] with a 5-band TINTED per-track ramp (CC warm-light/violet-shadow, PV warm-light/cool-shadow), NearestFilter, cached per trackDef.key. This is what stops PV's icebergs collapsing into one white value.",
+        "Vignette 0.32/0.45 -> 0.42/0.30 and re-A/B against the owner's 2026-07-06 post-lab sign-off before shipping.",
+        "CONTRACT LINES for wave-1 siblings (land on day 1 so P2 can build against them): add speed: race.speed, maxSpeed: MAX_SPEED and surface: <current surface type> to the particleContext object at ~6236."
+      ],
+      "impact": 10,
+      "effort": "L",
+      "dependsOn": [],
+      "acceptance": "In all 18 recaptured frames there is no black arc and no cylinder rim anywhere in the top third of the image. Exactly one sun disc appears in any frame, it has a visible glow lobe around it, and the karts' shading and shadows point away from it. The skyline's apparent height varies by less than 12% across the 9 progress marks on each track. Distant ground visibly warms and lifts toward the horizon instead of going darker. The ice-cream truck's two orthogonal faces differ by at least 30% luminance instead of the current 12%."
+    },
+    {
+      "id": "speedlines-and-trails",
+      "name": "Boost speed-lines rebuilt as a screen-space field, and drift trails that survive a corner",
+      "goal": "Kill the single loudest artefact in the frame and turn the boost into a legible event with an envelope, then make the drift trail persist a full corner instead of 0.17 seconds.",
+      "ownedFiles": [
+        "src/game/race/render/raceParticles.js"
+      ],
+      "tasks": [
+        "Delete the 14-wedge geometry (raceParticles.js:154-201) and replace it with ONE full-screen NDC quad + fragment shader — same single draw call, zero bytes. Vertex: gl_Position = vec4(position.xy, 0.0, 1.0). Material: AdditiveBlending, depthTest:false, depthWrite:false, transparent, frustumCulled:false, renderOrder 60.",
+        "Polar streak field in the fragment: lanes = 34, angular profile exp(-af*af*90.0), radial term scrolling OUTWARD with fract(r*uDensity - uTime*(2.6+h*1.8)), tapered at BOTH ends via smoothstep(0.0,0.12,s)*smoothstep(1.0,0.55,s), and an inner mask smoothstep(uInner, uInner+0.22, r) with uInner ~0.52 so the centre of frame stays clean and streaks run off the corners. Aspect-correct with a uAspect uniform updated on resize.",
+        "Converge on the look-ahead point, not the screen centre: uFocus = projected look-ahead in UV space, falling back to (0.5,0.5).",
+        "Envelope instead of a boolean: fast attack (0.07s) / slow release (0.26s) on a boostEnergy value, plus a rising-edge punch that decays over 0.14s, gated by an overspeed term clamp((speed - 0.80*maxSpeed)/(0.30*maxSpeed),0,1) using the speed/maxSpeed contract fields P1 lands. Advance uTime by dt — never re-randomise opacity per frame.",
+        "Tint from DRIFT_FEEL.sparkColors by mini-turbo tier (#00E5FF / #FFD34F / #C879FF), #BFEAFF for pad boosts.",
+        "Skid buffer: SKID_QUADS 64 -> 256 (128 on mobile), SKID_MIN_STEP 1.25 -> 2.4, SKID_HALF_WIDTH 0.34 -> 0.78 to match the rear tyre footprint at x=+/-4.6, SKID_FADE_SECONDS 6 -> 4.0. Add a head/tail taper: alpha ramp over the 3 freshest quads and lerp the outer verts 35% toward the centreline on the 4 oldest so the trail narrows to a point instead of hard-cutting.",
+        "Grow the pooled burst InstancedMesh from 32/16 to 96/40 (about 5 KB of instance matrices, zero new draw calls) so waves 3 and 5 have headroom for the cue vocabulary."
+      ],
+      "impact": 8,
+      "effort": "M",
+      "dependsOn": [],
+      "acceptance": "A capture taken while not boosting has NO streak field at all (today it is present in 18/18 frames including an 88 km/h start frame). A boosting capture shows streaks that start near the frame border, converge on where the kart is going, taper to nothing at both ends, and never draw across the player kart. The drift trail runs continuously through a whole corner behind the kart and fades out, instead of terminating on a hard edge three kart-lengths back."
+    },
+    {
+      "id": "hud-css-pass",
+      "name": "HUD chip material and readability pass (CSS only)",
+      "goal": "Move the HUD from flat black rounded rectangles to a readable, layered game HUD without touching any JSX. Cheapest visible polish in the plan and fully parallel-safe.",
+      "ownedFiles": [
+        "src/game/comebackCityThreeKartRace.css"
+      ],
+      "tasks": [
+        "Give the chips real material: inner top highlight, 1px rim, outer drop shadow, subtle backdrop blur, and a track-accent left edge. Today they read as #000 rounded rects pasted on the frame.",
+        "Establish hierarchy purely in CSS: scale the position chip's numeral ~2x, make the speed readout the second-largest element, demote the mute/item chips. MK8's read order is position, then lap, then speed, then item.",
+        "Frame the item slot as a distinct socket (inset shadow + accent ring) so the held item is not just another chip.",
+        "Add a coin/boost counter emphasis state (transform + colour flash keyframes) driven by classes that already exist on the elements.",
+        "Verify 844x390 landscape phone and safe-area insets; nothing may clip or overlap the race controls."
+      ],
+      "impact": 4,
+      "effort": "S",
+      "dependsOn": [],
+      "acceptance": "In a 400px-wide thumbnail of a race frame, position and speed are the first two readable elements. Every chip has visible material (bevel, rim, shadow) rather than being a flat dark rectangle. Nothing clips or overlaps at 844x390."
+    },
+    {
+      "id": "dead-code-and-telemetry",
+      "name": "Delete the dead render tree and make the capture harness report fps",
+      "goal": "Stop engineers shipping work into unreachable files, reclaim gzip headroom, and make the fps budget measurable — every later wave needs a before/after number to be signable.",
+      "ownedFiles": [
+        "src/game/ArcadeRace3D.jsx",
+        "src/game/race/raceSceneRuntime.js",
+        "src/game/race/raceCameraRuntime.js",
+        "src/game/race/camera/chaseCamera.js",
+        "src/game/race/raceHud.jsx",
+        "src/game/race/render/createTrackMesh.js",
+        "src/game/race/render/createRaceScenery.js",
+        "src/game/race/render/createRaceVehicles.js",
+        "src/game/race/render/createRacePickups.js",
+        "src/game/race/render/syncRaceMeshes.js",
+        "src/game/race/render/raceVfx.js",
+        "src/game/race/render/createBillboardText.js",
+        "src/game/race/render/raceSceneTheme.js",
+        "scripts/aaa-visual-capture.mjs"
+      ],
+      "tasks": [
+        "Verify by grep from the kart entry point that each listed file is unreachable, then delete it. Confirmed today: the monolith imports only raceCoins, tracks, driftFeel, kartAudio, raceParticles, rivalRacers, heldItems, raceCrossers, airTricks, createBasicMaterial (createKartModel), paletteMoments, createRaceRenderer/fitRaceRendererToCanvas (createRaceScene), gltfLoader, toonRimShader and trackVisualSchema.",
+        "BEFORE deleting createRaceScenery.js, copy the procedural Ferris wheel block (around lines 1172-1196) into src/game/race/render/_salvage-ferris.txt for P7, or note the commit sha so P7 can git show it.",
+        "Add a banner comment to the top of src/game/race/render/createKartModel.js: only createBasicMaterial ships; the kart body, wheels and boost flame in that file are legacy. The shipped flame is in the monolith at ~575-584.",
+        "Fix scripts/aaa-visual-capture.mjs: read window.__comebackCityKartTelemetry (fps, rendererStats.calls, rendererStats.triangles, frameWorkMs) and write them into capture-manifest.json instead of nulls. Add a --label flag and a small diff reporter so every later package lands with a measured before/after on both tracks.",
+        "Re-run a FRESH build then npm run test:bundle:kart and record the new JS gzip figure (baseline 360.59 KiB of a 500 KiB cap; total 10860.41 of 12000 KiB, i.e. about 1.1 MiB gz headroom, not 1.5)."
+      ],
+      "impact": 3,
+      "effort": "S",
+      "dependsOn": [],
+      "acceptance": "capture-manifest.json reports non-null fps, drawCalls and triangles for all 18 frames on a fresh capture. npm run test:bundle:kart on a FRESH build reports JS gzip below the 360.59 KiB baseline. Both tracks still boot and complete a lap."
+    },
+    {
+      "id": "post-chain-rebuild",
+      "name": "Post chain: correct ordering, a white point, dithering, and a per-track grade",
+      "goal": "The chain currently deletes its own bloom, has no grade, no dither and no white point. Rebuild it as an extracted module with three passes, a procedural per-track LUT, and a boost response.",
+      "ownedFiles": [
+        "src/game/ComebackCityThreeKartRace.jsx",
+        "src/game/race/render/racePostChain.js",
+        "src/game/race/render/raceGrade.js",
+        "src/game/race/render/aerialEffect.js",
+        "src/game/race/render/speedBlurEffect.js"
+      ],
+      "tasks": [
+        "Extract the composer block (monolith 3960-4020) into NEW src/game/race/render/racePostChain.js exporting buildRacePostChain({renderer, scene, camera, trackKey, tier, params}) plus update(dt, ctx) and resize(w,h). The monolith keeps the ?post= flags and a single call.",
+        "Three passes, not one. Pass 1: bloomWide (mipmapBlur, intensity 0.62, radius 0.88, threshold 0.72, smoothing 0.30, mipmapBlurPass.levels = 6) + bloomTight (intensity 0.85, radius 0.30, threshold 1.15, smoothing 0.12, levels = 3) — both merge legally. Pass 2 (grade): speedBlur (the only CONVOLUTION effect allowed in the pass) -> aerial haze -> ToneMapping ACES -> LUT3D -> Vignette -> Noise. Pass 3: SMAAEffect ALONE and LAST so it resolves the tone-mapped sRGB image. Today SMAA runs mid-chain and its shader overwrites the accumulated colour with fresh inputBuffer taps, deleting bloom on exactly the high-contrast silhouettes bloom exists for.",
+        "Set dithering = true on the LAST pass. If three's ordered dither is too weak on the 10-15px dark-sky bands, add a 1-LSB hash dither at the end of the grade shader.",
+        "Buy back a white point: toneMappingExposure 1.05 -> 1.28, plus a white-point pull inside the LUT (c = min(c/0.90,1.0) CC, /0.93 PV). Today the brightest scene pixel in the whole capture set is 241 and 0.000% of pixels exceed 240, so bloom at threshold 1.0 is inert by construction.",
+        "Give the backdrop something to bloom with: far-ring MeshBasicMaterial color.setRGB(1.45,1.45,1.45) so the pre-hazed horizon glow and the (now singular) sun clear the new 0.72 threshold while the near silhouette ring stays neutral at 1.0.",
+        "NEW raceGrade.js: buildTrackLut(trackKey) from LookupTexture.createNeutral(32) — 131 KB of GPU, zero bundle bytes. CC: wp 0.90, gain (1.10,1.02,0.96), lift (0.010,0.004,0.030), contrast 0.22, sat 1.14, shadow tint #241a4a*0.06, highlight tint #ffb46a*0.05. PV: wp 0.93, gain (0.99,1.01,1.06), lift (0.004,0.010,0.030), contrast 0.34, sat 1.10, shadow #0e2a52*0.09, highlight #ffd9a0*0.04. Mount as LUT3DEffect AFTER ToneMappingEffect with inputColorSpace SRGB — this finally fills the 'when owner supplies a LUT' comment at line 4009 with something that needs no asset.",
+        "NEW aerialEffect.js: an EffectAttribute.DEPTH effect (the depth texture is already allocated) that desaturates and tints toward the horizon with depth. CC hazeNear 0.55, desat 0.35, tint #ff8a3d, strength 0.42; PV hazeNear 0.45, desat 0.20, tint #cfe4f2, strength 0.55. One depth fetch, no taps.",
+        "NEW speedBlurEffect.js: CONVOLUTION radial blur, 8 taps along (uv - centre), with R/G/B sampled at 1.00/1.06/1.12 radii so chroma split is free. Drive strength from the same boost state as the FOV kick, smoothed with the existing 1-pow(0.001,dt) lerp; disable the pass under 0.0015 so cruising costs zero. Explicitly NO depth of field — MK8 does not use DoF during gameplay.",
+        "Vignette moves post-ACES and gets aspect correction (pmndrs supplies an aspect uniform); retune to offset 0.42 / darkness 0.30 (or ESKIL 0.62/0.42). Today it multiplies linear HDR pre-ACES and its falloff is an ellipse that bites the bottom of the road.",
+        "SMAA: preset HIGH with EdgeDetectionMode.LUMA (MEDIUM disables diagonal and corner detection in a scene built from diagonals), plus composer.multisampling = 4 on desktop. Set the WebGLRenderer's antialias:false — it is dead weight under a composer.",
+        "Grain: NoiseEffect, BlendFunction.OVERLAY, premultiply, opacity 0.035 (0.02 mobile).",
+        "Mobile tier: 2 passes — bloomWide only (levels 4, intensity 0.55, threshold 0.78) then tone map + LUT + vignette with dithering. No SMAA, no MSAA, no haze, no grain, no sharpen. Wire the tier through handleResize so an orientation change cannot leave a desktop chain on a phone.",
+        "CONTRACT LINE for P7: land the one-line addMidGroundBelt(world, sampler, trackDef, {seed}) call inside addDistrictsAndProps on day 1 against the agreed signature."
+      ],
+      "impact": 9,
+      "effort": "L",
+      "dependsOn": [
+        "sky-and-key-light",
+        "dead-code-and-telemetry"
+      ],
+      "acceptance": "A vertical scan of the sky in comeback-city-p0_33 shows no constant-colour run longer than 2px (today: 96 bands over 250 rows with runs up to 15px). Between 0.15% and 0.6% of CC scene pixels exceed 250 and the sun disc has a visible halo. The two tracks no longer look identically graded — CC reads warm-highlight/violet-shadow, PV separates ice, snow and shelf into distinct values instead of a 200-240 mush. A boost frame shows radial streaking and a contrast/saturation lift that a cruise frame does not."
+    },
+    {
+      "id": "kart-shading-injections",
+      "name": "Stepped specular, paint tint and curvature AO through the existing rim registry",
+      "goal": "Give the karts three separable material classes — glossy paint, matte rubber, hot chrome — so they read as objects instead of decals, with zero monolith edits by extending applyHeroRim which is already wired at six call sites.",
+      "ownedFiles": [
+        "src/game/race/render/toonRimShader.js",
+        "src/game/race/render/createKartModel.js",
+        "src/game/race/tracks/comebackCity.js",
+        "src/game/race/tracks/penguinVillage.js"
+      ],
+      "tasks": [
+        "Add applyToonSpecular(material, {gloss, strength, tint}) composed through the existing addShaderInjection registry (never assign onBeforeCompile directly). Fragment at the #include <opaque_fragment> anchor using symbols already in scope: half-vector against the palette sun direction, pow(NdH, uSpecGloss), then smoothstep(0.42,0.52,...) so the highlight is a stepped cel band rather than a PBR blob.",
+        "Three presets applied from inside applyHeroRim based on a per-material role tag: PAINT {gloss 28, strength 0.55, tint = palette.rimLightColor}, CHROME/TRIM {gloss 90, strength 1.1, tint #ffffff}, RUBBER = no injection at all. The contrast is the point.",
+        "Add applyPaintTint: a self-selecting saturation mask (max(rgb)-min(rgb) via smoothstep 0.28..0.62) so baked-texture paint regions tint while greys/blacks (tyres, trim) do not. Restores per-racer identity, which is currently dead for all six authored karts because attachTripoKartBody keeps only the baked map.",
+        "Add a curvature-AO term: outgoingLight *= mix(0.72, 1.0, smoothstep(-0.35, 0.85, geometryNormal.y)) so undertrays, wheel wells and seat interiors darken independent of light direction. This is what gives pale karts form on Penguin Village.",
+        "Add a shared TOON_RIM_STRENGTH_SCALE uniform so wave 5 can drive rim strength with speed from one float write per frame.",
+        "Palette: CC heroRim {power 3.2, strength 0.22} -> {power 2.4, strength 0.40, tint '#4fd8ff'}. The dark track currently ships HALF the rim strength of the bright one, which is why the player kart is the darkest object on screen in comeback-city-p0_06."
+      ],
+      "impact": 7,
+      "effort": "M",
+      "dependsOn": [
+        "sky-and-key-light"
+      ],
+      "acceptance": "On the hero kart a hard specular band is visible on the cowl and wheel hubs and slides as the kart yaws, while the tyres stay dead matte. On penguin-village-p0_78 the pale kart ahead shows a readable top/side value break instead of one flat pale-blue shape. In comeback-city-p0_45 the four racers are distinguishable by paint colour without reading the mini-map."
+    },
+    {
+      "id": "midground-belt",
+      "name": "Mid-ground belt, grandstands and one kinetic landmark",
+      "goal": "Convert both tracks from two depth layers to four. Today there is a 400+ unit band of flat nothing between the trackside props and the painted ring, and it is the reason the frames read as a decal on a table with a poster behind it.",
+      "ownedFiles": [
+        "src/game/race/render/createMidGroundBelt.js"
+      ],
+      "tasks": [
+        "NEW module exporting addMidGroundBelt(world, sampler, trackDef, {seed}). Sample the centreline at 64 progress steps; at each step push outward on both sides to lateral rings at 90 / 170 / 300 units; skip a slot when minCenterlineDistance < 70.",
+        "Exactly two shared geometries (BoxGeometry, ConeGeometry) and three materials per track keyed to distance so value steps down with depth: CC #241a3e / #3a2352 / #56306a blocks (scale x/z 10-26, y 20-90, yaw jitter +/-0.35); PV #cfe3ef / #b9d4e6 / #9dc0d6 ice wedges (radius 14-40, height 30-110). Seeded hash jitter so captures stay deterministic. Target 6 InstancedMesh, ~200-260 instances, ~3k tris, 6 draw calls, zero bytes.",
+        "Grandstands at 4 authored progress marks per track (CC 0.0/0.24/0.55/0.82, PV 0.02/0.30/0.58/0.86) at widthAt*0.5 + 22: five stacked box tiers merged into one BufferGeometry, plus ONE InstancedMesh of ~140 billboarded fan quads on a procedural 256x64 canvas atlas of ABSTRACT rounded silhouettes in 6 hues — explicitly not penguins, per the owner rule — with a 6-line vertex bob. Top the back rail with a scrolling banner plane.",
+        "CC kinetic landmark: lift the procedural Ferris wheel salvaged by P4 from the deleted createRaceScenery.js, scale the torus radius 17 -> 48, place at progress 0.30 / lateral 260 / y 62, and expose a tick(dt) so the monolith's existing ambient block can spin it at 0.12 rad/s. PV: a 3-segment additive aurora curtain at y 200 / radius 620 with a scrolling procedural gradient canvas, which also gives PV a hot sky value for its whites to key against.",
+        "Export a single tick(dt) so the wave-2 monolith owner only adds one call in the ambient block.",
+        "Report the draw-call and triangle delta from the P4-fixed harness in the PR."
+      ],
+      "impact": 8,
+      "effort": "L",
+      "dependsOn": [
+        "dead-code-and-telemetry"
+      ],
+      "acceptance": "At every one of the 18 progress marks there is authored silhouette geometry between roughly 90 and 300 units that parallaxes against the backdrop — the flat dead band in comeback-city-p0_67/-p0_9 and penguin-village-p0_56 is gone. Comeback City has one large slow-moving landmark trackable across multiple marks, both tracks have a grandstand with a moving crowd at the start/finish, and there is not a single penguin figure. Draw calls rise by no more than 14 and fps is within 3% of baseline."
+    },
+    {
+      "id": "road-and-edge-rebuild",
+      "name": "Road, curb, verge and paint rebuilt as one built object",
+      "goal": "Make the drivable surface read as a racetrack: a crowned, arc-length-sampled road welded to a single extruded edge profile, with a crisp checker, continuous edge lines, a real start apron, and visible ice.",
+      "ownedFiles": [
+        "src/game/ComebackCityThreeKartRace.jsx",
+        "src/game/race/render/buildRoadEdgeProfile.js",
+        "src/game/race/physics/surfacePhysics.js",
+        "src/game/race/tracks/comebackCity.js",
+        "src/game/race/tracks/penguinVillage.js"
+      ],
+      "tasks": [
+        "Road mesh: replace the fixed 112-sample, 2-vertex ribbon with an arc-length loop at ceil(length/6) samples (CC 482, PV 407) emitting 5 verts per sample at lanes [-1,-0.55,0,0.55,1] with y offsets [0,+0.10,+0.14,+0.10,0] for a 0.14 crown; side FrontSide (drop DoubleSide); UVs from accumulated arc length so grain is world-constant regardless of road width; anisotropy from getMaxAnisotropy instead of the hardcoded 4.",
+        "Bake edge darkening into the road's vertex colours: outer verts x0.78, +/-0.55 verts x0.93. This is the highest-value-per-byte grounding available while the shadow work is still a wave away.",
+        "Surface bands become visible: write a per-vertex aSurface/tint from surfaceTypeAt() — asphalt (1,1,1), snow (1.28,1.32,1.36), ice (0.72,0.92,1.18) — with vertexColors on, plus a shader injection lowering effective roughness toward 0.08 and adding a hard pow(NdH,90) specular on the ice weight. Duplicate the vertex row at progress 0.24 and 0.42 so the band edge is a seam, not a 20-unit smear.",
+        "NEW src/game/race/render/buildRoadEdgeProfile.js: ONE extruded 7-point cross-section per side replacing the four separate ribbons (6 meshes -> 2). Profile outward from u = 0.44*widthAt: chamfer foot welded at road height (no gap), crest inner/outer at +0.30 across ~4 units, outer chamfer, graded verge lerping down to ground, then a barrier face and a top cap with real thickness. computeVertexNormals, FrontSide, flatShading, lit MeshStandardMaterial with vertexColors.",
+        "Crisp checker: colour the crest quads by floor(arcLength / 6.5) % 2 (about 0.75 kart widths) via a 2x1 NearestFilter DataTexture on arc-length UV — the current per-vertex colour on SHARED vertices interpolates the teeth into a pastel gradient, and the 112-sample cadence gives one 25.8-unit block per colour.",
+        "One merged road-paint mesh replacing 28 dash boxes and 20 start tiles (48 draw calls -> 1): centre dashes 9.0/12.0 at 1.2 wide, a continuous solid edge line at lane +/-0.905 (#f2f6ff CC, #8fd8ff PV), an inside-apex worn band 12% darker through both carousels, an 8-row square-tile start apron with a coloured lap line and painted grid boxes. All coplanar with depthWrite false.",
+        "PV edge legibility: curb {a:'#123a52', b:'#00E5FF'} and wall {a:'#1c4a63', b:'#00E5FF'} — today's #F5F8FF against #eaf4fa snow is under 4 deltaE, so half the boundary is invisible in penguin-village-p0_45/-p0_78.",
+        "Make the curbs reachable: move the lane clamp and wallLane from 0.95 to 1.14 so the outer wheel can sit on the crest, add a rumble band above |lane|>1.0 (visual y lift 0.30, 9 Hz camera roll, spray emitter, grip x0.88), and add an offroad SURFACE_TYPES entry {accel 0.55, grip 0.62, steer 0.85} consumed at the same place surfaceTypeAt already is.",
+        "Un-gate banking: drop the visualRoadEnabled guard on bankYOffsetAt, read bankingDegrees from a plain table on the track def, author CC south-carousel 9 / east-loop 6 / seam-carousel 8 and PV pond-sweep 7 / return-bend 5, and smooth entry/exit through the same 14-pass box filter used for the width table.",
+        "Terrain relief so the other half of the lap stops competing: subdivide the ground plane to 64x64 (or 96x96) and displace by 2-octave value noise, lerping displacement to zero within roadHalfWidth+26..+70; recompute normals; add a co-planar macro-blob overlay texture at repeat 2 for large-scale variation.",
+        "Camera near 0.25 -> 1.0 (4x depth precision; the chase boom never gets closer than ~6 units) to kill the horizon-line z-fight between road and ground.",
+        "CONTRACT LINE for P9: expose the current surface type and the landing/air state in particleContext."
+      ],
+      "impact": 9,
+      "effort": "L",
+      "dependsOn": [
+        "sky-and-key-light",
+        "post-chain-rebuild"
+      ],
+      "acceptance": "From a single still, the drivable edge is ONE continuous silhouette — tarmac, chamfer, checkered crest, chamfer, graded verge, barrier with visible thickness — with no strips of bare grass or snow showing between elements (compare the left edge of comeback-city-p0_33 today). The checker alternates roughly every 6.5 units and strobes at speed. A solid edge line and regular centre dashes run continuously. The start/finish has a deep square-tile apron with a lap line and grid boxes. On Penguin Village the road edge is clearly legible against the snow, and the ice band at progress 0.24-0.42 is visibly ice."
+    },
+    {
+      "id": "surface-and-ambient-vfx",
+      "name": "Surface-typed ambient particles, landings, and the missing cue vocabulary",
+      "goal": "Glue the karts to the surface and make the world react to gameplay. The runtime already derives 15 audio cues and the particle router answers 2.",
+      "ownedFiles": [
+        "src/game/race/render/raceParticles.js"
+      ],
+      "tasks": [
+        "Ambient emission that does not require drifting: a faint tyre haze on tarmac at speed, white spray on snow, a sparkle glint on ice, and a heavier plume off-road, all keyed off the surface field the road package exposes.",
+        "Landing puffs: a flat ring of ~10 particles sized and counted by peak air height, fired on the 'land' cue.",
+        "Extend onCue to cover item-pickup (8 particles in the item accent), item-use (12-particle forward muzzle cone), tier-1/2/3 (6 sparks at the rear wheels in the tier colour), mini-turbo-1/2/3 (14 particles fired backward at speed 16 plus a punch on the speed-line envelope), and spin-out (add an expanding shockwave ring reusing the existing drift-tier pop torus).",
+        "Rhythmic exhaust puffs at low frequency so the kart is always shedding something.",
+        "Everything routes through the enlarged burst pool from wave 1 — zero new draw calls, zero bytes. Report the fps delta from the fixed harness."
+      ],
+      "impact": 6,
+      "effort": "M",
+      "dependsOn": [
+        "speedlines-and-trails",
+        "road-and-edge-rebuild"
+      ],
+      "acceptance": "A capture of a kart at 280+ km/h on tarmac shows visible tyre haze without drifting; the same kart on the snow shoulder throws white spray and off-road throws a heavier plume. A landing frame shows a ground puff scaled to the drop. Item pickup, item use, spin-out and mini-turbo each produce a visually distinct burst."
+    },
+    {
+      "id": "shadows-and-grounding",
+      "name": "Shadow tiers, lit props, and contact shadows that stay on the road",
+      "goal": "Nothing in the mid-field is lit and nothing casts. Fix the three-caster shadow pass, light the props, and decouple the contact shadow from the kart's transform.",
+      "ownedFiles": [
+        "src/game/ComebackCityThreeKartRace.jsx",
+        "src/game/race/render/raceShadowRig.js"
+      ],
+      "tasks": [
+        "Hero tier: shadowMap.type BasicShadowMap -> PCFSoftShadowMap; mapSize 384 -> 1024 desktop / 512 mobile; ortho +/-64 -> +/-26 (widened along the light's Y to about +/-44 for the new low sun); bias -0.00015, normalBias 0.45, shadow.intensity 0.55 (this single line takes the measured 76% shadow crater to ~40%). Aim the target 12 units AHEAD of the kart and texel-snap it to kill shimmer.",
+        "Caster set: delete the rivals-cast-nothing traverse at 4503-4507; add drivers, item boxes, breakables and the coin InstancedMesh; set receiveShadow=true on kart bodies in mountDriverAvatar, attachTripoKartBody, attachAuthoredKartBody and the procedural fallback so driving under the CC overpass actually dims the kart.",
+        "Static world tier: a SECOND DirectionalLight sharing the sun direction at intensity 0 with castShadow true, 1536 map, ortho +/-190, shadow.autoUpdate false, rendered ONCE after the GLB mount count settles. A zero-intensity light still contributes its shadow term, so buildings, the overpass and the new mid-ground belt get baked-quality shadows for one depth render per race. Extract the whole tier setup into NEW src/game/race/render/raceShadowRig.js.",
+        "Light the props: mountMiamiAsset currently forces MeshBasicMaterial with castShadow/receiveShadow false for every hero prop on both tracks. Swap to MeshToonMaterial with the track's tinted gradient (or MeshLambert if the baked highlights fight it), enable cast/receive, and keep applyAmbientSway (it is an onBeforeCompile injection and survives). Keep MeshBasicMaterial ONLY for item projectiles and backdrop rings.",
+        "Contact-AO decals: one shared 128x128 radial-gradient CanvasTexture and one per-track InstancedMesh of ground quads scaled to each prop's fitted XZ footprint x1.35 at fitted.min.y + 0.04. One extra draw call per track, zero bytes, and it grounds every prop even where the shadow maps do not reach.",
+        "Blob shadow decoupling: move the shadow, contact glow and underglow into a contactGroup that is a SIBLING of the kart group in world space, driven from the surface sample only — position from sampler point + 0.07 along the surface normal, yaw from kart heading, quaternion aligned to the surface so it lies flat on banked road. Fade and shrink with air height (opacity x(1 - airT*0.75), scale x(1 - airT*0.35)). Same for rivals. Replace the hard 22-gon disc with the shared radial alphaMap.",
+        "Split the overloaded flag: renderer.shadowMap.enabled and sun.castShadow currently read !trackVisualsEnabled, which ties the road-geometry experiment to a shadow trade. Introduce a separate contactGroundingEnabled so the two can move independently, and add a ?shadow=high|low|off diagnostic alongside the existing ?post= toggles.",
+        "OPTIONAL, measurement-gated: pmndrs SSAOEffect + NormalPass are already in the installed build (zero new bytes) but the NormalPass roughly doubles draw calls (480 CC / 782 PV today) and costs ~1.2ms. Do NOT ship it default-on unless the P4 harness shows the headroom on both tracks and on a phone; the static world tier plus contact decals already deliver most of the grounding."
+      ],
+      "impact": 8,
+      "effort": "L",
+      "dependsOn": [
+        "sky-and-key-light",
+        "road-and-edge-rebuild",
+        "dead-code-and-telemetry"
+      ],
+      "acceptance": "Every kart on screen has a soft-edged shadow anchored under its contact patches (today rivals have none and visibly levitate in penguin-village-p0_06/-p0_56). The player's shadow stays flat on the road through hops, drifts and banked corners, and lifts and fades in the air. Every building, palm, igloo, crate and coin pedestal has visible contact darkening and a lit/shade split. Shadow interiors sit about 40% below the lit road rather than 75%."
+    },
+    {
+      "id": "env-probe",
+      "name": "Procedural PMREM environment probe",
+      "goal": "Give the world a specular response. There is no scene.environment anywhere in the shipped runtime, so every metalness value is a no-op and no surface in any frame carries a highlight.",
+      "ownedFiles": [
+        "src/game/race/render/raceEnvironment.js"
+      ],
+      "tasks": [
+        "NEW module exporting buildRaceEnvironment({renderer, palette, sunDir}): construct a throwaway scene with an inverted sphere painted with the SAME sky gradient stops and sun disc, run PMREMGenerator.fromScene at 256, dispose the generator and the scene. One-time cost ~2-4ms, zero bundle bytes.",
+        "Export an envMapIntensity policy so the probe does not wash out the authored dusk: road/ground 0.35, buildings and scenery 0.5, kart body/trim/glass 1.0, ice and rails 1.2. MeshToonMaterial ignores env in r184 — document that toon surfaces are covered by the specular injection from the kart-shading package instead.",
+        "Provide a dispose() and rebuild-on-palette-change path for the ?paletteLab overrides.",
+        "Expose it as a single call the wave-4 monolith owner wires next to the sky dome creation."
+      ],
+      "impact": 6,
+      "effort": "M",
+      "dependsOn": [
+        "sky-and-key-light",
+        "kart-shading-injections"
+      ],
+      "acceptance": "Kart paint, chrome trim, ice rails and the road each show a distinct sky-coloured sheen that moves as the camera yaws, and the road's sheen is clearly weaker than the kart's so the neon dusk grade is not flattened."
+    },
+    {
+      "id": "kart-rig-and-lights",
+      "name": "Wheels, lights, weight transfer and a seated driver",
+      "goal": "Fix the two kart blockers and make the chassis feel like it has mass. The default Hero Kart currently drives at 289 km/h on frozen wheels, and its rear face is the darkest object on screen in a game framed permanently from behind.",
+      "ownedFiles": [
+        "src/game/ComebackCityThreeKartRace.jsx"
+      ],
+      "tasks": [
+        "Move the four procedural wheel Groups out of bodyGroup into a sibling wheelRig on the model (the same treatment boostFlame already gets so it survives the swap). Change replaceBody to keep the procedural wheels by default and only swap to GLB nodes when all four Kenney names resolve. In attachTripoKartBody, re-seat and re-scale wheelRig from the fused body's measured footprint, with a per-kart wheelOffsets override for iceblock and icesled.",
+        "Fix wheel spin aliasing: derive from radius (speed / TIRE_R) and clamp below the geometry's Nyquist limit (~0.28 rad/frame against a 10-segment lathe), and above ~140 swap the tyre to a pre-made concentric-ring blur material so it reads as a spinning disc. Raise the lathe from 10 to 14 segments.",
+        "Build a lightRig Group parented to model (not bodyGroup) so the rear light bar, round tail lamps and headlight strips survive replaceBody, re-seated from the fused body's fitted bounds. Drive a brake-light brightness/colour flip from a tracked prevSpeed. Use toneMapped:false MeshBasicMaterial so they clear the bloom threshold for free.",
+        "Weight transfer on bodyRig (NOT the outer group, which would drag the contact shadow): roll toward the corner and the drift direction, pitch from acceleration, both smoothed with the existing 1-pow(k,dt) lerp; then counter-move the wheels so the body leans OVER planted wheels — that inverse relationship is the whole trick.",
+        "Seat the driver: replace the hardcoded 0.58-of-body-height mount with a measured seat anchor (per-kart seatY, or a downward raycast from fitted.max.y), drop the rig by hip height rather than foot height, clip the legs with a local clipping plane, and add two sphere hands on the steering wheel that rotate with steer input. Today the drivers stand on the cowl with their lower bodies missing.",
+        "Boost flame: replace the opaque 7-sided cone with a merged additive two-part flame (white-hot core, tinted shell) with an animated noise mask in the fragment, depthTest TRUE (the current streak bars punch through geometry), length scaled by mini-turbo tier, throttle-gated stutter, and a 2.4x backfire on drift release tinted to the tier colour.",
+        "Wire the paint tint and speed-reactive rim uniform from the kart-shading package at the six applyHeroRim call sites.",
+        "CONTRACT LINE for P13: expose item/impact/finish state in particleContext."
+      ],
+      "impact": 8,
+      "effort": "L",
+      "dependsOn": [
+        "kart-shading-injections",
+        "shadows-and-grounding"
+      ],
+      "acceptance": "The default Hero Kart's wheels visibly rotate forward at 280+ km/h (today they are static, and the procedural fallback aliases into a backward crawl). The kart has lit tail lamps that brighten under braking. Through a corner the body rolls and under acceleration it pitches, while the wheels stay planted. The driver is seated in the bucket with hands on the wheel, not standing on the cowl with no legs."
+    },
+    {
+      "id": "event-vfx",
+      "name": "Item, impact and celebration VFX",
+      "goal": "Make gameplay events legible in the world instead of only in the HUD numbers.",
+      "ownedFiles": [
+        "src/game/race/render/raceParticles.js"
+      ],
+      "tasks": [
+        "Item box shatter: 14 coloured shards with gravity at the box position when its cooldown flips positive, replacing the current instant visibility toggle.",
+        "Kart-to-kart contact and item hits: a star burst plus a spinning smoke ring at the contact point, with a colour keyed to the item.",
+        "Coin pickup sparkle upgrade and a per-lap flourish; a finish-line confetti and firework burst using the pooled burst mesh with a longer ttl and gravity.",
+        "Deploy flash and orbiting motes on the ice shield (today it deploys as a bare wireframe geodesic cage with no event at all — penguin-village-p0_9).",
+        "Expose an onShake(intensity, duration) callback the camera package consumes, so shake is authored here with the burst it belongs to."
+      ],
+      "impact": 5,
+      "effort": "M",
+      "dependsOn": [
+        "surface-and-ambient-vfx"
+      ],
+      "acceptance": "An item box being consumed shatters into shards; a kart-to-kart hit produces a burst and a ring; crossing the finish line fires confetti. A viewer can tell from a still what just happened without reading the HUD."
+    },
+    {
+      "id": "camera-and-hud-feel",
+      "name": "Chase camera feel and HUD structure",
+      "goal": "Add the camera language MK8 uses to sell speed and impact, and restructure the HUD markup to match the CSS pass from wave 1.",
+      "ownedFiles": [
+        "src/game/ComebackCityThreeKartRace.jsx",
+        "src/game/comebackCityThreeKartRace.css"
+      ],
+      "tasks": [
+        "Camera: drift-side lateral offset and roll, a boost punch-in dolly (short pull-back then settle) on top of the existing FOV kick, a landing dip, and a lookAhead that lengthens with speed. All in the inline camera block at ~6300-6340 — note chaseCamera.js is DEAD and must not be edited.",
+        "Screen shake driven by the onShake callback from the event-VFX package: short, decaying, capped, and disabled under reducedMotion.",
+        "Retune the FOV curve now that speed blur carries part of the speed read, so the two do not double up into nausea.",
+        "HUD JSX restructure to match the wave-1 CSS: position numeral as the hero element, speed second, item socket, lap, coin/boost counters; add lap-change and final-lap states and a finish flourish.",
+        "Re-verify the phone landscape soft-lock path and the touch control layout after the HUD changes."
+      ],
+      "impact": 6,
+      "effort": "M",
+      "dependsOn": [
+        "kart-rig-and-lights",
+        "hud-css-pass",
+        "event-vfx"
+      ],
+      "acceptance": "A boost frame shows a visibly different camera position and framing from a cruise frame at the same track point. A hit frame shows displacement. The HUD's position and speed dominate the read, and the lap/finish moment has a visible state change rather than a silent number increment."
+    },
+    {
+      "id": "quality-tiers",
+      "name": "Mobile and low-end quality tiers across post, particles and renderer",
+      "goal": "Protect the phone build now that the chain, shadows, belt and particle systems have all grown. Everything in this package lands in modules that are free in the final wave.",
+      "ownedFiles": [
+        "src/game/race/render/racePostChain.js",
+        "src/game/race/render/raceParticles.js",
+        "src/game/race/render/createRaceScene.js"
+      ],
+      "tasks": [
+        "Consolidate the per-system tier switches behind one resolved tier value (high / low / potato) covering post passes, bloom mip levels, MSAA, SMAA vs FXAA vs none, particle pool sizes, skid quad count, cloud layer on/off and speed-blur tap count.",
+        "Confirm the desktop 0.85 and mobile 0.6 render scales are still the right trade with the new chain, and add the post-tone-map unsharp mask on desktop only (0.30) to buy back acuity lost to the bilinear upscale.",
+        "Add an automatic degrade: if the rolling fps estimate sits below 55 for more than 3 seconds, step the tier down once and log it to telemetry.",
+        "Capture a phone-profile run through the P4 harness on both tracks and publish the before/after fps, drawCalls and triangles table alongside a fresh npm run test:bundle:kart on a FRESH build."
+      ],
+      "impact": 5,
+      "effort": "M",
+      "dependsOn": [
+        "post-chain-rebuild",
+        "shadows-and-grounding",
+        "midground-belt",
+        "event-vfx"
+      ],
+      "acceptance": "A phone-profile capture on both tracks holds 60fps per the harness with the LUT, vignette and dither still applied (the two effects that carry the art direction), while the desktop capture is unchanged. The bundle report on a fresh build is still inside 16 MiB / 12000 KiB gz."
+    }
+  ],
+  "sequencing": [
+    {
+      "wave": 1,
+      "packageIds": [
+        "sky-and-key-light",
+        "speedlines-and-trails",
+        "hud-css-pass",
+        "dead-code-and-telemetry"
+      ],
+      "rationale": "The two loudest artefacts in the capture set are above the horizon (black arc, two suns) and on top of the kart (grey speed-line sticks). Both are visible before a player looks at anything else, and both are zero-byte. sky-and-key-light is the only monolith owner this wave; the other three own a standalone module, a CSS file, and the legacy tree respectively, so there is no contention. dead-code-and-telemetry must land here because several auditor fixes target files that never render, and because nothing after this wave can be signed off without harness fps/drawCalls/triangles."
+    },
+    {
+      "wave": 2,
+      "packageIds": [
+        "post-chain-rebuild",
+        "kart-shading-injections",
+        "midground-belt"
+      ],
+      "rationale": "Once there is a coherent sky and a real key light, the post chain is what converts it into an authored look — and the chain currently deletes its own bloom, has no dither, no white point and no grade. post-chain-rebuild owns the monolith and lands the one-line mid-ground call for its sibling. kart-shading-injections works entirely inside the already-wired applyHeroRim path and the (now free) track palettes. midground-belt is a pure new module. Nothing here can start before the sun direction and light rebalance are settled, because all three tune against them."
+    },
+    {
+      "wave": 3,
+      "packageIds": [
+        "road-and-edge-rebuild",
+        "surface-and-ambient-vfx"
+      ],
+      "rationale": "With the frame lit and graded, the next biggest read is that the road is a painted ribbon with disconnected stripes. This is the largest single monolith surgery in the plan (addTrack, buildCheckerRibbon, lane markings, start apron, ground relief, lane clamp) so it gets the wave alone on that file; raceParticles is free again and takes the surface-typed ambient work that depends on the road exposing its surface type."
+    },
+    {
+      "wave": 4,
+      "packageIds": [
+        "shadows-and-grounding",
+        "env-probe"
+      ],
+      "rationale": "Grounding comes after the road exists — the contact shadows and prop AO decals must be authored against the new crowned road and edge profile, and the static world-tier shadow map must include the mid-ground belt from wave 2. env-probe is a pure new module and pairs naturally because it and the shadow work together decide how much specular and how much occlusion the stylized look can carry."
+    },
+    {
+      "wave": 5,
+      "packageIds": [
+        "kart-rig-and-lights",
+        "event-vfx"
+      ],
+      "rationale": "The kart blockers (frozen wheels, deleted tail lights) are severe but they are also the most self-contained monolith work, and the weight-transfer and contact-shadow decoupling depend on wave 4 having moved the shadow out of the transformed group. event-vfx keeps raceParticles busy in parallel and produces the shake callback the last wave consumes."
+    },
+    {
+      "wave": 6,
+      "packageIds": [
+        "camera-and-hud-feel",
+        "quality-tiers"
+      ],
+      "rationale": "Camera and HUD are the last things to tune because they should react to everything else that now exists (speed blur, boost envelope, shake events, new lap/finish flourishes). quality-tiers closes the wave by re-measuring every system that grew and re-establishing the phone build, which is a ship gate rather than a look gate."
+    }
+  ],
+  "honestGap": "What we can genuinely match: lighting coherence (one sun, correct elevation, 3:1 key:fill, aerial perspective that runs the right way), the shading model (cel ramps with stepped specular, rim, curvature AO, an env probe), post and grade (per-track LUT, correct pass order, dither, a real white point, boost response, aerial haze), road legibility (extruded curbs, crisp checker, continuous edge lines, telegraphed surface changes, banking), grounding (soft shadows on every kart, a one-shot static world shadow tier, contact AO under every prop), effects density (the cue vocabulary is already derived — we simply never draw it), camera feel, and HUD polish. All of that is shader and parameter work inside the 1.1 MiB gz of headroom that actually exists (10860 of 12000 KiB today, not the 1.5 MiB the brief assumed), and most of it is byte-negative once the dead render tree and the baked sun disc come out. What we cannot match, and should stop pretending we will: authored content volume. An MK8 course carries hundreds of bespoke hand-modeled, hand-textured, hand-placed props, a unique animated set piece per section, per-course crowd rigs, and layered detail normal/roughness maps authored at 1-2 metre scale; we have six Miami GLBs reused three times a lap and procedural noise. Our drivers are static meshes — we can fake a seated pose, hands on the wheel and a lean, but we will never have MK8's per-action character animation sets, and no shader fixes that. We also cannot match Nintendo's fixed-hardware budget: they render 1080p native with no upscale and a bespoke pipeline, we render at 0.85 scale in a browser with a hard fps floor on phones, which is why SSAO stays measurement-gated and MSAA stays desktop-only. And there are whole MK8 systems (antigravity, gliding, underwater mode transitions, 12-kart fields, replay cameras) that are design scope, not art scope. Realistic ceiling for this plan: the frames stop reading as a hobby WebGL demo and start reading as a good stylized console-tier racer — closer to a strong Wii/3DS-era Mario Kart with modern shading and post than to MK8 Deluxe. That is a large, defensible jump, and it is achievable in these six waves. Claiming parity would be a lie."
+}

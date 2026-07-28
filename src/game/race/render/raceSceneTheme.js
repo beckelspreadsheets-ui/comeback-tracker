@@ -1,3 +1,13 @@
+// LEGACY - NOT THE SHIPPED GAME. Editing this file changes nothing the
+// owner ever sees. The racer that ships is the ComebackCityThreeKartRace.jsx
+// monolith, which imports NONE of this module tree (its only render-layer
+// imports are raceParticles / toonRimShader / gltfLoader / createRaceScene
+// (renderer+canvas fit only) / createBasicMaterial).
+//
+// The shipped per-track palettes live in src/game/race/tracks/comebackCity.js
+// and penguinVillage.js, validated by trackVisualSchema.js. These keys are
+// the old 2D-era track ids. Kept: npm run test:race imports this directly.
+
 export const TRACK_THEME = {
   'comeback-city': {
     fog: '#d5f9ff',

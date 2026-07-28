@@ -14,17 +14,63 @@
 // and `geometryNormal` / `geometryViewDir` (orthographic-safe, declared by
 // lights_fragment_begin) are already in scope at that point.
 import * as THREE from 'three';
+import {
+  HERO_RIM_KEY_BIAS,
+  HERO_RIM_MAX_POWER,
+  HERO_RIM_MIN_STRENGTH,
+  KART_PAINT_TINT_AMOUNT,
+  resolveKartShading,
+  tuneHeroTexture,
+} from './kartMaterials.js';
 
 // Fresnel rim added to the lit toon color. MeshToonMaterial has no envMap
 // in r184, so this injected rim IS the character-pop lever — it lifts kart
 // and driver silhouettes off the dark dusk track.
+//
+// AAA wave 2 round 2: the fresnel alone fired at full strength all the way
+// around the silhouette, including the edge the sun cannot see, so the rim
+// described nothing about the lighting — it read as a flat coloured outline
+// traced onto every hero. It now leans toward the key: same total budget,
+// redistributed, so the sunward edge is hotter and the shadow edge keeps only
+// enough to hold the silhouette off a dark track (see HERO_RIM_KEY_BIAS).
+// Key direction is read out of the light rig rather than taken as a uniform,
+// exactly as the kart shading chunk does, so it follows whatever sun the
+// track authored with no per-track wiring. `rim`-prefixed locals throughout:
+// both chunks land at the same anchor in the same scope, so a shared name
+// would be a redeclaration error on any material carrying both.
 export const TOON_RIM_CHUNK = /* glsl */ `
+	vec3 rimKeyDir = vec3(0.42, 0.72, 0.55);
+	#if NUM_DIR_LIGHTS > 0
+		float rimKeyWeight = -1.0;
+		for (int rimLightIdx = 0; rimLightIdx < NUM_DIR_LIGHTS; rimLightIdx++) {
+			float rimLightLum = luminance(directionalLights[rimLightIdx].color);
+			if (rimLightLum > rimKeyWeight) {
+				rimKeyWeight = rimLightLum;
+				rimKeyDir = directionalLights[rimLightIdx].direction;
+			}
+		}
+	#endif
 	float toonRimFresnel = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), uRimPower);
-	outgoingLight += uRimColor * uRimStrength * toonRimFresnel;`;
+	// Wide window: at the silhouette N is roughly perpendicular to the view, so
+	// N.key sweeps the full -1..1 as the eye travels around the outline. A tight
+	// window here would cut the rim into two hard arcs.
+	float toonRimKey = mix(
+		uRimKeyBias.x,
+		uRimKeyBias.y,
+		smoothstep(-0.45, 0.35, dot(geometryNormal, normalize(rimKeyDir)))
+	);
+	outgoingLight += uRimColor * uRimStrength * uRimStrengthScale * toonRimFresnel * toonRimKey;`;
 
 const TOON_RIM_PARS = /* glsl */ `uniform vec3 uRimColor;
 uniform float uRimStrength;
-uniform float uRimPower;`;
+uniform float uRimStrengthScale;
+uniform float uRimPower;
+uniform vec2 uRimKeyBias;`;
+
+// ONE shared multiplier on every hero rim, so a later wave can push the rim
+// with speed (boost = hotter silhouette) with a single float write per frame
+// instead of walking the material list. 1 = shipped strength.
+export const TOON_RIM_STRENGTH_SCALE = { value: 1 };
 
 // ONE shared tint object across every rimmed material: createScene sets it
 // from palette.rimLightColor (per-track — Penguin Village '#00d5ff' vs the
@@ -112,19 +158,221 @@ export const applyAmbientSway = (material, { heightRef = 4, speed = 1.6, strengt
     vertexPars: AMBIENT_SWAY_PARS,
   });
 
+// AAA wave 2 — four material classes out of one baked albedo.
+//
+// The audit's read on the karts was "not lit like objects, they are lit like
+// decals": pure diffuse toon plus a weak fresnel rim, no specular event
+// anywhere on the vehicle. This chunk adds the missing event, and adds it
+// several different ways so the surfaces disagree with each other the way
+// MK8's do — see kartMaterials.js for why each number is what it is.
+//
+// It has to work per-texel rather than per-material because every authored
+// kart body is one fused mesh carrying one baked map (attachTripoKartBody
+// keeps only that map), so there is no "tyre material" to treat differently.
+// Paint is chromatic; trim is bright-and-neutral; rubber is dark-and-neutral;
+// plastic is everything neutral in between, which round 2 left unclassified
+// and therefore unshaded. The four masks are a partition, so no texel can
+// collect two specular events, and the whole classifier costs four smoothsteps.
+//
+// Anchors and symbols verified against the INSTALLED three r184 sources, not
+// from memory. At `#include <opaque_fragment>` the meshtoon (and meshphysical)
+// fragment has `diffuseColor`, `outgoingLight`, `geometryNormal` and
+// `geometryViewDir` in scope; `luminance()` and `viewMatrix` come from the
+// renderer's fragment prefix (WebGLProgram.js); `inverseTransformDirection`
+// and `saturate` come from <common>; `directionalLights` is declared by
+// <lights_pars_begin> under the same NUM_DIR_LIGHTS guard used below.
+const KART_SHADING_PARS = /* glsl */ `uniform vec2 uKartPaintChroma;
+uniform vec2 uKartChromeLum;
+uniform vec2 uKartChromeCeil;
+uniform vec2 uKartRubberLum;
+uniform vec2 uKartGloss;
+uniform vec3 uKartSpecStrength;
+uniform vec2 uKartAo;
+uniform vec3 uKartSpecTint;
+uniform float uKartSpecBlend;
+uniform float uKartSpecCeil;
+uniform float uKartSkyBounce;
+uniform float uKartRubberDarken;
+uniform vec4 uKartTint;`;
+
+const KART_SHADING_CHUNK = /* glsl */ `
+	vec3 kartAlbedo = diffuseColor.rgb;
+	float kartChroma =
+		max(kartAlbedo.r, max(kartAlbedo.g, kartAlbedo.b)) -
+		min(kartAlbedo.r, min(kartAlbedo.g, kartAlbedo.b));
+	float kartLum = luminance(kartAlbedo);
+	float kartPaintMask = smoothstep(uKartPaintChroma.x, uKartPaintChroma.y, kartChroma);
+	float kartNeutral = 1.0 - kartPaintMask;
+	// Chrome is a BAND-PASS, not a step. Round 1 used the rising edge alone, so
+	// any near-white neutral texel scored a full chrome flash — which is what
+	// turned the pink kart's baked-white tyres into glossy marshmallows in
+	// comeback-city-p0_15. The falling edge retires everything above the
+	// ceiling from EVERY specular class (see below): still AO'd, still bounced,
+	// still rimmed, but no additive event on a surface that is already at white.
+	float kartBrightRetire = smoothstep(uKartChromeCeil.x, uKartChromeCeil.y, kartLum);
+	float kartChromeSel = smoothstep(uKartChromeLum.x, uKartChromeLum.y, kartLum);
+	float kartRubberSel = 1.0 - smoothstep(uKartRubberLum.x, uKartRubberLum.y, kartLum);
+	float kartChromeMask = kartNeutral * kartChromeSel * (1.0 - kartBrightRetire);
+	float kartRubberMask = kartNeutral * kartRubberSel;
+	// The fourth class is whatever the other three did not claim: neutral, but
+	// too dark for chrome and too bright for rubber. Round 2 gave that band
+	// nothing at all, and it is where mid-grey unpainted plastic lives — roll
+	// bars, seat shells, bumpers. Defined as the leftover rather than as its
+	// own window so the four masks stay a partition and no texel can ever
+	// collect two specular events.
+	float kartPlasticMask =
+		kartNeutral * (1.0 - kartBrightRetire) * (1.0 - kartChromeSel) * (1.0 - kartRubberSel);
+
+	// Key direction = the brightest directional light, already in VIEW space
+	// and already premultiplied by intensity by WebGLLights. Reading it out of
+	// the light rig instead of taking a uniform means the highlight tracks
+	// whatever sun each track authored with zero per-track wiring, and it stays
+	// correct if a later wave re-aims the key.
+	vec3 kartKeyDir = vec3(0.42, 0.72, 0.55);
+	#if NUM_DIR_LIGHTS > 0
+		float kartKeyWeight = -1.0;
+		for (int kartLightIdx = 0; kartLightIdx < NUM_DIR_LIGHTS; kartLightIdx++) {
+			float kartLightWeight = luminance(directionalLights[kartLightIdx].color);
+			if (kartLightWeight > kartKeyWeight) {
+				kartKeyWeight = kartLightWeight;
+				kartKeyDir = directionalLights[kartLightIdx].direction;
+			}
+		}
+	#endif
+	kartKeyDir = normalize(kartKeyDir);
+	// Half-vector against the key: the band slides across the cowl as the kart
+	// YAWS, which is the cue that reads as a solid glossy object rather than a
+	// painted sprite. pow() shapes the lobe, smoothstep cuts it into a cel band.
+	float kartNdH = saturate(dot(geometryNormal, normalize(kartKeyDir + geometryViewDir)));
+	float kartPaintBand = smoothstep(0.42, 0.52, pow(kartNdH, uKartGloss.x));
+	float kartChromeBand = smoothstep(0.42, 0.52, pow(kartNdH, uKartGloss.y));
+	// No shadow term is reachable here (meshtoon does not include
+	// <shadowmask_pars_fragment>), so gate on N.L instead — enough to stop a
+	// highlight firing on a face the key cannot see.
+	float kartLitMask = smoothstep(0.02, 0.3, dot(geometryNormal, kartKeyDir));
+
+	// Curvature AO, deliberately light-INDEPENDENT: undertrays, wheel wells and
+	// seat interiors have to stay dark even when the low sun rakes straight
+	// under the kart. World up, not view up — the kart yaws every frame.
+	vec3 kartWorldNormal = inverseTransformDirection(geometryNormal, viewMatrix);
+	float kartAo = mix(uKartAo.x, 1.0, smoothstep(-0.35, 0.85, kartWorldNormal.y));
+	// Screen-space derivative of the normal: ~0 across a flat facet, large
+	// across a crease, so hard edges ink themselves without a second pass.
+	kartAo *= 1.0 - uKartAo.y * smoothstep(0.1, 0.8, length(fwidth(geometryNormal)));
+
+	// Per-racer paint tint, selecting itself off the same chroma mask so tyres,
+	// trim and decals never take the racer colour. Luminance-preserving, so the
+	// baked panel shading survives the recolour. Amount is 0 unless a caller
+	// opts a body in via setKartPaintTint.
+	vec3 kartTinted = uKartTint.rgb * (luminance(outgoingLight) / max(1e-4, luminance(uKartTint.rgb)));
+	outgoingLight = mix(outgoingLight, kartTinted, kartPaintMask * uKartTint.a);
+	outgoingLight *= kartAo * mix(1.0, uKartRubberDarken, kartRubberMask);
+	// Sky bounce — the only form cue that survives on a texel the classifier
+	// has retired (baked-white tyres, the frosted shell). Albedo-tinted so it
+	// reads as light the surface returned rather than as a grey wash, and
+	// metered against the same lit headroom as the specular so it can only
+	// spend what the surface still has, never clip.
+	outgoingLight += uKartSkyBounce
+		* saturate(kartWorldNormal.y)
+		* kartAlbedo
+		* saturate((uKartSpecCeil - luminance(outgoingLight)) / uKartSpecCeil);
+	vec3 kartSpec = kartLitMask * (
+		mix(vec3(1.0), uKartSpecTint, uKartSpecBlend) * (uKartSpecStrength.x * kartPaintBand * kartPaintMask) +
+		// Unpainted plastic borrows the paint lobe (no extra pow) at a third of
+		// the strength and half the tint pull: a duller, more neutral event.
+		mix(vec3(1.0), uKartSpecTint, uKartSpecBlend * 0.5) * (uKartSpecStrength.z * kartPaintBand * kartPlasticMask) +
+		vec3(uKartSpecStrength.y * kartChromeBand * kartChromeMask)
+	);
+	// Additive specular on an already-lit surface is unbounded. Round 1 spent
+	// it against the ALBEDO's headroom, which is the wrong quantity — a mid
+	// texel standing in full key is already near 1.0 by the time the band
+	// fires. Measured against the LIT result instead, the band lifts dark and
+	// mid surfaces hard and eases to nothing on anything the key has already
+	// taken to white, so the highlight can no longer flatten a panel into a
+	// featureless blob or hand the bloom pass one.
+	outgoingLight += kartSpec * saturate((uKartSpecCeil - luminance(outgoingLight)) / uKartSpecCeil);`;
+
+// Adds the paint / chrome / plastic / rubber split to a hero material. Composed through
+// addShaderInjection like everything else — never assigned directly — so it
+// stacks with the rim (and with anything a later wave registers).
+export const applyKartShading = (material, overrides = null) => {
+  // Merged, not taken whole: applyToonRim lets a caller hand in a partial
+  // shading object, and a missing vec2 here would throw at spread time rather
+  // than degrade.
+  const params = overrides ? { ...resolveKartShading(), ...overrides } : resolveKartShading();
+  // Sampling, not shading, but this is the one funnel every hero albedo map
+  // passes through — kart bodies, seated drivers, marchers and item boxes all
+  // reach it via applyHeroRim. Doing it at material-build time means the
+  // texture is re-uploaded before its first draw, not mid-race.
+  tuneHeroTexture(material.map, params.textureAnisotropy);
+  return addShaderInjection(material, {
+    fragmentAnchor: '#include <opaque_fragment>',
+    fragmentChunk: KART_SHADING_CHUNK,
+    fragmentPars: KART_SHADING_PARS,
+    name: 'kart-shading-v1',
+    uniforms: {
+      uKartAo: { value: new THREE.Vector2(params.aoFloor, params.aoCrease) },
+      uKartChromeCeil: { value: new THREE.Vector2(...params.chromeCeiling) },
+      uKartChromeLum: { value: new THREE.Vector2(...params.chromeLuminance) },
+      uKartGloss: { value: new THREE.Vector2(params.paintGloss, params.chromeGloss) },
+      uKartPaintChroma: { value: new THREE.Vector2(...params.paintChroma) },
+      uKartRubberDarken: { value: params.rubberDarken },
+      uKartRubberLum: { value: new THREE.Vector2(...params.rubberLuminance) },
+      uKartSkyBounce: { value: params.skyBounce },
+      uKartSpecBlend: { value: params.specTintBlend },
+      uKartSpecCeil: { value: params.specCeiling },
+      uKartSpecStrength: {
+        value: new THREE.Vector3(params.paintStrength, params.chromeStrength, params.plasticStrength),
+      },
+      // Same shared Color object the rim rides, so palette moments retint the
+      // paint highlight and the rim together in one write.
+      uKartSpecTint: TOON_RIM_SHARED_TINT,
+      uKartTint: { value: new THREE.Vector4(1, 1, 1, 0) },
+    },
+  });
+};
+
+// Opt a body into the per-racer paint tint. Call AFTER applyToonRim /
+// applyKartShading (it writes into the injection's own uniform), passing the
+// racer's colour — KART_PAINT_TINTS in kartMaterials.js mirrors the roster.
+export const setKartPaintTint = (material, tint, amount = KART_PAINT_TINT_AMOUNT) => {
+  const entry = material.userData.shaderInjections?.find((item) => item.name === 'kart-shading-v1');
+  if (!entry || !tint) return material;
+  const color = new THREE.Color(tint);
+  entry.uniforms.uKartTint.value.set(color.r, color.g, color.b, amount);
+  return material;
+};
+
 // Palette-tinted fresnel rim for the hero set (karts, drivers, marchers,
 // item boxes — never scenery: rim-on-everything cheapens the read).
 // Defaults are the execution-plan starting values; the owner-gated rim lab
 // picks the shipped numbers.
-export const applyToonRim = (material, { strength = 0.32, power = 2.6 } = {}) =>
-  addShaderInjection(material, {
+//
+// AAA wave 2: this now ALSO installs the kart material classes, registered
+// first so the rim lands on top of the AO'd, specular'd surface rather than
+// underneath it. Doing it here is what keeps the package at zero monolith
+// edits — applyHeroRim is already wired at all six hero call sites. Pass
+// `shading: null` for a hero material that should stay flat-toon.
+// Consequence worth knowing: applyHeroRim no-ops entirely when a track ships
+// no palette.heroRim (and under the ?rimLab=0 diagnostic), so a track without
+// that key now loses the material classes too, not just the rim.
+export const applyToonRim = (material, { strength = 0.32, power = 2.6, shading } = {}) => {
+  if (shading !== null) applyKartShading(material, shading || null);
+  return addShaderInjection(material, {
     fragmentAnchor: '#include <opaque_fragment>',
     fragmentChunk: TOON_RIM_CHUNK,
     fragmentPars: TOON_RIM_PARS,
     name: 'toon-rim-v1',
     uniforms: {
       uRimColor: TOON_RIM_SHARED_TINT,
-      uRimPower: { value: power },
-      uRimStrength: { value: strength },
+      // See kartMaterials.js: Comeback City ships HALF the rim strength of
+      // Penguin Village, on the darker of the two tracks. The floor lifts CC
+      // only; PV's authored values already clear it. Temporary — it belongs
+      // in the track palette.
+      uRimKeyBias: { value: new THREE.Vector2(...HERO_RIM_KEY_BIAS) },
+      uRimPower: { value: Math.min(power, HERO_RIM_MAX_POWER) },
+      uRimStrength: { value: Math.max(strength, HERO_RIM_MIN_STRENGTH) },
+      uRimStrengthScale: TOON_RIM_STRENGTH_SCALE,
     },
   });
+};
