@@ -89,6 +89,22 @@
 //      plates is, which is why this can never be a global) and re-tints the
 //      excess to the track's own sun colour at its own luminance — one warm
 //      sun-catch instead of a spectrum.
+//
+// WAVE 5 ROUND 2 — THE DOME IS THE LAST LAYER WITH NO COMPASS. Wave 4 gave the
+// cloud deck a bearing (uCloudFront) and wave 5 round 1 gave the backdrop plate
+// one (RING_SUN_WEDGE). The dome itself never had one: `t` is pow(d.y, power),
+// so the LUT ladder is identical at every azimuth by construction, and the only
+// two terms that vary with the sun — the glow lobes and the scatter veil — key
+// on the full 3D sun dot, which is radially symmetric. A cone centred on a
+// 12-degree sun projects as a horizontal band across the frame, which is what
+// every Penguin Village mark ships: measured over rows 8-95 of the nine
+// wave5-r1 marks, per-column R-B tops out at +80 with the warm band spanning
+// the full width on all nine, against Comeback City's +187 at 0.75 saturation.
+// SKY_DOME_WEDGE is the missing axis — a flat (horizontal) bearing gate that
+// rotates the low sky onto an authored ember toward the sun and takes value off
+// it away from the sun, weighted by an elevation window so the storm ceiling
+// above stays cold at every bearing. Zero cost, zero bytes, and it cannot clip:
+// see the shader block for the arithmetic.
 import * as THREE from 'three';
 
 // Azimuth 0 = +Z, 90 = +X (the convention the track palettes are authored
@@ -223,6 +239,16 @@ uniform float uHorizonPower;
 uniform vec3 uScatter;
 uniform vec3 uScatterColor;
 #endif
+#ifdef SKY_DOME_WEDGE
+// x = how far the sun-facing sky rotates onto the ember, y = how far the
+// anti-sun sky is knocked down in value, z = the half-width of the bearing
+// window in FLAT (horizontal) sun-dot.
+uniform vec3 uDomeWedge;
+uniform vec3 uDomeWedgeTint;
+// The elevation window the wedge lives in, in d.y: full authority at or below
+// .x, gone at or above .y. See the wedge block for why this is not optional.
+uniform vec2 uDomeWedgeBand;
+#endif
 #ifdef SKY_CLOUDS
 uniform sampler2D uCloudNoise;
 uniform vec3 uCloudColor;
@@ -346,6 +372,45 @@ void main() {
 	// rather than as a bleach. Penguin Village authors 0 and uses the mix above.
 	col += uCloudLitColor * ((cHigh + cLow) * pow(sd, 4.0) * uCloudMix.y);
 #endif
+#ifdef SKY_DOME_WEDGE
+	// THE DOME'S MISSING AXIS, and it is the same one the ring and the deck each
+	// got in earlier waves. Everything upstream of this line keys the sky on
+	// ELEVATION: the LUT coordinate is pow(d.y, uHorizonPower), so the ladder —
+	// the storm indigo, the trough, the break — is by construction identical at
+	// every compass bearing. The two terms that DO vary with the sun both key on
+	// sd, the full 3D sun dot, which is radially symmetric about the sun vector:
+	// a cone, not a wedge, and a cone centred on a 12-degree sun is a horizontal
+	// band across the whole frame. Measured on wave5-r1, rows 8-95 of the nine
+	// Penguin Village marks: per-column R-B peaks at +80 and the warm band spans
+	// the full frame width on every one of them, against Comeback City at +187.
+	//
+	// So the LUT colour takes a horizontal bearing gate. Toward the sun it
+	// ROTATES onto an authored ember; away from it, it loses value. Both terms
+	// are weighted by an ELEVATION window, and that window is the whole reason
+	// this is a front rather than a tint: a warm rotation carried to the zenith
+	// would repaint the storm ceiling the ladder exists to establish, which is
+	// precisely the wave-4 broad-lobe mistake wearing a compass. Full authority
+	// in the break band, dying out before the top of frame, so a camera facing
+	// the sunset frames a hot horizon under a cold lid and a camera facing away
+	// frames a cold, dark anvil.
+	//
+	// RUNS AFTER THE DECK ON PURPOSE, for the same reason the scatter veil does:
+	// the deck covers most of the visible sky on this track, so a bearing term
+	// applied under it would be painted over by the very geometry it is meant to
+	// light. The tear opens toward the sun, so the deck is thinnest exactly where
+	// the wedge is hottest, and thickest where it is shading.
+	//
+	// NEITHER TERM CAN CLIP. The rotation is skyHueMix — luminance-preserving,
+	// clamped amount — and the shade is a multiply that is <= 1 by construction.
+	// Every warm term this file has shipped that was ADDITIVE measured as a
+	// desaturator or a two-channel clip; there is no additive lobe here.
+	vec2 domeView = normalize(d.xz + vec2(1e-5, 0.0));
+	vec2 domeSun = normalize(uSunDir.xz + vec2(1e-5, 0.0));
+	float domeBearing = smoothstep(-uDomeWedge.z, uDomeWedge.z, dot(domeView, domeSun));
+	float domeLow = 1.0 - smoothstep(uDomeWedgeBand.x, uDomeWedgeBand.y, d.y);
+	col = skyHueMix(col, uDomeWedgeTint, clamp(domeBearing * domeLow * uDomeWedge.x, 0.0, 1.0));
+	col *= mix(1.0 - clamp(uDomeWedge.y * domeLow, 0.0, 0.85), 1.0, domeBearing);
+#endif
 #ifdef SKY_SUN_SCATTER
 	// THE SCATTER VEIL, and it runs LAST on purpose: the deck has to take it
 	// too. A cloud base a few degrees off a low sun is the warmest thing in the
@@ -386,6 +451,18 @@ const normalizedTint = (source, fallback = '#ffffff') => {
 // the dome already holds, which is where a scatter veil's colour physically
 // comes from anyway. The named `scatter` parameter is the real interface and
 // wins whenever it is supplied; delete the tail when the monolith can pass it.
+//
+// WAVE 5 EXTENDS THE SAME TAIL, glow[5..8], with the dome's sun wedge, under
+// the same constraint (the monolith still forwards five named keys, verbatim
+// array included). It rides `glow` rather than `clouds` because glow[0..1] and
+// glow[2..4] are the dome's other two SUN-BEARING terms and this is a third —
+// putting a bearing parameter anywhere else is how the set gets confused later.
+//   [5] warm  — rotation onto the ember on the sun bearing.
+//   [6] shade — value knockdown on the anti-sun bearing.
+//   [7] reach — half-width of the bearing window, in flat sun-dot.
+//   [8] color — the ember, packed as a hex integer (THREE.Color takes one).
+// The named `wedge` parameter is the real interface; delete the tail when the
+// monolith forwards whole objects.
 export const createSkyDome = ({
   clouds = null,
   horizonPower = 2.6,
@@ -393,10 +470,15 @@ export const createSkyDome = ({
   lut,
   scatter = null,
   skyUniforms,
+  wedge = null,
 }) => {
   const veil = scatter
     || (glow.length > 2
       ? { amount: glow[2] ?? 0, disc: glow[4] ?? 0, power: glow[3] ?? 3 }
+      : null);
+  const domeWedge = wedge
+    || (glow.length > 5
+      ? { color: glow[8], reach: glow[7], shade: glow[6], warm: glow[5] }
       : null);
   const uniforms = {
     uGlow: { value: new THREE.Vector2(glow[0], glow[1]) },
@@ -442,6 +524,36 @@ export const createSkyDome = ({
       value: normalizedTint(veil.color || skyUniforms.uSunColor.value),
     };
   }
+  const domeWedgeWarm = domeWedge?.warm ?? 0;
+  const domeWedgeShade = domeWedge?.shade ?? 0;
+  if (domeWedgeWarm > 0 || domeWedgeShade > 0) {
+    uniforms.uDomeWedge = {
+      value: new THREE.Vector3(domeWedgeWarm, domeWedgeShade, domeWedge?.reach ?? 0.5),
+    };
+    // Authored, not taken from the sun, and the arithmetic is the same one
+    // written out under the ring's uWedgeTint: normalising #ffd2a4 gives a tint
+    // at 0.376 linear min/max, so even a FULL rotation onto it tops out near
+    // 0.24 HSV saturation — under the >= 0.42 the rubric asks for however hard
+    // the amount is driven. A sun's DISC is a near-white by definition; the
+    // EMBER a low sun paints on the sky under a front is a different colour.
+    // Defaulting to the sun colour is still correct behaviour for a track that
+    // authors none: it degrades to a weak warm bias rather than to a wrong hue.
+    uniforms.uDomeWedgeTint = {
+      value: normalizedTint(
+        domeWedge?.color === undefined || domeWedge?.color === null
+          ? skyUniforms.uSunColor.value
+          : domeWedge.color
+      ),
+    };
+    // d.y, i.e. sin(elevation). The default spans 23.6 to 41 degrees: full
+    // authority across the break band the backdrop plate's 22.3-degree rim
+    // uncovers, a little over half of it at 30 degrees, and effectively nothing
+    // at the top of a chase-camera frame (~34-38 degrees), which is where the
+    // ladder's cold storm ceiling has to survive at EVERY bearing.
+    uniforms.uDomeWedgeBand = {
+      value: new THREE.Vector2(domeWedge?.band?.[0] ?? 0.4, domeWedge?.band?.[1] ?? 0.66),
+    };
+  }
   // Defines, not runtime branches: a track that authors one body colour and no
   // sun-side mix (Comeback City) compiles to the pre-wave-4 shader exactly, so
   // its measurably-correct sky cannot drift by so much as a rounding step.
@@ -453,6 +565,13 @@ export const createSkyDome = ({
     if ((clouds.front?.amount ?? 0) > 0) defines.SKY_CLOUD_FRONT = '';
   }
   if ((veil?.amount ?? 0) > 0 || (veil?.disc ?? 0) > 0) defines.SKY_SUN_SCATTER = '';
+  // Comeback City authors no dome wedge, so this branch never compiles and its
+  // owner-confirmed Miami sky is bit-identical. Its dome is warm at EVERY
+  // bearing on purpose (measured R-B +119..+197 across the top of frame on both
+  // sampled marks, in every column): a boulevard at golden hour has the whole
+  // sky lit, and putting a directional break in it would be inventing weather
+  // it does not have. Same reasoning, same wording, as the ring's wedge.
+  if (domeWedgeWarm > 0 || domeWedgeShade > 0) defines.SKY_DOME_WEDGE = '';
   const material = new THREE.ShaderMaterial({
     defines,
     // depthTest stays ON and the dome renders LAST in the opaque queue. It

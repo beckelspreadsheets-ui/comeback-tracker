@@ -164,6 +164,26 @@ export const ENV_RESPONSE = Object.freeze({
 // 97.6% on the road and 98.7% on the sky. Whatever is wrong with that kart, it
 // is the only object in the shot that is not suffering from a missing highlight,
 // and the fix is mesh/silhouette work, not a material clamp.
+//
+// AAA wave 5 round 2 — the same finding was filed a THIRD time ("clamp
+// envMapIntensity for the translucent/ice entry in ENV_RESPONSE",
+// comeback-city-p0_33/45/56). The refutation above is unchanged and is a
+// property of three's renderer, not of this table: `ice` has no live call site
+// on either track, and even if it had one it could not reach a kart, because
+// karts are toon and WebGLRenderer.js:2165 will not hand a toon material
+// scene.environment. Clamping this entry would change nothing in any frame.
+// The Ice Racer's silhouette is the asset track.
+//
+// The near-clip ICE WEDGE (penguin-village-p0_9, right quarter) is a separate
+// case and it is not this table either. Re-measured this round: (121,150,170)
+// at (1350,450), (120,148,169) at (1450,250) and (121,149,170) at (1500,400),
+// BIT-IDENTICAL to wave4-r3 at all three. A surface that did not move by one
+// least-significant bit across a wave in which every standard material in the
+// tree gained an analytic form term is a surface the term never reached — see
+// applySurfaceFormToScene below for which materials it did and did not reach,
+// and note that the mid-ground belt builds its masses as MeshToonMaterial /
+// MeshLambertMaterial with its own shading injection (createMidGroundBelt.js:
+// 829, 1426). Those belong to the belt package.
 
 // ---- AAA wave 5: analytic surface form -------------------------------------
 //
@@ -241,6 +261,69 @@ export const SURFACE_FORM = Object.freeze({
   // just needs less of it to read at that pixel count.
   desktop: 0.08,
   exponent: 4,
+  // ---- The MICRO-BREAK, AAA wave 5 round 2 ------------------------------
+  //
+  // The grazing term above is the right answer for a VERTICAL mass and it is
+  // structurally the wrong one for a horizontal plane, which is where both of
+  // the surviving flatness blockers actually live. Two reasons, and neither is
+  // a tuning question:
+  //
+  //   * property 2 suppresses it on up-facing normals by design (groundKeep
+  //     0.28), because the road runs to the horizon and the full term on it
+  //     reads as haze;
+  //   * on a plane the camera looks along, N.V is very nearly constant across
+  //     the whole face, so pow(1 - N.V, 4) returns one number over hundreds of
+  //     pixels. A term that varies only with the view direction cannot break up
+  //     a surface the view direction barely moves across.
+  //
+  // Measured, wave5-r1: penguin-village-p0_9's ice wedge returns (121,150,170)
+  // at (1350,450), (1450,250) and (1500,400) — the same triple wave4-r3
+  // recorded, BIT-IDENTICAL at three of five separated sample points.
+  // comeback-city-p0_15's road holds one value across the lower third.
+  //
+  // So the plane needs a term that varies with WORLD POSITION, and this is it:
+  // three sines summed at mutually irrational bearings, in three octaves, read
+  // at the fragment's world position. Four properties keep it from becoming a
+  // grade change or a shimmer source:
+  //
+  //  1. MEAN ZERO AND MULTIPLICATIVE. It is applied as (1 + amp * n) with n
+  //     symmetric about 0, so it adds no energy at all — it redistributes the
+  //     value the surface already has. An owner-confirmed grade is a statement
+  //     about mean and hue; this moves neither. (Every other term in this file
+  //     is additive and therefore had to be argued for on those grounds; this
+  //     one cannot fail that way.)
+  //  2. HUE-FREE. It scales all three channels by one factor, so it is an
+  //     exposure ripple, never a tint. Nothing here can invent a colour.
+  //  3. DISTANCE-FADED. The two coarse octaves fade out between 70 and 190
+  //     units and the fine one between 12 and 45, so the pattern never falls
+  //     below a pixel. Shimmer on the track surface is an automatic rubric
+  //     blocker and a world-space noise with no distance fade is the classic
+  //     way to earn one.
+  //  4. HEADROOM-WEIGHTED. Scaled by the same peak-channel meter the grazing
+  //     term uses, so an emissive neon strip or a blown snow face keeps its
+  //     flat read and only the mid-value masses ripple.
+  //
+  // Amplitude is set against the measurement, not by eye. A sum of three sines
+  // has a typical excursion of roughly 0.4 of its peak, so 0.075 is about
+  // +-3% typical and +-6% worst case: on the PV snow apron (sRGB ~150) that is
+  // +-4 levels typically and +-9 at the peaks, which is well clear of the
+  // "bit-identical over hundreds of pixels" failure and well under the ~24
+  // levels that would read as dirt. Weighted UP on up-facing normals — it is
+  // the exact complement of groundKeep, so between the two terms every face in
+  // the frame gets one of them and neither gets both at full strength.
+  //
+  // KNOWN AND ACCEPTED LIMIT: because it is multiplicative it scales with the
+  // surface, so it does most for a bright plane (arctic snow, the PV apron) and
+  // very little for Comeback City's near-black asphalt, where +-6% of sRGB 55
+  // is under a level. That asymmetry is the price of the mean-zero property,
+  // and the mean-zero property is what makes a default-on term safe on a grade
+  // the owner has signed off. A dark road needs an albedo/normal-map answer,
+  // which is the monolith's roadMaterial, not this module's.
+  grain: 0.075,
+  grainMobile: 0.06,
+  // How much of the ripple a VERTICAL face keeps. Low, because a vertical face
+  // is already served by the grazing term.
+  grainUpBias: 0.5,
   // How much of the term an up-facing surface keeps. See property 2.
   groundKeep: 0.28,
   mobile: 0.06,
@@ -254,8 +337,16 @@ export const SURFACE_FORM = Object.freeze({
 // has no dependency on the probe existing.
 export const SURFACE_FORM_STRENGTH = { value: SURFACE_FORM.desktop };
 
+// Second shared tier float, for the micro-break. Separate object rather than a
+// vec2 because the two are read at different points in the chunk and a shared
+// vector would make a future per-track override of one of them silently move
+// the other.
+export const SURFACE_FORM_GRAIN = { value: SURFACE_FORM.grain };
+
 const SURFACE_FORM_PARS = /* glsl */ `uniform float uSurfStrength;
-uniform vec3 uSurfShape;`;
+uniform float uSurfGrain;
+// (grazing exponent, ground suppression, headroom ceiling, grain vertical bias)
+uniform vec4 uSurfShape;`;
 
 // Symbols verified against the INSTALLED three r184 sources, not from memory:
 // at `#include <opaque_fragment>` meshphysical.glsl.js:216 has `outgoingLight`
@@ -311,6 +402,44 @@ const SURFACE_FORM_CHUNK = /* glsl */ `
 	// one colour it was supposed to leave alone.
 	float surfPeak = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b));
 	float surfHead = saturate((uSurfShape.z - surfPeak) / uSurfShape.z);
+	// ---- Micro-break: the term for the surfaces the grazing lobe cannot help --
+	// See SURFACE_FORM.grain. geometryPosition is the fragment's VIEW-space
+	// position (declared by <lights_fragment_begin> as -vViewPosition, in scope
+	// in meshphysical, meshtoon and meshlambert alike); rotating it back by the
+	// view matrix WITHOUT normalising and adding the camera's world position is
+	// the fragment's world position. inverseTransformDirection cannot be reused
+	// here — it normalises, which is exactly what would be thrown away.
+	vec3 surfWorldPos = cameraPosition + (vec4(geometryPosition, 0.0) * viewMatrix).xyz;
+	float surfViewDist = length(geometryPosition);
+	// Three bearings chosen so no pair is a rational multiple of another: a
+	// product of axis-aligned sines reads as a plaid grid on a big plane, a sum
+	// at mutually irrational bearings reads as terrain. The Y term is small and
+	// only on one band, so a vertical face gets a different slice of the same
+	// field rather than a vertically-smeared copy of the ground's.
+	vec3 surfGrainPhase = vec3(
+		dot(surfWorldPos.xz, vec2(0.071, 0.034)) + surfWorldPos.y * 0.052,
+		dot(surfWorldPos.xz, vec2(-0.029, 0.063)) + 2.1,
+		dot(surfWorldPos.xz, vec2(0.013, -0.019)) + 4.7
+	);
+	// ~88-unit dune, ~16-unit drift ripple, ~4-unit grain. The fine octave is
+	// held to the near field on purpose: it is the one that would alias, and it
+	// is also the only one a player can see at that scale.
+	float surfGrainNear = 1.0 - smoothstep(12.0, 45.0, surfViewDist);
+	float surfGrain = dot(sin(surfGrainPhase), vec3(0.3333));
+	surfGrain += 0.55 * dot(sin(surfGrainPhase * 5.5 + 1.7), vec3(0.3333));
+	surfGrain += 0.45 * surfGrainNear * dot(sin(surfGrainPhase * 21.0 + 3.9), vec3(0.3333));
+	// Normalised by the summed octave weights so the field stays inside [-1, 1]
+	// and uSurfGrain is the whole amplitude budget.
+	surfGrain /= 2.0;
+	// Complement of groundKeep: the ripple carries the horizontal masses the
+	// grazing term is suppressed on, and steps back on the vertical ones it
+	// already serves.
+	float surfGrainUp = mix(uSurfShape.w, 1.0, smoothstep(0.35, 0.92, surfWorldNormal.y));
+	// MULTIPLICATIVE and mean-zero — it cannot move the surface's mean value,
+	// only redistribute it. That is the property that makes a default-on term
+	// safe on an owner-confirmed grade.
+	outgoingLight *= 1.0 + uSurfGrain * surfGrain * surfGrainUp * surfHead
+		* (1.0 - smoothstep(70.0, 190.0, surfViewDist));
 	// Hard ceiling. Every factor above is already <= 1, so this cannot bind
 	// today; it is here so that it still cannot bind after someone hands
 	// surfTint an unnormalised colour. See the note above about the road sheen.
@@ -342,14 +471,119 @@ export const applySurfaceForm = (material, { ceiling = 1.18 } = {}) => {
     fragmentPars: SURFACE_FORM_PARS,
     name: 'surface-form-v1',
     uniforms: {
-      uSurfShape: {
-        value: new THREE.Vector3(SURFACE_FORM.exponent, SURFACE_FORM.groundKeep, ceiling),
-      },
-      // Shared object, not a per-material value — one write retiers every
+      // Shared objects, not per-material values — one write retiers every
       // surface in the scene.
+      uSurfGrain: SURFACE_FORM_GRAIN,
+      uSurfShape: {
+        value: new THREE.Vector4(
+          SURFACE_FORM.exponent,
+          SURFACE_FORM.groundKeep,
+          ceiling,
+          SURFACE_FORM.grainUpBias
+        ),
+      },
       uSurfStrength: SURFACE_FORM_STRENGTH,
     },
   });
+};
+
+// ---- AAA wave 5 round 2: THE REASON THE TERM ABOVE MEASURED AS NO CHANGE ----
+//
+// Wave 5 shipped `applySurfaceForm` defaulted ON inside `createBasicMaterial`
+// and reasoned that this reaches the whole track, because createBasicMaterial
+// is "the generic workhorse: 60+ call sites". Three critics then measured the
+// four largest surfaces in the frame as completely unmoved — CC open road
+// 99.6% adjacent-pixel-flat, PV open road 99.9%, the PV snow apron one value
+// across 580x280, the p0_9 ice wedge BIT-IDENTICAL to wave 4 at three of five
+// separated sample points.
+//
+// They were right, and the cause is mechanical rather than a matter of
+// strength. Grepping `new THREE.MeshStandardMaterial` across the shipped tree
+// returns six live hits and every one of them is in the monolith, built
+// DIRECTLY rather than through the helper this module owns (line numbers are
+// as of this round — the monolith is being edited concurrently, so the GREP is
+// the durable reference, not the numbers):
+//
+//   ComebackCityThreeKartRace.jsx:2979   the road          <- roadMaterial
+//   ComebackCityThreeKartRace.jsx:3329   the ground plane  <- the snow / grass
+//   ComebackCityThreeKartRace.jsx:3456   the kerb
+//   ComebackCityThreeKartRace.jsx:3806   the road paint
+//   ComebackCityThreeKartRace.jsx:4399   the winter crate body
+//   ComebackCityThreeKartRace.jsx:4409   the winter crate bracket
+//
+// (createTrackMesh.js:17 has a seventh, `asphaltMat`, but that module is only
+// imported by scripts/race-content-playtest.mjs — grep-verified — so it renders
+// no shipped pixel.) The helper covers roughly sixty scenery materials and
+// misses the road, the ground plane, the kerb and the road markings, which
+// between them are most of every frame and ALL of the flatness findings. The
+// wave-5 term was live and pointed at the props.
+//
+// This package cannot edit those six lines. What it can do is stop the term
+// depending on a call site at all: walk the scene and install it on every
+// standard material that does not already carry it. Two exclusions, both
+// checkable rather than heuristic:
+//
+//   * anything carrying `kart-shading-v1` — a kart body does this job already
+//     and does it weighted per material class, including giving the rubber
+//     class zero. createKartModel.js's three factories say exactly this and
+//     pass `form: false` for it; stacking both would put a sky sheen back on
+//     the tyres by the back door.
+//   * anything a caller explicitly opted out with `form: false`, which
+//     createBasicMaterial now records on the material rather than by simply
+//     not calling (an opt-out that leaves no trace cannot survive a traversal).
+//
+// Deliberately restricted to MeshStandardMaterial. The chunk's symbols are all
+// valid in meshtoon and meshlambert too, and widening the guard would let this
+// reach the mid-ground belt's toon bergs — which is a surface another package
+// is authoring in this same round, with its own shading injection. Adding an
+// uninvited term to another package's materials would confound their
+// measurements; the belt's flat faces are reported to their owner instead.
+export const applySurfaceFormToScene = (scene) => {
+  if (!scene?.traverse) return 0;
+  let installed = 0;
+  const consider = (material) => {
+    if (!material?.isMeshStandardMaterial) return;
+    if (material.userData?.surfaceFormOptOut) return;
+    const injections = material.userData?.shaderInjections;
+    if (injections?.some((entry) => entry.name === 'kart-shading-v1')) return;
+    // addShaderInjection already no-ops on a duplicate name, so this is only to
+    // keep the counter honest.
+    if (injections?.some((entry) => entry.name === 'surface-form-v1')) return;
+    applySurfaceForm(material);
+    installed += 1;
+  };
+  scene.traverse((node) => {
+    const material = node.material;
+    if (!material) return;
+    if (Array.isArray(material)) material.forEach(consider);
+    else consider(material);
+  });
+  return installed;
+};
+
+// Render counts on which the sweep runs. Not every frame: assigning an
+// injection bumps material.version and forces a program recompile, so a
+// per-frame sweep would be a per-frame recompile check on every material in
+// the scene. Powers of two out to 128 cover the ~2s window in which the async
+// GLB props and the lazily-built track dressing arrive, and then it stops
+// permanently — nine traversals for a whole race.
+const SURFACE_FORM_SWEEPS = [0, 1, 2, 4, 8, 16, 32, 64, 128];
+
+// Composed, never assigned: the renderer calls scene.onBeforeRender once per
+// render (WebGLRenderer.js:1642), and clobbering whatever a caller installed
+// there is the same mistake addShaderInjection exists to prevent.
+const watchSurfaceForm = (scene) => {
+  if (!scene) return;
+  scene.userData = scene.userData || {};
+  if (scene.userData.surfaceFormWatcher) return;
+  scene.userData.surfaceFormWatcher = true;
+  const previous = scene.onBeforeRender;
+  let renders = 0;
+  scene.onBeforeRender = function surfaceFormSweep(...args) {
+    if (typeof previous === 'function') previous.apply(this, args);
+    if (SURFACE_FORM_SWEEPS.includes(renders)) applySurfaceFormToScene(scene);
+    if (renders <= 128) renders += 1;
+  };
 };
 
 // The installed probe, so tuneEnvResponse can be called from anywhere without
@@ -613,6 +847,13 @@ export const installRaceEnvironment = ({
   // the right strength on a context where PMREM refuses its render targets, and
   // on a track that installs no probe at all.
   SURFACE_FORM_STRENGTH.value = mobile ? SURFACE_FORM.mobile : SURFACE_FORM.desktop;
+  SURFACE_FORM_GRAIN.value = mobile ? SURFACE_FORM.grainMobile : SURFACE_FORM.grain;
+  // ...and arm the sweep on the same "before any early return" footing, for the
+  // same reason: the form term is analytic, has no dependency on a probe, and
+  // is the half of this module that reaches the road. A track that fails PMREM
+  // must still get it. See applySurfaceFormToScene for why a traversal is the
+  // only route to the four surfaces that carry the flatness findings.
+  watchSurfaceForm(scene);
   // Headless test harnesses build scenes with no renderer; a missing probe must
   // degrade to "no probe", never to a throw.
   if (!renderer || !scene) return noop;

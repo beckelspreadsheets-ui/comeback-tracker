@@ -162,7 +162,10 @@ const wrap01 = (value) => ((value % 1) + 1) % 1;
 // hundred degenerate vertices per instance, which is nothing next to a
 // draw-call ledger capped at 14 for the whole wave.
 // RIDGE is wave 3's, and it exists so Penguin Village can stop drawing BLOCK.
-const SHAPE = Object.freeze({ ARCH: 3, BLOCK: 0, RIDGE: 4, SHARD: 1, TABULAR: 2 });
+// CALVED is wave 5's, and it is the "second silhouette family" the rubric critic
+// asked for by name. See calvedPositions for why a STEPPED profile is the one
+// outline this vocabulary could not already produce.
+const SHAPE = Object.freeze({ ARCH: 3, BLOCK: 0, CALVED: 5, RIDGE: 4, SHARD: 1, TABULAR: 2 });
 
 // The peaked archetypes all read the track's cone radius/height authoring, so
 // each needs a proportion correction: a tabular berg is wide and low where a
@@ -171,6 +174,11 @@ const SHAPE = Object.freeze({ ARCH: 3, BLOCK: 0, RIDGE: 4, SHARD: 1, TABULAR: 2 
 // the landscape, so it is the widest and by far the lowest of the four.
 const SHAPE_ASPECT = Object.freeze({
   [SHAPE.ARCH]: { height: 0.66, radius: 1.7 },
+  // A calved shelf is a WIDE landform with one tall end, so it takes the arch's
+  // reach and a little over the tabular's height: the whole read is the step
+  // between its two levels, and a step needs both levels to be worth a
+  // silhouette.
+  [SHAPE.CALVED]: { height: 0.58, radius: 1.55 },
   [SHAPE.RIDGE]: { height: 0.34, radius: 1.8 },
   [SHAPE.SHARD]: { height: 1, radius: 1 },
   [SHAPE.TABULAR]: { height: 0.62, radius: 1.25 },
@@ -374,12 +382,42 @@ const TRACK_TUNING = {
     // the eye tallies. RIDGE and TABULAR are both horizontal landforms; giving
     // them the share puts long low masses between the peaks, which is what a
     // pressure-ice field actually looks like and what breaks the saw.
+    // WAVE 5 ROUND 2 ADDS CALVED, AND IT IS THE FIRST NEW *OUTLINE* SINCE THE
+    // RIDGE. The round-1 rubric critic filed "PV puts the same pyramid +
+    // flat-top mesa pair across the entire horizon in every mark" and asked for
+    // three things: per-instance non-uniform scale, yaw jitter, and a second
+    // silhouette family. The first two already ship and have for two waves (the
+    // XZ squash at 0.56-1.44, the independent Y stretch at 0.68-1.5 and a full
+    // 2-pi yaw are all in the placement loop) — which is exactly why they were
+    // not enough. All four existing archetypes silhouette as a MONOTONE profile
+    // (up once, down once), and a transform cannot change that. CALVED is a
+    // stepped profile: up, across, up again. See calvedPositions.
+    //
+    // The share comes off TABULAR and SHARD rather than off RIDGE, because RIDGE
+    // is the horizontal that breaks a ring of peaks and TABULAR is the archetype
+    // CALVED is closest to — a shelf that has lost a level reads as the same
+    // material as a mesa, which is the point, so trading one for the other
+    // changes the outline census without changing the ring's character.
     massShapes: [
-      [SHAPE.RIDGE, 0.34],
-      [SHAPE.SHARD, 0.18],
-      [SHAPE.TABULAR, 0.32],
-      [SHAPE.ARCH, 0.16],
+      [SHAPE.RIDGE, 0.3],
+      [SHAPE.SHARD, 0.16],
+      [SHAPE.TABULAR, 0.24],
+      [SHAPE.CALVED, 0.16],
+      [SHAPE.ARCH, 0.14],
     ],
+    // Depth spread multiplier on RING_PLAN's own jitter, this track only. The
+    // round-1 critic's third ask was "stagger depth so near belt entries
+    // partially occlude far ones", and the rings ship at +/- half their jitter:
+    // +/-22 on a mass ring, +/-30 on the shelf. Against ring pitches of 80-134
+    // units that is not enough for two entries of the SAME ring to occlude each
+    // other, so every ring resolves as a row of separated silhouettes at one
+    // apparent size — which is the "backdrop, not a place" read. 1.5 takes a
+    // mass ring to +/-33 and the shelf to +/-45 without letting any ring's near
+    // edge cross the one in front of it (92+33 = 125 against 172-33 = 139), and
+    // the footprint clearance and sight-line cap below are unchanged, so nothing
+    // this widens can walk onto the road. Comeback City authors none and keeps
+    // its measured layout exactly.
+    ringSpread: 1.5,
     // Kept, unreferenced by the shipped weights above, as the fallback the
     // placement loop reads if BLOCK is ever re-weighted onto this track.
     block: { depth: [12, 30], height: [14, 46], width: [12, 30] },
@@ -453,11 +491,24 @@ const TRACK_TUNING = {
       color: '#a4a8b8',
       density: 0.58,
       peak: { height: [18, 58], radius: [14, 34] },
+      // CALVED takes the largest single share here, larger than on the mass
+      // rings. This is the row that OWNS the horizon line — it is the only tier
+      // whose masses reach the skyline in every mark — so it is where a
+      // repeated outline is counted, and where an outline with a step in it
+      // buys the most. TABULAR keeps the plurality because a calving front is
+      // an event on a shelf, not the shelf itself.
       shapes: [
-        [SHAPE.TABULAR, 0.46],
-        [SHAPE.RIDGE, 0.34],
-        [SHAPE.SHARD, 0.2],
+        [SHAPE.TABULAR, 0.34],
+        [SHAPE.RIDGE, 0.3],
+        [SHAPE.CALVED, 0.22],
+        [SHAPE.SHARD, 0.14],
       ],
+      // Same multiplier as the mass rings, on a jitter that is already the
+      // widest in the plan (60 against 44), so this ring ends up at 430 +/- 45.
+      // That is the only depth stagger in the frame large enough to put one
+      // shelf IN FRONT OF another rather than beside it, which is what the
+      // round-1 critic asked for by name.
+      spread: 1.5,
     },
     // The arctic warmth clamp, and wave 3 aims it. Round 2 measured the cause
     // of "a field of tan desert cones" correctly: the albedo is cool but the
@@ -1224,6 +1275,83 @@ const archPositions = (random) => {
   return positions;
 };
 
+// Calved shelf — wave 5's, and the archetype that answers "add a second
+// silhouette family (a fractured shelf would break the cone monotony)".
+//
+// WHY THE EXISTING FOUR COULD NOT PRODUCE THIS OUTLINE. Every one of them is
+// built as a closed hull whose top is a single feature: SHARD is one apex,
+// TABULAR is one cap, RIDGE is one crest line, ARCH is one span. All four
+// therefore silhouette as a MONOTONE outline — the profile rises to a maximum
+// once and falls once — and no per-instance squash, stretch, yaw or lean can
+// change that, because those transform a shape rather than re-describe it. That
+// is why three waves of widening the jitter ranges (which do ship: the XZ squash
+// at 0.56-1.44, the independent Y stretch at 0.68-1.5 and a full 2-pi yaw are
+// all in the placement loop below) kept measuring as "the same silhouettes at
+// several sizes". A ring needs an outline whose profile goes up, ACROSS, and up
+// again.
+//
+// A calving front is exactly that landform: a shelf that has dropped one of its
+// levels, leaving a bench at half height with a vertical ice cliff behind it.
+// Built as a stepped 2D profile extruded in Z — the same construction as ARCH,
+// for the same reason: when the silhouette IS the point, authoring the profile
+// directly is the only way to guarantee it survives every bearing.
+//
+// The extrusion depth batters inward with height (halfAt), so the mass is a
+// wedge rather than a prism and its Z faces read as ice rather than as a cut.
+const calvedPositions = (random) => {
+  // Where the step falls along X, and how high the low bench sits. Both rolled
+  // per instance, so two calved shelves in one ring are not the same shelf: the
+  // step can sit anywhere from a third to two thirds across, and the bench from
+  // a quarter to just over half of the full height.
+  const stepX = lerp(-0.16, 0.2, random());
+  const benchY = -0.5 + lerp(0.26, 0.56, random());
+  // The upper shelf's top is not level — a calved cap sags away from the cliff.
+  const capTilt = (random() - 0.5) * 0.16;
+  const profile = [
+    [-0.5, -0.5],
+    [0.5, -0.5],
+    // The seaward end leans, so the low bench is not a rectangle. INWARD only:
+    // a symmetric roll here would put the vertex up to 0.56 out and break the
+    // unit-cube invariant every other archetype holds — which is not cosmetic,
+    // because the placement loop's footprint clearance is computed from the
+    // instance SCALE on the assumption that the outline fits the cube. Measured
+    // over 500 rolls before this was one-sided: max |coord| 0.5598.
+    [0.5 - random() * 0.12, benchY],
+    [stepX, benchY + (random() - 0.5) * 0.06],
+    // THE CLIFF. Near-vertical and full height: this single edge is the whole
+    // silhouette contribution, so it is the one thing not allowed to wander far.
+    [stepX + (random() - 0.5) * 0.05, 0.5],
+    [-0.5, 0.5 - 0.12 - capTilt],
+  ];
+  // Batter: the mass narrows toward its crown. Rolled once so the taper is
+  // consistent up the whole shelf rather than per-vertex noise.
+  const baseHalf = 0.5 * lerp(0.62, 1, random());
+  const crownHalf = baseHalf * lerp(0.46, 0.76, random());
+  const halfAt = (y) => lerp(baseHalf, crownHalf, clamp(y + 0.5, 0, 1));
+  const front = (p) => [p[0], p[1], halfAt(p[1])];
+  const back = (p) => [p[0], p[1], -halfAt(p[1])];
+  const positions = [];
+  // Webs. The profile is wound counter-clockwise in XY and is an L, i.e.
+  // non-convex — but every vertex is visible from profile[0] (the bottom-left
+  // corner, which the notch is cut diagonally opposite to), so a fan from it is
+  // valid and needs no ear clipping.
+  for (let i = 1; i < profile.length - 1; i += 1) {
+    pushTri(positions, front(profile[0]), front(profile[i]), front(profile[i + 1]));
+    pushTri(positions, back(profile[0]), back(profile[i + 1]), back(profile[i]));
+  }
+  // Walls, wound outward. For a counter-clockwise profile the outward normal of
+  // edge a->b is (dy, -dx), and (front a, back a, back b) / (front a, back b,
+  // front b) is the pair that produces it — the materials are single-sided, so
+  // a reversed triangle here is a missing face, not a dark one.
+  for (let i = 0; i < profile.length; i += 1) {
+    const a = profile[i];
+    const b = profile[(i + 1) % profile.length];
+    pushTri(positions, front(a), back(a), back(b));
+    pushTri(positions, front(a), back(b), front(b));
+  }
+  return positions;
+};
+
 // One geometry per ring holding every archetype that ring can draw, tagged
 // per-vertex so the shader can collapse the ones an instance did not pick.
 const makeShapeFamily = (THREE, random, ids) => {
@@ -1235,6 +1363,7 @@ const makeShapeFamily = (THREE, random, ids) => {
     else if (id === SHAPE.SHARD) built = shardPositions(random);
     else if (id === SHAPE.TABULAR) built = tabularPositions(random);
     else if (id === SHAPE.RIDGE) built = ridgePositions(random);
+    else if (id === SHAPE.CALVED) built = calvedPositions(random);
     else built = archPositions(random);
     for (let i = 0; i < built.length; i += 3) shapeIds.push(id);
     for (let i = 0; i < built.length; i += 1) positions.push(built[i]);
@@ -1608,6 +1737,11 @@ export const createMidGroundBelt = (options = {}) => {
         // across all three depths it becomes another texture, which is the
         // exact failure it was added to fix.
         shapes: index === 1 ? track.massShapes : track.massShapes.filter(([id]) => id !== SHAPE.ARCH),
+        // Multiplies RING_PLAN's own jitter. Authored per TRACK on the mass
+        // rings (they share one plan entry each and want one answer) and per
+        // TIER on everything else. Defaults to 1, so a track that authors
+        // nothing gets RING_PLAN exactly as it shipped.
+        spread: track.ringSpread ?? 1,
         // Far ring gets no windows: at 296 units a cell is sub-pixel and only
         // buys aliasing.
         windowShare: track.window && index < 2 ? track.window.litShare : 0,
@@ -1631,6 +1765,7 @@ export const createMidGroundBelt = (options = {}) => {
       peak: authored.peak,
       scale: 1,
       shapes: authored.shapes,
+      spread: authored.spread ?? 1,
       windowShare: track.window ? authored.windowShare || 0 : 0,
     };
   };
@@ -1670,7 +1805,15 @@ export const createMidGroundBelt = (options = {}) => {
           // horizon (measured across ~12 cones in penguin-village-p0_9).
           const progress = (step + random()) / steps;
           const sample = samplePath(path, progress);
-          const offset = ring.distance + (random() - 0.5) * ring.jitter;
+          // `spread` is a per-track / per-tier multiplier on the plan's jitter,
+          // and it is applied HERE rather than by editing RING_PLAN because the
+          // plan is shared by both tracks and Comeback City's belt layout is
+          // measured and unchanged. Widening only moves the slot's authored
+          // DISTANCE — every clearance test below (path distance, stand
+          // clearance, footprint, sight-line cap) runs after it on the widened
+          // value, so a wider spread can leave a slot empty but can never put a
+          // mass anywhere the narrow spread would not have allowed.
+          const offset = ring.distance + (random() - 0.5) * ring.jitter * (spec.spread ?? 1);
           // Where the lap folds back on itself the authored distance lands on
           // the far side of the road, so the slot walks in and then out
           // before it is abandoned. Without this the pinched quadrants (PV

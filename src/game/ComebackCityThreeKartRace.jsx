@@ -1137,7 +1137,21 @@ const createGroundedKartModel = ({
   // radius; the centre is behind the bodywork and already occluded. An annulus
   // would delete the only part that was innocent and keep the part doing the
   // damage.
-  addGlowSprite(group, accent, 5.6, 0.22, 2.6);
+  //
+  // ROUND 1 FIX — AN ADDITIVE BILLBOARD IS THE FIRST THING THAT HAS TO GO AT
+  // THE LENS, AND IT WAS THE ONLY THING THAT NEVER DID.
+  //
+  // The proximity ghost fades `bodyMeshes`, which is built from node.isMesh —
+  // and a THREE.Sprite is not a Mesh, so every additive sprite on a rival kept
+  // full strength while the bodywork under it faded away. A sprite's screen area
+  // grows as 1/d^2 while its opacity stays put, so a rival on the near plane
+  // laid a full-value accent colour across the frame: that is the lavender wash
+  // and the hot pink-white point measured on the ice rival at
+  // penguin-village-p0_24, and it is a large part of the 35,099 partially-clipped
+  // pixels the artefact hunter counted in the bottom-left of comeback-city-p0_15.
+  // Kept as a handle so the ghost can reach it — see the frame loop.
+  const underglow = addGlowSprite(group, accent, 5.6, 0.22, 2.6);
+  underglow.userData.baseOpacity = underglow.material.opacity;
   // Cached for the proximity fade — a rival parked on the lens has to ghost,
   // and re-traversing four karts every frame to find that out is not worth the
   // cycles. Rebuilt from BOTH mounts every time either of them changes, which
@@ -1228,8 +1242,14 @@ const createGroundedKartModel = ({
       // Flagged so the frame loop can fade the band in with speed and leave a
       // stationary kart exactly as it renders today.
       pivot.userData.spinBand = true;
+      // Sized off visualRadius (the cluster's SMALLER span — see the note where
+      // it is measured), never off `radius`. Combined with the texture's own
+      // radial feather, which takes the smear's energy to zero by 0.86 of the
+      // half-size, the brightest tick now lands at ~0.74 of the tyre's own
+      // radius and nothing the band draws can reach its silhouette.
+      const bandRadius = hub.visualRadius ?? hub.radius * 0.82;
       const band = new THREE.Mesh(
-        new THREE.PlaneGeometry(hub.radius * 2, hub.radius * 2),
+        new THREE.PlaneGeometry(bandRadius * 2, bandRadius * 2),
         new THREE.MeshBasicMaterial({
           // Additive: a rotation cue may brighten a tyre, never darken one. A
           // subtractive band on an already dark tyre would read as a hole.
@@ -1281,6 +1301,7 @@ const createGroundedKartModel = ({
     refreshGhostMeshes,
     replaceBody,
     shadow,
+    underglow,
     wheels,
   };
 };
@@ -1450,10 +1471,33 @@ const makeGlowTexture = () => {
 // speed so a parked or grid kart is byte-identical to today's build. It rides
 // the hub the detector finds, spins at wheel speed and steers with the axle, so
 // the read is "that wheel is turning" rather than "there is a decal on it".
+//
+// ROUND 1 FIX — IT WAS A PICKET FENCE, NOT A SMEAR.
+//
+// The first version drew 13 straight RADIAL strokes out to 0.92 of the plane's
+// half-size. Two things made that the most broken-reading element in the whole
+// capture set (all four wheels, both tracks, every frame):
+//
+//   1. a still frame FREEZES the ticks. A radial stroke that is not moving is
+//      not motion blur, it is a spoke — and 13 hard-edged white spokes on a
+//      black tyre read as geometry, not as speed.
+//   2. at 0.92 of a half-size derived from the over-wide shell cluster, the
+//      spokes' outer ends landed PAST the rubber and onto the road, so they
+//      also read as spokes protruding through the wheel.
+//
+// Both are fixed here at the source. Every tick is now an ARC swept through
+// ~26 degrees at a drifting radius, so it is a comma of light following the
+// wheel's own rotation — the shape a smear actually has, in a still as well as
+// in motion — and the whole disc is multiplied by a radial feather that takes
+// alpha to zero well inside the plane's edge, so the band's silhouette can no
+// longer be a hard boundary anywhere regardless of how the hub was measured.
 let sharedWheelSpinTexture = null;
 const makeWheelSpinTexture = () => {
   if (sharedWheelSpinTexture) return sharedWheelSpinTexture;
-  const size = 128;
+  // 256, not 128: this texture now has a mip chain (see below) and the arcs are
+  // thin, so the top level has to carry enough samples that level 1 is still a
+  // smear rather than a dashed ring.
+  const size = 256;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -1462,30 +1506,69 @@ const makeWheelSpinTexture = () => {
   // 13 ticks, a prime-ish count so the pattern never lands back on itself at a
   // frame rate that could strobe it into standing still.
   const TICKS = 13;
-  ctx.lineCap = 'round';
+  // How far each tick smears round the hub. 0.46 rad is a shade under 2 tick
+  // pitches (2*pi/13 = 0.483), so consecutive smears very nearly touch and the
+  // band reads as one continuous blurred ring with a beat in it, instead of as
+  // 13 separable marks.
+  const SWEEP = 0.46;
+  // Sub-segments per tick. The along-arc alpha ramp is applied per segment,
+  // which is the only way to get a gradient along a curve in canvas 2D.
+  const STEPS = 14;
+  ctx.lineCap = 'butt';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = size * 0.032;
   for (let tick = 0; tick < TICKS; tick += 1) {
     const angle = (tick / TICKS) * Math.PI * 2;
-    // Alternating length so the band has a texture rather than a picket fence.
-    const inner = centre * (tick % 2 ? 0.5 : 0.6);
-    const outer = centre * 0.92;
-    const gradient = ctx.createLinearGradient(
-      centre + Math.cos(angle) * inner,
-      centre + Math.sin(angle) * inner,
-      centre + Math.cos(angle) * outer,
-      centre + Math.sin(angle) * outer
-    );
-    gradient.addColorStop(0, 'rgba(255,255,255,0)');
-    gradient.addColorStop(0.45, 'rgba(255,255,255,0.85)');
-    gradient.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = size * 0.035;
-    ctx.beginPath();
-    ctx.moveTo(centre + Math.cos(angle) * inner, centre + Math.sin(angle) * inner);
-    ctx.lineTo(centre + Math.cos(angle) * outer, centre + Math.sin(angle) * outer);
-    ctx.stroke();
+    // Alternating radial band so the smear has depth across the sidewall rather
+    // than sitting on one ring. Both bands stay inside 0.74 — see the feather.
+    const inner = centre * (tick % 2 ? 0.34 : 0.44);
+    const outer = centre * (tick % 2 ? 0.66 : 0.74);
+    for (let step = 0; step < STEPS; step += 1) {
+      const t0 = step / STEPS;
+      const t1 = (step + 1) / STEPS;
+      const mid = (t0 + t1) * 0.5;
+      // sin^1.6 gives a soft leading edge and a longer tail, which is what a
+      // rotating mark leaving a shutter looks like.
+      ctx.globalAlpha = 0.52 * Math.pow(Math.sin(Math.PI * mid), 1.6);
+      ctx.beginPath();
+      // Radius drifts outward along the sweep so each tick is a shallow spiral,
+      // not a concentric ring segment — concentric segments stack into visible
+      // rings, spirals do not.
+      ctx.arc(
+        centre,
+        centre,
+        inner + (outer - inner) * mid,
+        angle + (t0 - 0.5) * SWEEP,
+        // A hair of overlap so consecutive segments cannot leave a seam.
+        angle + (t1 - 0.5) * SWEEP + 0.006
+      );
+      ctx.stroke();
+    }
   }
+  ctx.globalAlpha = 1;
+  // RADIAL FEATHER — the guarantee, not a nicety. Whatever the hub detector
+  // measured, the texture itself is transparent past 0.86 of the half-size and
+  // already falling from 0.62, so the band cannot present a hard edge at the
+  // plane boundary and cannot paint anything at the tyre's silhouette.
+  ctx.globalCompositeOperation = 'destination-in';
+  const feather = ctx.createRadialGradient(centre, centre, 0, centre, centre, centre);
+  feather.addColorStop(0, 'rgba(0,0,0,1)');
+  feather.addColorStop(0.62, 'rgba(0,0,0,1)');
+  feather.addColorStop(0.86, 'rgba(0,0,0,0)');
+  feather.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = feather;
+  ctx.fillRect(0, 0, size, size);
+  ctx.globalCompositeOperation = 'source-over';
   sharedWheelSpinTexture = new THREE.CanvasTexture(canvas);
   sharedWheelSpinTexture.colorSpace = THREE.SRGBColorSpace;
+  // A rotating high-frequency pattern with no mip chain is a shimmer generator;
+  // three defaults CanvasTexture to mipmapping ON, but the anisotropy matters
+  // here because the band is seen almost edge-on from the chase camera and the
+  // isotropic mip that picks would blur it out of existence at 20 units.
+  sharedWheelSpinTexture.generateMipmaps = true;
+  sharedWheelSpinTexture.minFilter = THREE.LinearMipmapLinearFilter;
+  sharedWheelSpinTexture.magFilter = THREE.LinearFilter;
+  sharedWheelSpinTexture.anisotropy = 8;
   return sharedWheelSpinTexture;
 };
 
@@ -1594,6 +1677,21 @@ const analyseFusedKartBody = (rig) => {
           front: (z0 + z1) * 0.5 > (minZ + maxZ) * 0.5,
           radius,
           side,
+          // AAA wave 5 round 1 fix — THE RADIUS THE SPIN BAND IS ALLOWED TO USE.
+          //
+          // `radius` above is the MEAN of the cluster's two spans, and the
+          // cluster is everything past 90% of the half-width: on every shipped
+          // body that also swallows a slice of the fender arch and the side pod,
+          // so the mean overshoots the visible rubber. The roundness gate two
+          // lines up only requires the spans to agree within 34%, which means
+          // `radius` can sit up to ~17% proud of the tyre — and a spin band sized
+          // from it put hard radial ticks OUTSIDE the tyre silhouette, onto the
+          // road, on every kart in every frame of the round.
+          //
+          // The MINIMUM span is the conservative read of the same cluster: it
+          // cannot be inflated by whichever axis the bodywork bled into, and an
+          // undersized band is invisible where an oversized one is an artefact.
+          visualRadius: Math.min(spanZ, spanY) * 0.5,
           x: outer,
           y: hubY,
           z: (z0 + z1) * 0.5,
@@ -2917,11 +3015,20 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
 	// emissive decal, not ice. Real sheet ice is a mosaic of facets that each
 	// catch the key at a slightly different angle, so the highlight MOVES
 	// across the plates as the camera passes instead of sitting still.
+	//
+	// ROUND 1 FIX — 0.46..1.18 IS NOT A MOSAIC, IT IS A LIFT WITH A WOBBLE.
+	// The facet weight only ever multiplied an ADDITIVE term, and its floor was
+	// 0.46, so the darkest plate on the pond still added 46% of the fresnel to
+	// the road. Every plate got brighter; none got darker; the pond therefore
+	// measured 148-153 luminance at EVERY sample from y590 to y890 in
+	// penguin-village-p0_33 — 350 rows with no gradient in them. 0.16..1.62
+	// (same 0.89 mean, 10x the ratio) is what turns the same hash into a surface
+	// that has dark plates in it, which is the only reason to have facets at all.
 	float roadIceFacet = 1.0;
 	#ifdef USE_MAP
 		vec2 roadIceCell = floor(vMapUv * 4.36);
 		float roadIceHash = fract(sin(dot(roadIceCell, vec2(12.9898, 78.233))) * 43758.5453);
-		roadIceFacet = 0.46 + 0.72 * roadIceHash;
+		roadIceFacet = 0.16 + 1.46 * roadIceHash;
 	#endif
 	// Grazing-angle term. The specular lobe above is a 92-power highlight: it
 	// only fires where the mirror direction happens to point at the key, which
@@ -2964,18 +3071,46 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
 	// it stays under the bloom threshold the post chain would otherwise smear
 	// across the apron.
 	float roadIceSpecular = min(roadSheen * vRoadIce * uRoadSheenStrength, uRoadSheenCeiling);
-	outgoingLight += uRoadSheenColor * roadIceSpecular + min(roadIceFloor, vec3(0.34));`,
+	// ROUND 1 FIX — THE CEILING LANDED AND THE APRON STILL WASHED OUT, BECAUSE
+	// THE OTHER TERM WAS DOING IT.
+	//
+	// Measured on penguin-village-p0_33: the drivable pond went 84.8 -> 151.2
+	// median luminance and the snow shoulder beside it 78.9 -> 149.5, i.e. the
+	// road/shoulder separation collapsed from 5.9 to 1.7 and the track edge
+	// became findable only from the dashed lines. The moving 92-power highlight
+	// is NOT what did that (its p99 dropped, exactly as the ceiling intended) —
+	// the fresnel FLOOR did, because it has no light direction in it, saturates
+	// across the whole pond at chase-camera angles, and lands as an unconditional
+	// additive plate the road's own albedo cannot be read through.
+	//
+	// The 0.34 clamp was never reached, so it never bounded anything: with the
+	// track's own pale rim colour the raw floor tops out around 0.20-0.28 linear,
+	// which against asphalt at ~0.04 linear is already a 6x lift. 0.13 is the
+	// number that leaves the drivable surface reading as tarmac-under-ice rather
+	// than as a lit plane, and the facet spread above is what puts structure back
+	// into it. Verify at the same two boxes the wash was measured in: road
+	// (300,650)-(900,880) must sit at least 20 luminance clear of shoulder
+	// (0,600)-(200,760), and a vertical scan down the pond must show a gradient
+	// instead of 350 rows of one value.
+	outgoingLight += uRoadSheenColor * roadIceSpecular + min(roadIceFloor, vec3(0.13));`,
     fragmentPars: /* glsl */ `varying float vRoadIce;
 uniform vec3 uRoadSheenColor;
 uniform float uRoadFresnelStrength;
 uniform float uRoadSheenCeiling;
 uniform float uRoadSheenStrength;`,
-    name: 'road-surface-sheen-v2',
+    // v3: the facet weight and the floor's ceiling both moved, and this name is
+    // the program cache key — a changed chunk under an unchanged name is how a
+    // stale program gets reused.
+    name: 'road-surface-sheen-v3',
     uniforms: {
-      // 0.5 -> 0.24. The fresnel is the FLAT half of the effect (it has no
-      // light direction in it at all), so it may only ever be the floor the
-      // facets sit on; the highlight has to be what reads as ice.
-      uRoadFresnelStrength: { value: 0.24 },
+      // 0.5 -> 0.24 -> 0.11. The fresnel is the FLAT half of the effect (it has
+      // no light direction in it at all), so it may only ever be the floor the
+      // facets sit on; the highlight has to be what reads as ice. 0.24 was still
+      // enough to add ~0.20 linear across an entire pond sweep — see the
+      // measurement note in the chunk above. At 0.11 the brightest facet adds
+      // ~0.13 and the darkest ~0.013, so the band varies by an order of
+      // magnitude across itself instead of arriving as one plate.
+      uRoadFresnelStrength: { value: 0.11 },
       // Hard energy ceiling on the 92-power lobe. See the chunk above: this is
       // a bound on the WEIGHT, so the sheen keeps uRoadSheenColor's hue at
       // every intensity instead of clipping into whichever channel has headroom.
@@ -3379,14 +3514,26 @@ uniform float uToothFadeFull;`,
     ).multiplyScalar(1.7);
     const railPositions = [];
     const railIndices = [];
+    const railEdges = [];
+    const railOutwards = [];
+    // Half-width of the strip in world units. Published to the shader below,
+    // which is the only consumer that needs to know it.
+    const RAIL_HALF_WIDTH = 0.45;
     // Four vertices per ring — inner/outer cap edge on each side, in a fixed
     // order so the index pass can address ring i and ring i+1 arithmetically.
     roadFrames.forEach((frame) => {
       const capInner = frame.section[7];
       const capOuter = frame.section[8];
       const capMid = (capInner.u + capOuter.u) * 0.5;
+      // Rise per unit of lateral offset across the cap. Packed into the widen
+      // direction's Y below so that any screen-width growth SLIDES ALONG THE
+      // CAP PLANE instead of cutting across it — a purely lateral growth would
+      // sink the outboard edge under the cap it is lying on and reintroduce the
+      // dropout at exactly the distances the growth exists to fix.
+      const capSlope = (capOuter.y - capInner.y) / Math.max(0.001, capOuter.u - capInner.u);
       frame.sides.forEach((side) => {
-        [capMid - 0.45, capMid + 0.45].forEach((offset) => {
+        [-1, 1].forEach((edge) => {
+          const offset = capMid + edge * RAIL_HALF_WIDTH;
           // Follow the cap's outward slope rather than laying the rail flat:
           // a flat strip on a sloped cap z-fights along whichever edge it
           // sinks into, and the cap only rises 0.16 over its 1.3-unit width.
@@ -3396,6 +3543,11 @@ uniform float uToothFadeFull;`,
             side.origin.y + lerp(capInner.y, capOuter.y, along) + 0.05,
             side.origin.z + side.outward.z * offset
           );
+          // Which side of the strip this vertex is on, and the direction the
+          // strip widens in. The vertex shader below needs both to hold a
+          // minimum screen width without changing the mesh's own authoring.
+          railEdges.push(edge);
+          railOutwards.push(side.outward.x, capSlope, side.outward.z);
         });
       });
     });
@@ -3408,11 +3560,77 @@ uniform float uToothFadeFull;`,
     }
     const railGeometry = new THREE.BufferGeometry();
     railGeometry.setAttribute('position', new THREE.Float32BufferAttribute(railPositions, 3));
+    railGeometry.setAttribute('aRailEdge', new THREE.Float32BufferAttribute(railEdges, 1));
+    railGeometry.setAttribute('aRailOut', new THREE.Float32BufferAttribute(railOutwards, 3));
     railGeometry.setIndex(railIndices);
-    const rail = new THREE.Mesh(
-      railGeometry,
-      new THREE.MeshBasicMaterial({ color: railColor, side: THREE.DoubleSide })
-    );
+    const railMaterial = new THREE.MeshBasicMaterial({ color: railColor, side: THREE.DoubleSide });
+    // ROUND 1 FIX — A 0.9-UNIT STRIP SEEN NEARLY EDGE-ON GOES SUB-PIXEL AND
+    // THEREFORE GOES AWAY.
+    //
+    // The rail is the strongest and longest edge in every Penguin Village frame,
+    // and the artefact hunter measured it thinning to nothing around x~300 in
+    // pv-p0_67 and then RESUMING — a line that drops out and comes back reads as
+    // a broken barrier, not as a distant one. That is not a material problem:
+    // a fixed world-space width projects to zero eventually, and once the
+    // rasteriser's sample point misses the quad there is nothing left to shade.
+    //
+    // So the strip is given a minimum SCREEN width instead. The width is
+    // measured by PROJECTING the strip's own widen vector, not by dividing by
+    // depth — foreshortening is the whole problem here and a depth-only estimate
+    // is blind to it. This rail lies on a near-horizontal cap seen from a chase
+    // camera a couple of degrees above it, so its projected width is roughly a
+    // twentieth of what its depth alone would predict; a depth-only floor would
+    // have measured "wide enough" all the way to the horizon and done nothing.
+    // Same construction as the kerb-checker resolve above, which measures aFlow
+    // the same way and for the same reason.
+    //
+    // Growth is zero wherever the authored 0.9 units already projects wider than
+    // the floor — i.e. everywhere the player is actually looking — and only
+    // opens up down the vanishing run. In NDC rather than pixels so it needs no
+    // resize hook: 0.0045 NDC is ~2.0px on the 900px-tall capture, which is the
+    // width at which a bright line stops flickering between covered and
+    // uncovered samples.
+    //
+    // Anchored at project_vertex (addShaderInjection inserts BEFORE its anchor),
+    // because `transformed` has to still be writable and mvPosition does not
+    // exist yet — hence the local modelViewMatrix multiply.
+    addShaderInjection(railMaterial, {
+      name: 'edge-rail-screen-width-floor-v1',
+      uniforms: {
+        uRailHalfWidth: { value: RAIL_HALF_WIDTH },
+        // Ceiling on the growth, in world units per side. At the distances that
+        // reach it the barrier is already a haze-bound line, so a rail that
+        // overhangs its cap by this much reads as the bloom a neon strip should
+        // have rather than as a widened plate — and it cannot become a slab if
+        // the projection ever degenerates near the frustum edge.
+        uRailMaxGrow: { value: 2.0 },
+        uRailMinNdc: { value: 0.0045 },
+      },
+      vertexAnchor: '#include <project_vertex>',
+      vertexChunk: /* glsl */ `
+	vec4 railView = modelViewMatrix * vec4(transformed, 1.0);
+	// The strip's full width as a view-space vector, then the NDC distance
+	// between its two ends. This is the number that actually goes sub-pixel.
+	vec4 railSpan = modelViewMatrix * vec4(aRailOut * (2.0 * uRailHalfWidth), 0.0);
+	vec4 railClipA = projectionMatrix * railView;
+	vec4 railClipB = projectionMatrix * (railView + railSpan);
+	float railNdc = length(
+		railClipB.xy / max(abs(railClipB.w), 0.001) - railClipA.xy / max(abs(railClipA.w), 0.001)
+	);
+	// How much wider it has to be to clear the floor. max(0, ...) is what makes
+	// this a FLOOR and not a scale: a rail that already reads wide enough is
+	// left exactly as authored, so nothing near the camera moves and the
+	// near-field grade cannot shift.
+	float railNeed = uRailMinNdc / max(railNdc, 1e-6);
+	float railGrow = clamp((railNeed - 1.0) * uRailHalfWidth, 0.0, uRailMaxGrow);
+	transformed += aRailOut * (aRailEdge * railGrow);`,
+      vertexPars: /* glsl */ `attribute float aRailEdge;
+attribute vec3 aRailOut;
+uniform float uRailHalfWidth;
+uniform float uRailMaxGrow;
+uniform float uRailMinNdc;`,
+    });
+    const rail = new THREE.Mesh(railGeometry, railMaterial);
     rail.userData.kind = 'real-3d-track-mesh';
     world.add(rail);
   }
@@ -3793,7 +4011,12 @@ uniform float uToothFadeFull;`,
   // left to carry.
   const CHEVRON_LIFT = 0.02;
   const CHEVRON_SPAN = 6;
-  const CHEVRON_BAND = 3;
+  // 3 -> 5. The transverse ramp added below is one CELL wide on each side, and
+  // at 3 cells across a 3-unit arm that fed back a full unit of feather per
+  // edge — enough to visibly thin the arrow. At 5 the ramp is 0.6 units and the
+  // solid core is 1.8. Cost is 48 extra triangles per chevron inside the single
+  // merged draw call the rebuild already collapsed them into.
+  const CHEVRON_BAND = 5;
   // Right arm as a bilinear patch: leading edge A->B, trailing edge D->C, in
   // (lateral, longitudinal) world units about the chevron's own anchor. The
   // left arm is this mirrored in x, which is what makes the two halves meet
@@ -3804,61 +4027,100 @@ uniform float uToothFadeFull;`,
     tailInner: [0, 1.6],
     tailOuter: [4.2, -4.4],
   };
+  //
+  // ROUND 1 FIX (1 of 2) — THE ELBOW WAS DRAWN TWICE.
+  //
+  // The two arms were built as two independent patches, each starting at
+  // su = 0 where leadX and tailX are both 0 — i.e. both patches emitted the SAME
+  // centreline column. On an ADDITIVE material a doubled column is a doubled
+  // contribution, which is the visible brightness step across the apex seam the
+  // artefact hunter measured at comeback-city-p0_9 and read as mismatched arm
+  // shapes at penguin-village-p0_56. Building the chevron as ONE strip that runs
+  // left-outer -> elbow -> right-outer emits that column once by construction,
+  // and it is also the only formulation in which the two halves cannot disagree
+  // about where the centreline is.
+  //
+  // The material is DoubleSide, so a strip that reverses handedness at the
+  // elbow needs no winding special-case — which is what let the old code get
+  // away with two patches in the first place.
+  const CHEVRON_COLUMNS = CHEVRON_SPAN * 2;
   const chevronPositions = [];
+  const chevronColors = [];
   const chevronIndices = [];
   for (let index = 0; index < 11; index += 1) {
     const progress = (0.04 + index * 0.085) % 1;
     [-0.38, 0.38].forEach((lane) => {
-      [1, -1].forEach((mirror) => {
-        const base = chevronPositions.length / 3;
-        for (let s = 0; s <= CHEVRON_SPAN; s += 1) {
-          const su = s / CHEVRON_SPAN;
-          const leadX = lerp(CHEVRON_ARM.leadInner[0], CHEVRON_ARM.leadOuter[0], su);
-          const leadZ = lerp(CHEVRON_ARM.leadInner[1], CHEVRON_ARM.leadOuter[1], su);
-          const tailX = lerp(CHEVRON_ARM.tailInner[0], CHEVRON_ARM.tailOuter[0], su);
-          const tailZ = lerp(CHEVRON_ARM.tailInner[1], CHEVRON_ARM.tailOuter[1], su);
-          for (let t = 0; t <= CHEVRON_BAND; t += 1) {
-            const tv = t / CHEVRON_BAND;
-            const localX = mirror * lerp(leadX, tailX, tv);
-            const localZ = lerp(leadZ, tailZ, tv);
-            // Arc length -> progress. The chevron is ~9 units long against a
-            // 6.5-unit ring pitch, so this genuinely spans more than one road
-            // quad and has to be resolved per vertex, not per chevron.
-            const vertexProgress = wrap01(progress + localZ / sampler.length);
-            const { normal, point } = sampler.pointAt(vertexProgress, 0);
-            // Identical arithmetic to the road mesh's own lane offset, so a
-            // chevron vertex and the road vertex beneath it resolve to the same
-            // surface even where the width table is changing.
-            const laneNorm = lane + localX / (sampler.widthAt(vertexProgress) * 0.44);
-            const offset = laneNorm * sampler.widthAt(vertexProgress) * 0.44;
-            chevronPositions.push(
-              point.x + normal.x * offset,
-              point.y + crownAt(laneNorm) + bankYOffsetAt(vertexProgress, laneNorm * 0.44) + CHEVRON_LIFT,
-              point.z + normal.z * offset
-            );
-          }
+      const base = chevronPositions.length / 3;
+      for (let column = 0; column <= CHEVRON_COLUMNS; column += 1) {
+        const signed = column - CHEVRON_SPAN;
+        const mirror = signed < 0 ? -1 : 1;
+        const su = Math.abs(signed) / CHEVRON_SPAN;
+        const leadX = lerp(CHEVRON_ARM.leadInner[0], CHEVRON_ARM.leadOuter[0], su);
+        const leadZ = lerp(CHEVRON_ARM.leadInner[1], CHEVRON_ARM.leadOuter[1], su);
+        const tailX = lerp(CHEVRON_ARM.tailInner[0], CHEVRON_ARM.tailOuter[0], su);
+        const tailZ = lerp(CHEVRON_ARM.tailInner[1], CHEVRON_ARM.tailOuter[1], su);
+        // ROUND 1 FIX (2 of 2) — THE SILHOUETTE IS FEATHERED, NOT CUT.
+        //
+        // Three critics independently filed the chevrons as the most aliased
+        // edge in the frame: a hard-edged additive polygon on tarmac has no
+        // filtering of any kind at its boundary, so every diagonal is a stair.
+        // Feathering the decal's own OUTLINE in vertex colour costs zero bytes
+        // and zero draws and is resolution-independent, where an alpha-test or
+        // an MSAA setting is neither. The tip fade also removes the straight
+        // vertical cut the outer end of each arm terminated in.
+        const tipFade = smoothstep01((1 - su) / 0.16);
+        for (let t = 0; t <= CHEVRON_BAND; t += 1) {
+          const tv = t / CHEVRON_BAND;
+          const localX = mirror * lerp(leadX, tailX, tv);
+          const localZ = lerp(leadZ, tailZ, tv);
+          // Arc length -> progress. The chevron is ~9 units long against a
+          // 6.5-unit ring pitch, so this genuinely spans more than one road
+          // quad and has to be resolved per vertex, not per chevron.
+          const vertexProgress = wrap01(progress + localZ / sampler.length);
+          const { normal, point } = sampler.pointAt(vertexProgress, 0);
+          // Identical arithmetic to the road mesh's own lane offset, so a
+          // chevron vertex and the road vertex beneath it resolve to the same
+          // surface even where the width table is changing.
+          const laneNorm = lane + localX / (sampler.widthAt(vertexProgress) * 0.44);
+          const offset = laneNorm * sampler.widthAt(vertexProgress) * 0.44;
+          chevronPositions.push(
+            point.x + normal.x * offset,
+            point.y + crownAt(laneNorm) + bankYOffsetAt(vertexProgress, laneNorm * 0.44) + CHEVRON_LIFT,
+            point.z + normal.z * offset
+          );
+          // Both long edges to zero over exactly one cell, interior at full:
+          // ~0.6 units of road, which is a sub-pixel gradient at distance and a
+          // soft edge up close, i.e. it behaves like a filtered edge at every
+          // range without costing a texture fetch or an alpha test.
+          const edgeStep = 1 / CHEVRON_BAND;
+          const edgeFade = smoothstep01(tv / edgeStep) * smoothstep01((1 - tv) / edgeStep);
+          const weight = edgeFade * tipFade;
+          chevronColors.push(weight, weight, weight);
         }
-        for (let s = 0; s < CHEVRON_SPAN; s += 1) {
-          for (let t = 0; t < CHEVRON_BAND; t += 1) {
-            const a = base + s * (CHEVRON_BAND + 1) + t;
-            const b = a + (CHEVRON_BAND + 1);
-            // Winding follows the mirror so both arms face up after the flip.
-            if (mirror > 0) chevronIndices.push(a, a + 1, b, a + 1, b + 1, b);
-            else chevronIndices.push(a, b, a + 1, a + 1, b, b + 1);
-          }
+      }
+      for (let column = 0; column < CHEVRON_COLUMNS; column += 1) {
+        for (let t = 0; t < CHEVRON_BAND; t += 1) {
+          const a = base + column * (CHEVRON_BAND + 1) + t;
+          const b = a + (CHEVRON_BAND + 1);
+          chevronIndices.push(a, a + 1, b, a + 1, b + 1, b);
         }
-      });
+      }
     });
   }
   const chevronGeometry = new THREE.BufferGeometry();
   chevronGeometry.setAttribute('position', new THREE.Float32BufferAttribute(chevronPositions, 3));
+  chevronGeometry.setAttribute('color', new THREE.Float32BufferAttribute(chevronColors, 3));
   chevronGeometry.setIndex(chevronIndices);
   chevronGeometry.computeVertexNormals();
   const arrowMat = new THREE.MeshBasicMaterial({
     blending: THREE.AdditiveBlending,
     color: '#2cc4e8',
     depthWrite: false,
-    opacity: 0.42,
+    // 0.42 -> 0.5. The rebuild above removed two things that were paying for the
+    // old level: the doubled elbow column and the hard outline. Both were
+    // artefacts, but they were also brightness, so the peak has to be restored
+    // deliberately rather than lost by accident.
+    opacity: 0.5,
     // Kept from the round-3 build and still the right tool: the decal is now
     // genuinely coplanar with the road everywhere, which is exactly the case
     // polygonOffset exists for. The 2cm lift above is only insurance for the
@@ -3868,6 +4130,10 @@ uniform float uToothFadeFull;`,
     polygonOffsetUnits: -3,
     side: THREE.DoubleSide,
     transparent: true,
+    // Carries the outline feather built above. Vertex colours MULTIPLY the
+    // material colour in three, so a weight of 0 is a transparent edge on an
+    // additive material — no alpha channel and no second attribute needed.
+    vertexColors: true,
   });
   const chevrons = new THREE.Mesh(chevronGeometry, arrowMat);
   chevrons.renderOrder = 3;
@@ -4234,7 +4500,11 @@ const itemBoxTemplateCache = new Map();
 // per frame, zero per-frame allocation. Collected coins park on a
 // zero-scale pose (degenerate triangles rasterize nothing).
 const coinPoseScratch = new THREE.Matrix4();
-const COIN_UNIT_SCALE = new THREE.Vector3(1, 1, 1);
+// Reused every frame for the near-camera retire ramp — see the coin block in
+// the frame loop. Mutated in place; same no-allocation rule as the scratch
+// matrix above. (This replaces the old COIN_UNIT_SCALE constant: the coin's
+// pose is no longer unit-scaled unconditionally.)
+const COIN_NEAR_SCALE = new THREE.Vector3(1, 1, 1);
 const COIN_COLLECTED_POSE = new THREE.Matrix4().makeScale(0, 0, 0);
 
 const loadItemBoxTemplate = (url) => {
@@ -7916,10 +8186,32 @@ export const ComebackCityThreeKartRace = ({
       const motion = kartModel.motion;
       motion.lean = lerp(motion.lean, leanTarget, 1 - Math.pow(0.0005, dt));
       kartModel.driverMount.rotation.z = motion.lean;
-      // Boosts push the driver into a forward tuck; eases back on expiry.
+      // ROUND 1 FIX — THE DRIVER TURNS WITH THE WHEELS.
+      //
+      // The roll above was already there and is genuinely visible, but the rubric
+      // critic's note is the right one: through a full drift the figure never
+      // turns its head, so a mid-corner still is the same pose as a straight.
+      // The yaw is deliberately derived from EXACTLY the expression the front
+      // wheels take (driveKartWheels is called with race.steer * 0.38 and writes
+      // it straight onto wheel.rotation.y), scaled by half. Tying it to the same
+      // signal at the same sign means the driver and the visible steered wheels
+      // can never disagree in a frame, which is the only way to be sure the
+      // direction is right without a capture to check it against.
+      kartModel.driverMount.rotation.y = lerp(
+        kartModel.driverMount.rotation.y,
+        clamp(steer * 0.19, -0.22, 0.22),
+        1 - Math.pow(0.003, dt)
+      );
+      // Boosts push the driver into a forward tuck; eases back on expiry. Braking
+      // does the same thing for the opposite reason — `accel` is last frame's
+      // smoothed load signal (it is integrated further down this function), so a
+      // lift or a hard stop pitches the figure over the wheel a beat behind the
+      // chassis's own dive. One frame of lag on a 0.09-radian pose is invisible
+      // and it avoids reordering the weight-transfer block below.
+      const driverBrace = boosting ? 0.13 : clamp(-(motion.accel || 0), 0, 1) * 0.09;
       kartModel.driverMount.rotation.x = lerp(
         kartModel.driverMount.rotation.x,
-        boosting ? 0.13 : 0,
+        driverBrace,
         1 - Math.pow(0.002, dt)
       );
       const speedRatio = clamp(speed / MAX_SPEED, 0, 1);
@@ -7990,11 +8282,15 @@ export const ComebackCityThreeKartRace = ({
         const braking = clamp(-motionState.accel * 1.7, 0, 1);
         kartModel.brakeLamps.visible = braking > 0.02 || speed > 16;
         if (kartModel.brakeLamps.visible) {
+          // The proximity ghost cannot reach a Sprite (it walks isMesh), so the
+          // one place that already owns this sprite's level applies it. 1 on the
+          // player, whose proximity never moves.
+          const lampGhost = kartModel.proximity ?? 1;
           kartModel.brakeLamps.children.forEach((lamp) => {
             // Idle tail lamp at speed, ~4x the level on the brakes — enough
             // that a still frame reads which of the two states it is in, low
             // enough that the pair never blooms into one plate across the tail.
-            lamp.material.opacity = 0.12 + braking * 0.34;
+            lamp.material.opacity = (0.12 + braking * 0.34) * lampGhost * lampGhost;
             lamp.scale.setScalar(lamp.userData.baseScale * (0.85 + braking * 0.5));
           });
         }
@@ -8013,7 +8309,12 @@ export const ComebackCityThreeKartRace = ({
         if (!wheel.userData.spinBand) return;
         const band = wheel.children[0];
         band.visible = blur > 0.01;
-        if (band.visible) band.material.opacity = blur * 0.34;
+        // 0.34 -> 0.40 compensates for the texture rebuild: the smear's peak
+        // alpha dropped 0.85 -> 0.52 when the hard spokes became swept arcs, so
+        // the same multiplier would have quietly halved the cue. Net peak is
+        // still BELOW the old build's (0.21 vs 0.29) — the old one read hot
+        // because of its shape, not only its level.
+        if (band.visible) band.material.opacity = blur * 0.4;
       });
     };
 
@@ -8784,12 +9085,31 @@ export const ComebackCityThreeKartRace = ({
       });
       if (engine.coinInstanced?.mesh) {
         const { faceMatrices, mesh: coinFieldMesh } = engine.coinInstanced;
+        const coinCamera = engine.camera.position;
         engine.coinMeshes.forEach((group, index) => {
           const perFace = faceMatrices[index];
+          // ROUND 1 FIX — A COIN THE CAMERA IS ABOUT TO PASS THROUGH IS NOT A
+          // PICKUP, IT IS AN OCCLUDER.
+          //
+          // Two critics filed the same measurement independently: 180-250px
+          // ribbed cylinders at the lens (comeback-city-p0_56, two of them, one
+          // sliced by the frame corner; penguin-village-p0_67, two flanking the
+          // kart at its own height). The coin's world size is CORRECT — it reads
+          // right at mid-distance, which is the whole race — so scaling it by
+          // distance would be wrong. What is missing is the end of its life: the
+          // player has already reached it, it is behind the action, and it has
+          // no business being the biggest object in the frame.
+          //
+          // Shrinking rather than hiding, and over 5 units, so it reads as the
+          // coin being taken. The InstancedMesh has one material, so scale is
+          // the only per-instance channel available — which is also exactly how
+          // a collected coin is already retired (COIN_COLLECTED_POSE).
+          const coinNear = clamp((group.position.distanceTo(coinCamera) - 5) / 5, 0, 1);
           for (let face = 0; face < perFace.length; face += 1) {
             const slot = index * perFace.length + face;
-            if (group.visible) {
-              coinPoseScratch.compose(group.position, group.quaternion, COIN_UNIT_SCALE).multiply(perFace[face]);
+            if (group.visible && coinNear > 0.02) {
+              COIN_NEAR_SCALE.setScalar(coinNear);
+              coinPoseScratch.compose(group.position, group.quaternion, COIN_NEAR_SCALE).multiply(perFace[face]);
               coinFieldMesh.setMatrixAt(slot, coinPoseScratch);
             } else {
               coinFieldMesh.setMatrixAt(slot, COIN_COLLECTED_POSE);
@@ -8829,9 +9149,14 @@ export const ComebackCityThreeKartRace = ({
           speed: racer.speed,
           steer: clamp(racer.laneVel * 0.6, -1, 1),
         });
-        rival.model.boostFlame.visible = racer.boostTimer > 0;
+        // Same reasoning as the underglow in the ghost block below: additive
+        // exhaust on a kart that is being faded off the lens is light with
+        // nothing behind it. `proximity` is last frame's value (the ghost is
+        // solved after the pose), which is 16ms of lag on a boolean.
+        const rivalGlowVisible = (rival.model.proximity ?? 1) > 0.8;
+        rival.model.boostFlame.visible = racer.boostTimer > 0 && rivalGlowVisible;
         rival.model.idleFlames.forEach((flame, flameIndex) => {
-          flame.visible = racer.speed > 16;
+          flame.visible = racer.speed > 16 && rivalGlowVisible;
           flame.scale.setScalar(
             flame.userData.baseScale * (0.75 + Math.sin(race.raceTime * 24 + index * 3 + flameIndex * 2.1) * 0.16)
           );
@@ -8925,6 +9250,14 @@ export const ComebackCityThreeKartRace = ({
           });
           rival.model.group.visible = proximity > 0.02;
           rival.model.contactRig.visible = proximity > 0.2;
+          // The additive layer, which the isMesh-based list above cannot see.
+          // Squared, so it leads the bodywork out rather than following it: pure
+          // light with no form in it is exactly what should not be growing across
+          // the frame while the object making it is being faded away.
+          if (rival.model.underglow) {
+            rival.model.underglow.material.opacity =
+              (rival.model.underglow.userData.baseOpacity ?? 0.22) * proximity * proximity;
+          }
         }
       });
 

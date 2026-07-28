@@ -346,7 +346,37 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// trim and decals never take the racer colour. Luminance-preserving, so the
 	// baked panel shading survives the recolour. Amount is 0 unless a caller
 	// opts a body in via setKartPaintTint.
-	vec3 kartTinted = uKartTint.rgb * (luminance(outgoingLight) / max(1e-4, luminance(uKartTint.rgb)));
+	//
+	// AAA wave 5 round 2 — THE RESCALE IS BOUNDED NOW, and the missing bound was
+	// a blocker. luminance(lit) / luminance(tint) is unbounded, and it is large
+	// for every colour on the roster: a saturated hue carries far more peak
+	// channel than Rec709 luminance (crrt-bunny 4.33x, lifoladen 3.93x, tclow
+	// 4.84x), so a body lit to luminance 0.4 was handed a tint whose peak channel
+	// was already 1.6-1.9 in linear light before any other term ran. Measured
+	// consequence in comeback-city-p0_15: the Miami Cruiser, authored #8e1a43 —
+	// a dark wine — renders rgb(253,110,148), and 9,178 of 55,250 sampled pixels
+	// in its region carry a railed channel against 358 in the same box in
+	// wave4-r3. (The two captures do not frame that kart identically, so treat
+	// the 358 -> 9,178 step as corroboration rather than as the proof; the proof
+	// is the arithmetic above, which rails without reference to any frame.) A
+	// railed channel has no gradation left, and the compressor twelve lines below
+	// then folds a 1.6 overshoot into a 0.16-wide band, which flattens whatever
+	// the bake still had. See KART_PAINT_TINT_AMOUNT for the full derivation.
+	//
+	// The cap is the surface's OWN peak, or the paint compressor's ceiling,
+	// whichever is higher: a dark body can still be lifted to a legible hue, and
+	// no body can be pushed past the value the compressor is about to enforce
+	// anyway. One factor across all three channels, so this is exposure only —
+	// the hue the owner picked is preserved exactly, which is the whole point of
+	// the term. min() makes it one-sided: a tint that was not going to clip is
+	// untouched and keeps full luminance preservation.
+	float kartTintPeak = max(uKartTint.r, max(uKartTint.g, uKartTint.b));
+	float kartLitPeak = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b));
+	float kartTintScale = min(
+		luminance(outgoingLight) / max(1e-4, luminance(uKartTint.rgb)),
+		max(kartLitPeak, uKartPaintShape.w) / max(1e-4, kartTintPeak)
+	);
+	vec3 kartTinted = uKartTint.rgb * kartTintScale;
 	outgoingLight = mix(outgoingLight, kartTinted, kartPaintMask * uKartTint.a);
 	outgoingLight *= kartAo * mix(1.0, uKartRubberDarken, kartRubberMask);
 

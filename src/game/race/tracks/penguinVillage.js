@@ -409,7 +409,62 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // bearing, so the veil tightens onto the sun: 3.8 leaves 60 degrees off-sun
     // at 12% and the anti-sun sky at 3.4%, which is aerial perspective rather
     // than a tint applied to the sky.
-    skyGlow: [0.3, 0.08, 0.36, 3.8, 0.1],
+    //
+    // WAVE 5 ROUND 2 — THE [5..8] TAIL IS THE DOME'S SUN WEDGE, AND IT IS THE
+    // LAST LAYER OF THIS SKY WITH NO COMPASS. Wave 4 gave the cloud deck a
+    // bearing (clouds.front) and round 1 gave the backdrop plate one
+    // (backdropGlow[2..5]). The dome itself still has none by construction: the
+    // shader samples the ladder at pow(d.y, horizonPower), which is a function
+    // of ELEVATION alone, and the only two terms that vary with the sun — the
+    // glow lobes at [0..1] and the scatter veil at [2..4] — key on the full 3D
+    // sun dot. That dot is radially symmetric about the sun vector, i.e. a CONE,
+    // and a cone centred on a 12-degree sun projects onto the frame as a
+    // horizontal band across its whole width.
+    //
+    // Measured on the wave5-r1 marks, rows 8-95 of a 900px frame sampled in 12
+    // columns:
+    //
+    //   mark    per-column R-B                          per-column saturation
+    //   p0_33   +3 +69 +79 +77 +69 +56 +35 +4 ...        0.08-0.36
+    //   p0_45   -7 +76 +80 +73 +57 +45 +31 +36 ...       0.07-0.36
+    //   p0_15   -24 +16 +58 +40 +14 +7 +1 +17 ...        0.09-0.38
+    //   CC p0_33 +48 +187 +161 +161 +169 +157 +144 ...   0.42-0.75
+    //
+    // i.e. the warm band is present in EVERY column of every mark, it never
+    // clears +80, and its saturation tops out at 0.38 against the rubric's 0.42.
+    // The rubric critic's ask is exact: "concentrate the warm wedge into one
+    // azimuth so it swings across frame as the track turns, and raise its chroma
+    // until a per-column R-B scan of the top third peaks above +90 somewhere and
+    // below +20 elsewhere."
+    //
+    //   [5] 0.50 — the warm rotation onto the ember, luminance-preserving at the
+    //     pixel's own value (createSkyDome.js SKY_DOME_WEDGE). Replayed over the
+    //     shipped warm-band pixels of p0_45 (191,133,111) and p0_33 (184,131,115)
+    //     this lands them at (206,127,93) and (201,124,94): R-B +80 -> +115 and
+    //     +69 -> +107, saturation 0.42 -> 0.56 and 0.38 -> 0.54 — and that is
+    //     BEFORE the grade's 1.36 chroma, which the replay cannot include because
+    //     the sampled pixels have already been through it.
+    //   [6] 0.22 — the anti-sun value knockdown. Under the plate's own 0.34 on
+    //     purpose: the dome starts darker than the plate (measured 87-144 against
+    //     123-167) and the two wedges stack on the same bearing, so matching them
+    //     would put a hole in the top of every frame facing away from the sunset.
+    //   [7] 0.50 — the half-width in flat sun-dot. Full ember within 60 degrees
+    //     of bearing 195, full anvil past 120, a smooth ramp between. Slightly
+    //     tighter than the plate's 0.55 because the dome occupies the top of the
+    //     frame, where a wide window is once again a band across the whole width.
+    //   [8] 0xd0703c — the SAME ember the plate wedge uses, and it has to be: the
+    //     dome and the plate meet at the 22.3-degree rim, and two different warm
+    //     colours meeting there is a seam. The reason it is not the sun colour is
+    //     written out under backdropGlow — normalising #ffd2a4 caps a full
+    //     rotation near 0.24 HSV saturation, short of the target however hard the
+    //     amount is driven.
+    //
+    // WHY THIS CANNOT TURN THE BERGS TO SAND, which is the failure mode this
+    // track has walked into twice: the environment probe is generated
+    // ANALYTICALLY from `palette.sky`, `palette.sun` and `palette.sunColor`
+    // (raceEnvironment.js buildSkyEquirect), NOT by rendering the dome. The
+    // wedge is a dome-fragment term only. It lights nothing.
+    skyGlow: [0.3, 0.08, 0.36, 3.8, 0.1, 0.5, 0.22, 0.5, 0xd0703c],
     // Heavy overcast, not scattered cumulus: a lower coverage floor plus a
     // cool body, so the deck reads as one storm ceiling.
     // Wave 2: the deck was BRIGHTER than the sky it sat in (#b9cad8 over a

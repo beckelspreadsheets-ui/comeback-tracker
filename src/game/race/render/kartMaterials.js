@@ -296,15 +296,45 @@ const RUBBER_DARKEN = 0.9;
 // before (all three channels take one factor; this moves exposure, never tint).
 //
 // knee 0.72 is low enough that a body sitting in full key is genuinely brought
-// down into the display range rather than nudged; ceiling 1.02 is the asymptote
-// the compressor approaches, deliberately just over 1 so the compressor itself
-// never becomes the thing that flattens a hot panel. `pull` stays a partial
-// take (0.85) so a small overshoot is corrected gently.
+// down into the display range rather than nudged; the ceiling is the asymptote
+// the compressor approaches. `pull` stays a partial take (0.85) so a small
+// overshoot is corrected gently.
 //
 // The ADDITIVE terms still run after this and are still allowed past 1.0 —
 // that is the point. The body is compressed under the display ceiling; the
 // specular band is what goes over it and feeds the bloom threshold.
-const PAINT_SHAPE = { ceiling: 1.02, knee: 0.72, pull: 0.85, shade: 0.78 };
+//
+// AAA wave 5 round 2 — CEILING 1.02 -> 0.88, because the sentence directly
+// above was not true of the number directly above it.
+//
+// The post chain's bloom threshold is 1.0 (racePostChain.js) and ACES runs at
+// an effective 1.08/0.6 = 1.80x on the linear buffer, so a body compressed to a
+// peak of 1.02 is ALREADY over the bloom threshold before a single additive
+// term has run — it encodes to ~245/255 and then gets a bloom contribution on
+// top. Walk what wave 5 then stacks on a paint texel that lands at the
+// compressor's asymptote:
+//
+//   after compressor      peak 1.02
+//   + VIEW_FILL gain      x (1 + 0.55 * 0.136)      -> 1.096
+//   + sky bounce / probe  + ~0.03                   -> 1.13
+//   + sun glint           + up to 0.42 * 0.354      -> 1.28
+//   + cel specular band   + up to 0.55 * 0.27       -> 1.43
+//
+// 1.43 linear is 249/255 through ACES and 255 once bloom and the grade LUT have
+// had it, which is the artefact hunter's measurement: 9,178 of 55,250 sampled
+// pixels in comeback-city-p0_15's near kart region carry a railed channel,
+// against 358 in the same box in wave4-r3. A railed channel is a panel with no
+// gradation left, which is the same frame the rubric critic reads as "one
+// uniform hot pink with no form".
+//
+// At 0.88 the body lands under 1.0 even after the VIEW_FILL gain (0.88 x 1.12 =
+// 0.99), so the highlights are once again the only kart terms that cross the
+// bloom threshold — which is what the paragraph above always claimed. Cost is
+// confined to genuinely hot paint: a panel at peak 0.8 moves by 1%, one at 1.4
+// by 7%. Nothing below the knee is touched at all, and the compressor is masked
+// by kartPaintMask, so neutrals (the Ice Racer's frosted shell, the Miami
+// Cruiser's baked-white tyres) never see it.
+const PAINT_SHAPE = { ceiling: 0.88, knee: 0.72, pull: 0.85, shade: 0.78 };
 
 // Albedo-INDEPENDENT hemispheric fill for the dark-neutral class.
 //
@@ -781,6 +811,68 @@ export const KART_PAINT_TINTS = Object.freeze({
 });
 
 // How hard the tint pushes when a caller does opt in. A full replace kills
-// the baked shading variation inside the paint region; 0.7 keeps the bake's
-// panel breaks while the racer's hue clearly wins.
-export const KART_PAINT_TINT_AMOUNT = 0.7;
+// the baked shading variation inside the paint region.
+//
+// ---- AAA wave 5 round 2 -----------------------------------------------------
+//
+// FIRST, THE PART OF THE CRITICS' FINDING THAT IS WRONG, recorded so the same
+// patch is not handed back a third time. Three critics filed "rival karts never
+// receive the material classes the player got — route rivals through the same
+// applyToonRim path", and one of them filed this constant as the cause of a
+// Kenney rival's flat violet. Both halves are refuted by the import graph:
+//
+//   * EVERY body already routes through applyHeroRim -> applyToonRim ->
+//     applyKartShading. attachTripoKartBody, attachAuthoredKartBody and
+//     mountDriverAvatar are the only three attach paths in the monolith
+//     (:2582, :2630, :2398 as of this round — the file is being edited
+//     concurrently, so grep the names) and all three call it. There is no
+//     unshaded body anywhere in the roster.
+//   * the Kenney rivals never receive this constant AT ALL. Purple Dragster
+//     (seth-penguin), Orange Dragster (mizzle) and Bronze Dragster (layer23)
+//     are `kart: 'kenney'`, which routes to attachAuthoredKartBody — and that
+//     function deliberately does NOT call setKartPaintTint, because
+//     makeKartPaletteTexture has already remapped the atlas upstream. So this
+//     number cannot explain penguin-village-p0_56's violet rival by any value.
+//     What CAN is that the Kenney atlas is a palette of FLAT swatches on a
+//     flat-shaded slab body: the albedo carries no panel shading for a shader
+//     to preserve. That is the asset track, not this file.
+//
+// SECOND, THE REAL BUG THIS CONSTANT IS HALF OF, which is a blocker and is
+// measured. The tint is applied as a LUMINANCE-PRESERVING RESCALE:
+// tint.rgb * (luminance(lit) / luminance(tint)). That ratio is unbounded, and
+// for every roster colour it is large, because a saturated hue has far more
+// peak channel than Rec709 luminance:
+//
+//   crrt-bunny #e8261d   peak 0.806  lum 0.186   peak/lum 4.33
+//   lifoladen  #8e1a43   peak 0.270  lum 0.069   peak/lum 3.93
+//   tclow      #2378ff   peak 1.000  lum 0.207   peak/lum 4.84
+//
+// So a lit body at luminance 0.4 was being handed a tint whose red channel is
+// 1.57 in linear light before anything else ran. That is trap #2 — a shipped
+// term with no ceiling — and it is visible: comeback-city-p0_15's Miami Cruiser
+// (lifoladen's seat, authored #8e1a43, a DARK WINE) renders at rgb(253,110,148),
+// a railed bubblegum pink that is not the colour anybody picked. The downstream
+// paint compressor then has to fold a 1.57 overshoot into a 0.3-wide band,
+// which is what destroys the panel breaks the tint was documented as keeping.
+// One cause, three findings: the clip, the wrong hue, and the flatness.
+//
+// The ceiling itself lands in the shader (see the tint block in
+// toonRimShader.js) — it caps the rescale so the tint can never lift the peak
+// channel above max(the surface's own peak, PAINT_SHAPE.ceiling), which is
+// hue-exact and leaves luminance preservation intact on every texel that was
+// not going to clip.
+//
+// 0.7 -> 0.55 is the OTHER half, and only makes sense once the cap exists. On a
+// texel the cap binds, the tinted colour is constant, so the untinted (1 - a)
+// share is the only channel through which the bake's own panel variation still
+// reaches the output: at 0.7 a 0.20 peak-channel spread across a panel arrives
+// as 0.06, at 0.55 as 0.09. Not the 0.42-0.48 the rubric critic asked for —
+// that was aimed at the wrong lever (a tint at 0.45 of a colour overshooting by
+// 3.9x still rails) and it costs more per-racer identity than the measurement
+// justifies now that the overshoot is bounded at source.
+//
+// Also already true, and filed as missing: the tint IS multiplied by the paint
+// mask's confidence — `mix(outgoingLight, kartTinted, kartPaintMask * amount)`
+// — so tyres, glass and trim never take the racer colour. That half of the ask
+// has shipped since wave 2.
+export const KART_PAINT_TINT_AMOUNT = 0.55;

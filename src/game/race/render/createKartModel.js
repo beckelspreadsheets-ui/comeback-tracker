@@ -76,6 +76,23 @@ const DEFAULT_VEHICLE_PALETTE = {
 // `form: false` is the escape hatch for a surface that must stay analytically
 // flat. Like `env`, it is a helper flag rather than a THREE.Material property
 // and is destructured out before the constructor sees it.
+//
+// ---- AAA wave 5 round 2: `form: false` now leaves a MARK -------------------
+//
+// The wave-5 reasoning was that defaulting the term on here reaches the whole
+// track. It does not, and the reason is recorded in full above
+// applySurfaceFormToScene in raceEnvironment.js: the road, the ground/snow
+// plane, the kerb and the road paint are all built with a direct
+// `new THREE.MeshStandardMaterial` in the monolith and never pass through this
+// helper at all, which is why three critics measured every large surface in the
+// frame as bit-identical to the wave before. The term is now also installed by
+// a scene sweep, so it no longer depends on a call site.
+//
+// That makes an untraceable opt-out unsafe. Declining to CALL applySurfaceForm
+// left no evidence on the material, so a sweep would simply put the term back
+// on the three kart classes below — which is precisely the "sky sheen on the
+// tyres by the back door" the block under this one exists to prevent. The flag
+// is therefore recorded on the material, and the sweep honours it.
 export const createBasicMaterial = (color, options = {}) => {
   const { env = null, form = true, ...materialOptions } = options;
   const material = new THREE.MeshStandardMaterial({
@@ -86,6 +103,7 @@ export const createBasicMaterial = (color, options = {}) => {
     ...materialOptions,
   });
   if (form) applySurfaceForm(material);
+  else material.userData.surfaceFormOptOut = true;
   return env ? tuneEnvResponse(material, env) : material;
 };
 
@@ -189,6 +207,15 @@ export const createKartRubberMaterial = (color, options = {}) =>
 // chevron) against this file or against raceParticles.js, when the geometry
 // actually on screen is the monolith's. Editing the boostFlame / driftSpark /
 // shield groups below changes nothing in any captured frame.
+//
+// AAA wave 5 round 2: filed against again — "add a procedural tread band and a
+// hub value break, targetFile createKartModel.js" (blind judge, pair-04/07/
+// 09/14). Re-verified this round with the same grep: `createVehicleModel` has
+// exactly four call sites in the tree and all four are in
+// scripts/race-content-playtest.mjs. The wheels the frames show are built by
+// the monolith's own local `createKartModel` (~line 600) and spun by
+// driveKartWheels (~:8008) — which is also where this round's wheel-spin-band
+// artefact lives. Tread on the wheels below would render nowhere.
 export const createVehicleModel = ({
   accent = '#2cc8ff',
   color = '#ef4334',
