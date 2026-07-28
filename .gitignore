@@ -42,3 +42,9 @@ tmp/aaa-blind/
 tmp/aaa-blind-keys/
 tmp/aaa-review-dist/
 tmp/aaa-approval/
+
+# Ordinal roster working files (sheets, crops, raw lifts) — regenerable
+tmp/ordinal-roster/
+
+# Kart concept pick sheet dist (regenerable)
+tmp/kart-picks-dist/

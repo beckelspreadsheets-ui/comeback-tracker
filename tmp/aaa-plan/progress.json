@@ -225,13 +225,20 @@
     },
     {
       "wave": 5,
-      "packages": [
-        "kart-rig-and-lights",
-        "event-vfx"
+      "status": "committed-failing",
+      "commit": "1d7202f3",
+      "runId": "wf_ee4c2eca-560",
+      "rounds": [
+        {
+          "round": 3,
+          "totals": [
+            75,
+            68,
+            73
+          ]
+        }
       ],
-      "status": "pending",
-      "runId": null,
-      "commit": null
+      "note": "harshest critic 61->73, its best of the programme. materials +0.7. Three wave-4 artefacts measurably dead (sheen column green clip 17930->4361). Camera -0.3 and PV shadows still absent."
     },
     {
       "wave": 6,
@@ -281,5 +288,12 @@
     "boost chevrons tear into disconnected triangles on the crowned road (ShapeGeometry ~line 3025).",
     "camera does not laterally dodge RIVAL karts (deliberate, but the near-plane case at pv-p0_9 is only partly mitigated).",
     "Kenney rival hue-gate fix landed but OVERSHOT — env-probe agent handed back evidence and an exact patch."
+  ],
+  "remaining": [
+    "WAVE 6: arc-length/lane progress term FIRST, then ~4x track length",
+    "camera is the persistent floor at 4.3 — rebuilt in wave 4 but still lowest",
+    "PV karts cast no shadow: diagnosed as the 12-deg key throwing the ribbon behind the kart, unverified against a running build",
+    "rival V-spread capped at 0.247 by the atlas — needs a new atlas cell, not a remap",
+    "fallback kart blackMat/tireMat/seatMat still lack rim:true (~40% of its surface gets no kart shading)"
   ]
 }
