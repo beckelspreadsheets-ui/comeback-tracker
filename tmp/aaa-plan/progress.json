@@ -160,13 +160,35 @@
     },
     {
       "wave": 3,
-      "packages": [
-        "road-and-edge-rebuild",
-        "surface-and-ambient-vfx"
+      "status": "committed-failing",
+      "runId": "wf_3a73b071-d9b",
+      "rounds": [
+        {
+          "round": 1,
+          "totals": [
+            68,
+            56,
+            51
+          ]
+        },
+        {
+          "round": 2,
+          "totals": [
+            67,
+            66,
+            53
+          ]
+        },
+        {
+          "round": 3,
+          "totals": [
+            65,
+            63,
+            60
+          ]
+        }
       ],
-      "status": "pending",
-      "runId": null,
-      "commit": null
+      "note": "trackLegibility 6.0->7.0 best yet; PV sky failed a 3rd time because its agent never owned createSkyDome.js or penguinVillage.js"
     },
     {
       "wave": 4,
@@ -204,7 +226,9 @@
     "One monolith (ComebackCityThreeKartRace.jsx) owner per wave — file ownership is disjoint within a wave.",
     "Each wave: implement -> build+capture -> 3 harsh critics (rubric / blind A/B / artefact hunt) -> fix, up to 3 rounds.",
     "test:bundle:kart measures the EXISTING dist-kart — always build:kart first or the number is stale.",
-    "Machine load fakes proof-test reds above load1 ~7: greens count, reds need a retry at a quiet moment."
+    "Machine load fakes proof-test reds above load1 ~7: greens count, reds need a retry at a quiet moment.",
+    "Checkpoint commits must stage OWNED paths explicitly, never git add -A.",
+    "If a package keeps failing, check it OWNS the files its fix requires before running another round."
   ],
   "finalGate": [
     "npm run build:kart",
@@ -224,5 +248,6 @@
     "PENGUIN VILLAGE ARCTIC IDENTITY via the GRADE and the BELT (raceGrade.js + createMidGroundBelt.js) — the grade is what solved Comeback City. PV is currently pale overcast, not an arctic sunset storm front, and the belt puts TAN DESERT CONES on an ice track",
     "surface-and-ambient-vfx (raceParticles.js): surface-typed tyre haze, snow spray, off-road plume, landing puffs; kill remaining floating-debris reads",
     "cleanup: chaseCamera.js, raceVfx.js and their dead importers raceCameraRuntime.js / syncRaceMeshes.js are genuinely orphaned"
-  ]
+  ],
+  "branchNote": "Working branch is now aaa-kart-ci (pushed, CI runs there). aaa-kart-overhaul-full keeps the full per-round history locally and must NOT be pushed: commit 9c8364bf swept 820 pre-existing files / 530 binaries via git add -A."
 }
