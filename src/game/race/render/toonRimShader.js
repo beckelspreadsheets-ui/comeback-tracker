@@ -210,9 +210,12 @@ uniform float uKartSpecCeil;
 uniform float uKartSkyBounce;
 uniform float uKartRubberDarken;
 uniform float uKartDarkFill;
-uniform vec3 uKartPaintShape;
+uniform float uKartRubberCeil;
+uniform vec4 uKartPaintShape;
 uniform vec4 uKartTint;
-uniform vec4 uKartEnv;`;
+uniform vec4 uKartEnv;
+// (fresnel floor, probe ramp low, probe ramp high, unused)
+uniform vec4 uKartEnvShape;`;
 
 const KART_SHADING_CHUNK = /* glsl */ `
 	// Declares that the four class masks below exist in this scope. The rim
@@ -325,13 +328,34 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// ...and paint gets its range back. A saturated body spends its whole range
 	// in one channel and pins there, so the gradation the bake and the two
 	// terms above are producing exists entirely above 1.0 where nothing can
-	// show it. Scaling the colour uniformly back under the knee is hue-exact
-	// (all three channels take the same factor — this moves exposure, never
-	// tint) and it is what makes every additive term below land ON a panel
-	// instead of being metered away against a surface that was already clipped.
-	// Ordered here, before the additive terms, for exactly that reason.
+	// show it. Scaling the colour uniformly is hue-exact (all three channels
+	// take the same factor — this moves exposure, never tint) and it is what
+	// makes every additive term below land ON a panel instead of being metered
+	// away against a surface that was already clipped. Ordered here, before the
+	// additive terms, for exactly that reason.
+	//
+	// AAA wave 4 round 2 — SOFT KNEE, not a divide. The round-2 form was
+	// knee / max(knee, peak) at knee = 1.0, which is a no-op below 1.0 and an
+	// insufficient correction above it: a panel at peak 1.6 came out at 1.18 and
+	// stayed pinned at white, and the headroom meter then had nothing left to
+	// give the specular band (measured: 18 frames, no paint hotspot in any of
+	// them). See PAINT_SHAPE in kartMaterials.js for the full table.
+	//
+	// over/(over + range) is monotone and asymptotic to the ceiling, so an
+	// arbitrarily overexposed panel is folded into the band between knee and
+	// ceiling AND texels that differed above 1.0 still differ below it. Nothing
+	// below the knee is touched at all, so a dark body is unaffected.
 	float kartPaintPeak = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b));
-	float kartPaintPull = uKartPaintShape.y / max(uKartPaintShape.y, kartPaintPeak);
+	float kartPaintRange = max(1e-4, uKartPaintShape.w - uKartPaintShape.y);
+	float kartPaintOver = max(0.0, kartPaintPeak - uKartPaintShape.y);
+	float kartPaintTarget = uKartPaintShape.y + kartPaintOver * kartPaintRange / (kartPaintOver + kartPaintRange);
+	// min() is NOT redundant. Below the knee kartPaintOver is 0, so the target
+	// is the knee itself and the raw ratio is knee/peak > 1 — i.e. without this
+	// the compressor would BRIGHTEN every dark paint texel up to the knee, which
+	// is the exact opposite of the term's job and would flatten the shadow side
+	// of every body into the same value. This is a one-sided compressor: it may
+	// only ever pull down.
+	float kartPaintPull = min(1.0, kartPaintTarget / max(1e-4, kartPaintPeak));
 	outgoingLight *= mix(1.0, mix(1.0, kartPaintPull, uKartPaintShape.z), kartPaintMask);
 
 	// Sky bounce — the only form cue that survives on a texel the classifier
@@ -380,7 +404,13 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	vec3 kartWorldView = inverseTransformDirection(geometryViewDir, viewMatrix);
 	vec3 kartRefl = reflect(-kartWorldView, kartWorldNormal);
 	vec3 kartKeyWorld = inverseTransformDirection(kartKeyDir, viewMatrix);
-	vec3 kartProbe = mix(kartEnvGround, kartEnvSky, smoothstep(-0.30, 0.42, kartRefl.y));
+	// Ramp edges are uniforms since wave 4 round 2. The reflection vectors off a
+	// kart's visible facets cluster in a narrow band around the horizon (a chase
+	// camera looks slightly down at a mostly-vertical rear), so a ramp that
+	// spent its contrast across 0.72 of reflected-Y returned near-identical
+	// colour to every facet — which is most of why this term measured as no
+	// change at all on the two rivals it was written for. See ENV_PROBE.rampLo.
+	vec3 kartProbe = mix(kartEnvGround, kartEnvSky, smoothstep(uKartEnvShape.y, uKartEnvShape.z, kartRefl.y));
 	// The warm band sits where the sun does — low. pow() on |y| keeps it inside
 	// roughly the bottom 25 degrees of the reflected hemisphere, which is where
 	// both tracks author their hot horizon stop.
@@ -392,7 +422,15 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// sky than one facing it. This is what puts the sheen on the SHOULDER of a
 	// panel and off its centre, and it is most of why the term reads as a
 	// reflection rather than as a wash.
-	float kartEnvFresnel = mix(0.28, 1.0, pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 3.0));
+	//
+	// The FLOOR is the whole argument and it was hard-coded at 0.28, which meant
+	// every front-facing facet — the large ones, the ones that fill the
+	// silhouette — collected 28% of the same probe colour unconditionally. That
+	// floor is a flat tint over most of the visible body, and it is why the
+	// rivals stayed 81-85% adjacent-flat and why the hero's red paint measured
+	// out at saturation 0.19. Now a uniform (0.09), so the term is genuinely
+	// orientation-driven: per-facet variation up, mean contribution down.
+	float kartEnvFresnel = mix(uKartEnvShape.x, 1.0, pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 3.0));
 	float kartEnvWeight = kartEnvFresnel * (
 		uKartEnv.x * kartPaintMask +
 		uKartEnv.y * kartChromeMask +
@@ -423,8 +461,20 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// Reuses kartRubberMask so the tyres' contract still holds — this adds no
 	// gloss and no highlight, only the value gradient that stops a matte black
 	// surface reading as a hole. Headroom-metered like everything else.
+	//
+	// AAA wave 4 round 2 — the RAMP is new and it is the difference between a
+	// value break and a fill light. Round 2 shipped mix(ground, sky, ...)
+	// alone, which never returns zero: a fully down-facing normal still took the
+	// full uKartDarkFill, just in the ground's hue. So the term lifted the whole
+	// tyre uniformly (measured mean rgb(120,110,117) on a #10121c tyre) while
+	// only its HUE varied top to bottom. Multiplying by a second ramp that
+	// reaches zero underneath is what makes it a crown light: lit top, black
+	// undercarriage, which is what a matte black surface needs to read as a
+	// solid rather than as a hole. Magnitude came down alongside it (0.13 ->
+	// 0.05) — see DARK_FILL.
+	float kartDarkLift = smoothstep(-0.35, 0.9, kartWorldNormal.y);
 	outgoingLight += mix(kartEnvGround, kartEnvSky, smoothstep(-0.55, 0.85, kartWorldNormal.y))
-		* uKartDarkFill * kartRubberMask * KART_HEADROOM;
+		* uKartDarkFill * kartDarkLift * kartRubberMask * KART_HEADROOM;
 
 	vec3 kartSpec = kartLitMask * (
 		mix(vec3(1.0), uKartSpecTint, uKartSpecBlend) * (uKartSpecStrength.x * kartPaintBand * kartPaintMask) +
@@ -440,7 +490,35 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// mid surfaces hard and eases to nothing on anything the key has already
 	// taken to white, so the highlight can no longer flatten a panel into a
 	// featureless blob or hand the bloom pass one.
-	outgoingLight += kartSpec * KART_HEADROOM;`;
+	outgoingLight += kartSpec * KART_HEADROOM;
+
+	// ---- Rubber's soft ceiling (AAA wave 4 round 2) ------------------------
+	// The class contract is "dead matte, and the value anchor the other three
+	// classes are read against". That contract was being enforced only by every
+	// other term in the file happening to stay small, and in round 2 one of them
+	// did not (DARK_FILL at 0.13 put the player's tyres at a measured median
+	// luminance of 108). This makes the contract a property of the class instead
+	// of an emergent one.
+	//
+	// A soft knee, not a min(): a hard clamp would flatten the tyre's crown into
+	// a plate and undo the very gradient two lines above exist to give it. Same
+	// asymptotic fold as the paint compressor, so it is monotone — a brighter
+	// texel stays brighter, it just stays under the ceiling.
+	//
+	// Deliberately LAST in this chunk, and deliberately not the last word: the
+	// rim chunk composes after this one (addShaderInjection re-replaces the same
+	// anchor, so a later entry lands between this and <opaque_fragment>) and
+	// adds its own silhouette term afterwards. That is intended — the rim is
+	// what holds a black tyre off a black road — and it is why
+	// HERO_RIM_RUBBER_SCALE has to stay small independently of this.
+	float kartRubberPeak = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b));
+	float kartRubberOver = max(0.0, kartRubberPeak - uKartRubberCeil);
+	float kartRubberTarget = uKartRubberCeil + kartRubberOver * uKartRubberCeil / (kartRubberOver + uKartRubberCeil);
+	// One-sided, for the same reason the paint compressor is: below the ceiling
+	// the raw ratio exceeds 1 and would LIFT a genuinely black texel up to it,
+	// turning a ceiling into a floor and greying the exact surface this class
+	// exists to keep dark.
+	outgoingLight *= mix(1.0, min(1.0, kartRubberTarget / max(1e-4, kartRubberPeak)), kartRubberMask);`;
 
 // Adds the paint / chrome / plastic / rubber split to a hero material. Composed through
 // addShaderInjection like everything else — never assigned directly — so it
@@ -473,12 +551,23 @@ export const applyKartShading = (material, overrides = null) => {
           params.envSunSharp
         ),
       },
+      // (fresnel floor, probe ramp low, probe ramp high, spare)
+      uKartEnvShape: {
+        value: new THREE.Vector4(params.envFresnelFloor, params.envRamp[0], params.envRamp[1], 0),
+      },
       uKartGloss: { value: new THREE.Vector2(params.paintGloss, params.chromeGloss) },
       uKartPaintChroma: { value: new THREE.Vector2(...params.paintChroma) },
-      // (shadow-side step, unclip knee, how much of the unclip to take)
+      // (shadow-side step, compressor knee, how much of the correction to take,
+      //  compressor ceiling — the asymptote the knee folds the overshoot into)
       uKartPaintShape: {
-        value: new THREE.Vector3(params.paintShade, params.paintKnee, params.paintPull),
+        value: new THREE.Vector4(
+          params.paintShade,
+          params.paintKnee,
+          params.paintPull,
+          params.paintCeiling
+        ),
       },
+      uKartRubberCeil: { value: params.rubberCeiling },
       uKartRubberDarken: { value: params.rubberDarken },
       uKartRubberLum: { value: new THREE.Vector2(...params.rubberLuminance) },
       uKartSkyBounce: { value: params.skyBounce },

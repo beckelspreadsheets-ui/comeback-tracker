@@ -237,17 +237,81 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // Chroma in the authored stops is still moderate (widest 0.44 saturation)
     // for the reason round 1 gives below: the grade multiplies chroma by 1.36,
     // so an authored 0.6 arrives past 0.85 and the bruise becomes a neon.
+    //
+    // WAVE 4 ROUND 3 — THE LADDER WAS STILL ONE BAND TOO HIGH, AND IT HAD NO
+    // DARK SIDE. Measured on the round-2 frames rather than replayed forward
+    // (nine marks, sky column x560-1040, 9px strips down x=700 and x=1000):
+    //
+    //   y  4-40    hue 267-316  sat 0.28-0.36  R-B -27..+7    violet ceiling
+    //   y 52-100   hue 312-331  sat 0.22-0.29  R-B  +8..+19   a rose band
+    //   y116-164   hue 220-286  sat 0.07-0.16  R-B  -4..-18   NEUTRAL GREY
+    //
+    // against Comeback City's own column, which the owner has confirmed:
+    // hue 16-24, sat 0.61-0.77, R-B +152..+195, val 0.86-1.00 at every height.
+    //
+    // Two separate faults, and the second is the one four waves have missed:
+    //
+    //   1. THE EMBER IS STILL BEHIND THE PLATE. Round 2 moved it to offsets
+    //      0.90-1.00. Inverting the shader's own mapping (LUT v = d.y^1.7 and
+    //      the canvas is flipY, so offset = 1 - d.y^1.7), offset 0.90 is
+    //      elevation 14.9 and 0.95 is 11.4 — i.e. below the 22.3-degree rim of
+    //      pv-far.webp, whose alpha reaches 255 by 12 degrees. The band the
+    //      camera frames is 20-34 degrees, which is offsets 0.84 down to 0.63.
+    //      EVERY stop from 0.90 down was painted behind a plate again. The hot
+    //      stop is now at 0.84 (elev 19.9), where the plate's alpha is still
+    //      partial, and 0.79 (elev 23.5) is the first fully-visible one.
+    //   2. THE LADDER HAS NO DARK BAND, SO THERE IS NO FRONT. Round 2's stops
+    //      rise monotonically in value from the zenith to the horizon, which is
+    //      a clear dusk gradient. A storm front is a DARK MASS with light
+    //      underneath it: the value has to fall into the front and climb out of
+    //      it. 0.74 (#5a3d6d, val 0.43) is now the darkest stop in the whole
+    //      ladder and it sits at elevation 26.9 — the middle of the frame,
+    //      between an indigo ceiling above and the break below. That trough is
+    //      the front. It is also what the round-2 critics were asking for when
+    //      they wrote "a DARKER slate band with actual internal form" and
+    //      "no cloud front, no darkening wedge"; the storm bank
+    //      (createMidGroundBelt.js) supplies the form, this supplies the value.
+    //
+    // Each stop pushed through raceGrade.js's real gradeColor (the exported
+    // function the LUT is baked from, so this part is arithmetic rather than
+    // estimate) at 0.87 of its authored value — 0.87 being the attenuation the
+    // round-2 frames actually measured between an authored stop and the pixel it
+    // produced, before the deck and the bank take their share:
+    //
+    //   elev 34  offset 0.62  -> rgb( 28, 38,163)  hue 236  sat 0.83  R-B -135
+    //   elev 31  offset 0.68  -> rgb( 46, 34,143)  hue 247  sat 0.76  R-B  -97
+    //   elev 27  offset 0.74  -> rgb( 66, 35,109)  hue 265  sat 0.68  R-B  -43
+    //   elev 24  offset 0.79  -> rgb(140, 49, 69)  hue 347  sat 0.65  R-B  +71
+    //   elev 20  offset 0.84  -> rgb(205, 82, 26)  hue  19  sat 0.87  R-B +179
+    //
+    // The rubric target was horizon-band sat >= 0.45 with R-B >= +60 and a
+    // zenith at R-B <= -20; every row clears it. The margin above the target is
+    // deliberate and it is also why the break is authored at #bd7449 rather than
+    // the #c8763f a first pass reached for: the deck, the storm bank and the
+    // backdrop plate all stand in front of the low band and each takes a share,
+    // and a probe generated from this dome (raceEnvironment.js, landing in the
+    // same round) will hand whatever is left to every ice surface on the track.
+    // The one failure mode this track has walked into twice is "a field of tan
+    // desert cones"; the ember is hot enough to be a sunset and no hotter.
     sky: [
-      [0, '#141c48'],
-      [0.3, '#1e2b60'],
-      [0.5, '#334280'],
-      [0.62, '#4a4f90'],
-      [0.7, '#5f5590'],
-      [0.77, '#7d5b8a'],
-      [0.84, '#a06a79'],
-      [0.9, '#c2825f'],
-      [0.95, '#dda65c'],
-      [1, '#f0c47c'],
+      [0, '#0d1338'],
+      [0.32, '#161c52'],
+      [0.5, '#26286e'],
+      // Top of frame (elev ~34). Cold storm indigo, and it has to be the
+      // BLUEST thing in the sky or the front below it has nothing to be an
+      // edge against.
+      [0.62, '#3b3f8e'],
+      [0.68, '#4a3b82'],
+      // THE FRONT ITSELF — the trough. Darkest stop in the ladder.
+      [0.74, '#5a3d6d'],
+      // Out of the trough: the front's underlit edge, first stop warm of
+      // neutral, and the first elevation the plate does not cover.
+      [0.79, '#90525a'],
+      // THE BREAK. Elevation ~20, where the plate is still translucent.
+      [0.84, '#bd7449'],
+      [0.9, '#d3924f'],
+      [0.95, '#e3ab68'],
+      [1, '#f5c88a'],
     ],
     // Arctic SUNSET, and round 1 did not deliver one: the only disc in 18
     // frames was small, WHITE and high, which is midday. 22 -> 15 degrees puts
@@ -335,7 +399,17 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     //              horizon, which is aerial perspective and not a wash.
     //   [4] 0.10 — a narrow additive collar on the disc itself, the only part
     //              of this that adds rather than rotates.
-    skyGlow: [0.3, 0.08, 0.45, 3.0, 0.1],
+    //
+    // WAVE 4 ROUND 3 — 0.45/3.0 -> 0.36/3.8. The veil is a hue rotation toward
+    // the SUN's colour, so it warms the whole hemisphere by pow(sd*0.5+0.5, p):
+    // at 3.0 a bearing 60 degrees off the sun still took a 19% warm rotation,
+    // and the round-2 frames measured the ceiling's R-B swinging from -27 to +7
+    // between marks purely on which way the camera happened to face. The new
+    // ladder puts real cold chroma up there and it has to survive at EVERY
+    // bearing, so the veil tightens onto the sun: 3.8 leaves 60 degrees off-sun
+    // at 12% and the anti-sun sky at 3.4%, which is aerial perspective rather
+    // than a tint applied to the sky.
+    skyGlow: [0.3, 0.08, 0.36, 3.8, 0.1],
     // Heavy overcast, not scattered cumulus: a lower coverage floor plus a
     // cool body, so the deck reads as one storm ceiling.
     // Wave 2: the deck was BRIGHTER than the sky it sat in (#b9cad8 over a
@@ -409,14 +483,32 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // ceiling above it. band 0.44 -> 0.46 and strength 0.84 -> 0.80 take a
     // little more of the deck out of the way, because the ladder behind it is
     // now worth seeing.
+    // WAVE 4 ROUND 3 — the deck follows the ladder it now sits in front of, and
+    // the front's EDGE gets broken up. Two changes, both measured against the
+    // round-2 frames:
+    //   * baseColor #9c6f74 -> #b8735c and litColor #e6976a -> #ff9c5c. The
+    //     deck's warm half is a cloud BASE over a 12-degree sun, and the sun it
+    //     is under just got 3x hotter (the sky ladder above); a base that is
+    //     cooler than the break behind it reads as haze in front of a sunset
+    //     rather than as cloud lit by one. color #3d3f6e -> #343764 takes the
+    //     ceiling down with the new indigo stop for the same reason.
+    //   * front.edge 0.28 — the round-2 gate is smoothstep(sun dot), i.e. a
+    //     perfect circle centred on the sun bearing, which is a vignette. A
+    //     front has a ragged leading LINE. `edge` perturbs the gate with the
+    //     deck's own noise field before the smoothstep, so the boundary between
+    //     the anvil and the tear breaks up into the cloud it is cutting through,
+    //     and it creeps (createSkyDome.js carries the one-line shader term).
+    //   * amount 0.5 -> 0.58 and tear 0.25/0.85 -> 0.18/0.78: a harder anvil
+    //     and a tear that opens wider and lower, so the break sits ON the new
+    //     ember band instead of just above it.
     clouds: {
       band: [0.46, 0.7],
-      baseColor: '#9c6f74',
-      color: '#3d3f6e',
+      baseColor: '#b8735c',
+      color: '#343764',
       deck: [0.24, 0.66],
-      front: { amount: 0.5, tear: [0.25, 0.85] },
+      front: { amount: 0.58, edge: 0.28, tear: [0.18, 0.78] },
       litAdd: 0,
-      litColor: '#e6976a',
+      litColor: '#ff9c5c',
       litMix: 0.5,
       lowDeck: [0.32, 0.66],
       scale: 0.5,
@@ -504,7 +596,17 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // now doing chromatic work of its own so the haze no longer has to be the
     // warm thing on the horizon. The far/near DIFFERENCE — the depth ramp this
     // line exists for — is preserved at 0.13.
-    backdropHaze: { band: [0.28, 0.86, 0.85, 0.6], bottomFade: 0.18, color: '#b58a6e', far: 0.24, near: 0.11 },
+    //
+    // WAVE 4 ROUND 3 — band[2] 0.85 -> 0.93, band[3] 0.60 -> 0.56. The round-2
+    // tame fired and the fringe is still in the frames (gold -> lime -> magenta
+    // down a five-pixel ramp at 3x zoom on penguin-village-p0_67, -p0_45 and
+    // -p0_78). createSkyDome.js's rim block now compresses the plate's CHROMA
+    // before it rotates the hue, which is what removes the staircase; these two
+    // numbers give that compression enough authority to finish the job — at 0.93
+    // a 0.96-saturated fringe texel comes out at 0.63 instead of 0.65, and the
+    // opening moves down to just above the plate's legitimate 0.55 shadow bands
+    // so the fringe's own soft shoulder is caught with its core.
+    backdropHaze: { band: [0.28, 0.86, 0.93, 0.56], bottomFade: 0.18, color: '#b58a6e', far: 0.24, near: 0.11 },
     // Icebergs collapsed into one white value under the old 4-band ramp; the
     // 5-band set keeps a readable step between the two lit bands where all
     // the arctic geometry sits, and the deeper floor (40, not 64) is what
@@ -593,7 +695,27 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // Replayed through the exact grade with the wave-4 rig, the tooth lands at
     // rgb(137,159,178) — B-R falls from +118 to +41, and it now separates from
     // the cyan tooth by hue as well as by value.
-    curb: { a: '#fff2dc', b: '#00c6ee' },
+    //
+    // WAVE 4 ROUND 3 — THE PRE-CORRECTION OVERSHOT BECAUSE THE FILL MOVED UNDER
+    // IT. #fff2dc (B/R = 0.863) was derived against the round-1 hemisphere and
+    // predicted to land at rgb(137,159,178). The environment probe landed in the
+    // same round and charges its diffuse energy against that hemisphere, so the
+    // fill the correction was authored for is not the fill that shipped:
+    // measured at penguin-village-p0_15 the tooth arrives rgb(198,179,166), hue
+    // 24, saturation 0.16 — beach sand next to a cyan tooth on an arctic track.
+    //
+    // The lesson is not "correct harder in the other direction", it is that a
+    // pre-correction is only as stable as the rig it was solved against, and
+    // this package does not own the rig (raceEnvironment.js does, and its
+    // hemisphere takeover is being changed in the same round). So the albedo
+    // goes back to a near-NEUTRAL white with only a hair of warmth left in it
+    // (#fdfaf4, B/R = 0.957 against the old 0.863). That is the one authored
+    // value that cannot fail in either direction: under the shipped warm fill it
+    // lands barely warm of neutral instead of tan, and under the cold fill the
+    // probe fix restores it lands cool-white rather than back on the wave-3
+    // periwinkle. Both are inside the "cool white, not a warm one" the round-2
+    // artefact hunter asked for; neither is sand.
+    curb: { a: '#fdfaf4', b: '#00c6ee' },
     rail: '#00E5FF',
     wall: { a: '#1c4a63', b: '#00E5FF' },
     // Run-off shelf and embankment. Same fault as Comeback City's and the

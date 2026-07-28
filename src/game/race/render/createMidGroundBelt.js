@@ -287,7 +287,48 @@ const TRACK_TUNING = {
     // was meant to silhouette against; and the wave-3 lit tint below is 22%
     // hotter than round 3's, so the sun-facing faces need headroom or they
     // walk straight back into the clipped white that killed round 1.
-    ringColors: ['#93b3ca', '#7c9db8', '#6485a3'],
+    // WAVE 4 ROUND 3 — THREE RINGS, ONE COLOUR. The round-2 set is a single hue
+    // (207, 207, 208) at a single saturation band (0.28 / 0.32 / 0.39) with a
+    // 19% value spread, i.e. one colour at three exposures — and both the A/B
+    // judge and the rubric critic read the arctic mid-ground the same way: "a
+    // uniform pale wall", "the ice cliffs, pyramids and mid-ground bergs all sit
+    // within a narrow value band, so depth only reads where the amber rim
+    // happens to catch". Depth is not a brightness ramp; it is aerial
+    // perspective, and aerial perspective moves THREE axes at once — near masses
+    // are dark, saturated and cool, far ones are pale, desaturated and take the
+    // sky's hue.
+    //
+    // So the ladder now runs on all three (values are Rec.709 luma of the
+    // authored albedo, before the lit/shade split multiplies it):
+    //
+    //   ring 0   92u  #6f8ca8  hue 209  sat 0.34  luma 0.53   cool near shadow
+    //   ring 1  172u  #8ba3b8  hue 204  sat 0.25  luma 0.61   neutral mid
+    //   ring 2  296u  #aab2bb  hue 212  sat 0.09  luma 0.69   far haze
+    //
+    // against round 2's 0.68 / 0.60 / 0.51 — note the direction is REVERSED as
+    // well as widened. Round 2 had the near ring brightest, which is aerial
+    // perspective backwards and is why the belt had to rely on the rim light to
+    // separate at all. The far ring's near-neutral 0.09 saturation is what lets
+    // it dissolve into the fog colour (#bfa08c) rather than sitting in front of
+    // it, and the near ring's 0.34 is the only saturated ice in the frame, which
+    // is where the eye now reads "close".
+    ringColors: ['#6f8ca8', '#8ba3b8', '#aab2bb'],
+    // Per-instance hue jitter, the other half of "the density stops reading as a
+    // tiling". The rings already jitter per-instance VALUE (0.74-1.06) and that
+    // is not enough on a low-chroma palette: at 0.09-0.34 saturation a 30% value
+    // spread is the only difference between two masses, so the eye tallies the
+    // silhouettes instead.
+    //
+    // BIDIRECTIONAL, and that is not a stylistic choice — it is the only shape
+    // that survives this track's own arctic clamp. `coolClamp` below subtracts
+    // warm excess AFTER lighting on any pixel whose R-B clears 0.01, so a jitter
+    // that only walks toward the sunset would be up to 78% undone by the very
+    // next stage in the same shader. Splitting the roll about the base colour
+    // means the cool half is structurally untouchable by the clamp and the warm
+    // half keeps the 22-38% the clamp leaves — and it is the SPREAD between two
+    // neighbouring masses, not the absolute hue of either, that stops a ring
+    // reading as one repeated silhouette.
+    instanceTint: { amount: 0.32, cool: '#7d8bbe', warm: '#e0a476' },
     // No BLOCK. A rectangular slab on an ice field reads as a building, and
     // 30% of every arctic mass ring was one. RIDGE takes that share: a long
     // low buckled crest is the arctic landform the vocabulary was missing, and
@@ -358,7 +399,14 @@ const TRACK_TUNING = {
     // its whole job is to keep the snow plain from ending on a hard line.
     shelf: {
       block: { depth: [18, 48], height: [10, 34], width: [22, 64] },
-      color: '#7e99b1',
+      // WAVE 4 ROUND 3: #7e99b1 -> #b7bcbe. The shelf is 430 units out, past
+      // where FogExp2 0.0013 takes 43%, so it is the ring that has to be the
+      // SKY's value rather than the ice's — and at luma 0.58 it was darker than
+      // the two rings in front of it, which is the depth ladder running
+      // backwards at the far end. Near-neutral (saturation 0.03) on purpose:
+      // this row's whole job is to stop the snow plain ending on a hard line,
+      // and a chromatic silhouette out there competes with the front instead.
+      color: '#b7bcbe',
       density: 0.58,
       peak: { height: [18, 58], radius: [14, 34] },
       shapes: [
@@ -426,7 +474,23 @@ const TRACK_TUNING = {
     // and it is the element that puts the sunset in frames where the sun disc
     // itself is off camera.
     stormBank: {
-      color: '#2c3f5e',
+      // WAVE 4 ROUND 3 — THIS WALL IS THE GREY MID-BAND. All three round-2
+      // critics measured Penguin Village's sky collapsing to saturation
+      // 0.05-0.22 with R-B within +/-11 across y110-260, and read it as the
+      // dome. It is not: a 9px column scan down penguin-village-p0_67 walks
+      // hue 331 / sat 0.26 at y68 straight into hue 232 / sat 0.10 at y132,
+      // which is where this wall's opaque body starts (radius 548, height 300,
+      // crest ~0.46 -> the band from roughly 8 to 20 degrees of elevation). At
+      // 0.66 opacity a #2c3f5e slate over a violet dome composites to exactly
+      // the neutral they measured — the wall was averaging the sky to grey.
+      //
+      // #2b2f56 is the same value (Rec.709 luma 0.212 against 0.216) rotated
+      // off cyan-slate onto the dome's own indigo, so where the bank is opaque
+      // the sky stays a hue instead of becoming the average of two. Combined
+      // with the opacity drop below, the composite over the new ember band
+      // keeps roughly 44% of the dome's chroma instead of 34% of a hue that
+      // disagreed with it.
+      color: '#2b2f56',
       // THE BRUISED CEILING, and it is the half of "storm front" round 2 did
       // not ship. The bank had a warm underlit base and then ONE flat slate
       // value all the way to the crest, which is the literal definition of
@@ -452,7 +516,14 @@ const TRACK_TUNING = {
       // anti-sun side, so the hole would occupy the top of every frame looking
       // away from the sunset. 0.66 keeps the crest clearly under the dome it
       // silhouettes against without going black.
-      ceiling: 0.66,
+      // WAVE 4 ROUND 3: 0.66 -> 0.74. Same rule, third re-derivation, and this
+      // time against a dome that has a dark band of its OWN. The re-authored
+      // ladder puts the front's trough at elevation ~27 (penguinVillage.js's
+      // 0.74 stop, the darkest in the ledger) which is exactly the band this
+      // wall's crest occupies. A crest darker than that trough is a hole in a
+      // dark band; at 0.74 the crest sits just under the dome behind it, which
+      // is the silhouette this layer is for.
+      ceiling: 0.74,
       gap: 0.8,
       // 190 -> 240. At radius 548 the old wall topped out at 19 degrees of
       // elevation, so on a frame whose horizon sits near the middle the front
@@ -470,12 +541,35 @@ const TRACK_TUNING = {
       // dome. The opaque body does not grow with it (the crest fraction is
       // authored in UV); what grows is the gradient.
       height: 300,
-      opacity: 0.66,
+      // WAVE 4 ROUND 3: 0.66 -> 0.54. See the colour note above — this wall
+      // stands in front of the one band of the dome that carries the sunset,
+      // and every point of opacity it spends is a point of the break it hides.
+      // 0.54 still reads as a solid front where the crest is thick (the body
+      // term peaks at 1.0 well below the crest) and lets nearly half the ember
+      // through where it is thinning, which is what an actual break looks like.
+      opacity: 0.54,
       radius: 548,
       // Follows the wave-4 key (#ffd2a4) down in green and blue for the same
       // reason it does: the rim is the sun transmitted through cloud, so it
       // cannot be warmer in HUE than the sun behind it.
-      rim: '#ffae66',
+      // Round 3: #ffae66 -> #ff9a4e. The sun this rim transmits did not change,
+      // but the sky BEHIND the wall did: the dome's break now arrives at
+      // rgb(231,116,41) where round 2 put rgb(150,136,138) there. A rim cooler
+      // than the break it is supposed to be lit by reads as a grey wall with a
+      // tint on it, which is the "calm aurora dusk" the A/B judge scored.
+      rim: '#ff9a4e',
+      // How far round the wall the underlit base reaches, in sun-dot.
+      // Round 2 hard-coded smoothstep(0.16, 0.92) in the shader; authored here
+      // because it is the one number that decides whether this reads as a front
+      // breaking or as a band with a gradient, and it belongs beside the colour
+      // it applies. 0.16 confined the warm base to ~130 degrees either side of
+      // the sun and the round-2 frames show the consequence: on the marks facing
+      // away from the sunset (p0_67, p0_78, p0_9) the whole horizon band is the
+      // slate body and there is no sunset in the frame at all. -0.04 reaches
+      // roughly 180 degrees, so a camera looking across the front still catches
+      // the lit underside at a grazing angle — which is what a front looks like
+      // from beside it — while the anti-sun quarter stays cold.
+      rimReach: [-0.04, 0.86],
     },
     // 0.58 in the plan sat inside PV's bridge band (0.55-0.67, peak 17), so
     // that stand would have been sunk 15 units under the deck it faces.
@@ -1481,6 +1575,16 @@ export const createMidGroundBelt = (options = {}) => {
     };
   };
 
+  // Resolved once: a THREE.Color and a scalar, so the placement loop never
+  // parses a string or allocates inside the per-instance path.
+  const instanceTint = track.instanceTint
+    ? {
+        amount: track.instanceTint.amount ?? 0,
+        cool: new THREE.Color(track.instanceTint.cool),
+        warm: new THREE.Color(track.instanceTint.warm),
+      }
+    : null;
+
   const crownEntries = [];
   if (hasPath) {
     const ringPlan = mobile ? RING_PLAN_MOBILE : RING_PLAN;
@@ -1533,6 +1637,18 @@ export const createMidGroundBelt = (options = {}) => {
           // what tipped Penguin Village's ice into clipped white, and a wider
           // downward spread is free silhouette separation.
           scratchColor.copy(baseColor).multiplyScalar(lerp(0.74, 1.06, random()));
+          // Per-instance HUE jitter on top of the value jitter. See the
+          // instanceTint note in TRACK_TUNING: on a 0.09-0.34 saturation palette
+          // a value spread alone leaves every mass the same colour, so the eye
+          // counts silhouettes. Rolled unconditionally so a track that authors
+          // no tint cannot shift the random stream relative to one that does.
+          const tintRoll = random() * 2 - 1;
+          if (instanceTint) {
+            scratchColor.lerp(
+              tintRoll < 0 ? instanceTint.cool : instanceTint.warm,
+              Math.abs(tintRoll) * instanceTint.amount
+            );
+          }
           const instanceColor = scratchColor.clone();
           let height = 0;
           // The mass is SIZED before it is committed to its slot. The walk
@@ -1587,6 +1703,22 @@ export const createMidGroundBelt = (options = {}) => {
             // narrow spires that break a ring of cones come from.
             width = radius * 2 * lerp(0.56, 1.44, random());
             depth = radius * 2 * lerp(0.56, 1.44, random());
+            // INDEPENDENT Y STRETCH, and it is not a duplicate of the height
+            // roll above it. `height` is between(peak.height) * massScale, and
+            // massScale is the SAME factor that scaled the radius the two lines
+            // above just stretched — so a mass that rolled big rolled big in
+            // every axis and the whole ring shared one aspect ratio at several
+            // sizes. That is the "same silhouette repeated 8+ times per frame at
+            // the same proportions" both round-2 critics counted. Rolling Y on
+            // its own is what turns one outline into a squat mesa and a needle
+            // spire, which is the difference a yaw can never make: an archetype
+            // seen from any bearing still resolves to its own aspect.
+            //
+            // Applied BEFORE the sight-line cap below, so a tall roll is still
+            // capped against its lateral clearance and cannot become a wall; and
+            // it touches Y only, so the footprint clearance already computed
+            // from width/depth is unaffected.
+            height *= lerp(0.68, 1.5, random());
           }
 
           // Footprint-aware clearance. Every archetype is authored inside the
@@ -2223,6 +2355,9 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
         uGap: { value: bank.gap },
         uOpacity: { value: mobile ? bank.opacity * 0.85 : bank.opacity },
         uRimColor: { value: new THREE.Color(bank.rim) },
+        // Defaults reproduce round 2's hard-coded window exactly, so a track
+        // that authors no reach compiles to the same picture.
+        uRimReach: { value: new THREE.Vector2(bank.rimReach?.[0] ?? 0.16, bank.rimReach?.[1] ?? 0.92) },
         uSunDir: { value: new THREE.Vector3().fromArray(sunDirectionOf(palette)) },
         uTime: { value: 0 },
       };
@@ -2235,6 +2370,7 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
           uniform vec3 uBankColor;
           uniform vec3 uRimColor;
           uniform vec3 uSunDir;
+          uniform vec2 uRimReach;
           uniform float uCeiling;
           uniform float uGap;
           uniform float uOpacity;
@@ -2303,7 +2439,11 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
             // breaking rather than as a tint applied to the whole band. The
             // ceiling above it goes cold at the same bearing, so the two now
             // meet on a line instead of blending.
-            float rim = smoothstep(0.16, 0.92, toSun) * (1.0 - smoothstep(0.0, 0.62, vUv.y));
+            // WAVE 4 ROUND 3: the window is authored (uRimReach) rather than
+            // literal. See the rimReach note in the palette — the round-2
+            // numbers left three of the nine capture marks with no warm pixel
+            // anywhere on the horizon.
+            float rim = smoothstep(uRimReach.x, uRimReach.y, toSun) * (1.0 - smoothstep(0.0, 0.62, vUv.y));
             // The burn-through's own edge is the hottest part of a front: the
             // cloud there is thin enough to transmit rather than just bounce.
             // Small and low, so it reads as the sun behind the wall and not as

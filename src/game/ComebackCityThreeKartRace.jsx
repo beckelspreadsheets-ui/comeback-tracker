@@ -187,6 +187,24 @@ const CHASE_FORWARD = new THREE.Vector3();
 const CHASE_RIGHT = new THREE.Vector3();
 const CHASE_UP = new THREE.Vector3();
 const CAMERA_DODGE_DIR = new THREE.Vector3();
+// Near-plane lateral guard: the boom's horizontal screen-right axis, and the
+// probe direction cast along it. Module scope like everything else the frame
+// loop touches.
+const CAMERA_LATERAL_RIGHT = new THREE.Vector3();
+const CAMERA_LATERAL_DIR = new THREE.Vector3();
+// How much air the lens keeps beside itself, in world units. The camera's near
+// plane is 0.25, so a mass has to be almost touching the lens before it is
+// literally sliced — but the failure the captures keep shipping is not the
+// slice, it is a 30-unit ice wall a metre off the lens rendering as one flat
+// unshaded value over a fifth of the frame with no silhouette a player can
+// read. 5 units is roughly a kart's width of air: enough that a roadside mass
+// resolves as a form with its own shading break, small enough that the push
+// itself is never the thing you notice.
+const CAMERA_LATERAL_STANDOFF = 5;
+// ...and only against masses that can genuinely hide the shot. Bridge rails,
+// kerb walls and sign posts are all legitimately a couple of units off the lens
+// on a normal lap; shoving the eye off those would be a new bug, not a fix.
+const CAMERA_LATERAL_MIN_HEIGHT = 12;
 // Scratch for the once-per-frame tier-2 grounding solve, plus the frozen answer
 // for the degenerate cases. Module scope for the same reason as everything else
 // in this block: the frame loop must not allocate.
@@ -877,6 +895,34 @@ const createGroundedKartModel = ({
   const shadow = new THREE.Mesh(
     shadowGeometry,
     new THREE.MeshBasicMaterial({
+      // MULTIPLY, not alpha-composite, and this is the round-3 fix for the
+      // blocker every critic measured independently: the contact zone reading
+      // BRIGHTER than the road beside it (+50% at penguin-village-p0_15, +22%
+      // at comeback-city-p0_06, +92% under boost at comeback-city-p0_24).
+      //
+      // The cause is spatial, not ordinal. The kart's neon underglow and its
+      // boost/exhaust glow are additive sprites painting the SAME footprint,
+      // and round 2's remedy — draw the patch after them (renderOrder 38) —
+      // only decides who writes last, not who wins: an alpha-composited black
+      // patch at 0.46 still leaves 54% of a glow that had already doubled the
+      // road's value. ZERO / ONE_MINUS_SRC_ALPHA makes the decal a SCALE on
+      // whatever is already on the pixel — dst *= (1 - alpha) — so it darkens
+      // the glow along with the road and cannot be out-added. It is also
+      // hue-preserving, which is why tier 3 uses a multiply for the same job
+      // (raceShadowRig.js) rather than a black plate on Miami's neon asphalt.
+      //
+      // Consequences worth knowing: `color` is unused (src.rgb never enters the
+      // blend), and `opacity` is now literally the darkening fraction at the
+      // patch's core. The ALPHA channel is deliberately passed through
+      // untouched (ZERO/ONE) — the composer's intermediate targets carry alpha
+      // and a decal has no business editing it.
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+      blendDstAlpha: THREE.OneFactor,
+      blendEquation: THREE.AddEquation,
+      blendEquationAlpha: THREE.AddEquation,
+      blendSrc: THREE.ZeroFactor,
+      blendSrcAlpha: THREE.ZeroFactor,
+      blending: THREE.CustomBlending,
       color: '#03060c',
       depthWrite: false,
       map: makeContactShadowTexture(),
@@ -960,7 +1006,27 @@ const createGroundedKartModel = ({
   // critics read the result as "a warm exhaust glow where a shadow should be").
   // Centring it on the chassis keeps the colour-coding read — which is what the
   // sprite is for — and hands the deck back to the grounding cue.
-  addGlowSprite(group, accent, 7.8, 0.22, 1.5);
+  //
+  // Round 3 pulls it in again — 7.8/y1.5 -> 5.6/y2.6 — and this is the term
+  // that was inverting the contact patch, so it is worth the arithmetic. The
+  // road under the wheels sits at normalised radius y0/(scale/2) in the
+  // sprite's own gradient: at 1.5/3.9 = 0.38 the ramp is still at 0.30 alpha,
+  // so the deck took 0.30 * 0.22 = 0.066 of a FULL-VALUE accent colour added
+  // to asphalt whose own linear value is ~0.03. That is not a tint, it is a
+  // doubling — and it is why the captures measured the contact zone 22-50%
+  // BRIGHTER than the road beside it while a shadow was nominally being drawn
+  // there. At 2.6/2.8 = 0.93 the ramp is down to ~0.035, i.e. eight times less
+  // light on the exact pixels the grounding cue has to own, and the halo still
+  // wraps the bodywork it exists to colour-code.
+  //
+  // NOTE for the next reader: the obvious-sounding fix — punch a hole in the
+  // middle of the glow texture so it "cannot paint the disc it sits inside" —
+  // is backwards for a CAMERA-FACING sprite. The pixels landing on the road
+  // under the wheels are at the BOTTOM of the billboard, i.e. out on its
+  // radius; the centre is behind the bodywork and already occluded. An annulus
+  // would delete the only part that was innocent and keep the part doing the
+  // damage.
+  addGlowSprite(group, accent, 5.6, 0.22, 2.6);
   // Cached for the proximity fade — a rival parked on the lens has to ghost,
   // and re-traversing four karts every frame to find that out is not worth the
   // cycles. Rebuilt from BOTH mounts every time either of them changes, which
@@ -6138,6 +6204,11 @@ const createScene = ({
         // cast would walk their full triangle list every frame for nothing.
         Math.max(halfX, halfZ) <= 200
       ) {
+        // Stamped for the near-plane lateral guard in the frame loop: a ray hit
+        // gives you a surface, not a mass, and the guard has to be able to tell
+        // "30-unit ice wall" from "bridge rail" without re-deriving a world AABB
+        // per hit. Free here — the box is already computed.
+        node.userData.cameraOccluderHeight = boxHeight;
         cameraOccluders.push(node);
       }
       // Pushout set only from here down. Its floor is about MASS — the camera
@@ -7143,10 +7214,14 @@ export const ComebackCityThreeKartRace = ({
         : CONTACT_BOOST_NEUTRAL;
       contactRig.scale.set(fade.scale * boost.scale, 1, fade.scale * boost.scale);
       contactRig.children.forEach((decal) => {
-        // Capped: past ~0.8 an alpha-blended patch stops reading as a shadow on
-        // the road and starts reading as a hole cut through it.
+        // Capped, and the cap came DOWN with the blend change: on the
+        // multiply path (see the contact decal's material) this number is the
+        // fraction of the road's own value the patch removes, so 0.8 is not a
+        // deep shadow, it is an 80% wipe — a hole cut through the asphalt. 0.7
+        // is as dark as a contact patch ever needs to be, and the boost term
+        // that used to overshoot the old cap now lands just under it.
         decal.material.opacity = Math.min(
-          0.8,
+          0.7,
           decal.userData.contactOpacity * fade.opacity * boost.opacity
         );
       });
@@ -8065,7 +8140,18 @@ export const ComebackCityThreeKartRace = ({
         );
         // The original absolute rule survives as a floor: anything this close to
         // the lens gets sliced by the near plane whatever direction it is in.
-        const lensBand = clamp((rivalDistance - 5) / 7, 0, 1);
+        //
+        // ROUND 3 measures it to the rival's SURFACE, not its origin, and that
+        // one term is the comeback-city-p0_45 blocker. A kart is ~14 long and
+        // ~7 wide, so its near corner leads its origin by a full kart radius:
+        // the rival that filled the right third of that frame with a driver
+        // head and a wheel SLICED BY THE NEAR PLANE had its origin ~13 units
+        // out, which the old test scored as 1.0 — completely solid, no fade,
+        // while its bodywork was physically inside the lens. Off-axis rivals
+        // never reach the cone test above (they are legitimately beside you),
+        // so this floor is the only thing that can catch them.
+        const surfaceDistance = rivalDistance - CHASE_SUBJECT_RADIUS;
+        const lensBand = clamp((surfaceDistance - 3) / 7, 0, 1);
         // Cubic on the axial term only. The band is wide enough now that a
         // linear fade would leave a rival visibly translucent while it is still
         // a legitimate part of the shot; off-axis rivals never reach it at all.
@@ -8490,6 +8576,84 @@ export const ComebackCityThreeKartRace = ({
             }
           }
 
+          // NEAR-PLANE LATERAL GUARD.
+          //
+          // Everything above tests the corridor between the kart and the eye,
+          // and that test is STRUCTURALLY blind to the shot the critics keep
+          // returning: a mass at the FRAME EDGE is never on the kart ray. The
+          // iceberg owning the right 22% of penguin-village-p0_9 (measured
+          // 96.4% adjacent-pixel-flat — an unlit face, not a shaded form) and
+          // the khaki slab over the top-left of p0_78 are both BESIDE the lens,
+          // not in front of it, which is why four rounds of tuning the broad-
+          // phase never reached them. Two rays straight out of the eye along
+          // its own screen-right axis are the cheapest test that can see them.
+          //
+          // Two responses, because neither alone is enough. The PUSH buys the
+          // current frame back (a mass a metre off the lens renders as one flat
+          // value; five units of air and it resolves as a form). The DODGE
+          // below swings the whole bearing off the mass over the next few
+          // frames, which is the only thing that actually removes it from the
+          // shot — and it needs to be told, because its own sweep only ever
+          // asks about the kart corridor, which in these frames is clear.
+          //
+          // Screen-right for a lens looking back down the boom: guardDir runs
+          // kart -> eye, the view direction is its negation, so the horizontal
+          // right vector is (guardDir.z, 0, -guardDir.x).
+          CAMERA_LATERAL_RIGHT.set(guardDir.z, 0, -guardDir.x);
+          const lateralAxis = CAMERA_LATERAL_RIGHT.length();
+          let lateralSide = 0;
+          let lateralDepth = 0;
+          if (lateralAxis > 1e-3) {
+            CAMERA_LATERAL_RIGHT.divideScalar(lateralAxis);
+            let leftDepth = 0;
+            let rightDepth = 0;
+            for (let side = -1; side <= 1; side += 2) {
+              engine.cameraRay.set(
+                camPos,
+                CAMERA_LATERAL_DIR.copy(CAMERA_LATERAL_RIGHT).multiplyScalar(side)
+              );
+              engine.cameraRay.near = 0;
+              engine.cameraRay.far = CAMERA_LATERAL_STANDOFF;
+              engine.cameraRayHits.length = 0;
+              engine.cameraRay.intersectObjects(
+                engine.cameraOccluders,
+                false,
+                engine.cameraRayHits
+              );
+              // Front faces only (three's default), so each ray hits the face
+              // of the mass that is turned toward the lens — which is exactly
+              // the face that would be filling the frame.
+              for (let hit = 0; hit < engine.cameraRayHits.length; hit += 1) {
+                const found = engine.cameraRayHits[hit];
+                // Height gate: a bridge rail or a kerb wall is legitimately a
+                // couple of units off the lens on a normal lap and must never
+                // move the camera. Only masses tall enough to hide the shot
+                // get a vote (stamped in collectCameraBlockers).
+                if ((found.object.userData.cameraOccluderHeight || 0) < CAMERA_LATERAL_MIN_HEIGHT)
+                  continue;
+                const depth = CAMERA_LATERAL_STANDOFF - found.distance;
+                if (side < 0) leftDepth = Math.max(leftDepth, depth);
+                else rightDepth = Math.max(rightDepth, depth);
+                break;
+              }
+            }
+            // Blocked on BOTH sides is a gorge or a tunnel: sliding across it
+            // only trades one wall for the other, so the guard stands down and
+            // the boom shortening above owns the frame. Same rule the occlusion
+            // cast already uses when it is jammed.
+            if ((leftDepth > 0) !== (rightDepth > 0)) {
+              lateralSide = leftDepth > 0 ? -1 : 1;
+              lateralDepth = Math.max(leftDepth, rightDepth);
+              camPos.addScaledVector(CAMERA_LATERAL_RIGHT, -lateralSide * lateralDepth);
+              // A little lift travels with the push. Roadside masses are tall
+              // and what is above them is open sky, so elevation clears far
+              // more silhouette per unit than sideways does — capped hard,
+              // because the framing solver still has to put the kart back in
+              // its box afterwards.
+              camPos.y += Math.min(lateralDepth * 0.35, 1.6);
+            }
+          }
+
           // LATERAL DODGE — the answer the previous round explicitly deferred
           // ("the good answer is a lateral dodge, which is wave 6's camera
           // work"). Shortening the boom cannot clear penguin-village-p0_9: the
@@ -8509,7 +8673,7 @@ export const ComebackCityThreeKartRace = ({
           // It only runs while jammed or already dodging, so a clear frame pays
           // for exactly one cast, as before.
           const jammed = Number.isFinite(hitDistance) && hitDistance < guardFloor;
-          if (jammed || Math.abs(race.cameraDodgeYaw || 0) > 0.001) {
+          if (jammed || lateralSide !== 0 || Math.abs(race.cameraDodgeYaw || 0) > 0.001) {
             const idealRise = cameraSample.point.y + feel.eyeLift - guardHead.y;
             const idealLength = Math.hypot(feel.boomLength, idealRise) || 1;
             let dodgeTarget = 0;
@@ -8536,6 +8700,22 @@ export const ComebackCityThreeKartRace = ({
             // Surrounded (nothing clear) leaves dodgeTarget at 0 and the boom
             // shortening above stays the fallback — one broken frame beats a
             // camera cartwheeling looking for an exit.
+            //
+            // ...and a lateral hit steers the bearing on its own. The sweep
+            // above can only ever answer "is the kart corridor clear", and in
+            // the frames this exists for it IS clear — the mass is off to the
+            // side, so every candidate bearing scores identically and the sweep
+            // returns 0. Repulsion is the honest model for that case: swing
+            // away from the blocked side, proportional to how far inside the
+            // standoff the eye is, and unwind the moment the probe comes back
+            // clear. Sign: +yaw walks the eye toward CAMERA_LATERAL_RIGHT (the
+            // boom's own screen-right), so away from side s is -s. Capped at
+            // ~23 degrees, well inside the sweep's own 43-degree ceiling, so a
+            // dodge can never turn the chase shot into a side view.
+            if (lateralSide !== 0 && dodgeTarget === 0) {
+              dodgeTarget =
+                -lateralSide * 0.4 * clamp(lateralDepth / CAMERA_LATERAL_STANDOFF, 0, 1);
+            }
             race.cameraDodgeYaw = lerp(
               race.cameraDodgeYaw || 0,
               dodgeTarget,

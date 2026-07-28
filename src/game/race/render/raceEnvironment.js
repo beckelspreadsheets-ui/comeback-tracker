@@ -2,8 +2,9 @@
 //
 // WHY THIS FILE EXISTS
 // --------------------
-// There is no `scene.environment` anywhere in the shipped race runtime. That
-// one absence is why the materials axis has sat at 4-5 for three waves:
+// Through wave 3 there was no `scene.environment` anywhere in the shipped race
+// runtime. That one absence is why the materials axis sat at 4-5 for three
+// waves:
 //
 //   * `createBasicMaterial` (createKartModel.js) builds every piece of scenery,
 //     every barrel, every rail and the road itself as a MeshStandardMaterial
@@ -19,6 +20,16 @@
 // A probe fixes that for the whole standard-material half of the frame with one
 // call and zero asset bytes, because the probe is GENERATED from the sky the
 // track already authored rather than shipped as an HDR.
+//
+// WHAT A PROBE COSTS, AND WHERE IT IS PAID
+// ----------------------------------------
+// A probe delivers two things: indirect SPECULAR (the sheen, the per-facet
+// value break, the reason this file exists) and indirect DIFFUSE (a broadband
+// ambient wash). three drives both off one intensity, so the wash cannot be
+// declined — it can only be paid for. It is paid for out of the hemisphere
+// light, per channel, in installRaceEnvironment. Round 1 paid for it by
+// LUMINANCE and that bill landed on Penguin Village's blue: see
+// HEMI_TAKEOVER_FLOOR, which is the longest comment in the file for a reason.
 //
 // WHAT THIS DOES NOT COVER
 // ------------------------
@@ -93,8 +104,8 @@ export const ENV_RESPONSE = Object.freeze({
   //
   // AAA wave 4 round 2 — pulled back from { 0.9, 0.16, 0.24 }. Two critics
   // filed a rainbow/oil-slick fringe on the Penguin Village ridges against this
-  // class. It is NOT the cause (see the note below), but the numbers were
-  // authored for a smooth surface and this geometry is flat-shaded low-poly:
+  // class. It is NOT the cause (see the note below the table), but the numbers
+  // were authored for a smooth surface and this geometry is flat-shaded low-poly:
   // roughness 0.24 on a facet whose normal is constant across its whole face
   // gives that face ONE mirror-sharp probe sample, so adjacent facets return
   // widely separated points on a sky whose only chromatic energy is a narrow
@@ -106,16 +117,6 @@ export const ENV_RESPONSE = Object.freeze({
   // because a dielectric's grazing response should come from fresnel, not from
   // tinting the reflection with the albedo.
   //
-  // Honest scope note for whoever re-measures: the fringe visible in
-  // tmp/aaa-visual/wave4-r1/penguin-village-p0_15.png cannot be coming from
-  // here. `installRaceEnvironment` has no call site anywhere in src/, so
-  // `activeEnvTexture` is null, and tuneEnvResponse's degraded branch applies
-  // ROUGHNESS ONLY — envMapIntensity and metalness in this table have never
-  // reached a shipped frame. The measured fringe is the mid-ground belt's own
-  // cloud-bank shader (createMidGroundBelt.js:2156/2227: uRimColor '#ffae66'
-  // mixed in at 0.92, i.e. a near-total replacement at the silhouette, plus an
-  // additive ember on top) against the cool dome behind it. That file is not in
-  // this package.
   ice: { envMapIntensity: 0.5, metalness: 0.1, roughness: 0.34 },
   // Everything that should read as unfinished: snow verge, terrain, cloth,
   // stucco. Kept non-zero so the surface still tilts with the sky.
@@ -126,6 +127,30 @@ export const ENV_RESPONSE = Object.freeze({
   // what lands is a wide grazing sheen down the ribbon, never a mirror.
   road: { envMapIntensity: 0.22, metalness: 0.06, roughness: 0.74 },
 });
+
+// STATUS OF THIS TABLE, MEASURED — read before filing anything against it.
+//
+// `tuneEnvResponse` is reachable two ways: directly, or via
+// `createBasicMaterial(color, { env: '...' })`. Grep over all of src/ for both
+// (`tuneEnvResponse(`, `env: '`) returns exactly two live hits, and both are in
+// createKartModel.js — `createBasicMaterial`'s own pass-through and
+// `createKartChromeMaterial`'s 'metal'. createKartChromeMaterial is only
+// consumed by `createVehicleModel`, which that file's own header records as NOT
+// SHIPPED (the app's karts are the monolith's local builder). Zero track
+// materials, on either track, are in any class in this table.
+//
+// So a wave-4-r2 finding that blames `ENV_RESPONSE.ice` for the blown-white
+// specular bar down the Penguin Village racing line is provably not this: the
+// PV deck is a `createBasicMaterial` at the class DEFAULTS (metalness 0.02,
+// roughness 0.68) riding `scene.environment`, exactly like every other surface
+// on both tracks. Moving "the drivable ribbon" into the `road` class is not a
+// thing this package can do either — the classes are opt-in at the call site
+// and the call sites are the track files.
+//
+// The table is kept, not deleted, because it is the vocabulary the track files
+// will opt into; but nothing in it can explain a shipped pixel today, and the
+// one lever this package really does pull on the whole track is
+// `installRaceEnvironment` below.
 
 // The installed probe, so tuneEnvResponse can be called from anywhere without
 // threading the texture through. Null until installRaceEnvironment runs, and
@@ -292,17 +317,40 @@ const buildSkyEquirect = ({ ground, height, horizonPower, glow, ramp, sunColor, 
   return { mean: new THREE.Color(meanR / weight, meanG / weight, meanB / weight), texture };
 };
 
-// How much of the hemisphere fill the probe is allowed to take over.
+// How much of ANY ONE CHANNEL of the hemisphere fill the probe may take over.
 //
 // A HemisphereLight IS an environment probe — a two-colour analytic one. Adding
 // a real probe on top of it without taking anything away is a straight ambient
 // lift, and the Comeback City grade is owner-confirmed and must not move. So
 // the probe's diffuse irradiance is charged against the hemisphere's and the
-// hemisphere is dimmed by the same amount: total ambient roughly constant, but
-// the part that came from a flat two-colour approximation now comes from a
-// probe with a sun in it, which is where the directionality and the highlight
-// come from. Floored so a very bright probe can never black out the fill.
-const HEMI_TAKEOVER_FLOOR = 0.55;
+// hemisphere is dimmed by the same amount.
+//
+// AAA wave 4 round 2 — THE CHARGE IS PER CHANNEL NOW, and that change is the
+// whole Penguin Village ground-plane regression.
+//
+// Round 1 charged LUMINANCE: one scalar, applied to `hemi.intensity`. That
+// conserves total ambient brightness and nothing else, and the two things being
+// traded are not the same colour. Penguin Village's fill is authored cold
+// (`hemi.sky '#7e96c6'`, `ground '#5a5f7e'`) precisely because it is the term
+// carrying "this is ice"; its probe is built from a SUNSET STORM sky and is
+// therefore warm. Charging a warm probe against a cold fill by luminance takes
+// the blue away to pay for orange, and every arctic surface goes neutral:
+// measured on the p0_45 verge, wave 3 rgb(67,123,165) at hue 206 / sat 0.42
+// became wave 4 rgb(70,63,66) at hue 334 / sat 0.05, and the ice field behind
+// it fell from sat 0.90 to sat 0.23. That is the whole reason the track stopped
+// reading as arctic, and it is arithmetic, not taste.
+//
+// Charging per channel conserves each channel of ambient irradiance separately:
+// the probe supplies mostly red on PV, so it is mostly RED that is taken out of
+// the hemisphere, and the blue the fill exists to deliver survives almost
+// intact. Comeback City, whose fill (#8d8ce0 over #2a1e4a) and probe are both
+// warm-violet, is charged near-uniformly across channels and lands where the
+// scalar version left it — this is strictly more conservative of an authored
+// palette than the scalar form, not less.
+//
+// Floored per channel so a probe that dominates one channel can never black
+// that channel out of the fill entirely.
+const HEMI_TAKEOVER_FLOOR = 0.3;
 
 // The half of a response class that needs something to reflect. Split out of
 // tuneEnvResponse so the deferred replay applies EXACTLY the same writes as the
@@ -320,30 +368,26 @@ const applyEnvParams = (material, params) => {
 /**
  * Build the track's environment probe and install it on the scene.
  *
- * THE ONE CALL SITE — STILL MISSING AS OF WAVE 4 ROUND 1. Verified by grep
- * over all of src/: nothing calls this function, so every frame captured in
- * tmp/aaa-visual/wave4-r1 was rendered with `scene.environment` null and with
- * ENV_RESPONSE's metalness and envMapIntensity columns unreached. The line
- * below is a ONE-LINE monolith edit and it is the whole materials axis; it
- * cannot be made from inside this package, which owns no file that ever sees a
- * renderer and a scene together.
+ * WIRED. The call site landed in wave 4 round 2 and is
+ * ComebackCityThreeKartRace.jsx:5236, inside createScene, immediately below the
+ * `TOON_RIM_SHARED_TINT.value.set(...)` line — the first point where
+ * `renderer`, `scene`, `palette`, `hemi` and `mobile` are all in scope, and
+ * before any track geometry is built. `raceEnvironment.dispose()` runs with the
+ * rest of the scene teardown at :8773.
  *
- * In ComebackCityThreeKartRace.jsx's createScene, put this
- * immediately after the rim light is added and `activeHeroRim` is resolved —
- * i.e. directly below the `TOON_RIM_SHARED_TINT.value.set(...)` line (currently
- * :5121), which is the first point where `renderer`, `scene`, `palette`, `hemi`
- * and `mobile` are all in scope and before any track geometry is built:
- *
- *     const raceEnvironment = installRaceEnvironment({ hemi, mobile, palette, renderer, scene, skyStops });
- *
- * and add `raceEnvironment.dispose()` beside the other scene teardown. Nothing
- * else needs to change: every MeshStandardMaterial in the track picks the probe
- * up automatically, and the karts already carry the analytic twin.
+ * That ORDER is load-bearing and is the reason the call sits so high: three
+ * bakes `USE_ENVMAP` into a material's program, and `tuneEnvResponse` resolves
+ * its class once at material-build time. A probe installed after the track was
+ * built would arrive at materials that had already decided they had nothing to
+ * reflect. (`pendingTunes` now covers the reverse ordering; nothing covers a
+ * probe that never installs at all, which is what round 1 shipped.)
  *
  * @param {object}   opts
- * @param {THREE.HemisphereLight} [opts.hemi] Dimmed to pay for the probe's
- *        diffuse energy. Omit and the probe is a straight ambient ADD — only do
- *        that on a track whose grade is not yet locked.
+ * @param {THREE.HemisphereLight} [opts.hemi] Its sky and ground colours are
+ *        scaled PER CHANNEL to pay for the probe's diffuse energy, so each
+ *        channel of ambient irradiance lands where the track authored it. Omit
+ *        and the probe is a straight ambient ADD — only do that on a track
+ *        whose grade is not yet locked.
  * @param {boolean}  [opts.mobile] Halves the source resolution and the scene
  *        intensity. The probe is a one-off build plus one cubeUV sampler, so
  *        the phone tier is about upload bandwidth, not per-frame cost.
@@ -407,20 +451,60 @@ export const installRaceEnvironment = ({
   scene.environment = target.texture;
   scene.environmentIntensity = intensity;
 
-  // Charge the probe's diffuse energy against the hemisphere fill. See
-  // HEMI_TAKEOVER_FLOOR for why this is not optional on a graded track.
+  // Charge the probe's diffuse energy against the hemisphere fill, PER CHANNEL.
+  // See HEMI_TAKEOVER_FLOOR for why the per-channel form is not optional on a
+  // track whose identity lives in the fill's hue.
   let hemiScale = 1;
+  let hemiChannelScale = null;
   if (hemi) {
-    const luminance = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-    const sky = new THREE.Color(palette.hemi?.sky || '#8d8ce0');
-    const ground = new THREE.Color(palette.hemi?.ground || '#2a1e4a');
+    // Read the LIGHT, not the palette. Both are the same numbers today (the
+    // monolith builds this light straight from palette.hemi), but the light is
+    // the thing actually being charged, and reading it means a caller that has
+    // already retinted the fill is scaled rather than silently overwritten.
+    const sky = hemi.color.clone();
+    const ground = hemi.groundColor.clone();
     // A HemisphereLight's irradiance averaged over all normal directions is
     // (sky + ground) / 2 * intensity — the mix() in three's hemisphere term is
     // linear in 0.5 * N.y + 0.5, which integrates to exactly the midpoint.
-    const hemiMean = (luminance(sky) + luminance(ground)) * 0.5 * hemi.intensity;
-    const probeMean = luminance(source.mean) * intensity;
-    hemiScale = THREE.MathUtils.clamp(1 - probeMean / Math.max(1e-4, hemiMean), HEMI_TAKEOVER_FLOOR, 1);
-    hemi.intensity *= hemiScale;
+    const takeover = (skyC, groundC, probeC) => {
+      const hemiMean = (skyC + groundC) * 0.5 * hemi.intensity;
+      return THREE.MathUtils.clamp(
+        1 - (probeC * intensity) / Math.max(1e-4, hemiMean),
+        HEMI_TAKEOVER_FLOOR,
+        1
+      );
+    };
+    hemiChannelScale = {
+      b: takeover(sky.b, ground.b, source.mean.b),
+      g: takeover(sky.g, ground.g, source.mean.g),
+      r: takeover(sky.r, ground.r, source.mean.r),
+    };
+    // Applied to the COLOURS, not to `intensity` — a per-channel scale has no
+    // scalar expression. Irradiance is colour * intensity * mix(), so scaling
+    // the colours is exactly the same operation the scalar version performed on
+    // intensity, just resolved per channel. Both THREE.Color instances are
+    // already in the working (linear) space, so this is a linear-light scale
+    // with no conversion.
+    hemi.color.setRGB(sky.r * hemiChannelScale.r, sky.g * hemiChannelScale.g, sky.b * hemiChannelScale.b);
+    hemi.groundColor.setRGB(
+      ground.r * hemiChannelScale.r,
+      ground.g * hemiChannelScale.g,
+      ground.b * hemiChannelScale.b
+    );
+    // ONE known way this can be undone: applyPaletteMoments
+    // (ComebackCityThreeKartRace.jsx:1623) writes hemi.color / hemi.groundColor
+    // from the moments lerp every frame, which would restore the UNCHARGED fill
+    // and leave the probe as a straight ambient add. No shipped track authors a
+    // `moments` key today (verified in both track palettes — it is reachable
+    // only through the ?momentsLab dev hook), so this is latent rather than
+    // live. Stashed on the light so whoever lands the first moments set can
+    // multiply the lerp result by it instead of rediscovering this the hard way.
+    hemi.userData = hemi.userData || {};
+    hemi.userData.probeTakeover = hemiChannelScale;
+    // Luminance-equivalent scalar, reported for continuity with the round-1
+    // telemetry. Nothing branches on it.
+    hemiScale =
+      0.2126 * hemiChannelScale.r + 0.7152 * hemiChannelScale.g + 0.0722 * hemiChannelScale.b;
   }
 
   activeEnvTexture = target.texture;
@@ -449,6 +533,10 @@ export const installRaceEnvironment = ({
     replayed: replayed.length,
     // Exposed for the capture harness: a probe whose mean luminance drifts
     // between waves is the first thing to check if a track's exposure moves.
+    // `hemiChannelScale` is the one to watch on Penguin Village — if its `b`
+    // ever approaches its `r`, the cold fill is being spent on a warm probe
+    // again and the ice will go neutral (see HEMI_TAKEOVER_FLOOR).
+    hemiChannelScale,
     hemiScale,
     intensity,
     mean: source.mean,

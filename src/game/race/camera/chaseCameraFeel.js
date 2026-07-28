@@ -86,7 +86,18 @@ export const CHASE_FEEL_DEFAULTS = {
   // same way so the apex is on screen before the kart gets there. Both are
   // deliberately small: MK8's lead is about 8 degrees, not a chase-cam yank.
   driftLeadYaw: 0.15,
-  driftLeadLook: 7.5,
+  // ROUND 3 — 7.5 -> 4.2. Apparent SIZE is now solved (the hero measured
+  // 196-224px wide on 8 of 9 penguin-village marks, +-7%), but its screen
+  // ANCHOR still wandered 26 points of frame width, cx 36% at p0_45 to 62% at
+  // p0_33. That excursion is this number: a 7.5-unit lateral shove on a look
+  // target ~30 units out rotates the lens by 0.25 rad/tan-half-fov, which is
+  // ~0.26 NDC, which is ~13% of frame width EACH WAY — the entire measured
+  // wander, authored. At 4.2 the same swing is ~0.14 NDC and now fits inside
+  // the framing solver's dead zone (deadX below) instead of fighting it, so the
+  // drift camera keeps its read: the EYE still swings to the outside of the
+  // corner on driftLeadYaw, which is the half of the MK8 cue that does not move
+  // the subject across the frame.
+  driftLeadLook: 4.2,
   driftLeadEngage: 0.02,
   driftLeadRelease: 0.0004,
   // Air. The camera takes a SHARE of the kart's height (following 1:1 kills the
@@ -307,10 +318,14 @@ export const advanceChaseFeel = (state, input) => {
  */
 export const FRAMING_DEFAULTS = {
   // deadX has to CONTAIN the full drift lead or the framing solver would spend
-  // every corner cancelling the swing it was just asked to add: at the tuning
-  // above the lead moves the kart about 0.26 NDC, so 0.30 leaves the drift
-  // camera free and still catches a genuine slide toward the edge.
-  deadX: 0.3,
+  // every corner cancelling the swing it was just asked to add — but it is also
+  // the ONLY thing bounding the hero's lateral screen position, and at 0.30 it
+  // was permission for the measured 26-point wander (cx 36% -> 62%): both of
+  // those frames sat INSIDE the dead zone, so the solver correctly did nothing.
+  // With driftLeadLook down to 4.2 the lead now costs ~0.14 NDC, so 0.16 still
+  // contains it and hard-bounds the anchor at +-8% of frame width, which lands
+  // every mark inside the 44-56% band the captures are measured against.
+  deadX: 0.16,
   // Asymmetric on purpose. The kart belongs BELOW centre with road above it,
   // which is where the approved captures put it (-0.21); a kart drifting up
   // toward the horizon is the failure, so the ceiling is tight and the floor is

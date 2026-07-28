@@ -73,6 +73,9 @@
 //             velocity gradient IS the storm; it is also what makes the
 //             ambient cloud's round dots read as the far distance rather than
 //             as the whole of the weather.
+//             CEILINGED (wave 4, round 3) — see the SNOW_STREAK_* block. A
+//             photographically honest shutter is the wrong shutter here,
+//             because nothing else in the frame is exposed at one.
 // The shells wrap in a box carried by the CAMERA, but the flakes themselves
 // move in world space, so parallax is real and nothing is glued to the lens.
 // Nothing here fades to zero over a lifetime — a flake is retired only when the
@@ -445,9 +448,14 @@ const LANDING_MIN_DROP = 1.2;
 //            |velocity relative to the camera| * shutter, so the streaking is
 //            an outcome of the kart's speed rather than a hand-tuned number,
 //            and a parked kart in the pre-race camera gets specks, not lines.
+//   streak   hard ceiling on the streak's SCREEN length, in the same angular
+//            units as SNOW_MAX_ANGLE. See the SNOW_STREAK_* block below — the
+//            shutter alone has no ceiling and blows straight past a hairline.
+//   ratio    second ceiling, as a multiple of the flake's own drawn width, so a
+//            flake that has already faded to a sliver cannot also be long.
 const SNOW_SHELLS = [
-  { count: 118, half: [70, 34, 78], name: 'far', shutter: 0.0035, size: 0.3, tint: '#B9CFE4' },
-  { count: 36, half: [15, 9.5, 17], name: 'near', shutter: 0.0065, size: 0.11, tint: '#FAFDFF' },
+  { count: 118, half: [70, 34, 78], name: 'far', ratio: 5, shutter: 0.0035, size: 0.3, streak: 0.014, tint: '#B9CFE4' },
+  { count: 36, half: [15, 9.5, 17], name: 'near', ratio: 7, shutter: 0.0065, size: 0.11, streak: 0.026, tint: '#FAFDFF' },
 ];
 // Shared horizontal drift. A storm front has a BEARING; this is it. Magnitude
 // is deliberately a fair fraction of the fall rate so the flakes come down at a
@@ -473,6 +481,43 @@ const SPINDRIFT_YAW = Math.atan2(-SNOW_WIND.z, SNOW_WIND.x);
 // lens and swipes across the whole frame; the outer ramp hides the wrap.
 const SNOW_NEAR_FADE = 1.6;
 const SNOW_EDGE_FADE = 0.24;
+
+// Streak ceiling (wave 4, round 3). The shutter term above is physically
+// honest and that is exactly what was wrong with it. Measured on
+// wave4-r2/penguin-village-p0_15 (216 km/h): a near-shell flake at depth ~4
+// sits at the width cap (SNOW_MAX_ANGLE -> ~4 px at 900 p) while its screen
+// velocity is ~42 half-heights/s, so the shutter term asks for 0.28 half-heights
+// of length — a 4 x 116 px white hairline lying across the asphalt with a bright
+// core running its whole length. Two critics logged that frame independently,
+// one as "free-floating white speed-line slivers", one as "snow renders as lens
+// scratches"; the same object produced both reads, and it is neither speed-lines
+// (that pass only draws while boosting) nor the ambient cloud.
+//
+// The reason a true shutter is wrong HERE: nothing else in the image is exposed
+// at one. The road, its dashes and the kart are all rendered instantaneously
+// (the post chain's radial blur only fires on boost), so a correctly
+// motion-blurred flake is the single blurred object in an otherwise crisp frame
+// and therefore reads as a mark ON the picture rather than as weather in it.
+// The streak has to stay long enough to carry the storm and short enough that it
+// never resolves as a line — 9-18 px at 900 p, which is where snow in a
+// hand-held plate lands anyway. `ratio` is the second ceiling for the case the
+// first cannot see: a flake dimmed to a sliver by the edge fade must shorten
+// with its width or it becomes a scratch made of nothing.
+//
+// The far shell gets the tighter angular ceiling of the two. Distance is what it
+// is FOR: a long streak at the horizon has no parallax to justify it and is pure
+// scratch, while the near shell's streak is the one the parallax earns.
+//
+// Energy conservation is the other half. A smear spreads the same light over N
+// times the area, so a streak drawn at the same value as a compact flake is
+// brighter than the flake it came from — which is precisely the high-contrast
+// white-on-dark-asphalt read. Full 1/N erases the layer, so the ramp is
+// sqrt(width/length) with a floor, and it only engages once the flake is
+// visibly elongated (below SNOW_DIM_ONSET it is a dot and there is nothing to
+// conserve). The floor exists because these are NORMAL-blended: dim far enough
+// and a flake over the bright storm sky inverts into a dark speck.
+const SNOW_DIM_ONSET = 1.6;
+const SNOW_DIM_FLOOR = 0.62;
 
 // Speed-line exclusion ellipse, in WORLD units around the kart. It used to be
 // a constant uv radius tuned at one boom length, which is only correct at that
@@ -584,6 +629,35 @@ const getSoftDotTexture = () => {
   ctx.fillRect(0, 0, 64, 64);
   softDotTexture = new THREE.CanvasTexture(canvas);
   return softDotTexture;
+};
+
+// Storm flake. A third profile, and it exists because of what happens to the
+// other two when they are scaled non-uniformly. getSoftDotTexture holds 0.92
+// alpha out to 18% of its radius and 0.45 out to half of it — a near-solid
+// plateau — so stretching it 4:1 does not produce a tapered streak, it produces
+// a bright bar with a short taper at each tip. That is the "sharp ends" the
+// artefact hunter measured, and it is a property of the RAMP, not of the length.
+// A plateau-free falloff turns the same geometry into a smear that has no
+// definable end, which is the only shape a flake in motion can honestly have.
+// Still radially symmetric, so an unstretched flake is still a soft dot rather
+// than an oval.
+let snowFlakeTexture = null;
+const getSnowFlakeTexture = () => {
+  if (snowFlakeTexture) return snowFlakeTexture;
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,0.98)');
+  grad.addColorStop(0.22, 'rgba(255,255,255,0.6)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.26)');
+  grad.addColorStop(0.7, 'rgba(255,255,255,0.07)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  snowFlakeTexture = new THREE.CanvasTexture(canvas);
+  return snowFlakeTexture;
 };
 
 // Displaced ground and tyre smoke want the opposite of a core: no hard centre,
@@ -1132,8 +1206,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         // and the one place it would show is the road — i.e. it would read as
         // ground debris, which is the opposite of weather.
         blending: THREE.NormalBlending,
-        map: getSoftDotTexture(),
-        opacity: 0.9,
+        // Not the shared soft dot: see getSnowFlakeTexture for why its alpha
+        // plateau is what gave the streaks their hard ends.
+        map: getSnowFlakeTexture(),
+        // Lifted from 0.9 to hold the layer's read after the softer profile
+        // took roughly a third of the sprite's integrated alpha out.
+        opacity: 1,
         size: 1,
       })
     : null;
@@ -1143,6 +1221,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
   const snowShellOf = new Uint8Array(snowCount);
   const snowPositions = new Float32Array(snowCount * 3);
   const snowPhase = new Float32Array(snowCount);
+  // The flake's own jittered tint, kept because instanceColor is no longer a
+  // write-once channel: the streak dim (see the SNOW_STREAK_* block) scales it
+  // every frame, so the value it scales has to survive somewhere.
+  const snowBaseTint = new Float32Array(snowCount * 3);
+  // 1 while a flake is drawn at a reduced value, so the frame that stops
+  // elongating it knows it owes one write back to full.
+  const snowLitLast = new Uint8Array(snowCount);
   const snowPosition = new THREE.Vector3();
   const snowVelocity = new THREE.Vector3();
   // Seeded on the first frame rather than at build time: the box is carried by
@@ -1158,7 +1243,9 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
         snowShellOf[index] = shellIndex;
         snowPhase[index] = Math.random() * Math.PI * 2;
         // Per-flake value jitter so the field is not one flat stencil of dots.
-        snowMesh.setColorAt(index, scratchColor.set(shell.tint).multiplyScalar(0.82 + Math.random() * 0.3));
+        scratchColor.set(shell.tint).multiplyScalar(0.82 + Math.random() * 0.3);
+        scratchColor.toArray(snowBaseTint, index * 3);
+        snowMesh.setColorAt(index, scratchColor);
       }
     });
     snowMesh.instanceColor.needsUpdate = true;
@@ -1178,6 +1265,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       for (let index = 0; index < snowCount; index += 1) seedFlake(index);
       snowSeeded = true;
     }
+    let snowColorDirty = false;
     for (let index = 0; index < snowCount; index += 1) {
       const shell = snowShells[snowShellOf[index]];
       const half = shell.half;
@@ -1233,16 +1321,41 @@ export const createRaceParticles = ({ isIce = false, mobile = false } = {}) => {
       // its own depth (a screen offset of u half-heights is u * depth /
       // focalLength world units). So the same flake is a speck at a standstill
       // and a hairline at 285 — which is the storm.
+      //
+      // ...under two ceilings, both from the SNOW_STREAK_* block: an absolute
+      // SCREEN length (depth * shell.streak, so it holds at every distance) and
+      // a multiple of the flake's own drawn width. The old code carried only the
+      // second, at 26x, which at a 4 px width is a 105 px line.
       const screenSpeed = scratchScreenVelocity.length();
-      const length = Math.max(width, Math.min(width * 26, (screenSpeed * shell.shutter * depth) / focalLength));
+      const length = Math.max(
+        width,
+        Math.min(width * shell.ratio, depth * shell.streak, (screenSpeed * shell.shutter * depth) / focalLength)
+      );
       const roll =
         screenSpeed > 0.02
           ? Math.atan2(scratchScreenVelocity.y, scratchScreenVelocity.x) - Math.PI / 2
           : snowPhase[index];
       scratchRoll.setFromAxisAngle(Z_AXIS, roll).premultiply(scratchQuaternion);
       snowMesh.setMatrixAt(index, scratchMatrix.compose(snowPosition, scratchRoll, scratchScale.set(width, length, 1)));
+      // Spread the flake's light over the smear rather than repeating it along
+      // it. Only once it is visibly elongated — a dot has nothing to conserve,
+      // and touching every flake every frame would just dim the whole layer.
+      const elongation = length / width;
+      const dim =
+        elongation > SNOW_DIM_ONSET
+          ? Math.max(SNOW_DIM_FLOOR, Math.sqrt(SNOW_DIM_ONSET / elongation))
+          : 1;
+      if (dim !== 1 || snowLitLast[index]) {
+        snowMesh.setColorAt(index, scratchColor.fromArray(snowBaseTint, base).multiplyScalar(dim));
+        snowColorDirty = true;
+      }
+      // Remembering which flakes are currently scaled is what keeps the write
+      // sparse: without it, restoring a flake to full value would need a write
+      // on every frame it is round, i.e. on nearly all of them.
+      snowLitLast[index] = dim !== 1 ? 1 : 0;
     }
     snowMesh.instanceMatrix.needsUpdate = true;
+    if (snowColorDirty) snowMesh.instanceColor.needsUpdate = true;
   };
 
   // Shared per-frame kinematics: the caller may not supply speed yet, and the

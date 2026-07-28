@@ -109,7 +109,19 @@ const walkStaticWorld = (node, visit) => {
  * panel four units up in the air ends up sharing a patch with the post holding
  * it, instead of getting a dark ellipse floating beside it.
  */
-const collectGroundingBuckets = (world, { cellSize, groundMin, groundMax, maxFootprint }) => {
+const collectGroundingBuckets = (
+  world,
+  {
+    cellSize,
+    furnitureMaxBaseY,
+    furnitureMaxHeight,
+    groundMin,
+    groundMax,
+    maxFootprint,
+    minFootprint,
+    minHeight,
+  }
+) => {
   const buckets = new Map();
   const box = new THREE.Box3();
   world.updateMatrixWorld(true);
@@ -132,27 +144,46 @@ const collectGroundingBuckets = (world, { cellSize, groundMin, groundMax, maxFoo
     const sizeZ = box.max.z - box.min.z;
     if (!Number.isFinite(sizeX) || !Number.isFinite(sizeZ)) return;
     const footprint = Math.max(sizeX, sizeZ);
-    // Under a metre it is a bolt or a window frame; over `maxFootprint` it is
-    // the backdrop ring, the sky dome or the track ribbon itself.
-    if (footprint < 1.2 || footprint > maxFootprint) return;
-    // Under 1.6 units tall it is road furniture lying on the deck — a boost-pad
-    // chevron, a curb block, a painted marking riser. Darkening around those
-    // reads as the "shadow-shaped hole punched in the asphalt" the critics
-    // already logged against the boost pad's backing quad.
-    if (sizeY < 1.6) return;
+    // Over `maxFootprint` it is the backdrop ring, the sky dome or the track
+    // ribbon itself. The FLOOR came down (1.2 -> 0.8) because the captures
+    // measured the barrel, the palm planter, the ice plinths and the snowman
+    // bases meeting the ground with zero contact darkening — and those are
+    // exactly the dressing that sits at the kart's eye-line and sells scale.
+    if (footprint < minFootprint || footprint > maxFootprint) return;
+    // Height floor came down with it (1.6 -> 0.7). The old gate's premise was
+    // that anything shorter is road furniture lying on the deck — a boost-pad
+    // chevron, a curb block — and that darkening around those reads as a
+    // "shadow-shaped hole punched in the asphalt". The premise was right, the
+    // remedy (exclude them entirely) was not: the one prop every critic called
+    // out as floating was the one prop with no contact cue at all. Short props
+    // now get a patch, they just get the FURNITURE tier's very faint, very wide
+    // one instead of a prop-strength patch (see buildGroundingDecals).
+    if (sizeY < minHeight) return;
     // Bands the world's ground can plausibly be at. Anything above this is a
     // gantry, a hanging sign or the skyline, and a patch under it would land in
     // mid-air.
     if (box.min.y < groundMin || box.min.y > groundMax) return;
+    // The height floor came down to 0.7, and that opens one new way to be
+    // wrong: a SHORT mesh with nothing below it in its cell — a marquee panel,
+    // a lamp head, a wall-mounted box — would get a dark ellipse hanging in
+    // mid-air under it. A tall prop is protected by the band above; a short one
+    // needs a tighter ceiling, because "short" is only evidence of furniture if
+    // it is actually near the deck. Buckets that also contain something tall
+    // keep the tall mesh's base (see below) and are unaffected.
+    if (sizeY < furnitureMaxHeight && box.min.y > furnitureMaxBaseY) return;
     const centerX = (box.min.x + box.max.x) * 0.5;
     const centerZ = (box.min.z + box.max.z) * 0.5;
     const key = `${Math.round(centerX / cellSize)}|${Math.round(centerZ / cellSize)}`;
     const existing = buckets.get(key);
     if (!existing) {
-      buckets.set(key, { x: centerX, z: centerZ, baseY: box.min.y, sizeX, sizeZ });
+      buckets.set(key, { x: centerX, z: centerZ, baseY: box.min.y, sizeX, sizeY, sizeZ });
       return;
     }
     existing.baseY = Math.min(existing.baseY, box.min.y);
+    // Height is the bucket's MAXIMUM, not the winning mesh's: a barrel parked
+    // against a tower shares its cell, and a cell containing anything tall is
+    // not furniture however wide the short thing in it happens to be.
+    existing.sizeY = Math.max(existing.sizeY, sizeY);
     if (Math.max(sizeX, sizeZ) > Math.max(existing.sizeX, existing.sizeZ)) {
       existing.x = centerX;
       existing.z = centerZ;
@@ -164,9 +195,9 @@ const collectGroundingBuckets = (world, { cellSize, groundMin, groundMax, maxFoo
 };
 
 /**
- * Build the tier-3 instanced patches. Two meshes, split by footprint: there is
+ * Build the tier-3 instanced patches. Three meshes, split by shape: there is
  * no PER-INSTANCE strength control on a multiply material however it is blended,
- * so strength lives in the texture and the split lives in the bucketing. Two
+ * so strength lives in the texture and the split lives in the bucketing. Three
  * draw calls for every prop on the course.
  */
 const buildGroundingDecals = (world, options) => {
@@ -175,13 +206,24 @@ const buildGroundingDecals = (world, options) => {
   const geometry = new THREE.PlaneGeometry(1, 1);
   geometry.rotateX(-Math.PI / 2);
   // A barrel wants a tight, dark patch; a forty-unit building wants a wide,
-  // faint one, or the road under the skyline turns to soot.
+  // faint one, or the road under the skyline turns to soot. Road furniture —
+  // anything under 1.6 units tall, i.e. the boost pad, the kerb blocks, the
+  // low plinths — wants the faintest and widest of the three: enough that the
+  // deck darkens where the prop meets it, nowhere near enough to read as a hole
+  // cut in the asphalt, which is the failure the old blanket exclusion was
+  // avoiding.
   const tiers = [
     { name: 'grounding-decals-tight', core: 0.42, spread: 1.75, entries: [] },
     { name: 'grounding-decals-broad', core: 0.66, spread: 1.4, entries: [] },
+    { name: 'grounding-decals-furniture', core: 0.86, spread: 2.1, entries: [] },
   ];
   entries.forEach((entry) => {
-    const tier = Math.max(entry.sizeX, entry.sizeZ) <= options.tightMax ? tiers[0] : tiers[1];
+    const tier =
+      entry.sizeY < options.furnitureMaxHeight
+        ? tiers[2]
+        : Math.max(entry.sizeX, entry.sizeZ) <= options.tightMax
+          ? tiers[0]
+          : tiers[1];
     tier.entries.push(entry);
   });
   const matrix = new THREE.Matrix4();
@@ -271,9 +313,17 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
   // The phone tier is deliberately UNCHANGED from what shipped (512, player
   // kart only). Phone framerate is owner-visible and the phone's grounding win
   // comes from tiers 2 and 3, which cost it nothing.
+  //
+  // Round 3 tightens the desktop box 38 -> 32 (a 0.0208-unit texel, 1.19x the
+  // density again). 32 units still reaches a full kart-length past every rival
+  // in the pack and every prop actually beside the shot — at 3 laps of a ~34s
+  // course the field is never more than ~25 units apart — and the texels it
+  // stops spending on empty road are the ones the silhouette needs: the
+  // captures still read the far half of the shadow as structureless ink with
+  // no wheel gaps in it.
   const tier = mobile
     ? { mapSize: 512, extent: 38, rivalsCast: false, driversCast: false, propsCast: false }
-    : { mapSize: 3072, extent: 38, rivalsCast: true, driversCast: true, propsCast: true };
+    : { mapSize: 3072, extent: 32, rivalsCast: true, driversCast: true, propsCast: true };
 
   if (renderer) {
     renderer.shadowMap.enabled = active;
@@ -302,11 +352,19 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
       // caster, offset ~90px from it (comeback-city-p0_33) and a detached dark
       // smear behind the kart with clear road in between (penguin-village-
       // p0_67). That is textbook peter-panning, not a shadow-map resolution
-      // problem. 0.12 is ~5 texels at 3072/38 — still enough to keep the
+      // problem. 0.12 is ~6 texels at 3072/32 — still enough to keep the
       // faceted bodywork off its own surface, small enough that the silhouette
       // stays attached to the wheels.
       sun.shadow.bias = -0.00009;
       sun.shadow.normalBias = 0.12;
+      // Umbra floor. A shadow that removes 100% of the key light goes to the
+      // ambient term alone, and on Miami dusk asphalt that is near-black — the
+      // captures read the result as "a hole in the road" and "an ink splat"
+      // rather than as shade, on three separate marks. shadow.intensity is a
+      // straight lerp toward "unshadowed" (three r184, LightShadow.intensity),
+      // so 0.72 keeps the silhouette unambiguous while letting the bounce fill
+      // the umbra the way a real one does. Zero cost — it is a uniform.
+      sun.shadow.intensity = 0.72;
       sun.shadow.camera.updateProjectionMatrix();
     }
   }
@@ -408,11 +466,23 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
     try {
       decals = buildGroundingDecals(world, {
         cellSize: 7,
+        // Anything shorter than this is road furniture and takes the faint
+        // furniture tier rather than a prop-strength patch — but only if it is
+        // actually near the deck. `groundMax` carries 26 units of headroom for
+        // tall props on raised ground; furniture gets none of it, so a short
+        // mesh floating above the highest road surface stays unpatched.
+        furnitureMaxBaseY: groundMax - 24,
+        furnitureMaxHeight: 1.6,
         groundMin,
         groundMax,
         // Past 96 units across it is the road ribbon, a backdrop ring or the
         // mid-ground belt's base plate, none of which sit ON anything.
         maxFootprint: 96,
+        // Under 0.8 across / 0.7 tall it is a bolt, a window frame or a decal
+        // riser — smaller than the patch's own soft rim, so a patch there is
+        // just a smudge on the road.
+        minFootprint: 0.8,
+        minHeight: 0.7,
         tightMax: 14,
       });
       return decals.reduce((total, mesh) => total + mesh.count, 0);
@@ -473,14 +543,28 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
  */
 export const contactPatchProfile = (shadowsEnabled, contactGrounding) =>
   shadowsEnabled
-    ? // Round 2 raises the floor. 0.34 was chosen against a road the audit
-      // measured at 46-55 luminance and should have read as a ~17-value drop;
-      // the captures measured +0.6 to +31.5 instead, because the kart's own
-      // additive underglow paints the identical footprint. The monolith now
-      // draws this patch AFTER that glow (renderOrder) — but a patch that only
-      // just wins the argument is not grounding, so the base comes up too.
-      { width: 8.4, length: 12.6, opacity: contactGrounding ? 0.46 : 0.42, glowScale: 1.1 }
-    : { width: 12, length: 21, opacity: contactGrounding ? 0.52 : 0.46, glowScale: 1.05 };
+    ? // ROUND 3 — `opacity` here is no longer an alpha, it is a DARKENING
+      // FRACTION, and that is the whole fix for the four marks that measured
+      // the contact zone BRIGHTER than the road it sits on (up to +50% at
+      // penguin-village-p0_15). The monolith blends this decal ZERO /
+      // ONE_MINUS_SRC_ALPHA, i.e. dst *= (1 - alpha), so 0.46 is "scale
+      // whatever is on that pixel to 54% of its value" — it cannot lose to the
+      // kart's own additive underglow the way an alpha-composited black patch
+      // did, because it scales the glow down along with the road.
+      //
+      // That also makes the floor UNCONDITIONAL: a kart standing on the start
+      // grid, with no boost, no speed and its cast shadow outside the ortho
+      // frustum, still darkens its own footprint by 46%. Grounding at rest was
+      // the easiest case in the game and the one that kept failing.
+      //
+      // The numbers are chosen against the TONE MAP, not against the frame
+      // buffer: the decal multiplies a linear-ish HDR target that ACES then
+      // rolls off, so a 0.54 darkening lands at roughly a 30% drop in the
+      // sRGB values the critics actually measure — comfortably past the "at
+      // least 25% darker than open road" bar, without the black-slab read that
+      // sank round 2's first attempt.
+      { width: 8.4, length: 12.6, opacity: contactGrounding ? 0.62 : 0.58, glowScale: 1.1 }
+    : { width: 12, length: 21, opacity: contactGrounding ? 0.62 : 0.56, glowScale: 1.05 };
 
 /**
  * Tier-2 boost for the frames where tier 1 cannot be seen.
@@ -521,9 +605,17 @@ export const contactPatchShadowBoost = (awayDot, out = { opacity: 1, scale: 1 })
  * Shared by the player and every rival so a kart mid-hop reads the same however
  * it got airborne. Returns the uniform XZ scale AND the opacity multiplier: a
  * shadow does not just shrink as its caster rises, it also softens.
+ *
+ * ROUND 3 drops both floors (0.30/0.42 -> 0.12/0.30) and steepens the opacity
+ * ramp. comeback-city-p0_56 caught two karts roughly 200px above the deck, each
+ * still leaving a hard-edged near-black splat on the road — one of them running
+ * across the rumble strip and onto the verge. A patch that is 30% present under
+ * a kart that is metres up is not a soft shadow, it is a decal that forgot to
+ * leave, and at full hop height it is now 12%: visible enough to say "the kart
+ * is over THERE", faint enough that nobody reads it as contact.
  */
 export const contactPatchAirFade = (airHeight) => {
   const air = Math.max(0, airHeight || 0);
-  const scale = clamp(1 - air * 0.05, 0.42, 1);
-  return { opacity: clamp(1 - air * 0.062, 0.3, 1), scale };
+  const scale = clamp(1 - air * 0.058, 0.3, 1);
+  return { opacity: clamp(1 - air * 0.085, 0.12, 1), scale };
 };

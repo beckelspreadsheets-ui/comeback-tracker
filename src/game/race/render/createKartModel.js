@@ -18,10 +18,11 @@ const DEFAULT_VEHICLE_PALETTE = {
 // what a material helper written before the scene had any environment settles
 // on, because with `scene.environment` null three's indirect specular term
 // drops out entirely and metalness only ever subtracts diffuse. Now that
-// raceEnvironment.js can install a probe, metalness is a live lever for the
-// first time — but raising this DEFAULT would re-shade every barrel, verge,
-// building and rail in both tracks at once, and Comeback City's grade is
-// owner-confirmed. So the default is unchanged and the lever is opt-in:
+// raceEnvironment.js installs a probe (live since wave 4 round 2,
+// ComebackCityThreeKartRace.jsx:5236), metalness is a live lever for the first
+// time — but raising this DEFAULT would re-shade every barrel, verge, building
+// and rail in both tracks at once, and Comeback City's grade is owner-confirmed.
+// So metalness is unchanged and the lever stays opt-in:
 //
 //     createBasicMaterial('#9fd9ef', { env: 'ice' })
 //
@@ -29,13 +30,34 @@ const DEFAULT_VEHICLE_PALETTE = {
 // out before the constructor sees it — setValues() warns on unknown keys. See
 // ENV_RESPONSE in raceEnvironment.js for the classes and tuneEnvResponse for
 // why metalness is only applied when a probe actually exists.
+//
+// ROUGHNESS 0.68 -> 0.58, AAA wave 4 round 2, and this one IS safe to move.
+//
+// The probe shipped in round 2 and the frames it produced still measure 96.9%
+// adjacent-pixel-flat asphalt on Comeback City and 97.8% on Penguin Village —
+// i.e. the track paid the probe's full ambient cost (which is charged against
+// the hemisphere fill, see HEMI_TAKEOVER_FLOOR) and collected essentially none
+// of its specular return. This default is why. At roughness 0.68 the indirect
+// specular resolves to a very high PMREM mip and a broad, weak BRDF lobe, so
+// the term is present and invisible.
+//
+// Safe because of a property specific to three's standard material: diffuse is
+// `albedo * (1 - metalness)` and carries NO roughness term at all, while
+// roughness enters only the specular mip selection and the split-sum BRDF. At
+// metalness 0.02 these surfaces are ~98% diffuse, so the base value and hue of
+// every graded surface in both tracks is arithmetically untouched by this line;
+// what changes is a grazing-angle, sky-coloured fresnel sheen (F0 stays the
+// dielectric 0.04 — metalness did not move) appearing where a surface turns
+// away from the camera. That is exactly the "nothing picks up bounce from the
+// sky it sits under" finding, and it is the cheapest possible answer to it:
+// zero bytes, zero draw calls, one float.
 export const createBasicMaterial = (color, options = {}) => {
   const { env = null, ...materialOptions } = options;
   const material = new THREE.MeshStandardMaterial({
     color,
     flatShading: true,
     metalness: 0.02,
-    roughness: 0.68,
+    roughness: 0.58,
     ...materialOptions,
   });
   return env ? tuneEnvResponse(material, env) : material;

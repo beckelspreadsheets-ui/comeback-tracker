@@ -241,8 +241,9 @@ uniform float uCloudStrength;
 uniform float uTime;
 #ifdef SKY_CLOUD_FRONT
 // x = how hard the front piles up / tears open, y and z = the sun-dot window
-// the tear opens across. See the coverage block.
-uniform vec3 uCloudFront;
+// the tear opens across, w = how far the deck's own noise displaces that
+// window's edge. See the coverage block.
+uniform vec4 uCloudFront;
 #endif
 #endif
 varying vec3 vDir;
@@ -297,7 +298,20 @@ void main() {
 	// has already computed. The clamp matters: away from the sun the gate
 	// exceeds 1 and saturates, so the anvil goes SOLID rather than merely
 	// denser, which is what puts a hard cloud edge in the frame.
-	float frontOpen = smoothstep(uCloudFront.y, uCloudFront.z, sd);
+	// ROUND 3 — THE GATE ABOVE IS A CIRCLE, AND A CIRCLE IS A VIGNETTE. sd is
+	// radially symmetric about the sun vector, so round 2's front tore open in a
+	// perfect cone centred on the sun and its boundary was a smooth ellipse
+	// across the sky. Weather does not have that boundary; a front has a ragged
+	// leading LINE, and the line is the thing that reads as a front at all. Two
+	// terms, both free: the deck's own high-octave tap displaces the gate's edge
+	// (so the boundary breaks up into the same cloud it is cutting through,
+	// rather than sliding across it), and a slow sine creeps the whole window so
+	// the edge advances instead of being pinned to the sun for the whole race.
+	// 0.021 rad/s is roughly one crossing per five minutes — under the threshold
+	// where a player reads it as motion, over the one where a still frame and a
+	// frame ten seconds later are the same picture.
+	float frontEdge = sd + (high - 0.5) * uCloudFront.w + sin(uTime * 0.021) * 0.05;
+	float frontOpen = smoothstep(uCloudFront.y, uCloudFront.z, frontEdge);
 	float frontGate = mix(1.0 + uCloudFront.x, 1.0 - uCloudFront.x, frontOpen);
 	cHigh = clamp(cHigh * frontGate, 0.0, 1.0);
 	cLow = clamp(cLow * frontGate, 0.0, 1.0);
@@ -411,10 +425,13 @@ export const createSkyDome = ({
     uniforms.uTime = { value: 0 };
     if (clouds.front) {
       uniforms.uCloudFront = {
-        value: new THREE.Vector3(
+        value: new THREE.Vector4(
           clouds.front.amount ?? 0,
           clouds.front.tear?.[0] ?? 0.1,
-          clouds.front.tear?.[1] ?? 0.9
+          clouds.front.tear?.[1] ?? 0.9,
+          // 0 reproduces round 2's smooth elliptical gate exactly, so a track
+          // that authors no edge compiles to the same picture.
+          clouds.front.edge ?? 0
         ),
       };
     }
@@ -543,6 +560,34 @@ void main() {
 	// out around 0.55. Both Comeback City plates are 100% above 0.62, which is
 	// why this can only ever be per-track authoring and never a default.
 	float rimSat = 1.0 - min(col.r, min(col.g, col.b)) / max(max(col.r, max(col.g, col.b)), 1e-4);
+	// ROUND 3 — A HUE ROTATION CANNOT REMOVE A HUE STAIRCASE, AND THAT IS WHAT
+	// SURVIVED. Round 2 mixed the fringe toward the sun's colour on a
+	// smoothstep gate at 0.85 strength, and the shipped frames still carry the
+	// artefact all three critics filed: at 3x zoom on penguin-village-p0_67 the
+	// crest line runs gold -> lime -> magenta down a five-pixel ramp. Both
+	// reasons are structural rather than tuning:
+	//   * 15% of a (241,255,64) lime survives a 0.85 mix, and 15% of a lime IS
+	//     still a lime once the grade's 1.36 chroma has it;
+	//   * the gate is a smoothstep, so the texels either side of the hairline
+	//     take a PARTIAL rotation. A partial rotation between two very different
+	//     hues travels THROUGH the hues in between — which is the staircase. The
+	//     ramp was the thing making the ramp.
+	// So the tame is now a chroma COMPRESSION first: saturation above the
+	// opening is scaled back continuously and monotonically, which cannot
+	// produce a band because the map has no edge in it anywhere. What is left is
+	// then rotated to the sun's hue, and the rotation can be near-total because
+	// the pixel it acts on is no longer strongly coloured. A texel at the
+	// plate's legitimate 0.55 shadow-band saturation is untouched by both.
+	// The min() is load-bearing, not defensive. Below the opening the ramp
+	// expression evaluates to the OPENING itself, which is larger than the
+	// pixel's own saturation — and mix(luma, col, keep/sat) with a ratio above 1
+	// is an extrapolation, i.e. it would SATURATE every low-chroma texel on the
+	// plate (the sky rows, the snow, the haze) instead of leaving them alone.
+	// Clamping the target to the source is what makes the map an identity
+	// everywhere under the opening.
+	float rimKeep = min(rimSat, uRimTame.y + max(0.0, rimSat - uRimTame.y) * (1.0 - uRimTame.x));
+	float rimLum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+	col = mix(vec3(rimLum), col, rimSat > 1e-4 ? rimKeep / rimSat : 1.0);
 	col = skyHueMix(col, uRimTameTint, smoothstep(uRimTame.y, uRimTame.z, rimSat) * uRimTame.x);
 #endif
 	// AERIAL PERSPECTIVE. The rings are fog-exempt (the art is pre-hazed and

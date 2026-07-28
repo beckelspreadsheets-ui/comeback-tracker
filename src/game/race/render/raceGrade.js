@@ -323,6 +323,28 @@ const TRACK_GRADES = {
     // replaying the full 32^3 cube: 0.000% before and after.
     hiAmount: 0.22,
     hiKnee: 0.72,
+    // Highlight desaturation, opened early and deepened. See the note at the
+    // roll's own line in gradeColor. Replayed over a 48^3 cube, nodes landing
+    // with 2+ channels at or over 250 fall 6.04% -> 5.58%, and NOTHING under
+    // luma 0.778 moves by more than 1.2/255 — verified by differencing the two
+    // baked cubes node by node. Every authored colour on the track is unmoved:
+    // the rail cyan, the coin gold, the boost-pad yellow, the lit snow and the
+    // kart red all grade to identical bytes before and after, because they sit
+    // under the knee once the tone curve has them.
+    //
+    // AND THE HONEST LIMIT, so the next round does not re-tune this expecting
+    // more. The rubric critic asked for "clamp the bloom threshold on the PV
+    // grade so only genuine emitters contribute". This file CANNOT do that. It
+    // bakes a 3D LUT whose white scale is measured at input 1.0, so the curve is
+    // monotone into exactly 1.0 and an input that arrives at 255 leaves at 255
+    // by construction — the only population this stage can rescue is the one
+    // `sat` 1.36 was tipping over on its own, which is the 0.46 points above.
+    // The road's blown specular bar on penguin-village-p0_33 arrives here
+    // already at rgb(250,252,255): it is the uncapped `uRoadSheenColor *
+    // roadSheen * 2.4` in the monolith, and the bloom threshold itself lives in
+    // racePostChain.js. Neither is in this package.
+    hiRollFrom: 0.8,
+    hiRollAmount: 0.9,
     // -- THE SKY SPLIT. --------------------------------------------------
     // Round 1 of wave 3 aimed its two stages at LUMINANCE — deepen the dark
     // blues, gild the bright ones — and the shipped frames moved by 1-6/255,
@@ -500,6 +522,10 @@ const lumaNormalized = (hex) => {
 };
 
 Object.values(TRACK_GRADES).forEach((params) => {
+  // Highlight-desaturation window. Defaults ARE the pre-round-3 literals, so a
+  // track that authors neither key bakes to the identical cube.
+  if (params.hiRollFrom === undefined) params.hiRollFrom = 0.9;
+  if (params.hiRollAmount === undefined) params.hiRollAmount = 0.82;
   // Decoded once, at module init, so the bake loop (32k iterations x 3
   // channels) never parses a string.
   params.shadowTintRgb = srgbTriplet(params.shadowTint);
@@ -551,7 +577,21 @@ export const gradeColor = (r, g, b, params, out = [0, 0, 0]) => {
   // The roll is keyed on LUMA, so a saturated NEON at mid luma (the thing the
   // grade exists to protect) is untouched — only things already close to white
   // give up chroma, which is exactly the behaviour of light.
-  const highlightRoll = 1 - 0.82 * smoothstep(0.9, 1, luma);
+  // WAVE 4 ROUND 3 — the window is per-track. It used to be a literal
+  // smoothstep(0.9, 1) at 0.82, which is where the CLIPPING on this track
+  // actually comes from: nothing below input 1.0 can clip in the tone curve
+  // (whiteScale is measured at input 1, so the curve is monotone into exactly
+  // 1.0), but `sat` runs AFTER it and pushes the leading channel of a bright
+  // saturated pixel over on its own. Measured across the 18 round-2 frames,
+  // pixels with 2+ channels >= 250: Penguin Village 0.31-1.39% against Comeback
+  // City's 0.13-0.69%, and PV's two worst marks — p0_33 (1.39%, concentrated at
+  // y400-600, i.e. the ice road's specular bar) and p0_78 (1.38% at y200-400,
+  // the snowman props and the shield) — are the two the rubric critic filed.
+  // Opening the roll 0.10 earlier and taking it 8 points deeper removes chroma
+  // from that population before `sat` can tip it, and touches nothing under
+  // luma 0.78. Comeback City keeps the shipped literals exactly. What this
+  // cannot do — and why — is written out at hiRollFrom in the PV params.
+  const highlightRoll = 1 - params.hiRollAmount * smoothstep(params.hiRollFrom, 1, luma);
   const shadowWeight = (1 - smoothstep(0, params.shadowKnee, luma)) * params.shadowAmount;
   const hiWeight = smoothstep(params.hiKnee, 1, luma) * params.hiAmount * highlightRoll;
   const saturation = params.sat * highlightRoll;

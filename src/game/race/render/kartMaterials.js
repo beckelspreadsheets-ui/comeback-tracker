@@ -125,11 +125,20 @@ const RUBBER_LUMINANCE = [0.1, 0.38];
 // not", which is why not one of the three critics reported seeing a highlight
 // on any kart in 18 frames. The classes were live and invisible.
 //
-// Widened until a facet-normal is reliably inside the window: 14 gives ~21
+// Widened until a facet-normal is reliably inside the window: 14 gave ~21
 // degrees for paint, 48 gives ~13 for chrome. Still two clearly different
 // materials — the chrome window is a third the paint window and the two
 // almost never fire on the same facet — but both now fire.
-const GLOSS = { chrome: 48, paint: 14 };
+//
+// AAA wave 4 round 2: paint 14 -> 10 (~24.5 degrees). The round-2 widening was
+// the right move and it was not enough — three critics read 18 frames and none
+// found a specular hotspot on paint anywhere. Most of that was the unclip
+// starving the headroom meter (see PAINT_SHAPE, which is the real fix), but the
+// geometry argument compounds it: a chase camera looks at a kart's REAR, where
+// the facet count is lowest and the half-vector against a low key is furthest
+// from any of them. Chrome is left alone — it is the tighter of the two by
+// design and the trim it lands on is small, high-curvature and well sampled.
+const GLOSS = { chrome: 48, paint: 10 };
 // Additive strengths. Chrome stays well above paint — a chrome flash that is
 // merely as bright as the paint highlight reads as one material — but it comes
 // down from 1.1 because the wider lobe spends it over ~2.5x the facet area.
@@ -229,16 +238,44 @@ const RUBBER_DARKEN = 0.9;
 // (lit crest / mid flank / shadow side) rather than leaving the AO's curvature
 // term to carry the whole read on its own.
 //
-// `knee` / `pull` — the unclip. Where the paint class's peak channel lands
-// above `knee`, the whole colour is scaled down toward it, uniformly across
-// RGB so the hue is untouched and only the exposure moves. `pull` is how much
-// of that correction is taken: 1.0 would pin every paint peak exactly at the
-// knee (which flattens a genuinely hot highlight back into the body), 0.7
-// leaves the brightest texels visibly brighter than the rest while still
-// pulling a 97%-clipped panel back under the ceiling. Applied BEFORE the
-// additive terms on purpose — an unclipped panel has real headroom again, so
-// the specular band lands as a band instead of being metered away to nothing.
-const PAINT_SHAPE = { knee: 1, pull: 0.7, shade: 0.78 };
+// `knee` / `ceiling` / `pull` — the unclip.
+//
+// AAA wave 4 round 2 — THIS TERM DID NOT WORK AND IT TOOK THE PAINT HIGHLIGHT
+// DOWN WITH IT. Round 2 shipped a HARD-DIVIDE unclip: scale the colour by
+// knee/peak, take 70% of that correction, knee = 1.0. Walk the arithmetic on
+// the peaks the shipped bodies actually reach:
+//
+//   peak 0.90 -> 0.900   headroom 0.237   paint spec lands at 0.131
+//   peak 1.00 -> 1.000   headroom 0.153   paint spec lands at 0.084
+//   peak 1.20 -> 1.060   STILL CLIPPED    paint spec lands at 0.056
+//   peak 1.60 -> 1.180   STILL CLIPPED    paint spec lands at 0.000
+//
+// Two of the three critics' findings are that table. A knee AT 1.0 cannot
+// unclip anything — the correction only starts where the display already ended
+// — and taking 70% of an insufficient correction leaves 1.2 and 1.6 both
+// pinned at white, which is the measured "one uniform hot pink with no form"
+// and the blue rival's 81.7% adjacent-flat body. And because SPEC_CEILING
+// meters the additive terms against what is left under 1.18, a panel parked at
+// 1.06-1.18 has nothing left to spend, which is why not one of 18 frames
+// carries a specular hotspot on paint. One cause, both findings.
+//
+// Replaced with a proper soft-knee compressor: below `knee` nothing happens at
+// all, above it the overshoot is folded into the band between `knee` and
+// `ceiling` by over/(over + range), which is monotone and asymptotic — so an
+// arbitrarily overexposed panel lands just under `ceiling` and, crucially,
+// texels that differed above 1.0 still differ below it. Same hue-exactness as
+// before (all three channels take one factor; this moves exposure, never tint).
+//
+// knee 0.72 is low enough that a body sitting in full key is genuinely brought
+// down into the display range rather than nudged; ceiling 1.02 is the asymptote
+// the compressor approaches, deliberately just over 1 so the compressor itself
+// never becomes the thing that flattens a hot panel. `pull` stays a partial
+// take (0.85) so a small overshoot is corrected gently.
+//
+// The ADDITIVE terms still run after this and are still allowed past 1.0 —
+// that is the point. The body is compressed under the display ceiling; the
+// specular band is what goes over it and feeds the bloom threshold.
+const PAINT_SHAPE = { ceiling: 1.02, knee: 0.72, pull: 0.85, shade: 0.78 };
 
 // Albedo-INDEPENDENT hemispheric fill for the dark-neutral class.
 //
@@ -257,10 +294,47 @@ const PAINT_SHAPE = { knee: 1, pull: 0.7, shade: 0.78 };
 // honest one: a black dielectric is not visible through its diffuse albedo, it
 // is visible through what it REFLECTS. Sky colour on up-facing normals, ground
 // colour underneath, no albedo factor, headroom-metered so it cannot clip.
-// Deliberately small — this is a value break across a silhouette, not a fill
-// light, and pushing it further would grey the one class the other three are
-// read against.
-const DARK_FILL = 0.13;
+//
+// AAA wave 4 round 2 — 0.13 WAS A FILL LIGHT, and it is what turned the tyres
+// grey. Measured on the player's left rear tyre in
+// tmp/aaa-visual/wave4-r2/penguin-village-p0_56.png: mean rgb(120,110,117),
+// median luminance 108. A tyre whose albedo is #10121c (linear luminance
+// ~0.006) has no route to a mid grey through any diffuse path; this term is the
+// route. Both of its factors were wrong for the job:
+//
+//   * MAGNITUDE. 0.13 of a colour normalised to a max channel of 1 is ~0.13 of
+//     linear output, which encodes to roughly sRGB 0.40 — i.e. this term alone
+//     sets the tyre's floor at ~102/255, above everything else on the tyre
+//     combined. The critics' read, "pale blue-grey tyres", is precisely the
+//     Penguin Village hemisphere sky arriving at 0.13 on a black surface.
+//   * SHAPE. `mix(ground, sky, ...)` never returns zero: a fully down-facing
+//     normal still gets the full 0.13, just in the ground's hue. So it was a
+//     uniform lift wearing a gradient's clothes, which is the opposite of the
+//     top-to-bottom value break it was added for.
+//
+// Now 0.05 and ramped to ZERO on down-facing normals (see the chunk), so the
+// term is a genuine break — lit crown, black undercarriage — and its peak
+// contribution is ~1/3 of what it was. The driver's black suit keeps a
+// readable crown, which was the whole justification for the term; the tyres
+// return to the value anchor the other three classes are read against.
+const DARK_FILL = 0.05;
+
+// Ceiling on the RUBBER class's final output, as a peak-channel value in the
+// same linear space the shader works in.
+//
+// Belt-and-braces behind the two fixes above, and the critics asked for it
+// explicitly ("value clamped so tyres stay matte black"). DARK_FILL is not the
+// only term that can reach a tyre — the toon ramp's 58/255 floor, an emissive a
+// caller passed in, and any future additive term all land here too — and
+// "matte black" is a contract this class is defined by, not a number that
+// should depend on five other numbers staying small. Applied as a soft knee,
+// not a clamp: a hard min() would posterise the tyre's crown into a flat plate
+// and undo the form DARK_FILL is there to give it.
+//
+// 0.055 linear encodes to roughly sRGB 0.26 (~66/255) before tone mapping,
+// against the ~108 the frames measure today. Dark, still legible as a surface,
+// and clearly the darkest thing on the vehicle — which is the job.
+const RUBBER_CEILING = 0.055;
 
 // ---- AAA wave 4: the analytic sky probe ------------------------------------
 //
@@ -294,12 +368,53 @@ const DARK_FILL = 0.13;
 // Rubber gets nothing at all, which is the same one-line contract the rest of
 // this file keeps: matte is the whole point of the class, and the tyres are the
 // value anchor the other three classes are read against.
+//
+// AAA wave 4 round 2 — the term landed and it landed FLAT. Measured on the
+// bodies the round-1 comment names as the cases it was written for:
+// penguin-village-p0_56's blue rival is 81.7% adjacent-pixel-flat and
+// comeback-city-p0_45's rival 84.6%, i.e. essentially unmoved. The weights are
+// not the reason; `fresnelFloor` is. See below.
 const ENV_PROBE = {
   chrome: 0.5,
+  // Lower bound of the Schlick shaping, i.e. how much of the probe a facet
+  // pointing STRAIGHT AT THE CAMERA still collects.
+  //
+  // This was 0.28, hard-coded in the chunk, and it is why the probe reads as a
+  // wash instead of as a reflection. At 0.28 a body's front-facing facets — the
+  // large ones, the ones that fill the silhouette — all take 28% of the same
+  // probe colour, so the term's floor is a flat tint applied to most of the
+  // visible area and only its top 72% varies with orientation. Two measured
+  // consequences, both filed as findings:
+  //
+  //   * the rivals stay flat, because the part of the term that varies per
+  //     facet is swamped by the part that does not;
+  //   * the hero's paint desaturates. On Penguin Village the probe is a pale
+  //     cold sky; 0.28 * 0.22 of it, added unconditionally to a red body,
+  //     measures rgb(136,94,101) at saturation 0.19 on a kart whose paint is
+  //     #ef4334. A reflection that lands hardest where the surface faces you is
+  //     not a reflection, it is a haze pass.
+  //
+  // 0.09 makes the term what its own comment says it is: a SHOULDER sheen. The
+  // facets turned edge-on to the eye keep essentially all of their weight (the
+  // Schlick top end is untouched), the flat-on facets keep a trace, and the
+  // difference between the two is now the read. Per-facet variation goes up
+  // while the mean contribution goes down — which is exactly the trade that
+  // fixes flatness and desaturation at the same time.
+  fresnelFloor: 0.09,
   paint: 0.22,
   plastic: 0.14,
+  // Vertical span of the probe's ground -> sky ramp, in reflected-Y.
+  //
+  // Was (-0.30, 0.42). A chase camera sits behind and slightly above the kart,
+  // so the reflection vectors off a kart's visible facets cluster in a narrow
+  // band around the horizon — and a ramp that spends its whole contrast across
+  // 0.72 of Y returns nearly the same colour to every one of them. Tightened to
+  // (-0.18, 0.34) so the band the facets actually occupy is where the ramp's
+  // contrast lives. Zero cost: it is the same smoothstep with different edges.
+  rampHi: 0.34,
+  rampLo: -0.18,
   // Exponent on the sun lobe in the REFLECTION direction. Much tighter than the
-  // paint gloss lobe (14) because this one is not gated on a half-vector: it is
+  // paint gloss lobe because this one is not gated on a half-vector: it is
   // the sun's own image in the surface, and a wide one would read as a second
   // key light washing the whole body rather than as a glint travelling across
   // a cowl.
@@ -326,9 +441,12 @@ export const KART_SHADING_DESKTOP = Object.freeze({
   chromeStrength: SPEC_STRENGTH.chrome,
   darkFill: DARK_FILL,
   envChrome: ENV_PROBE.chrome,
+  envFresnelFloor: ENV_PROBE.fresnelFloor,
   envPaint: ENV_PROBE.paint,
   envPlastic: ENV_PROBE.plastic,
+  envRamp: [ENV_PROBE.rampLo, ENV_PROBE.rampHi],
   envSunSharp: ENV_PROBE.sunSharp,
+  paintCeiling: PAINT_SHAPE.ceiling,
   paintChroma: PAINT_CHROMA,
   paintGloss: GLOSS.paint,
   paintKnee: PAINT_SHAPE.knee,
@@ -336,6 +454,7 @@ export const KART_SHADING_DESKTOP = Object.freeze({
   paintShade: PAINT_SHAPE.shade,
   paintStrength: SPEC_STRENGTH.paint,
   plasticStrength: SPEC_STRENGTH.plastic,
+  rubberCeiling: RUBBER_CEILING,
   rubberDarken: RUBBER_DARKEN,
   rubberLuminance: RUBBER_LUMINANCE,
   skyBounce: SKY_BOUNCE,
@@ -359,16 +478,19 @@ export const KART_SHADING_DESKTOP = Object.freeze({
 // glint can land between samples and strobe, and 15 spreads the same energy
 // over roughly 1.7x the solid angle so it survives resampling.
 //
-// PAINT_SHAPE and DARK_FILL are deliberately NOT re-tiered. Neither is a
-// detail term — one stops a channel clipping and the other is a low-frequency
-// value gradient — so both survive a 0.6-scale render intact, and both matter
-// MORE on a small screen where a flat clipped panel has no other cue left.
+// PAINT_SHAPE, DARK_FILL and RUBBER_CEILING are deliberately NOT re-tiered.
+// None is a detail term — one compresses a clipping channel, one is a
+// low-frequency value gradient, one is a soft ceiling — so all three survive a
+// 0.6-scale render intact, and all three matter MORE on a small screen where a
+// flat clipped panel has no other cue left. The probe's fresnel floor and ramp
+// are not re-tiered either: they cost nothing and they are the term carrying
+// per-facet variation, which a downscale needs most.
 export const KART_SHADING_MOBILE = Object.freeze({
   ...KART_SHADING_DESKTOP,
   aoCrease: 0,
   chromeGloss: 34,
   envSunSharp: 15,
-  paintGloss: 10,
+  paintGloss: 8,
   textureAnisotropy: 2,
 });
 
@@ -424,11 +546,19 @@ export const HERO_RIM_KEY_BIAS = [0.45, 1.25];
 // file that is a judgement call rather than a measurement: the driver's black
 // suit is also a dark neutral, and on Comeback City that silhouette against a
 // near-black road has nothing else holding it. So the tyres lose most of the
-// outline (a rim at 0.4 is well under the eye's edge-detection threshold at the
-// widths involved) while the driver keeps a trace of it — and DARK_FILL, which
-// lands on the same mask, gives that driver the form the outline was standing
-// in for.
-export const HERO_RIM_RUBBER_SCALE = 0.4;
+// outline while the driver keeps a trace of it — and DARK_FILL, which lands on
+// the same mask, gives that driver the form the outline was standing in for.
+//
+// AAA wave 4 round 2: 0.4 -> 0.15. The round-2 note asserted that "a rim at 0.4
+// is well under the eye's edge-detection threshold at the widths involved" and
+// the frames say otherwise — the player's tyres in penguin-village-p0_56
+// measure a p95 luminance of 160 against a median of 108, i.e. the brightest
+// thing on the tyre is still its outline. 0.4 was also chosen while DARK_FILL
+// was lifting the whole tyre to a mid grey, so the rim had to compete with a
+// pale surface to be seen; with the tyre back at its real value the same
+// silhouette read costs far less rim. The driver keeps a trace at 0.15, which
+// is the only reason this is not zero.
+export const HERO_RIM_RUBBER_SCALE = 0.15;
 
 // Bring a hero albedo map up to the tier's sampling standard, once per texture.
 //
