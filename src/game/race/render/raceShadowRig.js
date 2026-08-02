@@ -570,11 +570,30 @@ export const contactPatchProfile = (shadowsEnabled, contactGrounding) =>
  * Tier-2 boost for the frames where tier 1 cannot be seen.
  *
  * The whole premise of shrinking the AO patch (see contactPatchProfile) is that
- * the sun is carrying the cast shadow. On Penguin Village it mostly is not: the
- * shadow is thrown almost directly AWAY from the lens for over half the lap, so
- * it lands behind the kart, hidden by the kart, and the frame has no grounding
- * cue at all — measured on 5 of 9 penguin-village marks, where the road under
- * the kart came back BRIGHTER than the open road beside it.
+ * the sun is carrying the cast shadow, and there are frames where it is not.
+ *
+ * CORRECTION, AAA WAVE 7 — READ THIS BEFORE TUNING THE NUMBERS BELOW. The claim
+ * this function shipped with ("on Penguin Village the shadow is thrown almost
+ * directly AWAY from the lens for over half the lap") is FALSE and was never
+ * checked. Solved over the shipped centerlines and sun vectors at 720 samples
+ * per lap, `awayDot` exceeds the 0.5 point of the smoothstep below for 26.4% of
+ * Penguin Village's lap and 39.3% of Comeback City's — the track that works has
+ * MORE of the failure mode this function was written to catch, not less. At the
+ * mark the blocker was filed against, penguin-village-p0_06, awayDot is 0.259,
+ * i.e. the shadow is thrown 75 degrees off the view axis; comeback-city-p0_06 is
+ * 0.927 and ships fine. The frames agree — penguin-village-p0_33 (awayDot
+ * -0.995) carries a large, clean cast shadow, so PV's rig, caster policy and
+ * ortho box are all sound.
+ *
+ * What is actually per-track is the ribbon's LENGTH: at 12 degrees a 7-unit kart
+ * throws 32.9 units against 18.2 at Comeback City's 21, so the same silhouette
+ * is smeared over five kart-lengths of road and, thrown side-on, its far two
+ * thirds leave the frame laterally. Whatever replaces this term has to be keyed
+ * on that, not on azimuth alone. It is left in place because it is correct for
+ * the case it does describe and because the wave-7 package could not run a
+ * capture to verify a replacement; see the monolith's CONTACT_WIPE_CAP block for
+ * the half of the fault that was fixed (this whole term was being clamped away
+ * on Penguin Village before it could do anything at all).
  *
  * `awayDot` is the dot product of the direction the shadow is thrown (the
  * ground projection of -sunDirection, normalised) with the camera's forward

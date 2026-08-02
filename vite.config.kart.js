@@ -154,6 +154,36 @@ export default defineConfig({
     rollupOptions: {
       input: kartHtmlPath,
       output: {
+        // AAA wave 7 — `largest JavaScript gzip size` breached its 400 KiB cap
+        // (measured 427.6 KiB) because six overhaul waves grew the monolith
+        // 6,703 -> 10,831 lines and every new render module landed in the same
+        // index.kart chunk alongside all of three.js and postprocessing.
+        //
+        // Everything below is a STATIC chunk split: rollup still emits plain
+        // `import` edges from the entry, so module evaluation order is exactly
+        // what it was in one chunk. Nothing here defers a download or changes
+        // when side effects run — that would need a dynamic import in
+        // src/kart/KartApp.jsx, which this config cannot reach. See the
+        // wave-7 notes: React.lazy on the race component alone would NOT
+        // defer the monolith, because KartApp also imports KART_CHARACTERS,
+        // KART_OPTIONS, DEFAULT_CHARACTER_KEY and HeldItemIcon from it for the
+        // intro/select screens.
+        //
+        // Split order matters: the most specific vendor prefixes are tested
+        // first, and app code is only bucketed after every node_modules test
+        // has missed.
+        //
+        // Measured on the same tree, before -> after:
+        //   largest JavaScript gzip   427.59 KiB FAIL -> 253.05 KiB pass
+        //   total JavaScript gzip     484.62        -> 485.94 / 500
+        // The +1.32 KiB total is chunk-boundary overhead and shared text that
+        // no longer cross-compresses — the price of the split, paid knowingly.
+        // Every chunk is <link rel=modulepreload>-ed from index.html, so the
+        // same bytes are still fetched in parallel on first paint; nothing
+        // became a request waterfall. The CSS splits too (index + race-runtime)
+        // and concatenating the two is byte-identical to the old single file
+        // apart from one injected newline, so the Tailwind cascade order the
+        // race UI depends on is unchanged. SW precache 47 -> 50 entries.
         manualChunks(id) {
           if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/')) {
             return 'react-vendor';
@@ -161,6 +191,42 @@ export default defineConfig({
           if (id.includes('/node_modules/lucide-react/')) {
             return 'icons';
           }
+          // three + its examples/jsm helpers (GLTFLoader, MeshoptDecoder,
+          // RoundedBoxGeometry, BufferGeometryUtils, the ?post=0 fallback
+          // EffectComposer chain). A clean leaf — nothing in three imports app
+          // code, so no cycle can straddle this boundary and trip a TDZ.
+          if (id.includes('/node_modules/three/')) {
+            return 'three-vendor';
+          }
+          // pmndrs postprocessing — the SHIPPED post chain (racePostChain.js).
+          // Depends on three one-way, so it is safe downstream of three.
+          //
+          // MEASURED, not assumed: rolldown FOLDS these two groups back
+          // together and emits a single postprocessing-vendor chunk (896.8 KiB
+          // raw / 253.1 KiB gz, and it does contain WebGLRenderer). Both
+          // groups are reachable from exactly one importer — race-runtime —
+          // so rolldown's chunk merge treats them as one unit. The three-vendor
+          // branch above is kept because it states the intent and takes effect
+          // the moment those reachability sets diverge (e.g. postprocessing
+          // dropped, or three pulled in by a non-race screen). Do not "clean
+          // up" the branch on the grounds that no three-vendor-*.js appears.
+          if (id.includes('/node_modules/postprocessing/')) {
+            return 'postprocessing-vendor';
+          }
+          if (id.includes('/node_modules/')) return undefined;
+          // The race runtime: the monolith plus every module under
+          // src/game/race/ (physics, render, audio, tracks, HUD). This is the
+          // boundary the screen flow already implies — none of it is needed
+          // until a race actually starts. Keeping it in its own chunk today
+          // (a) gets the largest-chunk metric back under cap without touching
+          // a line of game code, and (b) means the eventual dynamic import in
+          // KartApp.jsx has a chunk already shaped for it instead of forcing a
+          // re-split. Matched by path, not by import site, so a new render
+          // module joins it automatically.
+          if (id.includes('/src/game/race/') || id.includes('/src/game/ComebackCityThreeKartRace.jsx')) {
+            return 'race-runtime';
+          }
+          return undefined;
         },
       },
     },

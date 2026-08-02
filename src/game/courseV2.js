@@ -95,6 +95,18 @@ export const KartTuningV2 = Object.freeze({
 // (pads, boxes, anchors) is scale-invariant; absolute world coordinates
 // below are multiplied through.
 const TRACK_SCALE = 1.35;
+// AAA wave 7: the authored loop used to close with a point at {-193, 46}, only
+// 2.2 authored units (3.0 scaled) from centerline[0] {-195, 45}, where every
+// other gap on the loop is ~24-29. The runtime builds this as a CLOSED
+// CatmullRomCurve3 with UNIFORM parameterisation, so a segment an order of
+// magnitude shorter than its neighbours gets the same slice of curve parameter
+// as a full-length one and the spline whips through it. The layout previewer
+// measured the result as two unauthored kinks of radius 20.2 and 34.7 sitting
+// directly ON the start/finish line — tighter than anything either track
+// authors (min 72) and crossed once per lap. Dropping the point leaves a seam
+// gap of 28.5 authored units against its neighbour's 29.2, i.e. the loop now
+// closes at its own natural spacing. Verified: 7 corners (2 kink) ->
+// 5 corners (0 kink), min radius 20.2 -> 110.5.
 // Owner feedback 2026-06-12 round 2: corners must be long sustained sweepers
 // that reward holding a drift. This centerline is GENERATED from exact
 // arc/straight primitives (three drift carousels R~108-143 scaled, a dive,
@@ -182,7 +194,6 @@ const authoredCenterline = [
   { x: -267, z: 92 },
   { x: -247, z: 69 },
   { x: -222, z: 54 },
-  { x: -193, z: 46 },
 ];
 const centerline = authoredCenterline.map((point) => ({
   x: point.x * TRACK_SCALE,

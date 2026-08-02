@@ -223,6 +223,11 @@ const CONTACT_BOOST_NEUTRAL = Object.freeze({ opacity: 1, scale: 1 });
 // AAA wave 5 (b) — PENGUIN VILLAGE HAD NO GROUNDING CUE, AND THE REASON IS THE
 // SUN, NOT THE RIG.
 //
+// PARTLY SUPERSEDED — see the CONTACT_WIPE_CAP block below before trusting the
+// azimuth reasoning in this one. The "PV's azimuth puts the ribbon behind the
+// kart for most of the lap" line is measurably false; the elevation arithmetic
+// immediately below it is correct and is why this function still exists.
+//
 // The shadow rig is per-scene and identical on both tracks: same map size, same
 // caster policy, same ortho box, and PV's scenery demonstrably casts. What is
 // per-track is where the shadow LANDS. `sunDirection.y` is the sine of the key
@@ -268,6 +273,62 @@ const contactPatchKeyStrength = (sunElevationSin) =>
 // soft, visibly detached patch: it says "the kart is over that point on the
 // road" without ever reading as a wheel touching it.
 const CONTACT_AIR_HIDDEN_FLOOR = 0.42;
+
+// AAA wave 7 (b) — THE WAVE-5 MITIGATION WAS ARITHMETICALLY INERT ON THE ONE
+// TRACK IT WAS WRITTEN FOR, AND THE DIAGNOSIS ABOVE IS WRONG. Both measured.
+//
+// 1. THE DIAGNOSIS. "PV's 12-degree key throws the shadow BEHIND the kart where
+//    the chase camera cannot see it" was carried for three waves and never
+//    checked against geometry. Solved over the shipped centerlines and sun
+//    vectors (ground-projected shadow direction dotted with the ground-projected
+//    view direction, sampled 720x per lap), the shadow runs away from the lens
+//    for 26.4% of Penguin Village's lap against 39.3% of Comeback City's — and
+//    at the failing mark itself, penguin-village-p0_06, awayDot is 0.259, i.e.
+//    the shadow is thrown 75 degrees off the view axis and is as side-on as it
+//    ever gets, while comeback-city-p0_06 is 0.927 (fully behind its own caster)
+//    on the track that WORKS. Azimuth is not the discriminator. The frames agree:
+//    penguin-village-p0_33 (awayDot -0.995) ships a large, clean, readable cast
+//    shadow, so PV's rig, casters and ortho box are all fine.
+//
+//    Nor is the light budget. Key share of a flat up-facing receiver, from the
+//    shipped palettes (sunIntensity x sin(elevation) x luminance(sunColor)
+//    against the hemi and rim terms) is 48.4% on PV against 51.2% on CC. A
+//    shadowed PV road pixel is entitled to almost exactly the same drop as a CC
+//    one. What IS per-track is LENGTH: 32.9 units of ribbon for a 7-unit kart at
+//    12 degrees against 18.2 at 21. A ribbon nearly twice the caster's own
+//    footprint-length spreads the same silhouette over five kart-lengths of
+//    road, and when it is thrown side-on the far two thirds of it leave the
+//    frame laterally, leaving in shot only the strip immediately beside the
+//    wheels — which the kart's own body covers at the chase camera's low angle.
+//
+// 2. THE INERT MITIGATION, which is the part this wave can actually fix.
+//    contactPatchKeyStrength returns 1.2205 on PV. The decal was built with
+//    `opacity: Math.min(0.7, contactProfile.opacity * contactStrength)`
+//    = min(0.7, 0.58 * 1.2205) = min(0.7, 0.7079) = 0.7000 — and 0.7 was ALSO
+//    the frame loop's wipe cap. So on Penguin Village the patch sat pinned at
+//    the cap from construction, every per-frame term after it (the 1 -> 1.55
+//    contactPatchShadowBoost, the whole hidden-cast-shadow branch, the air
+//    fade's hidden floor) could only ever be clamped straight back to 0.7, and
+//    the patch was a CONSTANT whether the cast shadow was fully in shot or fully
+//    behind the kart. Comeback City, at strength exactly 1.0 and base 0.58, was
+//    the only track where any of it did anything. The track the code names in
+//    its own comments is the track it stopped working on.
+//
+// The cap therefore has to be the per-track quantity, not a shared constant. The
+// authored 0.7 was chosen against Miami asphalt at a 0.58 base; a track whose
+// key cannot put a mass on the road needs both the deeper floor AND the headroom
+// above it for the boost to mean something. CONTACT_WIPE_CAP_MAX is the hard
+// stop that keeps "a deep contact patch" from becoming "a hole in the road".
+//
+// Comeback City is BIT-IDENTICAL by construction: contactPatchKeyStrength(sin
+// 21deg = 0.358) is exactly 1 (0.358 is above CONTACT_KEY_READABLE_SIN, so the
+// smoothstep argument is negative and clamps to 0), so its cap resolves to
+// 0.7 * 1 = 0.7 and its base to 0.58 — the two numbers it ships today.
+const CONTACT_WIPE_CAP = 0.7;
+const CONTACT_WIPE_CAP_MAX = 0.86;
+const contactWipeCapFor = (contactStrength) =>
+  clamp(CONTACT_WIPE_CAP * (contactStrength || 1), CONTACT_WIPE_CAP, CONTACT_WIPE_CAP_MAX);
+
 // Scratch for the rival proximity-ghost cone test, same no-allocation rule.
 const GHOST_AXIS = new THREE.Vector3();
 const GHOST_OFFSET = new THREE.Vector3();
@@ -795,11 +856,28 @@ const createGroundedKartModel = ({
   // toonRimShader.applyToonRim), so this one flag is what gets the fallback
   // the same specular/AO treatment as the authored bodies.
   const bodyMat = createToonMaterial(color, { emissive: color, emissiveIntensity: 0.2, rim: true });
-  const blackMat = createToonMaterial('#191c28');
+  // AAA wave 7 (c) — THE OTHER 40% OF THE FALLBACK.
+  //
+  // bodyMat/hubMat/trimMat carried rim:true; blackMat and seatMat did not, and
+  // between them they own the front and rear bumpers, both side pods, the
+  // wheel-arch struts, the steering wheel, the seat pan, the seat back, both
+  // bolsters and the head rest — call it 40% of the fallback's visible surface,
+  // all of it structural silhouette rather than decoration. Without the flag
+  // applyHeroRim never installs the material classes on them, so that surface
+  // gets NO kart shading chunk at all: no curvature AO in the pod-to-chassis
+  // creases, no dark-class fill, no fresnel edge to separate a near-black
+  // bumper from the near-black road behind it. It reads as one unlit silhouette
+  // blob, which is exactly what the artefact hunter cropped.
+  //
+  // tireMat is deliberately left OUT. The dark class the chunk applies is a
+  // rubber ceiling — matte tyres are what make the rimmed hubs and the painted
+  // bodywork mean anything, and rimming everything is the same as rimming
+  // nothing.
+  const blackMat = createToonMaterial('#191c28', { rim: true });
   const tireMat = createToonMaterial('#10121c');
   const hubMat = createToonMaterial('#343a4c', { rim: true });
   const trimMat = createToonMaterial('#f6fbff', { rim: true });
-  const seatMat = createToonMaterial('#1d2233');
+  const seatMat = createToonMaterial('#1d2233', { rim: true });
   const accentGlowMat = createBasicMaterial(accent, { emissive: accent, emissiveIntensity: 1.1 });
 
   const addPart = (mesh, x, y, z, rx = 0) => {
@@ -1125,6 +1203,11 @@ const createGroundedKartModel = ({
   // branch this patch is already the full blob and is the only grounding cue on
   // screen, so boosting it further would just punch a hole in the road.
   contactRig.userData.shadowBoostEligible = shadowsEnabled;
+  // AAA wave 7 (b). Resolved ONCE per kart and carried on the rig, because it is
+  // the number the frame loop clamps against and the two used to be different
+  // constants that happened to collide at 0.7 on Penguin Village. See
+  // contactWipeCapFor: 0.7 on Comeback City (unchanged), 0.854 on PV.
+  contactRig.userData.contactWipeCap = contactWipeCapFor(contactStrength);
   const shadowGeometry = new THREE.PlaneGeometry(1, 1);
   const shadow = new THREE.Mesh(
     shadowGeometry,
@@ -1166,9 +1249,13 @@ const createGroundedKartModel = ({
       // between "the sun casts and this is AO" and "this IS the shadow".
       // contactStrength is the track's half of that split — a key light that
       // cannot put its shadow in shot hands the whole job back to this patch.
-      // Kept under the 0.7 wipe the frame loop caps at, so a strong track can
-      // never punch a hole in the road.
-      opacity: Math.min(0.7, contactProfile.opacity * contactStrength),
+      //
+      // AAA wave 7 (b): clamped against the RIG's cap, not a bare 0.7. The bare
+      // 0.7 was also the frame loop's cap, so on Penguin Village this line
+      // produced exactly the cap and pinned the patch there for the whole race —
+      // see contactWipeCapFor for the arithmetic and the measurement. Comeback
+      // City resolves to min(0.7, 0.58) = 0.58 exactly as before.
+      opacity: Math.min(contactRig.userData.contactWipeCap, contactProfile.opacity * contactStrength),
       // Sitting 0.16 above the road still loses to a banked curb lip, so the
       // decal also biases its depth toward the camera.
       polygonOffset: true,
@@ -4856,6 +4943,12 @@ const COIN_COLLECTED_POSE = new THREE.Matrix4().makeScale(0, 0, 0);
 // world units on its longest axis (see the coin mount), so half of that is the
 // disc the camera sees edge-on at worst.
 const COIN_LENS_RADIUS = 1.35;
+// AAA wave 7 (d). Same job for the item box, and the same convention: HALF-WIDTH
+// of the solid part, not its diagonal and not its glow. The solid part is the
+// 6.8-unit rounded crate (makeWinterItemCrate) or the GLB rig that replaces it;
+// the 5.1-radius glow sphere is a 0.14-opacity shell and the question plane is a
+// depthWrite:false billboard, so neither can be sliced open by the near plane.
+const ITEM_BOX_LENS_RADIUS = 3.4;
 
 const loadItemBoxTemplate = (url) => {
   if (!itemBoxTemplateCache.has(url)) {
@@ -8764,11 +8857,16 @@ export const ComebackCityThreeKartRace = ({
         // Capped, and the cap came DOWN with the blend change: on the
         // multiply path (see the contact decal's material) this number is the
         // fraction of the road's own value the patch removes, so 0.8 is not a
-        // deep shadow, it is an 80% wipe — a hole cut through the asphalt. 0.7
-        // is as dark as a contact patch ever needs to be, and the boost term
-        // that used to overshoot the old cap now lands just under it.
+        // deep shadow, it is an 80% wipe — a hole cut through the asphalt.
+        //
+        // AAA wave 7 (b): the cap is now the RIG's, resolved from the track's
+        // key (contactWipeCapFor). Comeback City still clamps at exactly 0.7 and
+        // is bit-identical; Penguin Village clamps at 0.854, which is what gives
+        // `boost` somewhere to go — with a shared 0.7 its base was already 0.7
+        // and every per-frame term above was multiplied in and clamped straight
+        // back off again.
         decal.material.opacity = Math.min(
-          0.7,
+          contactRig.userData.contactWipeCap,
           decal.userData.contactOpacity * airOpacity * boost.opacity
         );
       });
@@ -9895,6 +9993,43 @@ export const ComebackCityThreeKartRace = ({
         box.rotation.y += dt * 1.4;
         box.position.y += Math.sin(race.raceTime * 2.4 + index) * 0.012;
         box.visible = !race[`item-${index}`] || race.finished;
+        // AAA wave 7 (d) — THE LAST DYNAMIC OBJECT ON THE ROAD WITH NO LENS
+        // GUARD. Rivals ghost (proximity block), crossers/projectiles/bones get
+        // a hard cull, coins shrink — and the item box, which is the one pickup
+        // deliberately parked ON the racing line at kart height, had nothing. A
+        // box the camera is about to pass through is a 5-unit crate plus its
+        // glow sphere sliced open by the near plane across the middle of the
+        // frame, which is the same measurement the coins were fixed for.
+        //
+        // Shrink, not hide, for the reason written out over the coin block: a
+        // pickup collapsing reads as the pickup being TAKEN, which is what is
+        // about to happen anyway, whereas a pop-out reads as a bug. Purely
+        // cosmetic — collection is `race[item-N]`, set by the sim from progress
+        // and lane and never looking at the rig — so a box that shrinks on the
+        // lens is still there to be driven through and still awards its item.
+        //
+        // On the KART window, not the pickup one, and that is the whole
+        // difference from the coins. The pickup window (0.55/0.95 of the hero)
+        // exists because a 2.7-unit coin stops being a readable collectible long
+        // before it is a wall. This crate is 6.8 across — kart-scale — and at the
+        // hero's own depth it already measures 0.63 of the hero, so the pickup
+        // window would have it 20% collapsed at the exact frame the player drives
+        // through it. The kart window leaves it untouched there (0.63 is well
+        // under 1.45) and only starts pulling it in around 15 units from the eye,
+        // which is half a boom length behind the player and the range where it
+        // stops being a pickup and starts being a near-plane slab.
+        if (box.visible) {
+          const boxNear = lensBandFor(
+            noteLensPeak(
+              lensCoverage(box.position, ITEM_BOX_LENS_RADIUS, engine.camera.position, lensTanHalfFov, lensNear)
+            ),
+            lensSubjectCoverage
+          );
+          box.scale.setScalar(boxNear);
+          // Below a fiftieth of its size the crate is a speck that still costs a
+          // draw and can still catch a glow sprite; retire it for the frame.
+          if (boxNear <= 0.02) box.visible = false;
+        }
         box.children.forEach((child) => {
           if (child.userData.kind === 'item-question') child.lookAt(engine.camera.position);
         });

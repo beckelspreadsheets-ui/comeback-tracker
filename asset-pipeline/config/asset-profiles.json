@@ -13,6 +13,21 @@
    "colorTextureQuality": 82,
    "meshoptLevel": "medium"
   },
+  "hero-kart-diet-v2": {
+   "class": "hero-kart",
+   "allowSimplify": true,
+   "simplifyRatio": 0.5,
+   "simplifyError": 0.01,
+   "lockBorder": false,
+   "allowJoin": false,
+   "keepNamed": true,
+   "maxTextureSize": 512,
+   "colorTextureQuality": 82,
+   "meshoptLevel": "medium",
+   "stripUnsampledTextureSlots": true,
+   "targetTextureFormat": "jpeg",
+   "notes": "What scripts/diet-kart-bodies.mjs ACTUALLY ships, recorded here because hero-kart-balanced-v1 (ratio 0.08) was never the transform any kart was built with — every kart in src/assets/game/models/karts/ records 'simplify 0.5/0.01' in the runtime manifest. allowJoin is false because Meshy lifts arrive as a single primitive, so join() is a no-op that only risks renaming nodes. stripUnsampledTextureSlots removes normal/metallicRoughness/emissive/occlusion: the runtime kart path is MeshToonMaterial{ gradientMap, map }, which samples base colour ONLY, so every other slot is decoded and uploaded for nothing. targetTextureFormat is pinned so a PNG source cannot survive a resize as a PNG (that is how the 2026-07 fleet shipped 245-350 KB '384x384' normal maps). maxTextureSize is 512 rather than the fleet's 384 because dropping the unsampled maps frees far more than the 384->512 base-colour delta costs."
+  },
   "rival-kart-balanced-v1": {
    "class": "rival-kart",
    "allowSimplify": true,
@@ -381,6 +396,36 @@
   {
    "path": "src/assets/game/models/karts/btc-kart.glb",
    "assetId": "karts.btcKart",
+   "class": "hero-kart",
+   "role": "runtime-vehicle"
+  },
+  {
+   "path": "src/assets/game/models/karts/hash-runner.glb",
+   "assetId": "karts.hashRunner",
+   "class": "hero-kart",
+   "role": "runtime-vehicle"
+  },
+  {
+   "path": "src/assets/game/models/karts/cold-wallet.glb",
+   "assetId": "karts.coldWallet",
+   "class": "hero-kart",
+   "role": "runtime-vehicle"
+  },
+  {
+   "path": "src/assets/game/models/karts/sat-stacker.glb",
+   "assetId": "karts.satStacker",
+   "class": "hero-kart",
+   "role": "runtime-vehicle"
+  },
+  {
+   "path": "src/assets/game/models/karts/pixel-pickup.glb",
+   "assetId": "karts.pixelPickup",
+   "class": "hero-kart",
+   "role": "runtime-vehicle"
+  },
+  {
+   "path": "src/assets/game/models/karts/node-runner.glb",
+   "assetId": "karts.nodeRunner",
    "class": "hero-kart",
    "role": "runtime-vehicle"
   }
