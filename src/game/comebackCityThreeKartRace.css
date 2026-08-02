@@ -122,15 +122,10 @@
   right: calc(20px + env(safe-area-inset-right, 0px));
 }
 
-/* Boost-pad and item-box tallies. Two rounds of restyling could not fix what
-   they are: run telemetry the player can neither act on nor spend, sitting in
-   the corner a racing HUD reserves for the thing you are holding. They stay
-   published (the results panel shows them at the end, which is where a tally
-   belongs) but they are off the race HUD. This used to be a display:none on
-   :nth-child(4),(5) — an index that silently governed which chips vanished. */
-.three-kart-race__hud-tally {
-  display: none;
-}
+/* The boost-pad / item-box tally group used to live here as a display:none
+   wrapper around two live-bound badges — hidden pixels that still cost a React
+   reconcile on every telemetry tick. The markup is gone (the results panel
+   publishes both numbers in a real <dl>), so the rule went with it. */
 
 .three-kart-race__badge {
   align-content: center;
@@ -166,9 +161,16 @@
      anyway. The plate carries its own material instead. */
 }
 
-/* Eyebrow label. The markup has no room for one, so every chip grows its
-   caption from ::before — flex-basis pushes the value onto its own line. */
-.three-kart-race__badge::before {
+/* Eyebrow label. This used to be a ::before with the word in `content:`, which
+   meant the accessibility tree saw an icon and a bare number — the aria-live
+   region announced "84 … 1/3 … 3" with nothing naming or unitising any of it,
+   and generated content is not selectable, translatable or reachable by a
+   screen reader. The words are real elements now; the geometry is unchanged
+   (flex-basis 100% still pushes the value onto its own line).
+   Two forms because the compact strip is 66-92px wide per plate: the long form
+   is authored, the short one is rendered alongside it only where they differ,
+   and the media query swaps which is displayed. */
+.three-kart-race__badge-label {
   color: var(--tkr-muted);
   flex-basis: 100%;
   font: 700 9px/1 var(--tkr-mono);
@@ -177,9 +179,24 @@
   text-shadow: 0 1px 2px rgba(4, 7, 14, 0.8);
 }
 
+/* Short form is authored but hidden at desktop widths; the compact query
+   below swaps the pair on the two plates that carry one. */
+.three-kart-race__badge-label-short {
+  display: none;
+}
+
+/* Unit suffix — same story as the label: it was `content: 'KM/H'`, so the
+   readout announced as a bare integer. */
+.three-kart-race__badge-unit {
+  color: var(--tkr-muted);
+  font: 700 10px/1 var(--tkr-mono);
+  letter-spacing: 0.14em;
+  margin-bottom: 5px;
+}
+
 /* Numerals sit on sky that runs from near-white snow to orange sunset, so
    the type carries its own contrast rather than relying on the plate. */
-.three-kart-race__badge > span {
+.three-kart-race__badge-value {
   paint-order: stroke fill;
   text-shadow: 0 2px 0 rgba(4, 7, 14, 0.45), 0 4px 14px rgba(4, 7, 14, 0.55);
   -webkit-text-stroke: 2px rgba(6, 10, 18, 0.85);
@@ -189,8 +206,9 @@
   color: var(--tkr-cyan);
   filter: drop-shadow(0 1px 2px rgba(4, 7, 14, 0.8));
   height: 15px;
-  /* ::before is first in the box tree, so the glyph needs an explicit order
-     to lead its own caption. */
+  /* The caption is the first child in the box tree (it was ::before, it is a
+     real span now — same slot), so the glyph needs an explicit order to lead
+     its own caption. */
   order: -1;
   width: 15px;
 }
@@ -208,8 +226,7 @@
   width: 162px;
 }
 
-.three-kart-race__badge[data-hud-stat='position']::before {
-  content: 'POSITION';
+.three-kart-race__badge[data-hud-stat='position'] .three-kart-race__badge-label {
   /* Shares line 1 with the trophy (20px icon + 8px gap) so the ordinal owns
      line 2 by itself. */
   flex-basis: calc(100% - 28px);
@@ -223,7 +240,7 @@
   width: 20px;
 }
 
-.three-kart-race__badge[data-hud-stat='position'] > span {
+.three-kart-race__badge[data-hud-stat='position'] .three-kart-race__badge-value {
   color: var(--tkr-gold);
   font-size: 66px;
   letter-spacing: -0.02em;
@@ -231,16 +248,22 @@
   -webkit-text-stroke: 4px rgba(6, 10, 18, 0.9);
 }
 
-/* SPEED — bottom-left, second in the hierarchy. */
+/* SPEED — bottom-left, second in the hierarchy.
+   NO inset here. The plate is position:relative (see .three-kart-race__badge)
+   and its corner group already owns the anchor: a `bottom`/`left` on a
+   relatively-positioned box is an OFFSET FROM FLOW, so the pair this rule used
+   to carry displaced the plate by its own former anchor value on top of the
+   group's — and the compact query, which collapses the corners with
+   display:contents, never unset them, so on a phone the same offsets pushed
+   chips straight off the strip. If a corner ever needs a different inset it
+   belongs on .three-kart-race__corner--*, which is the absolutely-positioned
+   element. */
 .three-kart-race__badge[data-hud-stat='speed'] {
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   height: 94px;
-  left: calc(20px + env(safe-area-inset-left, 0px));
   width: 166px;
 }
 
-.three-kart-race__badge[data-hud-stat='speed']::before {
-  content: 'SPEED';
+.three-kart-race__badge[data-hud-stat='speed'] .three-kart-race__badge-label {
   flex-basis: calc(100% - 26px);
   margin-bottom: 8px;
 }
@@ -251,32 +274,20 @@
   width: 18px;
 }
 
-.three-kart-race__badge[data-hud-stat='speed'] > span {
+.three-kart-race__badge[data-hud-stat='speed'] .three-kart-race__badge-value {
   font-size: 46px;
   letter-spacing: -0.02em;
   text-shadow: 0 3px 0 rgba(4, 7, 14, 0.5), 0 6px 20px rgba(4, 7, 14, 0.6);
   -webkit-text-stroke: 3px rgba(6, 10, 18, 0.88);
 }
 
-/* The readout had no unit at all — km/h is what the telemetry publishes. */
-.three-kart-race__badge[data-hud-stat='speed']::after {
-  color: var(--tkr-muted);
-  content: 'KM/H';
-  font: 700 10px/1 var(--tkr-mono);
-  letter-spacing: 0.14em;
-  margin-bottom: 5px;
-}
-
 /* LAP + COINS — top-right column, matched width so they read as one stack. */
 .three-kart-race__badge[data-hud-stat='lap'] {
   height: 82px;
-  right: calc(20px + env(safe-area-inset-right, 0px));
-  top: calc(68px + env(safe-area-inset-top, 0px));
   width: 112px;
 }
 
-.three-kart-race__badge[data-hud-stat='lap']::before {
-  content: 'LAP';
+.three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-label {
   flex-basis: calc(100% - 24px);
   margin-bottom: 7px;
 }
@@ -290,17 +301,57 @@
 /* Lap is the third thing the rubric asks to be big — 34px keeps the ladder
    (66 position / 46 speed / 34 lap / 28 coins) unambiguous at thumbnail size
    while still clearing the plate's 82px box. */
-.three-kart-race__badge[data-hud-stat='lap'] > span {
+.three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-value {
   font-size: 34px;
   -webkit-text-stroke: 2.5px rgba(6, 10, 18, 0.88);
+}
+
+/* Lap progress rail. The arc-length progress term landed this wave and nothing
+   on screen was spending it: a player could read WHICH lap they were on and
+   never how far through it. Absolute, so the tuned 112x82 plate keeps its box;
+   scaleX on a fill rather than a width so the update is a compositor transform
+   and never a layout on a canvas that repaints every frame. */
+.three-kart-race__badge-rail {
+  background: rgba(6, 10, 18, 0.55);
+  border-radius: 2px;
+  bottom: 6px;
+  box-shadow: inset 0 0 0 1px rgba(126, 239, 255, 0.12);
+  height: 3px;
+  left: 14px;
+  overflow: hidden;
+  position: absolute;
+  right: 12px;
+}
+
+.three-kart-race__badge-rail-fill {
+  background: linear-gradient(90deg, var(--tkr-cyan), var(--tkr-gold));
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  width: 100%;
+}
+
+/* Running split — parked in the caption line's empty right end. "LAP" is ~22px
+   of the 62px available beside the 16px flag, so the split has room; the JSX
+   drops it entirely on the final lap, when the caption grows to "FINAL LAP" and
+   claims that space. Absolute, so it can never reflow the plate.
+   top: 20px puts it on the caption's baseline band — 8px plate padding, 4px of
+   align-content centring (57px of content in a 65px box), then the caption sits
+   flush to the bottom of the 16px flag's line. */
+.three-kart-race__badge-note {
+  color: rgba(242, 247, 255, 0.78);
+  font: 700 8px/1 var(--tkr-mono);
+  letter-spacing: 0.04em;
+  position: absolute;
+  right: 12px;
+  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.85);
+  top: 20px;
 }
 
 .three-kart-race__badge[data-hud-stat='coins'] {
   --tkr-accent-a: var(--tkr-gold);
   --tkr-accent-b: rgba(255, 211, 79, 0.2);
   height: 72px;
-  right: calc(20px + env(safe-area-inset-right, 0px));
-  top: calc(158px + env(safe-area-inset-top, 0px));
   width: 112px;
   /* Restart trick: React only changes data-coins, and a changing
      animation-name is the one thing CSS can hang a re-trigger on. Odd/even
@@ -316,8 +367,7 @@
   animation-name: tkr-coin-pop-alt;
 }
 
-.three-kart-race__badge[data-hud-stat='coins']::before {
-  content: 'COINS';
+.three-kart-race__badge[data-hud-stat='coins'] .three-kart-race__badge-label {
   flex-basis: calc(100% - 26px);
   margin-bottom: 6px;
 }
@@ -329,7 +379,7 @@
   width: 18px;
 }
 
-.three-kart-race__badge[data-hud-stat='coins'] > span {
+.three-kart-race__badge[data-hud-stat='coins'] .three-kart-race__badge-value {
   color: var(--tkr-gold);
   font-size: 28px;
   -webkit-text-stroke: 2.5px rgba(6, 10, 18, 0.88);
@@ -704,14 +754,15 @@
 
 /* Final lap: the position plate is the thing that matters now, so it takes the
    gold rim up a stop and holds a slow pulse for the rest of the race. */
-.three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap'] > span,
+.three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-value,
 .three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap'] svg {
   color: var(--tkr-gold);
 }
 
-.three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap']::before {
+/* The word itself now comes from the markup (hudPhase picks "Final lap" vs
+   "Lap"), so this rule is colour only. */
+.three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-label {
   color: rgba(255, 211, 79, 0.72);
-  content: 'FINAL LAP';
 }
 
 /* K7 pickup pop (owner pick B): the new item's icon springs oversized, then
@@ -1080,7 +1131,7 @@
     position: relative;
   }
 
-  .three-kart-race__badge::before {
+  .three-kart-race__badge-label {
     flex-basis: 100%;
     font-size: 8px;
     letter-spacing: 0.16em;
@@ -1098,10 +1149,24 @@
     width: 80px;
   }
 
-  .three-kart-race__badge[data-hud-stat='position']::before {
-    content: 'POS';
+  .three-kart-race__badge[data-hud-stat='position'] .three-kart-race__badge-label {
     flex-basis: 100%;
     margin-bottom: 4px;
+  }
+
+  /* Long → short caption swap. Only the two plates that ship both forms are
+     listed: SPEED and COINS render a single label and must keep showing it.
+     "FINAL LAP" is 9 tracked characters against a 66px plate with 18px of
+     padding, so the lap chip stays "LAP" here — the phase still reads from the
+     gold and from the banner. */
+  .three-kart-race__badge[data-hud-stat='position'] .three-kart-race__badge-label-full,
+  .three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-label-full {
+    display: none;
+  }
+
+  .three-kart-race__badge[data-hud-stat='position'] .three-kart-race__badge-label-short,
+  .three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-label-short {
+    display: inline;
   }
 
   /* The two hero chips drop their glyph here: at 80px wide the caption
@@ -1112,7 +1177,7 @@
     display: none;
   }
 
-  .three-kart-race__badge[data-hud-stat='position'] > span {
+  .three-kart-race__badge[data-hud-stat='position'] .three-kart-race__badge-value {
     font-size: 23px;
     -webkit-text-stroke: 2px rgba(6, 10, 18, 0.88);
   }
@@ -1121,17 +1186,17 @@
     width: 92px;
   }
 
-  .three-kart-race__badge[data-hud-stat='speed']::before {
+  .three-kart-race__badge[data-hud-stat='speed'] .three-kart-race__badge-label {
     flex-basis: 100%;
     margin-bottom: 4px;
   }
 
-  .three-kart-race__badge[data-hud-stat='speed'] > span {
+  .three-kart-race__badge[data-hud-stat='speed'] .three-kart-race__badge-value {
     font-size: 21px;
     -webkit-text-stroke: 2px rgba(6, 10, 18, 0.88);
   }
 
-  .three-kart-race__badge[data-hud-stat='speed']::after {
+  .three-kart-race__badge[data-hud-stat='speed'] .three-kart-race__badge-unit {
     font-size: 8px;
     margin-bottom: 2px;
   }
@@ -1141,7 +1206,7 @@
     width: 66px;
   }
 
-  .three-kart-race__badge[data-hud-stat='lap']::before {
+  .three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-label {
     flex-basis: 100%;
   }
 
@@ -1150,9 +1215,23 @@
     width: 13px;
   }
 
-  .three-kart-race__badge[data-hud-stat='lap'] > span {
+  .three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-value {
     font-size: 15px;
     -webkit-text-stroke: 1.5px rgba(6, 10, 18, 0.8);
+  }
+
+  /* The rail survives the collapse — it is 3px of the only "how far through the
+     lap" cue there is. The split does not: 8px mono in a 66px plate that is
+     already carrying a caption and a value is a smudge, and the phone player is
+     reading the road. */
+  .three-kart-race__badge-rail {
+    bottom: 4px;
+    left: 10px;
+    right: 8px;
+  }
+
+  .three-kart-race__badge-note {
+    display: none;
   }
 
   /* The retired tallies took 110px of the strip with them: at 844x390 the row
@@ -1163,7 +1242,7 @@
     width: 60px;
   }
 
-  .three-kart-race__badge[data-hud-stat='coins']::before {
+  .three-kart-race__badge[data-hud-stat='coins'] .three-kart-race__badge-label {
     flex-basis: 100%;
   }
 
@@ -1172,7 +1251,7 @@
     width: 14px;
   }
 
-  .three-kart-race__badge[data-hud-stat='coins'] > span {
+  .three-kart-race__badge[data-hud-stat='coins'] .three-kart-race__badge-value {
     font-size: 15px;
     -webkit-text-stroke: 1.5px rgba(6, 10, 18, 0.8);
   }
@@ -1180,13 +1259,6 @@
   .three-kart-race__audio-toggle {
     height: 46px;
     width: 44px;
-  }
-
-  /* "FINAL LAP" is 9 tracked characters; the compact lap plate is 66px wide
-     with 18px of padding, so it stays "LAP" here — the phase is still legible
-     from the gold and the banner. */
-  .three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap']::before {
-    content: 'LAP';
   }
 
   .three-kart-race__item-slot {

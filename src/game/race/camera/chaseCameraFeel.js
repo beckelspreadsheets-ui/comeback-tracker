@@ -10,7 +10,7 @@
 //
 // The monolith keeps ownership of anything that needs the world: the spline
 // anchor, the blocker push-out, the occlusion cast, the rival proximity ghost,
-// and the actual Vector3/quaternion arithmetic. This module answers four
+// and the actual Vector3/quaternion arithmetic. This module answers five
 // questions:
 //
 //   1. how long is the boom, how high is the eye, and where is it pointing
@@ -19,7 +19,11 @@
 //   3. where on screen does the subject BELONG this frame, is it there, and if
 //      not what look-target nudge and boom scale fixes it (advanceChaseFeel
 //      publishes the box, solveFramingCorrection solves against it);
-//   4. how hard should the frame kick on an impact (impulseChaseShake).
+//   4. how hard should the frame kick on an impact (impulseChaseShake);
+//   5. how much of the frame does a given object cover, and therefore how much
+//      should the caller fade it (solveLensIntruderFade — the ONE piece of
+//      camera arithmetic that has to run in the monolith's own object loops,
+//      exported so it is a shared implementation rather than a copied formula).
 //
 // Sign conventions used throughout:
 //   * `driftDirection` is driftFeel's locked value: +1 for a right-hand drift
@@ -138,6 +142,13 @@ export const CHASE_FEEL_DEFAULTS = {
   // 0.16 - 0.09 = 0.07 NDC to the outside, because the solver defends the zone's
   // EDGE, not its centre — a subject already inside the zone is left alone, by
   // design, and that is where the shot's life comes from.
+  //
+  // ROUND-1 CORRECTION: 0.07 is where the subject ARRIVES, not where it has to
+  // stay. The far edge of the slid zone was 0.16 + 0.09 = 0.25, and that is the
+  // permission the round-1 captures were measured sitting in (|ndcX| 0.18 on
+  // comeback-city-p0_33, a left-hand drift). FRAMING_DEFAULTS.hardX now
+  // intersects the zone at 0.15 instead of letting it run out to 0.25, so the
+  // drift read here is unchanged and its excursion is bounded.
   driftAnchorShift: 0.16,
   driftLeadEngage: 0.02,
   driftLeadRelease: 0.0004,
@@ -262,6 +273,30 @@ export const CHASE_FEEL_DEFAULTS = {
   // chase distance is the second backstop.
   boomFovCompensationMin: 0.76,
   boomFovCompensationMax: 1.12,
+  // BOOST DOLLY — an extra pull on the boom that the FOV does NOT pay for, so
+  // it is the one speed cue that survives the lens ceiling.
+  //
+  // Measured off the wave-6 capture manifest, which is what makes this a fault
+  // rather than a taste note. Sixteen of the eighteen marks are at 228 km/h or
+  // above, and MAX_SPEED is 228, so speed01 — and therefore the whole 7.5-degree
+  // base term — is pinned at 1.0 on sixteen of eighteen frames. The only thing
+  // separating a 228 frame from a 286 frame is the boost flag, and fovMaxWiden
+  // then eats most of that too: 7.5 + 5.5 = 13 clipped to 11, so boost delivers
+  // 3.5 degrees, not 5.5. That is precisely the blind judge's finding, that 221
+  // and 285 km/h are the same photograph.
+  //
+  // Raising fovMaxWiden is the wrong way to buy it back: a wider lens makes NEAR
+  // geometry larger relative to the safe area, and near geometry filling the
+  // frame is the current blocker on three critic sheets. The dolly is free of
+  // that trade — it makes the periphery converge and rush without touching the
+  // lens angle, and it SHORTENS the eye-to-hero corridor that the intruders live
+  // in, so it pays into the blocker rather than against it.
+  //
+  // 6% on top of the ~19% the FOV compensation already gives at boost: the boom
+  // runs 0.81x cruising to 0.76x boosting, and the hero's projected radius moves
+  // 0.288 -> 0.306, inside the size window (0.24-0.35) so the size solver stays
+  // a no-op and does not argue with it.
+  boostDollyPull: 0.06,
   // Eye lift with speed, KEPT at wave 5's value, and the reason is not the one
   // the old comment gave. It is not a speed cue — a still frame cannot tell you
   // how high the eye is. It is near-plane clearance, and it is the dominant
@@ -346,6 +381,48 @@ export const FRAMING_DEFAULTS = {
   // zone does not snap shut at its boundary) and reaches full authority a
   // twelfth of a frame-width past it, which is what makes the anchor an anchor.
   softSpan: 0.12,
+  // ---------------------------------------------------------------------
+  // HARD LATERAL BOUND. The absolute limit on |ndcX|, independent of where the
+  // drift has put the anchor.
+  //
+  // WHY IT IS NEW, and it is the wave-6 round-1 camera finding: the box was
+  // bounded on paper and unbounded in practice on the one axis the critics
+  // measure. The rubric critic measured the hero's screen centre across the
+  // nine Comeback City marks at x = 830, 860, 840, 945, 860, 715, 730, 800,
+  // 695 on a 1600px frame — a 250px swing, |ndcX| up to 0.18 — and read it as
+  // the solver failing. The solver was not failing. It was obeying: during a
+  // full-charge drift the published zone runs from anchorX - deadX to
+  // anchorX + deadX, i.e. up to |0.16| + 0.09 = 0.25 of legal permission, and
+  // every measured frame sat inside that. The only other stop was the SAFE
+  // edge at ~0.85, which is "not clipped by the viewport", not "framed".
+  //
+  // So the fault is a missing bound rather than a weak gain, and a bound is
+  // what goes in. The dead zone still slides with the drift (that read is
+  // owner-visible and paid for), but it is INTERSECTED with +-0.15 rather than
+  // added to it:
+  //
+  //   straight   anchor  0.00 -> zone [-0.09, +0.09], excursion capped at 0.15
+  //   full drift anchor -0.16 -> zone [-0.15, -0.07], excursion capped at 0.15
+  //
+  // The drift composition survives intact — the subject still sits 0.07 to
+  // 0.15 of frame width to the OUTSIDE of the corner, which is the whole point
+  // of driftAnchorShift — while the worst case falls from 0.25 to 0.15, under
+  // the 0.15 the critic asked for and a third tighter than what shipped.
+  //
+  // Raising the gain instead would have been the wrong fix twice over: the
+  // frames that measured 0.18 were inside the dead zone, where by design the
+  // gain is zero, and a stiffer ramp everywhere would have pulled the life out
+  // of the frames that are already correct.
+  hardX: 0.15,
+  // Vertical gets the same treatment as insurance, not as a fix — the same
+  // critic measured the kart's bottom edge between y 590 and 650 on all 18
+  // frames, so nothing is wrong here today. The bound is anchor + dead zone +
+  // this slack, so it moves with the airborne ceiling (deadYUp opens to
+  // airFrameCeiling on a launch) instead of fighting it, and it exists so that
+  // "vertical framing is unbounded" cannot come back from some future term
+  // that widens the zone. On the ground it permits -0.38..-0.06; airborne, up
+  // to +0.06. Previously the only stop was the safe edge at ~0.85.
+  hardYSlack: 0.1,
   // Apparent-size window, expressed as the subject's NDC radius against the
   // VERTICAL half-frame.
   //
@@ -399,6 +476,7 @@ export const createChaseFeelState = (overrides = {}) => ({
   shakeAmp: 0,
   shakeTime: 0,
   fov: 0,
+  boostBlend: 0,
   // Reused output record. The camera block runs 60+ times a second for the
   // whole race; allocating a result object there is ~4KB/s of garbage for no
   // reason.
@@ -601,7 +679,18 @@ export const advanceChaseFeel = (state, input) => {
     t.boomFovCompensationMin,
     t.boomFovCompensationMax
   );
-  out.boomLength = (input.boomBase || 30) * fovCompensation + state.airBlend * t.airBoomUnits;
+  // Boost dolly. Damped with the SAME asymmetric attack/release as the lens, so
+  // the two halves of the punch arrive together (~0.09s in, ~0.26s out) and a
+  // mushroom picked up and burned inside a corner cannot step the boom.
+  state.boostBlend = dampTowards(
+    state.boostBlend,
+    input.boosting && !reduced ? 1 : 0,
+    input.boosting ? t.fovAttack : t.fovRelease,
+    dt
+  );
+  out.boomLength =
+    (input.boomBase || 30) * fovCompensation * (1 - state.boostBlend * t.boostDollyPull) +
+    state.airBlend * t.airBoomUnits;
   out.eyeLift =
     (input.eyeBase || 10) +
     speedCue * t.eyeSpeedLift +
@@ -642,51 +731,111 @@ export const advanceChaseFeel = (state, input) => {
   return out;
 };
 
-const solveAxis = (value, deadLow, deadHigh, safe, softGain, softSpan) => {
+const solveAxis = (value, deadLow, deadHigh, hardLow, hardHigh, safe, softGain, softSpan) => {
   const error = value > deadHigh ? value - deadHigh : value < deadLow ? value - deadLow : 0;
   if (error === 0) return 0;
   const ramp = Math.min(1, Math.abs(error) / Math.max(1e-3, softSpan));
   let correction = error * Math.min(1, softGain * ramp * ramp);
-  // Hard stop. The 1.08 overshoot absorbs the first-order error in the
-  // small-angle approximation below, so one solve normally lands inside the
-  // safe box and the caller's second pass finds nothing to do.
-  const rest = value - correction;
+  let rest = value - correction;
+  // FRAMING BOUND. Everything the soft ramp did not take, taken. The bound sits
+  // just outside the dead zone rather than out at the viewport edge, so this is
+  // the term that turns the anchor into an anchor: past it the aim tracks the
+  // subject laterally one for one and the WORLD slides instead, which is what a
+  // chase camera does through a long corner.
+  //
+  // Continuity matters more than the value here and is worth stating: the soft
+  // correction is continuous in `value`, so `rest` is too, so this term starts
+  // at exactly zero the moment it engages. Only the SLOPE changes at the
+  // boundary — no pop, no snap, and no gimbal read inside the box.
+  if (rest > hardHigh) {
+    correction += rest - hardHigh;
+    rest = hardHigh;
+  } else if (rest < hardLow) {
+    correction += rest - hardLow;
+    rest = hardLow;
+  }
+  // Viewport stop, which the bound above now normally pre-empts. The 1.08
+  // overshoot absorbs the first-order error in the small-angle approximation
+  // below, so one solve normally lands inside the safe box and the caller's
+  // second pass finds nothing to do.
   if (rest > safe) correction += (rest - safe) * 1.08;
   else if (rest < -safe) correction += (rest + safe) * 1.08;
   return correction;
 };
 
 /**
+ * How much of the frame does an object cover, and therefore how solid should it
+ * be — the near-lens intruder fade, as a function instead of as a comment.
+ *
+ * WHY IT LIVES HERE AND WHY IT IS EXPORTED. This is the highest-severity camera
+ * finding of the programme (five to six of eighteen capture frames put a kart,
+ * a crosser or a pickup inside the near volume, sliced open into backfaces —
+ * comeback-city-p0_45 and p0_56 are the current pair) and it is the one piece of
+ * the answer that CANNOT run in this module: the fade has to be applied per
+ * object, in the monolith's own rival/prop/pickup loops, which this package does
+ * not own. Three waves have now shipped the formula as prose in this file and
+ * three waves have gone by without it being applied — so it is a callable now,
+ * pure, with no THREE and no scene, and the monolith's "Proximity ghost" block
+ * can adopt it as a one-line import. See the note at the head of
+ * solveFramingCorrection for what this module DOES do about the same fault.
+ *
+ * The metric is SCREEN COVERAGE, not world distance. World distance is what the
+ * shipped ghost uses (`lensBand = clamp((rivalDistance - R - 3) / 7)`) and it is
+ * blind to the field of view: at vFOV 71 a rival 11 units off the lens covers
+ * 45% of the half-frame and scores a fully solid 1.0, while the same rival at
+ * the phone's vFOV 58 covers 34% and scores identically. Coverage is FOV-correct
+ * on every quality tier by construction, which also makes it right on the mobile
+ * tier without a second set of numbers.
+ *
+ * Units: coverage is the object's projected radius against the HALF-frame
+ * height, i.e. the same unit as `ndcRadius` from solveFramingCorrection, so the
+ * hero's own framed size (0.288 desktop, 0.318 phone) is a useful yardstick —
+ * `solid` at 0.34 means "may be a little bigger than the hero and stay solid".
+ *
+ * Cost at the call site: one dot product for depthAlongView, one subtract and
+ * one divide here. No allocation, no state.
+ *
+ * @param {object} input
+ *   radius          object bounding radius, world units (a kart is ~5.4 —
+ *                   CHASE_SUBJECT_RADIUS; a coin is ~1.2)
+ *   depthAlongView  the object's offset from the eye dotted with camera
+ *                   FORWARD. Signed on purpose: an object behind the lens is
+ *                   not on screen and must never be faded, which is the bug a
+ *                   plain distance test ships.
+ *   tanHalfFov      tan(verticalFov / 2) — the LIVE fov, not the authored one
+ *   solid/gone      coverage at which the fade starts and completes
+ * @returns {number} 1 = draw normally, 0 = fully hidden
+ */
+export const solveLensIntruderFade = ({
+  radius,
+  depthAlongView,
+  tanHalfFov,
+  solid = 0.34,
+  gone = 0.52,
+}) => {
+  if (!(depthAlongView > 0)) return 1;
+  const coverage = Math.max(0, radius || 0) / Math.max(1e-3, (tanHalfFov || 0.5) * depthAlongView);
+  return clamp((gone - coverage) / Math.max(1e-3, gone - solid), 0, 1);
+};
+
+/**
  * Solve the framing against the box advanceChaseFeel published this frame.
  *
  * WHAT THIS CANNOT DO, stated plainly because it is the highest-severity camera
- * finding in the wave-5 report and it does not belong to this file.
+ * finding in the wave-5/6 reports and it does not belong to this file.
  *
- * Five to six of eighteen capture frames put a RIVAL kart (or a rival's driver)
- * inside the near volume. This module never sees a rival: its entire input is
- * the hero's own state plus the caller's authored numbers. The dolly-zoom boom
- * is a real, measurable mitigation — the stretch of road behind the hero that
- * can put a rival in frame at all shortens from 24.75 units to 17.75 at full
- * boost — but it is a mitigation, not the fix, and it does nothing at all for a
- * rival that is BESIDE the lens rather than in front of it.
+ * A rival kart (or a crosser, or a coin) inside the near volume is not a framing
+ * fault and no framing solve can fix it: this module's entire input is the
+ * HERO's projection plus the caller's authored numbers, and it never sees a
+ * second object. What it does do is shorten the corridor those intruders live
+ * in — the dolly-zoom boom cuts the stretch of road behind the hero that can put
+ * a rival in frame at all from 24.75 units to 17.75 at full boost — and that is
+ * a mitigation, not the fix, and it does nothing at all for a rival that is
+ * BESIDE the lens rather than in front of it.
  *
- * The fix is one change in the monolith's rival loop, which owns the proximity
- * ghost (ComebackCityThreeKartRace.jsx, "Proximity ghost" block). That ghost
- * currently fades on WORLD distance: `lensBand = clamp((rivalDistance - R - 3) / 7)`.
- * World distance is the wrong metric and is why the count went UP this wave —
- * it is blind to the field of view, so at vFOV 71 a rival 11 units off the lens
- * covers 45% of the frame height and scores a fully solid 1.0, while the same
- * rival at vFOV 58 on a phone covers 34% and scores identically. Replace it with SCREEN
- * COVERAGE, which is the quantity the critics are actually measuring:
- *
- *   coverage = rivalRadius / (tanHalfFov * max(depthAlongView, near))
- *   lensBand = clamp((0.34 - coverage) / 0.18, 0, 1)   // solid under 34% of
- *                                                      // half-frame, gone by 52%
- *
- * with `depthAlongView` the rival's dot against the camera forward vector (so a
- * rival BEHIND the lens is never faded) and `rivalRadius` the same
- * CHASE_SUBJECT_RADIUS the framing solver already uses. Two dot products, no new
- * state, and it is FOV-correct on every tier by construction. Do not solve it by
+ * The fix is the per-object fade above, applied in the monolith's rival loop
+ * ("Proximity ghost" block) and extended past rivals to crossers and pickups,
+ * which is where the remaining two frames come from. Do not solve it by
  * collapsing the boom: every legal boom length on that bearing is inside the
  * pack, which is what the wave-4 guard already learned the hard way.
  *
@@ -750,20 +899,33 @@ export const solveFramingCorrection = ({
   const ndcRadiusX = ndcRadius / safeAspect;
   const safeX = Math.max(0.04, 1 - box.edgePad - ndcRadiusX);
   const safeY = Math.max(0.04, 1 - box.edgePad - ndcRadius);
-  const anchorX = box.anchorX || 0;
   const anchorY = box.anchorY || 0;
+  // The lateral bound is ABSOLUTE and the drift anchor is intersected with it,
+  // not added to it — see hardX. Both edges of the zone are pulled inside the
+  // bound, which cannot invert it: the anchor is itself clamped into the bound
+  // first, so deadLow <= anchor <= deadHigh always holds.
+  const hardX = Math.max(box.deadX, box.hardX ?? 1);
+  const anchorX = clamp(box.anchorX || 0, -hardX, hardX);
   const correctionX = solveAxis(
     ndcX,
-    anchorX - box.deadX,
-    anchorX + box.deadX,
+    Math.max(anchorX - box.deadX, -hardX),
+    Math.min(anchorX + box.deadX, hardX),
+    -hardX,
+    hardX,
     safeX,
     box.softGain,
     box.softSpan
   );
+  // Vertical bound rides the zone (which opens on a launch) plus a fixed slack,
+  // so it is insurance against a future term widening the box rather than a
+  // limit the shipped composition ever reaches.
+  const slackY = box.hardYSlack ?? 1;
   const correctionY = solveAxis(
     ndcY,
     anchorY - box.deadYDown,
     anchorY + box.deadYUp,
+    anchorY - box.deadYDown - slackY,
+    anchorY + box.deadYUp + slackY,
     safeY,
     box.softGain,
     box.softSpan

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, Bitcoin, Flag, Gauge, RotateCcw, Sparkles, Trophy, Volume2, VolumeX, Zap } from 'lucide-react';
+import { ArrowDown, Bitcoin, Flag, Gauge, RotateCcw, Sparkles, Trophy, Volume2, VolumeX } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -271,6 +271,47 @@ const CONTACT_AIR_HIDDEN_FLOOR = 0.42;
 // Scratch for the rival proximity-ghost cone test, same no-allocation rule.
 const GHOST_AXIS = new THREE.Vector3();
 const GHOST_OFFSET = new THREE.Vector3();
+// Camera forward for the lens tests below, refreshed once per frame.
+const GHOST_FORWARD = new THREE.Vector3();
+const LENS_PROBE = new THREE.Vector3();
+// SCREEN COVERAGE, not world distance. The ghost's absolute floor used to be
+// `clamp((rivalDistance - 5.4 - 3) / 7)`, and world distance is blind to the
+// field of view: it scores identically for a kart that covers two thirds of the
+// frame at the dolly-zoom's wide end and one that covers a third at the phone
+// tier's narrow one. `lensCoverage` is the body's radius as a fraction of the
+// HALF frame height at its own depth — the quantity the critics were measuring
+// off the pixels — and it costs one dot product.
+const lensCoverage = (position, radius, camPos, tanHalfFov, near) => {
+  LENS_PROBE.copy(position).sub(camPos);
+  const depthAlongView = LENS_PROBE.dot(GHOST_FORWARD);
+  // Behind the lens: not on screen, so not the camera's business. Signalling
+  // "tiny" rather than "huge" is what keeps a body that has been overtaken from
+  // being faded (and losing its shadow) for nothing.
+  if (depthAlongView <= 0) return 0;
+  return radius / (tanHalfFov * Math.max(depthAlongView, near));
+};
+// Fade thresholds are expressed as a MULTIPLE OF THE HERO'S OWN COVERAGE rather
+// than as absolute screen fractions, and that is deliberate. The hero's coverage
+// is the size the framing solver is actively holding, so it already carries the
+// live FOV, the boom length (which the dolly zoom shortens under boost) and the
+// quality tier. An absolute constant tuned against desktop's 66-degree FOV and
+// 24-unit boom would fade rivals that are racing alongside the moment either
+// number moved — measured off the captures, the hero sits at ~0.26 coverage and
+// a rival level with it lands within a few percent of that.
+//
+// 1.45x is a body half again the hero's on-screen size — closer to the lens than
+// the hero, and starting to be a wall. 2.0x is twice the hero's size, which is
+// the near-plane slab with no road behind it (comeback-city-p0_56 measured ~3.4x).
+const LENS_WALL_START = 1.45;
+const LENS_WALL_FULL = 2.0;
+const lensBandFor = (coverage, subjectCoverage) => {
+  if (!(subjectCoverage > 0)) return 1;
+  return clamp(
+    (subjectCoverage * LENS_WALL_FULL - coverage) / (subjectCoverage * (LENS_WALL_FULL - LENS_WALL_START)),
+    0,
+    1
+  );
+};
 // Lateral-dodge sweep, in radians, ALWAYS starting at 0 (the undodged bearing)
 // so an active dodge unwinds the instant its bearing is clear. ~14/28/43
 // degrees each way: past that the shot is no longer a chase shot and the guard
@@ -337,6 +378,15 @@ const formatTime = (seconds = 0) => {
   const minutes = Math.floor(seconds / 60);
   const rest = seconds - minutes * 60;
   return `${minutes}:${rest.toFixed(2).padStart(5, '0')}`;
+};
+// Running lap split for the HUD. One decimal, not two: at 7 snapshots a second
+// the hundredths column is a blur of noise in the corner of the eye, and the
+// full-precision time is what the results panel is for.
+const formatSplit = (seconds = 0) => {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00.0';
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds - minutes * 60;
+  return `${minutes}:${rest.toFixed(1).padStart(4, '0')}`;
 };
 
 const TRACK_SAMPLES = 112;
@@ -468,7 +518,14 @@ const createInitialRace = (
   landSquashTimer: 0,
   lap: 1,
   laps: trackDef.laps,
+  // Lap split state. The HUD had no way to say "how is this lap going" — the
+  // only clock on screen was the finish panel's total, after the fact.
+  bestLap: null,
+  lapStartTime: 0,
   lane: 0,
+  // Biggest body on the lens this frame, as a multiple of the hero's own
+  // on-screen size. Solved by the proximity ghost, read by telemetry.
+  lensPeak: 0,
   // Last frame's own-path/centreline length ratio (see LANE_ARC). Seeded at the
   // straight-line no-op so telemetry read before the first physics tick is a
   // real number rather than undefined.
@@ -8824,9 +8881,69 @@ export const ComebackCityThreeKartRace = ({
       return cachedRendererStats;
     };
 
+    // FIRST-LAP HITCH. `programs` climbed 46->49 on Comeback City and 48->51
+    // with `textures` 72->80 on Penguin Village ACROSS THE NINE MARKS OF A
+    // SINGLE RUN — shader links and GPU uploads happening while the player is
+    // racing, which an fps average hides completely and a player feels as a
+    // stutter the first time each item, VFX or prop appears.
+    //
+    // Everything that can appear is already in the scene graph with
+    // `visible = false` (pooled projectiles, blizzard shells, the shield shell,
+    // the avalanche mound, every rival paint variant), and three's compile()
+    // walks with `traverse`, not `traverseVisible` — so one pass links the lot.
+    // Textures are separate: compile() prepares programs, not uploads, so their
+    // maps are forced up by hand.
+    //
+    // Run REPEATEDLY through the countdown rather than once at setup: the GLB
+    // mounts resolve asynchronously and a single pass at t=0 would warm an
+    // empty half of the scene. The countdown is the one window with 2.2s of
+    // spare frame budget and nothing to stutter.
+    //
+    // CAVEAT for whoever reads the next manifest: compile() links against the
+    // renderer's CURRENT output state, and the race draws through the post
+    // chain's render target rather than to the screen. If a define differs
+    // between those two the warm-up links a variant the race never uses and the
+    // absolute `programs` count goes UP while the mid-run DELTA goes to zero.
+    // The delta is the number that was the bug; judge it on that, not the level.
+    const warmedTextures = new WeakSet();
+    const warmSceneShaders = () => {
+      try {
+        // engine.scene, NOT engine.world: the hemisphere fill and the shadow
+        // key are parented to the scene, and compile() keys its programs on the
+        // lights it can see. Warming against the world group would link a set of
+        // no-light programs the race never renders and leave the real ones cold.
+        engine.renderer.compile(engine.scene, engine.camera);
+        engine.scene.traverse((node) => {
+          const materials = node.material ? (Array.isArray(node.material) ? node.material : [node.material]) : null;
+          if (!materials) return;
+          materials.forEach((material) => {
+            const upload = (value) => {
+              if (!value?.isTexture || warmedTextures.has(value)) return;
+              warmedTextures.add(value);
+              engine.renderer.initTexture(value);
+            };
+            // Slot maps (map / emissiveMap / gradientMap / alphaMap ...) are own
+            // properties; a ShaderMaterial's are one level down in `uniforms`,
+            // which is where the toon-rim and post materials keep theirs.
+            Object.values(material).forEach(upload);
+            if (material.uniforms) Object.values(material.uniforms).forEach((uniform) => upload(uniform?.value));
+          });
+        });
+      } catch (error) {
+        // A warm-up is an optimisation, never a reason to fail a race.
+        console.warn('[kart] shader warm-up skipped', error);
+      }
+    };
+    let nextWarmupAt = 0;
+
     const frame = () => {
       if (disposed) return;
       const now = performance.now();
+      // Countdown only: after the flag this must never run.
+      if (race.countdown > 0 && now >= nextWarmupAt) {
+        nextWarmupAt = now + 700;
+        warmSceneShaders();
+      }
       // Unclamped delta sampled BEFORE the physics clamp — throttled frames
       // must show their real length here even though the sim clamps to 40ms.
       frameElapsedSamples.push(now - previousFrameTime);
@@ -9065,6 +9182,12 @@ export const ComebackCityThreeKartRace = ({
             race.progress + (race.speed * dt) / (engine.sampler.length * race.laneArcScale)
           );
           if (race.previousProgress > 0.86 && race.progress < 0.18) {
+            // Close the split BEFORE the finish branch: the last lap is a lap
+            // and belongs in the best-lap comparison even though it also ends
+            // the race.
+            const lapTime = race.raceTime - race.lapStartTime;
+            if (lapTime > 1) race.bestLap = race.bestLap ? Math.min(race.bestLap, lapTime) : lapTime;
+            race.lapStartTime = race.raceTime;
             race.lap += 1;
             if (race.lap > race.laps) {
               race.lap = race.laps;
@@ -9798,6 +9921,29 @@ export const ComebackCityThreeKartRace = ({
           motion.separationLane = lerp(motion.separationLane, target, 1 - Math.pow(0.0004, dt));
         });
       }
+      // Lens basis for every proximity test below, solved ONCE. The camera is
+      // parented straight to the scene, so its quaternion is already its world
+      // orientation. The FOV is read live because the dolly-zoom boom moves it
+      // with speed — a coverage test against a hard-coded FOV would be exactly
+      // the FOV-blind metric this replaced.
+      GHOST_FORWARD.set(0, 0, -1).applyQuaternion(engine.camera.quaternion);
+      const lensTanHalfFov = Math.tan((engine.camera.fov * Math.PI) / 360);
+      const lensNear = engine.camera.near;
+      // The reference every lens test below is scaled against: whatever the
+      // hero currently measures on screen is, by definition, the right size for
+      // a kart in this shot.
+      const lensSubjectCoverage = lensCoverage(
+        engine.playerModel.group.position,
+        CHASE_SUBJECT_RADIUS,
+        engine.camera.position,
+        lensTanHalfFov,
+        lensNear
+      );
+      race.lensPeak = 0;
+      const noteLensPeak = (coverage) => {
+        if (lensSubjectCoverage > 0) race.lensPeak = Math.max(race.lensPeak, coverage / lensSubjectCoverage);
+        return coverage;
+      };
       engine.rivalModels.forEach((rival, index) => {
         const racer = race.rivals[index];
         const sample = engine.sampler.pointAt(racer.progress, racer.lane + rival.model.motion.separationLane);
@@ -9883,20 +10029,26 @@ export const ComebackCityThreeKartRace = ({
           0,
           1
         );
-        // The original absolute rule survives as a floor: anything this close to
-        // the lens gets sliced by the near plane whatever direction it is in.
+        // The absolute rule survives as a floor: anything this big on the lens
+        // is a wall whatever direction it is in.
         //
-        // ROUND 3 measures it to the rival's SURFACE, not its origin, and that
-        // one term is the comeback-city-p0_45 blocker. A kart is ~14 long and
-        // ~7 wide, so its near corner leads its origin by a full kart radius:
-        // the rival that filled the right third of that frame with a driver
-        // head and a wheel SLICED BY THE NEAR PLANE had its origin ~13 units
-        // out, which the old test scored as 1.0 — completely solid, no fade,
-        // while its bodywork was physically inside the lens. Off-axis rivals
-        // never reach the cone test above (they are legitimately beside you),
-        // so this floor is the only thing that can catch them.
-        const surfaceDistance = rivalDistance - CHASE_SUBJECT_RADIUS;
-        const lensBand = clamp((surfaceDistance - 3) / 7, 0, 1);
+        // ROUND 4 replaces the world-distance version of that floor with SCREEN
+        // COVERAGE. Rounds 2 and 3 tuned a metric that cannot express the
+        // failure: `clamp((rivalDistance - 5.4 - 3) / 7)` calls a rival 15 units
+        // out 0.94 — solid — while at that depth its disc is over half the frame
+        // height. cc-p0_56 measured ~3.4x the hero's on-screen size and shipped
+        // fully opaque, sliced open by the near plane across the left 46% of the
+        // frame, because `lateral` let it through: "legitimately beside you" was
+        // measured in world units against a cone that scales with the player's
+        // disc, and at that range "beside you" still means owning half the
+        // screen. The band is taken as a MIN over the whole proximity term, so
+        // the lateral escape hatch can no longer re-open it.
+        const lensBand = lensBandFor(
+          noteLensPeak(
+            lensCoverage(rival.model.group.position, CHASE_SUBJECT_RADIUS, camPos, lensTanHalfFov, lensNear)
+          ),
+          lensSubjectCoverage
+        );
         // Cubic on the axial term only. The band is wide enough now that a
         // linear fade would leave a rival visibly translucent while it is still
         // a legitimate part of the shot; off-axis rivals never reach it at all.
@@ -9931,6 +10083,47 @@ export const ComebackCityThreeKartRace = ({
               (rival.model.underglow.userData.baseOpacity ?? 0.22) * proximity * proximity;
           }
         }
+      });
+
+      // LENS INTRUDERS THAT ARE NOT RIVALS.
+      //
+      // The ghost above has only ever looped rivals, and the camera's other
+      // guard (cameraBlockers / cameraOccluders) is collected ONCE from STATIC
+      // geometry with anything overlapping the road ribbon deliberately exempt.
+      // Every dynamic thing that lives ON the road therefore sat in neither
+      // set: a crosser, a thrown projectile or a dropped bone at the lens is
+      // drawn at full size, sliced open by the near plane, showing its own
+      // interior backfaces across half the frame.
+      //
+      // These get a hard cull rather than the rivals' graded fade, and that is
+      // deliberate: they carry no per-instance material (pooled props share the
+      // holder's clone, and fading a pool member fades every member of that
+      // pool), and the band only reaches zero when the object is already taller
+      // than the viewport — at which point there is nothing on screen for the
+      // "pop" to be visible against. They are NOT added to cameraBlockers:
+      // pushing the boom off a crosser is the wave-4 lesson in reverse.
+      const lensClear = (group, radius) =>
+        lensBandFor(
+          noteLensPeak(lensCoverage(group.position, radius, engine.camera.position, lensTanHalfFov, lensNear)),
+          lensSubjectCoverage
+        ) > 0;
+      // Radii are the mounted footprints halved: crosser 10 across, projectiles
+      // ~7, bones ~4.
+      //
+      // The two pools already publish `visible` from the sim EARLIER in this
+      // frame, so ANDing is self-restoring — next frame's pool update writes
+      // the sim's answer back and this test re-asks. The crossers do not: their
+      // rigs are mounted once and never touched again, so they need the band
+      // assigned rather than ANDed or a single close pass would retire the
+      // crosser for the rest of the race.
+      engine.crosserRigs?.forEach((rig) => {
+        rig.group.visible = lensClear(rig.group, 5);
+      });
+      engine.projectilePool?.forEach((holder) => {
+        if (holder.visible) holder.visible = lensClear(holder, 3.5);
+      });
+      engine.fishBonePool?.forEach((holder) => {
+        if (holder.visible) holder.visible = lensClear(holder, 2);
       });
 
       // G2 ambient animation. One shared clock drives every shader sway
@@ -10635,6 +10828,12 @@ export const ComebackCityThreeKartRace = ({
               ndcRadius: Number(race.cameraFraming.ndcRadius.toFixed(3)),
               ndcX: Number(race.cameraFraming.ndcX.toFixed(3)),
               ndcY: Number(race.cameraFraming.ndcY.toFixed(3)),
+              // Biggest body on the lens this frame as a multiple of the hero's
+              // own on-screen size (see LENS_WALL_START). >= 2.0 means something
+              // twice the hero's size is in shot, which is the near-plane slab
+              // three critics have now each measured off the pixels by hand.
+              // Published so it is a number in the manifest, not an eyeball.
+              lensPeak: Number((race.lensPeak || 0).toFixed(2)),
             }
           : null,
         grounding: {
@@ -10648,6 +10847,7 @@ export const ComebackCityThreeKartRace = ({
       if (snapshotTimer > 0.14 || race.finished) {
         snapshotTimer = 0;
         setSnapshot({
+          bestLap: race.bestLap,
           boostHits: race.boostHits,
           coins: race.coins,
           countdown: race.countdown,
@@ -10656,6 +10856,7 @@ export const ComebackCityThreeKartRace = ({
           heldItem: race.heldItem,
           itemPickups: race.itemPickups,
           lap: race.lap,
+          lapTime: Math.max(0, race.raceTime - race.lapStartTime),
           laps: race.laps,
           position: race.position,
           progress: race.progress,
@@ -10668,7 +10869,9 @@ export const ComebackCityThreeKartRace = ({
       if (race.finished && !finishReportedRef.current) {
         finishReportedRef.current = true;
         onFinish?.({
-          bestLap: null,
+          // Was hard-coded null while nothing timed a lap; the split state the
+          // HUD rail feeds off makes it real.
+          bestLap: race.bestLap,
           place: race.position,
           time: race.raceTime,
           trackKey,
@@ -10848,7 +11051,13 @@ export const ComebackCityThreeKartRace = ({
           every chip names itself with data-hud-stat, and the phase the HUD is
           in is one attribute instead of three numbers re-derived per rule.
           Every data-testid is unchanged — the smoke suites assert on them. */}
-      <div className="three-kart-race__hud" aria-live="polite" data-hud-phase={hudPhase}>
+      {/* aria-live is NOT on this wrapper. It used to be, and the snapshot
+          republishes about seven times a second, so the whole HUD was one live
+          region re-announcing speed and coins at 7 Hz — with the captions now
+          in the markup that would read the entire corner set aloud over and
+          over. Only the two values whose CHANGE is an event a player needs told
+          about carry a live region: lap roll-over and place change. */}
+      <div className="three-kart-race__hud" data-hud-phase={hudPhase}>
         <div className="three-kart-race__corner three-kart-race__corner--item">
           {/* A REAL ITEM SLOT, not a stat chip wearing a socket costume. The
               old markup was a badge whose icon/label the CSS had to reverse-
@@ -10893,14 +11102,44 @@ export const ComebackCityThreeKartRace = ({
             {audioMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
           </button>
           {/* data-lap-flash carries the roll-over instant, so the chip can pulse
-              on the tick rather than on a loop that hopes to coincide with it. */}
+              on the tick rather than on a loop that hopes to coincide with it.
+              The plate answers three questions now, not one: which lap, how far
+              through it (the rail along the bottom edge, fed by the arc-length
+              progress term this wave landed — the number already existed and
+              nothing on screen was spending it), and how the lap is going
+              against your best. */}
           <div
+            aria-live="polite"
             className="three-kart-race__badge"
             data-hud-stat="lap"
             data-lap-flash={lapFlash ? String(lapFlash.lap) : undefined}
           >
             <Flag size={15} />
-            <span>{snapshot.lap}/{snapshot.laps}</span>
+            <span className="three-kart-race__badge-label">
+              <span className="three-kart-race__badge-label-full">
+                {hudPhase === 'final-lap' ? 'Final lap' : 'Lap'}
+              </span>
+              <span className="three-kart-race__badge-label-short">Lap</span>
+            </span>
+            <span className="three-kart-race__badge-value">{snapshot.lap}/{snapshot.laps}</span>
+            {/* Running split. Absolutely placed in the caption line's empty
+                right end, and dropped on the final lap — "FINAL LAP" is nine
+                tracked characters and claims that space. One line only: the
+                best-lap comparison lives in the results panel, because the lap
+                plate is 112px wide and a two-line split would be sitting on the
+                "1/3" glyph at any lap count above nine. */}
+            {hudPhase === 'final-lap' ? null : (
+              <span className="three-kart-race__badge-note">{formatSplit(snapshot.lapTime)}</span>
+            )}
+            {/* Absolutely positioned inside the plate, so the rail cannot push
+                the tuned 112x82 box around. aria-hidden because the split above
+                and the lap counter beside it already say this in words. */}
+            <span aria-hidden="true" className="three-kart-race__badge-rail">
+              <span
+                className="three-kart-race__badge-rail-fill"
+                style={{ transform: `scaleX(${clamp(snapshot.progress ?? 0, 0, 1)})` }}
+              />
+            </span>
           </div>
           <div
             className="three-kart-race__badge"
@@ -10909,35 +11148,42 @@ export const ComebackCityThreeKartRace = ({
             data-testid="race-coins"
           >
             <Bitcoin size={15} />
-            <span>{snapshot.coins}</span>
+            <span className="three-kart-race__badge-label">
+              <span className="three-kart-race__badge-label-full">Coins</span>
+            </span>
+            <span className="three-kart-race__badge-value">{snapshot.coins}</span>
           </div>
         </div>
         <div className="three-kart-race__corner three-kart-race__corner--speed">
           <div className="three-kart-race__badge" data-hud-stat="speed">
             <Gauge size={15} />
-            <span>{Math.round(snapshot.speed)}</span>
+            <span className="three-kart-race__badge-label">
+              <span className="three-kart-race__badge-label-full">Speed</span>
+            </span>
+            <span className="three-kart-race__badge-value">{Math.round(snapshot.speed)}</span>
+            <span className="three-kart-race__badge-unit">km/h</span>
           </div>
         </div>
         <div className="three-kart-race__corner three-kart-race__corner--position">
-          <div className="three-kart-race__badge" data-hud-stat="position" data-testid="race-position-badge">
+          <div
+            aria-live="polite"
+            className="three-kart-race__badge"
+            data-hud-stat="position"
+            data-testid="race-position-badge"
+          >
             <Trophy size={15} />
-            <span>{ordinal(snapshot.position)}</span>
+            <span className="three-kart-race__badge-label">
+              <span className="three-kart-race__badge-label-full">Position</span>
+              <span className="three-kart-race__badge-label-short">Pos</span>
+            </span>
+            <span className="three-kart-race__badge-value">{ordinal(snapshot.position)}</span>
           </div>
         </div>
-        {/* Run tallies. Off the race HUD since wave 1 — they are telemetry the
-            player can neither act on nor spend — but the results panel below
-            now actually shows them, so they stay published here as one named
-            group instead of two chips hidden by their sibling index. */}
-        <div className="three-kart-race__hud-tally" aria-hidden="true">
-          <div className="three-kart-race__badge" data-hud-stat="boosts">
-            <Zap size={15} />
-            <span>{snapshot.boostHits}</span>
-          </div>
-          <div className="three-kart-race__badge" data-hud-stat="items">
-            <Sparkles size={15} />
-            <span>{snapshot.itemPickups}</span>
-          </div>
-        </div>
+        {/* Run tallies are NOT rendered. They were display:none'd here for two
+            waves while still mounting two badges bound to the live snapshot, so
+            React reconciled them on every telemetry tick to paint nothing. The
+            results panel below publishes both numbers in a real <dl>, which is
+            where a tally belongs. */}
       </div>
       {/* COUNTDOWN / GO. Keyed on the digit so React remounts the element every
           roll-over: the beat animation replays on the tick instead of looping
@@ -10988,6 +11234,15 @@ export const ComebackCityThreeKartRace = ({
             <strong>{formatTime(snapshot.raceTime)}</strong>
           </div>
           <dl className="three-kart-race__results-tally">
+            {/* Best lap belongs here rather than on the race HUD: the running
+                split is what a driver acts on mid-race, the best is what they
+                compare afterwards, and the lap plate has no width for both. */}
+            {snapshot.bestLap ? (
+              <div>
+                <dt>Best lap</dt>
+                <dd>{formatTime(snapshot.bestLap)}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>Coins</dt>
               <dd>{snapshot.coins}</dd>

@@ -55,11 +55,24 @@ import { createAdaptiveRenderScale, raceQuality } from './createRaceScene.js';
 // device this game is actually played on.
 //
 // DESKTOP (mobile === false)
-//   pays   4x MSAA on the scene pass, SMAA HIGH as its own trailing pass, both
+//   pays   2x MSAA on the scene pass, SMAA HIGH as its own trailing pass, both
 //          bloom lobes (wide veil + tight emitter core), 6 mip levels, LUT with
 //          tetrahedral interpolation, grain at 0.03, the full 0.034uv streak.
 //   holds  the full art direction, and now climbs toward native resolution on
 //          hardware that can hold the vblank (see the ladder in createRaceScene).
+//
+//   ROUND 1 CORRECTION: this tier shipped at 4x and the capture manifest caught
+//   it — frameWorkMs 1.81 -> 3.03-6.03 (CC) and 2.93 -> 5.40-7.43 (PV) with
+//   draw calls DOWN (383 -> 366-371, 707 -> 694-703) and triangles flat, i.e.
+//   the new cost is per-PIXEL, and 4x on an RGBA16F scene target is the only
+//   per-pixel thing this tier added. Worst frameElapsed was 14.27 ms against a
+//   16.7 ms budget: 2.4 ms of headroom on the REFERENCE machine, which is not a
+//   tier, it is a coin flip. 2x halves the sample store and the resolve traffic
+//   and keeps the thing MSAA is actually here for (see the note at the setter),
+//   and the sample count is now the FIRST rung the adaptive controller sheds,
+//   so a machine that still misses the vblank loses edge coverage before it
+//   loses resolution. The top tier is now a tier that was chosen; it used to be
+//   whatever the driver's maxSamples happened to be.
 //
 // PHONE (mobile === true — sourced from touchControls, NOT from the aspect
 //        test, because the race soft-locks phones to landscape and the aspect
@@ -95,6 +108,50 @@ import { createAdaptiveRenderScale, raceQuality } from './createRaceScene.js';
 //   identical as a separate pass because it is a CONVOLUTION with BlendFunction
 //   .SRC sitting FIRST in the grade pass: it re-taps inputBuffer and replaces
 //   the colour, so nothing upstream of it in that pass was reaching it anyway.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// ROUND 1: WHY THE COMEBACK CITY CONTRAST REGRESSION IS NOT IN THIS FILE.
+//
+// The wave6-r1 artefact critic filed two blockers against this module — "the CC
+// display transform clips at both ends" and "the Miami neon trim is gone" — on
+// the reasoning that nothing else in the display path changed this wave. The
+// first half of that is measured and correct; the attribution is not, and the
+// disproof is cheap enough that it belongs here rather than in a handoff.
+//
+// The regression is real. Measured over tmp/aaa-visual/wave5-r3 vs wave6-r1,
+// every 2nd pixel, HUD excluded:
+//   CC pixels at R=255      0.6-18.4%  ->  18.5-30.2%
+//   CC pixels at luma < 16  0.1-6.2%   ->   5.3-27.8%
+//   CC road asphalt, modal colour of a near-field patch, i.e. one flat material
+//   at one distance:        (50,46,70) / (58,50,66)  ->  (22,18,54) / (26,18,50)
+//   CC sky, modal colour of the top band:  (246,126,70) -> (254,166,38)
+// Both ends of the curve moved on a flat interior surface, so this is not
+// framing and it is not MSAA — MSAA can only touch pixels on an edge.
+//
+// But it is COMEBACK CITY ONLY. On the one mark where the two waves' cameras
+// land in the same place (penguin-village p0_06) the frames are the same image:
+// mean |delta| per channel 5.66 / 4.42 / 3.65 counts over 81k flat-neighbourhood
+// samples, versus 23.19 / 15.43 / 12.72 for the closest transfer hypothesis
+// tested. PV's clip and crush fractions are unchanged across all nine marks.
+//
+// Every line of this chain is shared by both tracks. The only things it
+// parameterises on trackKey are buildTrackLut() and createAerialEffect(), and
+// neither raceGrade.js nor aerialEffect.js was touched this wave (both are
+// wave-5 files, verified by mtime). A change here cannot be track-selective, so
+// a change here cannot be the cause. The CC-scene files edited this wave are in
+// the monolith, which is where this belongs.
+//
+// Filed as evidence, not as a rebuttal for its own sake: putting a "shoulder"
+// into this chain to answer a CC-only measurement would apply it to Penguin
+// Village too, and PV is currently the clean track.
+//
+// One correction to the same report while it is in front of the next reader:
+// the "cyan pixel count below y=400" numbers do not support the neon-loss
+// blocker. Re-measured on the same frames the count moves BOTH ways between the
+// waves (cc-p0_45 1109 -> 6976, cc-p0_9 8060 -> 1942) because the wave-6 camera
+// frames different amounts of kerb neon at each mark. It is a content metric,
+// not a grade metric.
 // ---------------------------------------------------------------------------
 
 // Exposure is NOT 1.28. The audit asked for 1.05 -> 1.28 on the strength of
@@ -144,15 +201,38 @@ export const buildRacePostChain = ({
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.toneMappingExposure = RACE_EXPOSURE;
 
+  // Declared here rather than beside the update loop because applySamples below
+  // reads it and the adaptive controller can call that on its first commit.
+  let currentMobile = mobile;
+
   const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType });
   // MSAA on the scene pass, on top of SMAA. They are not redundant: MSAA fixes
   // GEOMETRY edges (the iceberg and skyline diagonals all three critics called
   // "amateur"), SMAA fixes shader edges MSAA cannot see — neon trim, specular,
   // the alpha-keyed backdrop silhouettes. Guarded by the driver's own limit so
-  // a device that cannot do 4x quietly does what it can.
+  // a device that cannot do 2x quietly does what it can.
+  //
+  // 2, not 4. The step from 0 -> 2 is what removes the staircase from a long
+  // diagonal; the step from 2 -> 4 moves the two intermediate coverage values
+  // to four and is worth a fraction of a value on a 45-degree edge — while
+  // costing another 2 samples of RGBA16F store and resolve bandwidth for every
+  // covered fragment in the frame. Round 1 measured that trade and it is not
+  // close (see the tier ledger above).
   const maxSamples = renderer.capabilities?.maxSamples ?? 0;
-  const desktopSamples = wantMsaa ? Math.min(4, maxSamples) : 0;
-  if (!mobile && desktopSamples > 0) composer.multisampling = desktopSamples;
+  const desktopSamples = wantMsaa ? Math.min(2, maxSamples) : 0;
+  // Single writer for composer.multisampling. Crossing zero makes
+  // postprocessing REPLACE both composer buffers rather than resize them
+  // (EffectComposer's setter), so this is the one place that is allowed to
+  // touch it and it refuses a write that would not change anything.
+  const applySamples = (count) => {
+    const next = currentMobile ? 0 : Math.max(0, Math.min(desktopSamples, count));
+    if (composer.multisampling === next) return;
+    composer.multisampling = next;
+  };
+  // Through the same writer, so the construction value and every later tier or
+  // ladder move go down one path. (applySamples clamps on currentMobile, which
+  // is `mobile` at this point, so a phone chain lands on 0 here.)
+  applySamples(desktopSamples);
   composer.addPass(new RenderPass(scene, camera));
 
   const passes = [];
@@ -284,18 +364,32 @@ export const buildRacePostChain = ({
   // The composer assigns renderToScreen to the LAST pass in the array once, at
   // addPass time — it never re-derives it. So any tier switch that disables a
   // trailing pass has to hand the flag back itself or the frame goes nowhere.
+  //
+  // WRITE ONLY ON A REAL CHANGE, and this is not style. postprocessing's
+  // `set renderToScreen` sets `fullscreenMaterial.needsUpdate = true` on every
+  // assignment that flips the flag, and three answers needsUpdate by DISPOSING
+  // the program and compiling a new one. The previous version cleared the flag
+  // on every pass and then set it again on the last one, so each call flipped
+  // the trailing pass twice and recompiled its material — and this runs from
+  // setSpeedBlurEnabled, i.e. on every boost START and every boost END. That is
+  // a full SMAA-HIGH program compile several times a lap, inside the race,
+  // which is exactly the mid-race `programs 46 -> 49` climb the round-1 artefact
+  // critic measured and precisely the wrong direction for a wave whose own
+  // headline is frame cost. Two passes over a 4-element array, zero writes in
+  // the overwhelmingly common case where the trailing pass has not moved.
   const retargetOutput = () => {
     let last = null;
     passes.forEach((pass) => {
-      pass.renderToScreen = false;
       if (pass.enabled) last = pass;
     });
-    if (last) last.renderToScreen = true;
+    passes.forEach((pass) => {
+      const wants = pass === last;
+      if (pass.renderToScreen !== wants) pass.renderToScreen = wants;
+    });
   };
   retargetOutput();
 
   let blurStrength = 0;
-  let currentMobile = mobile;
   // Keep the blur pass in the draw list for the first few frames so its program
   // compiles during the countdown instead of hitching on the first boost. Same
   // trick, and the same reason, as raceParticles' speedLineWarmup: the wave-5
@@ -330,7 +424,14 @@ export const buildRacePostChain = ({
     composer,
     enabled: wantAdaptiveRes,
     mobile,
+    // The controller decides the sample count; this chain writes it. Handing it
+    // the DESKTOP ceiling unconditionally (rather than 0 on a phone) is what
+    // lets a chain built inside a narrow portrait window reach MSAA after the
+    // orientation lock hands it a landscape one — applySamples clamps to 0
+    // whenever the live tier is mobile, so the two cannot disagree.
+    onSamples: applySamples,
     renderer,
+    samples: desktopSamples,
   });
 
   // The LOW POWER sub-tier, driven by the controller's second lever. It is read
@@ -382,7 +483,6 @@ export const buildRacePostChain = ({
       if (isMobile === currentMobile) return;
       currentMobile = isMobile;
       if (smaaPass) smaaPass.enabled = !isMobile;
-      composer.multisampling = isMobile ? 0 : desktopSamples;
       if (bloomWide) bloomWide.mipmapBlurPass.levels = lowPower ? 3 : isMobile ? 4 : 6;
       // NOTE, and it is the one thing in this file that is not free: setting a
       // pmndrs effect's blend opacity to 0 stops it COMPOSITING, not RUNNING —
@@ -399,7 +499,14 @@ export const buildRacePostChain = ({
       if (bloomTight) bloomTight.blendMode.opacity.value = isMobile ? 0 : 1;
       if (grain) grain.blendMode.opacity.value = lowPower ? 0 : isMobile ? 0.018 : 0.03;
       speedBlur?.setTier(isMobile);
+      // setTier re-opens (or collapses) the controller's sample ladder and
+      // commits, which calls applySamples for us — but only when the controller
+      // is ENABLED. Under automation and ?postAdaptiveRes=0 it is completely
+      // inert by design, so the tier's own sample count has to be written here
+      // or a portrait->landscape flip would leave the desktop chain at 0.
       resolution.setTier(isMobile);
+      const rung = resolution.readout();
+      applySamples(isMobile ? 0 : rung.enabled ? rung.samples : desktopSamples);
       retargetOutput();
     },
     // boost01: 0 while cruising, 1 at full mini-turbo/pad boost. Smoothed here

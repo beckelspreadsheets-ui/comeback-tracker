@@ -52,6 +52,20 @@ const START_RUNG = Object.freeze({ desktop: 3, mobile: 2 });
 // runs the other way round: the art comes back BEFORE the sharpness does.
 const EMISSION_LADDER = Object.freeze([0.5, 0.7, 1]);
 
+// The ZEROTH lever, added in wave 6 round 1 after the capture manifest measured
+// frameWorkMs 1.81 -> 3.03-6.03 (CC) and 2.93 -> 5.40-7.43 (PV) with draw calls
+// DOWN (383 -> 366-371, 707 -> 694-703) and triangles flat. Draws falling while
+// frame work doubles means the new cost is per-PIXEL, and the only per-pixel
+// thing wave 6 added is MSAA on an RGBA16F scene target.
+//
+// It sheds BEFORE resolution, which is the opposite of the emission lever and
+// deliberate: MSAA only touches GEOMETRY edges, and SMAA still runs after tone
+// mapping and catches those plus the shader edges MSAA cannot see. Losing it
+// costs a few percent of the frame's pixels; losing a resolution rung costs
+// every pixel. So the shed order is samples -> resolution -> emission, and
+// recovery is the exact reverse: emission -> resolution -> samples.
+const SAMPLE_FLOOR = 0;
+
 // The shared quality bus.
 //
 // Ownership note, because a module-level singleton is otherwise a smell: this
@@ -76,6 +90,9 @@ export const raceQuality = {
   managed: false,
   mobile: false,
   renderScale: null,
+  // MSAA sample count the controller has settled on. Advisory like the rest of
+  // the bus — the post chain is what actually writes composer.multisampling.
+  samples: 0,
 };
 
 const percentile = (sorted, q) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * q)))];
@@ -148,7 +165,14 @@ export const createAdaptiveRenderScale = ({
   enabled = true,
   mobile = false,
   nowRef = globalThis.performance,
+  // Called whenever the sample rung moves. The controller never touches the
+  // composer's multisampling itself: the post chain owns which pass set exists
+  // at which tier, so it owns the write and this is only the decision.
+  onSamples = null,
   renderer = null,
+  // Desktop MSAA ceiling, resolved by the caller against the driver's own
+  // maxSamples. 0 disables the lever entirely (phones never build it).
+  samples = 0,
   windowRef = globalThis.window,
 } = {}) => {
   const history = new Float32Array(HISTORY_FRAMES);
@@ -174,12 +198,40 @@ export const createAdaptiveRenderScale = ({
       : START_RUNG[mobileTier ? 'mobile' : 'desktop'];
   let emissionRung = EMISSION_LADDER.indexOf(bus.emissionScale) >= 0 ? EMISSION_LADDER.indexOf(bus.emissionScale) : EMISSION_LADDER.length - 1;
   let appliedDpr = 0;
+  // The sample ladder is two rungs, not a range: 2x and 4x cost within a few
+  // percent of each other on a tiler's resolve and differ by one sample's worth
+  // of coverage, so a middle rung would buy a buffer reallocation and nothing
+  // a player could see. Off or on is the whole decision.
+  // Resolved from the DESKTOP ceiling the caller passes, not from the tier this
+  // controller happened to be constructed in: a chain built inside a narrow
+  // portrait window that later widens has to be able to reach MSAA.
+  const sampleCeiling = Math.max(0, Math.round(samples));
+  let sampleLadder = !mobileTier && sampleCeiling > 0 ? [SAMPLE_FLOOR, sampleCeiling] : [SAMPLE_FLOOR];
+  // Deliberately NOT resumed from the bus the way renderScale and emissionScale
+  // are. Those two carry a null/known-value sentinel that separates "never
+  // measured" from "measured at the floor"; a sample count of 0 is both, and a
+  // fresh desktop chain reading the bus's initial 0 would start every session
+  // with MSAA off. The cost of not resuming is one 2.5s warmup window of MSAA
+  // on a device that shed it last race, which the controller then sheds again.
+  let sampleRung = sampleLadder.length - 1;
+  // Its own fail memory, for the same reason the resolution ladder has one: a
+  // device sitting exactly on the boundary would otherwise raise samples, miss,
+  // shed them, wait out the cooldown and raise again forever — and each of
+  // those transitions crosses zero, which makes postprocessing REPLACE both
+  // composer buffers rather than resize them.
+  let sampleFailedAt = -1e6;
+  let sampleFailStreak = 0;
+  // What the caller has actually been told, so commit() can fire onSamples as
+  // an edge rather than a level. Seeded to the constructed rung because the
+  // post chain already wrote that value itself before building this.
+  let appliedSamples = sampleLadder[sampleRung];
 
   const publish = () => {
     bus.emissionScale = EMISSION_LADDER[emissionRung];
     bus.managed = true;
     bus.mobile = mobileTier;
     bus.renderScale = ladder[rung];
+    bus.samples = sampleLadder[sampleRung];
   };
 
   // Resolve and write the pixel ratio. Deliberately the same expression as
@@ -203,6 +255,15 @@ export const createAdaptiveRenderScale = ({
 
   const commit = () => {
     publish();
+    // Before the pixel ratio, deliberately: dropping samples is the cheaper of
+    // the two reallocations and the frame after a commit is discarded either
+    // way (see the ring reset below). Fired only when the rung actually moved,
+    // so the callback means "the sample count changed" and can be logged as an
+    // event rather than sampled as a level.
+    if (sampleLadder[sampleRung] !== appliedSamples) {
+      appliedSamples = sampleLadder[sampleRung];
+      onSamples?.(appliedSamples);
+    }
     applyToRenderer();
     lastChangeAt = elapsed;
     // The frames straight after a reallocation are not evidence of anything.
@@ -215,6 +276,17 @@ export const createAdaptiveRenderScale = ({
   };
 
   const shed = (hard) => {
+    // Samples first — see the SAMPLE_FLOOR note. A hard shed drops them AND
+    // takes a resolution step in the same commit, because a device that is 50%
+    // over budget does not get there on edge coverage alone.
+    if (sampleRung > 0) {
+      sampleFailStreak += 1;
+      sampleFailedAt = elapsed;
+      sampleRung = 0;
+      if (hard && rung > 0) rung -= 1;
+      commit();
+      return true;
+    }
     if (rung > 0) {
       // Same rung failing again = this device is not borderline, it is over.
       failStreak = rung === failedRung ? failStreak + 1 : 1;
@@ -240,6 +312,12 @@ export const createAdaptiveRenderScale = ({
         if (elapsed - failedAt < memory) return false;
       }
       rung += 1;
+    } else if (sampleRung < sampleLadder.length - 1) {
+      // Last thing back, mirroring the shed order. Same doubling memory as the
+      // resolution ladder.
+      const memory = Math.min(FAIL_MEMORY_MAX_S, FAIL_MEMORY_S * 2 ** Math.max(0, sampleFailStreak - 1));
+      if (sampleFailStreak > 0 && elapsed - sampleFailedAt < memory) return false;
+      sampleRung += 1;
     } else {
       return false;
     }
@@ -266,6 +344,7 @@ export const createAdaptiveRenderScale = ({
         mobile: mobileTier,
         renderScale: ladder[rung],
         rung,
+        samples: sampleLadder[sampleRung],
         warm: elapsed >= WARMUP_S,
       };
     },
@@ -359,6 +438,16 @@ export const createAdaptiveRenderScale = ({
       rung = Math.min(nearestRung(ladder, previousScale), START_RUNG[tierKey]);
       failedRung = -1;
       failStreak = 0;
+      // The phone tier has no MSAA at all, so the lever collapses to a single
+      // rung there and reopens on the way back. Coming back to desktop restores
+      // the ceiling rather than carrying the phone's 0 across — unlike the
+      // resolution ladder the two tiers do not overlap here, so there is no
+      // measurement to carry, and the desktop tier is BY DEFINITION the one
+      // that ships MSAA. If the device cannot hold it the very next evaluation
+      // window sheds it again, which is one reallocation, not a policy.
+      sampleLadder = mobileTier || sampleCeiling === 0 ? [SAMPLE_FLOOR] : [SAMPLE_FLOOR, sampleCeiling];
+      sampleRung = sampleLadder.length - 1;
+      sampleFailStreak = 0;
       // A tier flip changes the pass set (SMAA and MSAA come or go), so every
       // sample in the window was measured against a different renderer.
       elapsed = 0;
