@@ -1271,3 +1271,39 @@ export const arcProgressScaleFor = ({
 } = {}) =>
   laneArcScaleFor({ curvature, gain, lateralOffset, maxDeviation }) *
   weaveArcScaleFor({ lateralSpeed, maxWeaveRatio, speed });
+
+// ---------------------------------------------------------------------------
+// LANE UNITS ARE NOT METRES, AND THAT IS WHY A RIVAL SHIPPED ON THE KERB.
+//
+// The sampler places a body at `lane * widthAt(progress) * LANE_TO_HALF_WIDTH`
+// from the centreline, and 0.44 * width IS the drivable half-road (the same
+// number the track mesh's clear-radius pass uses for `widestHalfRoad`). So
+// lane +/-1 is exactly the road edge — for a POINT. A kart is not a point, and
+// every clamp in the sim is written as a bare lane constant (+/-0.95, +/-0.96),
+// which means the absolute margin between a body's outer edge and the road edge
+// is whatever the road happens to be wide at that station.
+//
+// Measured on the shipped tracks: at a 56-unit width the +/-0.96 rival clamp
+// puts the outer edge 2.2 units PAST the ribbon, which is comeback-city-p0_9 —
+// a rival with its outer half over the kerb, boost firing, and no off-road
+// penalty to explain it (rivals do not run the surface test the player does, so
+// nothing else in the frame says "that kart made a mistake").
+//
+// The clamp is exact when it is solved the other way round: the lane whose
+// world offset is (halfRoad - bodyHalfWidth). It TIGHTENS where the road
+// narrows, which is the behaviour the bare constant could not express.
+export const LANE_TO_HALF_WIDTH = 0.44;
+export const KART_BODY_HALF_WIDTH = 3.2;
+export const laneLimitFor = ({
+  bodyHalfWidth = KART_BODY_HALF_WIDTH,
+  laneScale = LANE_TO_HALF_WIDTH,
+  roadWidth = 0,
+} = {}) => {
+  const halfRoad = roadWidth * laneScale;
+  if (!(halfRoad > 0)) return 0;
+  // Never above 1: the authored lane domain is [-1, 1] and the AI, the surface
+  // bands and the width table all assume it. A road wide enough that the body
+  // fits with room to spare does not license a wider domain, it just means this
+  // clamp never bites there.
+  return clamp((halfRoad - bodyHalfWidth) / halfRoad, 0, 1);
+};

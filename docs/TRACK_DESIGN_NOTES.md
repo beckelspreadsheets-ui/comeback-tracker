@@ -23,10 +23,15 @@ driver experiences seconds.
 It runs on unregistered drafts too (`--file`), so a layout can be judged and
 rejected before anything is built from it.
 
-It also **gates**, rather than merely reporting: the curve maths is asserted
-against shipped ground truth (§3) and every road segment's value separation from
-its terrain is asserted against a measured frame (§7). Either one failing exits
-non-zero.
+It also **gates**, rather than merely reporting. Three assertions, any one of
+which exits non-zero:
+
+1. the curve maths against shipped ground truth (§3) — so the tool can be
+   trusted at all;
+2. every road segment's value separation from its terrain, against a measured
+   frame (§7) — *can the driver see where the road is?*;
+3. every corner's announcement against the chase camera's actual frustum (§8) —
+   *can the camera show the corner in time?*
 
 ---
 
@@ -40,11 +45,13 @@ node scripts/track-layout-preview.mjs --file tmp/my-draft.mjs      # unregistere
 node scripts/track-layout-preview.mjs --json-only                  # no browser
 node scripts/track-layout-preview.mjs --speed 300                  # what-if on mean speed
 node scripts/track-layout-preview.mjs --strict-contrast            # no kerb-only segments, no baselined debt
+node scripts/track-layout-preview.mjs --strict-sight               # every corner announced 1.5s ahead, not 0.8s
+node scripts/track-layout-preview.mjs --tier phone                 # sight through the phoneWide lens
 ```
 
 **The run exits non-zero** if the curve maths disagrees with shipped ground
-truth (§3) or if any road segment is illegible against its terrain (§7). Both
-are gates, not advice.
+truth (§3), if any road segment is illegible against its terrain (§7), or if any
+corner is blind to the chase camera (§8). All three are gates, not advice.
 
 Writes, per track: `<key>-layout.json` (diffable) and `<key>-plan.png` (the
 sheet). `--compare` writes `compare-<a>-vs-<b>.png` + `.json`.
@@ -194,6 +201,10 @@ bump's max slope is at its foot).
 | **red** road fill + `N% VALUE` | segment the driver cannot separate from the terrain — a new failure (§7) |
 | orange road fill + `N% VALUE` | same, but already baselined against a shipped track |
 | faint amber road tint | segment that reads only because of its painted kerb |
+| blue wedge + `pN.NN N.Ns` | the chase camera at one of the nine capture marks — where the eye is, how wide the lens is, and how far it can see (§8) |
+| **pink** wedge | same, but that mark is under the 0.6 s sight floor |
+| small blue dot | camera eye · **gold cross** the lead point it aims through |
+| violet road fill | road with less than 0.6 s of forward sight (§8) |
 
 `--compare` forces **one shared world-units-per-pixel across both canvases**, so
 relative size on that sheet is real — that is the entire reason for the mode.
@@ -265,6 +276,8 @@ is done:
 | kinks | **0** | the tool fails the sheet if any radius lands under 60 |
 | elevation | ≥1 climb, gradient ≤18% | 17–18% is the shipped, proven range |
 | **road vs terrain value** | **≥20% on every segment**, i.e. `--strict-contrast` passes | §7. Both shipped tracks fail this; authoring 4× more track without fixing it multiplies the defect by four |
+| **corner announcement** | **≥1.5 s on every corner**, i.e. `--strict-sight` passes | §8. 20 corners is 20 chances to author one the camera cannot show in time |
+| sight on the overtaking straight | **≥2.5 s** | you cannot set up a pass into road you cannot see |
 
 ### Penguin Village 4x
 
@@ -289,7 +302,10 @@ discover afterwards.
 1. Author waypoints + radii in a scratch module.
 2. `node scripts/track-layout-preview.mjs --file <draft> --speed 260`
 3. Read the sheet against the table above. Iterate. This costs seconds, and
-   nothing has been built yet.
+   nothing has been built yet. Read the **camera wedges and the forward-sight
+   chart** (§8) at this stage, not later: whether a corner can be seen in time
+   is decided by where it sits relative to the crest and the corner before it,
+   which is a centerline decision and nothing else.
 4. `--compare` the draft against the shipped track to keep scale honest.
 5. Once the layout is settled, author the palette and re-run with
    `--strict-contrast` (§7) — a road nobody can find is not something to
@@ -301,6 +317,14 @@ A sanity check that the targets are reachable: a 10-waypoint sketch with radii
 90–260 solves to 8,976 u / 34.5 s lap / 9 corners / **8.02 s longest straight**
 in one pass, with no kinks. The shape of the target is not exotic — the current
 tracks are simply small.
+
+The same is true of the sightline bars, which is worth stating because both
+shipped tracks currently fail them. A 9-waypoint 4x sketch (radii 90–240,
+10,401 u, 40 s lap) scores **2.39 s worst corner announcement and 3.21 s mean
+forward sight**, and passes `--strict-sight` with no adjustment at all. The
+shipped tracks are not blind because 0.8 s is a harsh bar; they are blind
+because at 2,400–2,900 u a corner is always sitting in the shadow of the corner
+or crest before it. Length is most of the cure.
 
 ---
 
@@ -421,3 +445,153 @@ and each entry carries the frame that proves it. Adding an entry is how you say
 reproduces the measured `pv-p0_33` verdict, and the run fails if the model ever
 starts calling that segment legible. If the tool and the pixels disagree, the
 tool is wrong.
+
+---
+
+## 8. The camera sightline gate
+
+### The failure it exists to stop
+
+Wave-6 blind-A/B, pair-15, 286 km/h: *"barely two road-widths of run-off, so a
+corner arriving would be unannounced."* Pair-03 and pair-07: *"the next corner
+is unreadable."* Those were filed against the **camera**, and the same round's
+rubric critic wrote the honest version of it:
+
+> Every camera blocker above is a corner where the layout and the chase rig
+> disagree. The previewer should draw the chase camera's lead point and frustum
+> along the spline, so the 4x track can be authored against what the camera will
+> actually show instead of being re-diagnosed from captures next wave.
+
+That is the whole section. A corner the camera cannot show in time is **not a
+camera bug** — no tuning puts road inside a frustum the road is not inside. It
+is a layout decision that was made without knowing where the lens would be, and
+it is about to be made 15–25 more times per track.
+
+### What it measures
+
+For every point of the lap the tool reconstructs the shipped rig's pose and
+walks the road forward from it, stopping at the first sample that is either
+outside the frame or hidden behind the road's own crest. That gives two numbers:
+
+- **forward sight** — seconds of road *continuously* visible from here;
+- **corner announcement** — how long a corner's **entry** has been continuously
+  in frame by the time you arrive at it. This is the number that matters. A
+  corner you glimpse, lose, and meet again at the apex has not been announced.
+
+Each finding also carries **why** the view ends, because the fix differs:
+
+| `hiddenBy` | meaning | the fix |
+|---|---|---|
+| `crest` | the road's own hump is in the way — the eye is still on the far side | move or flatten the crest, or move the corner off its shoulder |
+| `frame-side` | the corner is outside the lens's horizontal edge, usually because the *previous* corner is turning away from it | longer approach, or open the entry radius |
+| `frame-top` / `frame-bottom` | vertical framing — a drop or a climb takes the road out of shot | soften the gradient |
+| `horizon` | nothing is hiding it; you are simply at the fog/far-plane limit | nothing — this is the healthy answer |
+
+### The rig it mirrors
+
+| quantity | value | source |
+|---|---|---|
+| boom | 32 u (mobile 38, phoneWide 30) | `cameraBackUnits`, monolith |
+| eye height | 10.5 u (12.5 / 10) | `cameraHeight`, monolith |
+| vertical FOV | 60° (61 / 58) | `fovBase`, monolith |
+| lead point | 30 u ahead on the tangent (26 / 28) | `lookAhead`, monolith |
+| kart pinned at | **NDC y −0.22** | `FRAMING_DEFAULTS.anchorY`, `chaseCameraFeel.js` |
+| far plane | 860 u | `new THREE.PerspectiveCamera(66, 1, 1, 860)` |
+
+Two things make this a mirror rather than a guess:
+
+1. **The aim is a guarantee, not an emergent result.** The shipped rig does not
+   simply `lookAt()` the lead point — it then runs two passes of
+   `solveFramingCorrection` to put the kart's visual centre at NDC −0.22. So the
+   model reproduces the *guarantee*, which is exact, instead of a damped
+   `lookAt`, which is not. Cross-check: −0.22 predicts the hero at screen-y
+   **549** on a 900-px frame, and the wave6-r2 rubric critic's red-body
+   segmentation measured **464–602** across the nine Penguin Village marks.
+2. **Every constant above is re-read from source on every run**
+   (`CAMERA_MIRROR_CHECKS`). If the camera package moves the boom, the FOV or
+   the framing anchor, the run prints `THE CHASE RIG HAS MOVED — THESE NUMBERS
+   ARE STALE`, says which constant and what it is now, and the sheet carries the
+   warning. Mirrors rot silently; this one is not allowed to.
+
+**Default tier is `desktop`, and that is the conservative choice.** Sight is
+bounded by the *horizontal* half-angle, and the phone is not the narrower lens:
+desktop is vFOV 60 on 16:9 → **hFOV 91.4°**, phoneWide is vFOV 58 on 19.5:9 →
+**hFOV 100.3°**. A forced-landscape phone sees more road either side than a
+desktop does. `--tier phone` / `--tier mobile` are there for a specific
+question, not for the gate.
+
+### What the model does NOT include
+
+Rivals, props, buildings, the shield bubble, the FOV widening at speed and its
+boom compensation, the occlusion guard and lateral dodge, and the fact that a
+driver on the outside of a corner sees further into it than the racing line
+does. **Every one of the obstructions can only take road away from the frame,
+and the two lens terms only ever add.** Same one-sided contract as §7: a corner
+that fails here is blind with certainty; a corner that passes can still be
+spoiled by something standing in front of it.
+
+The one modelled occluder is the road surface itself, walked as an elevation
+profile (a sample is hidden if anything *nearer the eye* stands at a higher
+elevation angle). That is what catches the bridge. It only walks the receding
+part of the profile — where a hairpin brings the road back toward the eye,
+"nearer things hide farther things" stops being the right test and the frustum
+test carries it alone.
+
+### The bars
+
+| bar | value | meaning |
+|---|---|---|
+| **blind** (hard gate) | **0.8 s** of announcement | reaction to an unseen corner is ~0.25 s and the input that answers it needs the rest. Under this the corner is a coin flip, and track knowledge is the only thing that saves it |
+| **authoring** (`--strict-sight`) | **1.5 s** | one full read-choose-commit beat, with room for an item decision. The bar a *new* layout is authored to |
+| **sight floor** (reported) | 0.6 s of forward sight | flags where the camera is buried. Never gates on its own — a trough in the middle of a hairpin is a hairpin |
+
+### What the shipped tracks score
+
+| | worst announcement | blind corners | under the 1.5 s bar | worst forward sight |
+|---|---|---|---|---|
+| Comeback City | **0.44 s** (C4, the post-bridge sweeper) | 1 (crest) | 4 | 0.14 s |
+| Penguin Village | **0.50 s** (C4, second of the twin r88s) | 3 (2 frame-side, 1 crest) | 0 | 0.26 s |
+
+All four are baselined in `KNOWN_SIGHT_DEBT`, and each was checked against the
+pixels before it was written down. `cc-p0_45` is the clearest: at 277 km/h the
+road terminates at the bridge crest ~90 u ahead with nothing beyond it, the
+model gives that mark 0.34 s of forward sight, and the blind-A/B judge — working
+from the frames alone, with no access to this tool — filed the same thing as
+*"the next corner is unreadable"*. Two independent methods, one fault.
+
+### Reading it on the sheet
+
+- **Blue wedges on the plan** are the chase camera at the capture harness's own
+  nine marks (`p0.06 … p0.9`), so a wedge and the frame of the same name in
+  `tmp/aaa-visual/<wave>/` are one document read two ways. The wedge is clipped
+  to what the camera can actually *see*, and then clipped again to the 0.6 s
+  sight floor for legibility — **full length means at or over the floor, short
+  means under it**, and the label carries the real number. (At 91° a wedge is as
+  wide as it is deep; nine at full 860 u reach were larger than the track.)
+- **Gold cross** is the lead point the rig aims through.
+- **Violet road fill** is road under the sight floor. It is deliberately a
+  different hue family from §7's red/orange/yellow: both are legibility faults,
+  but one is fixed in the palette and one in the layout.
+- **The forward-sight chart** sits directly above the elevation chart on
+  purpose. Every trough in it is either a hump in the one below or a corner
+  turning the road out of the lens.
+
+### Targets for the 4x layouts
+
+Add to the §6 tables, for both tracks:
+
+| target | value | why |
+|---|---|---|
+| corner announcement | **≥1.5 s on every corner**, i.e. `--strict-sight` passes | 15–25 corners is 15–25 chances to author a blind one. The shipped tracks have four between them at ~4 corners each |
+| blind corners | **0** | a hard gate; a new one exits non-zero |
+| forward sight on the overtaking straight | **≥2.5 s** | you cannot set up a pass into road you cannot see |
+| crest placement | no corner entry within ~1.5 s *after* a crest | this is exactly what `cc-C4` is, and it is the one shipped fault both a critic and this model found independently |
+
+### Baselining
+
+`KNOWN_SIGHT_DEBT` keys corners as `C<n>@<startProgress>` and each entry carries
+the frame that proves it. Same rules as §7: entries print, count, and fail under
+`--strict-sight`; adding one is how you say "shipped, known, not this wave", not
+how you silence a new failure. Because the key carries the progress, editing a
+centerline drops the corner out of the baseline and it fails loudly — which is
+the safe direction.

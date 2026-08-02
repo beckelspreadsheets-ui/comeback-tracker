@@ -100,15 +100,30 @@
   top: calc(20px + env(safe-area-inset-top, 0px));
 }
 
-/* System control on top, then the two running counters. 10px gaps reproduce
-   the tuned 20 / 68 / 158 offsets the previous pass arrived at, but as one
-   rule instead of three absolute positions that had to be kept consistent by
-   hand every time a plate changed height. */
+/* The two running counters, and ONLY those. The mute button used to lead this
+   stack, which put a settings control on the anchor that means "live race
+   value" and gave it the same plate silhouette as the two chips under it —
+   three critics read it as a third, broken stat chip. It has its own anchor
+   now (--utility below); this corner is stats. 10px gaps reproduce the tuned
+   68 / 158 offsets the previous pass arrived at, but as one rule instead of
+   absolute positions kept consistent by hand. */
 .three-kart-race__corner--status {
   align-items: flex-end;
   flex-direction: column;
   gap: 10px;
   right: calc(20px + env(safe-area-inset-right, 0px));
+  top: calc(20px + env(safe-area-inset-top, 0px));
+}
+
+/* Utility anchor — system controls, outside all four stat corners.
+   Top-centre rather than tucked under one of them: the top edge of the frame
+   is sky on both tracks (the road never reaches it, which is what the framing
+   solver's vertical window guarantees), so a 38px chip there occludes nothing,
+   and being nowhere near a stat corner is the whole point of the move. */
+.three-kart-race__corner--utility {
+  justify-content: center;
+  left: 0;
+  right: 0;
   top: calc(20px + env(safe-area-inset-top, 0px));
 }
 
@@ -248,6 +263,32 @@
   -webkit-text-stroke: 4px rgba(6, 10, 18, 0.9);
 }
 
+/* Gap to the adjacent rival — the qualifier on the ordinal. Absolute so it can
+   never reflow the 162x108 box the 66px ordinal is tuned into, and parked on
+   the CAPTION line rather than beside the ordinal: at 66px "1ST" runs to within
+   a few pixels of the plate's right padding, so the only free width on this
+   plate is the caption's right end (the trophy plus "POSITION" spends ~87 of
+   136 inner px). Set well below the ordinal's weight — this is the number you
+   glance at, not the number you read.
+   Colour carries the sign so the glance works before the glyphs resolve:
+   gaining ground is the HUD cyan, losing it is a warm amber. Deliberately NOT
+   red/green — at PV's blue horizon and CC's orange sky a red-green pair is the
+   one axis that cannot hold on both tracks, and it is the pair colour-blind
+   players lose. */
+.three-kart-race__badge-gap {
+  color: var(--tkr-cyan);
+  font: 700 15px/1 var(--tkr-mono);
+  letter-spacing: 0.02em;
+  position: absolute;
+  right: 13px;
+  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.9), 0 2px 8px rgba(4, 7, 14, 0.65);
+  top: 12px;
+}
+
+.three-kart-race__badge-gap[data-gap-sign='down'] {
+  color: #ffbe63;
+}
+
 /* SPEED — bottom-left, second in the hierarchy.
    NO inset here. The plate is position:relative (see .three-kart-race__badge)
    and its corner group already owns the anchor: a `bottom`/`left` on a
@@ -281,10 +322,15 @@
   -webkit-text-stroke: 3px rgba(6, 10, 18, 0.88);
 }
 
-/* LAP + COINS — top-right column, matched width so they read as one stack. */
+/* LAP + COINS — top-right column, matched width so they read as one stack.
+   140, not 112: the split moved off the caption line and onto the value's
+   baseline as a real secondary number (see __badge-note), and 112 had 88px of
+   inner width against a 55px "1/3" — the split could only fit there by being
+   set at caption scale, which is exactly why it was unreadable. Both plates
+   grow together; a ragged column edge would cost more than the width does. */
 .three-kart-race__badge[data-hud-stat='lap'] {
   height: 82px;
-  width: 112px;
+  width: 140px;
 }
 
 .three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-label {
@@ -306,53 +352,72 @@
   -webkit-text-stroke: 2.5px rgba(6, 10, 18, 0.88);
 }
 
-/* Lap progress rail. The arc-length progress term landed this wave and nothing
+/* Lap progress rail. The arc-length progress term landed last round and nothing
    on screen was spending it: a player could read WHICH lap they were on and
-   never how far through it. Absolute, so the tuned 112x82 plate keeps its box;
-   scaleX on a fill rather than a width so the update is a compositor transform
-   and never a layout on a canvas that repaints every frame. */
+   never how far through it. Absolute, so the tuned plate keeps its box; scaleX
+   on a fill rather than a width so the update is a compositor transform and
+   never a layout on a canvas that repaints every frame.
+
+   ROUND 3 MAKES IT A GAUGE INSTEAD OF A SEAM. Shipped at 3px with a barely
+   darker background and a cyan→gold fill, it measured as a ~2px near-white
+   hairline against the plate's own pale edge and every critic read it as a
+   rendering artefact rather than as an instrument. Three changes, all of them
+   about the same thing — a gauge is a RECESS with something bright in it:
+     * the track is genuinely dark (0.78 alpha over the plate) and carries an
+       inner top shadow, so it reads as cut into the plate;
+     * the fill is the HUD's accent gold, flat. The old gradient spent its left
+       half in cyan, which is the plate's own rim colour, so the first third of
+       every lap was invisible by construction;
+     * 5px, not 3. At 3px a 1px rounding on a fractional device pixel is a third
+       of the bar.
+   Insets are symmetric now (12/12). They were 14 left / 12 right, which put the
+   fill 2px short of where the eye expects 100% to land. */
 .three-kart-race__badge-rail {
-  background: rgba(6, 10, 18, 0.55);
-  border-radius: 2px;
+  background: rgba(3, 6, 13, 0.78);
+  border-radius: 3px;
   bottom: 6px;
-  box-shadow: inset 0 0 0 1px rgba(126, 239, 255, 0.12);
-  height: 3px;
-  left: 14px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(126, 239, 255, 0.1);
+  height: 5px;
+  left: 12px;
   overflow: hidden;
   position: absolute;
   right: 12px;
 }
 
 .three-kart-race__badge-rail-fill {
-  background: linear-gradient(90deg, var(--tkr-cyan), var(--tkr-gold));
+  background: var(--tkr-gold);
+  box-shadow: 0 0 8px rgba(255, 211, 79, 0.45);
   display: block;
   height: 100%;
   transform-origin: left center;
   width: 100%;
 }
 
-/* Running split — parked in the caption line's empty right end. "LAP" is ~22px
-   of the 62px available beside the 16px flag, so the split has room; the JSX
-   drops it entirely on the final lap, when the caption grows to "FINAL LAP" and
-   claims that space. Absolute, so it can never reflow the plate.
-   top: 20px puts it on the caption's baseline band — 8px plate padding, 4px of
-   align-content centring (57px of content in a 65px box), then the caption sits
-   flush to the bottom of the 16px flag's line. */
+/* Running split — a real secondary value, not a caption.
+   It shipped at 8px mono parked in the caption line's empty right end, and at
+   1600x900 that is illegible; on a phone it was already display:none'd, so the
+   markup weight was buying nothing anywhere. It sits on the VALUE's baseline
+   now at 15px — the same family as the coins value, one step down in size — in
+   the width the plate gained for it. Still absolute, so it can never reflow the
+   plate, and still dropped by the JSX on the final lap when the caption grows
+   to "FINAL LAP" and claims the top line.
+   bottom: 17px clears the 5px rail plus its 6px inset with a 6px breath. */
 .three-kart-race__badge-note {
-  color: rgba(242, 247, 255, 0.78);
-  font: 700 8px/1 var(--tkr-mono);
-  letter-spacing: 0.04em;
+  color: rgba(242, 247, 255, 0.9);
+  font: 700 15px/1 var(--tkr-mono);
+  letter-spacing: 0.01em;
+  bottom: 17px;
   position: absolute;
   right: 12px;
-  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.85);
-  top: 20px;
+  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.9), 0 2px 8px rgba(4, 7, 14, 0.6);
 }
 
 .three-kart-race__badge[data-hud-stat='coins'] {
   --tkr-accent-a: var(--tkr-gold);
   --tkr-accent-b: rgba(255, 211, 79, 0.2);
   height: 72px;
-  width: 112px;
+  /* Matched to LAP so the stack keeps one right-hand edge. */
+  width: 140px;
   /* Restart trick: React only changes data-coins, and a changing
      animation-name is the one thing CSS can hang a re-trigger on. Odd/even
      rules below flip between two identical keyframes so every pickup pops. */
@@ -1220,17 +1285,21 @@
     -webkit-text-stroke: 1.5px rgba(6, 10, 18, 0.8);
   }
 
-  /* The rail survives the collapse — it is 3px of the only "how far through the
-     lap" cue there is. The split does not: 8px mono in a 66px plate that is
-     already carrying a caption and a value is a smudge, and the phone player is
-     reading the road. */
+  /* The rail survives the collapse — it is the only "how far through the lap"
+     cue there is. Insets symmetric here too (they were 10/8), and 4px rather
+     than the desktop 5 because the plate it sits in is 46px tall, not 82.
+     The split does NOT survive: even at its new 15px it would be a third of a
+     66px plate that is already carrying a caption and a value, and the phone
+     player is reading the road. Same for the position gap. */
   .three-kart-race__badge-rail {
     bottom: 4px;
-    left: 10px;
+    height: 4px;
+    left: 8px;
     right: 8px;
   }
 
-  .three-kart-race__badge-note {
+  .three-kart-race__badge-note,
+  .three-kart-race__badge-gap {
     display: none;
   }
 

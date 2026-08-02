@@ -675,6 +675,545 @@ const analyseSurfaceContrast = (trackDef) => {
 };
 
 // ---------------------------------------------------------------------------
+// CAMERA SIGHTLINE — "what will the chase camera actually SHOW here?"
+//
+// Why this is in a LAYOUT tool, and it is the wave-6 finding verbatim: "every
+// camera blocker is a corner where the layout and the chase rig disagree... the
+// previewer should draw the chase camera's lead point and frustum along the
+// spline, so the 4x track can be authored against what the camera will actually
+// show instead of being re-diagnosed from captures next wave."
+//
+// The failure this exists to stop is NOT a camera bug. wave6-r2 pair-15 is a
+// 286 km/h frame with "barely two road-widths of run-off, so a corner arriving
+// would be unannounced". That is a LAYOUT fault: a corner was authored at a
+// place where the rig, aimed the way the rig is aimed, cannot show it in time.
+// No camera tuning fixes it, because the road is not in the frustum yet. The
+// only cheap fix is to author the corner somewhere the camera can see it — and
+// that decision has to be makeable BEFORE the track exists, which is here.
+//
+// The model is a plan-and-profile viewshed, not a renderer. It answers one
+// question per point of the lap: walking forward from here, how much road stays
+// simultaneously inside the frustum and unblocked by the road's own crests?
+// Everything it does NOT model (rivals, props, buildings, fog banks, the shield
+// bubble, the framing solve's residual) can only ever REMOVE road from the
+// frame, never add it. So a segment that fails here is definitely blind; a
+// segment that passes here can still be spoiled by something in front of it.
+// Same one-sided contract as the contrast gate above. See TRACK_DESIGN_NOTES §8.
+// ---------------------------------------------------------------------------
+
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+const degToRad = (deg) => (deg * Math.PI) / 180;
+
+// The rig, mirrored. Every number here is a SHIPPED value and every one is
+// re-read from source at run time by verifyCameraMirror() below, because the
+// camera package edits these files and a previewer quoting last month's rig is
+// worse than no previewer.
+//
+// Tier choice matters and the DEFAULT IS THE WORST CASE, deliberately. Sight is
+// bounded by the HORIZONTAL half-angle, and a phone is not the narrowest lens:
+// desktop composes at vFOV 60 on 16:9 -> tan(h/2) = 1.026 -> hFOV 91.4 degrees,
+// where the phone's vFOV 58 on 19.5:9 -> hFOV 100.3. Widescreen phone sees MORE
+// road laterally than a desktop does. So gating on desktop gates on the tier
+// that hides a corner first.
+const CAMERA_TIERS = {
+  // aspect: the capture harness's own viewport, 1600x900 (capture-manifest.json).
+  desktop: { boom: 32, eye: 10.5, fov: 60, lookAhead: 30, aspect: 16 / 9, label: 'desktop 1600x900' },
+  mobile: { boom: 38, eye: 12.5, fov: 61, lookAhead: 26, aspect: 16 / 9, label: 'tablet / non-wide mobile' },
+  phone: { boom: 30, eye: 10, fov: 58, lookAhead: 28, aspect: 19.5 / 9, label: 'phoneWide (forced landscape)' },
+};
+
+// FOV widening (fovSpeedGain 7.5 + fovBoost 5.5 + fovMiniTurbo 4, clamped to
+// +11 by fovMaxWiden) is NOT modelled, and that is the safe direction: a wider
+// lens can only put MORE road on screen. The boom shortens to compensate
+// (fovCompensation), which moves the eye closer to the kart and costs a little
+// of the far view, but the net at +11 degrees is more visible road, not less.
+// Gate on the base lens and the widened lens is a bonus.
+const CAMERA_NEAR = 1; // new THREE.PerspectiveCamera(66, 1, 1, 860)
+const CAMERA_FAR = 860;
+// Where the rig PINS the kart: FRAMING_DEFAULTS.anchorY in chaseCameraFeel.js.
+// This is the whole reason the model can be trusted about pitch. The shipped
+// camera does not simply lookAt() a lead point — it then runs two passes of
+// solveFramingCorrection to put the kart's visual centre at NDC y -0.22, so the
+// aim is a GUARANTEE rather than an emergent result, and reproducing the
+// guarantee is exact where reproducing a damped lookAt would not be.
+const FRAMING_ANCHOR_Y = -0.22;
+const KART_SUBJECT_CENTRE = 3.4; // CHASE_SUBJECT_CENTRE — kart visual centre above the road point
+// Road that is technically inside the frustum but jammed against the frame edge
+// is not an announcement — it is a thing you notice after you have already
+// turned. The margin is FRAMING_DEFAULTS.edgePad (0.07) rounded down.
+const SIGHT_EDGE_PAD = 0.06;
+// Fog. FogExp2, so transmittance is exp(-(d*density)^2). 0.25 is where a road
+// has lost three quarters of its contrast against the haze and stops being
+// something you can read a corner's direction from. At the shipped 0.0013 this
+// solves to 906 units, i.e. the 860 far plane binds first on BOTH tracks — but
+// it binds immediately if a 4x layout authors thicker fog to hide its distance.
+const FOG_READ_FLOOR = 0.25;
+
+// THE BARS.
+//
+// blind (hard gate): 0.8 s. Reaction to a corner you have not seen is ~0.25 s,
+// and the input that answers it — lift, hop, set the drift — needs the rest.
+// Under 0.8 s the corner is not a decision, it is a coin flip, and no amount of
+// track knowledge helps a first-time player.
+//
+// authoring (--strict-sight): 1.5 s. One full read-choose-commit beat, and the
+// bar a NEW layout should be authored to. The shipped tracks are not expected
+// to clear it everywhere — same relationship --strict-contrast has to the
+// contrast gate.
+const SIGHT_BLIND_SECONDS = 0.8;
+const SIGHT_AUTHORING_SECONDS = 1.5;
+// Forward sight is reported separately from corner announcement because they
+// fail differently: a low sight FLOOR is a place the camera is buried (a crest,
+// a wall of a hairpin), a low ANNOUNCEMENT is a corner that arrives unread.
+const SIGHT_FLOOR_SECONDS = 0.6;
+
+// Sight-line samples every other geometry sample (~4 units at SAMPLE_STEP 2).
+// Finer than the ~2.5 units a kart covers in one 60 fps frame at race speed, so
+// nothing the driver could act on falls between samples.
+const SIGHT_STRIDE = 2;
+
+// Marks the plan view draws a frustum wedge at. These are the CAPTURE harness's
+// nine points, so a wedge on the plan can be held against the frame of the same
+// name in tmp/aaa-visual/<wave>/ and the two read as one document.
+const SIGHT_MARKS = [0.06, 0.15, 0.24, 0.33, 0.45, 0.56, 0.67, 0.78, 0.9];
+
+// Corners that are ALREADY blind on a shipped track. Same lint-baseline shape,
+// and the same rules, as KNOWN_CONTRAST_DEBT: they print, they count, they fail
+// under --strict-sight, and they do not turn an unrelated preview red.
+//
+// Each entry was checked against the pixels before it was written down — a
+// baseline nobody verified is just a way of silencing the tool. The keys carry
+// the corner's progress, so a centerline edit that moves a corner drops it out
+// of the baseline and it fails loudly, which is the safe direction.
+const KNOWN_SIGHT_DEBT = {
+  'comeback-city': {
+    'C4@0.532':
+      'the bridge crest. cc-p0_45 (progress 0.446, 277 km/h) shows the road terminating at the crest ~90u ahead with nothing beyond it; the model gives that mark 0.34s of forward sight and the corner 0.44s of announcement. Same fault the blind-A/B judge filed as "the next corner is unreadable".',
+  },
+  'penguin-village': {
+    'C3@0.383':
+      'first of the twin r88 corners: its entry sits outside the right frame edge until the previous left has been taken. pv-p0_33 is the frame — the road ahead leaves the lens and the value collapse in the same frame removes the only other cue.',
+    'C4@0.450':
+      'second of the twin r88 corners. pv-p0_45 is captured AT the entry and the road ahead bends out of frame right within ~120u.',
+    'C5@0.678':
+      'crest-hidden sweeper on the far side of the ice ramp; 0.51s of announcement against a 0.8s bar.',
+  },
+};
+
+// Ground truth for the AIM, measured off the shipped frames rather than assumed:
+// the rubric critic's red-body segmentation of the nine wave6-r2 Penguin Village
+// marks put the hero kart's vertical centre at 464-602 px on a 900 px frame.
+// The model's aim convention (subject pinned at NDC y -0.22) predicts
+// (1 - (-0.22)) / 2 * 900 = 549. If a future edit moves the anchor somewhere
+// that no longer lands in the measured band, the pitch of every sight cone here
+// is wrong and the tool says so instead of quietly reporting fiction.
+const AIM_GROUND_TRUTH = {
+  frameHeight: 900,
+  measuredSubjectYRange: [464, 602],
+  source: 'wave6-r2 rubric critic, red-body segmentation across the 9 penguin-village marks',
+};
+
+// Constants re-read from the shipped source. `pattern` must capture the number
+// in group 1 (or 1..3 for the phoneWide/mobile/desktop ternaries, in that
+// order). A MISS (pattern no longer matches) is reported as unverified; a
+// MISMATCH is reported as stale and shouts, because it means the rig moved.
+const CAMERA_MIRROR_CHECKS = [
+  {
+    key: 'boom',
+    file: 'src/game/ComebackCityThreeKartRace.jsx',
+    pattern: /cameraBackUnits\s*=[\s\S]{0,120}?phoneWide \? ([\d.]+) : viewport\.mobile \? ([\d.]+) : ([\d.]+)/,
+    expect: [CAMERA_TIERS.phone.boom, CAMERA_TIERS.mobile.boom, CAMERA_TIERS.desktop.boom],
+  },
+  {
+    key: 'eye',
+    file: 'src/game/ComebackCityThreeKartRace.jsx',
+    pattern: /cameraHeight\s*=[\s\S]{0,160}?phoneWide \? ([\d.]+) : viewport\.mobile \? ([\d.]+) : ([\d.]+)/,
+    expect: [CAMERA_TIERS.phone.eye, CAMERA_TIERS.mobile.eye, CAMERA_TIERS.desktop.eye],
+  },
+  {
+    key: 'fovBase',
+    file: 'src/game/ComebackCityThreeKartRace.jsx',
+    pattern: /fovBase: phoneWide \? ([\d.]+) : viewport\.mobile \? ([\d.]+) : ([\d.]+)/,
+    expect: [CAMERA_TIERS.phone.fov, CAMERA_TIERS.mobile.fov, CAMERA_TIERS.desktop.fov],
+  },
+  {
+    key: 'lookAhead',
+    file: 'src/game/ComebackCityThreeKartRace.jsx',
+    pattern: /lookAhead[\s\S]{0,140}?phoneWide \? ([\d.]+) : viewport\.mobile \? ([\d.]+) : ([\d.]+)/,
+    expect: [CAMERA_TIERS.phone.lookAhead, CAMERA_TIERS.mobile.lookAhead, CAMERA_TIERS.desktop.lookAhead],
+  },
+  {
+    key: 'subjectCentre',
+    file: 'src/game/ComebackCityThreeKartRace.jsx',
+    pattern: /const CHASE_SUBJECT_CENTRE = ([\d.]+)/,
+    expect: [KART_SUBJECT_CENTRE],
+  },
+  {
+    key: 'farPlane',
+    file: 'src/game/ComebackCityThreeKartRace.jsx',
+    pattern: /new THREE\.PerspectiveCamera\([\d.]+, [\d.]+, [\d.]+, ([\d.]+)\)/,
+    expect: [CAMERA_FAR],
+  },
+  {
+    key: 'anchorY',
+    file: 'src/game/race/camera/chaseCameraFeel.js',
+    pattern: /anchorY: (-?[\d.]+)/,
+    expect: [FRAMING_ANCHOR_Y],
+  },
+];
+
+const verifyCameraMirror = () => {
+  const results = CAMERA_MIRROR_CHECKS.map((check) => {
+    const path = resolve(ROOT, check.file);
+    if (!existsSync(path)) return { key: check.key, state: 'unverified', note: `${check.file} not found` };
+    const match = check.pattern.exec(readFileSync(path, 'utf8'));
+    if (!match) return { key: check.key, state: 'unverified', note: `pattern no longer matches in ${check.file}` };
+    const found = check.expect.map((_, index) => Number(match[index + 1]));
+    const agrees = found.every((value, index) => Math.abs(value - check.expect[index]) < 1e-6);
+    return {
+      key: check.key,
+      state: agrees ? 'verified' : 'stale',
+      expected: check.expect,
+      found,
+      note: agrees ? null : `${check.file} now says ${found.join('/')}, this tool mirrors ${check.expect.join('/')}`,
+    };
+  });
+  return {
+    checks: results,
+    verified: results.filter((row) => row.state === 'verified').length,
+    stale: results.filter((row) => row.state === 'stale'),
+    unverified: results.filter((row) => row.state === 'unverified'),
+    // Only STALE invalidates the numbers. An unverified check means the source
+    // was restructured, which is a prompt to re-read it, not proof of drift.
+    pass: results.every((row) => row.state !== 'stale'),
+  };
+};
+
+// The rig's pose at one point of the lap, reproduced from the shipped
+// arithmetic rather than approximated:
+//   eye XZ  = kart + boomDir * boom, where boomDir is the SHIPPED blend of the
+//             kart's trailing heading with the direction of the spline anchor
+//             one boom-length back (monolith ~L10300: anchorWeight = 0.65 *
+//             clamp(dot)). That blend is why the eye sits INSIDE a corner arc,
+//             which is exactly what decides whether the exit is in frame.
+//   eye Y   = the road's height AT THE ANCHOR + eye height. Not the kart's
+//             height: the shipped boom takes its Y from cameraSample, which is
+//             what makes a crest blind — the eye is still down the far side.
+//   aim     = whatever puts the kart's visual centre at NDC (0, -0.22).
+const cameraPoseAt = (sampler, progress, tier) => {
+  const player = sampler.pointAt(progress, 0);
+  const boomProgress = wrap01(progress - tier.boom / sampler.length);
+  const anchor = sampler.pointAt(boomProgress, 0);
+  const tangent3 = sampler.curve.getTangentAt(wrap01(progress));
+  const tangentLength = Math.hypot(tangent3.x, tangent3.z) || 1;
+  const tangent = { x: tangent3.x / tangentLength, z: tangent3.z / tangentLength };
+
+  let anchorX = anchor.x - player.x;
+  let anchorZ = anchor.z - player.z;
+  const anchorLength = Math.hypot(anchorX, anchorZ) || 1;
+  anchorX /= anchorLength;
+  anchorZ /= anchorLength;
+  const trailX = -tangent.x;
+  const trailZ = -tangent.z;
+  const anchorWeight = 0.65 * clamp(trailX * anchorX + trailZ * anchorZ, 0, 1);
+  let boomX = trailX + (anchorX - trailX) * anchorWeight;
+  let boomZ = trailZ + (anchorZ - trailZ) * anchorWeight;
+  const boomLength = Math.hypot(boomX, boomZ) || 1;
+  boomX /= boomLength;
+  boomZ /= boomLength;
+
+  const eye = {
+    x: player.x + boomX * tier.boom,
+    y: anchor.y + tier.eye,
+    z: player.z + boomZ * tier.boom,
+  };
+  const tanHalfV = Math.tan(degToRad(tier.fov) * 0.5);
+  const subjectY = player.y + KART_SUBJECT_CENTRE;
+  const toSubjectX = player.x - eye.x;
+  const toSubjectZ = player.z - eye.z;
+  const flat = Math.hypot(toSubjectX, toSubjectZ) || 1e-6;
+  const fx = toSubjectX / flat;
+  const fz = toSubjectZ / flat;
+  // Pitch the axis ABOVE the kart by the angle that lands the kart at anchorY.
+  const pitch = Math.atan2(subjectY - eye.y, flat) + Math.atan(Math.abs(FRAMING_ANCHOR_Y) * tanHalfV);
+  const cosPitch = Math.cos(pitch);
+  const sinPitch = Math.sin(pitch);
+  return {
+    eye,
+    player,
+    tangent,
+    forward: { x: fx * cosPitch, y: sinPitch, z: fz * cosPitch },
+    // right = forward x worldUp, up = right x forward. Roll is 0: the shipped
+    // rig never rolls the lens (drift is expressed in yaw and in the framing
+    // anchor), so the basis is exact rather than approximate.
+    right: { x: -fz, y: 0, z: fx },
+    up: { x: -fx * sinPitch, y: cosPitch, z: -fz * sinPitch },
+    tanHalfV,
+    tanHalfH: tanHalfV * tier.aspect,
+    // The lead point the rig aims THROUGH before the framing solve. Drawn on
+    // the plan because it is where the composition says the driver is looking,
+    // and a corner that arrives before the lead point does is a corner the shot
+    // is not composed for.
+    lead: {
+      x: player.x + tangent.x * tier.lookAhead,
+      z: player.z + tangent.z * tier.lookAhead,
+    },
+  };
+};
+
+// NDC of a world point in that pose. Returns null behind the near plane.
+const projectToNdc = (pose, point) => {
+  const vx = point.x - pose.eye.x;
+  const vy = point.y - pose.eye.y;
+  const vz = point.z - pose.eye.z;
+  const depth = vx * pose.forward.x + vy * pose.forward.y + vz * pose.forward.z;
+  if (depth <= CAMERA_NEAR) return null;
+  return {
+    depth,
+    x: (vx * pose.right.x + vz * pose.right.z) / (depth * pose.tanHalfH),
+    y: (vx * pose.up.x + vy * pose.up.y + vz * pose.up.z) / (depth * pose.tanHalfV),
+  };
+};
+
+const analyseSightline = (trackDef, sampler, geometry, meanSpeed, tierKey) => {
+  const tier = CAMERA_TIERS[tierKey] || CAMERA_TIERS.desktop;
+  const samples = geometry.samples;
+  const count = samples.length;
+  const ds = sampler.length / count;
+  const density = trackDef.palette?.fog?.density ?? 0.0013;
+  const fogLimitUnits = Math.sqrt(-Math.log(FOG_READ_FLOOR)) / density;
+  const horizonUnits = Math.min(CAMERA_FAR, fogLimitUnits);
+  const maxSteps = Math.max(1, Math.floor(horizonUnits / (ds * SIGHT_STRIDE)));
+
+  // Forward sight at every sample. The road ahead is walked in order and stops
+  // at the FIRST sample that is either outside the frustum or hidden behind the
+  // road's own crest — continuous visibility, not "visible somewhere ahead",
+  // because a corner that flickers back into frame has not been announced.
+  const sightSteps = new Array(count).fill(0);
+  // WHY the view ends, per sample. This is the difference between a finding an
+  // author can act on and a number they can only argue with: a corner hidden by
+  // a crest is fixed by moving the crest, a corner hidden by the frame edge is
+  // fixed by opening the radius or by moving the corner further down a straight.
+  const sightCause = new Array(count).fill('horizon');
+  const poses = new Array(count);
+  for (let index = 0; index < count; index += SIGHT_STRIDE) {
+    const pose = cameraPoseAt(sampler, samples[index].progress, tier);
+    poses[index] = pose;
+    // Viewshed along the profile: a point is hidden if anything NEARER to the
+    // eye stands at a higher elevation angle. On flat road the angle rises
+    // monotonically from the deck toward the horizon and nothing ever occludes;
+    // over a crest the far side drops below the crest's angle, which is the
+    // shipped bridge and the reason the model is a profile walk at all.
+    let crestAngle = -Infinity;
+    let lastFlat = 0;
+    let visibleSteps = 0;
+    let cause = 'horizon';
+    for (let step = 1; step <= maxSteps; step += 1) {
+      const ahead = samples[(index + step * SIGHT_STRIDE) % count];
+      const point = { x: ahead.x, y: ahead.y, z: ahead.z };
+      const flat = Math.hypot(point.x - pose.eye.x, point.z - pose.eye.z);
+      const angle = Math.atan2(point.y - pose.eye.y, Math.max(1e-6, flat));
+      let occluded = false;
+      // Only the part of the profile that recedes can occlude. A hairpin brings
+      // the road back TOWARD the eye, where "nearer things hide farther things"
+      // stops being the right test — those samples are left to the frustum test.
+      if (flat > lastFlat) {
+        occluded = angle < crestAngle;
+        crestAngle = Math.max(crestAngle, angle);
+        lastFlat = flat;
+      }
+      const ndc = occluded ? null : projectToNdc(pose, point);
+      if (occluded) cause = 'crest';
+      else if (!ndc) cause = 'behind-lens';
+      else if (Math.abs(ndc.x) > 1 - SIGHT_EDGE_PAD) cause = 'frame-side';
+      else if (Math.abs(ndc.y) > 1 - SIGHT_EDGE_PAD) cause = ndc.y > 0 ? 'frame-top' : 'frame-bottom';
+      else {
+        visibleSteps = step;
+        continue;
+      }
+      break;
+    }
+    sightSteps[index] = visibleSteps;
+    sightCause[index] = cause;
+  }
+  // Fill the stride gaps so downstream code can index any sample.
+  for (let index = 0; index < count; index += 1) {
+    if (poses[index]) continue;
+    const solved = index - (index % SIGHT_STRIDE);
+    sightSteps[index] = sightSteps[solved];
+    sightCause[index] = sightCause[solved];
+  }
+  const sightUnits = sightSteps.map((steps) => steps * ds * SIGHT_STRIDE);
+  const sightSeconds = sightUnits.map((units) => units / meanSpeed);
+
+  // Corner announcement: how long the corner ENTRY has been continuously in
+  // frame by the time the driver arrives at it. Derived from the sight profile
+  // rather than re-marched — entry is visible from sample j exactly when the
+  // distance from j to the entry is inside j's continuous sight.
+  const announceFor = (entryIndex) => {
+    let steps = 0;
+    while (steps < count) {
+      const back = (entryIndex - (steps + 1) + count * 2) % count;
+      const distance = (steps + 1) * ds;
+      if (distance > sightUnits[back]) break;
+      steps += 1;
+      if (distance > horizonUnits * 1.2) break;
+    }
+    return steps * ds;
+  };
+
+  const debt = KNOWN_SIGHT_DEBT[trackDef.key] || {};
+  const corners = geometry.corners.map((corner) => {
+    const entryIndex = Math.round(corner.startProgress * count) % count;
+    const units = announceFor(entryIndex);
+    const seconds = units / meanSpeed;
+    // The sample one step upstream of where the entry comes into view: whatever
+    // ends ITS view is what is keeping this corner hidden.
+    const causeIndex = (entryIndex - Math.round(units / ds) - 1 + count * 2) % count;
+    const key = `C${corner.index}@${corner.startProgress.toFixed(3)}`;
+    const blind = seconds < SIGHT_BLIND_SECONDS;
+    return {
+      key,
+      corner: corner.index,
+      type: corner.type,
+      direction: corner.direction,
+      startProgress: corner.startProgress,
+      radiusUnits: corner.radiusUnits,
+      announceUnits: round(units, 1),
+      announceSeconds: round(seconds, 2),
+      hiddenBy: sightCause[causeIndex],
+      sightAtEntrySeconds: round(sightSeconds[entryIndex], 2),
+      verdict: blind ? (debt[key] ? 'known-debt' : 'blind') : seconds < SIGHT_AUTHORING_SECONDS ? 'tight' : 'pass',
+      knownDebt: debt[key] || null,
+    };
+  });
+
+  // Runs of road where forward sight is under the floor, as progress spans the
+  // plan view can fill. Merged across adjacent samples so one crest is one
+  // finding rather than forty.
+  const blindRuns = [];
+  let run = null;
+  for (let index = 0; index < count; index += 1) {
+    const short = sightSeconds[index] < SIGHT_FLOOR_SECONDS;
+    if (short && !run) run = { startIndex: index, endIndex: index, worst: sightSeconds[index] };
+    else if (short && run) {
+      run.endIndex = index;
+      run.worst = Math.min(run.worst, sightSeconds[index]);
+    } else if (run) {
+      blindRuns.push(run);
+      run = null;
+    }
+  }
+  if (run) blindRuns.push(run);
+
+  const worstIndex = sightSeconds.reduce((best, value, index) => (value < sightSeconds[best] ? index : best), 0);
+  const mean = sightSeconds.reduce((sum, value) => sum + value, 0) / count;
+  const blindCorners = corners.filter((corner) => corner.verdict === 'blind');
+  const debtCorners = corners.filter((corner) => corner.verdict === 'known-debt');
+  const tightCorners = corners.filter((corner) => corner.verdict === 'tight');
+
+  // The frustum wedges the plan view draws, at the capture harness's own marks.
+  const marks = SIGHT_MARKS.map((progress) => {
+    const index = Math.round(wrap01(progress) * count) % count;
+    const pose = poses[index] || cameraPoseAt(sampler, samples[index].progress, tier);
+    const reach = Math.max(40, sightUnits[index]);
+    // Half-angle of the wedge as it appears IN PLAN. The frustum's horizontal
+    // half-angle is measured in camera space; projected onto the ground it opens
+    // by 1/cos(pitch), which is only ~0.4% at this rig's pitch but costs one
+    // hypot to get right rather than to hand-wave.
+    const halfAngle = Math.atan((pose.tanHalfH * (1 - SIGHT_EDGE_PAD)) / Math.hypot(pose.forward.x, pose.forward.z));
+    const heading = Math.atan2(pose.forward.x, pose.forward.z);
+    const edge = (sign) => ({
+      x: round(pose.eye.x + Math.sin(heading + sign * halfAngle) * reach, 1),
+      z: round(pose.eye.z + Math.cos(heading + sign * halfAngle) * reach, 1),
+    });
+    return {
+      progress: round(progress, 3),
+      eyeX: round(pose.eye.x, 1),
+      eyeZ: round(pose.eye.z, 1),
+      leadX: round(pose.lead.x, 1),
+      leadZ: round(pose.lead.z, 1),
+      left: edge(-1),
+      right: edge(1),
+      sightUnits: round(sightUnits[index], 1),
+      sightSeconds: round(sightSeconds[index], 2),
+      // What the drawn wedge's edges were solved at, so the plan can clip them
+      // proportionally without re-deriving the geometry in the browser.
+      reachUnits: round(reach, 1),
+    };
+  });
+
+  return {
+    tier: tierKey,
+    tierLabel: tier.label,
+    lens: {
+      verticalFovDeg: tier.fov,
+      horizontalFovDeg: round((Math.atan(Math.tan(degToRad(tier.fov) * 0.5) * tier.aspect) * 360) / Math.PI, 1),
+      aspect: round(tier.aspect, 3),
+      boomUnits: tier.boom,
+      eyeUnits: tier.eye,
+      lookAheadUnits: tier.lookAhead,
+      anchorY: FRAMING_ANCHOR_Y,
+    },
+    horizon: {
+      units: round(horizonUnits, 0),
+      seconds: round(horizonUnits / meanSpeed, 2),
+      boundBy: fogLimitUnits < CAMERA_FAR ? 'fog' : 'far plane',
+      fogDensity: density,
+      fogReadLimitUnits: round(fogLimitUnits, 0),
+    },
+    bars: {
+      blindSeconds: SIGHT_BLIND_SECONDS,
+      authoringSeconds: SIGHT_AUTHORING_SECONDS,
+      floorSeconds: SIGHT_FLOOR_SECONDS,
+    },
+    // The plan view's wedge clip, published in the report so the picture and the
+    // numbers cannot disagree about what a full-length wedge means. It is the
+    // SIGHT FLOOR in units, which makes the drawing rule the same rule as the
+    // violet road fill: a wedge that stops short is a mark under the floor.
+    // (At the lens's 91 degrees a wedge is as wide as it is deep, so nine of
+    // them at full 860u reach were a fan of triangles with the track underneath.)
+    wedgeClipUnits: round(SIGHT_FLOOR_SECONDS * meanSpeed, 0),
+    worstSightSeconds: round(sightSeconds[worstIndex], 2),
+    worstSightProgress: round(samples[worstIndex].progress, 4),
+    meanSightSeconds: round(mean, 2),
+    minAnnounceSeconds: corners.length ? round(Math.min(...corners.map((c) => c.announceSeconds)), 2) : 0,
+    blindCorners: blindCorners.length,
+    knownDebtCorners: debtCorners.length,
+    tightCorners: tightCorners.length,
+    // A NEW blind corner is a hard failure; a baselined one is not. The floor
+    // runs are reported and never gate on their own: a run of low sight in the
+    // middle of a hairpin is a hairpin, not a fault.
+    pass: blindCorners.length === 0,
+    strictPass: blindCorners.length === 0 && debtCorners.length === 0 && tightCorners.length === 0,
+    corners,
+    blindRuns: blindRuns.map((entry) => ({
+      startProgress: round(samples[entry.startIndex].progress, 4),
+      endProgress: round(samples[entry.endIndex].progress, 4),
+      worstSeconds: round(entry.worst, 2),
+      lengthUnits: round((entry.endIndex - entry.startIndex + 1) * ds, 1),
+    })),
+    marks,
+    // Downsampled for the sight profile chart: one value per percent of lap.
+    profile: Array.from({ length: 101 }, (_, index) =>
+      round(sightSeconds[Math.min(count - 1, Math.round((index / 100) * count)) % count], 2)
+    ),
+    mirror: verifyCameraMirror(),
+    aimCheck: (() => {
+      const predicted = round(((1 - FRAMING_ANCHOR_Y) / 2) * AIM_GROUND_TRUTH.frameHeight, 0);
+      const [low, high] = AIM_GROUND_TRUTH.measuredSubjectYRange;
+      return { ...AIM_GROUND_TRUTH, predictedSubjectY: predicted, agrees: predicted >= low && predicted <= high };
+    })(),
+    unmodelled: [
+      'rivals, props, buildings and the shield bubble — all of them can only REMOVE road from the frame',
+      'the FOV widening at speed (+11 max) and its boom compensation — net effect is more visible road',
+      'the occlusion guard, lateral dodge and drift lead, which move the eye off this pose by a few units',
+      'sight is measured along the racing line (lane 0); a driver on the outside of a corner sees further into it',
+    ],
+  };
+};
+
+// ---------------------------------------------------------------------------
 // BEATS — the authored moments around the lap.
 //
 // A BEAT is a discrete authored thing that happens TO the driver: an item box
@@ -740,7 +1279,7 @@ const readTelemetryCheck = () => {
   }
 };
 
-const analyseTrack = (trackDef, { meanSpeedOverride } = {}) => {
+const analyseTrack = (trackDef, { meanSpeedOverride, tier = 'desktop' } = {}) => {
   const key = trackDef.key;
   const meanSpeed = meanSpeedOverride || MEAN_SPEED[key] || 250;
   const sampler = makeSampler(trackDef);
@@ -865,6 +1404,8 @@ const analyseTrack = (trackDef, { meanSpeedOverride } = {}) => {
     // Can the driver see where the road is? Gated, not advisory — see the
     // SURFACE VALUE CONTRAST block above.
     contrast: analyseSurfaceContrast(trackDef),
+    // Can the CAMERA see the corner in time? Also gated — see CAMERA SIGHTLINE.
+    sightline: analyseSightline(trackDef, sampler, geometry, meanSpeed, tier),
     // Drawing payload for the plan view. Downsampled to ~4 units; the corner
     // maths already ran at 2, so this only affects the picture.
     plan: geometry.samples
@@ -1080,6 +1621,66 @@ function drawPlan(canvas, report, opts) {
     ctx.fillText(label, X(mid[0]), Y(mid[1])+7);
   }
 
+  // Road the CAMERA cannot see out of, filled in violet. Deliberately a
+  // different hue family from the contrast fills (red/orange/yellow): they are
+  // both legibility faults but they have different fixes, and an author reading
+  // the plan has to be able to tell which one they are looking at.
+  const sight = report.sightline;
+  if (sight) {
+    ctx.fillStyle = 'rgba(122,108,255,0.30)';
+    for (const runSpan of sight.blindRuns) {
+      const span = runSpan.endProgress <= runSpan.startProgress
+        ? runSpan.endProgress + 1 - runSpan.startProgress : runSpan.endProgress - runSpan.startProgress;
+      const quads = Math.max(1, Math.round(span * N));
+      let i = idxOf(runSpan.startProgress);
+      for (let step = 0; step < quads; step++) {
+        const j = (i+1)%N;
+        const a = edgePoint(i,1), b = edgePoint(j,1), c = edgePoint(j,-1), d = edgePoint(i,-1);
+        ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.lineTo(c[0],c[1]); ctx.lineTo(d[0],d[1]);
+        ctx.closePath(); ctx.fill();
+        i = j;
+      }
+    }
+
+    // THE CHASE CAMERA, drawn where it will be. Nine wedges at the capture
+    // harness's own marks, so a wedge here and the frame of the same name in
+    // tmp/aaa-visual/ are the same document read two ways.
+    //
+    // The wedge is not the full frustum — it is the frustum CLIPPED TO WHAT IT
+    // CAN ACTUALLY SEE: the two edges run out to the sight distance measured at
+    // that mark, so a wedge that stops short IS the finding. Drawing the lens's
+    // full 91 degrees to the horizon everywhere would be a picture of the lens,
+    // which nobody needs, instead of a picture of the shot.
+    //
+    // Reach is then clipped to the sight floor in units (wedgeClipUnits). At full
+    // reach a single 860u wedge is larger than either shipped track's whole
+    // bounding box — nine of them turned the plan into a fan of triangles with
+    // the layout somewhere underneath. Clipping at a fixed TIME keeps the read
+    // exact: a wedge that reaches its full length has at least a second of
+    // sight, a wedge that stops short has less, and the label carries the number.
+    for (const mark of sight.marks) {
+      const ex = X(mark.eyeX), ey = Y(mark.eyeZ);
+      const clip = Math.min(1, sight.wedgeClipUnits / Math.max(1, mark.reachUnits));
+      const lx = X(mark.eyeX + (mark.left.x - mark.eyeX)*clip), ly = Y(mark.eyeZ + (mark.left.z - mark.eyeZ)*clip);
+      const rx = X(mark.eyeX + (mark.right.x - mark.eyeX)*clip), ry = Y(mark.eyeZ + (mark.right.z - mark.eyeZ)*clip);
+      const short = mark.sightSeconds < sight.bars.floorSeconds;
+      ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(lx,ly); ctx.lineTo(rx,ry); ctx.closePath();
+      ctx.fillStyle = short ? 'rgba(255,110,140,0.12)' : 'rgba(110,200,255,0.055)';
+      ctx.fill();
+      ctx.strokeStyle = short ? 'rgba(255,110,140,0.6)' : 'rgba(110,200,255,0.34)';
+      ctx.lineWidth = 1; ctx.stroke();
+      // Lead point: where the rig aims THROUGH before the framing solve.
+      ctx.strokeStyle = '#ffd34f'; ctx.lineWidth = 1.4;
+      const px = X(mark.leadX), py = Y(mark.leadZ);
+      ctx.beginPath(); ctx.moveTo(px-4,py); ctx.lineTo(px+4,py); ctx.moveTo(px,py-4); ctx.lineTo(px,py+4); ctx.stroke();
+      // Eye.
+      ctx.fillStyle = short ? '#ff6e8c' : '#6ec8ff';
+      ctx.beginPath(); ctx.arc(ex,ey,3.4,0,7); ctx.fill();
+      ctx.font='10px ui-monospace,monospace'; ctx.textAlign='center';
+      ctx.fillText('p'+mark.progress.toFixed(2)+' '+mark.sightSeconds.toFixed(1)+'s', ex, ey-7);
+    }
+  }
+
   // Straights over the reporting minimum, drawn as the overtaking windows.
   for (const s of report.straights.list) {
     if (s.lengthUnits < report.straights.minUnits) continue;
@@ -1188,6 +1789,51 @@ function drawPlan(canvas, report, opts) {
   return upp;
 }
 
+// Forward sight around the lap, in seconds, with both bars drawn on it. Read it
+// next to the elevation chart directly below: every trough in this line is
+// either a crest in that one or a corner turning the road out of the lens.
+function drawSight(canvas, report) {
+  const ctx = canvas.getContext('2d');
+  const dpr=2, W=canvas.clientWidth, H=canvas.clientHeight;
+  canvas.width=W*dpr; canvas.height=H*dpr; ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const sight = report.sightline;
+  const prof = sight.profile;
+  const top = Math.max(sight.horizon.seconds, 1);
+  const yOf = (s) => (H-14) - (Math.min(s, top)/top)*(H-30);
+  // Bars first, so the line reads against them.
+  for (const [value, colour, label] of [
+    [sight.bars.blindSeconds, '#ff4b3e', 'blind '+sight.bars.blindSeconds+'s'],
+    [sight.bars.authoringSeconds, '#ffd34f', 'authoring '+sight.bars.authoringSeconds+'s'],
+  ]) {
+    ctx.strokeStyle = colour; ctx.globalAlpha = 0.55; ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,yOf(value)); ctx.lineTo(W,yOf(value)); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.fillStyle = colour; ctx.font='10px ui-monospace,monospace'; ctx.textAlign='right';
+    ctx.fillText(label, W-2, yOf(value)-3);
+  }
+  ctx.beginPath();
+  prof.forEach((s,i)=>{ const x=i/(prof.length-1)*W, y=yOf(s); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+  ctx.lineTo(W,H-14); ctx.lineTo(0,H-14); ctx.closePath();
+  ctx.fillStyle='rgba(110,200,255,0.16)'; ctx.fill();
+  ctx.strokeStyle='#6ec8ff'; ctx.lineWidth=2;
+  ctx.beginPath();
+  prof.forEach((s,i)=>{ const x=i/(prof.length-1)*W, y=yOf(s); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+  ctx.stroke();
+  // Corner entries, so a trough can be attributed to a corner by eye.
+  for (const corner of sight.corners) {
+    const x = corner.startProgress*W;
+    ctx.strokeStyle = corner.verdict === 'pass' ? '#33415c' : corner.verdict === 'tight' ? '#ffd34f' : '#ff4b3e';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x,H-14); ctx.lineTo(x,12); ctx.stroke();
+    ctx.fillStyle = ctx.strokeStyle; ctx.font='10px ui-monospace,monospace'; ctx.textAlign='left';
+    ctx.fillText('C'+corner.corner, x+2, 10);
+  }
+  ctx.fillStyle='#7d8aa3'; ctx.font='10px ui-monospace,monospace';
+  ctx.textAlign='left'; ctx.fillText('0%',0,H-3);
+  ctx.textAlign='right'; ctx.fillText('100% of lap',W,H-3);
+}
+
 function drawElevation(canvas, report) {
   const ctx = canvas.getContext('2d');
   const dpr=2, W=canvas.clientWidth, H=canvas.clientHeight;
@@ -1232,6 +1878,10 @@ const statBlock = (report) => {
   <div class="${report.contrast.failingSegments ? 'stat warn' : 'stat'}"><div class="k">Road vs terrain</div>
     <div class="v">${Math.round(report.contrast.minSeparation * 100)}%</div>
     <div class="n">worst segment, bar is ${Math.round(report.contrast.threshold * 100)}% — ${report.contrast.failingSegments} failing</div></div>
+  <div class="${report.sightline.blindCorners + report.sightline.knownDebtCorners ? 'stat warn' : 'stat'}">
+    <div class="k">Corner announcement</div>
+    <div class="v">${report.sightline.minAnnounceSeconds}s</div>
+    <div class="n">worst corner, bar is ${report.sightline.bars.blindSeconds}s — ${report.sightline.blindCorners} new + ${report.sightline.knownDebtCorners} known blind</div></div>
 </div>`;
 };
 
@@ -1371,6 +2021,74 @@ const contrastBlock = (report) => {
   return parts.join('');
 };
 
+const SIGHT_VERDICT_TAG = { pass: 't-sweeper', tight: 't-turn', 'known-debt': 't-hairpin', blind: 't-kink' };
+
+const sightTable = (report) => `
+<table>
+  <tr><th>corner</th><th>type</th><th class="num">r</th><th class="num">announced</th><th class="num">sight at entry</th><th>hidden by</th><th>verdict</th></tr>
+  ${report.sightline.corners
+    .map(
+      (corner) => `<tr>
+      <td>C${corner.corner} <span style="color:#7d8aa3">p${corner.startProgress.toFixed(3)}</span></td>
+      <td>${esc(corner.type)} ${esc(corner.direction)}</td>
+      <td class="num">${corner.radiusUnits}</td>
+      <td class="num">${corner.announceSeconds}s</td>
+      <td class="num">${corner.sightAtEntrySeconds}s</td>
+      <td>${esc(corner.hiddenBy)}</td>
+      <td><span class="tag ${SIGHT_VERDICT_TAG[corner.verdict]}">${corner.verdict}</span></td>
+    </tr>`
+    )
+    .join('')}
+</table>`;
+
+const sightBlock = (report) => {
+  const sight = report.sightline;
+  const parts = [];
+  const stale = sight.mirror.stale;
+  if (stale.length) {
+    parts.push(`<div class="flag"><b>THE CHASE RIG HAS MOVED — THESE NUMBERS ARE STALE.</b>
+      ${stale.map((row) => esc(`${row.key}: ${row.note}`)).join('; ')}.
+      Update CAMERA_TIERS in ${esc(report.tool)} and re-run before trusting any sight verdict on this sheet.</div>`);
+  } else {
+    parts.push(`<div class="flag ok"><b>RIG MIRROR VERIFIED</b> — all ${sight.mirror.checks.length} camera constants on this
+      sheet (boom ${sight.lens.boomUnits}u, eye ${sight.lens.eyeUnits}u, vFOV ${sight.lens.verticalFovDeg}, lead
+      ${sight.lens.lookAheadUnits}u, framing anchor ${sight.lens.anchorY}) were re-read from the shipped source at run time and match.
+      Aim check: anchor ${sight.lens.anchorY} predicts the hero at screen-y ${sight.aimCheck.predictedSubjectY} on a
+      ${sight.aimCheck.frameHeight} frame, measured ${sight.aimCheck.measuredSubjectYRange.join('–')} — ${sight.aimCheck.agrees ? 'agrees' : 'DISAGREES'}.</div>`);
+  }
+  const bad = sight.corners.filter((corner) => corner.verdict === 'blind' || corner.verdict === 'known-debt');
+  const tight = sight.corners.filter((corner) => corner.verdict === 'tight');
+  if (bad.length) {
+    parts.push(`<div class="flag"><b>${bad.length} CORNER${bad.length === 1 ? '' : 'S'} THE CAMERA CANNOT SHOW IN TIME.</b>
+      ${bad
+        .map(
+          (corner) =>
+            `C${corner.corner} at p${corner.startProgress.toFixed(3)} — ${corner.announceSeconds}s of announcement, hidden by
+             ${esc(corner.hiddenBy)}${corner.verdict === 'known-debt' ? ' (known shipped debt)' : ' (NEW)'}`
+        )
+        .join('; ')}.
+      ${bad.some((corner) => corner.knownDebt) ? `<br>${esc(bad.find((corner) => corner.knownDebt).knownDebt)}` : ''}
+      <br>A crest-hidden corner moves or flattens; a frame-side corner needs either a longer approach or a wider entry
+      radius. Both are layout edits — no camera tuning puts road in a frustum the road is not in.</div>`);
+  } else if (sight.corners.length) {
+    parts.push(`<div class="flag ok"><b>EVERY CORNER IS ANNOUNCED</b> — the tightest is ${sight.minAnnounceSeconds}s against the
+      ${sight.bars.blindSeconds}s bar.</div>`);
+  } else {
+    // A bare oval draft has no corners to announce; saying "every corner passes"
+    // there would read as a result rather than as an empty set.
+    parts.push(`<div class="flag ok"><b>NO CORNERS TO ANNOUNCE</b> — this layout has no arc the detector calls a corner, so the
+      announcement gate has nothing to measure. Forward sight is still reported above.</div>`);
+  }
+  if (tight.length) {
+    parts.push(`<div class="flag" style="border-left-color:#ffd34f;background:#1b1810;color:#ffe9ad">
+      <b>${tight.length} CORNER${tight.length === 1 ? '' : 'S'} UNDER THE ${sight.bars.authoringSeconds}s AUTHORING BAR.</b>
+      ${tight.map((corner) => `C${corner.corner} (${corner.announceSeconds}s)`).join(', ')}. Drivable on sight, but there is no
+      room in them for an item decision or a line change — run <code>--strict-sight</code> to make it a hard failure on a
+      new layout.</div>`);
+  }
+  return parts.join('');
+};
+
 const kinkBlock = (report) => {
   const kinks = report.corners.list.filter((c) => c.type === 'kink');
   if (!kinks.length) return '';
@@ -1399,6 +2117,10 @@ const legend = `
   <span><i class="sw" style="background:rgba(255,75,62,0.5)"></i>road fill: illegible against terrain (NEW)</span>
   <span><i class="sw" style="background:rgba(255,163,61,0.5)"></i>road fill: illegible, known shipped debt</span>
   <span><i class="sw" style="background:rgba(255,211,79,0.22)"></i>road tint: legible from the kerb only</span>
+  <span><i class="sw" style="background:rgba(122,108,255,0.6)"></i>road fill: less than 0.6s of forward sight</span>
+  <span><i class="sw" style="background:rgba(110,200,255,0.5)"></i>chase camera wedge — full length = at or over the sight floor</span>
+  <span><i class="sw" style="background:#6ec8ff"></i>camera eye</span>
+  <span><i class="sw" style="background:#ffd34f"></i>camera lead point</span>
 </div>`;
 
 const singleSheetHtml = (report) => `<!doctype html><meta charset="utf-8"><style>${SHEET_CSS}</style>
@@ -1411,6 +2133,12 @@ ${statBlock(report)}
   <div class="panel plan">
     <canvas id="plan" style="width:900px;height:820px"></canvas>
     ${legend}
+    <h2 style="margin-top:16px">Forward sight — seconds of road the chase camera can see (${esc(report.sightline.tierLabel)})</h2>
+    <canvas id="sight" style="width:900px;height:130px"></canvas>
+    <div class="note">Horizon is ${report.sightline.horizon.units}u (${report.sightline.horizon.seconds}s), bound by the
+      ${esc(report.sightline.horizon.boundBy)}; fog at density ${report.sightline.horizon.fogDensity} stops the road reading at
+      ${report.sightline.horizon.fogReadLimitUnits}u. Mean ${report.sightline.meanSightSeconds}s, worst
+      ${report.sightline.worstSightSeconds}s at p${report.sightline.worstSightProgress}.</div>
     <h2 style="margin-top:16px">Elevation</h2>
     <canvas id="elev" style="width:900px;height:120px"></canvas>
     <div class="note">${
@@ -1433,12 +2161,22 @@ ${statBlock(report)}
     <div class="panel"><h2>Road vs terrain value — gate ${Math.round(report.contrast.threshold * 100)}%, worst ${Math.round(report.contrast.minSeparation * 100)}%</h2>
       ${contrastBlock(report)}
       ${contrastTable(report)}</div>
+    <div class="panel"><h2>Camera sightline — announcement bar ${report.sightline.bars.blindSeconds}s, worst ${report.sightline.minAnnounceSeconds}s</h2>
+      ${sightBlock(report)}
+      ${sightTable(report)}
+      <div class="note">announced = how long the corner's ENTRY has been continuously in frame by the time you reach it,
+      at ${report.meanSpeed} u/s. Measured from the shipped rig: boom ${report.sightline.lens.boomUnits}u, eye
+      ${report.sightline.lens.eyeUnits}u, vFOV ${report.sightline.lens.verticalFovDeg} (hFOV ${report.sightline.lens.horizontalFovDeg}),
+      kart pinned at NDC ${report.sightline.lens.anchorY}. Not modelled, and all of it can only take road AWAY:
+      ${esc(report.sightline.unmodelled.join('; '))}.</div>
+    </div>
     <div class="panel"><h2>Validation</h2>${validationBlock(report)}${kinkBlock(report)}</div>
   </div>
 </div>
 <script>const REPORT = ${JSON.stringify(report)};
 ${DRAW_SCRIPT}
 drawPlan(document.getElementById('plan'), REPORT, {});
+drawSight(document.getElementById('sight'), REPORT);
 drawElevation(document.getElementById('elev'), REPORT);
 </script>
 </body>`;
@@ -1482,6 +2220,12 @@ ${legend}
     ${compareRow('road vs terrain, worst (%)', Math.round(a.contrast.minSeparation * 100), Math.round(b.contrast.minSeparation * 100))}
     ${compareRow('segments failing the value gate', a.contrast.failingSegments, b.contrast.failingSegments)}
     ${compareRow('segments legible from the kerb only', a.contrast.edgeOnlySegments, b.contrast.edgeOnlySegments)}
+    ${compareRow('worst corner announcement (s)', a.sightline.minAnnounceSeconds, b.sightline.minAnnounceSeconds)}
+    ${compareRow('blind corners (new)', a.sightline.blindCorners, b.sightline.blindCorners)}
+    ${compareRow('blind corners (baselined)', a.sightline.knownDebtCorners, b.sightline.knownDebtCorners)}
+    ${compareRow('corners under the authoring bar', a.sightline.tightCorners, b.sightline.tightCorners)}
+    ${compareRow('forward sight, mean (s)', a.sightline.meanSightSeconds, b.sightline.meanSightSeconds)}
+    ${compareRow('forward sight, worst (s)', a.sightline.worstSightSeconds, b.sightline.worstSightSeconds)}
   </table>
 </div>
 <script>const A = ${JSON.stringify(a)}, B = ${JSON.stringify(b)};
@@ -1537,7 +2281,19 @@ const loadTrackFromFile = async (path) => {
 };
 
 const parseArgs = (argv) => {
-  const args = { track: null, file: null, compare: null, out: OUT_DIR, speed: null, jsonOnly: false, strictContrast: false };
+  const args = {
+    track: null,
+    file: null,
+    compare: null,
+    out: OUT_DIR,
+    speed: null,
+    jsonOnly: false,
+    strictContrast: false,
+    strictSight: false,
+    // Desktop is the default because it is the NARROWEST horizontal lens of the
+    // three tiers, i.e. the one that hides a corner first. See CAMERA_TIERS.
+    tier: 'desktop',
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--track') args.track = argv[++index];
@@ -1547,7 +2303,13 @@ const parseArgs = (argv) => {
     else if (arg === '--speed') args.speed = Number(argv[++index]);
     else if (arg === '--json-only') args.jsonOnly = true;
     else if (arg === '--strict-contrast') args.strictContrast = true;
+    else if (arg === '--strict-sight') args.strictSight = true;
+    else if (arg === '--tier') args.tier = argv[++index];
     else if (arg === '--help' || arg === '-h') args.help = true;
+  }
+  if (!CAMERA_TIERS[args.tier]) {
+    process.stderr.write(`unknown --tier "${args.tier}" — known: ${Object.keys(CAMERA_TIERS).join(', ')}\n`);
+    process.exit(1);
   }
   return args;
 };
@@ -1563,6 +2325,11 @@ const USAGE = `track-layout-preview — plan view + layout numbers for the shipp
   --json-only              skip the browser, write JSON only
   --strict-contrast        also fail on road/terrain contrast debt that is
                            already baselined against a shipped track
+  --tier <name>            camera tier for the sightline model
+                           (${Object.keys(CAMERA_TIERS).join(' | ')}); default desktop,
+                           which is the NARROWEST horizontal lens of the three
+  --strict-sight           hold corners to the 1.5s authoring announcement bar
+                           instead of the 0.8s "arrives unread" gate
 `;
 
 const main = async () => {
@@ -1590,7 +2357,7 @@ const main = async () => {
       return;
     }
     const key = trackDef.key;
-    const report = analyseTrack(trackDef, { meanSpeedOverride: args.speed });
+    const report = analyseTrack(trackDef, { meanSpeedOverride: args.speed, tier: args.tier });
     reports.push(report);
     const jsonPath = resolve(args.out, `${key}-layout.json`);
     writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
@@ -1654,6 +2421,52 @@ const main = async () => {
       process.stderr.write(
         `\nFAIL: ${report.name} has road segments the driver cannot separate from the terrain. ` +
           `Move the road's VALUE (not its hue) or move the terrain's; see docs/TRACK_DESIGN_NOTES.md section 7.\n`
+      );
+      process.exitCode = 1;
+    }
+
+    // The sightline gate. A corner the camera cannot show in time is not a
+    // difficulty choice, it is a corner nobody can drive on sight — and the 4x
+    // layouts are being authored right now.
+    const sight = report.sightline;
+    const SIGHT_LABEL = { blind: 'BLIND CORNER ', 'known-debt': 'known debt   ', tight: 'tight        ' };
+    process.stdout.write(
+      `  sightline      ${sight.tierLabel} lens vFOV ${sight.lens.verticalFovDeg} / hFOV ${sight.lens.horizontalFovDeg}, ` +
+        `horizon ${sight.horizon.units}u (${sight.horizon.seconds}s, ${sight.horizon.boundBy}); ` +
+        `worst corner announcement ${sight.minAnnounceSeconds}s (gate ${sight.bars.blindSeconds}s / authoring ${sight.bars.authoringSeconds}s), ` +
+        `forward sight worst ${sight.worstSightSeconds}s mean ${sight.meanSightSeconds}s -> ` +
+        `${args.strictSight ? (sight.strictPass ? 'PASS' : 'FAIL') : sight.pass ? 'PASS' : 'FAIL'}\n`
+    );
+    sight.corners
+      .filter((corner) => corner.verdict !== 'pass')
+      .forEach((corner) => {
+        process.stdout.write(
+          `  ${SIGHT_LABEL[corner.verdict]}  ${corner.key} ${corner.type} ${corner.direction} r${corner.radiusUnits} ` +
+            `announced ${corner.announceSeconds}s (${corner.announceUnits}u), hidden by ${corner.hiddenBy}\n`
+        );
+      });
+    if (!sight.mirror.pass) {
+      process.stderr.write(
+        `\nWARNING: the chase rig has MOVED since this tool mirrored it — every sight number above is stale.\n` +
+          sight.mirror.stale.map((row) => `  ${row.key}: ${row.note}\n`).join('') +
+          `  Update CAMERA_TIERS / CAMERA_MIRROR_CHECKS in ${report.tool} before trusting a layout it approves.\n`
+      );
+      // Stale is a hard failure only under --strict-sight: the rig moving is a
+      // prompt to re-baseline this tool, not evidence the LAYOUT is wrong.
+      if (args.strictSight) process.exitCode = 1;
+    }
+    if (!sight.aimCheck.agrees) {
+      process.stderr.write(
+        `\nFAIL: the aim convention no longer reproduces the measured frames — NDC anchor ${FRAMING_ANCHOR_Y} predicts ` +
+          `subject screen-y ${sight.aimCheck.predictedSubjectY} against a measured ${sight.aimCheck.measuredSubjectYRange.join('-')}. ` +
+          `The pitch of every sight cone is wrong; do not trust any sightline verdict.\n`
+      );
+      process.exitCode = 1;
+    }
+    if (args.strictSight ? !sight.strictPass : !sight.pass) {
+      process.stderr.write(
+        `\nFAIL: ${report.name} has corners the chase camera cannot show in time. ` +
+          `Move the corner, open its radius, or give it a straight to be seen down; see docs/TRACK_DESIGN_NOTES.md section 8.\n`
       );
       process.exitCode = 1;
     }

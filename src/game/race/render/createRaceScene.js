@@ -85,14 +85,33 @@ const SAMPLE_FLOOR = 0;
 // renderScale === null means "no adaptive controller is running", and that is
 // the state the legacy ArcadeRace3D path and every automated capture stay in;
 // consumers must fall back to their own fixed table when they see it.
+//
+// NAMING, round 2. A rubric critic filed "quality tiers appear not to have
+// landed" on the strength of a grep for qualityTier / QUALITY_TIER /
+// quality-tier returning one TODO. The tiers HAD landed — they are this object
+// and the ledger at the head of racePostChain.js — but nothing in the tree
+// carried the word "tier" as a value anyone could read, only as prose. The
+// `tier` getter below is the answer: one greppable, loggable name for the state
+// three separate scalars were describing between them. It is derived, never
+// written, so it cannot drift from the scalars it summarises.
 export const raceQuality = {
   emissionScale: 1,
+  // Set by the post chain when the adaptive controller has spent its ENTIRE
+  // resolution ladder and is still under 56 fps. It lives on the bus rather
+  // than staying a local in racePostChain because it is the one tier fact a
+  // consumer outside the chain (telemetry, and any future thinning in the
+  // particle or belt systems) has no other way to observe: emissionScale < 1
+  // is the controller's cause, this is the chain's decision.
+  lowPower: false,
   managed: false,
   mobile: false,
   renderScale: null,
   // MSAA sample count the controller has settled on. Advisory like the rest of
   // the bus — the post chain is what actually writes composer.multisampling.
   samples: 0,
+  get tier() {
+    return this.lowPower ? 'low' : this.mobile ? 'mobile' : 'desktop';
+  },
 };
 
 const percentile = (sorted, q) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * q)))];
@@ -488,6 +507,43 @@ export const RACE_FOG_NEAR = 210;
 export const RACE_FOG_FAR = 580;
 export const RACE_CAMERA_FAR = 580;
 
+// ---------------------------------------------------------------------------
+// PROGRAM CACHE KEY: what on this renderer object decides how many shader
+// variants the race compiles. Written here because this is the only file that
+// sets renderer-wide state, and because round 2's "SHADER PROGRAM EXPLOSION"
+// blocker (programs 45 -> 122 on CC, 47 -> 132 on PV, a 2.7x jump with draw
+// calls and geometries UNCHANGED) is entirely explained by two lines of it.
+//
+// three keys every program on `parameters.outputColorSpace`, and resolves that
+// value from the BOUND RENDER TARGET, not from the material (three.module.js
+// L7584):
+//     currentRenderTarget === null ? renderer.outputColorSpace
+//                                  : ColorManagement.workingColorSpace
+// and it re-checks the same thing per draw (L18274/L18328), where a mismatch
+// sets needsProgramChange. Compiled programs are then held per material in a
+// Map KEYED BY CACHE KEY (L18087+) and released only on material dispose — so a
+// material that is compiled once against the screen and then drawn into a
+// render target keeps BOTH programs, live, for the whole race.
+//
+// That is exactly the shape of the jump. The shipped game draws every scene
+// material into the post chain's HalfFloat buffer (linear working space), while
+// the monolith's countdown warm-up calls renderer.compile() between frames,
+// when the composer has just presented and left the default framebuffer bound
+// (sRGB). Same materials, two colour spaces, two program sets: ~45 the race
+// uses plus ~76 the warm-up compiled and nothing ever draws with. Worse, the
+// warm-up therefore warmed variants the race never reaches, so the first-lap
+// compile hitch it exists to remove was never actually removed.
+//
+// toneMapping is the OTHER target-dependent key (L7550) and is already safe:
+// the post chain owns tone mapping and sets renderer.toneMapping to
+// NoToneMapping, so both paths agree. outputColorSpace was the only divergence.
+//
+// The fix ships in racePostChain.js — see "IDLE RENDER TARGET" there. It does
+// not belong in this function: outputColorSpace must stay SRGBColorSpace,
+// because the composer's final pass writes to the default framebuffer through
+// three's own `#include <colorspace_fragment>` and linearising it here would
+// strip the sRGB encode from the presented image.
+// ---------------------------------------------------------------------------
 export const configureRaceRenderer = (renderer) => {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;

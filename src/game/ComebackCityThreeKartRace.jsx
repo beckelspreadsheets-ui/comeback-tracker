@@ -129,7 +129,7 @@ import {
 } from './race/airTricks.js';
 import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
-import { arcProgressScaleFor, LANE_ARC } from './race/physics/kartPhysics.js';
+import { arcProgressScaleFor, LANE_ARC, laneLimitFor } from './race/physics/kartPhysics.js';
 import { SURFACE_ROAD_SHEEN, SURFACE_ROAD_TINT, surfaceTypeAt } from './race/physics/surfacePhysics.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import {
@@ -304,13 +304,19 @@ const lensCoverage = (position, radius, camPos, tanHalfFov, near) => {
 // the near-plane slab with no road behind it (comeback-city-p0_56 measured ~3.4x).
 const LENS_WALL_START = 1.45;
 const LENS_WALL_FULL = 2.0;
-const lensBandFor = (coverage, subjectCoverage) => {
+// PICKUPS GET A TIGHTER WINDOW THAN KARTS, and the reason is not tuning taste.
+// The kart numbers above say "a body may be half again the hero's size before it
+// stops being a competitor and starts being a wall", which is right for a thing
+// that IS a kart. A coin is a 2.7-unit collectible: by the time it matches the
+// hero's on-screen size it is not a pickup the player is reading, it is a
+// ribbed cylinder across the lens (penguin-village-p0_67 measured two of them
+// wider than the hero's own wheels). Start at just over half the hero and be
+// gone by the time they match.
+const LENS_PICKUP_START = 0.55;
+const LENS_PICKUP_FULL = 0.95;
+const lensBandFor = (coverage, subjectCoverage, start = LENS_WALL_START, full = LENS_WALL_FULL) => {
   if (!(subjectCoverage > 0)) return 1;
-  return clamp(
-    (subjectCoverage * LENS_WALL_FULL - coverage) / (subjectCoverage * (LENS_WALL_FULL - LENS_WALL_START)),
-    0,
-    1
-  );
+  return clamp((subjectCoverage * full - coverage) / (subjectCoverage * (full - start)), 0, 1);
 };
 // Lateral-dodge sweep, in radians, ALWAYS starting at 0 (the undodged bearing)
 // so an active dodge unwinds the instant its bearing is clear. ~14/28/43
@@ -387,6 +393,27 @@ const formatSplit = (seconds = 0) => {
   const minutes = Math.floor(seconds / 60);
   const rest = seconds - minutes * 60;
   return `${minutes}:${rest.toFixed(1).padStart(4, '0')}`;
+};
+
+// Gap to the adjacent rival, for the POSITION plate. Signed: + means the
+// reference kart is AHEAD (you are losing that much), - means it is behind.
+//
+// WHY THIS EXISTS. The HUD asserted "1ST" in 62px type and gave the player
+// nothing to measure it against — no ladder, no map, no gap — so the single
+// largest element on screen carried the least actionable information in the
+// frame. One number turns it from a label into a readout.
+//
+// Returns null rather than a string when there is nothing worth showing, so the
+// JSX can omit the element instead of rendering a placeholder: a lapped field
+// (or the pre-flag grid, where everyone is on the same arc) produces gaps the
+// plate has no width for and the player has no use for.
+const GAP_MAX_SECONDS = 60;
+const formatGap = (seconds) => {
+  if (!Number.isFinite(seconds) || Math.abs(seconds) >= GAP_MAX_SECONDS) return null;
+  // MINUS SIGN U+2212, not a hyphen: at the mono face's tracking a hyphen sits
+  // at cap-height mid-stroke and reads as part of the digits beside it.
+  const sign = seconds < 0 ? '−' : '+';
+  return `${sign}${Math.abs(seconds).toFixed(1)}s`;
 };
 
 const TRACK_SAMPLES = 112;
@@ -511,6 +538,9 @@ const createInitialRace = (
   driftCharge: 0,
   driftState: createDriftState(),
   driftTier: 0,
+  // Seconds to the adjacent rival, signed (see formatGap). null on the grid,
+  // where every kart is on the same arc and the number would be noise.
+  gap: null,
   finished: false,
   heldItem: null,
   itemFireCooldown: 0,
@@ -4822,6 +4852,10 @@ const coinPoseScratch = new THREE.Matrix4();
 // pose is no longer unit-scaled unconditionally.)
 const COIN_NEAR_SCALE = new THREE.Vector3(1, 1, 1);
 const COIN_COLLECTED_POSE = new THREE.Matrix4().makeScale(0, 0, 0);
+// Bounding radius for the lens-coverage test. The coin rig is fitted to 2.7
+// world units on its longest axis (see the coin mount), so half of that is the
+// disc the camera sees edge-on at worst.
+const COIN_LENS_RADIUS = 1.35;
 
 const loadItemBoxTemplate = (url) => {
   if (!itemBoxTemplateCache.has(url)) {
@@ -6518,8 +6552,14 @@ const createScene = ({
   const sunDirection = skyUniforms.uSunDir.value;
   const sunDistance = sunCfg.distance ?? 190;
   const skyDome = createSkyDome({
-    // The cloud deck is two extra taps on a full-screen dome pass; phones
-    // skip it until the quality-tier package measures a phone profile.
+    // The cloud deck is two extra taps on a full-screen dome pass, so the phone
+    // tier drops it. `mobile` here is the construction-time viewport tier, which
+    // is the right input for a decision baked into a shader at scene build —
+    // raceQuality.tier (createRaceScene.js) is the LIVE bus and is for things
+    // that can change mid-race without a rebuild. Naming it, because a grep for
+    // "quality tier" landed on the old TODO that used to sit here and concluded
+    // the tier work had not shipped: it has, as raceQuality / the adaptive
+    // render-scale controller, and this line is one of its consumers.
     clouds: mobile ? null : palette.clouds || { color: '#ff9a5e', litColor: '#ffd9a0', strength: 0.55 },
     glow: palette.skyGlow || [0.3, 0.08],
     horizonPower: palette.skyHorizonPower ?? 2.6,
@@ -7803,6 +7843,20 @@ const laneArcCurvatureAt = (sampler, progress) => {
 // the arc term would be solved for a path the kart is not on.
 const laneOffsetFor = (sampler, progress, lane) => lane * sampler.widthAt(progress) * 0.44;
 
+// The lane a RIVAL is drawn at, which is not always the lane it is racing at.
+//
+// A rival never runs the player's off-road surface test, so nothing in the sim
+// stops its solved lane putting the body's outer half over the kerb, and nothing
+// in the frame explains it when it does (comeback-city-p0_9). The sim keeps its
+// answer — this is the same visual-only contract the separation nudge signed —
+// and the DRAW is bounded by the ribbon the track mesh was actually built from.
+// Width-aware, so it tightens through the narrow stations instead of trusting a
+// constant tuned against the widest one.
+const rivalDrawLane = (sampler, progress, lane) => {
+  const limit = laneLimitFor({ roadWidth: sampler.widthAt(progress) });
+  return clamp(lane, -limit, limit);
+};
+
 // Autoplay item sense: the demo driver dodges what a human sees — fish
 // bones sitting ahead on its line and rival snowballs closing from behind.
 // Deterministic, progress-space windows (~0.02 of a lap ≈ 50-60 wu) so it
@@ -8109,6 +8163,9 @@ export const ComebackCityThreeKartRace = ({
         ? 'final-lap'
         : 'racing';
   const countdownDigit = snapshot.countdown > 0 ? Math.ceil(snapshot.countdown) : null;
+  // null when there is no gap worth showing (see formatGap), which is also the
+  // signal the position plate uses to omit the element entirely.
+  const gapLabel = formatGap(snapshot.gap);
   const autoplay = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -9454,6 +9511,35 @@ export const ComebackCityThreeKartRace = ({
             race.driftState.tier = 0;
           }
           race.position = playerPositionOf(playerTotal, race.rivals);
+          // Gap to the adjacent rival — the one number that makes the POSITION
+          // plate mean something (see formatGap). The reference is the kart
+          // immediately AHEAD while there is one, and the kart immediately
+          // behind once the player is leading, which is what a driver in each
+          // of those two situations is actually watching.
+          //
+          // Distance is arc length, not straight-line: two karts either side of
+          // a hairpin are metres apart in space and seconds apart on the track,
+          // and the second number is the true one. Converted to seconds at the
+          // PLAYER's pace, with a floor, because the alternative is dividing by
+          // a spun-out kart's speed and publishing infinity into the HUD.
+          {
+            let ahead = null;
+            let behind = null;
+            race.rivals.forEach((rival) => {
+              const total = totalProgressOf(rival);
+              if (total > playerTotal) {
+                if (ahead === null || total < ahead) ahead = total;
+              } else if (behind === null || total > behind) behind = total;
+            });
+            const reference = ahead !== null ? ahead : behind;
+            // Suppressed on the grid: the field is stacked on one arc there, so
+            // the number would be a flickering "+0.0s" that means nothing, and
+            // the countdown already owns the player's attention.
+            race.gap =
+              reference === null || race.countdown > 0
+                ? null
+                : ((reference - playerTotal) * engine.sampler.length) / Math.max(40, race.speed);
+          }
           // A desperate last-place rival just fired the leader-killer.
           if (avalancheBy && !race.avalanche) {
             const leadRival = race.rivals.reduce(
@@ -9775,6 +9861,36 @@ export const ComebackCityThreeKartRace = ({
           flame.userData.baseScale * (0.65 + heat * 0.65 + Math.sin(race.raceTime * 26 + flameIndex * 2.1) * 0.16)
         );
       });
+      // Lens basis for every proximity test in this frame, solved ONCE. The
+      // camera is parented straight to the scene, so its quaternion is already
+      // its world orientation. The FOV is read live because the dolly-zoom boom
+      // moves it with speed — a coverage test against a hard-coded FOV would be
+      // exactly the FOV-blind metric this replaced.
+      //
+      // Round 3 hoists it ABOVE the pickup block. It used to sit between the
+      // pickups and the rivals, which is the whole reason the coins kept their
+      // own world-distance fade and stayed the one class of object on the road
+      // measuring itself in metres (penguin-village-p0_67: two coins wider on
+      // screen than the hero's own wheels, at a distance the metre test called
+      // two thirds gone). One basis, one metric, every object.
+      GHOST_FORWARD.set(0, 0, -1).applyQuaternion(engine.camera.quaternion);
+      const lensTanHalfFov = Math.tan((engine.camera.fov * Math.PI) / 360);
+      const lensNear = engine.camera.near;
+      // The reference every lens test is scaled against: whatever the hero
+      // currently measures on screen is, by definition, the right size for a
+      // kart in this shot.
+      const lensSubjectCoverage = lensCoverage(
+        engine.playerModel.group.position,
+        CHASE_SUBJECT_RADIUS,
+        engine.camera.position,
+        lensTanHalfFov,
+        lensNear
+      );
+      race.lensPeak = 0;
+      const noteLensPeak = (coverage) => {
+        if (lensSubjectCoverage > 0) race.lensPeak = Math.max(race.lensPeak, coverage / lensSubjectCoverage);
+        return coverage;
+      };
       engine.itemBoxes.forEach((box, index) => {
         box.rotation.y += dt * 1.4;
         box.position.y += Math.sin(race.raceTime * 2.4 + index) * 0.012;
@@ -9793,8 +9909,8 @@ export const ComebackCityThreeKartRace = ({
         const coinCamera = engine.camera.position;
         engine.coinMeshes.forEach((group, index) => {
           const perFace = faceMatrices[index];
-          // ROUND 1 FIX — A COIN THE CAMERA IS ABOUT TO PASS THROUGH IS NOT A
-          // PICKUP, IT IS AN OCCLUDER.
+          // A COIN THE CAMERA IS ABOUT TO PASS THROUGH IS NOT A PICKUP, IT IS
+          // AN OCCLUDER.
           //
           // Two critics filed the same measurement independently: 180-250px
           // ribbed cylinders at the lens (comeback-city-p0_56, two of them, one
@@ -9805,11 +9921,29 @@ export const ComebackCityThreeKartRace = ({
           // player has already reached it, it is behind the action, and it has
           // no business being the biggest object in the frame.
           //
-          // Shrinking rather than hiding, and over 5 units, so it reads as the
-          // coin being taken. The InstancedMesh has one material, so scale is
-          // the only per-instance channel available — which is also exactly how
-          // a collected coin is already retired (COIN_COLLECTED_POSE).
-          const coinNear = clamp((group.position.distanceTo(coinCamera) - 5) / 5, 0, 1);
+          // Shrinking rather than hiding, so it reads as the coin being taken.
+          // The InstancedMesh has one material, so scale is the only
+          // per-instance channel available — which is also exactly how a
+          // collected coin is already retired (COIN_COLLECTED_POSE).
+          //
+          // ROUND 3 REPLACES THE METRIC. Round 1 shipped
+          // `clamp((distance - 5) / 5)` and that is the world-distance test
+          // every other lens guard in this file has already been re-based off:
+          // it is blind to the FOV, so it scored the same coin identically at
+          // the dolly-zoom's wide end and at the phone tier's narrow one, and
+          // pv-p0_67 is what that costs — the coins there measure ~0.68 on the
+          // metre ramp (i.e. "two thirds of the way gone") while covering more
+          // of the frame than the hero's wheels. Coverage against the hero's
+          // own framed size is the quantity the critics were reading off the
+          // pixels, and it needs no second set of numbers for mobile.
+          const coinNear = lensBandFor(
+            noteLensPeak(
+              lensCoverage(group.position, COIN_LENS_RADIUS, coinCamera, lensTanHalfFov, lensNear)
+            ),
+            lensSubjectCoverage,
+            LENS_PICKUP_START,
+            LENS_PICKUP_FULL
+          );
           for (let face = 0; face < perFace.length; face += 1) {
             const slot = index * perFace.length + face;
             if (group.visible && coinNear > 0.02) {
@@ -9875,7 +10009,14 @@ export const ComebackCityThreeKartRace = ({
         sepLat.push(race.lane * engine.sampler.widthAt(race.progress) * 0.44);
         engine.rivalModels.forEach((rival, index) => {
           const racer = race.rivals[index];
-          const lane = racer.lane + rival.model.motion.separationLane;
+          // The DRAWN lane, not the solved one: the resolve has to measure the
+          // bodies the player can see, or a rival held off the kerb by
+          // rivalDrawLane would be solved against a position it is not in.
+          const lane = rivalDrawLane(
+            engine.sampler,
+            racer.progress,
+            racer.lane + rival.model.motion.separationLane
+          );
           sepArc.push(racer.progress * trackLength);
           sepLat.push(lane * engine.sampler.widthAt(racer.progress) * 0.44);
         });
@@ -9906,47 +10047,57 @@ export const ComebackCityThreeKartRace = ({
           }
           const motion = rival.model.motion;
           const halfRoad = Math.max(1, engine.sampler.widthAt(racer.progress) * 0.44);
-          // Clamped twice: the nudge itself stays small enough that a rival is
-          // never drawn a lane away from where it is racing, and the SUM has to
-          // stay inside the kerb or the fix would put karts on the verge.
-          const target = push
-            ? clamp(
-                clamp(motion.separationLane + push / halfRoad, -0.42, 0.42),
-                -0.96 - racer.lane,
-                0.96 - racer.lane
-              )
-            : 0;
-          // Eased, not snapped: the overlap resolves over ~0.15s so it reads as
-          // a kart being nudged aside rather than as a teleport.
-          motion.separationLane = lerp(motion.separationLane, target, 1 - Math.pow(0.0004, dt));
+          // Round 3: the outer bound is the width-aware one (laneLimitFor), not
+          // the bare 0.96 this shipped with. 0.96 is a lane, and a lane is a
+          // fraction of a road that changes width — see the note on
+          // laneLimitFor for the measurement. This is the same limit the pose
+          // below draws against, so the resolve can no longer aim at a lane the
+          // draw is going to clip anyway.
+          const laneLimit = laneLimitFor({ roadWidth: engine.sampler.widthAt(racer.progress) });
+          const solveTarget = (want) =>
+            clamp(
+              clamp(motion.separationLane + want / halfRoad, -0.42, 0.42),
+              -laneLimit - racer.lane,
+              laneLimit - racer.lane
+            );
+          let target = 0;
+          if (push) {
+            target = solveTarget(push);
+            // KERB ESCAPE. Both bodies pinned against the same wall is the one
+            // overlap the old solve could not clear: `dir` always pushes AWAY
+            // from the other kart, and away is off the road, so the clamp ate
+            // the whole correction and the pair stayed interpenetrated for as
+            // long as they held that line (comeback-city-p0_24/p0_45). If the
+            // bound takes more than half of what was asked for, go round the
+            // inside instead — worse racing line, but a rival's racing line is
+            // fiction and two karts sharing one volume is not.
+            const wanted = push / halfRoad;
+            const got = target - motion.separationLane;
+            if (Math.abs(got) < Math.abs(wanted) * 0.5) {
+              const mirrored = solveTarget(-push);
+              if (Math.abs(mirrored - motion.separationLane) > Math.abs(got)) target = mirrored;
+            }
+          }
+          // Asymmetric, and that is the fix for "it resolves eventually": at
+          // 280 km/h the old symmetric ~0.13s time constant meant ten metres of
+          // travel with two bodies drawn inside each other, which is exactly
+          // what a still frame catches. Engaging in ~0.05s is under three
+          // frames and reads as a nudge; releasing over ~0.3s is what keeps it
+          // from chattering when a pair drifts in and out of the footprint.
+          const engaging = Math.abs(target) > Math.abs(motion.separationLane);
+          motion.separationLane = lerp(
+            motion.separationLane,
+            target,
+            1 - Math.pow(engaging ? 2e-9 : 0.036, dt)
+          );
         });
       }
-      // Lens basis for every proximity test below, solved ONCE. The camera is
-      // parented straight to the scene, so its quaternion is already its world
-      // orientation. The FOV is read live because the dolly-zoom boom moves it
-      // with speed — a coverage test against a hard-coded FOV would be exactly
-      // the FOV-blind metric this replaced.
-      GHOST_FORWARD.set(0, 0, -1).applyQuaternion(engine.camera.quaternion);
-      const lensTanHalfFov = Math.tan((engine.camera.fov * Math.PI) / 360);
-      const lensNear = engine.camera.near;
-      // The reference every lens test below is scaled against: whatever the
-      // hero currently measures on screen is, by definition, the right size for
-      // a kart in this shot.
-      const lensSubjectCoverage = lensCoverage(
-        engine.playerModel.group.position,
-        CHASE_SUBJECT_RADIUS,
-        engine.camera.position,
-        lensTanHalfFov,
-        lensNear
-      );
-      race.lensPeak = 0;
-      const noteLensPeak = (coverage) => {
-        if (lensSubjectCoverage > 0) race.lensPeak = Math.max(race.lensPeak, coverage / lensSubjectCoverage);
-        return coverage;
-      };
       engine.rivalModels.forEach((rival, index) => {
         const racer = race.rivals[index];
-        const sample = engine.sampler.pointAt(racer.progress, racer.lane + rival.model.motion.separationLane);
+        const sample = engine.sampler.pointAt(
+          racer.progress,
+          rivalDrawLane(engine.sampler, racer.progress, racer.lane + rival.model.motion.separationLane)
+        );
         updateVehiclePose(rival.model, sample, clamp(racer.laneVel * 0.6, -1, 1), false, {
           extraYaw: spinOutYaw(racer.spinTimer),
           hop: racer.air.height,
@@ -10828,11 +10979,14 @@ export const ComebackCityThreeKartRace = ({
               ndcRadius: Number(race.cameraFraming.ndcRadius.toFixed(3)),
               ndcX: Number(race.cameraFraming.ndcX.toFixed(3)),
               ndcY: Number(race.cameraFraming.ndcY.toFixed(3)),
-              // Biggest body on the lens this frame as a multiple of the hero's
-              // own on-screen size (see LENS_WALL_START). >= 2.0 means something
-              // twice the hero's size is in shot, which is the near-plane slab
-              // three critics have now each measured off the pixels by hand.
-              // Published so it is a number in the manifest, not an eyeball.
+              // Biggest OBJECT on the lens this frame as a multiple of the
+              // hero's own on-screen size (see LENS_WALL_START). Rivals,
+              // crossers, projectiles, bones and — since the coin field moved
+              // onto the shared coverage metric — pickups all report into it.
+              // >= 2.0 means something twice the hero's size is in shot, which
+              // is the near-plane slab three critics have now each measured off
+              // the pixels by hand. Published so it is a number in the
+              // manifest, not an eyeball.
               lensPeak: Number((race.lensPeak || 0).toFixed(2)),
             }
           : null,
@@ -10853,6 +11007,7 @@ export const ComebackCityThreeKartRace = ({
           countdown: race.countdown,
           drift: race.drift,
           finished: race.finished,
+          gap: race.gap ?? null,
           heldItem: race.heldItem,
           itemPickups: race.itemPickups,
           lap: race.lap,
@@ -11086,7 +11241,13 @@ export const ComebackCityThreeKartRace = ({
             </span>
           </div>
         </div>
-        <div className="three-kart-race__corner three-kart-race__corner--status">
+        {/* SETTINGS, NOT STATUS. The mute button used to be the first child of
+            --corner--status, which put a utility control on the same anchor as
+            the two live race values and made it read as a third, broken stat
+            chip sitting above the LAP plate. The four stat corners are real
+            elements now, so this is a markup move rather than a CSS override:
+            its own anchor, top-centre, out of all four of them. */}
+        <div className="three-kart-race__corner three-kart-race__corner--utility">
           <button
             type="button"
             className="three-kart-race__badge three-kart-race__audio-toggle"
@@ -11101,6 +11262,8 @@ export const ComebackCityThreeKartRace = ({
           >
             {audioMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
           </button>
+        </div>
+        <div className="three-kart-race__corner three-kart-race__corner--status">
           {/* data-lap-flash carries the roll-over instant, so the chip can pulse
               on the tick rather than on a loop that hopes to coincide with it.
               The plate answers three questions now, not one: which lap, how far
@@ -11177,6 +11340,18 @@ export const ComebackCityThreeKartRace = ({
               <span className="three-kart-race__badge-label-short">Pos</span>
             </span>
             <span className="three-kart-race__badge-value">{ordinal(snapshot.position)}</span>
+            {/* Gap to the adjacent rival, declared as a sub-element of the
+                position badge rather than as a fifth chip: it is a QUALIFIER on
+                the ordinal beside it, and a plate of its own would have said
+                the place is one fact and the margin is another.
+                Omitted entirely when formatGap declines (lapped field, or a
+                grid where every kart is on the same arc) — an empty slot on the
+                hero plate is worse than no slot. */}
+            {gapLabel ? (
+              <span className="three-kart-race__badge-gap" data-gap-sign={snapshot.gap < 0 ? 'up' : 'down'}>
+                {gapLabel}
+              </span>
+            ) : null}
           </div>
         </div>
         {/* Run tallies are NOT rendered. They were display:none'd here for two
