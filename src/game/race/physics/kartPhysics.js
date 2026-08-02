@@ -1163,3 +1163,111 @@ export const resolveFlightGateForFrame = ({
     reason: null,
   };
 };
+
+// ─── Arc-length progress ────────────────────────────────────────────────────
+// Race progress used to advance as (speed / trackLength) * dt for the player
+// and for every rival. The kart's LANE never entered that sum, so corner radius
+// cost exactly zero lap time: cutting an apex gained nothing, running wide cost
+// nothing, and the only lever on lap time was the speed cap — which is why 16 of
+// 18 sampled speeds sat pinned at it and the driving read as a rail. These
+// helpers put the geometry back.
+//
+// For a centreline of signed curvature k (positive = the track bends toward
+// +normal, the same convention the corner push already uses) a path held at
+// lateral offset d is a PARALLEL CURVE, and its arc length relates to the
+// centreline's by
+//     ds_offset = (1 - k * d) * ds_centre.
+// A kart moving at v covers v*dt of ITS OWN path, which is v*dt / (1 - k*d) of
+// centreline — and centreline is what `progress` measures. Inside line
+// (sign(d) === sign(k)) gives a factor below 1, so the same speed buys more
+// progress. Note the form: no 1/R anywhere, so a straight (k -> 0) is the
+// no-op case rather than a division blow-up.
+//
+// Two deliberate departures from the raw geometry, both load-bearing:
+//
+// 1. GAIN. Raw geometry is far too strong to bolt onto handling the owner
+//    already likes. Measured over both shipped tracks (2000 samples each, the
+//    20 world-unit curvature baseline below), |k*d| at the wall lane averages
+//    ~0.096 — CC 0.092, PV 0.102 — so raw geometry would make a perfect inside
+//    line worth ~10% of lap time. That is decisive, not tempting. At gain 0.25,
+//    integrating this scale over a full lap gives (v held constant):
+//        line held at        CC lap time     PV lap time
+//        centre               0.00%           0.00%
+//        inside, lane 0.5    -1.21%          -1.34%
+//        inside, lane 0.95   -2.28%          -2.54%
+//        outside, lane 0.95  +2.28%          +2.54%
+//    So a perfect inside line is worth ~0.8s over the current ~34s race and the
+//    inside-to-outside swing is ~1.6s — about one kart tier from the +/-2%
+//    top-speed spread, against a live-origin field gap of 0.84s. Worth taking,
+//    never race-winning on its own. This is the single number to move if the
+//    line should matter more; it scales the whole table linearly.
+//
+// 2. CEILING. Every unbounded lobe in this codebase has eventually shipped a
+//    bug, so the deviation is clamped rather than trusted. The centreline is a
+//    Catmull-Rom through authored points and the curvature estimator spikes at
+//    the seams: on a 3-unit baseline Comeback City measures |k*d| up to 6.8,
+//    which raw would drive the factor NEGATIVE and run progress backwards. The
+//    clamp caps the per-frame swing at +/-10%, and on the 20-unit baseline it
+//    engages on 0.22% (CC) / 0.47% (PV) of the lap even at the wall lane — i.e.
+//    it costs nothing real and catches exactly the artefacts.
+//
+// A weave term rides along: lateral travel is distance covered that is not
+// progress, so a kart sawing at the wheel down a straight now loses ~0.6% to
+// one holding a line. Deliberately small — it exists so "straight is fastest on
+// a straight" is true in the sim and not just in the fiction.
+export const LANE_ARC = Object.freeze({
+  // Symmetric baseline for the curvature estimate, in world units. Wide enough
+  // that the spline's seam spikes average out (max |k*d| falls 6.8 -> 1.0 on
+  // CC and 0.81 -> 0.43 on PV) while the mean — the term that actually sets lap
+  // time — moves by under 4%.
+  curvatureSpanUnits: 20,
+  gain: 0.25,
+  maxDeviation: 0.1,
+  // Lateral-to-forward speed ratio ceiling. Full steering lock at racing speed
+  // is ~0.11; the cap only exists so a near-stationary kart being shoved
+  // sideways by a bump cannot divide its way to zero progress.
+  maxWeaveRatio: 0.6,
+});
+
+// Centreline-per-own-path length ratio for a kart at `lateralOffset` (world
+// units, signed toward +normal) on curvature `curvature` (1/world units).
+// Returns 1 on a straight, <1 on the inside, >1 on the outside.
+export const laneArcScaleFor = ({
+  curvature = 0,
+  gain = LANE_ARC.gain,
+  lateralOffset = 0,
+  maxDeviation = LANE_ARC.maxDeviation,
+} = {}) => {
+  if (!Number.isFinite(curvature) || !Number.isFinite(lateralOffset)) return 1;
+  return clamp(1 - gain * curvature * lateralOffset, 1 - maxDeviation, 1 + maxDeviation);
+};
+
+// Path-length penalty for crossing the road. >= 1 always, so it can only ever
+// cost progress.
+export const weaveArcScaleFor = ({
+  lateralSpeed = 0,
+  maxWeaveRatio = LANE_ARC.maxWeaveRatio,
+  speed = 0,
+} = {}) => {
+  if (!Number.isFinite(lateralSpeed) || !Number.isFinite(speed) || speed <= 1) return 1;
+  const ratio = Math.min(Math.abs(lateralSpeed) / speed, maxWeaveRatio);
+  return Math.sqrt(1 + ratio * ratio);
+};
+
+// Combined divisor: own-path distance -> centreline distance, so a frame's
+// progress is (speed * dt) / (trackLength * scale). Both call sites want the
+// SCALE rather than a finished delta — the player multiplies it into its own
+// advance, and the rival sim advances progress inside a module this package does
+// not own, so its frame delta can only be corrected after the fact by dividing
+// through by the same number.
+export const arcProgressScaleFor = ({
+  curvature = 0,
+  gain,
+  lateralOffset = 0,
+  lateralSpeed = 0,
+  maxDeviation,
+  maxWeaveRatio,
+  speed = 0,
+} = {}) =>
+  laneArcScaleFor({ curvature, gain, lateralOffset, maxDeviation }) *
+  weaveArcScaleFor({ lateralSpeed, maxWeaveRatio, speed });

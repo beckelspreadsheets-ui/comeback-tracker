@@ -129,6 +129,7 @@ import {
 } from './race/airTricks.js';
 import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
+import { arcProgressScaleFor, LANE_ARC } from './race/physics/kartPhysics.js';
 import { SURFACE_ROAD_SHEEN, SURFACE_ROAD_TINT, surfaceTypeAt } from './race/physics/surfacePhysics.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import {
@@ -468,6 +469,10 @@ const createInitialRace = (
   lap: 1,
   laps: trackDef.laps,
   lane: 0,
+  // Last frame's own-path/centreline length ratio (see LANE_ARC). Seeded at the
+  // straight-line no-op so telemetry read before the first physics tick is a
+  // real number rather than undefined.
+  laneArcScale: 1,
   position: 1 + RIVALS.length,
   previousProgress: startProgressFor(trackDef),
   progress: startProgressFor(trackDef),
@@ -7708,6 +7713,39 @@ const trackCurvatureAt = (sampler, progress) => {
 const cornerPushFor = (kappa, speed) =>
   -Math.sign(kappa) * Math.min(4, Math.pow(Math.abs(kappa), 0.7) * speed * speed * 0.00052);
 
+// Same measurement as trackCurvatureAt, over a much wider symmetric baseline.
+// The corner push wants the LOCAL number (it is a steering force and should
+// spike where the road does); the arc-length term wants a stable one, because
+// it integrates into lap time and the centreline spline's control-point seams
+// throw single-sample spikes an order of magnitude past anything the track
+// actually contains. Three sampler calls, same cost as the local version plus
+// one — see LANE_ARC.curvatureSpanUnits for the measured effect.
+const laneArcCurvatureAt = (sampler, progress) => {
+  const halfSpan = LANE_ARC.curvatureSpanUnits / 2 / sampler.length;
+  const behind = sampler.pointAt(progress - halfSpan);
+  const ahead = sampler.pointAt(progress + halfSpan);
+  // Normal at the MIDPOINT, from the bisector of the two tangents, rather than
+  // a third sampler.pointAt(progress). Exact for a symmetric baseline, and it
+  // saves one sample (four Vector3 allocations) per racer per frame — this runs
+  // for the player and every rival on every tick.
+  let midX = behind.tangent.x + ahead.tangent.x;
+  let midZ = behind.tangent.z + ahead.tangent.z;
+  const midLength = Math.hypot(midX, midZ) || 1;
+  midX /= midLength;
+  midZ /= midLength;
+  // sampler builds its normal as (-tangent.z, 0, tangent.x); match that or the
+  // sign of "inside" flips.
+  return (
+    ((ahead.tangent.x - behind.tangent.x) * -midZ + (ahead.tangent.z - behind.tangent.z) * midX) /
+    LANE_ARC.curvatureSpanUnits
+  );
+};
+
+// Lane (-1..1) -> signed lateral offset in world units, toward +normal. Must
+// match the 0.44 half-width factor sampler.pointAt() uses to place the kart, or
+// the arc term would be solved for a path the kart is not on.
+const laneOffsetFor = (sampler, progress, lane) => lane * sampler.widthAt(progress) * 0.44;
+
 // Autoplay item sense: the demo driver dodges what a human sees — fish
 // bones sitting ahead on its line and rival snowballs closing from behind.
 // Deterministic, progress-space windows (~0.02 of a lap ≈ 50-60 wu) so it
@@ -7744,10 +7782,24 @@ const autoplayDodgeBias = (race) => {
 const readInput = (input, autoplay, race, cornerPush = 0) => {
   if (!autoplay) return input.current;
   // Steer against the centrifugal push (into the corner) plus a pull back
-  // toward road center, with the item-dodge bias strong enough to beat the
-  // center pull; drift the demanding bends, brake for the hairpin, trick
-  // when airborne, fire held items on straights. Deterministic.
-  const desired = clamp(-cornerPush * 1.4 - race.lane * 0.9 + autoplayDodgeBias(race) * 1.2, -1, 1);
+  // toward the demo driver's target lane, with the item-dodge bias strong
+  // enough to beat that pull; drift the demanding bends, brake for the hairpin,
+  // trick when airborne, fire held items on straights. Deterministic.
+  //
+  // The target lane used to be a hard 0 — dead centre, every corner. Now that
+  // lane offset feeds arc length (see LANE_ARC), a driver pinned to the centre
+  // is the one entity on track leaving the racing line on the table, and every
+  // captured frame would show a kart ignoring the geometry the sim just gained.
+  // cornerPush already carries sign(curvature) and corner severity, so the apex
+  // side comes free: inside is -sign(cornerPush). 0.45 sits just under the 0.55
+  // the rival brain uses, so the demo stays the conservative driver in the
+  // field. Revert by restoring `- race.lane * 0.9`.
+  const apexLane = clamp(-cornerPush * 0.5, -1, 1) * 0.45;
+  const desired = clamp(
+    -cornerPush * 1.4 - (race.lane - apexLane) * 0.9 + autoplayDodgeBias(race) * 1.2,
+    -1,
+    1
+  );
   return {
     brake: Math.abs(cornerPush) > 1.5,
     drift: (Math.abs(cornerPush) > 0.55 && race.speed > 80) || race.airState.airborne,
@@ -7816,6 +7868,12 @@ const publishTelemetry = (
     fpsEstimate: Math.round(fpsEstimate),
     itemPickups: race.itemPickups,
     lane: Number(race.lane.toFixed(3)),
+    // Own-path/centreline length ratio for THIS frame (see LANE_ARC). < 1 means
+    // the line being driven is shorter than the centreline and is buying lap
+    // time; > 1 means it is costing it. This is the hook that makes "corner
+    // radius now costs lap time" a measurement instead of a claim — sample it
+    // across a lap and the spread should straddle 1 rather than sit pinned.
+    laneArcScale: Number((race.laneArcScale ?? 1).toFixed(4)),
     lap: race.lap,
     miniTurbo: Number(race.driftState.miniTurboTimer.toFixed(2)),
     miniTurboTier: race.driftState.miniTurboTier,
@@ -7944,6 +8002,56 @@ export const ComebackCityThreeKartRace = ({
     lastHeldItemRef.current = held;
     return undefined;
   }, [snapshot.heldItem]);
+  // ── HUD moments ─────────────────────────────────────────────────────────
+  // The countdown and the lap counter used to be raw numbers with a looping
+  // CSS animation hoping to land on the digit changes. That is presentation
+  // without state: nothing marked the INSTANT a digit rolled or a lap ticked
+  // over, so nothing could animate it. These two hooks give the CSS real
+  // discrete events to hang a one-shot animation on.
+  //
+  // GO: race.countdown reaches 0 and is never rendered again, so the release —
+  // the single most important beat in the intro — had no element at all. Hold
+  // one for 900ms after the light goes green.
+  const [goFlash, setGoFlash] = useState(false);
+  const countingDownRef = useRef(false);
+  useEffect(() => {
+    const counting = snapshot.countdown > 0;
+    const released = countingDownRef.current && !counting;
+    countingDownRef.current = counting;
+    if (!released) return undefined;
+    setGoFlash(true);
+    const timer = setTimeout(() => setGoFlash(false), 900);
+    return () => clearTimeout(timer);
+  }, [snapshot.countdown]);
+  // Lap roll-over. `lap` is also what the final-lap banner keys off, so the
+  // flash carries its own text rather than the CSS guessing from a counter.
+  const [lapFlash, setLapFlash] = useState(null);
+  const lastLapRef = useRef(snapshot.lap);
+  useEffect(() => {
+    const lap = snapshot.lap;
+    const previous = lastLapRef.current;
+    lastLapRef.current = lap;
+    // Lap 1 is the start, not a roll-over; a restart winds the counter back.
+    if (lap <= previous || lap < 2) return undefined;
+    setLapFlash({
+      at: Date.now(),
+      final: lap === snapshot.laps,
+      lap,
+    });
+    const timer = setTimeout(() => setLapFlash(null), 1500);
+    return () => clearTimeout(timer);
+  }, [snapshot.lap, snapshot.laps]);
+  // Whole-HUD phase, published as one attribute so the CSS can dress the
+  // countdown / racing / final-lap / finished states without every rule
+  // re-deriving them from three separate numbers.
+  const hudPhase = snapshot.finished
+    ? 'finished'
+    : snapshot.countdown > 0
+      ? 'countdown'
+      : snapshot.lap >= snapshot.laps
+        ? 'final-lap'
+        : 'racing';
+  const countdownDigit = snapshot.countdown > 0 ? Math.ceil(snapshot.countdown) : null;
   const autoplay = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -8920,6 +9028,7 @@ export const ComebackCityThreeKartRace = ({
           // steer or drift through bends, they are no longer automatic.
           // Airborne karts fly straight (no lane control, no corner push);
           // spun-out karts barely steer.
+          const laneBeforeSteer = race.lane;
           if (!airState.airborne) {
             const steerAuthority = spinning ? 0.12 : 1;
             const laneRate =
@@ -8936,7 +9045,25 @@ export const ComebackCityThreeKartRace = ({
             race.wallContact = false;
           }
           race.previousProgress = race.progress;
-          race.progress = wrap01(race.progress + (race.speed / engine.sampler.length) * dt);
+          // Progress is centreline distance, and the kart is not on the
+          // centreline: it is on the parallel curve through its own lane, which
+          // is shorter on the inside of a bend and longer on the outside. Until
+          // this landed, corner radius cost zero lap time and the track was a
+          // rail. See LANE_ARC in kartPhysics.js for the geometry, the gain and
+          // why the deviation is clamped.
+          race.laneArcScale = arcProgressScaleFor({
+            curvature: laneArcCurvatureAt(engine.sampler, race.progress),
+            lateralOffset: laneOffsetFor(engine.sampler, race.progress, race.lane),
+            // Lateral world-units/s, from the lane the steering actually moved
+            // this frame rather than from the requested rate — so a lane clamped
+            // at the wall costs nothing extra.
+            lateralSpeed:
+              dt > 0 ? laneOffsetFor(engine.sampler, race.progress, race.lane - laneBeforeSteer) / dt : 0,
+            speed: race.speed,
+          });
+          race.progress = wrap01(
+            race.progress + (race.speed * dt) / (engine.sampler.length * race.laneArcScale)
+          );
           if (race.previousProgress > 0.86 && race.progress < 0.18) {
             race.lap += 1;
             if (race.lap > race.laps) {
@@ -9095,6 +9222,14 @@ export const ComebackCityThreeKartRace = ({
           // and a square rear hit spins the slower kart (both directions).
           race.bumpCooldown = Math.max(0, race.bumpCooldown - dt);
           const playerTotal = (race.finished ? race.laps : race.lap - 1) + race.progress;
+          // Lane/progress snapshot for the arc-length correction below. The sim
+          // mutates rivals in place, and it has more than one advance path (the
+          // spin-out branch returns early), so the frame's own delta is measured
+          // from here rather than trusted to rival.previousProgress.
+          const rivalArcBefore = race.rivals.map((rival) => ({
+            lane: rival.lane,
+            progress: rival.progress,
+          }));
           const { avalancheBy, playerBump, playerNudgeLane, playerSpin } = updateRivalRacers(race.rivals, {
             boostPads: trackDef.course.boostPads,
             boostSpeed: BOOST_SPEED,
@@ -9127,6 +9262,43 @@ export const ComebackCityThreeKartRace = ({
             raceTime: race.raceTime,
             trackLength: engine.sampler.length,
             wallLane: 0.95,
+          });
+          // ARC-LENGTH CORRECTION FOR THE RIVAL SIM. The AI has to be racing the
+          // same geometry as the player or the lane term is a player-only cheat:
+          // rivals already aim for the inside of the upcoming corner, and until
+          // this landed that line bought them nothing. rivalRacers.js advances
+          // progress with the same lane-blind speed/length term (in two places —
+          // the spin-out branch and the main branch) and belongs to another
+          // package, so the correction is applied here, to the delta it just
+          // wrote. Dividing the sim's OWN delta (rather than re-deriving one from
+          // rival.speed) keeps every cap, rubber-band and spin-out rule intact
+          // and leaves this a pure geometry pass.
+          race.rivals.forEach((rival, index) => {
+            const snapshotBefore = rivalArcBefore[index];
+            if (!snapshotBefore || !Number.isFinite(rival.progress)) return;
+            const before = snapshotBefore.progress;
+            const rawDelta = wrap01(rival.progress - before);
+            // A grid reset or teleport is not a frame of driving; leave it alone.
+            if (!(rawDelta > 0) || rawDelta > 0.2) return;
+            const scale = arcProgressScaleFor({
+              curvature: laneArcCurvatureAt(engine.sampler, rival.progress),
+              lateralOffset: laneOffsetFor(engine.sampler, rival.progress, rival.lane),
+              lateralSpeed:
+                dt > 0
+                  ? laneOffsetFor(engine.sampler, rival.progress, rival.lane - snapshotBefore.lane) / dt
+                  : 0,
+              speed: rival.speed,
+            });
+            const corrected = before + rawDelta / scale;
+            // The sim already ran its own lap-wrap test on the uncorrected value.
+            // Scaling can move the frame across that line either way (rarely, at
+            // up to 10%), and a lap counted wrong is permanent — so re-run the
+            // sim's exact test on both values and reconcile. V2 rival lap-wrap
+            // intentionally uses 0.86; mirrored from rivalRacers.js.
+            const lappedRaw = before > 0.86 && wrap01(before + rawDelta) < 0.18;
+            const lappedNow = before > 0.86 && wrap01(corrected) < 0.18;
+            if (lappedNow !== lappedRaw) rival.lap += lappedNow ? 1 : -1;
+            rival.progress = wrap01(corrected);
           });
           // Separation is continuous (karts never render through each
           // other); the bump impulse stays cooldown-gated.
@@ -10667,78 +10839,168 @@ export const ComebackCityThreeKartRace = ({
           <span>{webglError}</span>
         </div>
       ) : null}
-      <div className="three-kart-race__hud" aria-live="polite">
-        <div className="three-kart-race__badge" data-testid="race-position-badge">
-          <Trophy size={15} />
-          <span>{ordinal(snapshot.position)}</span>
-        </div>
-        <div className="three-kart-race__badge">
-          <Gauge size={15} />
-          <span>{Math.round(snapshot.speed)}</span>
-        </div>
-        <div className="three-kart-race__badge">
-          <Flag size={15} />
-          <span>{snapshot.lap}/{snapshot.laps}</span>
-        </div>
-        <div className="three-kart-race__badge">
-          <Zap size={15} />
-          <span>{snapshot.boostHits}</span>
-        </div>
-        <div className="three-kart-race__badge">
-          <Sparkles size={15} />
-          <span>{snapshot.itemPickups}</span>
-        </div>
-        <div className="three-kart-race__badge" data-testid="race-coins" data-coins={snapshot.coins}>
-          <Bitcoin size={15} />
-          <span>{snapshot.coins}</span>
-        </div>
-        <button
-          type="button"
-          className="three-kart-race__badge three-kart-race__audio-toggle"
-          data-testid="race-audio-toggle"
-          data-audio-muted={audioMuted ? '1' : '0'}
-          aria-label={audioMuted ? 'Unmute sound' : 'Mute sound'}
-          onClick={() => {
-            const next = !audioMuted;
-            setAudioMuted(next);
-            audioRef.current?.setMuted(next);
-          }}
-        >
-          {audioMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
-        </button>
-        <div className="three-kart-race__badge" data-testid="race-held-item" data-held-item={snapshot.heldItem || 'none'}>
-          {snapshot.heldItem ? (
-            <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} />
-          ) : snapshot.shieldActive ? (
-            <HeldItemIcon heldItem="iceshield" />
-          ) : (
-            <span style={{ filter: 'grayscale(0.7)', opacity: 0.45 }}>
-              <HeldItemIcon heldItem="snowball" projectileSkin={playerCharacter.projectileSkin} />
+      {/* HUD STRUCTURE (wave 6). Wave 1 restyled these chips but explicitly
+          deferred the markup, so the whole corner layout was carried by source
+          order: :nth-child(2) meant SPEED, :nth-child(3) meant LAP, and
+          :nth-child(4)/(5) were display:none'd by index. Moving one JSX line
+          silently relocated three chips, and the tallies could only be retired
+          by hiding them where they stood. The corners are real elements now,
+          every chip names itself with data-hud-stat, and the phase the HUD is
+          in is one attribute instead of three numbers re-derived per rule.
+          Every data-testid is unchanged — the smoke suites assert on them. */}
+      <div className="three-kart-race__hud" aria-live="polite" data-hud-phase={hudPhase}>
+        <div className="three-kart-race__corner three-kart-race__corner--item">
+          {/* A REAL ITEM SLOT, not a stat chip wearing a socket costume. The
+              old markup was a badge whose icon/label the CSS had to reverse-
+              engineer with :has(> img) and :first-child/:last-child to tell
+              "empty" from "shield up" from "armed". The state is declared. */}
+          <div
+            className="three-kart-race__item-slot"
+            data-held-item={snapshot.heldItem || 'none'}
+            data-slot-state={snapshot.heldItem ? 'armed' : snapshot.shieldActive ? 'shield' : 'empty'}
+            data-testid="race-held-item"
+          >
+            <span className="three-kart-race__item-slot-label">Item</span>
+            <span className="three-kart-race__item-slot-socket">
+              {snapshot.heldItem ? (
+                <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} />
+              ) : snapshot.shieldActive ? (
+                <HeldItemIcon heldItem="iceshield" />
+              ) : null}
             </span>
-          )}
-          <span>
-            {snapshot.heldItem
-              ? heldItemLabel(snapshot.heldItem, playerCharacter.projectileSkin)
-              : snapshot.shieldActive
-                ? 'ON'
-                : '—'}
-          </span>
+            <span className="three-kart-race__item-slot-name">
+              {snapshot.heldItem
+                ? heldItemLabel(snapshot.heldItem, playerCharacter.projectileSkin)
+                : snapshot.shieldActive
+                  ? 'Shield'
+                  : 'Empty'}
+            </span>
+          </div>
+        </div>
+        <div className="three-kart-race__corner three-kart-race__corner--status">
+          <button
+            type="button"
+            className="three-kart-race__badge three-kart-race__audio-toggle"
+            data-testid="race-audio-toggle"
+            data-audio-muted={audioMuted ? '1' : '0'}
+            aria-label={audioMuted ? 'Unmute sound' : 'Mute sound'}
+            onClick={() => {
+              const next = !audioMuted;
+              setAudioMuted(next);
+              audioRef.current?.setMuted(next);
+            }}
+          >
+            {audioMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+          </button>
+          {/* data-lap-flash carries the roll-over instant, so the chip can pulse
+              on the tick rather than on a loop that hopes to coincide with it. */}
+          <div
+            className="three-kart-race__badge"
+            data-hud-stat="lap"
+            data-lap-flash={lapFlash ? String(lapFlash.lap) : undefined}
+          >
+            <Flag size={15} />
+            <span>{snapshot.lap}/{snapshot.laps}</span>
+          </div>
+          <div
+            className="three-kart-race__badge"
+            data-coins={snapshot.coins}
+            data-hud-stat="coins"
+            data-testid="race-coins"
+          >
+            <Bitcoin size={15} />
+            <span>{snapshot.coins}</span>
+          </div>
+        </div>
+        <div className="three-kart-race__corner three-kart-race__corner--speed">
+          <div className="three-kart-race__badge" data-hud-stat="speed">
+            <Gauge size={15} />
+            <span>{Math.round(snapshot.speed)}</span>
+          </div>
+        </div>
+        <div className="three-kart-race__corner three-kart-race__corner--position">
+          <div className="three-kart-race__badge" data-hud-stat="position" data-testid="race-position-badge">
+            <Trophy size={15} />
+            <span>{ordinal(snapshot.position)}</span>
+          </div>
+        </div>
+        {/* Run tallies. Off the race HUD since wave 1 — they are telemetry the
+            player can neither act on nor spend — but the results panel below
+            now actually shows them, so they stay published here as one named
+            group instead of two chips hidden by their sibling index. */}
+        <div className="three-kart-race__hud-tally" aria-hidden="true">
+          <div className="three-kart-race__badge" data-hud-stat="boosts">
+            <Zap size={15} />
+            <span>{snapshot.boostHits}</span>
+          </div>
+          <div className="three-kart-race__badge" data-hud-stat="items">
+            <Sparkles size={15} />
+            <span>{snapshot.itemPickups}</span>
+          </div>
         </div>
       </div>
-      {snapshot.countdown > 0 ? (
-        <div className="three-kart-race__countdown">{Math.ceil(snapshot.countdown)}</div>
+      {/* COUNTDOWN / GO. Keyed on the digit so React remounts the element every
+          roll-over: the beat animation replays on the tick instead of looping
+          on a 1s timer offset by 0.2s and hoping to stay in phase. GO is its
+          own state — the release was the one moment of the intro with no
+          element on screen at all. */}
+      {countdownDigit !== null ? (
+        <div
+          className="three-kart-race__countdown"
+          data-countdown-step={countdownDigit}
+          key={`count-${countdownDigit}`}
+        >
+          {countdownDigit}
+        </div>
+      ) : goFlash ? (
+        <div className="three-kart-race__countdown" data-countdown-step="go" key="count-go">
+          Go
+        </div>
+      ) : null}
+      {/* LAP ROLL-OVER banner. Final lap says so — until now the only cue that
+          the last lap had begun was a counter in the corner changing by one. */}
+      {lapFlash ? (
+        <div
+          className="three-kart-race__lap-flash"
+          data-lap-flash-final={lapFlash.final ? 'true' : 'false'}
+          key={lapFlash.at}
+        >
+          <span className="three-kart-race__lap-flash-eyebrow">{lapFlash.final ? 'Final lap' : 'Lap'}</span>
+          <strong className="three-kart-race__lap-flash-value">
+            {lapFlash.lap}/{snapshot.laps}
+          </strong>
+        </div>
       ) : null}
       {itemPop ? (
         <div className="three-kart-race__item-pop" data-testid="race-item-pickup-pop" key={itemPop.at}>
           <HeldItemIcon heldItem={itemPop.item} projectileSkin={playerCharacter.projectileSkin} size={112} />
         </div>
       ) : null}
+      {/* RESULTS. Same .three-kart-race__results hook the proof scripts assert
+          on, but the panel now has parts: a headline, the run tallies that were
+          pulled off the race HUD (this is where a tally belongs), and the
+          action. data-finish-place lets the CSS celebrate a podium without the
+          JSX picking colours. */}
       {snapshot.finished ? (
-        <div className="three-kart-race__results">
-          <div>
+        <div className="three-kart-race__results" data-finish-place={snapshot.position}>
+          <div className="three-kart-race__results-head">
             <span>Finish · {ordinal(snapshot.position)}</span>
             <strong>{formatTime(snapshot.raceTime)}</strong>
           </div>
+          <dl className="three-kart-race__results-tally">
+            <div>
+              <dt>Coins</dt>
+              <dd>{snapshot.coins}</dd>
+            </div>
+            <div>
+              <dt>Boosts</dt>
+              <dd>{snapshot.boostHits}</dd>
+            </div>
+            <div>
+              <dt>Items</dt>
+              <dd>{snapshot.itemPickups}</dd>
+            </div>
+          </dl>
           <button type="button" onClick={restart}>
             <RotateCcw size={15} />
             Restart

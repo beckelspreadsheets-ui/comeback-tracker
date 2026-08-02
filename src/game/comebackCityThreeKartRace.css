@@ -71,21 +71,65 @@
 }
 
 /* ── HUD ──────────────────────────────────────────────────────────────
-   The JSX still emits ONE flex row of identical badges; the corner-cluster
-   layout below is done entirely in CSS by turning the strip into a
-   full-bleed layer and placing each badge absolutely. Read order is
-   position → speed → lap → coins → item, and size/colour encode that.
-   The nth-child indexes are coupled to the badge order in
-   ComebackCityThreeKartRace.jsx (position, speed, lap, boosts, items,
-   coins, mute, held item) — keep them in sync if that row is reordered.
-   Badges 4 and 5 (boost-pad / item-box tallies) are display:none here; see
-   the note on that rule. */
+   The corners are MARKUP now (wave 6): .three-kart-race__corner--item /
+   --status / --speed / --position each own a screen corner, and the plates
+   inside them are laid out normally rather than pinned individually. Every
+   plate declares what it is with data-hud-stat, so nothing here depends on
+   source order any more — the previous pass keyed SPEED to :nth-child(2) and
+   LAP to :nth-child(3), which meant reordering one JSX line moved three chips.
+   Read order is position → speed → lap → coins → item, and size/colour encode
+   that. */
 .three-kart-race__hud {
   display: block;
   inset: 0;
   pointer-events: none;
   position: absolute;
   z-index: 4;
+}
+
+/* Corner groups. Each is a stack anchored to its own corner; the plates it
+   holds are static children, so adding or removing one reflows the group
+   instead of leaving a hole at a hard-coded offset. */
+.three-kart-race__corner {
+  display: flex;
+  position: absolute;
+}
+
+.three-kart-race__corner--item {
+  left: calc(20px + env(safe-area-inset-left, 0px));
+  top: calc(20px + env(safe-area-inset-top, 0px));
+}
+
+/* System control on top, then the two running counters. 10px gaps reproduce
+   the tuned 20 / 68 / 158 offsets the previous pass arrived at, but as one
+   rule instead of three absolute positions that had to be kept consistent by
+   hand every time a plate changed height. */
+.three-kart-race__corner--status {
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  top: calc(20px + env(safe-area-inset-top, 0px));
+}
+
+.three-kart-race__corner--speed {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  left: calc(20px + env(safe-area-inset-left, 0px));
+}
+
+.three-kart-race__corner--position {
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
+}
+
+/* Boost-pad and item-box tallies. Two rounds of restyling could not fix what
+   they are: run telemetry the player can neither act on nor spend, sitting in
+   the corner a racing HUD reserves for the thing you are holding. They stay
+   published (the results panel shows them at the end, which is where a tally
+   belongs) but they are off the race HUD. This used to be a display:none on
+   :nth-child(4),(5) — an index that silently governed which chips vanished. */
+.three-kart-race__hud-tally {
+  display: none;
 }
 
 .three-kart-race__badge {
@@ -113,7 +157,7 @@
   min-height: 0;
   min-width: 0;
   padding: 8px 12px 9px 14px;
-  position: absolute;
+  position: relative;
   text-transform: uppercase;
   /* No backdrop-filter. Eight blurred regions stacked over a canvas that
      repaints every frame forces the compositor to re-sample and re-blur the
@@ -153,20 +197,18 @@
 
 /* POSITION — bottom-right hero plate. Biggest thing on the HUD by a wide
    margin; at a 400px thumbnail it is still the first readable element. */
-.three-kart-race__badge[data-testid='race-position-badge'] {
+.three-kart-race__badge[data-hud-stat='position'] {
   --tkr-accent-a: var(--tkr-gold);
   --tkr-accent-b: rgba(255, 211, 79, 0.2);
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   /* Hairline gold rim plus a soft outer bloom — the one plate allowed to throw
      light onto the frame, which is what makes it read as the hero at thumbnail
      size before any of the numerals resolve. */
   box-shadow: var(--tkr-bevel), 0 0 0 1px rgba(255, 211, 79, 0.32), 0 0 30px rgba(255, 211, 79, 0.16);
   height: 108px;
-  right: calc(20px + env(safe-area-inset-right, 0px));
   width: 162px;
 }
 
-.three-kart-race__badge[data-testid='race-position-badge']::before {
+.three-kart-race__badge[data-hud-stat='position']::before {
   content: 'POSITION';
   /* Shares line 1 with the trophy (20px icon + 8px gap) so the ordinal owns
      line 2 by itself. */
@@ -174,14 +216,14 @@
   margin-bottom: 8px;
 }
 
-.three-kart-race__badge[data-testid='race-position-badge'] svg {
+.three-kart-race__badge[data-hud-stat='position'] svg {
   align-self: center;
   color: var(--tkr-gold);
   height: 20px;
   width: 20px;
 }
 
-.three-kart-race__badge[data-testid='race-position-badge'] > span {
+.three-kart-race__badge[data-hud-stat='position'] > span {
   color: var(--tkr-gold);
   font-size: 66px;
   letter-spacing: -0.02em;
@@ -190,26 +232,26 @@
 }
 
 /* SPEED — bottom-left, second in the hierarchy. */
-.three-kart-race__badge:nth-child(2) {
+.three-kart-race__badge[data-hud-stat='speed'] {
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   height: 94px;
   left: calc(20px + env(safe-area-inset-left, 0px));
   width: 166px;
 }
 
-.three-kart-race__badge:nth-child(2)::before {
+.three-kart-race__badge[data-hud-stat='speed']::before {
   content: 'SPEED';
   flex-basis: calc(100% - 26px);
   margin-bottom: 8px;
 }
 
-.three-kart-race__badge:nth-child(2) svg {
+.three-kart-race__badge[data-hud-stat='speed'] svg {
   align-self: center;
   height: 18px;
   width: 18px;
 }
 
-.three-kart-race__badge:nth-child(2) > span {
+.three-kart-race__badge[data-hud-stat='speed'] > span {
   font-size: 46px;
   letter-spacing: -0.02em;
   text-shadow: 0 3px 0 rgba(4, 7, 14, 0.5), 0 6px 20px rgba(4, 7, 14, 0.6);
@@ -217,7 +259,7 @@
 }
 
 /* The readout had no unit at all — km/h is what the telemetry publishes. */
-.three-kart-race__badge:nth-child(2)::after {
+.three-kart-race__badge[data-hud-stat='speed']::after {
   color: var(--tkr-muted);
   content: 'KM/H';
   font: 700 10px/1 var(--tkr-mono);
@@ -226,20 +268,20 @@
 }
 
 /* LAP + COINS — top-right column, matched width so they read as one stack. */
-.three-kart-race__badge:nth-child(3) {
+.three-kart-race__badge[data-hud-stat='lap'] {
   height: 82px;
   right: calc(20px + env(safe-area-inset-right, 0px));
   top: calc(68px + env(safe-area-inset-top, 0px));
   width: 112px;
 }
 
-.three-kart-race__badge:nth-child(3)::before {
+.three-kart-race__badge[data-hud-stat='lap']::before {
   content: 'LAP';
   flex-basis: calc(100% - 24px);
   margin-bottom: 7px;
 }
 
-.three-kart-race__badge:nth-child(3) svg {
+.three-kart-race__badge[data-hud-stat='lap'] svg {
   align-self: center;
   height: 16px;
   width: 16px;
@@ -248,12 +290,12 @@
 /* Lap is the third thing the rubric asks to be big — 34px keeps the ladder
    (66 position / 46 speed / 34 lap / 28 coins) unambiguous at thumbnail size
    while still clearing the plate's 82px box. */
-.three-kart-race__badge:nth-child(3) > span {
+.three-kart-race__badge[data-hud-stat='lap'] > span {
   font-size: 34px;
   -webkit-text-stroke: 2.5px rgba(6, 10, 18, 0.88);
 }
 
-.three-kart-race__badge[data-testid='race-coins'] {
+.three-kart-race__badge[data-hud-stat='coins'] {
   --tkr-accent-a: var(--tkr-gold);
   --tkr-accent-b: rgba(255, 211, 79, 0.2);
   height: 72px;
@@ -266,28 +308,28 @@
   animation: tkr-coin-pop 0.34s cubic-bezier(0.2, 1.5, 0.4, 1);
 }
 
-.three-kart-race__badge[data-testid='race-coins'][data-coins$='1'],
-.three-kart-race__badge[data-testid='race-coins'][data-coins$='3'],
-.three-kart-race__badge[data-testid='race-coins'][data-coins$='5'],
-.three-kart-race__badge[data-testid='race-coins'][data-coins$='7'],
-.three-kart-race__badge[data-testid='race-coins'][data-coins$='9'] {
+.three-kart-race__badge[data-hud-stat='coins'][data-coins$='1'],
+.three-kart-race__badge[data-hud-stat='coins'][data-coins$='3'],
+.three-kart-race__badge[data-hud-stat='coins'][data-coins$='5'],
+.three-kart-race__badge[data-hud-stat='coins'][data-coins$='7'],
+.three-kart-race__badge[data-hud-stat='coins'][data-coins$='9'] {
   animation-name: tkr-coin-pop-alt;
 }
 
-.three-kart-race__badge[data-testid='race-coins']::before {
+.three-kart-race__badge[data-hud-stat='coins']::before {
   content: 'COINS';
   flex-basis: calc(100% - 26px);
   margin-bottom: 6px;
 }
 
-.three-kart-race__badge[data-testid='race-coins'] svg {
+.three-kart-race__badge[data-hud-stat='coins'] svg {
   align-self: center;
   color: var(--tkr-gold);
   height: 18px;
   width: 18px;
 }
 
-.three-kart-race__badge[data-testid='race-coins'] > span {
+.three-kart-race__badge[data-hud-stat='coins'] > span {
   color: var(--tkr-gold);
   font-size: 28px;
   -webkit-text-stroke: 2.5px rgba(6, 10, 18, 0.88);
@@ -306,23 +348,10 @@
   100% { filter: brightness(1) drop-shadow(0 0 0 rgba(255, 211, 79, 0)); transform: scale(1); }
 }
 
-/* Boost-pad and item-box tallies (nth-child 4 and 5) are retired. Two rounds of
-   restyling could not fix what they are: run telemetry the player can neither
-   act on nor spend, sitting in the corner a racing HUD reserves for the thing
-   you are holding. Dressing them up only made a small matched pair of chips
-   more prominent. They stay in the JSX — the snapshot still publishes the
-   counts and the results panel is where a tally belongs — but they are off the
-   race HUD. nth-child indexing is unaffected: display:none does not renumber
-   siblings, so the chips below keep their positions. */
-.three-kart-race__badge:nth-child(4),
-.three-kart-race__badge:nth-child(5) {
-  display: none;
-}
-
-/* The audio toggle is a real <button> wearing the badge look. The HUD strip
+/* The audio toggle is a real <button> wearing the badge look. The HUD layer
    is pointer-events:none so it never steals from the canvas — the button
-   opts back in. Parked in the top-right corner as a system control, out of
-   the racing hierarchy entirely — but demoted by glyph contrast, not by
+   opts back in. It rides at the top of the status corner as a system control,
+   out of the racing hierarchy entirely — but demoted by glyph contrast, not by
    element opacity: at 0.5 the whole plate went translucent and the chip
    dissolved into a smear of whatever sky sat behind it, so it was the one
    control on screen with no bevel or rim. */
@@ -339,8 +368,6 @@
   min-width: 0;
   padding: 0;
   pointer-events: auto;
-  right: calc(20px + env(safe-area-inset-right, 0px));
-  top: calc(20px + env(safe-area-inset-top, 0px));
   transition: color 0.16s ease;
   width: 38px;
   /* Same animation-name flip as the coin chip: toggling mute swaps the
@@ -377,47 +404,63 @@
   100% { transform: scale(1); }
 }
 
-/* ITEM SOCKET — top-left, framed as a recessed slot rather than a chip so
-   the held item stops reading as one more number in a row. */
-.three-kart-race__badge[data-testid='race-held-item'] {
-  --tkr-accent-a: transparent;
-  --tkr-accent-b: transparent;
-  align-content: center;
+/* ── ITEM SLOT ────────────────────────────────────────────────────────
+   Its own element and its own class, not a stat chip in a socket costume.
+   The previous pass had to tell the three states apart with
+   :has(> img) / :first-child / :last-child, because the markup shipped a
+   greyed placeholder icon for "empty" and wrote "ON" as the caption for
+   "shield". The JSX declares the state now: data-slot-state is
+   empty | shield | armed, and each part has a name. */
+.three-kart-race__item-slot {
   align-items: center;
+  background: var(--tkr-gloss), var(--tkr-face);
   border-radius: 18px;
+  box-sizing: border-box;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 -2px 0 rgba(0, 0, 0, 0.5),
     inset 0 0 26px rgba(4, 8, 16, 0.75),
     0 14px 30px rgba(3, 6, 12, 0.5);
+  color: var(--tkr-text);
+  display: flex;
   flex-direction: column;
-  flex-wrap: nowrap;
   gap: 7px;
   height: 104px;
   justify-content: center;
-  left: calc(20px + env(safe-area-inset-left, 0px));
   padding: 9px 8px 10px;
-  top: calc(20px + env(safe-area-inset-top, 0px));
+  position: relative;
+  text-transform: uppercase;
   width: 104px;
 }
 
-.three-kart-race__badge[data-testid='race-held-item']::before {
-  content: 'ITEM';
-  flex-basis: auto;
-  margin-bottom: 0;
+.three-kart-race__item-slot-label {
+  color: var(--tkr-muted);
+  font: 700 9px/1 var(--tkr-mono);
+  letter-spacing: 0.2em;
+  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.8);
+}
+
+/* Fixed box whether or not it holds a tile, so arming an item does not shove
+   the caption down 54px. */
+.three-kart-race__item-slot-socket {
+  align-items: center;
+  display: flex;
+  height: 54px;
+  justify-content: center;
+  width: 54px;
 }
 
 /* HeldItemIcon ships width/height attributes at 15px — CSS wins over the
    presentational hint, so the socket renders the same tile at full size.
    The radius is inline-styled, hence the override. */
-.three-kart-race__badge[data-testid='race-held-item'] img {
+.three-kart-race__item-slot-socket img {
   border-radius: 13px !important;
   box-shadow: 0 6px 14px rgba(3, 6, 12, 0.55);
   height: 54px;
   width: 54px;
 }
 
-.three-kart-race__badge[data-testid='race-held-item'] > span:last-child {
+.three-kart-race__item-slot-name {
   color: rgba(226, 238, 255, 0.74);
   font: 700 10px/1 var(--tkr-mono);
   letter-spacing: 0.08em;
@@ -426,17 +469,11 @@
   text-overflow: ellipsis;
   text-shadow: 0 1px 2px rgba(4, 7, 14, 0.8);
   white-space: nowrap;
-  -webkit-text-stroke: 0;
 }
 
-/* Empty slot: the JSX renders a greyed snowball as a placeholder, which
-   reads as "you are holding a snowball". Hide it — the first child is only
-   a <span> in the empty state (armed and shield states start with <img>). */
-.three-kart-race__badge[data-held-item='none'] > span:first-child {
-  display: none;
-}
-
-.three-kart-race__badge[data-testid='race-held-item']::after {
+/* The ring is the slot's state light: dashed and quiet when empty, cyan when
+   the shield is up, gold and breathing when something is loaded. */
+.three-kart-race__item-slot::after {
   border-radius: 18px;
   content: '';
   inset: 0;
@@ -444,48 +481,41 @@
   position: absolute;
 }
 
-/* :has() splits "empty" from "shield active" — both publish
-   data-held-item="none", but only the shield state renders an <img>. */
-.three-kart-race__badge[data-held-item='none']:not(:has(> img))::after {
+.three-kart-race__item-slot[data-slot-state='empty']::after {
   border: 2px dashed rgba(226, 238, 255, 0.24);
   inset: 26px 14px 24px;
 }
 
-.three-kart-race__badge[data-held-item='none']:not(:has(> img)) > span:last-child {
+/* Collapse the (empty) tile box rather than leaving a 54px hole: the dashed
+   ring IS the empty state's picture, and a reserved socket would push the
+   caption up out of the ring it is captioning. */
+.three-kart-race__item-slot[data-slot-state='empty'] .three-kart-race__item-slot-socket {
+  display: none;
+}
+
+.three-kart-race__item-slot[data-slot-state='empty'] .three-kart-race__item-slot-name {
   opacity: 0;
 }
 
-/* Shield up reads cyan; a held throwable reads gold and breathes. */
-.three-kart-race__badge[data-held-item='none']:has(> img)::after {
+.three-kart-race__item-slot[data-slot-state='shield']::after {
   border: 2px solid rgba(126, 239, 255, 0.7);
   box-shadow: 0 0 18px rgba(126, 239, 255, 0.3), inset 0 0 16px rgba(126, 239, 255, 0.14);
 }
 
-/* Shield is the one state whose caption the JSX writes as a state ("ON")
-   rather than as a name, so the socket read "ITEM / ON" while every other
-   state read "ITEM / FISH BONE". Collapse the type and re-label from the
-   span's own ::after, in the cyan the ring above already uses. */
-.three-kart-race__badge[data-held-item='none']:has(> img) > span:last-child {
-  font-size: 0;
-}
-
-.three-kart-race__badge[data-held-item='none']:has(> img) > span:last-child::after {
+.three-kart-race__item-slot[data-slot-state='shield'] .three-kart-race__item-slot-name {
   color: var(--tkr-cyan);
-  content: 'SHIELD';
-  font: 700 10px/1 var(--tkr-mono);
-  letter-spacing: 0.08em;
 }
 
-.three-kart-race__badge[data-testid='race-held-item']:not([data-held-item='none']) {
+.three-kart-race__item-slot[data-slot-state='armed'] {
   animation: tkr-slot-arm 0.5s cubic-bezier(0.2, 1.5, 0.4, 1);
 }
 
-.three-kart-race__badge[data-testid='race-held-item']:not([data-held-item='none'])::after {
+.three-kart-race__item-slot[data-slot-state='armed']::after {
   animation: tkr-slot-breathe 1.7s ease-in-out infinite;
   border: 2px solid rgba(255, 211, 79, 0.85);
 }
 
-.three-kart-race__badge[data-testid='race-held-item']:not([data-held-item='none']) > span:last-child {
+.three-kart-race__item-slot[data-slot-state='armed'] .three-kart-race__item-slot-name {
   color: var(--tkr-gold);
 }
 
@@ -500,11 +530,12 @@
 }
 
 /* ── Countdown ────────────────────────────────────────────────────────
-   No box: a stroked gold numeral over the grid, MK8-style. The 1s beat is
-   offset 0.2s so it lands on each digit change (countdown starts at 2.2s,
-   so the roll-overs are at 0.2 / 1.2 / 2.2). */
+   No box: a stroked gold numeral over the grid, MK8-style. The beat used to
+   be a 1s INFINITE loop offset by 0.2s, chasing digit changes it could not
+   see; the JSX keys the element on the digit now, so React remounts it every
+   roll-over and this plays ONCE, on the tick, by construction. */
 .three-kart-race__countdown {
-  animation: tkr-count-beat 1s cubic-bezier(0.2, 0.9, 0.3, 1) 0.2s infinite;
+  animation: tkr-count-beat 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) both;
   background: none;
   border: 0;
   color: var(--tkr-gold);
@@ -526,7 +557,7 @@
 }
 
 .three-kart-race__countdown::before {
-  animation: tkr-count-ring 1s ease-out 0.2s infinite;
+  animation: tkr-count-ring 0.9s ease-out both;
   border: 5px solid rgba(255, 211, 79, 0.7);
   border-radius: 50%;
   content: '';
@@ -539,6 +570,23 @@
   z-index: -1;
 }
 
+/* GO. The lights going green had no element at all before — the counter
+   simply stopped rendering. It gets the cyan of the boost VFX rather than the
+   countdown's gold, so the release reads as a different event and not as a
+   fourth digit, and it leaves faster than a digit does. */
+.three-kart-race__countdown[data-countdown-step='go'] {
+  animation-duration: 0.9s;
+  animation-name: tkr-count-go;
+  color: var(--tkr-cyan);
+  font-size: clamp(84px, 12vw, 180px);
+  letter-spacing: 0.04em;
+  text-shadow: 0 12px 40px rgba(4, 7, 14, 0.75), 0 0 72px rgba(126, 239, 255, 0.65);
+}
+
+.three-kart-race__countdown[data-countdown-step='go']::before {
+  border-color: rgba(126, 239, 255, 0.75);
+}
+
 @keyframes tkr-count-beat {
   0% { opacity: 0.25; transform: translate(-50%, -50%) scale(1.85); }
   16% { opacity: 1; transform: translate(-50%, -50%) scale(0.92); }
@@ -546,10 +594,124 @@
   100% { opacity: 0.95; transform: translate(-50%, -50%) scale(1); }
 }
 
+@keyframes tkr-count-go {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(1.22); }
+  34% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.12); }
+}
+
 @keyframes tkr-count-ring {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
   20% { opacity: 0.85; }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); }
+}
+
+/* ── Lap roll-over ────────────────────────────────────────────────────
+   The only cue that a lap had ticked over was a corner counter changing by
+   one, and the start of the FINAL lap — the one moment a racing game is
+   obliged to announce — looked exactly like every other lap. Both are real
+   state now (keyed on the roll-over instant, so this plays once per lap) and
+   the banner sits high, clear of the horizon and the racing line. */
+.three-kart-race__lap-flash {
+  animation: tkr-lap-flash 1.5s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  text-transform: uppercase;
+  top: 21%;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+.three-kart-race__lap-flash-eyebrow {
+  color: var(--tkr-muted);
+  display: block;
+  font: 700 12px/1 var(--tkr-mono);
+  letter-spacing: 0.42em;
+  /* Tracking pushes the block right by one letter-space; pull it back so the
+     eyebrow stays centred over the numeral. */
+  margin-right: -0.42em;
+  text-shadow: 0 2px 6px rgba(4, 7, 14, 0.9);
+}
+
+.three-kart-race__lap-flash-value {
+  color: var(--tkr-text);
+  display: block;
+  font: 900 46px/1 var(--tkr-display);
+  font-variant-numeric: tabular-nums;
+  margin-top: 8px;
+  paint-order: stroke fill;
+  text-shadow: 0 6px 22px rgba(4, 7, 14, 0.7);
+  -webkit-text-stroke: 4px rgba(6, 10, 18, 0.9);
+}
+
+/* Final lap is the one that gets the gold and the glow. */
+.three-kart-race__lap-flash[data-lap-flash-final='true'] .three-kart-race__lap-flash-eyebrow,
+.three-kart-race__lap-flash[data-lap-flash-final='true'] .three-kart-race__lap-flash-value {
+  color: var(--tkr-gold);
+}
+
+.three-kart-race__lap-flash[data-lap-flash-final='true'] .three-kart-race__lap-flash-value {
+  font-size: 58px;
+  text-shadow: 0 6px 22px rgba(4, 7, 14, 0.7), 0 0 42px rgba(255, 211, 79, 0.5);
+}
+
+@keyframes tkr-lap-flash {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.94); }
+  12% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.04); }
+  22% { transform: translateX(-50%) translateY(0) scale(1); }
+  74% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.98); }
+}
+
+/* The lap chip pulses in sympathy. The attribute is written on the roll-over
+   and removed when the flash window closes, so the rule is added and dropped
+   around each tick — that add is what starts the animation, and it needs no
+   two-keyframe alternation because the attribute genuinely goes away between
+   laps (unlike the coin counter, which only ever changes value). */
+.three-kart-race__badge[data-lap-flash] {
+  animation: tkr-lap-tick 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes tkr-lap-tick {
+  0% { filter: brightness(1.45); transform: scale(1.1); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+
+/* ── HUD phase ────────────────────────────────────────────────────────
+   data-hud-phase is countdown | racing | final-lap | finished. One attribute
+   on the layer, so the whole HUD can respond to the state of the race without
+   every rule re-deriving it from countdown/lap/finished separately. */
+
+/* On the grid and at the flag the HUD is not the subject: the countdown owns
+   the screen, then the results panel does. Recede rather than disappear — a
+   HUD that pops in and out reads as a bug. Applied to the PLATES, not to the
+   corner groups: compact collapses the corners with display:contents, and an
+   element with display:contents cannot carry an opacity. */
+.three-kart-race__hud .three-kart-race__badge,
+.three-kart-race__hud .three-kart-race__item-slot {
+  transition: opacity 0.35s ease;
+}
+
+.three-kart-race__hud[data-hud-phase='countdown'] .three-kart-race__badge,
+.three-kart-race__hud[data-hud-phase='countdown'] .three-kart-race__item-slot,
+.three-kart-race__hud[data-hud-phase='finished'] .three-kart-race__badge,
+.three-kart-race__hud[data-hud-phase='finished'] .three-kart-race__item-slot {
+  opacity: 0.55;
+}
+
+/* Final lap: the position plate is the thing that matters now, so it takes the
+   gold rim up a stop and holds a slow pulse for the rest of the race. */
+.three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap'] > span,
+.three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap'] svg {
+  color: var(--tkr-gold);
+}
+
+.three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap']::before {
+  color: rgba(255, 211, 79, 0.72);
+  content: 'FINAL LAP';
 }
 
 /* K7 pickup pop (owner pick B): the new item's icon springs oversized, then
@@ -629,7 +791,9 @@
   z-index: 6;
 }
 
-.three-kart-race__results span {
+/* Scoped to the headline block so the tally below can style its own type
+   instead of inheriting the 46px hero numeral. */
+.three-kart-race__results-head span {
   color: var(--tkr-gold);
   display: block;
   font: 700 11px/1 var(--tkr-mono);
@@ -637,7 +801,7 @@
   text-transform: uppercase;
 }
 
-.three-kart-race__results strong {
+.three-kart-race__results-head strong {
   color: #f8fbff;
   display: block;
   font: 900 46px/1 var(--tkr-display);
@@ -647,6 +811,39 @@
   paint-order: stroke fill;
   text-shadow: 0 4px 18px rgba(4, 7, 14, 0.6);
   -webkit-text-stroke: 3px rgba(6, 10, 18, 0.75);
+}
+
+/* A podium finish gets the hero treatment; 4th and 5th get the plain plate.
+   Driven off data-finish-place so the JSX never picks a colour. */
+.three-kart-race__results[data-finish-place='1'] .three-kart-race__results-head strong,
+.three-kart-race__results[data-finish-place='2'] .three-kart-race__results-head strong,
+.three-kart-race__results[data-finish-place='3'] .three-kart-race__results-head strong {
+  color: var(--tkr-gold);
+  text-shadow: 0 4px 18px rgba(4, 7, 14, 0.6), 0 0 44px rgba(255, 211, 79, 0.35);
+}
+
+/* Run tallies live HERE, not on the race HUD: at the flag they are the score,
+   during the race they were numbers the player could neither act on nor
+   spend. */
+.three-kart-race__results-tally {
+  align-self: center;
+  display: flex;
+  gap: 18px;
+  margin: 0;
+}
+
+.three-kart-race__results-tally dt {
+  color: var(--tkr-muted);
+  font: 700 9px/1 var(--tkr-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.three-kart-race__results-tally dd {
+  color: var(--tkr-text);
+  font: 900 22px/1 var(--tkr-display);
+  font-variant-numeric: tabular-nums;
+  margin: 7px 0 0;
 }
 
 @keyframes tkr-results-in {
@@ -857,16 +1054,28 @@
     top: calc(10px + env(safe-area-inset-top, 0px));
   }
 
-  /* Descendant form on purpose: it ties the per-chip corner anchors above
-     (same specificity, earlier in the file) so the strip really is a strip. */
-  .three-kart-race__hud > .three-kart-race__badge {
+  /* The corner groups dissolve rather than move: display:contents drops the
+     wrappers out of the box tree so their plates become flex items of the
+     strip directly. Reading order is then set by `order` below — declared, not
+     inherited from wherever the markup happens to put the corners. */
+  .three-kart-race__corner {
+    display: contents;
+  }
+
+  .three-kart-race__badge[data-hud-stat='position'] { order: 1; }
+  .three-kart-race__badge[data-hud-stat='speed'] { order: 2; }
+  .three-kart-race__badge[data-hud-stat='lap'] { order: 3; }
+  .three-kart-race__badge[data-hud-stat='coins'] { order: 4; }
+  .three-kart-race__audio-toggle { order: 5; }
+  .three-kart-race__item-slot { order: 6; }
+
+  .three-kart-race__hud .three-kart-race__badge {
     align-content: center;
     border-radius: 10px;
     flex: 0 0 auto;
     font-size: 13px;
     gap: 0 5px;
     height: 46px;
-    inset: auto;
     padding: 0 8px 0 10px;
     position: relative;
   }
@@ -880,16 +1089,16 @@
 
   /* Full-width captions here, so the glyph rides the value line instead of
      claiming a third row inside a 46px plate. */
-  .three-kart-race__hud > .three-kart-race__badge svg {
+  .three-kart-race__hud .three-kart-race__badge svg {
     align-self: center;
     order: 0;
   }
 
-  .three-kart-race__badge[data-testid='race-position-badge'] {
+  .three-kart-race__badge[data-hud-stat='position'] {
     width: 80px;
   }
 
-  .three-kart-race__badge[data-testid='race-position-badge']::before {
+  .three-kart-race__badge[data-hud-stat='position']::before {
     content: 'POS';
     flex-basis: 100%;
     margin-bottom: 4px;
@@ -898,51 +1107,50 @@
   /* The two hero chips drop their glyph here: at 80px wide the caption
      already names them, and the icon would push the value onto a third
      line inside a 46px plate. */
-  .three-kart-race__badge[data-testid='race-position-badge'] svg,
-  .three-kart-race__badge:nth-child(2) svg {
+  .three-kart-race__badge[data-hud-stat='position'] svg,
+  .three-kart-race__badge[data-hud-stat='speed'] svg {
     display: none;
   }
 
-  .three-kart-race__badge[data-testid='race-position-badge'] > span {
+  .three-kart-race__badge[data-hud-stat='position'] > span {
     font-size: 23px;
     -webkit-text-stroke: 2px rgba(6, 10, 18, 0.88);
   }
 
-  .three-kart-race__badge:nth-child(2) {
+  .three-kart-race__badge[data-hud-stat='speed'] {
     width: 92px;
   }
 
-  .three-kart-race__badge:nth-child(2)::before {
+  .three-kart-race__badge[data-hud-stat='speed']::before {
     flex-basis: 100%;
     margin-bottom: 4px;
   }
 
-  .three-kart-race__badge:nth-child(2) > span {
+  .three-kart-race__badge[data-hud-stat='speed'] > span {
     font-size: 21px;
     -webkit-text-stroke: 2px rgba(6, 10, 18, 0.88);
   }
 
-  .three-kart-race__badge:nth-child(2)::after {
+  .three-kart-race__badge[data-hud-stat='speed']::after {
     font-size: 8px;
     margin-bottom: 2px;
   }
 
-  .three-kart-race__badge:nth-child(3) {
+  .three-kart-race__badge[data-hud-stat='lap'] {
     height: 46px;
-    top: auto;
     width: 66px;
   }
 
-  .three-kart-race__badge:nth-child(3)::before {
+  .three-kart-race__badge[data-hud-stat='lap']::before {
     flex-basis: 100%;
   }
 
-  .three-kart-race__badge:nth-child(3) svg {
+  .three-kart-race__badge[data-hud-stat='lap'] svg {
     height: 13px;
     width: 13px;
   }
 
-  .three-kart-race__badge:nth-child(3) > span {
+  .three-kart-race__badge[data-hud-stat='lap'] > span {
     font-size: 15px;
     -webkit-text-stroke: 1.5px rgba(6, 10, 18, 0.8);
   }
@@ -950,33 +1158,38 @@
   /* The retired tallies took 110px of the strip with them: at 844x390 the row
      is now 388px of chips plus 30px of gaps inside ~820px of usable width, so
      it cannot wrap even with both safe-area insets at their iPhone maximum. */
-  .three-kart-race__badge[data-testid='race-coins'] {
+  .three-kart-race__badge[data-hud-stat='coins'] {
     height: 46px;
-    top: auto;
     width: 60px;
   }
 
-  .three-kart-race__badge[data-testid='race-coins']::before {
+  .three-kart-race__badge[data-hud-stat='coins']::before {
     flex-basis: 100%;
   }
 
-  .three-kart-race__badge[data-testid='race-coins'] svg {
+  .three-kart-race__badge[data-hud-stat='coins'] svg {
     height: 14px;
     width: 14px;
   }
 
-  .three-kart-race__badge[data-testid='race-coins'] > span {
+  .three-kart-race__badge[data-hud-stat='coins'] > span {
     font-size: 15px;
     -webkit-text-stroke: 1.5px rgba(6, 10, 18, 0.8);
   }
 
   .three-kart-race__audio-toggle {
     height: 46px;
-    top: auto;
     width: 44px;
   }
 
-  .three-kart-race__badge[data-testid='race-held-item'] {
+  /* "FINAL LAP" is 9 tracked characters; the compact lap plate is 66px wide
+     with 18px of padding, so it stays "LAP" here — the phase is still legible
+     from the gold and the banner. */
+  .three-kart-race__hud[data-hud-phase='final-lap'] .three-kart-race__badge[data-hud-stat='lap']::before {
+    content: 'LAP';
+  }
+
+  .three-kart-race__item-slot {
     border-radius: 12px;
     gap: 0;
     height: 46px;
@@ -984,27 +1197,30 @@
     width: 46px;
   }
 
-  .three-kart-race__badge[data-testid='race-held-item']::before {
-    content: none;
+  /* The strip has no room for a caption and the smash button already carries
+     the item's name on touch layouts. */
+  .three-kart-race__item-slot-label,
+  .three-kart-race__item-slot-name {
+    display: none;
   }
 
-  .three-kart-race__badge[data-testid='race-held-item'] img {
+  .three-kart-race__item-slot-socket {
+    height: 28px;
+    width: 28px;
+  }
+
+  .three-kart-race__item-slot-socket img {
     border-radius: 8px !important;
     height: 28px;
     width: 28px;
   }
 
-  /* The smash button already carries the item name on touch layouts. */
-  .three-kart-race__badge[data-testid='race-held-item'] > span:last-child {
-    display: none;
-  }
-
-  .three-kart-race__badge[data-testid='race-held-item']::after {
+  .three-kart-race__item-slot::after {
     border-radius: 12px;
     inset: 0;
   }
 
-  .three-kart-race__badge[data-held-item='none']:not(:has(> img))::after {
+  .three-kart-race__item-slot[data-slot-state='empty']::after {
     border-radius: 7px;
     inset: 9px;
   }
@@ -1041,13 +1257,37 @@
     padding: 16px 18px;
   }
 
-  .three-kart-race__results strong {
+  .three-kart-race__results-head strong {
     font-size: 34px;
+  }
+
+  .three-kart-race__results-tally {
+    gap: 12px;
+  }
+
+  .three-kart-race__results-tally dd {
+    font-size: 17px;
+    margin-top: 5px;
   }
 
   .three-kart-race__results button {
     min-height: 46px;
     padding: 0 16px;
+  }
+
+  /* The lap banner shares the strip's air on a 390pt-tall landscape phone, so
+     it drops to the upper third and loses a size step. */
+  .three-kart-race__lap-flash {
+    top: 26%;
+  }
+
+  .three-kart-race__lap-flash-value {
+    font-size: 32px;
+    -webkit-text-stroke: 3px rgba(6, 10, 18, 0.9);
+  }
+
+  .three-kart-race__lap-flash[data-lap-flash-final='true'] .three-kart-race__lap-flash-value {
+    font-size: 40px;
   }
 }
 

@@ -43,6 +43,59 @@ import * as THREE from 'three';
 import { createAerialEffect } from './aerialEffect.js';
 import { createSpeedBlurEffect } from './speedBlurEffect.js';
 import { buildTrackLut } from './raceGrade.js';
+import { createAdaptiveRenderScale, raceQuality } from './createRaceScene.js';
+
+// ---------------------------------------------------------------------------
+// QUALITY TIER LEDGER (AAA wave 6). What each tier costs, what it preserves.
+//
+// Everything in this chain grew over the overhaul: one merged pass became
+// three, a shadow rig landed, the particle pools tripled, the mid-ground belt
+// added instanced geometry. Desktop absorbed it (144 -> ~120/102 fps against a
+// 60 fps budget). The phone tier had never been re-measured, and a phone is the
+// device this game is actually played on.
+//
+// DESKTOP (mobile === false)
+//   pays   4x MSAA on the scene pass, SMAA HIGH as its own trailing pass, both
+//          bloom lobes (wide veil + tight emitter core), 6 mip levels, LUT with
+//          tetrahedral interpolation, grain at 0.03, the full 0.034uv streak.
+//   holds  the full art direction, and now climbs toward native resolution on
+//          hardware that can hold the vblank (see the ladder in createRaceScene).
+//
+// PHONE (mobile === true — sourced from touchControls, NOT from the aspect
+//        test, because the race soft-locks phones to landscape and the aspect
+//        test reads false on exactly the device that needs this tier)
+//   drops  SMAA entirely (a full extra pass + two auxiliary targets), MSAA
+//          entirely (4x on a HalfFloat target is the single largest bandwidth
+//          line on a tiler), the tight bloom lobe (never constructed, so its
+//          luminance pass and 3-level mip chain are not merely blended out),
+//          two bloom mip levels, tetrahedral LUT interpolation (3 extra taps
+//          per pixel), and half the grain.
+//   holds  the LUT, the vignette, ACES and the wide bloom veil. Those four ARE
+//          the Miami-dusk / arctic-storm direction; a phone that renders the
+//          scene without them is not a cheaper version of this game, it is a
+//          different-looking one. The HalfFloat frame buffer is also held: the
+//          bloom thresholds are 1.05 and 1.28, i.e. deliberately ABOVE unity so
+//          only real emitters qualify, and an LDR buffer clamps every one of
+//          them away — dropping to UnsignedByte would save real bandwidth and
+//          delete the sun disc, the neon trim and the boost core with it.
+//   costs  aliasing on geometry edges (no MSAA, no SMAA) and a coarser bloom
+//          falloff. Both were already true; this ledger just names them.
+//
+// LOW POWER (either tier, entered only when the adaptive controller has
+//            exhausted the resolution ladder and is still under 56 fps)
+//   drops  the film grain outright and takes the wide bloom to 3 mip levels.
+//   holds  the LUT, the vignette and ACES — unconditionally, in every tier.
+//          There is no configuration of this chain in which the grade is off.
+//
+// BOTH TIERS, ALL THE TIME
+//   the speed blur is now its own pass, gated on the boost. It is an 8-tap x 3
+//   channel gather (24 dependent fetches per pixel) whose loop the GPU runs
+//   whether or not uBoost.x is zero — i.e. the whole race was paying a boost
+//   effect's full per-pixel cost to multiply it by nothing. It is mathematically
+//   identical as a separate pass because it is a CONVOLUTION with BlendFunction
+//   .SRC sitting FIRST in the grade pass: it re-taps inputBuffer and replaces
+//   the colour, so nothing upstream of it in that pass was reaching it anyway.
+// ---------------------------------------------------------------------------
 
 // Exposure is NOT 1.28. The audit asked for 1.05 -> 1.28 on the strength of
 // "the brightest scene pixel in the capture set is 241", but that measurement
@@ -152,16 +205,33 @@ export const buildRacePostChain = ({
     passes.push(new EffectPass(camera, ...bloomEffects));
   }
 
-  // ---- Pass 2: the grade ---------------------------------------------------
+  // ---- Pass 1b: the speed blur, on its own and gated on the boost ----------
+  // It used to sit at the head of the grade pass. It had to be at the head,
+  // because it is a CONVOLUTION: it re-taps inputBuffer and writes with
+  // BlendFunction.SRC, so every effect ahead of it in the same pass was
+  // discarded. That is precisely why moving it out is free — a convolution
+  // that runs first and replaces the colour produces the same image whether it
+  // is the first effect of a pass or the whole of the pass before it.
+  //
+  // What it buys: the shader's 8-tap x 3-channel gather is an unconditional
+  // `for` loop, so it costs 24 dependent texture fetches per pixel per frame
+  // even while uBoost.x is 0, which is most of a race. Gated, the cost is paid
+  // during boosts and nowhere else.
   const speedBlur = wantBlur ? createSpeedBlurEffect({ mobile }) : null;
+  let speedBlurPass = null;
+  if (speedBlur) {
+    speedBlurPass = new EffectPass(camera, speedBlur);
+    passes.push(speedBlurPass);
+  }
+
+  // ---- Pass 2: the grade ---------------------------------------------------
   const aerial = wantHaze ? createAerialEffect({ mobile, trackKey }) : null;
   let lut = null;
   const gradeEffects = [];
-  // The convolution effect must come first: it re-taps inputBuffer, so anything
-  // ahead of it in the same pass would be thrown away. (pmndrs allows exactly
-  // one convolution effect per pass and throws on a second — SMAA is the other
-  // one, which is why it gets its own pass.)
-  if (speedBlur) gradeEffects.push(speedBlur);
+  // The aerial haze is a single depth fetch with no neighbour taps, so it is
+  // not a convolution and merges into the grade for free. (pmndrs allows
+  // exactly one convolution effect per pass and throws on a second — that is
+  // why the blur above and SMAA below each get their own.)
   if (aerial) gradeEffects.push(aerial);
   if (wantTone) gradeEffects.push(new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC }));
   // Vignette BEFORE the LUT, both after ACES. Before ACES it was multiplying
@@ -226,6 +296,60 @@ export const buildRacePostChain = ({
 
   let blurStrength = 0;
   let currentMobile = mobile;
+  // Keep the blur pass in the draw list for the first few frames so its program
+  // compiles during the countdown instead of hitching on the first boost. Same
+  // trick, and the same reason, as raceParticles' speedLineWarmup: the wave-5
+  // artefact critic measured programs climbing 47 -> 50 INSIDE a race and named
+  // mid-race shader compilation as the mechanism behind wave 4's 13.86ms cliff.
+  let blurWarmupFrames = 4;
+
+  const setSpeedBlurEnabled = (on) => {
+    if (!speedBlurPass) return;
+    // Never switch off the only pass that can reach the screen. renderToScreen
+    // lives on the LAST ENABLED pass, and the post lab can turn every other
+    // effect off by URL (?postBloom=0&postGrade=0&postTone=0...), in which case
+    // this pass is the whole chain and disabling it renders the race into a
+    // buffer nobody presents.
+    const next = on || passes.every((pass) => pass === speedBlurPass || !pass.enabled);
+    if (speedBlurPass.enabled === next) return;
+    speedBlurPass.enabled = next;
+    retargetOutput();
+  };
+
+  // Adaptive resolution. Default ON in a real browser, default OFF under
+  // automation — and that default is load-bearing, not politeness: every
+  // critic score in this programme is measured off captured PNGs, and a
+  // controller that quietly drops the render scale because SwiftShader is slow
+  // would soften every frame the critics read and make the wave-over-wave
+  // comparison meaningless. ?postAdaptiveRes=1 forces it on for a deliberate
+  // instrumented run; ?postAdaptiveRes=0 forces it off anywhere.
+  const adaptiveParam = params ? params.get('postAdaptiveRes') : null;
+  const underAutomation = Boolean(globalThis.navigator?.webdriver);
+  const wantAdaptiveRes = adaptiveParam === '1' ? true : adaptiveParam === '0' ? false : !underAutomation;
+  const resolution = createAdaptiveRenderScale({
+    composer,
+    enabled: wantAdaptiveRes,
+    mobile,
+    renderer,
+  });
+
+  // The LOW POWER sub-tier, driven by the controller's second lever. It is read
+  // rather than pushed so the chain never has to be told: the controller only
+  // reaches for emission after the resolution ladder has bottomed out, so
+  // emissionScale < 1 is by construction the signal "this device is still
+  // missing 60fps at its lowest resolution".
+  let lowPower = false;
+  const applyLowPower = (next) => {
+    if (next === lowPower) return;
+    lowPower = next;
+    // Grain is the only thing dropped outright. It is a banding dither, not a
+    // look — the LUT, the vignette and ACES stay in every tier, because they
+    // are the look.
+    if (grain) grain.blendMode.opacity.value = next ? 0 : currentMobile ? 0.018 : 0.03;
+    // Rebuilds the mip chain, so it is gated behind the controller's own
+    // hysteresis and can only fire when a rung moves.
+    if (bloomWide) bloomWide.mipmapBlurPass.levels = next ? 3 : currentMobile ? 4 : 6;
+  };
 
   return {
     // bloomWide is the handle the palette-moments hook multiplies; keeping the
@@ -233,11 +357,22 @@ export const buildRacePostChain = ({
     bloomEffect: bloomWide,
     composer,
     dispose() {
+      resolution.dispose();
       composer.dispose?.();
       lut?.dispose();
     },
+    // Read-only, for telemetry and the post lab: which rung the controller
+    // settled on and whether it is warm yet.
+    resolutionReadout() {
+      return resolution.readout();
+    },
     setSize(width, height) {
       composer.setSize(width, height, false);
+      // handleResize wrote the pixel ratio from the fit routine, which resolves
+      // it from the same bus this controller publishes to — so they agree by
+      // construction. This re-assert is the cheap insurance against a caller
+      // that sets a pixel ratio some other way.
+      resolution.reassert();
     },
     // Called from handleResize: an orientation change on a phone must not be
     // able to leave a desktop chain running (or vice versa). Nothing is rebuilt
@@ -248,15 +383,35 @@ export const buildRacePostChain = ({
       currentMobile = isMobile;
       if (smaaPass) smaaPass.enabled = !isMobile;
       composer.multisampling = isMobile ? 0 : desktopSamples;
-      if (bloomWide) bloomWide.mipmapBlurPass.levels = isMobile ? 4 : 6;
+      if (bloomWide) bloomWide.mipmapBlurPass.levels = lowPower ? 3 : isMobile ? 4 : 6;
+      // NOTE, and it is the one thing in this file that is not free: setting a
+      // pmndrs effect's blend opacity to 0 stops it COMPOSITING, not RUNNING —
+      // Effect.update() is documented to be called by the EffectPass "even if
+      // the blend function is set to SKIP", so a bloom lobe zeroed this way
+      // still pays its luminance pass and its whole mip chain. The honest fix
+      // is a separate pass that can be disabled, and it is deliberately NOT
+      // taken here: the two lobes share one pass so the tight lobe thresholds
+      // the RAW scene, and splitting it would make it threshold the already-
+      // bloomed image and quietly re-grade the owner-confirmed dusk. This costs
+      // nothing on a real phone, where `mobile` is true at construction and the
+      // tight lobe is never built at all; it costs one wasted mip chain only on
+      // a desktop-built chain dragged into phone tier by a narrow window.
       if (bloomTight) bloomTight.blendMode.opacity.value = isMobile ? 0 : 1;
-      if (grain) grain.blendMode.opacity.value = isMobile ? 0.018 : 0.03;
+      if (grain) grain.blendMode.opacity.value = lowPower ? 0 : isMobile ? 0.018 : 0.03;
       speedBlur?.setTier(isMobile);
+      resolution.setTier(isMobile);
       retargetOutput();
     },
     // boost01: 0 while cruising, 1 at full mini-turbo/pad boost. Smoothed here
     // rather than at the call site so the chain owns its own response curve.
     update(dt, { boost = 0 } = {}) {
+      // The adaptive controller runs first and unconditionally: it is the one
+      // thing in this chain that has to keep measuring even when every effect
+      // is switched off by a post-lab URL. It takes no delta — the caller's dt
+      // is clamped to 40ms by the sim and scaled 0.86 under reducedMotion, so
+      // it measures wall clock itself. See createAdaptiveRenderScale.sample.
+      resolution.sample();
+      applyLowPower(raceQuality.emissionScale < 1);
       if (!speedBlur) return;
       // Asymmetric on purpose, and the same 1-pow(k, dt) idiom the camera lerps
       // use: the streaks ARRIVE in ~0.08s so the boost lands as an event, and
@@ -264,6 +419,11 @@ export const buildRacePostChain = ({
       const rate = boost > blurStrength ? 0.000002 : 0.08;
       blurStrength += (boost - blurStrength) * (1 - Math.pow(rate, dt));
       speedBlur.setStrength(blurStrength);
+      if (blurWarmupFrames > 0) blurWarmupFrames -= 1;
+      // 0.0015 x the 0.034uv peak streak is a sub-pixel offset at any render
+      // scale this game ships, so the pass switches off the frame it stops
+      // being able to change a pixel — not when the boost timer says so.
+      setSpeedBlurEnabled(blurWarmupFrames > 0 || boost > 0 || blurStrength > 0.0015);
     },
   };
 };

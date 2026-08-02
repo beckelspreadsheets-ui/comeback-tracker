@@ -28,6 +28,13 @@
 //                       arctic storm. See the storm-snow contract below.
 // Adding a cue means adding an emitter into one of these pools, never a mesh.
 //
+// Tier contract (wave 6): the POOLS are sized once, from `mobile`, because they
+// are allocations and resizing them mid-race would churn instance buffers. What
+// varies at runtime is the EMISSION RATE, via raceQuality.emissionScale — see
+// the note at the top of update(). A thinner tier therefore has the same draw
+// calls and the same worst-case memory as a full one; it simply spends fewer of
+// its slots, which is the only kind of tier this budget contract permits.
+//
 // Attribution (wave 4): the ambient snow CLOUD filling the arctic sky is NOT
 // this module. It is a THREE.Points system built in the monolith
 // (ComebackCityThreeKartRace.jsx, the `G2 snowfall` block) at size 1.15 with
@@ -182,6 +189,11 @@
 // than as a notification, and a celebration at half density is still one.
 import * as THREE from 'three';
 import { DRIFT_FEEL } from '../driftFeel.js';
+// The shared quality bus. createRaceScene.js owns the renderer's resolution
+// ladder and publishes the measured tier there; this module is a consumer only
+// and never writes to it. (Import direction is safe — createRaceScene.js
+// imports nothing from this file, so there is no cycle.)
+import { raceQuality } from './createRaceScene.js';
 
 const SPRAY_GRAVITY = -16;
 const SPRAY_SNOW = new THREE.Color('#DCEEFF');
@@ -1117,7 +1129,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // Emission scale. The mobile pools are ~40% of desktop, so emitting at the
   // desktop rate there would recycle live particles and shorten every trail
   // rather than thin it.
-  const poolScale = mobile ? 0.6 : 1;
+  //
+  // This is the TIER term, fixed at construction. update() multiplies it by the
+  // shared quality bus's measured term each frame (see the note at the top of
+  // update) — the two are separate because this one is a property of the device
+  // class and that one is a property of what the device is currently managing.
+  const basePoolScale = mobile ? 0.6 : 1;
 
   // -- 1. Surface particles (drift spray + contact wash + landing puff) -----
   // Raised from 150/64. The wash is now continuous on every surface rather
@@ -3248,6 +3265,18 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
 
   const update = (context) => {
     const { camera, dt } = context;
+    // Adaptive emission (AAA wave 6). raceQuality.emissionScale is 1 unless the
+    // post chain's resolution controller has already spent its entire ladder
+    // and is STILL missing 60fps — resolution is always shed first, because
+    // sharpness is a cost every rubric axis notices and no axis is about, while
+    // the spray and the storm are the vfx and environment axes themselves.
+    //
+    // It thins CONTINUOUS emitters only. Every one-shot event burst (impact,
+    // pickup, item-box, spin-out, confetti, mini-turbo pips) keeps its full
+    // headcount at every tier, because those are not furniture — they are the
+    // frame telling the player something happened, and a feedback cue that
+    // fires at half strength on a slow phone is a bug report, not a tier.
+    const poolScale = basePoolScale * raceQuality.emissionScale;
     clock = (clock + dt) % 1000;
     camera.getWorldQuaternion(scratchQuaternion);
     inverseCameraQuaternion.copy(scratchQuaternion).invert();

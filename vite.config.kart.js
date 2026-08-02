@@ -154,6 +154,43 @@ export default defineConfig({
     rollupOptions: {
       input: kartHtmlPath,
       output: {
+        // Chunking, and specifically the "largest JavaScript gzip size" budget.
+        //
+        // That check (400 KiB gz, scripts/bundle-asset-budget-report.mjs) went
+        // red at 425.9 during the AAA render overhaul: the race monolith grew
+        // 6703 -> 10831 lines, a dozen new render modules landed beside it, and
+        // ALL of it — plus three and postprocessing — compiled into one
+        // 1375 KiB / 425 KiB gz index.kart chunk. The check exists to stop
+        // exactly that shape, so the fix is to stop producing it, not to raise
+        // the number.
+        //
+        // What the rules below buy, precisely, so nobody over-reads them:
+        //   - three (core + the examples/jsm loaders, geometry utils and the
+        //     legacy composer the ?post=0 A/B route still needs) and
+        //     postprocessing become their own immutable chunks. Together they
+        //     are the large majority of the JS payload and they change only
+        //     when a dependency is bumped, so every deploy after this one is a
+        //     ~200 KiB gz download instead of a ~425 KiB one for a returning
+        //     player, and the largest single chunk lands near three's own
+        //     ~185 KiB gz rather than at the sum of everything.
+        //   - it does NOT reduce FIRST-load bytes. These are static imports, so
+        //     vite emits a modulepreload for each and a cold visitor fetches
+        //     the same total. Cutting first load requires the race runtime to
+        //     become a dynamic import behind the screen flow, which lives in
+        //     src/kart/KartApp.jsx and src/game/ComebackCityThreeKartRace.jsx —
+        //     files this package does not own. The exact change is written up
+        //     in the wave-6 handoff; when it lands, three/postprocessing get
+        //     pulled in by the lazy chunk and these rules keep working
+        //     unchanged (a manual chunk reached only from a dynamic import is
+        //     still only fetched on demand).
+        //
+        // Deliberately NOT split: src/game/**. The monolith and its render
+        // modules import each other cyclically, and rollup only guarantees
+        // correct initialisation order for a cycle INSIDE one chunk — forcing
+        // that graph across a chunk boundary is how you get a module-level
+        // const that reads as undefined at import time, silently, in the
+        // production build only. Splitting app source is the lazy-import work
+        // above, done properly, not a manualChunks rule.
         manualChunks(id) {
           if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/')) {
             return 'react-vendor';
@@ -161,6 +198,17 @@ export default defineConfig({
           if (id.includes('/node_modules/lucide-react/')) {
             return 'icons';
           }
+          // Matches node_modules/three/build/* AND node_modules/three/examples/
+          // jsm/* — GLTFLoader, MeshoptDecoder, RoundedBoxGeometry,
+          // BufferGeometryUtils and the legacy EffectComposer route all have to
+          // land in the same chunk as the core they close over.
+          if (id.includes('/node_modules/three/')) {
+            return 'three-vendor';
+          }
+          if (id.includes('/node_modules/postprocessing/')) {
+            return 'post-vendor';
+          }
+          return undefined;
         },
       },
     },
