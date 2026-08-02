@@ -1,0 +1,330 @@
+[
+  {
+    "lens": "Blind A/B judge — wave6-r3, 18 pairs, sides randomised, keys never opened",
+    "verdict": "FAIL",
+    "headline": "18/18 decisive for the incumbent, zero ties: the challenger build does not render a 3D scene at all. In 17 of 18 frames the entire viewport is full-screen uninitialized-buffer noise (green/cyan/teal, resampled every frame — pair-01R, 02R, 03L, 05L, 07L, 12R, 14L, 16L, 18R viewed directly; the remaining 8 carry the unmistakable 3.0–3.8 MB incompressible-PNG signature against 640 KB–1.0 MB for every intact frame). In pair-10L, captured at t=0.6s during the countdown, the same viewport is instead a flat uniform navy with a ghosted \"Go\" ring — a target that was cleared but never rendered into. Only the DOM HUD survives, and it is a genuinely better HUD (corner-anchored ITEM with rendered item art + label, LAP with a lap-progress bar and split timer, COINS, SPEED, POSITION with gap delta) — but it is floating over garbage, so it cannot be credited. This is not a close round or a regression on one axis; it is a total render failure of the candidate on both tracks, both HUD states, every lap phase.",
+    "scores": {
+      "sky": 7,
+      "lighting": 6,
+      "materials": 6,
+      "trackLegibility": 7,
+      "environment": 7,
+      "kart": 6,
+      "vfx": 6,
+      "camera": 4,
+      "post": 7,
+      "hud": 6,
+      "frameIntegrity": 6
+    },
+    "total": 68,
+    "blockers": [
+      "CANDIDATE RENDERS NOTHING. 18/18 pairs won by the incumbent, all decisive. Broken side = full-screen noise in 17 frames, flat navy void in 1 (pair-10L, t=0.6s countdown). No sky, no road, no kart, no rivals, no props in any candidate frame on either track.",
+      "Diagnostic signature: the noise fill changes hue between captures of the same scene (pair-01R deep green, pair-02R saturated cyan, pair-05L pale mint, pair-07L near-white cyan, pair-12R teal) while the DOM HUD reads correct live telemetry (228 km/h, LAP 1/3, 3RD, coin counts that track the incumbent frame exactly). The simulation is running and the HUD is bound; only the GL composite is wrong. That is a final pass sampling a render target that was allocated but never written to — garbage VRAM, not a shader math error. Pair-10L confirms it: at t=0.6s the target still holds its clear colour, so it reads as flat navy; by t=2s it holds whatever else the GPU put there.",
+      "Wave 6 owns both plausible causes. Quality tiers touch render-target allocation (a tier path creating a WebGLRenderTarget with a size/type the composite pass never renders into), and the JS chunk-splitting budget fix touches module init order (racePostChain / createRaceScene evaluated in a chunk that resolves after the frame loop starts, leaving the composite bound to an empty target). Bisect those two before anything else — no other wave-6 item can produce this.",
+      "No console-error evidence is available to me from stills, but trap 8 in the brief is the precedent for exactly this failure mode: a silent, error-free, renders-absolutely-nothing regression. Treat the absence of a red console as zero evidence that the pipeline is healthy."
+    ],
+    "nextFixes": [
+      {
+        "title": "Restore the GL composite — candidate renders uninitialized VRAM instead of the scene",
+        "frame": "all 18 pairs; clearest at pair-10 (left = navy void at t=0.6s, right = fully intact Penguin Village at the same instant) and pair-02 (left intact Comeback City at 228 km/h, right the identical telemetry over cyan noise)",
+        "severity": "blocker",
+        "fix": "Bisect the two wave-6 renderer-adjacent changes in isolation: (a) the quality-tier branch, and (b) the manualChunks split. For (a), assert that every tier path renders the scene INTO the target the composite samples — log target.uuid at write and at read for one frame and require equality; a tier that allocates a second target, or resizes on tier switch without a re-render, produces exactly this. For (b), the post chain and scene factory must be evaluated before the first rAF; if manualChunks moved them into a lazily-resolved chunk, pin them into the entry chunk or await the import before starting the loop. Do not ship any chunk-splitting win that cannot survive a single-frame capture on both tracks.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/racePostChain.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Gate the chunk-split budget fix behind a render smoke check",
+        "frame": "every candidate frame — the bundle win, if it landed, cost 100% of the pixels",
+        "severity": "blocker",
+        "fix": "The 425.9/400 KiB largest-JS-gzip failure is real, but a split that trades it for a black screen is not a fix. Add a single-frame assertion to whatever harness produces these captures: sample the centre 64x64 of the frame and fail the run if its per-channel variance exceeds a noise threshold or if it matches the clear colour exactly. That check would have caught this round before 18 pairs were rendered.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/vite.config.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Keep the candidate's corner-anchored HUD — it is the one clear win and it must survive the revert",
+        "frame": "pair-18: left (incumbent) puts ICE SHIELD in a 7th identical grey chip in the top-left strip; right (candidate) gives it a bordered ITEM tile with the rendered shield art and a label. Same for LAP/timer/COINS/SPEED/POSITION.",
+        "severity": "major",
+        "fix": "Whatever revert unbreaks the render must not take the HUD markup with it. The incumbent HUD is seven visually identical 34px chips in one top-left row — position, speed, lap, boost, tricks, coins, mute and item all at the same weight, with the item slot a bare dash. The candidate splits them to screen corners with real typographic hierarchy (4TH at ~56px, a lap progress bar, a POSITION +0.1S gap delta) and that is a straight upgrade. Land it on top of a working scene. One caveat to fix while re-landing: on Penguin Village the SPEED and POSITION panels sit over near-white snow (see pair-14R, pair-17R for the background they will land on) — the panels currently rely on a dark fill with no scrim, so verify contrast against the brightest track, not the neon-dusk one.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/raceHud.jsx",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Chase camera lets the player kart drift off-centre and clip the frame edge",
+        "frame": "pair-07R and pair-08L: the player's Ice Racer occupies the entire lower-left quadrant and is cut by the left and bottom frame edges, while the rival it is racing sits dead centre — the frame reads as if the rival is the player. pair-09L repeats it, player kart at ~35% width and half out of frame.",
+        "severity": "major",
+        "fix": "The camera is not re-anchoring on the player after lateral movement — it appears to lag the player's lane offset without a recentring term, so at high lane offset the player leaves the composition entirely. Add a bounded recentre so the player's screen-space anchor never exceeds roughly +/-12% of frame width from centre, with the correction rate scaled by speed so it does not fight the drift read. This is the single largest contributor to the camera axis sitting at 4.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/camera/chaseCameraFeel.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Horizon is dead flat and identical in all 18 frames — no pitch, roll or FOV response",
+        "frame": "measure the horizon line across pair-01L, 04R, 06R, 09L, 11R, 13R, 15L: it sits at the same height and the same zero roll in every one, including pair-04R and pair-09L which are mid-corner at 230 and 260 km/h",
+        "severity": "major",
+        "fix": "Nothing in the camera responds to the car. Corner entry, boost and landing all produce the same rigid horizontal. Add (1) a small roll term driven by lateral acceleration, (2) a pitch term driven by longitudinal acceleration so boost dips the nose and lift raises it, and (3) a modest FOV widen on boost. Each individually is subtle; together they are what separates a static third-person view from a chase camera, and the axis will not clear 8 without them.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/camera/chaseCameraFeel.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Karts read as floating above the road surface",
+        "frame": "pair-06R: both karts sit visibly above the road plane against the skyline, with no contact point and no shadow beneath them, so they read as airborne on a flat corner. pair-09L shows the same kart with a soft contact shadow and reads correctly grounded, which isolates the variable.",
+        "severity": "moderate",
+        "fix": "The camera pitch at this height puts the road contact line behind the kart silhouette, so when the ground shadow is absent or faint there is no grounding cue at all. Lower the camera pitch slightly, or raise the shadow rig's minimum opacity so the contact ellipse is never fully lost — the shadow is doing all the grounding work and the camera should not be relying on it alone.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/camera/chaseCameraFeel.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Hard black cap arc across the top of every single frame",
+        "frame": "visible in all 18 intact captures; worst in pair-01L, 05R, 08L, 13R where a dark curved band eats the top 10-15% of the image with a hard terminator against the orange or storm sky",
+        "severity": "moderate",
+        "fix": "The sky dome does not reach the top of the vertical FOV, so the camera sees past its rim to the clear colour. The dome geometry belongs to another package (createSkyDome.js — tag out if the fix must live there), but the camera side can close it: reduce vertical FOV or raise the camera pitch so the dome rim falls outside frame. Confirm at the widest phone tier too, which has the most vertical FOV to leak through. This is currently the most conspicuous single defect in the surviving build and it costs both sky and frameIntegrity.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/camera/chaseCameraFeel.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Track previewer must surface the mid-ground dropout, not just the ribbon",
+        "frame": "pair-01L and pair-04R: past roughly 60m the scenery stops entirely and the ground becomes an unbroken flat green or grey plane running to the skyline — the eye has nothing between the near props and the painted city silhouette",
+        "severity": "moderate",
+        "fix": "When building the layout previewer, render it with a mid-ground occupancy readout (props per 10m band alongside the ribbon), not just a top-down spline. The 4x track that this tool unblocks will multiply the length of this dead band by four if the tool cannot show it. Cheap to add now, expensive to retrofit after the long track is authored.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/track",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Boost speed-lines composite as hard opaque quads over sky and buildings",
+        "frame": "pair-01L, 05R, 09L, 11R, 13R, 15L, 18L: long grey-white bars with crisp rectangular ends drawn at full opacity across the sky, several intersecting the skyline silhouettes with a visible hard edge rather than reading as motion",
+        "severity": "moderate",
+        "fix": "OUT OF SCOPE for wave 6 — flagging as evidence only, since it is the largest remaining vfx deduction in the surviving build. The lines need a soft alpha falloff along their length and depth-aware fade so they do not cut across the skyline. Owner: whoever holds raceParticles.js / speedBlurEffect.js.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/raceParticles.js",
+        "inScopeForWave6": false
+      },
+      {
+        "title": "Lamp post rendered at grossly wrong scale in the middle of the racing line",
+        "frame": "pair-03R: a pink-and-white column roughly 8x the kart's height with a glowing white sphere on top stands directly in the road, its base clipping through the tarmac at the kart's lane",
+        "severity": "moderate",
+        "fix": "OUT OF SCOPE for wave 6 (scenery placement / prop scale), but recording it because it is a frame-integrity defect visible in a hero frame and it is on the racing line where the player will hit it. Owner: scenery/props track.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/createRaceScenery.js",
+        "inScopeForWave6": false
+      }
+    ],
+    "outOfScopeNoted": [
+      "Building the 4x track itself — the previewer note above is scoped to the tool only, not the layout.",
+      "New kart body meshes — the player's default red/black kart is the weakest silhouette in the surviving frames (pair-01L, 11R, 14R) next to the Ice Racer and Miami Cruiser, but that is the asset track's re-roll, not wave 6.",
+      "On-demand character/kart pool — asset track.",
+      "Penguin Village cast shadows — already diagnosed as the 12-degree key throwing the ribbon behind the kart; pair-12L and pair-18L show the resulting blob-only grounding, no new information from me.",
+      "Sky dome rim geometry (createSkyDome.js) — I attributed the black cap fix to the camera side deliberately because that file is owned elsewhere; if the correct fix is dome height, hand it over rather than reaching into it.",
+      "Speed-line and lamp-post findings above are tagged out-of-scope in nextFixes and are recorded as evidence only — per the wave-1 lesson, do not let a fix agent chase them this round."
+    ]
+  },
+  {
+    "lens": "RUBRIC CRITIC — wave6-r3. Read all 18 PNGs in tmp/aaa-visual/wave6-r3 at full res, plus capture-manifest.json, plus PIL statistics on every frame (per-channel mean/stddev over a HUD-free 1100x600 central crop; horizontal high-frequency energy as mean |I(x+1)-I(x)|; 60x32 BOX-downsampled low-frequency reconstructions to test for any surviving scene structure at any spatial scale). Cross-read against tmp/aaa-visual/{baseline,wave5-r3,wave6-r1,wave6-r2} with the identical measurement so NEW could be separated from PRE-EXISTING. Then read source to root-cause: racePostChain.js, createRaceScene.js, the HUD JSX block at ComebackCityThreeKartRace.jsx:11180-11360, scripts/aaa-visual-capture.mjs, and tmp/bundle-budget-kart/bundle-asset-budget-report.json (captured 20:57:43Z, 15 s before the frame manifest at 20:57:58Z, i.e. the same build). I ran no builds, no captures and no git commands.",
+    "verdict": "FAIL",
+    "headline": "8/110 — this round has no picture. All 18 frames render the 3D scene as saturated per-pixel noise with zero structure at any spatial frequency; only the DOM HUD survives. Root cause is wave 6's own idle-render-target hold (racePostChain.js:485-501), which leaves composer.inputBuffer bound across every frame boundary for the first 15 s — and all 18 marks land at 0:00.6-0:09.3, inside that window. wave6-r2 renders a real, strong scene at the same marks, so this is a regression introduced by the r3 edit and r2 is a known-good rollback point. The harness reported 0 console errors, 74-122 fps and 0 missed marks over a completely destroyed image, and three critics were spent on it. Camera — this wave's headline axis — is UNMEASURABLE: there is no kart in any frame, so the bounding-box variance you asked for does not exist. The genuine wave-6 wins that are still verifiable: the budget fix landed (largest JS gzip 425.9 -> 253.05/400, all 7 checks pass) and the HUD markup rebuild is real and is the one axis that scores.",
+    "scores": {
+      "sky": 0,
+      "lighting": 0,
+      "materials": 0,
+      "trackLegibility": 0,
+      "environment": 0,
+      "kart": 0,
+      "vfx": 0,
+      "camera": 0,
+      "post": 0,
+      "hud": 8,
+      "frameIntegrity": 0
+    },
+    "total": 8,
+    "blockers": [
+      "TOTAL RENDER FAILURE, 18 of 18 frames. The WebGL layer is saturated per-pixel noise. Measured on a HUD-free central crop: horizontal high-frequency energy is 6-58 against 1.0-4.5 in EVERY prior round of this programme on both tracks (baseline 1.2-3.6, wave5-r3 1.6-3.2, wave6-r1 2.0-4.5, wave6-r2 2.0-4.5). Green and blue are pinned at 240-251 with stddev 13-24 in the late marks. A 60x32 BOX downsample — which would show a horizon, a road ribbon and a kart silhouette at 20x reduction if any existed — returns a flat field: central low-frequency stddev is 1.31/1.53 on the green/blue channels of comeback-city-p0_9 and 2.60/2.68 on penguin-village-p0_45. There is no sky, no road, no kart, no rival, no prop and no VFX anywhere in this round.",
+      "THE CORRUPTION IS AN ACCUMULATING FEEDBACK LOOP AND IT IS MONOTONIC IN TIME. Central-crop means climb strictly with mark index and RESET between tracks. Comeback City green: 120 -> 229 -> 240 -> 244 -> 247 -> 249 -> 250 -> 251 -> 251 across p0_06..p0_9. Penguin Village green: 32 -> 105 -> 203 -> 230 -> 241 -> 245 -> 247 -> 249 -> 250. Red does the same (CC 19 -> 185, PV 20 -> 173) while carrying the noise (stddev 62-72, hf 48-58). penguin-village-p0_06 at 0:00.6 is an essentially BLACK frame (mean 20,32,54; stddev 4,6,6) with the 'Go' countdown overlay and no scene at all — so the buffer starts empty and ratchets to saturation. That is a buffer being re-read and re-written without a clear, amplified by the bloom lobes that this file's own comments (lines 7, 160, 347) say RE-TAP inputBuffer and overwrite it.",
+      "ROOT CAUSE, wave-6 owned, racePostChain.js:485-501. The new IDLE RENDER TARGET block wraps composer.render and re-binds composer.inputBuffer as the renderer's current target after every single frame (line 490), and binds it once more before the first frame has run (line 501). These are the ONLY three setRenderTarget calls in the entire src/game tree — nothing else in the game has ever left a non-default framebuffer bound across a frame boundary. The hold is time-boxed at WARM_TARGET_HOLD_S = 15, and every one of the 18 capture marks reads 0:00.6 to 0:09.3 on the HUD lap timer, i.e. 18 for 18 inside the hold window. The adaptive resolution ladder is NOT a suspect: wantAdaptiveRes resolves to false under navigator.webdriver, so the controller is inert in this capture while the idle-target hold runs unconditionally.",
+      "IT IS A REGRESSION WITH A KNOWN-GOOD PREDECESSOR. wave6-r2 at the identical marks renders a correct scene — comeback-city-p0_45 shows the neon-dusk sky with cloud form, a red/white extruded rumble strip, a yellow centre line, the player kart with visible boost jets and an Ice Racer rival, all at hf 3.5-3.8. racePostChain.js is timestamped 13:48 and the r3 capture manifest is 13:57, so the destroying edit is in the r3 pass over that file. Wave 6 also LOST its rollback discipline here: the checkpoint-per-round rule exists precisely for this.",
+      "RUBRIC AUTO-BLOCKER, every axis at once: 'any part of the frame that renders as an unlit void or the clear colour' — 100% of the render area, 18 frames, both tracks. Also 'no missing meshes, no flicker': every mesh in the game is missing.",
+      "THE CAPTURE HARNESS CERTIFIED A DESTROYED ROUND AS HEALTHY. capture-manifest.json reports consoleErrors: [] on both tracks, missed: [], fps 74-122, frameWorkMs 2.23-5.09, drawCalls 362-703 and triangles ~786k/666k — all plausible, all green, all measured off a GPU that was faithfully drawing an image nobody could see. scripts/aaa-visual-capture.mjs (248 lines) calls page.screenshot at line 218 and never looks at the pixels it wrote. A single statistic — the horizontal high-frequency energy that separates this round from every other by an order of magnitude — would have rejected the round before three critic agents were spent on it."
+    ],
+    "nextFixes": [
+      {
+        "title": "Stop holding composer.inputBuffer bound across frame boundaries — this is what destroyed all 18 frames",
+        "frame": "all 18; the ramp is cleanest on penguin-village p0_06 (mean 20,32,54, no scene) -> p0_9 (173,250,249, saturated noise)",
+        "severity": "blocker",
+        "fix": "Delete or disable the idle-target hold at racePostChain.js:485-501. Three lines carry it: line 501 binds composer.inputBuffer before the first frame, line 490 re-binds it after every composer.render(), line 496 releases it 15 s in. Everything the monolith does at the top of frame() before composer.render() — the renderer.compile() warm-up at ComebackCityThreeKartRace.jsx:8972 and any pass that does not set its own target — therefore draws into the composer's HalfFloat input buffer, which the bloom lobes then re-tap and re-write (see this file's own comments at lines 7, 160 and 347), closing a feedback loop with no clear and no clamp. Fastest discriminator, zero code change: capture ONE mark past 15 s (a lap-2 mark) on the current build. If the image is clean after releaseWarmTarget() fires, the diagnosis is confirmed outright. Second discriminator: set WARM_TARGET_HOLD_S = 0 and re-capture. Do not re-land any part of this block until the frames come back.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/racePostChain.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Re-land the program-cache-key warm-up as a scoped bind around the compile call, not a cross-frame hold",
+        "frame": "n/a — the problem the deleted block was written to solve is real and stays real",
+        "severity": "major",
+        "fix": "The underlying finding is sound: renderer.compile() run with the default framebuffer bound keys programs against sRGB while the race only ever draws into a linear render target, and wave6-r2 measured programs 45 -> 121 (CC) and 47 -> 131 (PV) with draws/triangles/geometries unchanged. Fix it where the compile happens instead of globally: at ComebackCityThreeKartRace.jsx:8972 wrap the single call — save renderer.getRenderTarget(), setRenderTarget(engine.post.composer.inputBuffer), compile, then restore the saved target in a finally. The bind then lives for one statement instead of 15 seconds of live frames, nothing else in the engine can draw into the composer buffer by accident, and the trap the block's own comment predicts (\\\"a trap laid for whoever adds the first minimap\\\") never gets laid. Expose the buffer through a named accessor on the chain rather than reaching into composer.inputBuffer from the monolith.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Add a frame-sanity gate to the capture harness so a destroyed round can never be handed to critics again",
+        "frame": "capture-manifest.json — 0 console errors, 0 missed marks, 74-122 fps over 18 unusable images",
+        "severity": "blocker",
+        "fix": "scripts/aaa-visual-capture.mjs writes the PNG at line 218 and never inspects it. After each screenshot, decode it and assert two cheap statistics on a HUD-free central crop, then fail the run loudly and record them in the manifest: (a) horizontal high-frequency energy mean|I(x+1)-I(x)| must be < 8 per channel — this round is 6-58, every healthy round in the programme is 1.0-4.5, so the separation is an order of magnitude and the threshold is not delicate; (b) at least one channel must have central low-frequency stddev > 6 after a 60x32 BOX downsample, which is what 'the frame contains a horizon and a road' looks like and what a flat field cannot fake (this round returns 1.3-2.7). Write both numbers into capture-manifest.json per mark so every future round is comparable and a slow drift is visible before it becomes a cliff. Zero new dependencies if you sample the PNG through the page before saving.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/scripts/aaa-visual-capture.mjs",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Camera is UNMEASURED, not improved — the wave's headline axis produced zero evidence",
+        "frame": "all 18 — no kart is present in any frame",
+        "severity": "blocker",
+        "fix": "You asked for the kart's on-screen bounding box across all 9 marks, its variance, whether it clips a frame edge, whether there is readable road ahead, and whether the camera enters geometry or a rival. I can answer none of it: there is no kart, no road and no rival in the image. The camera axis scores 0 because the round produced no frame to judge, NOT because the camera work is bad — the r2 frames suggest the chase work may well be landing. After the render fix, re-capture and have the harness emit the measurement directly rather than making critics eyeball it: project the player kart's world AABB through the camera each mark and log screen-space x/y/w/h plus a per-rival near-plane distance into capture-manifest.json. That turns 'camera has been the floor for three waves' from a judgement into a tracked number, and it is the only way this axis stops being re-litigated every round.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/scripts/aaa-visual-capture.mjs",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Every capture mark lands in the first 10 s of a 3-lap race — the whole programme has only ever seen lap 1",
+        "frame": "HUD lap timers: CC 0:00.7 / 0:02.3 / 0:05.8 ...; PV 0:00.6 / 0:02.7 / ... / 0:09.3; manifest laps: 0 on both tracks",
+        "severity": "major",
+        "fix": "progress 0.06 -> 0.90 is covered in 9.3 seconds, so routeProgress marks 0.06-0.9 sample a single ~10 s lap and the manifest records laps: 0. Two consequences worth acting on. (1) It is exactly why this round's bug hid: 18 for 18 marks fell inside a 15 s window, so the one state that would have shown a clean frame was never sampled. (2) It means every camera, track-legibility and environment score this programme has produced comes from one lap of one short circuit — which is the case FOR the ~4x track length work, and the previewer this wave was meant to deliver is what unblocks it. Add at least two marks past the 15 s mark (lap 2 and lap 3 entries) to the points array so the capture spans a real race, and record the lap number per mark in the manifest.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/scripts/aaa-visual-capture.mjs",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "HUD markup rebuild is genuine and is the only axis that scores — but the empty ITEM slot still reads as an unimplemented control",
+        "frame": "comeback-city p0_06/p0_15/p0_24/p0_45, penguin-village p0_06/p0_15/p0_24/p0_33 — the dashed grey rectangle; contrast penguin-village-p0_9 where a rendered shield tile with a gold ring is genuinely good",
+        "severity": "moderate",
+        "fix": "Answering the question you asked directly: the structure now carries the hierarchy, and it is not CSS propping up weak markup. ComebackCityThreeKartRace.jsx:11215-11350 has four named corners plus a separate utility corner, data-hud-stat on every chip, data-hud-phase on the wrapper, data-slot-state on the item socket, and semantic badge-label / badge-value / badge-unit / badge-note / badge-gap / badge-rail children — replacing a layout that meant SPEED by :nth-child(2) and told 'empty' from 'shield' with :has(> img). The lap plate now answers three questions (which lap, how far through via the arc-length rail, how the lap is going), the gap is declared as a qualifier INSIDE the position badge rather than as a fifth chip, aria-live is correctly narrowed to lap and position instead of re-announcing the whole HUD at 7 Hz, and the two display:none'd tally badges that still mounted and reconciled every tick are gone. That is an 8. What holds it off 9: the empty state renders as a dashed grey box with the word ITEM and nothing else, and it is the largest single element in the top-left across 8 of 18 frames — the state is declared now, so give data-slot-state=\\\"empty\\\" a real treatment (a dimmed socket glyph, or collapse the plate to a slim rail until an item is held) rather than a placeholder outline. Wave 5 filed this against wave 6 and it did not move.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/comebackCityThreeKartRace.css",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "The mute chip reads as an orphan floating in the top-centre gutter",
+        "frame": "all 18 — the small dark rounded chip at x~800, y~38",
+        "severity": "polish",
+        "fix": "Moving it out of the status corner was right (it was reading as a third, broken stat chip above the LAP plate) but its new home is worse in one respect: it is now a lone 34px chip stranded in the middle of the top edge with no relation to any of the four corner plates, and it is the only element in the frame that belongs to no group. Dock it to a corner as a visibly SECONDARY affordance — smaller, lower opacity until hover/focus, and not sharing the plate treatment the four stat badges use — so the HUD reads as four data plates plus one control, not five things.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/comebackCityThreeKartRace.css",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "The lap split crowds the lap glyph it sits beside",
+        "frame": "comeback-city-p0_06 ('1/3' with '0:00.7' hard against its right edge), same on all non-final-lap frames",
+        "severity": "polish",
+        "fix": "'0:00.7' baseline-aligns into the '1/3' glyph's optical space with roughly 2px of air at 1600x900, so the two read as one string at a glance rather than as a value and its qualifier. The comment already documents the 112x82 constraint and the reason a second line is not available. Cheapest fix that keeps the box: drop the split's size a step and lift it onto the caption line properly (it is already absolutely positioned there), or right-align it to the plate's padding edge so there is a consistent gutter between the two at any lap count.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/comebackCityThreeKartRace.css",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Restore a per-round rollback point before the next round runs",
+        "frame": "n/a — process",
+        "severity": "major",
+        "fix": "wave6-r2 is a complete, correct, good-looking round and wave6-r3 destroyed it in a single edit to one file. progress.json's own lesson #2 ('NO ROLLBACK POINT ... commit a checkpoint after every capture round so the best round can be recovered') is the rule that would have made this a 10-minute recovery instead of a lost round. Before re-capturing: checkpoint the r2 state of racePostChain.js so the working chain is recoverable independently of whatever the fix turns out to be, staging owned paths explicitly and never git add -A.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/aaa-plan/progress.json",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Re-run the full 3-critic round after the re-capture — nine axes carry no information",
+        "frame": "all 18",
+        "severity": "blocker",
+        "fix": "sky, lighting, materials, trackLegibility, environment, kart, vfx, camera, post and frameIntegrity all score 0 because the round produced no image, not because those axes regressed. Do not read the 8/110 as a wave-over-wave delta and do not feed these zeros to a fix agent as findings — the only defensible comparison point right now is wave5-r3's 75/68/73. After the render fix lands, re-capture with the sanity gate in place and re-run all three lenses; only then is there a number that means anything about wave 6.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/aaa-plan/progress.json",
+        "inScopeForWave6": true
+      }
+    ],
+    "outOfScopeNoted": [
+      "BUDGET FIX VERIFIED LANDED — credit where it is due, and it is the one wave-6 deliverable this round proves. tmp/bundle-budget-kart/bundle-asset-budget-report.json captured 20:57:43Z, fifteen seconds before the frame manifest, so it is the same build: 'largest JavaScript gzip size' is 253.05 / 400 KiB PASS, down from the 425.9 FAILING figure the brief carried. All seven checks pass — 13.485/16 MiB raw, 10989.98/12000 KiB gz, total JS gz 487/500, largest single file 1.507/3 MiB. Headroom 2.515 MiB raw and 1010 KiB gz. No further budget work is needed this wave.",
+      "THE ARC-LENGTH PROGRESS TERM IS VISIBLY SPENT. The lap plate's progress rail fills monotonically across the marks (yellow fill under '1/3' growing from a stub at p0_06 to nearly full at p0_9) and it is bound to snapshot.progress through a scaleX transform. wave6-r2's HUD has no rail, so this landed in r3. It is the only piece of the wave's in-scene work I can confirm from these frames, and it confirms only that the number exists and reaches the DOM — whether the arc-length/lane term is CORRECT is a track-geometry question these frames cannot answer.",
+      "Building the ~4x track itself — next wave, per the brief. Noted only because the 9.3-second lap this capture reveals is the strongest argument for it that the programme has produced.",
+      "New kart body meshes (3 lifted awaiting diet, 2 re-rolled) and the on-demand character/kart pool — asset track. Not judgeable here regardless: no kart renders.",
+      "Penguin Village cast shadows (diagnosed: the 12-degree key throws the ribbon behind the kart) — already diagnosed and scheduled. Unjudgeable this round; carry the wave-5 measurement forward unchanged rather than re-deriving it.",
+      "Rival kart MATERIAL classes still flat next to the player, the driver rendering as an unlit black void, coin near-clip scale and edge-on billboarding, PV snow plane flatness, mid-ground belt silhouette repetition, CC ground-plate horizon edge — all filed by wave-5 critics against files this wave does not own. None are re-judgeable from a noise field; inherit the wave-5 frame lists rather than treating their absence from this report as resolution.",
+      "The wave-5 finding that geometry intrudes the camera near volume in 6 of 18 frames is the single most important thing wave 6 was supposed to answer, and it is exactly what these frames cannot show. Treat it as still open at 6/18 until a clean capture says otherwise."
+    ]
+  },
+  {
+    "lens": "artefact-hunter",
+    "verdict": "FAIL",
+    "headline": "TOTAL RENDER LOSS — 18/18 frames contain no scene at all. Wave 6's new post-chain \"idle render target\" hold leaves the composer sampling a buffer the scene pass never lands in; what ships is correctly-graded, correctly-vignetted uninitialised memory on BOTH tracks, with zero console errors. Structural image content fell ~200x (variance 4126-7837 -> 12-51). Draw calls and triangles are unchanged from wave 5, so the scene is being rendered correctly and then discarded in the target plumbing. Every visual axis is unassessable and this wave's headline change (the arc-length/lane progress term) cannot be reviewed at all.",
+    "scores": {
+      "sky": 0,
+      "lighting": 0,
+      "materials": 0,
+      "trackLegibility": 0,
+      "environment": 0,
+      "kart": 0,
+      "vfx": 0,
+      "camera": 0,
+      "post": 1,
+      "hud": 7,
+      "frameIntegrity": 0
+    },
+    "total": 8,
+    "blockers": [
+      "TOTAL SCENE RENDER LOSS, all 18 frames, both tracks. Box-averaged structural variance (HUD corners excluded) is 12-51 in wave6 vs 4126-7837 in wave5 - a ~200x collapse. No sky, no horizon, no road, no karts, no props anywhere in any frame.",
+      "PROOF THE OUTPUT CARRIES NO SCENE DATA: comeback-city-p0_45 and penguin-village-p0_67 - two completely different tracks - are 82.5% pixel-identical within +/-12 (mean abs diff 9.5 over 4000 samples). Two different worlds produce the same image.",
+      "THE POST CHAIN IS INNOCENT, ITS INPUT IS GARBAGE: box-averaging every frame leaves a dead-flat field with radially symmetric corner darkening, i.e. the vignette / LUT / ACES tail is still running correctly over noise. Noise autocorrelation is r=0.43 at lag 1 and r=0.05 at lag 2, so the garbage is generated at RENDER SCALE inside the composer's own buffer and upscaled - not introduced at present time.",
+      "ACCUMULATING FEEDBACK: mean frame brightness ramps monotonically toward white over the run on both tracks (CC 19,120,107 -> 185,251,249; PV 20,32,54 -> 173,250,249), with G and B clipping to 255 first. The chain is re-reading its own previous output instead of a freshly written scene.",
+      "ZERO CONSOLE ERRORS in capture-manifest.json despite a total render failure. The capture harness reported a clean run on 18 blank frames - the gate cannot currently detect the single worst thing that can happen to a frame.",
+      "FRAME COST REGRESSION WHILE RENDERING NOTHING: frameWorkMs +79% on CC (mean 1.68 -> 3.01, peak 4.38) and +76% on PV (mean 2.51 -> 4.42, peak 5.09). fps floor fell 119 -> 74 (CC p0_67, frameElapsed 13.46ms against a 16.7ms budget). Wave 5 never dropped below 119.",
+      "WAVE 6 IS UNREVIEWABLE. The arc-length/lane progress term, rival spacing, kart-vs-camera placement, chase camera feel and the quality tiers all need a visible scene to judge. Nothing in this round can be scored or compared; a re-capture is mandatory before any critic verdict on this wave means anything."
+    ],
+    "nextFixes": [
+      {
+        "title": "Remove the idle-render-target hold — it is the render outage",
+        "frame": "all 18 frames (wave6-r3)",
+        "severity": "blocker",
+        "fix": "racePostChain.js:486-501 wraps composer.render to leave `renderer.setRenderTarget(composer.inputBuffer)` bound after every frame, and also binds it once before the first frame. The hold lasts WARM_TARGET_HOLD_S = 15s, which covers the entire capture window (every captured frame is under 8s of race time). Holding a composer-owned buffer as the renderer's persistent current target breaks the composer's buffer rotation: the scene pass and the effect passes no longer agree on which attachment holds the frame, so the grade chain samples never-written memory — which is exactly the flat, track-independent, brightness-accumulating noise measured above. Delete the wrapper, the pre-frame bind and releaseWarmTarget, and restore the wave-5 end-of-frame state (renderer.setRenderTarget(null)). Treat the program-cache optimisation as a separate, later change: it is a micro-optimisation whose downside is the entire image.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/racePostChain.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "The idle-target change did not achieve its own stated goal — programs DOUBLED",
+        "frame": "capture-manifest.json, both tracks, all 9 points",
+        "severity": "major",
+        "fix": "The block's rationale is that binding a render target as the idle state collapses the duplicate sRGB/linear program set. Measured: wave5 CC 45->48 and PV 47->50 (a mild +3 mid-race climb); wave6 CC 85->84 and PV 92->91 — flat, but at roughly DOUBLE the wave-5 level. The climb was removed only because every duplicate is now compiled up front. The duplication itself is structural and the hold cannot remove it: the composer's final pass still binds null (the default framebuffer) every single frame to present, so both cache keys stay exercised for the whole race no matter what the idle state is. If the duplicate set is still worth attacking after the outage is fixed, attack the real cause — do the countdown warm-up (ComebackCityThreeKartRace.jsx:8972 renderer.compile) against a chain-owned throwaway 1x1 HalfFloat target that the composer never disposes or resizes, never against composer.inputBuffer.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/racePostChain.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Add a structural-content floor to the capture gate so a blank frame can never pass silently again",
+        "frame": "capture-manifest.json (consoleErrors: [] on 18 dead frames)",
+        "severity": "major",
+        "fix": "This wave shipped a total render failure that produced NO console error, and the manifest recorded a fully green run with plausible fps, draw-call and triangle numbers. Add a per-frame assertion to the capture harness: box-average the PNG to 64x36, exclude the four HUD corner regions, and compute channel variance across the centre field. Wave 5 scores 4126-7837; wave 6 scores 12-51. A floor of ~500 separates a real scene from a flat field by two orders of magnitude with enormous headroom, and would have failed this run at frame one. Record the value in the manifest per frame so wave-over-wave regressions are visible as a number, not a judgement.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/scripts/aaa-visual-capture.mjs",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Frame work up ~78% and fps floor down to 74 on a frame that draws nothing",
+        "frame": "comeback-city-p0_06 (4.38ms), comeback-city-p0_67 (74fps, 13.46ms), penguin-village-p0_15 (5.09ms)",
+        "severity": "major",
+        "fix": "CC frameWorkMs mean 1.68 -> 3.01 (peak 4.38), PV 2.51 -> 4.42 (peak 5.09), fps floor 119 -> 74, worst frameElapsed 13.46ms against the 16.7ms 60fps budget. Draw calls (370/702) and triangles (786k/666k) are IDENTICAL to wave 5, so none of the extra cost is scene work — it is the broken target rotation (very likely a full-buffer realloc or an unresolved multisample blit per frame) plus the doubled program set. Re-measure immediately after the idle-target hold is removed; if the gap does not close back to wave-5 numbers, the quality-tier sample switching in applySamples (racePostChain.js:280-292) is the next place to look, since composer.multisampling REPLACES both buffers whenever the write crosses zero.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/race/render/racePostChain.js",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "HUD gap readout renders \"+0.1S\" — inherited text-transform destroys the authored lowercase unit",
+        "frame": "comeback-city-p0_06 (+0.1S), penguin-village-p0_67 (-0.2S)",
+        "severity": "moderate",
+        "fix": "formatGap (ComebackCityThreeKartRace.jsx:411-416) deliberately returns a lowercase seconds suffix, and the same function carries a comment explaining its careful use of U+2212 for the minus — the typographic intent is unambiguous. But the new .three-kart-race__badge-gap span is a descendant of .three-kart-race__badge, which sets text-transform: uppercase at comebackCityThreeKartRace.css:171, and the gap rule at :278-286 never resets it. The unit renders as a capital S, colliding visually with the digits at the mono face's tracking. Add `text-transform: none;` to .three-kart-race__badge-gap. This is precisely the \"new markup moved into a container whose inherited styling it did not account for\" class of defect — the sign colouring (cyan gain / amber loss) is confirmed working correctly in the frames.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/comebackCityThreeKartRace.css",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "HUD gap readout emits a signed zero, \"−0.0s\", that flickers sign and colour around parity",
+        "frame": "comeback-city-p0_45 (-0.0S in cyan)",
+        "severity": "moderate",
+        "fix": "formatGap (ComebackCityThreeKartRace.jsx:411-416) derives the sign from `seconds < 0` but formats Math.abs(seconds).toFixed(1), so any gap in (-0.05, 0) prints \"−0.0s\" — a negative zero. Worse, the sign also drives data-gap-sign, which drives the cyan/amber colour, so a kart running level with a rival flips the plate's colour frame to frame on noise while the digits stay 0.0. Add a deadband: if Math.abs(seconds) < 0.05, either return null (consistent with the function's existing \"return null rather than a placeholder\" contract) or return a neutral even-gap token with a fixed colour. Derive data-gap-sign from the same deadbanded value rather than from the raw snapshot.gap in the JSX at :11351.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/src/game/ComebackCityThreeKartRace.jsx",
+        "inScopeForWave6": true
+      },
+      {
+        "title": "Re-capture and re-run all three critics before drawing any conclusion about wave 6",
+        "frame": "n/a — process",
+        "severity": "blocker",
+        "fix": "Every per-axis score in this report other than HUD is a record of the outage, not a judgement of wave 6's work. Do not feed these numbers into the wave-over-wave trend, do not run the blind A/B on this build (it would produce a meaningless 0/18), and do not action any of the visual findings from the sibling critics this round. Fix the render outage, re-capture, then re-score. The wave-6 changes that actually need eyes — the arc-length/lane progress term, rival spacing, kart-vs-camera agreement, chase camera feel — have never been seen by anyone.",
+        "targetFile": "/Users/andrewferguson/Downloads/comeback-tracker/tmp/aaa-plan/progress.json",
+        "inScopeForWave6": true
+      }
+    ],
+    "outOfScopeNoted": [
+      "Building the 4x-length track itself — the layout previewer this wave produces is what unblocks it; next wave, not now.",
+      "New kart body meshes (3 lifted awaiting diet, 2 re-rolling) — asset track. Cannot be assessed this round anyway; no kart is visible in any frame.",
+      "The on-demand character/kart pool — asset track.",
+      "Penguin Village cast shadows (diagnosed: the 12-degree key throws the ribbon behind the kart) — already scheduled, and unassessable this round.",
+      "The failing 'largest JavaScript gzip size' budget (425.9/400 KiB) is wave-6-owned via the chunk-splitting fix, but it is not an artefact and I cannot measure it from frames — flagged here only so it is not assumed handled. Total bundle (13.47/16 MiB raw, 10984/12000 KiB gz) still passes.",
+      "HUD verification note, per trap 6: I initially read the wave-6 position card as having LOST its rim stroke. Measuring it refuted that — the top-edge highlight row at y=786 is present in both waves (w5 89,98,116 / w6 84,97,114) and the left rim at x=1417 is present in both. The noisy background fooled the eye. HUD card chrome is intact; the new lap timer, lap progress bar, item-slot label and gap readout are genuine improvements and are the only reason any axis scored above 1.",
+      "Also verified by grep rather than trusting the code comment: racePostChain.js:477 claims no bare renderer.render() exists in the tree. True for the race path — the only hits are ArcadeRace3D.jsx:524, ComebackCityScene3D.jsx:8280 and WorldScene.jsx:4193, all separate stacks. So a stray render is NOT the mechanism behind the outage; the buffer rotation is."
+    ]
+  }
+]
