@@ -290,10 +290,29 @@
     "Kenney rival hue-gate fix landed but OVERSHOT — env-probe agent handed back evidence and an exact patch."
   ],
   "remaining": [
+    "BUDGET: largest JS chunk 425.9/400 KiB gz is FAILING (overhaul-caused). Code-split the kart runtime + put new kart bodies on the on-demand pool.",
     "WAVE 6: arc-length/lane progress term FIRST, then ~4x track length",
     "camera is the persistent floor at 4.3 — rebuilt in wave 4 but still lowest",
     "PV karts cast no shadow: diagnosed as the 12-deg key throwing the ribbon behind the kart, unverified against a running build",
     "rival V-spread capped at 0.247 by the atlas — needs a new atlas cell, not a remap",
     "fallback kart blackMat/tireMat/seatMat still lack rim:true (~40% of its surface gets no kart shading)"
-  ]
+  ],
+  "ownerKartPicks": {
+    "date": "2026-08-02",
+    "picks": [
+      "hash-runner",
+      "cold-wallet",
+      "pixel-pickup",
+      "node-runner",
+      "sat-stacker"
+    ],
+    "liftRunId": "wf_e8e1c87a-d86",
+    "note": "5 picks. Lifted via generated side/back views + Meshy multi_image_to_3d (the single-image path produced results the owner rejected at K5)."
+  },
+  "budgetFinding": {
+    "discovered": "2026-08-02",
+    "issue": "largest JavaScript gzip size is 425.9 / 400 KiB = FAILING. Caused by this overhaul: the monolith grew 6703 -> 10831 lines across 5 waves and the new render modules bundle into the same chunk.",
+    "alsoTight": "Adding 5 kart GLBs at the existing diet precedent (412-591 KB each, avg ~525) projects to ~16.0 / 16 MiB raw — at or over the cap.",
+    "fix": "Code-split the kart runtime out of index.kart, and put the new kart bodies on the SAME on-demand pool the owner already approved for the 100 characters (only the 4 karts in a race need to load). Both are wave-6 scope."
+  }
 }
