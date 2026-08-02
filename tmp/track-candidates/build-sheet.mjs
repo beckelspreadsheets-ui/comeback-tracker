@@ -11,6 +11,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// The two wave-7 gates are imported rather than reimplemented, so the sheet and
+// the terminal cannot disagree about whether a candidate passes.
+import * as GATE from './gate-topspeed.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PREVIEW = resolve(HERE, 'preview');
@@ -192,6 +195,18 @@ const TARGETS = [
     value: (r) => `${straightSeconds(r, 0)}s`,
     ok: (r) => straightSeconds(r, 0) >= 8 && straightSeconds(r, 0) <= 10,
   },
+  // Added in wave 7 fix round 1. The row above measures the straight at the LAP
+  // MEAN, which is the right unit for a lap and the wrong one for a pass: the
+  // shipped telemetry pegs 285-286 on exactly the marks a pass is set up on, so
+  // a straight that reads 8.4 s over a lap can be 7.6 s in the only situation it
+  // exists for. B failed this and was lengthened. Both rows stay, because a
+  // straight that clears at boost but blows past 10 s at cruise is also wrong.
+  {
+    label: 'Overtaking straight >= 8 s AT TOP SPEED',
+    bar: `${GATE.SPEED.boost} u/s, the HUD number on a passing mark (mean-speed row above is not enough)`,
+    value: (r) => `${GATE.report(r).longestStraight.seconds.boost}s @${GATE.SPEED.boost} · ${GATE.report(r).longestStraight.seconds.cruise}s @${GATE.SPEED.cruise}`,
+    ok: (r) => GATE.report(r).longestStraight.pass,
+  },
   // Tolerance either side of the 4-5 s band rather than a hard edge: 3.97 and
   // 5.32 are both "a straight you can use an item on that is not the main
   // zone", which is what the target is for. The exact figure is in the cell.
@@ -202,6 +217,23 @@ const TARGETS = [
   { label: 'Chicanes >= 2', bar: 'a shape that breaks the rhythm', value: (r) => `${chicanes(r)}`, ok: (r) => chicanes(r) >= 2 },
   { label: 'Handedness >= 33%', bar: 'both drift directions get used', value: (r) => `${pct(r)}%`, ok: (r) => pct(r) >= 33 },
   { label: 'Radius spread', bar: '80-400 u, min authored >= 72', value: (r) => `${r.corners.radiusRange[0]}-${r.corners.radiusRange[1]}`, ok: (r) => r.corners.radiusRange[0] >= 72 },
+  // Added in wave 7 fix round 1. "Radius spread" only checks the ENDS of the
+  // range, so a layout whose corners all sit in a 45-unit band still passes it
+  // as long as one corner is tight — which is how B shipped seventeen corners
+  // with no sweeper anywhere. This row checks the range is POPULATED: at least
+  // one corner in each of three separated classes. See gate-topspeed.mjs for
+  // why hairpin is < 90 with a floor of 72 rather than the < 70 that was asked
+  // for, and why sweeper/medium are judged on sustained radius while hairpin is
+  // judged on the tightest instant.
+  {
+    label: 'Three populated radius classes',
+    bar: 'sweeper > 200 · medium 90-140 · hairpin < 90 (floor 72) — one corner shape is one corner, however many there are',
+    value: (r) => {
+      const c = GATE.report(r).radiusClasses.counts;
+      return `${c.sweeper} sweep · ${c.medium} med · ${c.hairpin} hair`;
+    },
+    ok: (r) => GATE.report(r).radiusClasses.pass,
+  },
   { label: 'Kinks 0', bar: 'authored radii only — no spline artefacts', value: (r) => `${r.corners.kinks}`, ok: (r) => r.corners.kinks === 0 },
   { label: 'Elevation, gradient <= 18%', bar: '17-18% is the shipped, proven range', value: (r) => (r.elevation.carries ? `peak ${r.elevation.peakHeight} u, ${r.elevation.maxGradientPct}%` : 'flat'), ok: (r) => r.elevation.carries && r.elevation.maxGradientPct <= 18 },
   { label: 'No blind corners', bar: 'hard gate: 0.8 s of announcement', value: (r) => `worst ${r.sightline.minAnnounceSeconds}s`, ok: (r) => r.sightline.pass },

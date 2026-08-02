@@ -52,7 +52,16 @@ const RADII = [
   140, // 10 T9 marina dent
   120, // 11 T10 marina squeeze
   155, // 12 T11
-  100, // 13 T12 hairpin
+  // 82, not the 100 this was authored at. The wave-7 gate asks for three
+  // SEPARATED radius populations, and at 100 this corner solved to a tightest
+  // instant of 93 — inside the medium band, so A had eight sweepers, four
+  // mediums and no genuine stop-and-turn anywhere on the lap. A hairpin is not
+  // defined by its arc (this one already swept 126 degrees) but by the instant
+  // that forces you off the throttle, and 93 does not. 82 lands the tightest
+  // instant in the high 70s: a real hairpin, and still clear of the 72 floor
+  // that Penguin Village's W3 dent proved drivable in a build. It also makes A
+  // honest about its own thesis — "one hard braking point" now has one.
+  82, // 13 T12 LIGHTHOUSE HAIRPIN — the lap's only stop-and-turn
   205, // 14 T13
   215, // 15 T14
   200, // 16 T15

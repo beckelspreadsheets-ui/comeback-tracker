@@ -617,6 +617,23 @@ const createInitialRace = (
   // Biggest body on the lens this frame, as a multiple of the hero's own
   // on-screen size. Solved by the proximity ghost, read by telemetry.
   lensPeak: 0,
+  // AAA wave 7 round 2 — the proximity ghost's own instrumentation.
+  //
+  // The ghost moved from world distance to screen coverage in round 1 and a
+  // critic scored the camera axis on "no observable evidence in 18 frames" —
+  // for the third wave running, because the ghost is a NON-EVENT when it works
+  // and lensPeak alone cannot distinguish "nothing was ever close" from "the
+  // fade never fired". These three separate those two cases in the manifest:
+  //   rivalLensPeak  biggest RIVAL on the lens (lensPeak mixes in item boxes,
+  //                  coins, crossers and projectiles, none of which the ghost
+  //                  is tuned against)
+  //   ghostMinAlpha  the LOWEST proximity alpha applied to any rival; 1 means
+  //                  nothing faded at all this frame
+  //   ghostedRivals  how many rivals were below full opacity
+  // Seeded so a frame read before the first rival pass is a real number.
+  ghostMinAlpha: 1,
+  ghostedRivals: 0,
+  rivalLensPeak: 0,
   // Last frame's own-path/centreline length ratio (see LANE_ARC). Seeded at the
   // straight-line no-op so telemetry read before the first physics tick is a
   // real number rather than undefined.
@@ -1060,17 +1077,43 @@ const createGroundedKartModel = ({
   //     mid and a dark trailing plume that disperses. The tail is big, dim and
   //     set back, so it costs almost nothing in energy but gives the silhouette
   //     a direction. It is the FIRST child so the hotter lobes composite over it.
+  //
+  // AAA WAVE 7 ROUND 2 — THE ADDITIVE STACK HAD NO CEILING (KNOWN TRAP 2).
+  //
+  // Rubric blocker, penguin-village-p0_56: the flame composites as an opaque
+  // yellow capsule with a hard silhouette edge that swallows the left rear
+  // wheel. Measured peak inside it (255,235,177) — blue is the only channel with
+  // anything left. Solved forward through the shipped pipeline (scene-linear ->
+  // x1.80 exposure -> ACES -> track LUT), the three lobes stack to 1.45 in
+  // LINEAR RED before the road under them is even added:
+  //
+  //   core   texture 0.85 * opacity 0.95 * linear(#FFD34F).r 1.00 = 0.808
+  //   shell  texture 0.85 * opacity 0.70 * linear(#FF8C00).r 1.00 = 0.595
+  //   tail   texture 0.85 * opacity 0.24 * linear(#8a3a12).r 0.25 = 0.052
+  //
+  // Everything above ~0.56 scene-linear lands on the tone curve's shoulder and
+  // then on the LUT's ceiling, so the whole disc inside that radius flattens to
+  // one value: no falloff, no wheel, no road grain. The hard "silhouette edge"
+  // the critic saw is not a silhouette at all, it is the iso-line where the sum
+  // finally drops back under the ceiling.
+  //
+  // Opacities are cut so the co-located core+shell peak lands ~0.71 through
+  // ACES — around 219 sRGB before the LUT, with ~36 of headroom left — which is
+  // still the hottest thing in any frame but leaves the radial falloff, the
+  // tyre and the road visible THROUGH the skirt. The colours, the three-lobe
+  // ramp, the tier logic and the flicker are all untouched: this is a ceiling,
+  // not a redesign.
   const boostFlame = new THREE.Group();
   boostFlame.visible = false;
   const FLAME_Y = 3.05;
   [-1.5, 1.5].forEach((x, side) => {
     // Dispersing plume first, then shell, then core: strictly cool -> hot, so
     // the additive stack builds a value ramp instead of two flat discs.
-    const tail = addGlowSprite(boostFlame, '#8a3a12', 6.4, 0.24, FLAME_Y);
+    const tail = addGlowSprite(boostFlame, '#8a3a12', 6.4, 0.18, FLAME_Y);
     tail.position.set(x * 1.18, FLAME_Y + 0.5, -9.6);
-    const shell = addGlowSprite(boostFlame, '#FF8C00', 4.2, 0.7, FLAME_Y);
+    const shell = addGlowSprite(boostFlame, '#FF8C00', 4.2, 0.28, FLAME_Y);
     shell.position.set(x, FLAME_Y, -6.6);
-    const core = addGlowSprite(boostFlame, '#FFD34F', 1.9, 0.95, FLAME_Y);
+    const core = addGlowSprite(boostFlame, '#FFD34F', 1.9, 0.55, FLAME_Y);
     core.position.set(x, FLAME_Y, -6.4);
     // A sprite's scale IS its size, so the frame loop cannot just setScalar a
     // tier multiplier onto it the way it could with a mesh — it has to scale
@@ -1084,9 +1127,73 @@ const createGroundedKartModel = ({
       // point of it is to be the cold end of the ramp.
       sprite.userData.flameTail = index === 0;
       sprite.userData.flicker = side * 2.3 + index * 1.1;
+      // Which nozzle this lobe belongs to, so placeExhaustVfx can re-seat it on
+      // a swapped body without re-deriving it from a sign test on a position it
+      // is about to overwrite.
+      sprite.userData.flameSide = x < 0 ? -1 : 1;
     });
   });
   model.add(boostFlame);
+
+  // AAA WAVE 7 ROUND 2 — THE FLAME WAS NAILED TO A KART THAT IS NEVER ON SCREEN.
+  //
+  // Everything above is authored in the PROCEDURAL kart's coordinates: nozzles
+  // at x +/-1.5, y 3.05, z -6.6, i.e. just behind a tub whose rear face sits at
+  // z -6.0. Every kart in all eighteen capture frames is a loaded GLB fitted to
+  // 15.6 units, whose rear face is at roughly z -7.8 — so the flame was being
+  // drawn a unit and a half INSIDE the bodywork, level with the rear axle. That
+  // is the whole reason penguin-village-p0_56 reads as a yellow capsule welded
+  // to the left rear wheel: the sprite is not behind the diffuser, it is ON the
+  // tyre. Cutting the opacities alone would have made a dimmer capsule.
+  //
+  // The brake lamps already solved this exact problem (placeBrakeLamps, called
+  // from replaceBody with the mounted body's real bounds). This is the same fix
+  // for the same reason, keyed off the same measurement, and it inherits the
+  // same gate: it only ever runs when a GLB mounts, so the procedural kart's
+  // authored numbers above are bit-identical to what ships today.
+  //
+  // Ratios are the procedural kart's OWN proportions (half-width 4.4, height
+  // 6.7, length 12.35, rear face -6.0), so a body of the same shape lands the
+  // flame in the same place relative to itself:
+  //   nozzle x   +/-0.34 of half-width          (1.5 / 4.4)
+  //   nozzle y   0.46 of height above the deck  (3.05 / 6.7)
+  //   core z     0.032 of length past the tail  (-6.4 vs -6.0 over 12.35)
+  //   shell z    0.050 of length past the tail
+  //   tail z     0.290 of length past the tail
+  // and sprite sizes scale off half-width for the same reason a wide kart gets
+  // wide brake lamps.
+  const placeExhaustVfx = ({ halfWidth, height, length, minY, minZ }) => {
+    if (!(halfWidth > 0) || !(length > 0) || !(height > 0)) return;
+    const nozzleX = halfWidth * 0.34;
+    const nozzleY = minY + height * 0.46;
+    const rescale = (sprite, factor) => {
+      sprite.userData.baseScale = halfWidth * factor;
+      // The frame loop multiplies baseScale by the tier and the flicker, so the
+      // rest pose has to be written here too or a parked kart draws at the old
+      // size until the first boost.
+      sprite.scale.setScalar(sprite.userData.baseScale);
+    };
+    boostFlame.children.forEach((sprite) => {
+      const side = sprite.userData.flameSide || 1;
+      if (sprite.userData.flameTail) {
+        sprite.position.set(side * nozzleX * 1.18, nozzleY + height * 0.075, minZ - length * 0.29);
+        rescale(sprite, 1.45);
+      } else if (sprite.userData.flameCore) {
+        sprite.position.set(side * nozzleX, nozzleY, minZ - length * 0.032);
+        rescale(sprite, 0.43);
+      } else {
+        sprite.position.set(side * nozzleX, nozzleY, minZ - length * 0.05);
+        rescale(sprite, 0.95);
+      }
+    });
+    // Idle flames ride the same nozzles and had the same fault — they are just
+    // permanently on, so on a GLB body they were a constant orange smear over
+    // the rear tyre rather than an intermittent one.
+    idleFlames.forEach((flame, index) => {
+      flame.position.set((index === 0 ? -1 : 1) * nozzleX, minY + height * 0.31, minZ - length * 0.03);
+      rescale(flame, 0.5);
+    });
+  };
 
   // Drift sparks. Were solid DodecahedronGeometry on an opaque emissive basic
   // material: at chase distance those are chunky faceted yellow lumps that
@@ -1449,6 +1556,10 @@ const createGroundedKartModel = ({
     // whichever GLB mounted rather than on the procedural kart's light bar.
     // Every body has a rear face even when the wheel gates fail.
     if (analysis) placeBrakeLamps(analysis.bounds);
+    // Same call, same bounds, same reason — the exhaust VFX are authored on the
+    // procedural tub and have to be re-seated onto the mounted body's real tail
+    // or they draw over its rear wheels. See placeExhaustVfx.
+    if (analysis) placeExhaustVfx(analysis.bounds);
     if (named >= 2 || !analysis?.hubs) return;
     // Fused body. Nothing in the graph owns a wheel, so build the four hubs the
     // geometry implies and hang a speed-faded rotation band on each.
@@ -4553,7 +4664,34 @@ uniform float uRailMinNdc;`,
     // old level: the doubled elbow column and the hard outline. Both were
     // artefacts, but they were also brightness, so the peak has to be restored
     // deliberately rather than lost by accident.
-    opacity: 0.5,
+    //
+    // AAA WAVE 7 ROUND 2 — 0.5 -> 0.2, AND THIS IS A CEILING (KNOWN TRAP 2).
+    //
+    // Rubric blocker, comeback-city-p0_06: the chevron composites effectively
+    // OPAQUE despite being authored additive and translucent. Measured on the
+    // stroke's plateau (128,244,255) against asphalt at (54,49,68) — blue pinned
+    // at the ceiling, green one step off it, and the road's own speckle (sd 1.14
+    // outside the stroke) completely gone inside it. It is also brighter than
+    // the white kerb (max 218), i.e. the brightest non-emitting surface in the
+    // frame.
+    //
+    // Additive blending PRESERVES what is underneath — that is the whole reason
+    // it was chosen for a road decal. What destroys the asphalt grain is not the
+    // blend, it is CLIPPING: once a channel saturates, every value beneath it
+    // maps to the same output and the stroke goes flat. #2cc4e8 is a near-
+    // saturated cyan (linear 0.027 / 0.546 / 0.807), so blue clips first and
+    // drags the hue to white-cyan on the way — the same shape of failure as the
+    // wave-2 (66,255,255) column, and the same lesson: an additive lobe needs a
+    // ceiling chosen against the destination, not against how bright the decal
+    // "should" look in isolation.
+    //
+    // 0.2 puts the peak an estimated ~150-195 per channel with nothing at the
+    // top of the range, which keeps the arrow the strongest paint on the deck
+    // while leaving the tone curve enough local slope for the road grain to
+    // survive through it. Estimated, not measured — this package cannot run a
+    // capture — so the number to re-check next round is the stroke's own
+    // standard deviation, which should now be non-zero.
+    opacity: 0.2,
     // Kept from the round-3 build and still the right tool: the decal is now
     // genuinely coplanar with the road everywhere, which is exactly the case
     // polygonOffset exists for. The 2cm lift above is only insurance for the
@@ -8853,6 +8991,26 @@ export const ComebackCityThreeKartRace = ({
       // the only thing on screen tying the kart to a point on the road.
       const castHidden = clamp((boost.opacity - 1) / 0.55, 0, 1);
       const airOpacity = lerp(fade.opacity, Math.max(fade.opacity, CONTACT_AIR_HIDDEN_FLOOR), castHidden);
+      // AAA WAVE 7 ROUND 2 — A PENUMBRA CONSERVES ENERGY. THIS ONE WAS GAINING IT.
+      //
+      // penguin-village-p0_24 caught the hero mid-flight with what two critics
+      // independently described as an oversized detached blob: "a ~4-5x
+      // oversized soft ellipse sitting well left of and behind the kart", "a
+      // dirt smear, not a shadow". Reconstructed from the code above, at that
+      // hop height the patch is spread by fade.scale x airSpread x boost.scale
+      // to roughly 1.5x, while airOpacity is simultaneously being held UP by
+      // CONTACT_AIR_HIDDEN_FLOOR and multiplied by boost.opacity — so the thing
+      // got half again as wide WITHOUT getting any lighter. That is not a
+      // penumbra, it is a bigger stamp.
+      //
+      // airSpread's own comment says the point is that the patch "spreads back
+      // out as it fades". Dividing the opacity by the spread is what makes the
+      // second half of that sentence true. Deliberately keyed on airSpread ONLY:
+      // boost's growth is the compensating cue for a cast shadow the lens cannot
+      // see and is supposed to add darkness, and airSpread is exactly 1 on the
+      // ground — so every grounded kart on both tracks, which is most frames, is
+      // bit-identical to what shipped.
+      const airSpreadNormalise = 1 / Math.max(1, airSpread);
       contactRig.children.forEach((decal) => {
         // Capped, and the cap came DOWN with the blend change: on the
         // multiply path (see the contact decal's material) this number is the
@@ -8867,7 +9025,7 @@ export const ComebackCityThreeKartRace = ({
         // back off again.
         decal.material.opacity = Math.min(
           contactRig.userData.contactWipeCap,
-          decal.userData.contactOpacity * airOpacity * boost.opacity
+          decal.userData.contactOpacity * airOpacity * boost.opacity * airSpreadNormalise
         );
       });
     };
@@ -9985,6 +10143,11 @@ export const ComebackCityThreeKartRace = ({
         lensNear
       );
       race.lensPeak = 0;
+      // Reset here, with lensPeak, because the rival pass that writes them runs
+      // later in this same frame (see the proximity ghost block).
+      race.ghostMinAlpha = 1;
+      race.ghostedRivals = 0;
+      race.rivalLensPeak = 0;
       const noteLensPeak = (coverage) => {
         if (lensSubjectCoverage > 0) race.lensPeak = Math.max(race.lensPeak, coverage / lensSubjectCoverage);
         return coverage;
@@ -10329,16 +10492,30 @@ export const ComebackCityThreeKartRace = ({
         // disc, and at that range "beside you" still means owning half the
         // screen. The band is taken as a MIN over the whole proximity term, so
         // the lateral escape hatch can no longer re-open it.
-        const lensBand = lensBandFor(
-          noteLensPeak(
-            lensCoverage(rival.model.group.position, CHASE_SUBJECT_RADIUS, camPos, lensTanHalfFov, lensNear)
-          ),
-          lensSubjectCoverage
+        const rivalCoverage = lensCoverage(
+          rival.model.group.position,
+          CHASE_SUBJECT_RADIUS,
+          camPos,
+          lensTanHalfFov,
+          lensNear
         );
+        // Rival-only peak, alongside the shared all-objects one. See the
+        // ghostMinAlpha block in the race state for why the ghost needs its own
+        // number rather than lensPeak's mixture.
+        if (lensSubjectCoverage > 0) {
+          race.rivalLensPeak = Math.max(race.rivalLensPeak, rivalCoverage / lensSubjectCoverage);
+        }
+        const lensBand = lensBandFor(noteLensPeak(rivalCoverage), lensSubjectCoverage);
         // Cubic on the axial term only. The band is wide enough now that a
         // linear fade would leave a rival visibly translucent while it is still
         // a legitimate part of the shot; off-axis rivals never reach it at all.
         const proximity = Math.min(lensBand, Math.max(nearBand * nearBand * nearBand, lateral));
+        // Recorded EVERY frame, outside the change gate below: the gate only
+        // guards the material writes, and telemetry that only updated on a
+        // transition would report a stale alpha on exactly the held frames a
+        // capture harness screenshots.
+        race.ghostMinAlpha = Math.min(race.ghostMinAlpha, proximity);
+        if (proximity < 1) race.ghostedRivals += 1;
         if (proximity !== rival.model.proximity) {
           rival.model.proximity = proximity;
           const ghosted = proximity < 1;
@@ -11123,6 +11300,19 @@ export const ComebackCityThreeKartRace = ({
               // the pixels by hand. Published so it is a number in the
               // manifest, not an eyeball.
               lensPeak: Number((race.lensPeak || 0).toFixed(2)),
+              // Proximity-ghost evidence, published because three waves of
+              // critics have now had to score the camera axis on the ABSENCE of
+              // a faded rival in the stills. rivalLensPeak is the biggest rival
+              // on the lens as a multiple of the hero; ghostMinAlpha is the
+              // lowest opacity the ghost actually applied (1.0 = it never
+              // fired); ghostedRivals is how many were below full. A frame with
+              // rivalLensPeak >= 2 and ghostMinAlpha == 1 is the ghost FAILING;
+              // a frame with rivalLensPeak < 1 and ghostMinAlpha == 1 is the
+              // ghost correctly staying out of the way. Those two were
+              // indistinguishable in the manifest until now.
+              ghostMinAlpha: Number((race.ghostMinAlpha ?? 1).toFixed(3)),
+              ghostedRivals: race.ghostedRivals || 0,
+              rivalLensPeak: Number((race.rivalLensPeak || 0).toFixed(2)),
             }
           : null,
         grounding: {

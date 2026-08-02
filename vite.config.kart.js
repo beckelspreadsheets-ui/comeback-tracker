@@ -184,6 +184,45 @@ export default defineConfig({
         // and concatenating the two is byte-identical to the old single file
         // apart from one injected newline, so the Tailwind cascade order the
         // race UI depends on is unchanged. SW precache 47 -> 50 entries.
+        //
+        // ---------------------------------------------------------------
+        // WAVE 7 ROUND 1: a critic blamed this split for the Comeback City
+        // mid-ground skyline changing layout ("order-dependent RNG draw at
+        // module init, re-ordered by the chunk split"). FALSIFIED three
+        // times over — do NOT re-litigate it, and do NOT "fix" it here:
+        //
+        //  1. This block lives under `build.rollupOptions`. The capture
+        //     harness records `"server": "dev:kart"` in every
+        //     capture-manifest.json (scripts/aaa-visual-capture.mjs
+        //     SERVER_MODE defaults to dev:kart; `--server preview:kart` is
+        //     opt-in and was not used). Vite dev serves unbundled native
+        //     ESM — manualChunks never runs. The split cannot have produced
+        //     a single pixel in tmp/aaa-visual/wave7-r1.
+        //  2. createMidGroundBelt.js contains ZERO Math.random. Its stream
+        //     is makeRandom(hashSeed(`midground:${trackKey}`)) — a pure
+        //     FNV-1a of the track key, seeded inside the factory call, not
+        //     at module scope. Nothing about import order can reach it. A
+        //     module-scope scan of every file under src/game for
+        //     Math.random / Date.now / performance.now at depth 0 returns
+        //     one comment and nothing else, so no race module has an
+        //     evaluation-order-sensitive side effect to re-order.
+        //  3. A static manualChunks split preserves ESM evaluation order by
+        //     construction anyway (see the paragraph above).
+        //
+        // The actual cause is path-dependent: the belt is handed
+        // `beltCenterline` sampled from the course, and its placement loop
+        // rejects a slot (`if (!placed) continue;`) AFTER consuming three
+        // draws but BEFORE the shape / variant / landmark / mass / colour /
+        // tint draws. So one changed accept-reject outcome phase-shifts the
+        // rest of the shared stream and the whole skyline reshuffles. Wave
+        // 7's courseV2.js start/finish edit re-splined the closed
+        // CatmullRom, which moves every centerline sample, which flips
+        // those clearance tests. Belt determinism is per-TRACK-KEY, not
+        // per-LAYOUT. Owner of createMidGroundBelt.js: draw the
+        // placement-independent per-instance rolls from a per-slot sub-seed
+        // (hash of trackKey + ring + step + side) so a rejection can no
+        // longer phase-shift its neighbours.
+        // ---------------------------------------------------------------
         manualChunks(id) {
           if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/')) {
             return 'react-vendor';

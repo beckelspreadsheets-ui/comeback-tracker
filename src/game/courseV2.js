@@ -107,6 +107,46 @@ const TRACK_SCALE = 1.35;
 // gap of 28.5 authored units against its neighbour's 29.2, i.e. the loop now
 // closes at its own natural spacing. Verified: 7 corners (2 kink) ->
 // 5 corners (0 kink), min radius 20.2 -> 110.5.
+//
+// AAA WAVE 7 ROUND 2 — THE SEAM WAS STILL THE TIGHTEST POINT ON THE LOOP.
+//
+// Dropping the stray point removed the PATHOLOGY but not the problem. The
+// authored polyline's own turn radius is a poor proxy for what the runtime
+// draws: makeTrackCurve feeds these 80 points to a CLOSED CatmullRomCurve3 with
+// UNIFORM parameterisation and tension 0.38, and it is THAT curve the road, the
+// racing line and every progress query are built from.
+//
+// Re-derived off it (three r184, 4000 samples, three-point circumfit), the seam
+// at authored index 0 measured R=43.1 against a non-seam minimum of 47.7 and a
+// per-authored-point median of 230 — i.e. still the tightest corner on the
+// course, and one every lap crosses at full throttle. It held that ranking at
+// every measurement scale (h = 0.0005 -> 0.008 of a lap).
+//
+// The cause is the JOIN ANGLE, not the spacing. Point 79 {-222,54} arrives on a
+// heading of about -18 degrees while points 1..12 run dead flat at z=45, so the
+// spline had to absorb the whole heading change inside the one segment that
+// straddles the line. Lifting point 0 by TWO authored units in +z (the outward
+// side) lets the closing arc finish its turn ACROSS the seam instead of at it.
+//
+// Measured for this change, same probe:
+//     h        seam R (base -> +2z)   non-seam min R
+//   0.0005        32.8 -> 47.9             37.4
+//   0.001         36.4 -> 53.4             40.8
+//   0.002         43.1 -> 61.5             47.7
+//   0.004         56.7 -> 78.8             61.6
+//   0.008         84.4 -> 109.8            85.8
+//
+// The seam now clears the loop's own tightest non-seam corner by 28-30% at every
+// scale, and the course's global minimum radius moves OFF the start/finish to
+// the south carousel at t=0.300, where a carousel is supposed to be. Closure
+// spacing stays natural: 37.65 scaled units into the seam, 32.51 out of it,
+// against a 30.8-45.9 range everywhere else.
+//
+// +2 is the SMALLEST displacement that clears the bar with margin — a swept
+// search over +/-10 authored units in both axes found nothing closer — and
+// bigger nudges in the same direction REVERSE the win (dz=+4 is back to 43.8,
+// dz=+6 to 32.8) because the join then over-rotates the other way. That is why
+// this is a measured number and not "a few units outward".
 // Owner feedback 2026-06-12 round 2: corners must be long sustained sweepers
 // that reward holding a drift. This centerline is GENERATED from exact
 // arc/straight primitives (three drift carousels R~108-143 scaled, a dive,
@@ -114,7 +154,10 @@ const TRACK_SCALE = 1.35;
 // runtime CatmullRom follows the intended radii. Generator + validation
 // (crossing/curvature/race-sim): see git history of tmp track-gen scripts.
 const authoredCenterline = [
-  { x: -195, z: 45 },
+  // Start/finish. z is 47, not 45 — see the seam block above; this is the one
+  // point on the loop whose value is a curvature measurement rather than a
+  // layout choice.
+  { x: -195, z: 47 },
   { x: -171, z: 45 },
   { x: -147, z: 45 },
   { x: -123, z: 45 },

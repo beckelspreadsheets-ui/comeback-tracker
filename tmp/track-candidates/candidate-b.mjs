@@ -27,9 +27,26 @@ const WAYPOINTS = [
   { x: 1250, z: -610 }, // 6  T5 onto the east avenue
   { x: 1250, z: -100 }, // 7  T6
   { x: 1600, z: 250 }, // 8  T7
-  { x: 1600, z: 900 }, // 9  T8
-  { x: 1150, z: 1300 }, // 10 T9 — the Expressway begins
-  { x: -1150, z: 1300 }, // 11 T10 — the Expressway ends, hard, into the tight stuff
+  // T8/T9/T10 all moved in wave 7 fix round 1, for two measured reasons that
+  // happen to share one edit.
+  //
+  // (1) THE EXPRESSWAY WAS TOO SHORT AT THE SPEED IT IS ACTUALLY DRIVEN.
+  //     Round 0 measured it at 8.41 s against an 8-10 s target, but that was at
+  //     the LAP MEAN of 260 u/s. Shipped telemetry pegs 285-286 on exactly the
+  //     kind of mark a pass is set up on, and at 286 the same 2,186 u is
+  //     7.64 s — under the floor, in the one situation the straight exists for.
+  //     The leg goes 2,300 -> 2,600 u, which puts it at ~8.5 s at boost and
+  //     still inside 10 s at the slowest a straight is ever driven flat out.
+  // (2) B HAD NO SWEEPER. Every corner sat in a 134-178 sustained band except
+  //     the two switchbacks, which is the same "every corner is taken the same
+  //     way" complaint the shipped track earns, just at a different radius.
+  //     Pulling T8 north steepens the approach diagonal so T9's deflection goes
+  //     41 -> ~60 degrees, which is what lets it be authored as a real sweeper
+  //     (see RADII) instead of a 41-degree turn that a big radius would only
+  //     have flattened into a straight.
+  { x: 1600, z: 780 }, // 9  T8
+  { x: 1300, z: 1300 }, // 10 T9 — the Expressway begins, and B's only sweeper
+  { x: -1300, z: 1300 }, // 11 T10 — the Expressway ends, hard, into the tight stuff
   { x: -1600, z: 900 }, // 12 T11
   { x: -1600, z: 150 }, // 13 T12 OLD TOWN SWITCHBACK 1 — stop and turn
   { x: -1000, z: 650 }, // 14 T13 OLD TOWN SWITCHBACK 2 — stop and turn the other way
@@ -51,7 +68,14 @@ const RADII = [
   150, // 7  T6
   150, // 8  T7
   120, // 9  T8
-  130, // 10 T9 — opens onto the Expressway, so it is the fastest corner here
+  // 210, not 130. This is the one corner on B that is allowed out of the
+  // technical band, and it is the right one: it is the gateway onto the
+  // Expressway, so it is the corner where carrying speed pays for the whole
+  // straight. A candidate whose radii all sit within 45 units of each other has
+  // one corner shape, however many corners it has — the fault B exists to fix.
+  // The paired waypoint move gives it ~60 degrees of deflection so the radius
+  // buys a held drift rather than just erasing the corner.
+  210, // 10 T9 — opens onto the Expressway: B's only sweeper, deliberately
   110, // 11 T10
   140, // 12 T11
   85, // 13 T12 switchback
@@ -114,9 +138,18 @@ export const CANDIDATE_B = makeCandidate({
     failSpin: 1.8,
   },
   // The Convention Center ramp — a short, steep hump on the run out of the
-  // block staircase. Crest lands at p0.228; the next corner entry is at
-  // p0.272, i.e. 520 u = 2.0 s later, clear of the 1.5 s crest-shoulder rule.
-  elevation: { bridgeBand: { from: 0.207, peak: 27, to: 0.249 }, crestLaunch: true },
+  // block staircase, with a free launch off the crest.
+  //
+  // Moved 0.011 of a lap earlier in wave 7 fix round 1. Lengthening the
+  // Expressway lengthened the lap, which shifts every progress-addressed beat
+  // slightly backwards relative to the corners — enough that C5 fell to exactly
+  // 1.50 s of announcement, hidden by this crest, and joined the strict-sight
+  // miss list. Nothing is wrong with C5; the occluder had drifted onto its
+  // shoulder. Pulling the band back restores the gap. The lesson generalises
+  // and is worth stating for whoever builds the picked layout: progress-space
+  // beats are NOT invariant under a length change, so re-run the sightline gate
+  // after any centerline edit, however local the edit looks.
+  elevation: { bridgeBand: { from: 0.196, peak: 27, to: 0.238 }, crestLaunch: true },
   coinRows: [
     0.01, 0.04, 0.07, 0.1, 0.14, 0.17, 0.2, 0.23, 0.27, 0.3, 0.34, 0.37, 0.4, 0.44, 0.48, 0.51, 0.54, 0.58, 0.61,
     0.64, 0.67, 0.71, 0.74, 0.77, 0.8, 0.84, 0.87, 0.9, 0.93, 0.97,

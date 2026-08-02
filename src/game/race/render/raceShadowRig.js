@@ -30,6 +30,51 @@ import * as THREE from 'three';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+// AAA WAVE 7 ROUND 2 — normalBias IS A GROUND GAP, AND IT WAS 1.8x WIDER ON
+// PENGUIN VILLAGE THAN ON COMEBACK CITY FOR THE SAME NUMBER.
+//
+// normalBias offsets the shadow lookup along the RECEIVER's normal. On the road
+// that normal is straight up, so a bias of b displaces the shadow along the
+// ground by b / tan(elevation) — it is a peter-panning budget expressed in the
+// wrong units. The two tracks do not share an elevation (Comeback City 21
+// degrees, Penguin Village 12 — raceEnvironment.js), so the single 0.12 that
+// was tuned against and verified on CC bought:
+//
+//   Comeback City   0.12 / tan(21) = 0.313 units of gap
+//   Penguin Village 0.12 / tan(12) = 0.565 units of gap   (1.80x)
+//
+// which is exactly the artefact the wave-7 critics filed against PV and NOT
+// against CC: "a bright road gap between the front-wheel contact patches and
+// the shadow's near edge", i.e. the silhouette detached from the wheels. The
+// shadow LANDS on PV now (measured 22-36% darker than open road); it just lands
+// half a unit short of the tyres.
+//
+// So hold the GROUND GAP constant instead of the bias, and let the bias fall out
+// of the sun the frame is actually lit by:
+//
+//   normalBias = GAP * sin(elevation)
+//
+// The constant is calibrated so Comeback City resolves to 0.12 EXACTLY — the
+// track whose shadows the critics scored as correct is bit-identical, and only
+// the low-sun track moves (0.12 -> 0.070, ~3.4 texels at 3072/32, still ample
+// for the faceted low-poly bodywork this bias exists to keep off its own
+// surface).
+//
+// The exactly-constant-gap term is tan(elevation), not sin. sin is used anyway
+// for three reasons: it IS sunDirection.y for a unit vector, so it needs no
+// trig at all; it stays bounded as the sun drops toward the horizon where tan
+// runs away; and across the 12-21 degree band both tracks actually live in the
+// two agree to within 5% (PV would be 0.0665 on tan against 0.0697 on sin),
+// which is a fifth of a shadow texel.
+const CC_SUN_ELEVATION = (21 * Math.PI) / 180;
+const NORMAL_BIAS_GROUND_GAP = 0.335;
+// Floors and ceilings, both hard. Below 0.045 the bias stops covering the
+// bodywork's own facets and acne comes back; above the CC value we would be
+// making a track that already works worse. A sun that somehow reports a bad
+// elevation therefore degrades to today's shipped behaviour, never past it.
+const NORMAL_BIAS_MIN = 0.045;
+const NORMAL_BIAS_MAX = NORMAL_BIAS_GROUND_GAP * Math.sin(CC_SUN_ELEVATION);
+
 // Tier 3 textures are process-wide, keyed by strength.
 //
 // MULTIPLY blending, so this ramp is a brightness MULTIPLIER, not an alpha
@@ -356,7 +401,11 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
       // faceted bodywork off its own surface, small enough that the silhouette
       // stays attached to the wheels.
       sun.shadow.bias = -0.00009;
-      sun.shadow.normalBias = 0.12;
+      // Seed only. From here on normalBias is re-derived per frame from the
+      // sun's own elevation — see NORMAL_BIAS_GROUND_GAP and update() below.
+      // 0.12 is the value Comeback City resolves to, so this seed is also what
+      // the first frame of a CC race would have used anyway.
+      sun.shadow.normalBias = NORMAL_BIAS_GROUND_GAP * Math.sin(CC_SUN_ELEVATION);
       // Umbra floor. A shadow that removes 100% of the key light goes to the
       // ambient term alone, and on Miami dusk asphalt that is near-black — the
       // captures read the result as "a hole in the road" and "an ink splat"
@@ -401,6 +450,17 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
    */
   const update = (focusPoint, sunDirection, sunDistance) => {
     if (!sun) return;
+    // sunDirection points FROM the subject TOWARD the sun and is unit length, so
+    // its y IS sin(elevation). Written every frame because it is a uniform and
+    // because the caller is free to move the sun (palette moments already do).
+    if (active) {
+      const sinElevation = Math.abs(sunDirection.y) || Math.sin(CC_SUN_ELEVATION);
+      sun.shadow.normalBias = clamp(
+        NORMAL_BIAS_GROUND_GAP * sinElevation,
+        NORMAL_BIAS_MIN,
+        NORMAL_BIAS_MAX
+      );
+    }
     if (!active || texelWorldSize <= 0) {
       sun.position.copy(sunDirection).multiplyScalar(sunDistance).add(focusPoint);
       sun.target.position.copy(focusPoint);
