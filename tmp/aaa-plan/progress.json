@@ -307,7 +307,17 @@
       "sat-stacker"
     ],
     "liftRunId": "wf_e8e1c87a-d86",
-    "note": "5 picks. Lifted via generated side/back views + Meshy multi_image_to_3d (the single-image path produced results the owner rejected at K5)."
+    "note": "5 picks. Lifted via generated side/back views + Meshy multi_image_to_3d (the single-image path produced results the owner rejected at K5).",
+    "finalSet": [
+      "hash-runner",
+      "cold-wallet",
+      "sat-stacker",
+      "pixel-pickup-v2",
+      "node-runner-v2"
+    ],
+    "rerolls": "pixel-pickup v1 built an enclosed cab that hid the driver (bbox y 1.02 vs fleet 0.51-0.91); node-runner v1 had lettering on the side pods. Both re-rolled clean: pixel-pickup-v2 is open-top at y 0.685, node-runner-v2 is text-free. v1 meshes quarantined at tmp/kart-lifts/rejected/.",
+    "verifiedBy": "scripts/kart-turntable.mjs — 4-yaw render through the repo three + MeshoptDecoder, same loader stack as the game",
+    "stillNeeded": "diet each ~4MB raw lift to ~350-550KB, then the on-demand pool (5 karts at the existing diet precedent would put the raw bundle at ~16.0/16 MiB)"
   },
   "budgetFinding": {
     "discovered": "2026-08-02",
