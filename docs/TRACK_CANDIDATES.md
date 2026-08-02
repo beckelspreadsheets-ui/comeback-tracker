@@ -35,7 +35,8 @@ show a corner in time (§8 of the same document).
 node scripts/track-layout-preview.mjs --file tmp/track-candidates/candidate-a.mjs \
   --speed 260 --out tmp/track-candidates/preview
 node tmp/track-candidates/probe.mjs          # fast geometry loop, no browser
-node tmp/track-candidates/gate-topspeed.mjs  # the two gates added in wave 7 (§7)
+node tmp/track-candidates/gate-topspeed.mjs  # the two gates added in wave 7 r1 (§7)
+node tmp/track-candidates/gate-width.mjs     # the road-width gate, wave 7 r2 (§8)
 node tmp/track-candidates/export-centerlines.mjs
 node tmp/track-candidates/build-sheet.mjs    # rebuilds index.html
 ```
@@ -45,6 +46,12 @@ at the lap mean, and a corner class is not decided by the ends of the radius
 range. Wave 7 added a gate for each; both are in §7, both run from
 `gate-topspeed.mjs`, and both are rows on the owner's sheet. A and B were
 changed to pass them; C already did.
+
+**Six of the numbers below do not come from the previewer at all.** Road width
+is the one axis the previewer reports without measuring — its `minWidth` /
+`maxWidth` are the *authored* ribbon extremes, the numbers a designer typed,
+not what the runtime hands the camera. §8 is the gate that closes that hole,
+it runs from `gate-width.mjs`, and it changed A and C. B passed it unchanged.
 
 Two authoring decisions are worth stating because they are the reason the
 sheets come back clean:
@@ -153,17 +160,30 @@ exactly the shipped fault the sightline gate found (`cc-C4`, 0.44 s), and the
 straight a pass is set up on is the one place forward sight has to be longest.
 Crest to the next corner entry is 605 u = 2.3 s, clear of the 1.5 s rule.
 
+### Width — the Lighthouse squeeze
+
+`62 · 48 · 56 · 46 · 64 · 44 · 52` (delivered 44–64 u, ratio 1.455, 5 levels).
+
+**Changed in wave 7 round 2.** The causeway is the widest road on the lap and
+now empties straight into the narrowest: the Lighthouse ribbon went 54 → **44**,
+a 20-unit squeeze arriving exactly where A's one hard braking point is. The
+ribbon also starts at 0.695 rather than 0.72 — roughly two standard deviations
+of the runtime's width smoother ahead of the corner, so the full 44 u is
+delivered *at* the entry instead of half of it (§8 explains why that is not a
+detail). The palm chicane went 50 → 48 for the same reason at a smaller scale.
+Grid width is 60.8 u, so nothing was squeezed onto the start line.
+
 ### Verdict
 
-**Hits 17 of 19 targets.** Misses:
+**Hits 22 of 24 targets.** Misses:
 
 - **Handedness 31%** against a ≥33% bar (5 of 16 corners turn left). This is
   structural, not a tuning miss — see §6.
 - **Road/terrain value**, identically to B, C and the shipped track — see §6.
 
-Everything else clears, including both wave-7 gates (§7) and `--strict-sight`:
-**worst corner announcement 1.93 s**, the only candidate where every corner
-clears the 1.5 s authoring bar with no exceptions.
+Everything else clears, including all three wave-7 gates (§7, §8) and
+`--strict-sight`: **worst corner announcement 1.93 s**, the only candidate where
+every corner clears the 1.5 s authoring bar with no exceptions.
 
 ---
 
@@ -248,9 +268,21 @@ ramp, a short steep hump on the run out of the block staircase, with a free
 launch. Moved 0.011 of a lap earlier in wave 7 so the crest stops occluding C5;
 see the change note above.
 
+### Width — unchanged, and the only candidate that needed nothing
+
+`60 · 46 · 52 · 64 · 44 · 50` (delivered 44–64 u, ratio 1.455, 5 levels).
+
+B is the one candidate that passed the wave-7 round-2 width gate **as authored**,
+and for a reason worth recording: its width was already coupled to its layout.
+The Expressway is the widest road on the lap at 64 and the Old Town switchbacks
+are the narrowest at 44, they are adjacent, and the step lands at p0.66 — one
+sample before C10, the first switchback. That is an 18.1-unit straight-to-hairpin
+delta and a 0.57 s 8-unit squeeze without a single edit. Where A and C authored
+a width *range*, B had authored a width *decision*.
+
 ### Verdict
 
-**Hits 17 of 19 targets.** Misses:
+**Hits 22 of 24 targets.** Misses:
 
 - **`--strict-sight`: two corners under the 1.5 s authoring bar.** C2 and C4,
   the second element of each staircase chicane, are announced at **0.82 s**
@@ -331,9 +363,34 @@ gradient, because it is spread over more than twice the length. Crest sits at
 p0.825, which puts ~30 u of air over the start/finish line, and leaves 582 u
 (2.2 s) of descent before the viaduct hairpin's entry.
 
+### Width — rewritten in wave 7 round 2
+
+`60 · 54 · 44 · 56 · 62 · 42 · 54` (delivered 42–62 u, ratio 1.476, 4 levels).
+
+C was the **worst of the three** on the width gate and by a distance: its
+authored 46–60 undulated so gently that the fastest 8-unit change on the whole
+lap took **1.37 s** against the shipped track's 0.29, and only 4% of frames
+carried any width contrast at all. On the candidate whose entire pitch is a set
+piece, that was the most damaging place for it to be true.
+
+The rewrite gives C a width story that matches its elevation story. The market
+row is the technical middle at 44. The **viaduct opens to 62** — it is the pass
+window, and it is the only place on any of the three candidates where the road
+gets *wider as it climbs*, which is a large part of why the crossing reads as an
+event. Both hairpins at the bottom of the 39-unit descent sit at **42**, the
+narrowest road on any candidate, and the ribbon starts at 0.85 so the full 42 is
+delivered by C14's 0.875 entry. A 54 u harbour approach opens the road back out
+across the start/finish line so the grid does not form on the narrowest road on
+the track (delivered grid width 59.3 u).
+
+**No geometry moved.** The centerline, every corner, every straight, the
+self-crossing, the sightline verdicts and the beat map are byte-for-byte what
+they were — re-running the previewer after the edit returns the same 11,643.4 u,
+16 corners, 9.72 s straight and 1.3 s worst announcement.
+
 ### Verdict
 
-**Hits 17 of 19 targets.** Misses:
+**Hits 22 of 24 targets.** Misses:
 
 - **`--strict-sight`: two corners under 1.5 s.** C14, the viaduct hairpin, is
   announced at **1.3 s** and it is the crest that hides it — the corner arrives
@@ -344,8 +401,10 @@ p0.825, which puts ~30 u of air over the start/finish line, and leaves 582 u
 
 C also has the longest straight of the three at 9.72 s (**8.84 s at top
 speed**, the widest margin of the three), and the only second straight that
-reaches the 5 s end of the 4–5 s target. **C is the only candidate that passed
-both wave-7 gates unchanged** — its geometry is untouched this round.
+reaches the 5 s end of the 4–5 s target. C passed both round-1 gates unchanged
+and needed the largest width rewrite of the three in round 2 — but **its
+geometry has not been touched in either round.** Every corner, straight and
+sightline number above is the round-0 solve, re-measured.
 
 ---
 
@@ -383,7 +442,7 @@ is not a number to nudge on A.
 
 ---
 
-## 7. The two gates wave 7 added, and what they caught
+## 7. The two gates wave 7 round 1 added, and what they caught
 
 Both come from a wave-7 critic review of the round-0 sheet. Both are real holes
 in how round 0 judged the candidates, and each caught something the original
@@ -477,7 +536,156 @@ finding arriving from a third direction.
 
 ---
 
-## 8. Side by side
+## 8. Road width — the third axis, and the runtime line it needs
+
+This section exists because of one sentence from the wave-7 round-2 blind-A/B
+judge, written after that judge had picked the overhaul build over the baseline
+**18 pairs out of 18**:
+
+> Across 18 frames and two tracks the road is the same width with the same
+> gentle constant-radius bends and one crest. Nothing in the set shows a
+> hairpin, an elevation drop, a narrowing, or a fork. Any 4× length track
+> candidate should be judged on whether a randomly sampled frame is identifiable
+> as a specific corner — none of these 18 are. **Bring candidates that vary road
+> width and radius, not just length.**
+
+Radius was already gated twice (§7b, and the corner-variety rows in §9). Width
+was **authored in every candidate and measured in none**, because the previewer
+reports `road.minWidth` / `road.maxWidth` — the authored ribbon extremes. A
+sheet that says "46–64" while the camera never sees the difference is worse than
+a sheet with no width row at all. `tmp/track-candidates/gate-width.mjs` closes
+that, and the owner's sheet imports it rather than reimplementing it, so the
+page and the terminal cannot disagree.
+
+### 8a. What it found: authoring MORE width at 4× delivers LESS
+
+The runtime's width profile is `makeWidthTable` in the monolith — 224 samples
+indexed by **progress**, smoothed with 14 passes of a 1-2-1 kernel. Both
+constants are fractions of a lap, so every width transition scales with lap
+length. The kernel's standard deviation is √(14 × 0.5) = 2.65 samples = 0.0118
+of a lap:
+
+| | lap | kernel |
+|---|---|---|
+| Comeback City (shipped) | 2,889 u | **34.1 u** — matches the monolith's own comment, "soft transitions (~35 world units)" |
+| Penguin Village (shipped) | 2,445 u | 28.9 u |
+| any 4× candidate | ~11,700 u | **~138 u** |
+
+So a 4× track authored in the shipped style spreads its width changes over four
+times the distance, i.e. four times the seconds. Measured **before** this
+round's edits, and the direction is the surprise:
+
+| | authored range | delivered ratio | fastest 8 u change | frames with ≥4 u of contrast |
+|---|---|---|---|---|
+| Comeback City (shipped) | 45–56 | 1.244 | **0.29 s** | **44%** |
+| Penguin Village (shipped) | 58–64 | 1.103 | **never** | 14% |
+| A round-1 | 46–64 | 1.391 | 0.66 s | 13% |
+| B round-1 | 44–64 | 1.455 | 0.57 s | 11% |
+| C round-1 | 46–60 | 1.304 | 1.37 s | **4%** |
+
+Every candidate authored a **wider** range than the shipped track and put
+**less** width in a frame. And Penguin Village — which produced nine of the
+judge's eighteen frames — has no 8-unit width change anywhere on its lap and
+spends 82% of it within ±5% of its own median width. *"One wide constant-radius
+boulevard"* is not an impression. It is the width table.
+
+### 8b. The bars, and where each number comes from
+
+Every bar is anchored to a measured shipped value, because the complaint is
+comparative and the only defensible reference is the road that already exists.
+
+| | bar | why |
+|---|---|---|
+| **W1** delivered width ratio | ≥ 1.30 | The two shipped tracks bracket the problem: CC delivers 1.244, PV 1.103, and the judge called both of them one road. The bar sits above the better of the two, because a 4× lap has four times as much road to differentiate. |
+| **W2** share of the lap at one width | ≤ 45% within ±5% of the median | 5% of a 55 u road is 2.75 u — under half a kart width, invisible from the seat. CC 31%, PV 82%. |
+| **W3** fastest 8 u change | ≤ 0.60 s | 8 u is a bit over one kart width, the smallest narrowing that is unmistakable in a frame. CC does it in 0.29 s; the bar allows twice as slow because a 4× lap can afford a longer transition. |
+| **W4** populated width levels | ≥ 3, each ≥ 6 u apart and held for ≥ 5% of the lap | Exactly the shape of the radius-class gate in §7b, for the same reason: a range says the ends exist, not that the road ever sits at them. |
+| **W5** modal frame signature | ≤ 30% of the lap | The judge's actual test. 100 marks by arc length, each reduced to what one frame shows — width band × curvature class and handedness × gradient class. PV 43%, CC 22%. |
+| **W6** straight-to-hairpin width delta | ≥ 12 u | Width **coupled** to the layout, not merely varied: the two ends of the lap — the place a pass happens and the tightest corner — have to be visibly different roads. |
+
+Two judgement calls, stated because they are calls rather than arithmetic:
+
+1. **W6 is a magnitude, not a direction.** Comeback City's tightest corner is
+   *wider* than its longest straight (−2 u) and that is deliberate — the owner's
+   own 2026-06-12 direction was "the drift carousels open up wide; everything
+   else stays narrow so the lap takes skill", and CC's tightest radius sits
+   inside a carousel. A stop-and-turn hairpin and a drift carousel want opposite
+   things, so the gate asks that the two ends of the lap differ by two kart
+   widths and leaves the sign to the design. All three candidates chose to
+   close down into the hairpin, because all three put their hairpins at the end
+   of their overtaking straight.
+2. **The frame signature deliberately ignores landmarks.** Signage, props and
+   districts are the dressing pass and would flatter every layout equally. The
+   question this metric answers is narrower and harder: does the *road itself*
+   carry identity.
+
+### 8c. What it caught, and what the edits did
+
+A and C were changed; B passed unchanged. **No centerline moved**, so every
+corner, straight, sightline and beat number in §3–§5 and §7 still stands — the
+previewer was re-run after the edits and returns identical geometry.
+
+| | 8 u squeeze | straight→hairpin | modal frame | verdict |
+|---|---|---|---|---|
+| A | 0.66 → **0.56 s** | 8.5 → **20 u** | 20 → 29% | now PASS |
+| B | 0.57 s | 18.1 u | 18% | PASS unchanged |
+| C | 1.37 → **0.56 s** | 8 → **19.7 u** | 27 → 28% | now PASS |
+| Comeback City | 0.29 s | −2 u ❌ | 22% | fails W1/W4/W6 |
+| Penguin Village | never ❌ | −4.5 u ❌ | 43% ❌ | fails all six |
+
+A's and C's modal-signature share went **up** slightly, which is worth being
+honest about: making one section unmistakable makes the rest of the lap
+marginally more alike by comparison, and W5 measures the lap rather than the
+corner. Both still clear the 30% bar, and the number that answers the judge's
+complaint directly — how different the signature corner is from the road it
+arrives off — more than doubled on both (A 8.5 → 20 u, C 8 → 19.7 u).
+
+### 8d. The runtime prerequisite — one line, and it is not in this package
+
+Authoring can only do half of this. The other half is that the smoothing kernel
+is defined in lap fractions, and **that is a runtime constant in
+`src/game/ComebackCityThreeKartRace.jsx`, which this package does not own.** It
+is written down here rather than edited:
+
+> `makeWidthTable` should take the lap length and size its table from it —
+> `N = Math.max(224, Math.round(224 * (lapLength / 2897)))` — so the 14-pass
+> kernel stays ~35 **world** units instead of ~1.2% of a lap. The shipped tracks
+> are unaffected (they solve to N = 224 and N = 189 → clamped to 224, i.e. the
+> table they have today); only a long track changes.
+
+Scaling the *passes* instead does not work: the kernel width goes as √passes, so
+matching a 4× lap would need 14 ÷ 16 of a pass. The resolution is the only lever.
+
+Priced, on the three candidates as they now stand:
+
+| | 8 u squeeze | best in-frame width contrast |
+|---|---|---|
+| A | 0.56 s → **0.16 s** | 10.6 u → **19.9 u** |
+| B | 0.57 s → **0.16 s** | 10.2 u → **19.9 u** |
+| C | 0.56 s → **0.16 s** | 10.6 u → **19.9 u** |
+
+Cost is one `Float32Array` of ~900 floats and 14 smoothing passes over it
+(~12.6k iterations), once, at track load. **Do it before building the picked layout, not after** — it
+changes how a squeeze feels, so authored ribbon values should be tuned against
+the runtime that will ship them.
+
+### 8e. What this section does NOT answer
+
+- **Radius variety across frames.** The judge asked for width *and* radius. The
+  radius half was already gated in §7b and all three candidates pass it, but
+  none of that was re-derived here — the corner tables in §3–§5 are the
+  previewer's and remain the authority.
+- **"Nothing shows a fork."** All three candidates carry a dare shortcut
+  (`candidate.shortcut`, drawn on the plan as a purple diamond), which is the
+  closest thing to a fork the runtime has. Whether that reads as a fork in a
+  frame cannot be answered from a plan view.
+- **The frames themselves.** This is a plan-view gate. It says a randomly
+  sampled frame *should* be identifiable; it cannot prove one is until the
+  picked layout is built and captured.
+
+---
+
+## 9. Side by side
 
 | target | A | B | C | today |
 |---|---|---|---|---|
@@ -494,6 +702,11 @@ finding arriving from a third direction.
 | handedness ≥ 33% | 31% ❌ | 35% ✅ | 44% ✅ | 40% |
 | radius spread | 93.1–253.6 ✅ | 95.1–224.4 ✅ | 105.9–216.9 ✅ | 110.5–179.7 |
 | **three populated radius classes (§7b)** | **8/3/1 ✅** | **1/3/2 ✅** | **2/1/1 ✅** | **0/0/2 ❌** |
+| **delivered width range (§8)** | **44–64, 1.455× ✅** | **44–64, 1.455× ✅** | **42–62, 1.476× ✅** | 45–56, 1.244× ❌ |
+| **≤ 45% of the lap at one width (§8)** | **24% ✅** | **39% ✅** | **31% ✅** | 31% ✅ |
+| **8 u of narrowing in ≤ 0.6 s (§8)** | **0.56 s ✅** | **0.57 s ✅** | **0.56 s ✅** | 0.29 s ✅ |
+| **straight→hairpin width ≥ 12 u (§8)** | **20 u ✅** | **18.1 u ✅** | **19.7 u ✅** | −2 u ❌ |
+| **modal frame signature ≤ 30% (§8)** | **29% ✅** | **18% ✅** | **28% ✅** | 22% ✅ |
 | kinks 0 | 0 ✅ | 0 ✅ | 0 ✅ | 0 |
 | elevation ≤ 18% | 28 u @ 16.7% ✅ | 26.3 u @ 17.0% ✅ | 39.2 u @ 13.5% ✅ | 20.9 u @ 17% |
 | no blind corners (0.8 s) | 1.93 s ✅ | 0.82 s ✅ | 1.30 s ✅ | 0.52 s ❌ |
@@ -509,10 +722,26 @@ single most important target.
 the start/finish kink fix: the two r12 kinks are gone and the lap is 2,889.7 u
 rather than the 2,897 u quoted in the design notes.)*
 
+**One piece of outside evidence for the beat spacing, from the wave-7 round-2
+rubric critic** — who was reviewing the render, not this proposal, and looked at
+the eighteen capture frames rather than at any of these plans:
+
+> beat density is high enough that four of nine CC frames have a rival, a coin,
+> a shield and a boost all firing at once.
+
+That is the shipped 0.70 s beat gap seen from the camera rather than from a
+spreadsheet, and it is the strongest argument in the record for the one rule
+that survives whichever letter is picked: **the same 15–16 beats, spread over
+four times the lap.**
+
 ---
 
-## 9. What happens after a letter is picked
+## 10. What happens after a letter is picked
 
+0. **Scale the width table with lap length** (§8d) — one line in
+   `makeWidthTable`, and it comes first because it changes how every authored
+   width step feels. Tuning ribbon values against a runtime that is about to
+   change is the same mistake as tuning a palette before the layout is picked.
 1. **Author the palette** for the picked layout and re-run with
    `--strict-contrast` until it passes. A road nobody can find is not something
    to discover from a capture two waves later — and at 4× length the defect is
@@ -524,9 +753,15 @@ rather than the 2,897 u quoted in the design notes.)*
    fixable by adding concavity (a second dent complex on the east side); B's
    two 0.82 s staircase corners want ~50 u more link, which costs the chicane
    flag; C's viaduct hairpin wants either a lower crest or 200 u more descent.
-4. **Then build geometry**, and re-run the previewer *and*
-   `gate-topspeed.mjs` afterwards so the JSON report lands in the record next
+4. **Then build geometry**, and re-run the previewer, `gate-topspeed.mjs`
+   *and* `gate-width.mjs` afterwards so the JSON reports land in the record next
    to the frames.
+5. **Add capture marks at the start/finish line.** Three separate wave-7 critics
+   independently noted that the capture points run 0.06–0.90 and never cross the
+   line, so the start/finish geometry ships unreviewed. A 4× track makes that
+   worse, not better: nine marks over a 45 s lap is one frame every 5 s. That is
+   a harness change and belongs to whoever owns the harness, but a layout this
+   long should not be captured at the density a 11 s lap was.
 
 Beats stay at **15–16 for the whole 45 s lap**. Do not multiply them. Adding
 props proportionally recreates today's cram at four times the cost, and the
@@ -544,7 +779,7 @@ the edit looks.
 
 ---
 
-## 10. Files
+## 11. Files
 
 ```
 tmp/track-candidates/
@@ -556,9 +791,11 @@ tmp/track-candidates/
   walk.mjs                         turn-and-run centerline walker (C was authored with it)
   probe.mjs                        fast geometry loop — length, deflections, straights
   gate-topspeed.mjs                the two gates in §7; build-sheet.mjs imports it
+  gate-width.mjs                   the road-width gate in §8; build-sheet.mjs imports it too
   solve-c.mjs                      closure/crossing search used while shaping C
   build-sheet.mjs                  rebuilds index.html from the previewer's JSON
   export-centerlines.mjs           emits runtime-shaped centerline JSON
   cc4x-*-centerline.json           the centerline data itself
-  preview/                         previewer output: *-layout.json, *-plan.png
+  preview/                         previewer output: *-layout.json, *-plan.png,
+                                   plus width-gate.json from `gate-width.mjs --json`
 ```

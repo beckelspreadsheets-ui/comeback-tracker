@@ -79,14 +79,38 @@ export const CANDIDATE_A = makeCandidate({
   // causeway are the two places eight karts have to exist side by side, so
   // they are the widest sections on the lap. The esses narrow, so the flowing
   // part still costs something.
+  //
+  // WAVE 7 ROUND 2 — the Lighthouse squeeze. The blind-A/B judge's finding was
+  // that eighteen frames across two tracks read as "one wide constant-radius
+  // boulevard", and gate-width.mjs turned that into numbers: A's width changed
+  // so gradually that no frame carried it (fastest 8-unit change 0.66 s against
+  // Comeback City's 0.29 s, and the tightest corner on the lap was only 8.5 u
+  // narrower than the longest straight). Two edits fix it, and neither touches
+  // the centerline, so every corner, straight, sight and beat number in
+  // docs/TRACK_CANDIDATES.md sections 3 and 7 still stands:
+  //
+  //   - the hairpin ribbon drops 54 -> 44, so the widest road on the lap (the
+  //     64 u causeway) empties straight into the narrowest, a 20-unit squeeze
+  //     that arrives exactly where A's one hard braking point is. That is the
+  //     corner A's whole thesis is built on and it now looks like it in a
+  //     single frame.
+  //   - the ribbon starts at 0.695 rather than 0.72. The runtime smooths the
+  //     width table with a kernel whose sigma is 0.0118 of a LAP (14 passes of
+  //     1-2-1 over 224 samples), which is ~138 world units here, so a step
+  //     authored AT the corner is only half-delivered when the corner arrives.
+  //     Starting it ~2 sigma early lands the full 44 u at the entry.
+  //
+  // The palm chicane goes 50 -> 48 for the same reason at a smaller scale: it
+  // is the only other place on the lap the road is meant to feel tight, and at
+  // 50 against a 56 u neighbour it was a 6-unit change nobody could see.
   roadRibbons: [
     { key: 'start-boulevard', role: 'main', width: 62, shoulderWidth: 7, startProgress: 0, endProgress: 0.11 },
-    { key: 'palm-chicane', role: 'main', width: 50, shoulderWidth: 6, startProgress: 0.11, endProgress: 0.17 },
+    { key: 'palm-chicane', role: 'main', width: 48, shoulderWidth: 5.5, startProgress: 0.11, endProgress: 0.17 },
     { key: 'ocean-drive', role: 'main', width: 56, shoulderWidth: 6.5, startProgress: 0.17, endProgress: 0.37 },
     { key: 'marina-squeeze', role: 'main', width: 46, shoulderWidth: 5.5, startProgress: 0.37, endProgress: 0.47 },
-    { key: 'causeway', role: 'main', width: 64, shoulderWidth: 7.5, startProgress: 0.47, endProgress: 0.72 },
-    { key: 'lighthouse-hairpin', role: 'main', width: 54, shoulderWidth: 6.5, startProgress: 0.72, endProgress: 0.79 },
-    { key: 'west-esses', role: 'main', width: 50, shoulderWidth: 6, startProgress: 0.79, endProgress: 1 },
+    { key: 'causeway', role: 'main', width: 64, shoulderWidth: 7.5, startProgress: 0.47, endProgress: 0.695 },
+    { key: 'lighthouse-hairpin', role: 'main', width: 44, shoulderWidth: 5, startProgress: 0.695, endProgress: 0.79 },
+    { key: 'west-esses', role: 'main', width: 52, shoulderWidth: 6, startProgress: 0.79, endProgress: 1 },
   ],
   boostPads: [
     { key: 'boulevard-pad', progress: 0.08, side: 0 },

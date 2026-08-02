@@ -114,33 +114,41 @@
     {
       "key": "market-row",
       "role": "main",
-      "width": 46,
-      "shoulderWidth": 5.5,
+      "width": 44,
+      "shoulderWidth": 5,
       "startProgress": 0.34,
       "endProgress": 0.52
     },
     {
       "key": "west-approach",
       "role": "main",
-      "width": 52,
-      "shoulderWidth": 6,
+      "width": 56,
+      "shoulderWidth": 6.5,
       "startProgress": 0.52,
-      "endProgress": 0.62
+      "endProgress": 0.625
     },
     {
       "key": "viaduct",
       "role": "main",
-      "width": 58,
-      "shoulderWidth": 7,
-      "startProgress": 0.62,
-      "endProgress": 0.88
+      "width": 62,
+      "shoulderWidth": 7.5,
+      "startProgress": 0.625,
+      "endProgress": 0.85
     },
     {
-      "key": "south-loop",
+      "key": "twin-hairpins",
       "role": "main",
-      "width": 50,
-      "shoulderWidth": 6,
-      "startProgress": 0.88,
+      "width": 42,
+      "shoulderWidth": 5,
+      "startProgress": 0.85,
+      "endProgress": 0.965
+    },
+    {
+      "key": "harbour-approach",
+      "role": "main",
+      "width": 54,
+      "shoulderWidth": 6.5,
+      "startProgress": 0.965,
       "endProgress": 1
     }
   ],

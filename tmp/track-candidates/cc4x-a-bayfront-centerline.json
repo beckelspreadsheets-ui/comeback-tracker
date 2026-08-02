@@ -106,8 +106,8 @@
     {
       "key": "palm-chicane",
       "role": "main",
-      "width": 50,
-      "shoulderWidth": 6,
+      "width": 48,
+      "shoulderWidth": 5.5,
       "startProgress": 0.11,
       "endProgress": 0.17
     },
@@ -133,20 +133,20 @@
       "width": 64,
       "shoulderWidth": 7.5,
       "startProgress": 0.47,
-      "endProgress": 0.72
+      "endProgress": 0.695
     },
     {
       "key": "lighthouse-hairpin",
       "role": "main",
-      "width": 54,
-      "shoulderWidth": 6.5,
-      "startProgress": 0.72,
+      "width": 44,
+      "shoulderWidth": 5,
+      "startProgress": 0.695,
       "endProgress": 0.79
     },
     {
       "key": "west-esses",
       "role": "main",
-      "width": 50,
+      "width": 52,
       "shoulderWidth": 6,
       "startProgress": 0.79,
       "endProgress": 1

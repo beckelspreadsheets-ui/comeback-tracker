@@ -13,7 +13,7 @@
    "colorTextureQuality": 82,
    "meshoptLevel": "medium"
   },
-  "hero-kart-diet-v2": {
+  "hero-kart-diet-v3": {
    "class": "hero-kart",
    "allowSimplify": true,
    "simplifyRatio": 0.5,
@@ -23,7 +23,8 @@
    "keepNamed": true,
    "maxTextureSize": 512,
    "colorTextureQuality": 82,
-   "meshoptLevel": "medium",
+   "meshoptLevel": "high",
+   "meshoptLevelNotes": "v3's ONLY change from v2, and it is worth 384.5 KiB raw / 366.5 KiB gz across the five 2026-08 bodies. 'medium' encodes NORMAL as VEC3/i16n; 'high' encodes it as VEC3/i8n with the octahedral filter. POSITION is VEC3/i16n under BOTH, so this is not a position-precision trade: re-encoding the five shipped bodies and comparing them in world space (positions matched exactly, undoing meshopt's reorder() permutation) gives a position deviation of max 0.000000 units — bit-identical surface — against a normal deviation of max 1.14 deg, mean 0.35 deg, with ZERO vertices past 5 deg, and a turntable pixel delta of max 4-25 of 255 across 0.65-1.09% of channels. 'high' is also the encoding the four 2026-07 bodies already ship (ice-racer, miami-cruiser, ice-block, btc-kart all carry NORMAL:VEC3/i8n), so v3 brings the new bodies into line with what the owner already approved on screen rather than taking a new risk. A degree of normal error cannot move a MeshToonMaterial band except exactly on a band edge. WHY THIS WAS MISSED FIRST TIME: bytes-per-vertex is not a rubric axis, not a budget line and not visible in a frame, so the medium encoding passed every gate in the repo while shipping 22% heavier — `node scripts/diet-kart-bodies.mjs --verify` now hard-fails a shipped body whose NORMAL is not componentType 5120.",
    "stripUnsampledTextureSlots": true,
    "targetTextureFormat": "jpeg",
    "targetTextureFormatRequiresOpaque": true,

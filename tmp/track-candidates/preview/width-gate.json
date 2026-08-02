@@ -1,0 +1,1068 @@
+{
+  "generatedAt": "2026-08-02T23:51:25.332Z",
+  "meanSpeed": 260,
+  "rows": [
+    {
+      "name": "Comeback City (shipped)",
+      "key": "comeback-city",
+      "lengthUnits": 2889,
+      "gridWidth": 47.8,
+      "tableSamples": 224,
+      "kernelWorldUnits": 34.1,
+      "authored": {
+        "min": 45,
+        "max": 56
+      },
+      "delivered": {
+        "min": 45,
+        "max": 56,
+        "median": 52.9,
+        "ratio": 1.244
+      },
+      "medianBandShare": 0.308,
+      "squeeze": {
+        "seconds": 0.29,
+        "progress": 0.184
+      },
+      "frame": {
+        "bestContrastUnits": 11,
+        "contrastShare": 0.437
+      },
+      "levels": [
+        {
+          "centreUnits": 54,
+          "share": 0.5423611111111111
+        },
+        {
+          "centreUnits": 48,
+          "share": 0.4576388888888889
+        }
+      ],
+      "coupling": {
+        "straightWidth": 54,
+        "straightUnits": 564,
+        "hairpinWidth": 56,
+        "hairpinProgress": 0.286,
+        "hairpinRadius": 91.3,
+        "delta": -2
+      },
+      "signature": {
+        "distinct": 17,
+        "modal": "w8·straight·flat",
+        "modalShare": 0.22,
+        "top": [
+          [
+            "w8·straight·flat",
+            22
+          ],
+          [
+            "w9·turnR·flat",
+            18
+          ],
+          [
+            "w9·straight·flat",
+            16
+          ],
+          [
+            "w9·tightL·flat",
+            11
+          ],
+          [
+            "w8·turnR·flat",
+            6
+          ]
+        ]
+      },
+      "ribbons": [
+        {
+          "key": "start-straight",
+          "authored": 47,
+          "delivered": 47,
+          "spanProgress": 0.1,
+          "spanUnits": 289,
+          "shortfall": 0
+        },
+        {
+          "key": "harbor-dive",
+          "authored": 45,
+          "delivered": 45,
+          "spanProgress": 0.1,
+          "spanUnits": 289,
+          "shortfall": 0
+        },
+        {
+          "key": "south-carousel",
+          "authored": 56,
+          "delivered": 56,
+          "spanProgress": 0.2,
+          "spanUnits": 578,
+          "shortfall": 0
+        },
+        {
+          "key": "bridge-climb",
+          "authored": 45,
+          "delivered": 45,
+          "spanProgress": 0.13,
+          "spanUnits": 376,
+          "shortfall": 0
+        },
+        {
+          "key": "east-loop",
+          "authored": 56,
+          "delivered": 56,
+          "spanProgress": 0.13,
+          "spanUnits": 376,
+          "shortfall": 0
+        },
+        {
+          "key": "top-straight",
+          "authored": 47,
+          "delivered": 47,
+          "spanProgress": 0.12,
+          "spanUnits": 347,
+          "shortfall": 0
+        },
+        {
+          "key": "seam-carousel",
+          "authored": 54,
+          "delivered": 54,
+          "spanProgress": 0.22,
+          "spanUnits": 636,
+          "shortfall": 0
+        }
+      ]
+    },
+    {
+      "name": "Penguin Village (shipped)",
+      "key": "penguin-village",
+      "lengthUnits": 2444.9,
+      "gridWidth": 58.1,
+      "tableSamples": 224,
+      "kernelWorldUnits": 28.9,
+      "authored": {
+        "min": 58,
+        "max": 64
+      },
+      "delivered": {
+        "min": 58,
+        "max": 64,
+        "median": 58.7,
+        "ratio": 1.103
+      },
+      "medianBandShare": 0.823,
+      "squeeze": {
+        "seconds": null,
+        "progress": 0
+      },
+      "frame": {
+        "bestContrastUnits": 6,
+        "contrastShare": 0.144
+      },
+      "levels": [
+        {
+          "centreUnits": 66,
+          "share": 0.1597222222222222
+        },
+        {
+          "centreUnits": 60,
+          "share": 0.8402777777777778
+        }
+      ],
+      "coupling": {
+        "straightWidth": 58.8,
+        "straightUnits": 545,
+        "hairpinWidth": 63.3,
+        "hairpinProgress": 0.408,
+        "hairpinRadius": 69.8,
+        "delta": -4.5
+      },
+      "signature": {
+        "distinct": 12,
+        "modal": "w10·straight·flat",
+        "modalShare": 0.43,
+        "top": [
+          [
+            "w10·straight·flat",
+            43
+          ],
+          [
+            "w10·turnL·flat",
+            17
+          ],
+          [
+            "w11·tightL·flat",
+            8
+          ],
+          [
+            "w10·tightL·flat",
+            7
+          ],
+          [
+            "w10·tightR·flat",
+            5
+          ]
+        ]
+      },
+      "ribbons": [
+        {
+          "key": "main-street",
+          "authored": 58,
+          "delivered": 58,
+          "spanProgress": 0.24,
+          "spanUnits": 587,
+          "shortfall": 0
+        },
+        {
+          "key": "pond-sweep",
+          "authored": 64,
+          "delivered": 64,
+          "spanProgress": 0.18,
+          "spanUnits": 440,
+          "shortfall": 0
+        },
+        {
+          "key": "market-row",
+          "authored": 58,
+          "delivered": 58,
+          "spanProgress": 0.3,
+          "spanUnits": 733,
+          "shortfall": 0
+        },
+        {
+          "key": "return-bend",
+          "authored": 60,
+          "delivered": 60,
+          "spanProgress": 0.28,
+          "spanUnits": 685,
+          "shortfall": 0
+        }
+      ]
+    },
+    {
+      "name": "A — Bayfront Sweep",
+      "key": "cc4x-a-bayfront",
+      "lengthUnits": 11678.4,
+      "gridWidth": 60.8,
+      "tableSamples": 224,
+      "kernelWorldUnits": 137.9,
+      "authored": {
+        "min": 44,
+        "max": 64
+      },
+      "delivered": {
+        "min": 44,
+        "max": 64,
+        "median": 55.3,
+        "ratio": 1.455
+      },
+      "medianBandShare": 0.242,
+      "squeeze": {
+        "seconds": 0.56,
+        "progress": 0.688
+      },
+      "frame": {
+        "bestContrastUnits": 10.6,
+        "contrastShare": 0.158
+      },
+      "levels": [
+        {
+          "centreUnits": 66,
+          "share": 0.18472222222222223
+        },
+        {
+          "centreUnits": 60,
+          "share": 0.1375
+        },
+        {
+          "centreUnits": 54,
+          "share": 0.4305555555555556
+        },
+        {
+          "centreUnits": 48,
+          "share": 0.18680555555555556
+        },
+        {
+          "centreUnits": 42,
+          "share": 0.06041666666666667
+        }
+      ],
+      "coupling": {
+        "straightWidth": 64,
+        "straightUnits": 2401,
+        "hairpinWidth": 44,
+        "hairpinProgress": 0.733,
+        "hairpinRadius": 80.3,
+        "delta": 20
+      },
+      "signature": {
+        "distinct": 20,
+        "modal": "w9·straight·flat",
+        "modalShare": 0.29,
+        "top": [
+          [
+            "w9·straight·flat",
+            29
+          ],
+          [
+            "w11·straight·flat",
+            17
+          ],
+          [
+            "w10·straight·flat",
+            13
+          ],
+          [
+            "w8·straight·flat",
+            8
+          ],
+          [
+            "w9·sweepL·flat",
+            6
+          ]
+        ]
+      },
+      "ribbons": [
+        {
+          "key": "start-boulevard",
+          "authored": 62,
+          "delivered": 62,
+          "spanProgress": 0.11,
+          "spanUnits": 1285,
+          "shortfall": 0
+        },
+        {
+          "key": "palm-chicane",
+          "authored": 48,
+          "delivered": 48.1,
+          "spanProgress": 0.06,
+          "spanUnits": 701,
+          "shortfall": -0.1
+        },
+        {
+          "key": "ocean-drive",
+          "authored": 56,
+          "delivered": 56,
+          "spanProgress": 0.2,
+          "spanUnits": 2336,
+          "shortfall": 0
+        },
+        {
+          "key": "marina-squeeze",
+          "authored": 46,
+          "delivered": 46,
+          "spanProgress": 0.1,
+          "spanUnits": 1168,
+          "shortfall": 0
+        },
+        {
+          "key": "causeway",
+          "authored": 64,
+          "delivered": 64,
+          "spanProgress": 0.225,
+          "spanUnits": 2628,
+          "shortfall": 0
+        },
+        {
+          "key": "lighthouse-hairpin",
+          "authored": 44,
+          "delivered": 44,
+          "spanProgress": 0.095,
+          "spanUnits": 1109,
+          "shortfall": 0
+        },
+        {
+          "key": "west-esses",
+          "authored": 52,
+          "delivered": 52,
+          "spanProgress": 0.21,
+          "spanUnits": 2452,
+          "shortfall": 0
+        }
+      ]
+    },
+    {
+      "name": "B — Downtown Deadline",
+      "key": "cc4x-b-downtown",
+      "lengthUnits": 11877.5,
+      "gridWidth": 58.8,
+      "tableSamples": 224,
+      "kernelWorldUnits": 140.3,
+      "authored": {
+        "min": 44,
+        "max": 64
+      },
+      "delivered": {
+        "min": 44,
+        "max": 64,
+        "median": 52,
+        "ratio": 1.455
+      },
+      "medianBandShare": 0.385,
+      "squeeze": {
+        "seconds": 0.57,
+        "progress": 0.652
+      },
+      "frame": {
+        "bestContrastUnits": 10.2,
+        "contrastShare": 0.107
+      },
+      "levels": [
+        {
+          "centreUnits": 66,
+          "share": 0.20069444444444445
+        },
+        {
+          "centreUnits": 60,
+          "share": 0.1125
+        },
+        {
+          "centreUnits": 54,
+          "share": 0.2534722222222222
+        },
+        {
+          "centreUnits": 48,
+          "share": 0.2951388888888889
+        },
+        {
+          "centreUnits": 42,
+          "share": 0.13819444444444445
+        }
+      ],
+      "coupling": {
+        "straightWidth": 64,
+        "straightUnits": 2408,
+        "hairpinWidth": 45.9,
+        "hairpinProgress": 0.822,
+        "hairpinRadius": 83.1,
+        "delta": 18.1
+      },
+      "signature": {
+        "distinct": 19,
+        "modal": "w8·straight·flat",
+        "modalShare": 0.18,
+        "top": [
+          [
+            "w8·straight·flat",
+            18
+          ],
+          [
+            "w9·straight·flat",
+            17
+          ],
+          [
+            "w11·straight·flat",
+            17
+          ],
+          [
+            "w10·straight·flat",
+            11
+          ],
+          [
+            "w7·straight·flat",
+            11
+          ]
+        ]
+      },
+      "ribbons": [
+        {
+          "key": "start-avenue",
+          "authored": 60,
+          "delivered": 60,
+          "spanProgress": 0.09,
+          "spanUnits": 1069,
+          "shortfall": 0
+        },
+        {
+          "key": "block-staircase",
+          "authored": 46,
+          "delivered": 46,
+          "spanProgress": 0.11,
+          "spanUnits": 1307,
+          "shortfall": 0
+        },
+        {
+          "key": "east-avenue",
+          "authored": 52,
+          "delivered": 52,
+          "spanProgress": 0.22,
+          "spanUnits": 2613,
+          "shortfall": 0
+        },
+        {
+          "key": "expressway",
+          "authored": 64,
+          "delivered": 64,
+          "spanProgress": 0.24,
+          "spanUnits": 2851,
+          "shortfall": 0
+        },
+        {
+          "key": "old-town",
+          "authored": 44,
+          "delivered": 44,
+          "spanProgress": 0.17,
+          "spanUnits": 2019,
+          "shortfall": 0
+        },
+        {
+          "key": "civic-return",
+          "authored": 50,
+          "delivered": 50,
+          "spanProgress": 0.17,
+          "spanUnits": 2019,
+          "shortfall": 0
+        }
+      ]
+    },
+    {
+      "name": "C — Skyline Viaduct",
+      "key": "cc4x-c-skyline",
+      "lengthUnits": 11643.4,
+      "gridWidth": 59.3,
+      "tableSamples": 224,
+      "kernelWorldUnits": 137.5,
+      "authored": {
+        "min": 42,
+        "max": 62
+      },
+      "delivered": {
+        "min": 42,
+        "max": 62,
+        "median": 54.1,
+        "ratio": 1.476
+      },
+      "medianBandShare": 0.308,
+      "squeeze": {
+        "seconds": 0.56,
+        "progress": 0.844
+      },
+      "frame": {
+        "bestContrastUnits": 10.6,
+        "contrastShare": 0.117
+      },
+      "levels": [
+        {
+          "centreUnits": 60,
+          "share": 0.3729166666666667
+        },
+        {
+          "centreUnits": 54,
+          "share": 0.3173611111111111
+        },
+        {
+          "centreUnits": 48,
+          "share": 0.06666666666666667
+        },
+        {
+          "centreUnits": 42,
+          "share": 0.24305555555555555
+        }
+      ],
+      "coupling": {
+        "straightWidth": 62,
+        "straightUnits": 2531,
+        "hairpinWidth": 42.3,
+        "hairpinProgress": 0.944,
+        "hairpinRadius": 93.4,
+        "delta": 19.7
+      },
+      "signature": {
+        "distinct": 23,
+        "modal": "w10·straight·flat",
+        "modalShare": 0.28,
+        "top": [
+          [
+            "w10·straight·flat",
+            28
+          ],
+          [
+            "w9·straight·flat",
+            23
+          ],
+          [
+            "w7·straight·flat",
+            15
+          ],
+          [
+            "w8·straight·flat",
+            4
+          ],
+          [
+            "w10·turnL·flat",
+            3
+          ]
+        ]
+      },
+      "ribbons": [
+        {
+          "key": "harbour-straight",
+          "authored": 60,
+          "delivered": 60,
+          "spanProgress": 0.14,
+          "spanUnits": 1630,
+          "shortfall": 0
+        },
+        {
+          "key": "east-lobe",
+          "authored": 54,
+          "delivered": 54,
+          "spanProgress": 0.2,
+          "spanUnits": 2329,
+          "shortfall": 0
+        },
+        {
+          "key": "market-row",
+          "authored": 44,
+          "delivered": 44,
+          "spanProgress": 0.18,
+          "spanUnits": 2096,
+          "shortfall": 0
+        },
+        {
+          "key": "west-approach",
+          "authored": 56,
+          "delivered": 56,
+          "spanProgress": 0.105,
+          "spanUnits": 1223,
+          "shortfall": 0
+        },
+        {
+          "key": "viaduct",
+          "authored": 62,
+          "delivered": 62,
+          "spanProgress": 0.225,
+          "spanUnits": 2620,
+          "shortfall": 0
+        },
+        {
+          "key": "twin-hairpins",
+          "authored": 42,
+          "delivered": 42,
+          "spanProgress": 0.115,
+          "spanUnits": 1339,
+          "shortfall": 0
+        },
+        {
+          "key": "harbour-approach",
+          "authored": 54,
+          "delivered": 53.5,
+          "spanProgress": 0.035,
+          "spanUnits": 408,
+          "shortfall": 0.5
+        }
+      ]
+    }
+  ],
+  "scaled": [
+    {
+      "name": "A — Bayfront Sweep",
+      "key": "cc4x-a-bayfront",
+      "lengthUnits": 11678.4,
+      "gridWidth": 62,
+      "tableSamples": 903,
+      "kernelWorldUnits": 34.2,
+      "authored": {
+        "min": 44,
+        "max": 64
+      },
+      "delivered": {
+        "min": 44,
+        "max": 64,
+        "median": 56,
+        "ratio": 1.455
+      },
+      "medianBandShare": 0.211,
+      "squeeze": {
+        "seconds": 0.16,
+        "progress": 0.692
+      },
+      "frame": {
+        "bestContrastUnits": 19.9,
+        "contrastShare": 0.138
+      },
+      "levels": [
+        {
+          "centreUnits": 66,
+          "share": 0.2152777777777778
+        },
+        {
+          "centreUnits": 60,
+          "share": 0.11736111111111111
+        },
+        {
+          "centreUnits": 54,
+          "share": 0.41597222222222224
+        },
+        {
+          "centreUnits": 48,
+          "share": 0.16458333333333333
+        },
+        {
+          "centreUnits": 42,
+          "share": 0.08680555555555555
+        }
+      ],
+      "coupling": {
+        "straightWidth": 64,
+        "straightUnits": 2401,
+        "hairpinWidth": 44,
+        "hairpinProgress": 0.733,
+        "hairpinRadius": 80.3,
+        "delta": 20
+      },
+      "signature": {
+        "distinct": 20,
+        "modal": "w9·straight·flat",
+        "modalShare": 0.28,
+        "top": [
+          [
+            "w9·straight·flat",
+            28
+          ],
+          [
+            "w11·straight·flat",
+            19
+          ],
+          [
+            "w10·straight·flat",
+            11
+          ],
+          [
+            "w8·straight·flat",
+            7
+          ],
+          [
+            "w7·straight·flat",
+            7
+          ]
+        ]
+      },
+      "ribbons": [
+        {
+          "key": "start-boulevard",
+          "authored": 62,
+          "delivered": 62,
+          "spanProgress": 0.11,
+          "spanUnits": 1285,
+          "shortfall": 0
+        },
+        {
+          "key": "palm-chicane",
+          "authored": 48,
+          "delivered": 48,
+          "spanProgress": 0.06,
+          "spanUnits": 701,
+          "shortfall": 0
+        },
+        {
+          "key": "ocean-drive",
+          "authored": 56,
+          "delivered": 56,
+          "spanProgress": 0.2,
+          "spanUnits": 2336,
+          "shortfall": 0
+        },
+        {
+          "key": "marina-squeeze",
+          "authored": 46,
+          "delivered": 46,
+          "spanProgress": 0.1,
+          "spanUnits": 1168,
+          "shortfall": 0
+        },
+        {
+          "key": "causeway",
+          "authored": 64,
+          "delivered": 64,
+          "spanProgress": 0.225,
+          "spanUnits": 2628,
+          "shortfall": 0
+        },
+        {
+          "key": "lighthouse-hairpin",
+          "authored": 44,
+          "delivered": 44,
+          "spanProgress": 0.095,
+          "spanUnits": 1109,
+          "shortfall": 0
+        },
+        {
+          "key": "west-esses",
+          "authored": 52,
+          "delivered": 52,
+          "spanProgress": 0.21,
+          "spanUnits": 2452,
+          "shortfall": 0
+        }
+      ]
+    },
+    {
+      "name": "B — Downtown Deadline",
+      "key": "cc4x-b-downtown",
+      "lengthUnits": 11877.5,
+      "gridWidth": 60,
+      "tableSamples": 918,
+      "kernelWorldUnits": 34.2,
+      "authored": {
+        "min": 44,
+        "max": 64
+      },
+      "delivered": {
+        "min": 44,
+        "max": 64,
+        "median": 52,
+        "ratio": 1.455
+      },
+      "medianBandShare": 0.388,
+      "squeeze": {
+        "seconds": 0.16,
+        "progress": 0.657
+      },
+      "frame": {
+        "bestContrastUnits": 19.9,
+        "contrastShare": 0.107
+      },
+      "levels": [
+        {
+          "centreUnits": 66,
+          "share": 0.23055555555555557
+        },
+        {
+          "centreUnits": 60,
+          "share": 0.09583333333333334
+        },
+        {
+          "centreUnits": 54,
+          "share": 0.22708333333333333
+        },
+        {
+          "centreUnits": 48,
+          "share": 0.28402777777777777
+        },
+        {
+          "centreUnits": 42,
+          "share": 0.1625
+        }
+      ],
+      "coupling": {
+        "straightWidth": 64,
+        "straightUnits": 2408,
+        "hairpinWidth": 44,
+        "hairpinProgress": 0.822,
+        "hairpinRadius": 83.1,
+        "delta": 20
+      },
+      "signature": {
+        "distinct": 19,
+        "modal": "w11·straight·flat",
+        "modalShare": 0.21,
+        "top": [
+          [
+            "w11·straight·flat",
+            21
+          ],
+          [
+            "w8·straight·flat",
+            18
+          ],
+          [
+            "w9·straight·flat",
+            17
+          ],
+          [
+            "w7·straight·flat",
+            11
+          ],
+          [
+            "w10·straight·flat",
+            7
+          ]
+        ]
+      },
+      "ribbons": [
+        {
+          "key": "start-avenue",
+          "authored": 60,
+          "delivered": 60,
+          "spanProgress": 0.09,
+          "spanUnits": 1069,
+          "shortfall": 0
+        },
+        {
+          "key": "block-staircase",
+          "authored": 46,
+          "delivered": 46,
+          "spanProgress": 0.11,
+          "spanUnits": 1307,
+          "shortfall": 0
+        },
+        {
+          "key": "east-avenue",
+          "authored": 52,
+          "delivered": 52,
+          "spanProgress": 0.22,
+          "spanUnits": 2613,
+          "shortfall": 0
+        },
+        {
+          "key": "expressway",
+          "authored": 64,
+          "delivered": 64,
+          "spanProgress": 0.24,
+          "spanUnits": 2851,
+          "shortfall": 0
+        },
+        {
+          "key": "old-town",
+          "authored": 44,
+          "delivered": 44,
+          "spanProgress": 0.17,
+          "spanUnits": 2019,
+          "shortfall": 0
+        },
+        {
+          "key": "civic-return",
+          "authored": 50,
+          "delivered": 50,
+          "spanProgress": 0.17,
+          "spanUnits": 2019,
+          "shortfall": 0
+        }
+      ]
+    },
+    {
+      "name": "C — Skyline Viaduct",
+      "key": "cc4x-c-skyline",
+      "lengthUnits": 11643.4,
+      "gridWidth": 60,
+      "tableSamples": 900,
+      "kernelWorldUnits": 34.2,
+      "authored": {
+        "min": 42,
+        "max": 62
+      },
+      "delivered": {
+        "min": 42,
+        "max": 62,
+        "median": 54,
+        "ratio": 1.476
+      },
+      "medianBandShare": 0.333,
+      "squeeze": {
+        "seconds": 0.16,
+        "progress": 0.847
+      },
+      "frame": {
+        "bestContrastUnits": 19.9,
+        "contrastShare": 0.125
+      },
+      "levels": [
+        {
+          "centreUnits": 60,
+          "share": 0.36527777777777776
+        },
+        {
+          "centreUnits": 54,
+          "share": 0.33541666666666664
+        },
+        {
+          "centreUnits": 42,
+          "share": 0.2826388888888889
+        }
+      ],
+      "coupling": {
+        "straightWidth": 62,
+        "straightUnits": 2531,
+        "hairpinWidth": 42,
+        "hairpinProgress": 0.944,
+        "hairpinRadius": 93.4,
+        "delta": 20
+      },
+      "signature": {
+        "distinct": 19,
+        "modal": "w10·straight·flat",
+        "modalShare": 0.28,
+        "top": [
+          [
+            "w10·straight·flat",
+            28
+          ],
+          [
+            "w9·straight·flat",
+            23
+          ],
+          [
+            "w7·straight·flat",
+            16
+          ],
+          [
+            "w9·sweepL·flat",
+            3
+          ],
+          [
+            "w9·turnR·flat",
+            3
+          ]
+        ]
+      },
+      "ribbons": [
+        {
+          "key": "harbour-straight",
+          "authored": 60,
+          "delivered": 60,
+          "spanProgress": 0.14,
+          "spanUnits": 1630,
+          "shortfall": 0
+        },
+        {
+          "key": "east-lobe",
+          "authored": 54,
+          "delivered": 54,
+          "spanProgress": 0.2,
+          "spanUnits": 2329,
+          "shortfall": 0
+        },
+        {
+          "key": "market-row",
+          "authored": 44,
+          "delivered": 44,
+          "spanProgress": 0.18,
+          "spanUnits": 2096,
+          "shortfall": 0
+        },
+        {
+          "key": "west-approach",
+          "authored": 56,
+          "delivered": 56,
+          "spanProgress": 0.105,
+          "spanUnits": 1223,
+          "shortfall": 0
+        },
+        {
+          "key": "viaduct",
+          "authored": 62,
+          "delivered": 62,
+          "spanProgress": 0.225,
+          "spanUnits": 2620,
+          "shortfall": 0
+        },
+        {
+          "key": "twin-hairpins",
+          "authored": 42,
+          "delivered": 42,
+          "spanProgress": 0.115,
+          "spanUnits": 1339,
+          "shortfall": 0
+        },
+        {
+          "key": "harbour-approach",
+          "authored": 54,
+          "delivered": 54,
+          "spanProgress": 0.035,
+          "spanUnits": 408,
+          "shortfall": 0
+        }
+      ]
+    }
+  ]
+}

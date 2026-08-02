@@ -14,10 +14,28 @@ import { fileURLToPath } from 'node:url';
 // The two wave-7 gates are imported rather than reimplemented, so the sheet and
 // the terminal cannot disagree about whether a candidate passes.
 import * as GATE from './gate-topspeed.mjs';
+// The wave-7 round-2 width gate, imported for the same reason. It needs the
+// track DEFINITION rather than the previewer's report, because the numbers it
+// derives (delivered width, squeeze rate, frame signature) come from the
+// runtime's width table and curve, and the previewer's JSON only carries the
+// AUTHORED ribbon extremes — which was the reporting hole in the first place.
+import * as WIDTH from './gate-width.mjs';
+import CANDIDATE_A from './candidate-a.mjs';
+import CANDIDATE_B from './candidate-b.mjs';
+import CANDIDATE_C from './candidate-c.mjs';
+import { COMEBACK_CITY_TRACK } from '../../src/game/race/tracks/comebackCity.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PREVIEW = resolve(HERE, 'preview');
 const read = (key) => JSON.parse(readFileSync(resolve(PREVIEW, `${key}-layout.json`), 'utf8'));
+
+const widthOf = new Map(
+  [CANDIDATE_A, CANDIDATE_B, CANDIDATE_C, COMEBACK_CITY_TRACK].map((track) => [
+    track.key,
+    WIDTH.analyse(track.name || track.key, track),
+  ])
+);
+const width = (report) => widthOf.get(report.key);
 
 const CANDIDATES = [
   {
@@ -116,6 +134,36 @@ const planSvg = (report) => {
 
   const road = `M ${plan.map((p) => `${p[0].toFixed(0)} ${p[1].toFixed(0)}`).join(' L ')} Z`;
 
+  // The road drawn at its ACTUAL width instead of at one stroked mean.
+  //
+  // Wave 7 round 2: the legend already claimed "road at true width" and the
+  // plan was stroking a single constant width, so the one thing this round is
+  // about — where the road opens out and where it closes down — was the one
+  // thing the owner's sheet could not show. `report.plan` has carried a
+  // per-sample width in its third slot since round 0; this uses it.
+  //
+  // Drawn as ~160 short round-capped segments rather than as a filled left/right
+  // ribbon polygon, because candidate C CROSSES ITSELF: a two-loop polygon with
+  // either fill rule punches holes at the crossing, and the crossing is the
+  // whole point of that candidate. Round caps hide the segment joins.
+  const widthBands = (() => {
+    const chunk = Math.max(2, Math.round(n / 160));
+    const bands = [];
+    for (let start = 0; start < n; start += chunk) {
+      const points = [];
+      let sum = 0;
+      for (let step = 0; step <= chunk; step += 1) {
+        const point = plan[(start + step) % n];
+        points.push(`${point[0].toFixed(0)} ${point[1].toFixed(0)}`);
+        sum += point[2];
+      }
+      bands.push(
+        `<path d="M ${points.join(' L ')}" stroke="#2b3446" stroke-width="${(sum / (chunk + 1)).toFixed(1)}" fill="none" stroke-linecap="round"/>`
+      );
+    }
+    return bands.join('');
+  })();
+
   // Elevated road drawn last and lighter, so a crossing reads as a crossing.
   const band = report.elevation.band;
   const elevated = band ? pathFor(band.from, band.to) : '';
@@ -160,7 +208,7 @@ const planSvg = (report) => {
   const barStart = cx - WORLD_W / 2 + WORLD_W * 0.04;
 
   return `<svg viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${report.name} plan view">
-    <path d="${road}" stroke="#2b3446" stroke-width="${meanWidth.toFixed(0)}" fill="none" stroke-linejoin="round"/>
+    ${widthBands}
     <path d="${road}" stroke="#79879e" stroke-width="${(meanWidth * 0.1).toFixed(0)}" fill="none" stroke-linejoin="round" opacity="0.5"/>
     ${cornerPaths}
     ${longestPath}
@@ -170,6 +218,49 @@ const planSvg = (report) => {
     <line x1="${barStart}" y1="${barY}" x2="${barStart + barLen}" y2="${barY}" stroke="#8b98ad" stroke-width="${(WORLD_H * 0.004).toFixed(0)}"/>
     <text x="${barStart}" y="${barY - WORLD_H * 0.012}" fill="#8b98ad" font-size="${(WORLD_H * 0.028).toFixed(0)}" font-family="ui-monospace, monospace">500 u = 1.9 s</text>
   </svg>`;
+};
+
+// ---------------------------------------------------------------------------
+// The width profile strip.
+//
+// The plan view now draws the road at its true width, but a 4x lap is ~11,700 u
+// across a 450 px panel, so the difference between a 64 u causeway and a 44 u
+// hairpin is 2.5 px against 1.7 px — honest and nearly invisible. This strip is
+// the same data made readable: delivered width against lap fraction, with the
+// pass window and the tightest corner marked, so "where does this road open up
+// and where does it close down" is answerable at a glance. It is the only
+// picture of the axis this round is about.
+// ---------------------------------------------------------------------------
+const WIDTH_STRIP_H = 62;
+const widthStrip = (report) => {
+  const plan = report.plan;
+  const n = plan.length;
+  const w = width(report);
+  const lo = Math.min(...plan.map((p) => p[2]));
+  const hi = Math.max(...plan.map((p) => p[2]));
+  // Fixed 40-70 u scale on every strip so the four panels are comparable —
+  // auto-scaling each one would make Penguin Village's 58-64 look like a
+  // rollercoaster, which is the exact misreading this whole section exists to
+  // correct.
+  const SCALE_LO = 40;
+  const SCALE_HI = 70;
+  const W = 1000;
+  const y = (units) => WIDTH_STRIP_H - ((units - SCALE_LO) / (SCALE_HI - SCALE_LO)) * (WIDTH_STRIP_H - 10) - 2;
+  const step = Math.max(1, Math.round(n / 320));
+  const points = [];
+  for (let index = 0; index < n; index += step) points.push(`${((index / n) * W).toFixed(1)} ${y(plan[index][2]).toFixed(1)}`);
+  points.push(`${W} ${y(plan[0][2]).toFixed(1)}`);
+  const area = `M 0 ${WIDTH_STRIP_H} L ${points.join(' L ')} L ${W} ${WIDTH_STRIP_H} Z`;
+  const longest = report.straights.list.reduce((best, s) => (!best || s.lengthUnits > best.lengthUnits ? s : best), null);
+  const passBand = longest
+    ? `<rect x="${(longest.startProgress * W).toFixed(1)}" y="0" width="${(Math.max(0.004, longest.endProgress - longest.startProgress) * W).toFixed(1)}" height="${WIDTH_STRIP_H}" fill="#ffd54a" opacity="0.16"/>`
+    : '';
+  const tight = `<line x1="${(w.coupling.hairpinProgress * W).toFixed(1)}" y1="0" x2="${(w.coupling.hairpinProgress * W).toFixed(1)}" y2="${WIDTH_STRIP_H}" stroke="#ff7ac6" stroke-width="3"/>`;
+  return `<svg class="strip" viewBox="0 0 ${W} ${WIDTH_STRIP_H}" preserveAspectRatio="none" role="img" aria-label="road width along the lap">
+    ${passBand}${tight}
+    <path d="${area}" fill="#3b4a66" stroke="#8fb4ff" stroke-width="2"/>
+  </svg>
+  <p class="stripnote">Road width along the lap, ${SCALE_LO}–${SCALE_HI} u on every panel. Delivered ${lo}–${hi} u. <span class="k pass"></span> the pass window · <span class="k tight"></span> the tightest corner.</p>`;
 };
 
 // ---------------------------------------------------------------------------
@@ -234,6 +325,42 @@ const TARGETS = [
     },
     ok: (r) => GATE.report(r).radiusClasses.pass,
   },
+  // Added in wave 7 fix round 2, from the blind-A/B judge: "the road is the
+  // same width with the same gentle constant-radius bends... bring candidates
+  // that vary road width and radius, not just length". Width was authored in
+  // every candidate and gated in none, and the previewer's own min/max are the
+  // AUTHORED numbers — see gate-width.mjs for why authoring a wider range on a
+  // 4x lap can still put LESS width in a frame.
+  {
+    label: 'Delivered width range',
+    bar: 'what the runtime hands the camera, not what was typed (shipped CC 1.244x, Penguin Village 1.103x)',
+    value: (r) => `${width(r).delivered.min}-${width(r).delivered.max} u (${width(r).delivered.ratio}x)`,
+    ok: (r) => width(r).delivered.ratio >= WIDTH.BARS.MIN_WIDTH_RATIO,
+  },
+  {
+    label: 'At most 45% of the lap at one width',
+    bar: 'share within +/-5% of the lap median — Penguin Village sits at 82%, which is the "one boulevard" complaint',
+    value: (r) => `${Math.round(width(r).medianBandShare * 100)}% at ${width(r).delivered.median} u`,
+    ok: (r) => width(r).medianBandShare <= WIDTH.BARS.MAX_MEDIAN_BAND_SHARE,
+  },
+  {
+    label: 'A width change you can SEE: 8 u in <= 0.6 s',
+    bar: 'one kart width of narrowing, in one beat. Shipped CC does it in 0.29 s; Penguin Village never does it',
+    value: (r) => (width(r).squeeze.seconds === null ? 'never' : `${width(r).squeeze.seconds}s at p${width(r).squeeze.progress}`),
+    ok: (r) => width(r).squeeze.seconds !== null && width(r).squeeze.seconds <= WIDTH.BARS.SQUEEZE_8U_MAX_SECONDS,
+  },
+  {
+    label: 'Straight-to-hairpin width delta >= 12 u',
+    bar: 'width coupled to the layout: the road visibly closes down where the lap does',
+    value: (r) => `${width(r).coupling.delta} u (${width(r).coupling.straightWidth} -> ${width(r).coupling.hairpinWidth})`,
+    ok: (r) => width(r).coupling.delta >= WIDTH.BARS.MIN_STRAIGHT_TO_HAIRPIN_DELTA,
+  },
+  {
+    label: 'No single frame signature over 30% of the lap',
+    bar: 'the judge’s actual test: is a randomly sampled frame identifiable as a specific corner (width x radius x gradient)',
+    value: (r) => `${Math.round(width(r).signature.modalShare * 100)}% ${width(r).signature.modal}`,
+    ok: (r) => width(r).signature.modalShare <= WIDTH.BARS.MAX_MODAL_SIGNATURE_SHARE,
+  },
   { label: 'Kinks 0', bar: 'authored radii only — no spline artefacts', value: (r) => `${r.corners.kinks}`, ok: (r) => r.corners.kinks === 0 },
   { label: 'Elevation, gradient <= 18%', bar: '17-18% is the shipped, proven range', value: (r) => (r.elevation.carries ? `peak ${r.elevation.peakHeight} u, ${r.elevation.maxGradientPct}%` : 'flat'), ok: (r) => r.elevation.carries && r.elevation.maxGradientPct <= 18 },
   { label: 'No blind corners', bar: 'hard gate: 0.8 s of announcement', value: (r) => `worst ${r.sightline.minAnnounceSeconds}s`, ok: (r) => r.sightline.pass },
@@ -265,11 +392,13 @@ const candidateCard = (entry) => {
       </div>
     </header>
     <div class="plan">${planSvg(r)}</div>
+    ${widthStrip(r)}
     <p class="pitch">${esc(entry.pitch)}</p>
     <dl class="facts">
       <div><dt>Corner census</dt><dd>${cornerCensus(r)}</dd></div>
       <div><dt>Radii</dt><dd>${r.corners.radiusRange[0]}-${r.corners.radiusRange[1]} u, ${r.corners.kinks} kinks</dd></div>
       <div><dt>Straights</dt><dd>${straightSeconds(r, 0)}s · ${straightSeconds(r, 1)}s · ${straightSeconds(r, 2)}s · ${straightSeconds(r, 3)}s</dd></div>
+      <div><dt>Width</dt><dd>${width(r).delivered.min}-${width(r).delivered.max} u delivered · ${width(r).levels.length} levels · widest ${width(r).coupling.straightWidth} u on the pass window, tightest corner ${width(r).coupling.hairpinWidth} u · grid ${width(r).gridWidth} u</dd></div>
       <div><dt>Beats</dt><dd>${r.beats.count}, one every ${r.beats.meanGapSeconds}s (min ${r.beats.minGapSeconds}s, max ${r.beats.maxGapSeconds}s)</dd></div>
       <div><dt>Elevation</dt><dd>${r.elevation.carries ? `peak ${r.elevation.peakHeight} u, ${r.elevation.maxGradientPct}% max gradient, ${r.elevation.crestLaunch ? 'free launch off the crest' : 'no launch'}` : 'flat'}</dd></div>
       <div><dt>Camera</dt><dd>worst corner announced ${r.sightline.minAnnounceSeconds}s (gate 0.8s), mean forward sight ${r.sightline.meanSightSeconds}s</dd></div>
@@ -292,6 +421,7 @@ const referenceCard = () => {
       </div>
     </header>
     <div class="plan">${planSvg(r)}</div>
+    ${widthStrip(r)}
     <p class="pitch">Drawn at the same scale as the three candidates — this is what four times longer actually looks like. Today's lap is ${r.lapSeconds} s, its longest straight is ${straightSeconds(r, 0)} s, it has ${r.corners.total} corners, and it throws a beat at the driver every ${r.beats.meanGapSeconds} s. (Measured against the working tree, so it already includes the start/finish kink fix: the two r12 kinks the previewer found on the start line are gone, and the lap is 2,889.7 u rather than the 2,897 u in the design notes.)</p>
     <dl class="facts">
       <div><dt>Corner census</dt><dd>${cornerCensus(r)}</dd></div>
@@ -369,6 +499,11 @@ const html = `<title>Comeback City 4x — three candidate layouts</title>
   .closing { margin-top: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
   .closing p { margin: 0 0 10px; }
   .closing p:last-child { margin-bottom: 0; }
+  .strip { display:block; width:100%; height:62px; margin-top:10px; background:#0d1119; border:1px solid var(--line); border-radius:6px; }
+  .stripnote { margin:6px 0 0; font-size:12px; color:var(--dim); }
+  .stripnote .k { display:inline-block; width:10px; height:10px; border-radius:2px; vertical-align:-1px; }
+  .stripnote .k.pass { background:#ffd54a; opacity:0.5; }
+  .stripnote .k.tight { background:#ff7ac6; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #b9c6da; }
 </style>
 <div class="wrap">
@@ -381,7 +516,7 @@ const html = `<title>Comeback City 4x — three candidate layouts</title>
   </div>
 
   <div class="legend">
-    <span><i style="background:#2b3446"></i>road at true width</span>
+    <span><i style="background:#2b3446"></i>road at true width (it varies along the lap — see the strip under each plan)</span>
     <span><i style="background:#5ef0a6"></i>left corner</span>
     <span><i style="background:#ff7ac6"></i>right corner</span>
     <span><i style="background:#ffd54a"></i>the overtaking straight</span>
@@ -409,6 +544,7 @@ const html = `<title>Comeback City 4x — three candidate layouts</title>
   <div class="closing">
     <p><strong>What all three miss, identically, and on purpose.</strong> The road/terrain value gate fails on every segment of every candidate for exactly the reason it fails on Comeback City today: the road solves to luminance 46.9 against a 38.5–43.4 verge, and what actually carries it in every shipped frame is the painted red/white kerb at 81% separation. These candidates borrow Comeback City's palette verbatim so their contrast verdicts <em>are</em> the reference build's verdicts. Authoring new palette values is the step after a layout is picked — doing it now would mean tuning three palettes to throw two away.</p>
     <p><strong>Handedness is topology, not tuning.</strong> A smooth convex loop turns one way; the other direction only appears where the road is concave. That is why A lands at 31% however it is tuned, why B's slalom of square corners reaches 35%, and why C — which crosses itself, so it has to turn both ways to close — gets 44% for free. If both drift directions matter, that is a reason to prefer B or C, not a number to nudge.</p>
+    <p><strong>Width is the third axis, and it needs one runtime line before it fully lands.</strong> The blind-A/B judge picked this build 18/18 and still said all eighteen frames read as "one wide constant-radius boulevard". That is measurable: the runtime smooths the road-width table with a kernel defined as a fraction of a LAP (14 passes over 224 samples), so on a 4x lap every width transition stretches to four times its shipped world length. Authored width range went UP on all three candidates and the width you could see in a frame went DOWN — the fastest 8-unit narrowing took 0.66 / 0.57 / 1.37 s against the shipped track's 0.29 s. This round fixed the authoring half: the width step is now AT the signature corner and big enough to survive the smoother, so all three clear the gate at 0.56-0.57 s. The other half is one line in the build — scale the width table's resolution with lap length so the kernel stays ~35 world units — which takes the same three layouts to 0.16 s and doubles the width contrast inside a frame. Whoever builds the picked layout should do that first; it is quantified in section 8 of docs/TRACK_CANDIDATES.md.</p>
     <p><strong>What happens next.</strong> Pick a letter. Only then: author the palette against <code>--strict-contrast</code>, place the coin rows (~30, scaling with length, still free — one InstancedMesh), and build geometry. Re-run the previewer afterwards so the JSON report lands in the record next to the frames.</p>
   </div>
 </div>

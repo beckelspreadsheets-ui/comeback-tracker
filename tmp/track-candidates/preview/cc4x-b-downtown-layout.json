@@ -2,7 +2,7 @@
   "key": "cc4x-b-downtown",
   "name": "B — Downtown Deadline",
   "tagline": "Technical: 17 corners, two switchbacks, one Expressway",
-  "generatedAt": "2026-08-02T22:51:08.807Z",
+  "generatedAt": "2026-08-02T23:51:23.780Z",
   "tool": "scripts/track-layout-preview.mjs",
   "meanSpeed": 260,
   "laps": 3,

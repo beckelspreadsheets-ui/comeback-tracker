@@ -324,6 +324,23 @@ const CONTACT_AIR_HIDDEN_FLOOR = 0.42;
 // 21deg = 0.358) is exactly 1 (0.358 is above CONTACT_KEY_READABLE_SIN, so the
 // smoothstep argument is negative and clamps to 0), so its cap resolves to
 // 0.7 * 1 = 0.7 and its base to 0.58 — the two numbers it ships today.
+//
+// ROUND 3 CLOSES THE LOOP THIS BLOCK LEFT OPEN. Round 2 unpinned the cap and
+// then measured that Penguin Village STILL read 49.0 under the kart against
+// 49.2 on open road — i.e. giving the boost headroom did nothing, because the
+// thing being boosted was an 8.4 x 12.6 patch sitting entirely underneath the
+// bodywork that casts it. Two changes, both in raceShadowRig.js, both no-ops on
+// Comeback City by construction:
+//
+//   * contactPatchProfile grows a SKIRT keyed on contactStrength, so on PV the
+//     patch is 13.5 x 17.4 and ~59% of the darkening lands at the outer tyre
+//     line with a soft rim reaching ~2 units past it. That is the first time
+//     any of this has put a dark pixel on road the kart is not standing on.
+//   * contactPatchShadowBoost stops keying on azimuth alone and adds the
+//     ribbon-length x lateral-throw term the round-2 correction asked for, so
+//     PV's boost at the failing mark goes 1.11 -> 1.52 and pv-p0_33 — the one
+//     PV frame with a clean cast shadow in it — stays at 1.05 and does not
+//     double-darken.
 const CONTACT_WIPE_CAP = 0.7;
 const CONTACT_WIPE_CAP_MAX = 0.86;
 const contactWipeCapFor = (contactStrength) =>
@@ -342,6 +359,38 @@ const LENS_PROBE = new THREE.Vector3();
 // tier's narrow one. `lensCoverage` is the body's radius as a fraction of the
 // HALF frame height at its own depth — the quantity the critics were measuring
 // off the pixels — and it costs one dot product.
+//
+// AAA WAVE 7 ROUND 3 — THE METRIC WAS ON-AXIS AND EVERY ARTEFACT IT MISSED WAS
+// AT THE FRAME EDGE. THOSE TWO FACTS ARE THE SAME FACT.
+//
+// `radius / (tanHalfFov * depth)` is the angular size of a body ON THE VIEW
+// AXIS. A perspective projection is not angle-preserving off it: a sphere of
+// radius R at off-axis angle theta projects to an ellipse whose RADIAL semi-axis
+// is sec^2(theta) times the on-axis answer (d/dtheta of tan theta) and whose
+// tangential semi-axis is sec(theta) times it. At the corner of a 66-degree
+// 16:9 frame theta is ~52 degrees and sec^2 is 2.75 — so this function was
+// under-reporting the biggest bodies in the shot by up to 2.75x, and
+// under-reporting them precisely where they are worst.
+//
+// That is not a tuning miss, it is a units mismatch, and it explains the whole
+// filed set at once. LENS_WALL_START/FULL and LENS_PICKUP_START/FULL were all
+// derived by critics MEASURING PIXELS off the captures — pixels that already
+// carry the sec^2 stretch — while the code compared those thresholds against a
+// number that does not. Every lens artefact three waves of critics have filed
+// sits at a frame edge: the Ice Racer across the right of comeback-city-p0_45
+// (measured 1.85x the hero in pixels, scored ~1.19x here, so the ghost never
+// fired at all), the near-plane slab across the left 46% of comeback-city-p0_56,
+// the coins flanking penguin-village-p0_67. Bodies in the middle of frame, where
+// the correction is ~1.0, were never the complaint.
+//
+// The taper is what keeps this from becoming a new bug. Past the frame corner a
+// body has no pixels for the stretch to apply to, and inflating it there would
+// ghost rivals that are entirely off screen — which costs their cast shadow,
+// and on Penguin Village a 33-unit ribbon from an off-screen kart is legitimately
+// in shot. So the correction is full strength while the body's centre is inside
+// the frame and releases smoothly to nothing by sqrt(2)x the corner tangent.
+// Continuous, bounded at 2.75x, and no square roots: sec^2 = 1 + tan^2.
+let lensCornerTanSq = 0;
 const lensCoverage = (position, radius, camPos, tanHalfFov, near) => {
   LENS_PROBE.copy(position).sub(camPos);
   const depthAlongView = LENS_PROBE.dot(GHOST_FORWARD);
@@ -349,7 +398,16 @@ const lensCoverage = (position, radius, camPos, tanHalfFov, near) => {
   // "tiny" rather than "huge" is what keeps a body that has been overtaken from
   // being faded (and losing its shadow) for nothing.
   if (depthAlongView <= 0) return 0;
-  return radius / (tanHalfFov * Math.max(depthAlongView, near));
+  const depth = Math.max(depthAlongView, near);
+  const onAxis = radius / (tanHalfFov * depth);
+  // Degenerate camera (aspect not published yet on the very first frame): the
+  // honest answer is the uncorrected one, i.e. exactly what shipped.
+  if (!(lensCornerTanSq > 0)) return onAxis;
+  const perpSq = Math.max(0, LENS_PROBE.lengthSq() - depthAlongView * depthAlongView);
+  const offAxisTanSq = perpSq / (depth * depth);
+  const cornerRatioSq = offAxisTanSq / lensCornerTanSq;
+  const taper = clamp(2 - cornerRatioSq, 0, 1);
+  return onAxis * (1 + offAxisTanSq * taper);
 };
 // Fade thresholds are expressed as a MULTIPLE OF THE HERO'S OWN COVERAGE rather
 // than as absolute screen fractions, and that is deliberate. The hero's coverage
@@ -373,6 +431,16 @@ const LENS_WALL_FULL = 2.0;
 // ribbed cylinder across the lens (penguin-village-p0_67 measured two of them
 // wider than the hero's own wheels). Start at just over half the hero and be
 // gone by the time they match.
+//
+// ROUND 3 LEAVES THESE FOUR NUMBERS ALONE ON PURPOSE, and the next capture has
+// to re-check them. All four were derived by critics measuring PIXELS, and the
+// off-axis correction added to lensCoverage this round is exactly the change
+// that makes the code measure the same thing — so the right move is to leave
+// the thresholds where they were and let the corrected metric meet them. The
+// correction is largest (up to 2.75x) at the frame edge, which is where a
+// pickup passes the lens, so the pickup window is the one most likely to want a
+// nudge once there is a capture to nudge it against. Tuning it now, blind,
+// would be the same mistake the CONTACT_WIPE_CAP block records.
 const LENS_PICKUP_START = 0.55;
 const LENS_PICKUP_FULL = 0.95;
 const lensBandFor = (coverage, subjectCoverage, start = LENS_WALL_START, full = LENS_WALL_FULL) => {
@@ -848,7 +916,14 @@ const createGroundedKartModel = ({
   // has to be the whole grounding cue on its own. See contactPatchProfile.
   shadowsEnabled = false,
 } = {}) => {
-  const contactProfile = contactPatchProfile(shadowsEnabled, contactGrounding);
+  // contactStrength is passed to the SIZING as well as to the opacity now. A
+  // patch the size of the kart's own footprint is entirely hidden behind the
+  // bodywork that casts it from a chase camera, which is why Penguin Village
+  // measured 49.0 under the kart against 49.2 on open road while Comeback City
+  // — where the pixels being probed are the CAST shadow, not this decal —
+  // measured 42.9 against 51.8. See the skirt block in raceShadowRig.js.
+  // Comeback City's contactStrength is exactly 1, so its profile is unchanged.
+  const contactProfile = contactPatchProfile(shadowsEnabled, contactGrounding, contactStrength);
   const group = new THREE.Group();
   group.userData.kind = 'grounded-3d-kart';
   const model = new THREE.Group();
@@ -1379,6 +1454,13 @@ const createGroundedKartModel = ({
   // multiplier: the patch has to cover the wheels, and past that a wider patch
   // is a bigger smudge rather than a better grounding cue. Opacity is the term
   // that carries the read.
+  //
+  // ROUND 3: the "solid core is the kart's own footprint" sentence above is now
+  // only true of Comeback City, and that is the point — a patch that stops at
+  // the footprint is a patch the bodywork hides. On Penguin Village the profile
+  // arrives pre-skirted (13.5 x 17.4 after this sqrt), so the core reaches the
+  // tyre line at ~59% darkening and the penumbra lands on road the kart is not
+  // standing on. Both multipliers are exactly 1 on CC.
   const contactSpread = Math.sqrt(contactStrength);
   shadow.scale.set(contactProfile.width * contactSpread * scale, contactProfile.length * contactSpread * scale, 1);
   shadow.rotation.x = -Math.PI / 2;
@@ -10131,6 +10213,16 @@ export const ComebackCityThreeKartRace = ({
       // two thirds gone). One basis, one metric, every object.
       GHOST_FORWARD.set(0, 0, -1).applyQuaternion(engine.camera.quaternion);
       const lensTanHalfFov = Math.tan((engine.camera.fov * Math.PI) / 360);
+      // Tangent of the half-angle to the frame CORNER, squared. Written to
+      // module scope for the same reason GHOST_FORWARD is — lensCoverage reads
+      // the frame's lens basis from there rather than taking five parameters at
+      // five call sites — and it is the release point for the off-axis
+      // correction, not a threshold: see the block above lensCoverage.
+      // tanX = tanY * aspect, so corner^2 = tanY^2 * (1 + aspect^2).
+      {
+        const lensAspect = engine.camera.aspect || 16 / 9;
+        lensCornerTanSq = lensTanHalfFov * lensTanHalfFov * (1 + lensAspect * lensAspect);
+      }
       const lensNear = engine.camera.near;
       // The reference every lens test is scaled against: whatever the hero
       // currently measures on screen is, by definition, the right size for a
@@ -11219,7 +11311,10 @@ export const ComebackCityThreeKartRace = ({
       // the frame has no grounding cue unless the AO patch grows back. Solved
       // here, once, because the answer is identical for every kart on screen.
       // Both vectors are flattened to XZ — the sun's elevation changes how LONG
-      // the shadow is, not which side of the kart it lands on.
+      // the shadow is, not which side of the kart it lands on — and the
+      // elevation itself is handed over unflattened, because round 3's second
+      // branch keys on exactly that length (a 33-unit side-on ribbon leaves the
+      // frame laterally and leaves nothing beside the wheels).
       {
         const sunX = -engine.sunDirection.x;
         const sunZ = -engine.sunDirection.z;
@@ -11231,6 +11326,7 @@ export const ComebackCityThreeKartRace = ({
         if (sunLen > 1e-3 && viewLen > 1e-3) {
           contactPatchShadowBoost(
             (sunX * CONTACT_BOOST_FORWARD.x + sunZ * CONTACT_BOOST_FORWARD.z) / (sunLen * viewLen),
+            engine.sunDirection.y,
             race.contactShadowBoost
           );
         } else {
@@ -11299,6 +11395,13 @@ export const ComebackCityThreeKartRace = ({
               // is the near-plane slab three critics have now each measured off
               // the pixels by hand. Published so it is a number in the
               // manifest, not an eyeball.
+              //
+              // ROUND 3: these will read HIGHER than wave 7 round 2's for the
+              // same shot, and that is the fix, not a regression — lensCoverage
+              // now carries the off-axis stretch, so a body at the frame edge
+              // finally reports the size a critic measures off the pixels
+              // instead of its on-axis approximation. Compare across rounds only
+              // against pixel measurements, never against the old numbers.
               lensPeak: Number((race.lensPeak || 0).toFixed(2)),
               // Proximity-ghost evidence, published because three waves of
               // critics have now had to score the camera axis on the ABSENCE of

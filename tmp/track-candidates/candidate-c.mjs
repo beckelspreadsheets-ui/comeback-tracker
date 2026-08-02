@@ -77,13 +77,39 @@ export const CANDIDATE_C = makeCandidate({
   waypoints: WAYPOINTS,
   radii: RADII,
   mainRoadWidth: 54,
+  // WAVE 7 ROUND 2 — C was the worst of the three on the width gate and by a
+  // long way: its authored 46-60 undulated so gently that the fastest 8-unit
+  // change on the whole lap took 1.37 s (Comeback City does it in 0.29) and
+  // only 4% of frames carried any width contrast at all. That is the measured
+  // form of the blind judge's "one wide constant-radius boulevard", and on the
+  // candidate whose entire pitch is a set piece it was the most damaging.
+  //
+  // The rewrite gives C a width STORY that matches its elevation story, and it
+  // changes no geometry, so every corner, straight, sight and beat number in
+  // sections 5 and 7 of docs/TRACK_CANDIDATES.md still stands:
+  //
+  //   market row 44   the technical middle, and the narrowest road on the lap
+  //                   until the drop — 10 u below the east lobe it follows.
+  //   viaduct 60      the deck is the pass window (2,528 u, 8.84 s at boost),
+  //                   so it is the widest thing after the start straight. It
+  //                   arrives off a 56 u approach, i.e. the road OPENS as it
+  //                   climbs, which is the opposite of everything else on the
+  //                   lap and is why the crossing reads as a set piece.
+  //   twin-hairpins 44  both stop-and-turns at the bottom of the 39 u descent.
+  //                   16 u narrower than the deck they drop off, and the ribbon
+  //                   starts at 0.85, ~2 sigma of the runtime's width smoother
+  //                   before C14's 0.875 entry, so the full 44 is delivered by
+  //                   the time the corner arrives rather than half of it.
+  //   harbour-approach 56  opens back out across the start/finish line so the
+  //                   grid is not formed on the narrowest road on the track.
   roadRibbons: [
     { key: 'harbour-straight', role: 'main', width: 60, shoulderWidth: 7, startProgress: 0, endProgress: 0.14 },
     { key: 'east-lobe', role: 'main', width: 54, shoulderWidth: 6.5, startProgress: 0.14, endProgress: 0.34 },
-    { key: 'market-row', role: 'main', width: 46, shoulderWidth: 5.5, startProgress: 0.34, endProgress: 0.52 },
-    { key: 'west-approach', role: 'main', width: 52, shoulderWidth: 6, startProgress: 0.52, endProgress: 0.62 },
-    { key: 'viaduct', role: 'main', width: 58, shoulderWidth: 7, startProgress: 0.62, endProgress: 0.88 },
-    { key: 'south-loop', role: 'main', width: 50, shoulderWidth: 6, startProgress: 0.88, endProgress: 1 },
+    { key: 'market-row', role: 'main', width: 44, shoulderWidth: 5, startProgress: 0.34, endProgress: 0.52 },
+    { key: 'west-approach', role: 'main', width: 56, shoulderWidth: 6.5, startProgress: 0.52, endProgress: 0.625 },
+    { key: 'viaduct', role: 'main', width: 62, shoulderWidth: 7.5, startProgress: 0.625, endProgress: 0.85 },
+    { key: 'twin-hairpins', role: 'main', width: 42, shoulderWidth: 5, startProgress: 0.85, endProgress: 0.965 },
+    { key: 'harbour-approach', role: 'main', width: 54, shoulderWidth: 6.5, startProgress: 0.965, endProgress: 1 },
   ],
   boostPads: [
     { key: 'harbour-pad', progress: 0.09, side: 0 },

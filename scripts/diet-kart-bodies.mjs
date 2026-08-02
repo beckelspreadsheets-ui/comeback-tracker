@@ -4,6 +4,7 @@
 //   node scripts/diet-kart-bodies.mjs                       # all *-raw.glb in tmp/kart-lifts -> tmp/kart-diet
 //   node scripts/diet-kart-bodies.mjs --slug cold-wallet    # one body
 //   node scripts/diet-kart-bodies.mjs --texture 384         # override the base-colour resize
+//   node scripts/diet-kart-bodies.mjs --meshopt-level medium # wider normals, ~22% bigger (see MESHOPT_LEVEL)
 //   node scripts/diet-kart-bodies.mjs --promote             # copy the verified GLBs into the runtime dir
 //   node scripts/diet-kart-bodies.mjs --verify              # re-read the SHIPPED karts and gate them
 //
@@ -84,6 +85,29 @@ const ERROR = Number(arg('error', '0.01'));
 // texture budget buys anything visible.
 const TEXTURE = Number(arg('texture', '512'));
 const QUALITY = Number(arg('quality', '82'));
+
+// Meshopt encoding level. This defaulted to 'medium' on the 2026-08-02 diet and
+// that was a MEASURED mistake worth 384 KB across the five bodies. The two
+// levels differ in exactly one thing that matters here:
+//
+//   medium -> NORMAL:VEC3/i16n, no octahedral filter
+//   high   -> NORMAL:VEC3/i8n with the octahedral filter
+//
+// POSITION is i16n under BOTH, so this is not a position-precision trade at
+// all. Re-encoding the five shipped bodies and comparing them in world space
+// (positions matched exactly, so the reorder() permutation could be undone):
+//
+//   position deviation  max 0.000000 units — the surface is bit-identical
+//   normal deviation    max 1.14 deg, mean 0.35 deg, ZERO vertices past 5 deg
+//   size                1760.4 -> 1376.1 KB raw (-21.8%), 1578.3 -> 1211.9 KB gz
+//
+// 'high' is also what the four bodies ALREADY SHIPPING record (ice-racer,
+// miami-cruiser, ice-block and btc-kart all carry NORMAL:VEC3/i8n), so this is
+// not a new risk being taken — it is the five new bodies being brought into
+// line with the encoding the owner already approved on screen. A degree of
+// normal error cannot move a MeshToonMaterial band except exactly on a band
+// edge, where it is worth a pixel of jitter.
+const MESHOPT_LEVEL = arg('meshopt-level', 'high');
 
 const KB = (bytes) => `${(bytes / 1024).toFixed(1)} KB`;
 
@@ -241,6 +265,29 @@ const verifyKart = ({ file, document, bytes, hash, record, budgets, glbJson, dec
   if (bytes > budgets.encodedBytes.hard) add(HARD, `${KB(bytes)} over hard ${KB(budgets.encodedBytes.hard)}`);
   else if (bytes > budgets.encodedBytes.target) add(SOFT, `${KB(bytes)} over target ${KB(budgets.encodedBytes.target)}`);
 
+  // 3b. The SHIPPED normal precision, read off the container rather than the
+  // document — gltf-transform decodes meshopt on read, so the in-memory
+  // accessors describe the decoded mesh and cannot tell 'medium' from 'high'.
+  //
+  // This check exists because nothing else in the repo can see the difference.
+  // The 2026-08-02 diet shipped at level 'medium' (NORMAL i16n) and every gate
+  // stayed green: same triangles, same materials, same textures, same render,
+  // 384 KB heavier than it needed to be across five bodies. Bytes-per-vertex is
+  // not a rubric axis and not a budget line, so a silent 22% regression here
+  // would never surface until the raw bundle hit 16 MiB.
+  const normalAccessors = (glbJson.meshes || [])
+    .flatMap((mesh) => mesh.primitives || [])
+    .map((primitive) => (glbJson.accessors || [])[primitive.attributes?.NORMAL])
+    .filter(Boolean);
+  const wideNormals = normalAccessors.filter((accessor) => accessor.componentType !== 5120);
+  if (wideNormals.length) {
+    add(
+      shipping ? HARD : SOFT,
+      `NORMAL is ${wideNormals.length === 1 ? '' : `${wideNormals.length}x `}componentType ${wideNormals[0].componentType} (not 5120/i8) — encoded at meshopt level "medium". ` +
+        'The shipped fleet is i8n octahedral; re-encoding costs 0.000000 units of position error and max 1.14 deg of normal error, and saves ~22%. Re-run without --meshopt-level medium.'
+    );
+  }
+
   // 4. Manifest drift. A GLB re-dieted without its manifest entry being
   // updated is how a proof pointer ends up describing a file that no longer
   // exists (the "manifest entries need sourceHash or the audit fails" rule is
@@ -295,6 +342,8 @@ const runVerify = async (io) => {
     .sort()
     .filter((file) => !ONLY || file === `${ONLY}.glb`);
 
+  let fleetBytes = 0;
+  let fleetDeadTextureBytes = 0;
   for (const file of files) {
     const absolute = path.join(VERIFY_DIR, file);
     const buffer = await fs.readFile(absolute);
@@ -320,10 +369,26 @@ const runVerify = async (io) => {
 
     const hard = result.findings.filter((finding) => finding.level === HARD);
     failures += hard.length;
+    fleetBytes += result.bytes;
+    fleetDeadTextureBytes += result.deadTextureBytes;
     console.log(
       `\n${hard.length ? 'FAIL ' : 'ok   '} ${file.padEnd(20)} ${KB(result.bytes).padStart(10)}  tris ${String(result.triangles).padStart(6)}  mats ${result.materials}  dead-tex ${KB(result.deadTextureBytes)}`
     );
     for (const finding of result.findings) console.log(`      ${finding.level}  ${finding.message}`);
+  }
+
+  // The fleet total, printed because the per-file dead-texture warnings above
+  // are individually shruggable and collectively a budget decision. dist-kart
+  // is gated on TOTAL gzip (12000 KiB) and the gate walks every file in the
+  // directory, so an unsampled map costs the same whether its kart is loaded
+  // on demand or not — the pool cannot pay this off, only deleting the bytes
+  // can. Measured 2026-08-02: stripping the four 2026-07 bodies' unsampled
+  // slots and re-encoding at level high is worth 1255.9 KiB raw / 1256.6 KiB
+  // gz, which is the difference between the wired nine-kart fleet failing the
+  // gzip gate by 201.6 KiB and clearing it with ~1055 KiB to spare.
+  console.log(`\nfleet ${files.length} bodies  ${KB(fleetBytes)} shipped  ${KB(fleetDeadTextureBytes)} of it unsampled texture`);
+  if (fleetDeadTextureBytes > 0) {
+    console.log('      ^ dead weight in the gzip budget that the on-demand pool CANNOT offset — the budget gate walks all of dist-kart');
   }
 
   if (failures) {
@@ -459,7 +524,11 @@ const main = async () => {
     // these files must have MeshoptDecoder registered — a meshopt GLB renders
     // NOTHING without it, silently, with no console error. createGameGltfLoader
     // (gltfLoader.js) already registers it, as does scripts/kart-turntable.mjs.
-    await document.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
+    //
+    // level: see MESHOPT_LEVEL at the top. 'high' is the fleet encoding and is
+    // position-lossless relative to 'medium'; the only difference that reaches
+    // the screen is i8 octahedral normals, measured at max 1.14 deg.
+    await document.transform(meshopt({ encoder: MeshoptEncoder, level: MESHOPT_LEVEL }));
     await io.write(target, document);
     const finalBytes = (await fs.stat(target)).size;
     steps.push({
@@ -467,7 +536,7 @@ const main = async () => {
       bytes: finalBytes,
       triangles: countTriangles(document),
       textureBytes: textureBytes(document),
-      note: 'EXT_meshopt_compression + KHR_mesh_quantization required',
+      note: `level ${MESHOPT_LEVEL}; EXT_meshopt_compression + KHR_mesh_quantization required`,
     });
 
     for (const step of steps) {
@@ -489,7 +558,14 @@ const main = async () => {
       // textureFormat is recorded rather than assumed: the manifest's
       // runtimeTransform string quotes it, and the jpeg pin is conditional
       // (see STEP 3), so a future reader must be able to tell which branch ran.
-      settings: { ratio: RATIO, error: ERROR, texture: TEXTURE, quality: QUALITY, textureFormat: keepsAlpha ? 'source-kept (alpha)' : 'jpeg' },
+      settings: {
+        ratio: RATIO,
+        error: ERROR,
+        texture: TEXTURE,
+        quality: QUALITY,
+        textureFormat: keepsAlpha ? 'source-kept (alpha)' : 'jpeg',
+        meshoptLevel: MESHOPT_LEVEL,
+      },
     });
   }
 
