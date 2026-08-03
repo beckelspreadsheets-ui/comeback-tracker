@@ -242,13 +242,32 @@
     },
     {
       "wave": 6,
-      "packages": [
-        "camera-and-hud-feel",
-        "quality-tiers"
+      "status": "committed-partial",
+      "commit": "bc6fb3bb",
+      "note": "arc-length progress + HUD structure + camera KEPT; quality-tier package REVERTED after it replaced the 3D scene with cyan noise while the build stayed green"
+    },
+    {
+      "wave": 7,
+      "status": "committed",
+      "commit": "5bffb8ad",
+      "totals": [
+        85,
+        80,
+        82,
+        93
       ],
-      "status": "pending",
-      "runId": null,
-      "commit": null
+      "note": "kart diet 92%, spline kinks gone, JS chunk split 425.9->253/400. r3 shadow work rolled back."
+    },
+    {
+      "wave": 8,
+      "status": "committed",
+      "commit": "82e6d779",
+      "totals": [
+        86,
+        77,
+        79
+      ],
+      "note": "BOTH 4x TRACKS BUILT: CC=Skyline 11643u/44.78s, PV=Bayfront 11678u/44.92s, longest straight 2.19s->9.72s. Dead normal maps stripped. PV shadow split into fault A (fixed: contact patch narrower on screen than the kart occluding it) and fault B (root-caused: key at 12deg, 20deg is the lowest that reads, but 12 is load-bearing for the arctic sunset)."
     }
   ],
   "rules": [
@@ -324,5 +343,11 @@
     "issue": "largest JavaScript gzip size is 425.9 / 400 KiB = FAILING. Caused by this overhaul: the monolith grew 6703 -> 10831 lines across 5 waves and the new render modules bundle into the same chunk.",
     "alsoTight": "Adding 5 kart GLBs at the existing diet precedent (412-591 KB each, avg ~525) projects to ~16.0 / 16 MiB raw — at or over the cap.",
     "fix": "Code-split the kart runtime out of index.kart, and put the new kart bodies on the SAME on-demand pool the owner already approved for the 100 characters (only the 4 karts in a race need to load). Both are wave-6 scope."
+  },
+  "handoff": {
+    "doc": "docs/AAA_NEXT_RUN.md",
+    "writtenAt": "2026-08-03",
+    "commit": "82e6d779",
+    "note": "Authoritative handoff for a fresh context. Read it before progress.json."
   }
 }
