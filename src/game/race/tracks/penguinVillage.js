@@ -599,7 +599,47 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // snow's share of the key from sin(15) = 0.259 to sin(12) = 0.208 while
     // leaving a sun-facing vertical ice face at cos(12) = 0.978 — so the rake
     // moves off the ground plane and onto the geometry that has form.
-    sun: { azimuthDeg: 195, distance: 190, elevationDeg: 12 },
+    //
+    // AAA WAVE 9 — `shadowKey` is how this track finally gets a cast shadow
+    // WITHOUT touching a single thing the paragraph above argues for.
+    //
+    // Wave 8 root-caused the fault: rig config, caster policy, frustum
+    // placement and receiver materials are all identical to Comeback City and
+    // were all eliminated. The only variable that moves it is this elevation.
+    // Forcing 45 produces a clean shadow instantly and the sweep
+    // 45 -> 32 -> 25 -> 20 -> 16 -> 12 fades it out, with 20 the lowest that
+    // still reads. Twelve is load-bearing twice over — it is where pv-far.webp's
+    // alpha reaches 255, and it is what puts the rake on the ice faces instead
+    // of the snow — so RAISING it fixes the shadow by breaking the arctic
+    // sunset the owner approved.
+    //
+    // The obvious escape, a second light at 20 that "contributes no diffuse",
+    // does not exist: in three a shadow darkens by REMOVING that light's own
+    // contribution (raceShadowRig.js — "shadow.intensity 1.0 removes ONE
+    // HUNDRED PERCENT of the key light"), so a zero-intensity caster removes
+    // zero and renders nothing at all.
+    //
+    // So the key is SPLIT rather than added to. Same azimuth, same total
+    // diffuse energy: 65% stays at 12 degrees and carries the look, 35% sits at
+    // 20 degrees and casts. Because the azimuth is shared, the ground
+    // projection is bit-identical and the shadow lands on exactly the side of
+    // the kart it always would have — elevation changes how LONG a shadow is,
+    // not which side it falls on. What the driver loses is 35% of the rake's
+    // 8-degree bite on the ice faces; what he gains is the tier-1 shadow the
+    // track has never had.
+    //
+    // 20 is not a guess and not only the sweep's answer: contactPatchKeyStrength
+    // in the monolith already encodes CONTACT_KEY_READABLE_SIN = 0.34, which is
+    // sin(19.9) — the elevation the rig ALREADY calls "throws a shadow the chase
+    // camera can see". The probe and the shipped constant agree to a tenth of a
+    // degree, arrived at independently. Feeding the 20-degree vector to the rig
+    // therefore also drops this track's contact-patch boost from ~1.22 back to
+    // 1.0, which is correct and not a side effect: the enlarged AO patch existed
+    // only to stand in for a cast shadow that now exists.
+    //
+    // Comeback City authors no shadowKey, so it keeps ONE light and stays
+    // bit-identical by construction.
+    sun: { azimuthDeg: 195, distance: 190, elevationDeg: 12, shadowKey: { elevationDeg: 20, share: 0.35 } },
     // Wave 3: 5.2 -> 4.2, and see sunColor. Penguin Village was running a
     // HOTTER and MORE intense key than Comeback City (#ffb85a at 4.4) over a
     // white track, and the arithmetic only goes one way: a cool #a9c2d2 belt

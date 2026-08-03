@@ -161,7 +161,12 @@ import {
   roadEdgeBarrierMul,
   roadEdgeSection,
 } from './race/render/buildRoadEdgeProfile.js';
-import { createBackdropRingMaterial, createSkyDome, createSkyUniforms } from './race/render/createSkyDome.js';
+import {
+  createBackdropRingMaterial,
+  createSkyDome,
+  createSkyUniforms,
+  sunDirectionFrom,
+} from './race/render/createSkyDome.js';
 import { createMidGroundBelt } from './race/render/createMidGroundBelt.js';
 import { buildRacePostChain } from './race/render/racePostChain.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
@@ -7544,10 +7549,41 @@ const createScene = ({
   // Its DIRECTION is now the sky's — the frame loop places it along
   // sunDirection, not on the old hardcoded (-95, +110, -45) offset, which sat
   // at 46 degrees elevation (noon shading under a sunset sky).
-  const sun = new THREE.DirectionalLight(palette.sunColor || '#ffae72', palette.sunIntensity ?? 4.4);
+  //
+  // SPLIT KEY (see penguinVillage.js palette.sun.shadowKey). A track whose sun
+  // is too low to cast a readable shadow can divide the key in two: the
+  // authored elevation keeps most of the energy and all of the look, and a
+  // second light at a higher elevation takes the rest and does the casting.
+  // Both share the azimuth, so the shadow falls on the same side of the kart —
+  // elevation sets a shadow's LENGTH, not its side. Total diffuse is conserved,
+  // which is the whole point: an owner-confirmed grade must not move.
+  //
+  // A caster with no diffuse contribution is not an option. three darkens by
+  // removing the casting light's own contribution, so a zero-intensity caster
+  // removes nothing and draws nothing.
+  //
+  // No shadowKey (Comeback City) = one light, unchanged, bit-identical.
+  const shadowKeyCfg = sunCfg.shadowKey || null;
+  const shadowKeyShare = shadowKeyCfg ? clamp(shadowKeyCfg.share ?? 0.35, 0, 1) : 0;
+  const keyIntensity = palette.sunIntensity ?? 4.4;
+  const sun = new THREE.DirectionalLight(palette.sunColor || '#ffae72', keyIntensity * (1 - shadowKeyShare));
   sun.position.copy(sunDirection).multiplyScalar(sunDistance);
   scene.add(sun);
   scene.add(sun.target);
+  // The vector the SHADOW is thrown along — the sky's sun unless this track
+  // splits its key. Everything downstream that reasons about the cast shadow
+  // (the rig's frustum and umbra, the tier-2 contact patch) reads this one,
+  // while the dome, its glow and the grade keep reading `sunDirection`.
+  const shadowDirection = shadowKeyCfg
+    ? sunDirectionFrom({ azimuthDeg: sunCfg.azimuthDeg, elevationDeg: shadowKeyCfg.elevationDeg })
+    : sunDirection;
+  let shadowKey = null;
+  if (shadowKeyCfg) {
+    shadowKey = new THREE.DirectionalLight(palette.sunColor || '#ffae72', keyIntensity * shadowKeyShare);
+    shadowKey.position.copy(shadowDirection).multiplyScalar(sunDistance);
+    scene.add(shadowKey);
+    scene.add(shadowKey.target);
+  }
   // Everything about the depth pass — map size, frustum extent, bias, the
   // caster policy and the per-frame texel snap that stops shadow edges
   // crawling as the light rides the kart — is the rig's. Desktop moved 1024 ->
@@ -7558,7 +7594,10 @@ const createScene = ({
     enabled: !trackVisualsEnabled,
     mobile,
     renderer,
-    sun,
+    // The CASTER, which is the split key's high light when the track has one.
+    // The rig owns castShadow on whatever it is handed, so the 12-degree look
+    // light is left a pure diffuse contributor.
+    sun: shadowKey || sun,
   });
   const rimLight = new THREE.DirectionalLight(palette.rimLightColor || '#4fd8ff', 1.6);
   rimLight.position.set(92, 56, 74);
@@ -8155,7 +8194,12 @@ const createScene = ({
   // 21-degree sun returns exactly 1 (nothing about its shipped look moves);
   // Penguin Village's 12-degree rake returns ~1.22 and its karts stop meeting
   // the deck on a bare silhouette edge.
-  const contactKeyStrength = contactPatchKeyStrength(sunDirection.y);
+  // Reads the CASTER's elevation, not the sky's. The patch exists to stand in
+  // for a cast shadow the chase camera cannot see, so on a split-key track the
+  // question is how high the light that actually casts is sitting. Penguin
+  // Village goes ~1.22 -> 1.0 because its 20-degree caster clears
+  // CONTACT_KEY_READABLE_SIN: the stand-in retires when the real thing arrives.
+  const contactKeyStrength = contactPatchKeyStrength(shadowDirection.y);
   // Owner feedback 2026-06-12: karts read ~20% too big against the track.
   const playerModel = createGroundedKartModel({
     accent: playerCharacter.accent,
@@ -8631,6 +8675,7 @@ const createScene = ({
     midGroundBelt,
     postChain,
     skyDome,
+    shadowDirection,
     sunDirection,
     sunDistance,
     // Baked-GLB load state machine (pending -> active | missing). The
@@ -11975,7 +12020,10 @@ export const ComebackCityThreeKartRace = ({
       // light's target to whole shadow texels on the way — a light that rides a
       // moving subject resamples the depth map on a new grid every frame, and
       // the result is shadow edges that visibly crawl along every silhouette.
-      engine.shadowRig.update(playerSample.point, engine.sunDirection, engine.sunDistance);
+      // shadowDirection, not sunDirection: identical on a single-key track, and
+      // on a split-key one this is the caster's vector so the frustum, the texel
+      // snap and the umbra all follow the light that actually writes the map.
+      engine.shadowRig.update(playerSample.point, engine.shadowDirection, engine.sunDistance);
       // Tier-2 grounding strength for the NEXT pose update. The cast shadow is
       // thrown along the ground projection of -sunDirection; when that runs the
       // same way the lens is looking, the shadow is behind its own caster and
