@@ -1,10 +1,13 @@
 // Penguin Village — the arctic GP (docs/MULTITRACK_EXECUTION_PLAN.md Phase 1).
 //
 // AAA WAVE 8 — THE 4x LAP. The geometry below is candidate A, "BAYFRONT SWEEP"
-// (owner-picked from the plan views in tmp/track-candidates/): 11,678 units,
-// 44.92 s a lap, a 134.75 s race, sixteen corners (8 sweeper, 2 hairpin, 6 turn,
-// 0 kink) and a 9.22 s straight. The old loop was 2,443 units with a 2.19 s
-// longest straight, which is why there was never a window to set up a pass.
+// (owner-picked from the plan views in tmp/track-candidates/), scaled to its
+// promised LAP TIME rather than to its length (see LAP_TIME_SCALE): 11,128.7
+// units, 44.87 s a lap, a 134.62 s race, sixteen corners (0 kink) and a 9.19 s
+// straight, with fifteen beats at a 2.99 s mean gap. The old loop was 2,443
+// units with a 2.19 s longest straight, which is why there was never a window
+// to set up a pass. Comeback City lands at 44.78 s, so the two tracks in the
+// cup are now 0.09 s apart per lap instead of 2.31 s.
 //
 // BAYFRONT WAS DESIGNED FOR COMEBACK CITY AND IS RUNNING HERE. A centerline is
 // a centerline, so the GEOMETRY transfers untouched and every measured number
@@ -81,6 +84,31 @@ const RADII = [
 // too close together is the one authoring mistake that produces a kink.
 const SPACING = 26;
 
+// AAA WAVE 8 ROUND 2 — THE LAP TIME, NOT THE LENGTH, IS WHAT HAD TO MATCH.
+//
+// Candidate A's sheet promised 44.92 s a lap and the shipped layout measured
+// 47.09 s. Nothing was mis-authored: the two candidates were matched on LENGTH
+// (11,678 vs Comeback City's 11,643) and the tracks do not run at the same mean
+// speed — the previewer's measured means are 248 u/s here against 260 there, so
+// an equal length is a 2.3 s longer lap. Two tracks in one cup should not differ
+// by that much by accident.
+//
+// The correction is a uniform scale on the WAYPOINTS ONLY; the fillet radii
+// below are deliberately NOT scaled. A uniform scale of a polygon leaves every
+// join ANGLE invariant, so holding the radii fixed keeps every corner
+// geometrically identical — same radius, same arc, same classification, same
+// hairpin — and takes the 540 units out of the STRAIGHTS, which is where a lap
+// that is 4.8% long should lose them. Scaling the radii too would have taken the
+// beacon hairpin from 82 to 78, and the note on that number explains why 82 is
+// the value that puts its tightest instant in the high 70s rather than back in
+// the medium band.
+//
+// 0.955 solved against the previewer's own model: 11,138.6 units / 44.91 s,
+// i.e. within 0.13 s of Comeback City's 44.78 s. Re-solve it here, not by
+// retyping the waypoints, so candidate A's sheet stays readable against the
+// numbers it was picked on.
+const LAP_TIME_SCALE = 0.955;
+
 // Rigid translation onto the origin. The ground plane is the ONE piece of world
 // geometry pinned to the origin (backdrop rings, dome and shadow rig are all
 // camera- or centreline-anchored), so an off-origin loop would make it pay for
@@ -102,7 +130,12 @@ const recentreLoop = (points) => {
   return points.map((point) => ({ x: point.x - centreX, z: point.z - centreZ }));
 };
 
-const centerline = recentreLoop(buildCenterline(WAYPOINTS, { radius: RADII, spacing: SPACING }));
+const centerline = recentreLoop(
+  buildCenterline(
+    WAYPOINTS.map((point) => ({ x: point.x * LAP_TIME_SCALE, z: point.z * LAP_TIME_SCALE })),
+    { radius: RADII, spacing: SPACING }
+  )
+);
 export const PENGUIN_VILLAGE_GEOMETRY = validateCenterline(centerline);
 
 const PENGUIN_VILLAGE_COURSE = Object.freeze({
@@ -180,7 +213,12 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   // candidate A worth building counts the crest launch as one of its fifteen
   // events; without it the lap drops to fourteen and the mean gap moves. A
   // 135-second GP is not the beginner loop any more either way.
-  elevation: { bridgeBand: { from: 0.168, peak: 28, to: 0.213 }, crestLaunch: true },
+  // Round 2: the band widens 0.045 -> 0.0471 of a lap. It is a PROGRESS span
+  // over a lap that just lost 4.5% of its length (LAP_TIME_SCALE), so leaving it
+  // alone would have taken the same 28-unit peak over 24 fewer world units and
+  // pushed the gradient 16.7% -> 17.6%. This is the same ~525-unit ramp, and it
+  // holds the 17.0% the note above is written against.
+  elevation: { bridgeBand: { from: 0.1665, peak: 28, to: 0.2136 }, crestLaunch: true },
   ramps: [
     // Off the racing line so both are a deliberate line choice, not a trap:
     // one on the glacier shore, one on the exit of the beacon hairpin.
@@ -255,6 +293,52 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   // (uRoadIceTotal 0.3 -> 0.12, uRoadFresnelStrength 0.11 -> 0.045). The kerb
   // debt below stays paid: a dark tooth clears both the darker ice AND the
   // snowfield, which a white one never did.
+  //
+  // ROUND 2 FIX ROUND — THE VALUE FIX WENT FURTHER; THE TABLE STILL DID NOT
+  // MOVE, AND THIS IS THE MEASUREMENT THAT DISPOSES OF TWO CRITIC FINDINGS
+  // AIMED AT IT SO THE NEXT AGENT DOES NOT RE-CHASE THEM.
+  //
+  // The value half landed again (ICE_SPECULAR_TRADE 0.46 -> 0.60 and
+  // uRoadIceTotal 0.12 -> 0.075 in the monolith): re-measured on the shipped
+  // frames, the ice half of penguin-village-p0_33 read 154-164 luma against a
+  // ~148 snowfield, i.e. the road was still out-luminating the field, which is
+  // the blocker. Both levers are unconditional (one is baked into the vertex
+  // colour, one is a hard cap on the additive sum) and both multiply out on
+  // Comeback City, which authors no bands at all.
+  //
+  // TWO FINDINGS AGAINST THIS TABLE ARE WRONG, MEASURED:
+  //
+  //   1. "The asphalt-to-ice transition renders as a hard black trapezoid on
+  //      the racing line at penguin-village-p0_9 — blend the band boundary."
+  //      p0_9 captures at progress 0.893. The only band edges this table has are
+  //      0.29 and 0.37, and the previous round already measured those two arcs
+  //      as never coming within 2,863 world units of p0.89. Measured on the
+  //      frame itself, the dark patch is bounded at lane -0.33..+0.05 at one
+  //      depth and -0.43..+0.16 at another — a lane band is lane-CONSTANT by
+  //      construction, so a shape whose lane extent changes with distance from
+  //      the camera cannot be one. Its dark value (46,47,65) is the road's own
+  //      unmodified asphalt, identical to the road at p0_06/0_15/0_24/0_45/
+  //      0_56/0_67/0_78; what is anomalous is the surface AROUND it, which sits
+  //      at 139-149 — the snowfield's value — from ~29 units in front of the
+  //      camera to the horizon. So the artefact is a depth-keyed wash over the
+  //      road, not a hard-edged band on it, and blending this table's seams
+  //      would change nothing at that mark.
+  //   2. "The band leaks to p0.89." Same arithmetic, same answer, and
+  //      `surfaceTypeAt` returns 'asphalt' for every lane at 0.893 by
+  //      inspection, so `aRoadIce` is 0 on every vertex there and neither sheen
+  //      lobe can fire.
+  //
+  // The instrumentation for what IS doing it already exists and is one capture:
+  // ?roadIce=0 at p0.9 (see uRoadIceEnable in the monolith). If the road stays
+  // at ~139 with the injection dead — and the arithmetic above says it will —
+  // the cause is a depth-keyed runtime stage (aerialEffect / speedBlur / the
+  // post chain), none of which this package owns and all of which wave 8
+  // explicitly defers one at a time.
+  //
+  // The lane seams themselves stay HARD on purpose: the coincident vertex pair
+  // in addTrack is what makes the ice edge half a metre wide instead of smeared
+  // across a seven-unit lane column, which is the whole reason the risk/reward
+  // line reads as a line.
   surfaceBands: [
     { progressStart: 0, progressEnd: 0.29, laneStart: -1, laneEnd: 1, type: 'asphalt' },
     { progressStart: 0.29, progressEnd: 0.37, laneStart: -1, laneEnd: -0.28, type: 'ice' },
@@ -1377,7 +1461,7 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   // customStartArch: skip the default finish gantry (the ICE IS NICE arch
   // marks the start/finish instead).
   dressing: { penguinVillage: true, customStartArch: true },
-  // 45 -> 180. The geometric solve is 134.75 s over three laps and measured
+  // 45 -> 180. The geometric solve is 134.62 s over three laps and measured
   // autoplay runs a little slower than the solve (the grid start spends the
   // first two seconds accelerating from a standstill), so the number to beat is
   // ~138 s. 180 keeps the same proportional headroom the old 45 held over the

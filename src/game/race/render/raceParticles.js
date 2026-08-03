@@ -154,7 +154,9 @@
 //
 // Two mechanisms enforce it, and every emitter in both pools is now covered by
 // both. (1) A per-emitter angular CEILING — the burst pool has had one since
-// wave 5 (SPARK/CRYSTAL/GLINT/SHARD/CONFETTI/IMPACT_RING_MAX_ANGLE); the spray
+// wave 5 (SPARK/CRYSTAL/GLINT/SHARD/CONFETTI/IMPACT_RING_MAX_ANGLE, and since
+// wave 8 round 2 FLAME_SHELL/FLAME_CORE_MAX_ANGLE, which were the three burst
+// emitters this paragraph claimed were covered and were not); the spray
 // pool had one global number and a `flat ? 3 : 1` multiplier for four emitters
 // whose authored sizes span 0.55 to 6.5 units, which is how the ground wash
 // ended up allowed 0.33 rad (229 px at 900 p). See FLAT_MAX_ANGLE and
@@ -389,6 +391,23 @@ const resolveSurfaceLook = (surface, offRoad, isIce) => {
 // than as thrust.
 const FLAME_TTL = 0.15;
 const FLAME_CORE = new THREE.Color('#FFF6DC');
+// ...and the arctic one (wave 8, round 2). EXHAUST_TINT already pulls the shell
+// and the tail to ice-blue on Penguin Village — "amber is Comeback City's; the
+// arctic exhales vapour" — and EXHAUST_TIER_PULL closes the tier-colour bypass
+// beside it, but the CORE was left at one hardcoded cream on both tracks. That
+// is the hole, and it is the worst one of the three to leave open: the core
+// carries the highest per-sprite brightness in the file (0.38 against the
+// shell's 0.14), runs ~11 alive at full boost, and sits directly on the kart's
+// rear deck in screen space, so it is the module's single largest warm
+// contribution to an ice-track frame. Measured on wave8-r2/penguin-village-p0_24
+// (284 km/h): the kart-body box goes 20.9% amber-saturated against 4.3% at
+// cruise, and the four dominant hues collapse into 0-30 degrees with no cool
+// hue left in the top four. Most of that is NOT this module (see the handoff
+// note in spawnIdleFlame — the monolith's `boostFlame` is six hardcoded warm
+// glow sprites 1.9-6.4 units across), but this stage is the part of it this file
+// owns. Still the whitest, hottest lobe in the plume, which is the core's job;
+// it is now white with the storm in it rather than white with a sunset in it.
+const FLAME_CORE_ARCTIC = new THREE.Color('#EAF6FF');
 // Nozzle height above the kart origin. 1.5 sat at the bottom of the bodywork,
 // and from a chase camera that projects straight onto the asphalt — measured
 // on wave2-r1/penguin-village-p0_15, where the plume decodes as an unbroken
@@ -406,6 +425,49 @@ const FLAME_MIN_CLEARANCE = 1.9;
 const BURST_STRETCH_MAX = 5.5;
 const FLAME_SHELL_STRETCH_MAX = 2.6;
 const FLAME_CORE_STRETCH_MAX = 1.5;
+// Per-sprite ANGULAR ceilings for the two boost stages and the idle puff (wave
+// 8, round 2). The screen-size contract at the top of this file claims "every
+// emitter in both pools is now covered" by an angular ceiling, and these three
+// were not: they set `stretchMax` (a LENGTH cap) and nothing else, so they fell
+// through to the burst pool's size-derived heuristic —
+// `MAX_SPRITE_ANGLE * min(1, size * 0.6)` — which the PLUME_MAX_ANGLE block
+// already records as "a catch-all back when no emitter had an authored ceiling
+// at all". Work the heuristic out for the shell and it is the loosest ceiling
+// any billboard in this file has:
+//
+//   shell size 1.15-1.6  ->  heuristic cap 0.076-0.106 rad  (53-74 px at 900 p)
+//   drift spray                SPRAY_MAX_ANGLE 0.062        (43 px)
+//   contact/landing plume      PLUME_MAX_ANGLE 0.055        (38 px)
+//
+// and the shell is the emitter with the STRONGEST claim on a tight one: it is
+// born at the diffuser, i.e. ~5.6 units nearer the lens than the kart itself
+// (depth ~24.5 against the boom's ~30), so it is the only billboard here that
+// is guaranteed to draw ON the player's own bodywork. Its natural width at the
+// shipped framing is size * (0.5 + fade * 0.8) / depth = 0.061-0.085 rad, i.e.
+// the top of its own distribution is already past every other ceiling in the
+// file, and ~16 are alive at full boost. That is the additive lobe the blind
+// judge logged at pair-12/13 as the kart body saturating to one hue — the part
+// of it this module owns.
+//
+// 0.062 aligns the shell with the drift spray, which is the file's own
+// reference for "the cue can never outgrow the vehicle that threw it". It is a
+// GUARD RAIL and not a resize: count, brightness, velocity, colour and lifetime
+// are untouched, so the cone read (which comes from the count and from the
+// core/shell velocity difference, never from one sprite's width) is unchanged.
+//
+// And it does NOT reproduce the SPRAY_MAX_ANGLE trap recorded above — there the
+// clamp bit at BIRTH for every member, so the whole distribution came out at one
+// identical width. Here the width term is `size * (0.5 + fade * 0.8)`, which
+// SHRINKS with age: a shell crosses under the ceiling partway through its own
+// 0.15 s life, so at any instant the frame holds members at a spread of widths
+// with only the youngest, largest ones clamped.
+const FLAME_SHELL_MAX_ANGLE = 0.062;
+// The core is the one lobe in the module that is allowed to clear the bloom
+// knee, so it is capped tighter than the shell rather than looser: hot AND wide
+// is how an additive sprite becomes a lamp. Authored 0.42-0.58 units, natural
+// width 0.022-0.031 rad at the shipped framing, so 0.030 trims only the largest
+// cores at birth and leaves the value alone.
+const FLAME_CORE_MAX_ANGLE = 0.03;
 // Third stage of the plume (wave 5, round 3), and the answer to four rounds of
 // "the flame is an amorphous orange blob with no core, tail or falloff".
 //
@@ -1823,6 +1885,9 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // system running there. Amber is Comeback City's; the arctic exhales vapour.
   const EXHAUST_TINT = isIce ? '#9FD8FF' : '#FF9A3C';
   const EXHAUST_COLOR = new THREE.Color(EXHAUST_TINT);
+  // The plume's hot core follows the same rule, which it did not until wave 8
+  // round 2 — see FLAME_CORE_ARCTIC for the measurement.
+  const flameCoreTint = isIce ? FLAME_CORE_ARCTIC : FLAME_CORE;
   // ...and how far a TIER-coloured plume is pulled back toward it. The arctic
   // override above was silently bypassed the instant a mini-turbo banked a
   // tier, because the plume then takes DRIFT_FEEL.sparkColors — gold at tier 2,
@@ -3327,6 +3392,10 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     shell.size = (1.15 + Math.random() * 0.45) * (0.78 + 0.22 * force);
     shell.stretch = 1.6;
     shell.stretchMax = FLAME_SHELL_STRETCH_MAX;
+    // Explicit ceiling instead of the burst pool's size-derived heuristic — see
+    // FLAME_SHELL_MAX_ANGLE for why this emitter needs the tightest one and got
+    // the loosest.
+    shell.maxAngle = FLAME_SHELL_MAX_ANGLE;
     shell.tint.copy(tint);
     shell.ttl = FLAME_TTL * (0.8 + Math.random() * 0.5);
     shell.life = shell.ttl;
@@ -3345,7 +3414,9 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     core.size = (0.42 + Math.random() * 0.16) * (0.82 + 0.18 * force);
     core.stretch = 0.9;
     core.stretchMax = FLAME_CORE_STRETCH_MAX;
-    core.tint.copy(FLAME_CORE);
+    core.maxAngle = FLAME_CORE_MAX_ANGLE;
+    // Track-tinted like every other stage of the plume — see FLAME_CORE_ARCTIC.
+    core.tint.copy(flameCoreTint);
     core.ttl = FLAME_TTL * 0.7;
     core.life = core.ttl;
   };
@@ -3441,6 +3512,35 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   //     rear; wave7-r3/penguin-village-p0_24 (229) already has the lobes.
   // Staging THAT pair is a one-line change in the monolith and is owned by
   // whoever owns the monolith this wave.
+  //
+  // WAVE 8, ROUND 2 — SECOND HANDOFF, SAME OWNER, BIGGER. The blind judge scored
+  // pair-12/13 as "boost glow has no ceiling on the player kart... the whole rear
+  // two-thirds saturates to one amber value" and filed it against this file. The
+  // measurement says otherwise and it is worth writing down so the next round
+  // does not aim at this module again:
+  //   * every plume stage HERE is track-tinted (EXHAUST_TINT #9FD8FF on ice,
+  //     PAD_BOOST_TINT #BFEAFF, EXHAUST_TIER_PULL 0.72, and as of this round the
+  //     core too) — this module cannot put amber on Penguin Village at all.
+  //   * the amber in wave8-r2/penguin-village-p0_24 is IDENTICAL in hue, shape
+  //     and nozzle position to comeback-city-p0_33's. A track-independent lobe
+  //     is by definition not one of ours.
+  //   * it is the monolith's `boostFlame` group (ComebackCityThreeKartRace.jsx,
+  //     built ~:1344, driven ~:10620): six additive glow sprites, two per nozzle
+  //     plus a tail, at hardcoded '#8a3a12' 6.4 units / '#FF8C00' 4.2 units /
+  //     '#FFD34F' 1.9 units. It is switched on by `race.boostTimer > 0 ||
+  //     miniTurboActive`, which is exactly why the amber appears on boost frames
+  //     and not on cruise frames (p0_24 284 km/h: 20.9% of the kart-body box
+  //     amber-saturated; p0_45 228 km/h: 4.3%), and its 4.2-6.4 unit sprites are
+  //     3-4x anything this pool can emit (our shell peaks at ~1.6 units and is
+  //     now ceilinged at FLAME_SHELL_MAX_ANGLE on top of that).
+  //   * the same file's `idleFlames` pair is '#FF8C00' too and is on whenever
+  //     speed > 16, so BOTH of the monolith's exhaust systems ignore the arctic
+  //     palette that this module, the road package and the grade all honour.
+  // The fix is the one this module already made twice: give those two groups an
+  // isIce palette (the arctic set that works here is core '#EAF6FF', shell
+  // '#9FD8FF', tail '#2C4A66'), and cap the tier multiplier so the co-located
+  // core+shell peak stays under the tone curve's shoulder — the arithmetic for
+  // that ceiling is already written out at ComebackCityThreeKartRace.jsx:1330.
   const spawnIdleFlame = (context, tint, load = 1) => {
     const side = Math.random() < 0.5 ? -1 : 1;
     const cos = Math.cos(context.yaw);
@@ -3463,6 +3563,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     item.size = (0.55 + Math.random() * 0.3) * (0.8 + 0.2 * load);
     item.stretch = 1.1;
     item.stretchMax = FLAME_SHELL_STRETCH_MAX;
+    // Same explicit ceiling as the boost shell. It does not bite at the shipped
+    // framing (an idle puff is authored at 0.55-0.85 units, i.e. ~0.045 rad at
+    // the diffuser's depth), which is the point: the guard is stated rather than
+    // left to a size heuristic that would hand this emitter 0.036-0.056 rad
+    // depending on a random number.
+    item.maxAngle = FLAME_SHELL_MAX_ANGLE;
     item.tint.copy(tint);
     item.ttl = IDLE_FLAME_TTL * (0.7 + Math.random() * 0.6);
     item.life = item.ttl;

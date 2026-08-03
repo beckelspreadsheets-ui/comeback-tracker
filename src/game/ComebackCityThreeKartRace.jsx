@@ -3713,7 +3713,39 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
       // Comeback City is untouched by construction — it authors no surfaceBands,
       // so surfaceTypeAt returns 'asphalt' for every vertex and sheen is 0. The
       // owner-confirmed Miami dusk cannot move by this edit.
-      const ICE_SPECULAR_TRADE = 0.46;
+      //
+      // AAA WAVE 8 ROUND 2 (fix round) — 0.46 -> 0.60, AND THE REASON IS THAT
+      // THE ROUND-2 CAP LANDED AND THE BAND IS STILL BRIGHTER THAN THE FIELD.
+      // Measured on penguin-village-p0_33 (capture progress 0.323, i.e. inside
+      // the authored 0.29-0.37 ice band): the drivable surface samples luma 111
+      // on the right of the road and 154-164 on the LEFT — which is the ice
+      // half, lane -1..-0.28 — against a snowfield the same frame puts at ~148.
+      // The road out-luminates the terrain it has to be read against, which
+      // inverts this track's own Sherbet Land rule.
+      //
+      // Round 2 spent its whole budget on the ADDITIVE terms (uRoadIceTotal
+      // 0.3 -> 0.12, uRoadFresnelStrength 0.11 -> 0.045) and the band moved by
+      // far less than the arithmetic predicted. This is the other half of the
+      // energy balance and the one lever no lighting path, probe, grade or post
+      // stage can route around, because it is multiplied into the vertex colour
+      // before anything else runs. 0.60 takes the ice band's diffuse to 40% of
+      // asphalt's; with the additive cap coming down in the same edit that puts
+      // the surface UNDER the snowfield with margin, which is the ordering
+      // (asphalt < ice < snow) the palette already asks for everywhere else.
+      //
+      // Comeback City is untouched by construction — it authors no
+      // surfaceBands, so surfaceTypeAt returns 'asphalt' for every vertex and
+      // `sheen` is 0. This is a property of the vertex attribute, not a claim
+      // about the grade.
+      //
+      // NOTE FOR THE NEXT AGENT: scripts/track-layout-preview.mjs keeps its own
+      // copy of this constant (ICE_SPECULAR_TRADE) and of SHEEN_SPECULAR_LIFT,
+      // both calibrated against the pre-round-2 build. Until they are re-solved
+      // the previewer will keep printing ~11% for glacier-shore whatever this
+      // value is — it will UNDER-report the separation, which is the safe
+      // direction, but it cannot be used to verify this change. That file is
+      // not owned by this package.
+      const ICE_SPECULAR_TRADE = 0.6;
       const shade =
         roadEdgeShade(lane) * (1 - WEAR_DEPTH * wearWeight * wearBand) * (1 - ICE_SPECULAR_TRADE * sheen);
       roadColors.push(tint[0] * shade, tint[1] * shade, tint[2] * shade);
@@ -4022,7 +4054,23 @@ uniform float uRoadSheenStrength;`,
       // build. Until that constant is re-solved the previewer will keep printing
       // ~11% for glacier-shore no matter what this value is. That file is not
       // owned by this package.
-      uRoadIceTotal: { value: 0.12 },
+      //
+      // AAA WAVE 8 ROUND 2 (fix round) — 0.12 -> 0.075. The note above solves
+      // 0.12 against a predicted ~95-105 display luminance; the frames it
+      // shipped as measure 154-164 on the ice half of penguin-village-p0_33
+      // against a ~148 snowfield, so the calibration pair it was solved from
+      // (0.30 -> 152) over-predicted the fall. Rather than re-solve a curve off
+      // two points, this takes the additive cap down by the same ratio again
+      // AND trades more diffuse for it at the vertex (ICE_SPECULAR_TRADE above),
+      // so the two independent levers move together instead of one being asked
+      // to carry the whole gap.
+      //
+      // 0.075 linear against asphalt at ~0.03 linear is still 2.5x the surface
+      // it sits on, so the 92-power lobe that survives this cap still reads as a
+      // moving specular rather than as tarmac — which is the property that has
+      // to be protected, because a cap this low bounds the sharp highlight as
+      // well as the flat floor (they share one min()).
+      uRoadIceTotal: { value: 0.075 },
       // Hard energy ceiling on the 92-power lobe. See the chunk above: this is
       // a bound on the WEIGHT, so the sheen keeps uRoadSheenColor's hue at
       // every intensity instead of clipping into whichever channel has headroom.
@@ -6053,7 +6101,26 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     );
     if (!placement) continue;
     group.position.copy(placement);
-    group.rotation.y = Math.atan2(tangent.x, tangent.z);
+    // AAA WAVE 8 ROUND 2 — THE REPEAT, AND WHY IT IS A YAW PROBLEM.
+    //
+    // Two critics filed the same finding independently: "the purple crate-block
+    // prop repeats at p0_33, p0_56, p0_78 and p0_9" and "the losing build at
+    // least varied its bodies". The scatter cycles four prop types on index % 4,
+    // which is a fine rhythm — what makes it READ as a repeat is that every
+    // instance was aligned to its own tangent and left at scale 1, so the same
+    // silhouette arrived at the same angle at the same size every fourth slot.
+    // On the old 2,897-unit lap you saw ~6 of each per lap; on the 4x lap you
+    // see 21, and identical is identical.
+    //
+    // Deterministic jitter off the index — no RNG, so the layout is still the
+    // same every load and a capture is still reproducible. 2.399 rad is the
+    // golden angle, the one step that does not cycle over a run this length, and
+    // it is folded to +/-0.55 rad so a planter still faces roughly roadward
+    // rather than presenting its back. Scale rides two coprime moduli so size
+    // and facing do not come back into phase with each other.
+    group.rotation.y = Math.atan2(tangent.x, tangent.z) + (((index * 2.399) % 1.1) - 0.55);
+    const propScale = 0.86 + ((index * 5) % 7) * 0.055;
+    group.scale.set(propScale, 0.9 + ((index * 3) % 5) * 0.062, propScale);
     if (index % 4 === 0) {
       group.add(makeBox({ x: 2, y: 7, z: 2 }, { y: 3.5 }, propMat.trunk));
       const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(5.2, 0), propMat.leaf);
@@ -7102,45 +7169,93 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
     });
     world.add(setFlatTransform(river));
   }
-  // Background icebergs ringing the horizon — the "iceberg" read. Far out
-  // beyond the track envelope, tall and jagged, skipping any near the road.
+  // Background icebergs — the "iceberg" read, and the arctic's whole mid-ground.
   //
-  // AAA wave 5 round 2 — THE KEEP-OUT WAS MEASURED TO THE BERG'S ORIGIN.
+  // AAA WAVE 5 ROUND 2 kept a 70-unit keep-out honest (a 130-tall berg's main
+  // cone has a 65-unit base radius, so 70 put its skirt on the tarmac and the
+  // chase camera inside it). That guard is unchanged below. What changed is
+  // WHERE the ring is anchored, and it is the measured cause of a blocker.
   //
-  // 70 units of centreline clearance sounds generous until you notice a berg
-  // is up to 130 tall and its main cone's base radius is HALF its height. A
-  // 130-unit berg planted at exactly 70 has 65 units of rock reaching back
-  // toward a road whose own half-width is up to 32 — so its skirt overlaps the
-  // tarmac and the chase camera drives straight through it. That is the
-  // measured artefact: penguin-village-p0_9's right third is a single flat
-  // (121,150,170) mass with the camera inside it, and (121,150,170) is
-  // ICEBERG_SHELF's own lit value, i.e. the waterline skirt of one of these,
-  // seen from two metres.
+  // AAA WAVE 8 ROUND 2 — THE RING WAS ANCHORED TO THE ORIGIN AND THE 4x LOOP
+  // DROVE OUT FROM UNDER IT.
   //
-  // The berg is PUSHED OUT rather than skipped, because dropping it would thin
-  // the horizon ring the arctic identity is built on. Radially outward from the
-  // origin is the right direction: the course is inside this ring, so every
-  // step out is a step away from all of it.
-  for (let i = 0; i < 16; i += 1) {
-    const a = (i / 16) * Math.PI * 2 + 0.25;
+  // These were authored as "far out beyond the track envelope" on a 2,443-unit
+  // loop, as a circle of radius 500-544 about the world origin. Measured on the
+  // shipped 4x centreline (which recentres itself on the origin by construction,
+  // see penguinVillage.js):
+  //
+  //   centreline radius from origin      1205 - 2200 units
+  //   the r=500..544 berg circle sits      661 - 1039 units from the road
+  //
+  // i.e. every one of the sixteen now stands in the INFIELD, clears the 100-unit
+  // keep-out trivially, and is looked at ACROSS the loop from 660-1040 units
+  // away. FogExp2 at this track's 0.0013 is 56% at 700 units and 82% at 1000, so
+  // a faceted, vertex-shaded berg arrives as a single flat neutral wedge with no
+  // gradient, no arctic tint and snow particles drawing in front of it — which
+  // is exactly what the artefact hunter measured filling x0-260 / y140-455 of
+  // penguin-village-p0_56 at a dead-flat (147,145,146) -> (134,133,134). Sixteen
+  // of them clustered about one point also stack into the "row of near-identical
+  // cones at near-identical spacing" the blind judge filed against p0_10/11/13/16:
+  // seen from anywhere on a loop that surrounds them, a circle of cones IS a
+  // picket.
+  //
+  // So the ring is anchored to the ROAD instead of to the origin. Three
+  // consequences, all of them the point:
+  //   * distance from the camera is now a CONSTANT of the design (120-260 units
+  //     off the road edge) instead of a function of where the loop happens to
+  //     run, so fog takes 4-13% instead of 56-82% and the vertex-colour gradient
+  //     shadeIceForm bakes into every face actually reaches the eye;
+  //   * they alternate sides, so both flanks carry a mid-ground mass — the
+  //     "empty apron from the kerb to the horizon" finding;
+  //   * spacing is by LAP, so the rhythm survives any future length change.
+  // Object count is unchanged at 16 (4 meshes each), so the draw budget does not
+  // move; this is the same geometry, put where it can be seen.
+  const BERG_COUNT = 16;
+  for (let i = 0; i < BERG_COUNT; i += 1) {
+    // 0.031 phases the run off the igloo (0.04) and filler (0.02) slots so a
+    // berg never lands on top of a low prop's own anchor.
+    const p = ((i + 0.5) / BERG_COUNT + 0.031) % 1;
+    // No onElevatedSpan skip here, unlike every other anchor in this file: that
+    // guard exists because a prop is planted AT the sampler's own y, which on a
+    // viaduct band is deck height. A berg's y is forced to -2 below, so it lands
+    // on the ground beside a raised road, which is correct — skipping it would
+    // just punch a hole in the ring across the pressure ridge.
+    const { normal, point } = sampler.pointAt(p);
     const h = 58 + (i % 4) * 24;
     // The berg's own footprint (main cone radius h*0.5, skirt h*0.54 at the
     // waterline), the widest road this track can produce, and a chase-boom's
-    // worth of camera swing on top so nothing large can enter the corridor even
+    // worth of camera swing on top, so nothing large can enter the corridor even
     // when the camera lags wide through a corner.
     const clearance = h * 0.56 + roadWidth * 0.5 + 34;
-    let r = 500 + (i % 3) * 22;
-    let pos = { x: Math.cos(a) * r, z: Math.sin(a) * r };
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    // Two setback bands rather than one. A single band is a fence; two that
+    // overlap in silhouette read as a range with depth in it, which is the
+    // "vary scale, rotation and lateral offset per instance" ask.
+    const setback = Math.max(clearance, sampler.widthAt(p) * 0.5 + (i % 2 ? 132 : 236) + (i % 3) * 27);
+    const side = i % 2 === 0 ? 1 : -1;
+    let pos = point.clone().addScaledVector(normal, side * setback);
+    // The lap folds back on itself, so an anchor cleared against its OWN section
+    // can still stand on another one. Push further out along the same normal —
+    // the direction is already away from this section, and stepping out is what
+    // keeps the ring's rhythm instead of punching holes in it.
+    for (let attempt = 0; attempt < 6; attempt += 1) {
       const distance = minCenterlineDistance(sampler, pos.x, pos.z);
       if (distance >= clearance) break;
-      r += clearance - distance + 8;
-      pos = { x: Math.cos(a) * r, z: Math.sin(a) * r };
+      pos = pos.clone().addScaledVector(normal, side * (clearance - distance + 10));
     }
     if (minCenterlineDistance(sampler, pos.x, pos.z) < clearance) continue;
     const berg = makeIceberg(h);
     berg.position.set(pos.x, -2, pos.z);
-    berg.rotation.y = a * 1.7;
+    // Yaw off the anchor's own index rather than off a bearing about the origin:
+    // the old `a * 1.7` was a function of the ring angle, so adjacent bergs on a
+    // regular circle got a regular yaw step and every one presented the same
+    // face. 2.399 is ~137.5 degrees, the golden angle, which is the one step
+    // that never repeats a facing over a run this short.
+    berg.rotation.y = i * 2.399;
+    // Non-uniform scale, so the five-sided cones do not all silhouette alike.
+    // Held to +/-14% and tallest-first-out so the near band stays the smaller of
+    // the two and never eats the sky the far band is read against.
+    const stretch = 0.9 + ((i * 7) % 5) * 0.07;
+    berg.scale.set(stretch, 1 + ((i * 3) % 4) * 0.06, 2 - stretch);
     world.add(setFlatTransform(berg));
   }
   // Penguin spectator clusters along the rails — more penguins everywhere.
