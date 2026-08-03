@@ -154,8 +154,51 @@ first draft compared a hardcoded `224` against the monolith rather than the valu
 did something else. The first negative test also caught the gate printing `FAIL`
 and still exiting 0. Rule 2 earned its place twice in one item.
 
-**2. Rebuild the flatness metric before trusting it.** The 62.3% figure that
-justified the largest work item does not survive audit:
+**2. ~~Rebuild the flatness metric~~ — DONE, committed as
+`scripts/ground-flatness.mjs`.** All three audit faults fixed: the road is masked
+**per pixel**, projected from the shipped curve through the previewer's own
+camera (imported, not copied); the free σ threshold is **gone**, replaced by the
+median σ, which needs no cut-off to defend; and one run reads exactly one
+capture directory, so two sets cannot be spliced.
+
+Measured on `wave8-r3`, the newest capture with both tracks on the 4x layouts:
+
+| track | off-road median σ | road median σ | ratio |
+|---|---|---|---|
+| comeback-city | **1.15** | 2.94 | 2.6× flatter |
+| penguin-village | 2.56 | 3.48 | 1.4× flatter |
+
+**The localisation holds, but only for Comeback City.** PV's off-road ground is
+close to its own road; CC's is not. So this is a CC ground problem, not "the
+ground" in general — which narrows Phase 2 rather than justifying its full scope.
+
+Note how much the retired threshold destroyed: at σ<2.0 the same frames read
+58.9% vs 47.1% and 45.5% vs 43.3%, turning a 2.6× gap into 1.25× and a 1.4× gap
+into nothing at all. A cut-off on a unimodal distribution discards most of the
+signal — a stronger argument against it than "the threshold was arbitrary".
+
+**Two things I could not deliver, stated plainly.** The r = −0.71 correlation
+does not transfer to the new statistic, and it **cannot be recovered from the
+archive**: the road mask is projected from the shipped curve, so it is only valid
+on frames captured on that layout, and waves 1–7 were shot on the ~2.9k-unit
+tracks. Only wave 8 onward is scoreable, which is one data point. Until several
+more waves land, this is a **relative** measure between two builds of the same
+layout — which is how a ground change will use it — and not a calibrated
+predictor of the environment score. `--validate` says so rather than printing an
+r from one point.
+
+Second: the band still contains a thin strip of above-horizon geometry at its
+top edge. Visible in the `--overlay` output, not yet excluded.
+
+**`--overlay` exists because the first two masks were both wrong and only
+looking caught it** — a per-scanline min/max mask striped the road red-and-green
+once the whole lap was projected, and the quad rasteriser left 1px seams across
+the corridor that leaked road into the off-road set. Neither showed up in the
+numbers; both were obvious in one frame. Rule 1.
+
+<details><summary>The original finding, kept for the record</summary>
+
+The 62.3% figure that justified the largest work item does not survive audit:
 
 - The measured band is **68% road on Comeback City** — a fixed vertical slab
   (`x∈[35%,65%]`) cannot exclude a perspective trapezoid.
@@ -176,8 +219,37 @@ cheap automated proxy for an expensive human gate. Rebuild it with **per-scanlin
 road masking** and a threshold justified against the σ distribution, **commit it
 as a script**, and only then let a Phase 2 exit criterion depend on it.
 
-**3. Measure Penguin Village's mean speed.** `MEAN_SPEED['penguin-village']` is
-260 by inference. Every PV number the previewer reports scales by it.
+</details>
+
+**3. ~~Measure Penguin Village's mean speed~~ — DONE, and BOTH tracks were
+wrong.** New harness `scripts/measure-mean-speed.mjs`; four races, two per
+track, all four usable, 59–66 fps with the game clock tracking the wall clock to
+within 0.7%.
+
+| track | racing laps | length | measured |
+|---|---|---|---|
+| comeback-city | 47.44 / 47.46 s | 11659.0 | **245.7** |
+| penguin-village | 45.33 / 45.39 s | 11144.1 | **245.7** |
+
+`MEAN_SPEED` was **260 for both**, so every second-valued number the previewer
+reported was 5.8% short. The plan said only PV needed measuring, because the
+previewer's comment called CC "measured" — it was, from
+`tmp/k2.5-launch-repro/telemetry-autoplay.json`, which drove the **retired
+2,897-unit loop**. The same file is already rejected by the previewer's own
+staleness check for grading lap time, while being trusted to set the scale lap
+time is computed *from*. Rule 4, exactly.
+
+The old comment's *reasoning* about PV — that once wave 8 moved the ice off the
+racing line, "PV should mean what CC means" — turns out to be **right**: the two
+measure identically to four significant figures. It was the inherited number
+that was stale, not the argument for sharing it.
+
+**This deleted Phase 3's SECOND named defect.** Corner announcement is
+units ÷ mean speed, so a 5.8% overstatement of speed understated every
+announcement. `C16@0.983` moves 1.45s → **1.54s**, crossing the 1.5s authoring
+bar. Both tracks now report **zero non-passing corners**, and `--strict-sight`
+exits 0 for the first time. Caveat worth keeping: C16 clears by 0.04s, so it is
+marginal rather than comfortable, and a future layout edit could push it back.
 
 **4. CI capture reaches 2 of 9 marks.** Hypothesis (still unverified): under
 SwiftShader the frames are genuinely slow, the dt clamp turns that into slow
@@ -259,16 +331,30 @@ scoped to include the trackVisuals experiment.
 
 ## Phase 3 — camera · M · AFTER Phase 0's previewer fix
 
-**Re-measured 2026-08-03, after Phase 0 item 1: confirmed.** Comeback City's
-crest defect is gone and **`C16@0.983 sweeper left r189.1, announced 1.45s,
-hidden by frame-side` is the only non-passing corner on either track.** It is
-limited by the frame edge, which elevation and crests do not touch — so Phase 4
-cannot fix it and neither can moving a crest. The levers are a longer approach, a
-wider entry, or the lens.
+**PHASE 0 DELETED BOTH NAMED DEFECTS. There is no corner work left here.**
 
-Note it is *tight*, not *blind*: 1.45s against a 1.5s authoring bar and a 0.8s
-blind gate, and the sightline gate passes. This is authoring debt, not a corner
-nobody can drive on sight. Penguin Village has no non-passing corner at all.
+Re-measured 2026-08-03 after Phase 0 items 1 and 3, both tracks now report
+**zero non-passing corners**, and `--strict-sight` exits 0 for the first time:
+
+| defect | deleted by | how |
+|---|---|---|
+| `C14@0.875` crest | item 1, arc-length mirror | announcement 1.30s → **1.64s** |
+| `C16@0.983` frame-side | item 3, mean speed 260 → 245.7 | announcement 1.45s → **1.54s** |
+
+**Neither was a camera problem.** Both were measurement errors in the tool that
+reported them — one sampler running at the wrong arc-length resolution, one unit
+conversion carried over from a retired track. No camera, layout or elevation
+change was involved in either.
+
+Two cautions before treating this as free. C16 clears the 1.5s authoring bar by
+**0.04s**, which is thin enough that a layout edit could push it back — and the
+whole result rests on the mean speed being right, so it is worth re-checking
+after any physics or rival-AI change. C14 is also **still crest-occluded**; it
+simply now has enough announcement to pass, so do not read this as "the crest
+was imaginary".
+
+**What actually remains in this phase is the rival readability item below**,
+which is unaffected by any of the above.
 
 Camera is a **genuine two-file split**, not monolith-dominant and not
 `chaseCameraFeel.js`-only:

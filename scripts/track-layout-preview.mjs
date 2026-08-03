@@ -44,23 +44,30 @@ const OUT_DIR = resolve(ROOT, 'tmp/track-preview');
 
 // Mean speed over a full autoplay lap, per track. NOT top speed — the number
 // that turns world units into seconds, which is the only unit a layout can be
-// judged in. CC is measured: tmp/k2.5-launch-repro/telemetry-autoplay.json
-// means 257 u/s over the moving part of the race and the lap solves at 260.
-// --speed overrides.
+// judged in. --speed overrides.
 //
-// PV: 248 -> 260, and this one is INFERRED, not measured. 248 was measured on
-// the pre-wave-8 loop, where the ice was a STRIPE across the middle 75% of the
-// road for a fifth of the lap — a surface tax every racer paid, worth roughly
-// the 12 u/s that separated PV from CC. Wave 8 re-authored it as a risk/reward
-// line: ice now runs only down the inside of C6/C7 and the default racing line
-// never touches it. With no forced surface change, PV should mean what CC
-// means, so it carries CC's measured number rather than a stale tax.
+// MEASURED 2026-08-03 on the shipped 4x layouts by scripts/measure-mean-speed.mjs
+// — four races, two per track, every one usable:
 //
-// This is the one figure in this file that is a reasoned estimate rather than a
-// measurement, and it needs a real PV autoplay capture to settle. The report
-// labels any track without applicable telemetry as a pure geometric solve at
-// +/-3%, which is exactly what this is.
-const MEAN_SPEED = { 'comeback-city': 260, 'penguin-village': 260 };
+//   comeback-city    racing laps 47.44 / 47.46 s   11659.0 / 47.45 = 245.7
+//   penguin-village  racing laps 45.33 / 45.39 s   11144.1 / 45.36 = 245.7
+//
+// at 59-66 fps with the game clock tracking the wall clock to within 0.7%.
+// Lap 1 is excluded from both: it carries the standing start, which is a
+// property of the grid rather than of the layout.
+//
+// BOTH TRACKS WERE WRONG BEFORE, not just Penguin Village. The previous pair of
+// 260s came from tmp/k2.5-launch-repro/telemetry-autoplay.json, and that capture
+// drove the retired 2,897-unit loop — a track ~75% shorter than either of these.
+// This file's own staleness check already refused to grade lap time against that
+// capture while the same file was setting the scale lap time is computed FROM,
+// which is rule 4: a gate that duplicates the data it checks stops checking it.
+//
+// The old comment reasoned that Penguin Village "should mean what Comeback City
+// means" once wave 8 moved the ice off the racing line. That reasoning was
+// RIGHT — the two now measure identically, to four significant figures. It was
+// the number being inherited that was stale, not the argument for sharing it.
+const MEAN_SPEED = { 'comeback-city': 245.7, 'penguin-village': 245.7 };
 
 // The tool must be CHECKABLE, not merely plausible — but the thing worth
 // checking is the SOLVER, not the track.
@@ -2749,4 +2756,14 @@ const main = async () => {
   }
 };
 
-await main();
+// Run only when invoked directly. Guarded so other tools can import the sampler
+// and camera model instead of copying them — which is the failure this file has
+// already had once: makeSampler was duplicated from the monolith, went
+// unchecked, and drifted for two waves. A second copy of the CAMERA would drift
+// the same way. scripts/ground-flatness.mjs imports from here for exactly that
+// reason, and inherits mirrorCheck() with it.
+const invokedDirectly =
+  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (invokedDirectly) await main();
+
+export { makeSampler, cameraPoseAt, projectToNdc, mirrorCheck, CAMERA_TIERS, MEAN_SPEED };
