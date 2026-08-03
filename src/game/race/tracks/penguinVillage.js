@@ -1,56 +1,156 @@
-// Penguin Village Rooftop Rally — the first NEW track (docs/MULTITRACK_EXECUTION_PLAN.md
-// Phase 1). Cozy beginner loop: a long "main street" start straight, a wide
-// frozen-pond sweep, a "fish market" straight, gentle return bends. This is
-// the grey-box pass — drivable road + pads + boxes, flat (no bridge), no
-// dressing yet. Hazards (fish-cart crossers, snowmen, pond slip-zone) and
-// the arctic dressing land in later passes. Pure data; gate scripts import it.
+// Penguin Village — the arctic GP (docs/MULTITRACK_EXECUTION_PLAN.md Phase 1).
+//
+// AAA WAVE 8 — THE 4x LAP. The geometry below is candidate A, "BAYFRONT SWEEP"
+// (owner-picked from the plan views in tmp/track-candidates/): 11,678 units,
+// 44.92 s a lap, a 134.75 s race, sixteen corners (8 sweeper, 2 hairpin, 6 turn,
+// 0 kink) and a 9.22 s straight. The old loop was 2,443 units with a 2.19 s
+// longest straight, which is why there was never a window to set up a pass.
+//
+// BAYFRONT WAS DESIGNED FOR COMEBACK CITY AND IS RUNNING HERE. A centerline is
+// a centerline, so the GEOMETRY transfers untouched and every measured number
+// on the candidate sheet still stands. Its NAMES did not transfer: the sections
+// were Miami-flavoured (ocean-drive, causeway, lighthouse-hairpin,
+// marina-squeeze, palm-chicane) and are renamed into this track's own
+// vocabulary below. Nothing else Miami came with them — the arctic sunset storm
+// front took four waves and a root-cause investigation and the owner has seen
+// and approved it, so the palette below is untouched except for one measured
+// legibility fix (see palette.curb).
+//
+// Its thesis is FLOW: one hard braking point, everything else held on the
+// throttle, which is the layout that most rewards the drift the owner called
+// "amazing". The debt the previewer used to report on this track is designed
+// out rather than carried: all three sub-0.8 s corner announcements are gone
+// (candidate A clears the 1.5 s AUTHORING bar at 1.93 s, not just the 0.8 s
+// gate), and the pond's road/terrain legibility is addressed at the kerb — the
+// one lever this track has, and the same one Comeback City passes on.
 import { buildCenterline, validateCenterline } from './buildCenterline.js';
 
-// A loop with real character — mixed left/right turns (the W3 dent is a
-// concave right-hander, the rest sweep), a long main-street start straight,
-// a wide pond sweeper, and one tighter signature corner. Validated:
-// ~2442 units, min radius ~72, no self-intersections.
+// Driving order, x east / z south. Main street east along the bottom, the
+// lantern chicane, four flowing sweepers up the east side, a tightening pair
+// into the frozen river, the river west across the valley, the beacon hairpin,
+// then three long esses back down the west side.
 const WAYPOINTS = [
-  { x: -380, z: 250 }, // main-street start (bottom-left)
-  { x: 320, z: 250 }, // end of the long start straight (bottom-right)
-  { x: 480, z: 70 }, // wide frozen-pond sweeper (right)
-  { x: 250, z: -40 }, // signature tight inside dent (a right-hander)
-  { x: 380, z: -250 }, // back out to the top-right
-  { x: -200, z: -300 }, // fish-market straight (top)
-  { x: -470, z: -40 }, // wide left return
+  { x: -1930, z: 1250 }, // C16 MAIN STREET HAIRPIN — the last place to take a place
+  { x: -380, z: 1250 }, // C1  flat-out entry to the chicane
+  { x: -190, z: 1120 }, // C2  Lantern chicane, element 1
+  { x: -30, z: 1200 }, // C3  Lantern chicane, element 2
+  { x: 140, z: 1105 }, // C4  Lantern chicane, element 3
+  { x: 1250, z: 1000 }, // C5  Glacier Shore — the pressure-ridge run feeds this
+  { x: 1700, z: 620 }, // C6
+  { x: 1800, z: 60 }, // C7
+  { x: 1620, z: -420 }, // C8
+  { x: 1360, z: -700 }, // C9  Fish-market dent (turns the other way)
+  { x: 1430, z: -860 }, // C10 Fish-market squeeze; the shortcut cuts across here
+  { x: 900, z: -1430 }, // C11 frozen-river entry
+  { x: -1750, z: -1430 }, // C12 BEACON HAIRPIN — the one hard braking point
+  { x: -1300, z: -830 }, // C13 esse
+  { x: -1700, z: -170 }, // C14 esse
+  { x: -1250, z: 480 }, // C15 esse
 ];
-const centerline = buildCenterline(WAYPOINTS, { radius: [120, 110, 155, 72, 110, 145, 150], spacing: 22 });
+
+// Per-corner fillet radii in world units, authored rather than discovered.
+// Capped at 235: above ~250 the corner detector stops seeing a corner at all,
+// which silently lengthens the straight it sits in.
+const RADII = [
+  105, // C16 MAIN STREET HAIRPIN — 130 degrees at r105, the second stop-and-turn
+  220, // C1
+  120, // C2 chicane
+  110, // C3 chicane
+  120, // C4 chicane
+  235, // C5
+  205, // C6
+  195, // C7
+  180, // C8
+  140, // C9  market dent
+  120, // C10 market squeeze
+  155, // C11
+  // 82, not the 100 this was first authored at. A hairpin is not defined by its
+  // arc (this one already sweeps 126 degrees) but by the instant that forces
+  // you off the throttle, and at r100 the tightest instant solved to 93 — inside
+  // the medium band, so the lap had eight sweepers, four mediums and no genuine
+  // stop-and-turn anywhere. 82 lands the tightest instant in the high 70s: a real
+  // hairpin, and still clear of the 72 floor the old W3 dent proved drivable.
+  82, // C12 BEACON HAIRPIN — the lap's only stop-and-turn
+  205, // C13
+  215, // C14
+  200, // C15
+];
+
+// 26, not the old 22: this lap is four times longer and a uniform CatmullRom
+// does not need 530 control points to follow a 200-unit radius. Points sitting
+// too close together is the one authoring mistake that produces a kink.
+const SPACING = 26;
+
+// Rigid translation onto the origin. The ground plane is the ONE piece of world
+// geometry pinned to the origin (backdrop rings, dome and shadow rig are all
+// camera- or centreline-anchored), so an off-origin loop would make it pay for
+// the offset as well as the extent. Every length, radius, angle, sightline and
+// lap time is invariant under a translation, so this is free.
+const recentreLoop = (points) => {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (const point of points) {
+    if (point.x < minX) minX = point.x;
+    if (point.x > maxX) maxX = point.x;
+    if (point.z < minZ) minZ = point.z;
+    if (point.z > maxZ) maxZ = point.z;
+  }
+  const centreX = (minX + maxX) / 2;
+  const centreZ = (minZ + maxZ) / 2;
+  return points.map((point) => ({ x: point.x - centreX, z: point.z - centreZ }));
+};
+
+const centerline = recentreLoop(buildCenterline(WAYPOINTS, { radius: RADII, spacing: SPACING }));
 export const PENGUIN_VILLAGE_GEOMETRY = validateCenterline(centerline);
 
 const PENGUIN_VILLAGE_COURSE = Object.freeze({
   key: 'penguin-village',
-  mainRoadWidth: 58,
-  startProgress: 0.02,
+  mainRoadWidth: 56,
+  // 0.005, not 0.02. This is a WORLD DISTANCE written as a progress fraction:
+  // 0.02 was 49 units on the 2,443-unit loop and would be 233 units here.
+  startProgress: 0.005,
   centerline,
   minimapPath: centerline.map((p) => ({ ...p })),
-  // Cozy and wide; the frozen-pond sweep opens up. Runtime smooths these.
+  // Width is a design tool on this layout, not decoration. The start straight
+  // and the frozen river are the two places eight karts have to exist side by
+  // side, so they are the widest sections; the esses narrow, so the flowing
+  // part still costs something. Two edits carry the whole read:
+  //   - the hairpin ribbon is 44 against the river's 64, so the WIDEST road on
+  //     the lap empties straight into the NARROWEST, a 20-unit squeeze arriving
+  //     exactly at the one hard braking point. That is the corner this layout's
+  //     thesis is built on and it now looks like it in a single frame.
+  //   - that ribbon starts at 0.695 rather than 0.72. The runtime smooths the
+  //     width table with a kernel whose sigma is 0.0118 of a lap (14 passes of
+  //     1-2-1 over 224 samples), ~138 world units here, so a step authored AT
+  //     the corner is only half-delivered when the corner arrives.
   roadRibbons: [
-    { key: 'main-street', role: 'main', width: 58, shoulderWidth: 6, startProgress: 0, endProgress: 0.24 },
-    { key: 'pond-sweep', role: 'main', width: 64, shoulderWidth: 7, startProgress: 0.24, endProgress: 0.42 },
-    { key: 'market-row', role: 'main', width: 58, shoulderWidth: 6, startProgress: 0.42, endProgress: 0.72 },
-    { key: 'return-bend', role: 'main', width: 60, shoulderWidth: 6.5, startProgress: 0.72, endProgress: 1 },
+    { key: 'main-street', role: 'main', width: 62, shoulderWidth: 7, startProgress: 0, endProgress: 0.11 },
+    { key: 'lantern-chicane', role: 'main', width: 48, shoulderWidth: 5.5, startProgress: 0.11, endProgress: 0.17 },
+    { key: 'glacier-shore', role: 'main', width: 56, shoulderWidth: 6.5, startProgress: 0.17, endProgress: 0.37 },
+    { key: 'fish-market-row', role: 'main', width: 46, shoulderWidth: 5.5, startProgress: 0.37, endProgress: 0.47 },
+    { key: 'frozen-river', role: 'main', width: 64, shoulderWidth: 7.5, startProgress: 0.47, endProgress: 0.695 },
+    { key: 'beacon-hairpin', role: 'main', width: 44, shoulderWidth: 5, startProgress: 0.695, endProgress: 0.79 },
+    { key: 'snowfield-esses', role: 'main', width: 52, shoulderWidth: 6, startProgress: 0.79, endProgress: 1 },
   ],
   boostPads: [
-    { key: 'street-pad', progress: 0.12, side: 0 },
-    { key: 'pond-pad', progress: 0.33, side: 0.1 },
-    { key: 'market-pad', progress: 0.58, side: 0 },
-    { key: 'return-pad', progress: 0.85, side: -0.1 },
+    { key: 'main-street-pad', progress: 0.08, side: 0 },
+    { key: 'glacier-exit-pad', progress: 0.32, side: 0.18 },
+    { key: 'river-pad', progress: 0.55, side: -0.2 },
+    { key: 'esse-inside-pad', progress: 0.82, side: 0.24 },
   ],
   itemBoxes: [
-    { progress: 0.06, side: -0.16 },
-    { progress: 0.18, side: 0.16 },
-    { progress: 0.3, side: -0.14 },
-    { progress: 0.46, side: 0.16 },
-    { progress: 0.6, side: -0.16 },
-    { progress: 0.74, side: 0.14 },
-    { progress: 0.88, side: -0.16 },
+    { progress: 0.02, side: -0.18 },
+    { progress: 0.12, side: 0.16 },
+    { progress: 0.47, side: -0.16 },
+    { progress: 0.62, side: 0.18 },
+    { progress: 0.7, side: -0.18 },
+    { progress: 0.885, side: 0.16 },
+    { progress: 0.96, side: -0.16 },
   ],
-  // Dressing comes in a later pass — grey-box has no buildings or props.
+  // Dressing is placed procedurally by track key in the runtime (the PV tribute
+  // set), not from anchors here.
   districtAnchors: [],
   sceneryAnchors: [],
 });
@@ -61,32 +161,96 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   tagline: 'Cozy snow-village rally',
   course: PENGUIN_VILLAGE_COURSE,
   laps: 3,
-  startOffset: 0.03,
-  // Ice-bridge OVERPASS on the top straight (progress ~0.49-0.71): the road
-  // climbs over a frozen river and back down. No forced crest jump.
-  elevation: { bridgeBand: { from: 0.55, peak: 17, to: 0.67 }, crestLaunch: false },
+  // 0.03 -> 0.0075: a world distance written as a progress fraction. 0.03 put
+  // the grid 73 units past the gate on the old loop and would put it 350 units
+  // past on this one. See the same note on Comeback City.
+  startOffset: 0.0075,
+  // THE PRESSURE RIDGE. A crest on the 1,006-unit run out of the lantern
+  // chicane — deliberately NOT on the frozen river, because a crest in the
+  // middle of the overtaking straight is exactly the fault the sightline gate
+  // found on the old bridge (0.44 s announcement), and the straight a pass is
+  // set up on is the one place forward sight has to be longest. The placement
+  // is the whole point: the crest lands at p0.19 and the next corner entry is
+  // at p0.243, i.e. 605 units = 2.3 s later, comfortably past the 1.5 s "no
+  // corner on the shoulder of a crest" rule. Peak 28 over a 518-unit band is a
+  // 17.0% gradient, inside the shipped, proven 17-18% range.
+  //
+  // crestLaunch goes false -> TRUE. This track was authored as the cozy
+  // beginner loop with no forced jump, but the measured beat pacing that made
+  // candidate A worth building counts the crest launch as one of its fifteen
+  // events; without it the lap drops to fourteen and the mean gap moves. A
+  // 135-second GP is not the beginner loop any more either way.
+  elevation: { bridgeBand: { from: 0.168, peak: 28, to: 0.213 }, crestLaunch: true },
   ramps: [
-    // Pond-edge kicker for a small air trick; off the racing line so it's a
-    // deliberate line choice, not a trap.
-    { progress: 0.34, side: -0.55 },
+    // Off the racing line so both are a deliberate line choice, not a trap:
+    // one on the glacier shore, one on the exit of the beacon hairpin.
+    { progress: 0.24, side: -0.55 },
+    { progress: 0.765, side: 0.5 },
   ],
-  shortcut: null,
+  // The market cut: leave the road inside the fish-market squeeze and rejoin on
+  // the run down to the frozen river. Only sticks above 236 u/s; case it slow
+  // and you land in the stalls. This track shipped with `shortcut: null` — the
+  // 4x lap has the room for one and the layout puts it where the risk is real.
+  shortcut: {
+    launchProgress: 0.41,
+    landProgress: 0.48,
+    side: -0.7,
+    minSpeed: 236,
+    peakHeight: 24,
+    flightTime: 1.5,
+    failFlightTime: 0.85,
+    failLandProgress: 0.44,
+    failSpeed: 40,
+    failSpin: 1.8,
+  },
+  // ---- THE ICE BAND: this track's one unique mechanic ---------------------
+  //
+  // Comeback City has no surface change at all; this is the thing that makes
+  // Penguin Village a different game and not a different palette. The old band
+  // was a STRIPE — ice across the middle 75% of the road for a fifth of the lap
+  // with snow on both shoulders — so there was no line that avoided it and
+  // therefore no decision in it. It was a tax, not a mechanic.
+  //
+  // This is a RISK/REWARD LINE. The ice runs down the INSIDE of the two glacier
+  // shore right-handers (C6 at p0.301 and C7 at p0.351) and nowhere else. The
+  // inside is the short way round — and since wave 6 made lane offset feed arc
+  // length, taking it genuinely saves lap time — but it is ice: grip 0.35,
+  // steering 0.70, acceleration 0.72, drift charge 1.25. So the fast line and
+  // the safe line are different lines through the same two corners, and a
+  // driver who can hold a drift on it is rewarded for the skill the owner
+  // already likes rather than punished for arriving.
+  //
+  // Lane sign is MEASURED, not assumed: the signed curvature at p0.307 and
+  // p0.356 is negative on both, and the sampler builds its normal as
+  // (-tangent.z, 0, tangent.x), so the inside of these two corners is NEGATIVE
+  // lane. -0.28 is the boundary; it gets a coincident vertex pair in the road
+  // mesh (see laneSeams in addTrack) so the edge is half a metre wide instead
+  // of smeared across a seven-unit lane column.
+  //
+  // The band deliberately spans p0.33, and that is not an accident either: the
+  // previewer's contrast model is validated against a measured pixel at exactly
+  // p0.33 on this track and asserts that the segment there reads as illegible.
+  // Moving the ice off that progress would make the tool's own ground-truth
+  // check fail and every contrast verdict it prints untrustworthy. The debt is
+  // paid at the kerb instead — see palette.curb.
   surfaceBands: [
-    { progressStart: 0, progressEnd: 0.24, laneStart: -1, laneEnd: 1, type: 'asphalt' },
-    { progressStart: 0.24, progressEnd: 0.42, laneStart: -0.75, laneEnd: 0.75, type: 'ice' },
-    { progressStart: 0.24, progressEnd: 0.42, laneStart: -1, laneEnd: -0.75, type: 'snow' },
-    { progressStart: 0.24, progressEnd: 0.42, laneStart: 0.75, laneEnd: 1, type: 'snow' },
-    { progressStart: 0.42, progressEnd: 1, laneStart: -1, laneEnd: 1, type: 'asphalt' },
+    { progressStart: 0, progressEnd: 0.29, laneStart: -1, laneEnd: 1, type: 'asphalt' },
+    { progressStart: 0.29, progressEnd: 0.37, laneStart: -1, laneEnd: -0.28, type: 'ice' },
+    { progressStart: 0.29, progressEnd: 0.37, laneStart: -0.28, laneEnd: 1, type: 'asphalt' },
+    { progressStart: 0.37, progressEnd: 1, laneStart: -1, laneEnd: 1, type: 'asphalt' },
   ],
+  // Re-seated onto the new sections: the snowmen line the fish-market row and
+  // the run into the frozen river, the ice pillars stand at the ice band's two
+  // ends where they double as a physical cue for where the ice starts and stops.
   breakableObjects: [
-    { key: 'snowman-market-1', type: 'snowman', progress: 0.46, side: 0.72 },
-    { key: 'snowman-market-2', type: 'snowman', progress: 0.51, side: -0.7 },
-    { key: 'snowman-market-3', type: 'snowman', progress: 0.56, side: 0.74 },
-    { key: 'snowman-market-4', type: 'snowman', progress: 0.61, side: -0.72 },
-    { key: 'snowman-market-5', type: 'snowman', progress: 0.66, side: 0.7 },
-    { key: 'snowman-market-6', type: 'snowman', progress: 0.71, side: -0.74 },
-    { key: 'ice-pillar-pond-1', type: 'icePillar', progress: 0.28, side: 0.88 },
-    { key: 'ice-pillar-pond-2', type: 'icePillar', progress: 0.36, side: -0.86 },
+    { key: 'snowman-market-1', type: 'snowman', progress: 0.385, side: 0.72 },
+    { key: 'snowman-market-2', type: 'snowman', progress: 0.415, side: -0.7 },
+    { key: 'snowman-market-3', type: 'snowman', progress: 0.445, side: 0.74 },
+    { key: 'snowman-market-4', type: 'snowman', progress: 0.52, side: -0.72 },
+    { key: 'snowman-market-5', type: 'snowman', progress: 0.6, side: 0.7 },
+    { key: 'snowman-market-6', type: 'snowman', progress: 0.665, side: -0.74 },
+    { key: 'ice-pillar-shore-1', type: 'icePillar', progress: 0.288, side: -0.88 },
+    { key: 'ice-pillar-shore-2', type: 'icePillar', progress: 0.372, side: -0.86 },
   ],
   crossers: [
     // K4 (2026-07-12): first crosser LIVE in the shipped runtime —
@@ -923,7 +1087,38 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // probe fix restores it lands cool-white rather than back on the wave-3
     // periwinkle. Both are inside the "cool white, not a warm one" the round-2
     // artefact hunter asked for; neither is sand.
-    curb: { a: '#fdfaf4', b: '#00c6ee' },
+    //
+    // AAA WAVE 8 — a is #fdfaf4 -> #0d2c3e, AND THIS IS THE ICE BAND'S
+    // LEGIBILITY DEBT BEING PAID. Everything above still stands: the argument
+    // was about which WHITE the light tooth should be. The measurement that
+    // changes it is a different one, and it is the debt the previewer has been
+    // reporting on this track for three waves:
+    //
+    //   ice road 173.3   snowfield terrain band 189.6-208.5   =  8.6% Weber
+    //
+    // 8.6% against a 20% gate. The driver cannot pick the road out of the field
+    // in the one place the road is a different surface. The road's own value is
+    // not a lever here — the ice tint and its specular lift live in
+    // surfacePhysics.js, and darkening the SNOW is not on the table because the
+    // arctic sunset storm front is owner-approved.
+    //
+    // A kerb is a legitimate legibility device and the model already allows a
+    // segment to pass on one, but only if the SAME tooth separates from the road
+    // AND from the terrain. That second half is the whole test, and it is
+    // precisely what a white kerb on a white field fails: #fdfaf4 solves to 250,
+    // which is a healthy 31% off the ice but only 17% off the snowfield, and
+    // #00c6ee solves to 159, which is 16% off the snow but 8% off the ice. Both
+    // teeth were invisible against one side or the other, so the pair scored
+    // 16.7% and the segment failed outright.
+    //
+    // #0d2c3e solves to 39. Against the ice that is 77%; against the snowfield
+    // band it is 79%. Any value at or under 138 clears the gate on both halves
+    // simultaneously and there is nothing between 138 and the snow the arctic
+    // palette would accept, so the tooth has to go DARK — which is the same
+    // Sherbet Land rule the road asphalt on this track already follows, applied
+    // to the one piece of furniture that had been exempted from it. It is the
+    // track's own deep glacier ink beside its own cyan, not a new colour.
+    curb: { a: '#0d2c3e', b: '#00c6ee' },
     rail: '#00E5FF',
     wall: { a: '#1c4a63', b: '#00E5FF' },
     // Run-off shelf and embankment. Same fault as Comeback City's and the
@@ -1160,6 +1355,11 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   // customStartArch: skip the default finish gantry (the ICE IS NICE arch
   // marks the start/finish instead).
   dressing: { penguinVillage: true, customStartArch: true },
-  // Shorter loop than Comeback City; budgets stay generous for the gate.
-  budgets: { finishSeconds: 45, speedFloor: 130 },
+  // 45 -> 180. The geometric solve is 134.75 s over three laps and measured
+  // autoplay runs a little slower than the solve (the grid start spends the
+  // first two seconds accelerating from a standstill), so the number to beat is
+  // ~138 s. 180 keeps the same proportional headroom the old 45 held over the
+  // old ~30 s solve — a budget only detects a regression if its margin scales
+  // with the thing it is measuring.
+  budgets: { finishSeconds: 180, speedFloor: 130 },
 });

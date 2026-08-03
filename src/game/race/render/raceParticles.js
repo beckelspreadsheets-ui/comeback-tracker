@@ -4,15 +4,18 @@
 //
 // Budget contract: FIVE added draw calls total (four on Comeback City),
 // everything pooled up front —
-//   1. surface particles ONE InstancedMesh (208 quads, 96 on mobile) shared by
+//   1. surface particles ONE InstancedMesh (208 quads on desktop, 96/60 on the
+//                       two phone tiers — see PARTICLE_TIERS) shared by
 //                       the drift spray, the rolling-contact wash and plume,
 //                       the landing puff, the ground shockwave rings, the
 //                       arctic ground spindrift and the boost plume's tail
 //                       stage (which is here rather than with the other two
 //                       exhaust stages because this is the only pool that can
 //                       BLOOM — see the FLAME_HAZE_* block)
-//   2. skid marks       ONE Mesh over ONE ring-buffer BufferGeometry (256/128)
-//   3. additive sprites ONE InstancedMesh (160 quads, 72 mobile) shared by the
+//   2. skid marks       ONE Mesh over ONE ring-buffer BufferGeometry, sized in
+//                       SECONDS of trail per tier (2.8/1.7/0.95 s = 476/290/162
+//                       quads) — see SKID_TOP_SPEED_REF for the 4x-track reason
+//   3. additive sprites ONE InstancedMesh (160 quads desktop, 72/48 phone) shared by the
 //                       coin sparkle, the coin spill, the item pickup and use
 //                       bursts, the item-box shards, the impact shock ring, the
 //                       spin-out poof and spiral, the mini-turbo sparks and tier
@@ -24,7 +27,7 @@
 //                       streak field; the pixels do all the work, so there is
 //                       no geometry to spin and nothing to occlude the kart)
 //   5. storm snow       ONE InstancedMesh, PENGUIN VILLAGE ONLY (154 quads, 70
-//                       on mobile) — the wind-driven near-field layer of the
+//                       and 40 on the two phone tiers) — the wind-driven near-field layer of the
 //                       arctic storm. See the storm-snow contract below.
 // Adding a cue means adding an emitter into one of these pools, never a mesh.
 //
@@ -180,6 +183,47 @@
 // single exception that halves: it is the only cue whose particles live for
 // seconds rather than for a beat, which is long enough to read as motion rather
 // than as a notification, and a celebration at half density is still one.
+//
+// Quality-tier contract (wave 7). Everything above grew across the overhaul —
+// this module roughly tripled, gaining surface-typed continuous emission, skid
+// marks, boost streaks, drift spray, an event vocabulary and a snow system —
+// and the only lever it ever had for a phone was one boolean with a dozen
+// hand-picked ternaries behind it. Desktop absorbed the growth (frame work
+// 3.94 ms CC / 5.92 ms PV against 16.7 ms at 60 fps); the phone tier has never
+// been re-measured since any of it landed. See PARTICLE_TIERS for the table and
+// what each tier costs. Three rules shaped it:
+//   POOLS SCALE, THEY DO NOT HIDE. Every pool size, and the skid ring buffer,
+//   is derived from the tier rather than allocated at desktop size and masked —
+//   a hidden slot still costs its instance matrix, its JS object graph and (see
+//   below) a write every frame, on exactly the devices that cannot spare any of
+//   the three.
+//   THE GAMEPLAY TIER SURVIVES EVERY TIER. Drift spray staging and skid marks
+//   are how the drift system reads, boost streaks are how speed reads, and
+//   surface-typed contact emission is what glues the kart to the ground. Those
+//   four thin; they never switch off. What switches off on the bottom tier is
+//   ambience the player is not steering by: the ice glint and the idle exhaust.
+//   THE DEVICE ARBITRATES, NOT THE USER AGENT. Static capability signals are
+//   unreliable on phones (iOS ships no deviceMemory and caps hardwareConcurrency
+//   at the efficiency-core count), so the static tier only picks the POOL sizes
+//   and a runtime governor measures real frame intervals and scales emission
+//   inside them. See the QUALITY_LOAD_* block. It never runs on desktop, so the
+//   capture harness and every measured desktop number are untouched by it.
+//
+// 4x-track audit (wave 7). The tracks are being rebuilt ~4x longer in this same
+// wave (2,897 -> ~11,643 units per lap), so every fixed-size buffer and every
+// distance constant in this file was re-checked against that lap:
+//   CONTINUOUS EMITTERS ARE LAP-INVARIANT BY CONSTRUCTION. Rate is per unit of
+//   TRACK (WASH_SPACING, FLAME_HAZE_SPACING) and lifetime is a camera-relative
+//   window divided by speed (WASH_WINDOW, washTtlFor), so occupancy = rate * ttl
+//   cancels speed and never sees lap length at all. That is the wave-3 fix
+//   (per-second emission against a per-distance visibility window gave puffs a
+//   0.07 s life at race speed) and it is exactly what makes a 4x lap free here.
+//   WEATHER IS PER SECOND AND CAMERA-CARRIED. The spindrift rate and both snow
+//   shells are anchored to the camera box, not to the course.
+//   THE SKID RING IS THE ONE BUFFER WITH WORLD-DISTANCE MEMORY, and it is sized
+//   in SECONDS OF TRAIL now rather than in quads for that reason — see the
+//   SKID_RING_SECONDS block. Lap length does not change what it holds; the new
+//   track's DRIFT length does, and that is the number it is now authored in.
 import * as THREE from 'three';
 import { DRIFT_FEEL } from '../driftFeel.js';
 
@@ -810,6 +854,30 @@ const GUARD_HALF_HEIGHT = 8;
 const SKID_FADE_SECONDS = 4;
 const SKID_STEP_MIN = 1.6;
 const SKID_STEP_MAX = 3.4;
+// ...and this is the constant the 4x track moves (see the audit at the top of
+// the file). The ring is the only buffer in this module that remembers WORLD
+// DISTANCE: capacity = (quads / 2 wheels) * SKID_STEP_MAX world units, which is
+// a fixed number of SECONDS at top speed and has nothing to do with lap length.
+// What the new track changes is how long a single drift lasts. Today's course
+// is 7 corners over an 11.15 s lap and its longest straight is 2.19 s, so no
+// drift outlives the shipped 256-quad ring by much: 256 / 2 * 3.4 = 435 units,
+// i.e. 1.9 s at MAX_SPEED 228 and 1.5 s at the ~289 the frames measure under
+// boost. The 4x design targets 15-25 corners including sweepers authored
+// specifically "to hold a long drift" (docs/TRACK_DESIGN_NOTES.md), which puts
+// three-second drifts in the middle of the lap rather than at the edge of it —
+// and a ring that recycles at 1.5 s eats its own head mid-corner, so the mark
+// vanishes from behind the kart while the tyre is still laying it.
+//
+// So the tier authors SECONDS and the quad count is derived. Two bounds on the
+// number: it must stay under SKID_FADE_SECONDS (a ring that outlives the fade
+// stops recycling and the tail pinch, which is authored in SLOTS, never runs),
+// and every quad costs ~156 B of typed array plus one compare per frame.
+// TOP_SPEED_REF is the boosted top speed the shipped frames measure, not
+// MAX_SPEED, because the longest drifts happen at the highest speed.
+const SKID_TOP_SPEED_REF = 289;
+const skidQuadsFor = (seconds) =>
+  // Two wheels lay one quad each per step, so the count is even by construction.
+  Math.max(64, Math.ceil((seconds * SKID_TOP_SPEED_REF) / SKID_STEP_MAX) * 2);
 // Half a rear tyre's footprint (the wheels sit at x = ±4.6); 0.34 drew a
 // pinstripe far narrower than the tyre that supposedly made it.
 const SKID_HALF_WIDTH = 0.78;
@@ -1102,7 +1170,212 @@ void main() {
 }
 `;
 
-export const createRaceParticles = ({ isIce = false, mobile = false, onShake = null } = {}) => {
+// ---- Quality tiers -------------------------------------------------------
+// See the quality-tier contract at the top of the file. One table, three tiers,
+// and every phone-vs-desktop number in this module now comes out of it — the
+// shipped code carried fourteen separate `mobile ? a : b` ternaries plus a
+// `poolScale`, which is not a tier, it is a boolean with opinions.
+//
+// WHAT EACH TIER COSTS AND WHAT IT PRESERVES
+//
+//   high — desktop. Byte-identical to the shipped desktop build in every
+//     emitter, rate, cap, headcount and lane count. The one deliberate change
+//     is the skid ring (256 -> 476 quads, 1.5 s -> 2.8 s of trail at boosted
+//     top speed), for the 4x-track reason documented at SKID_TOP_SPEED_REF.
+//     Pools: 208 spray + 160 burst + 154 snow (PV) instances, 476 skid quads.
+//
+//   mid — the phone tier, and DELIBERATELY at behaviour parity with the shipped
+//     phone build: 96/72 pools, emission 0.6, snow 0.45, the same per-frame
+//     budgets, the same caps, the same lane counts, the same glint and
+//     spindrift rates. Nothing here is measured — the phone tier has not been
+//     re-measured since any of the overhaul landed — and un-measured churn on a
+//     device class nobody has profiled is how a wave breaks something it cannot
+//     see. What mid DOES gain is the longer skid ring (128 -> 290 quads, 0.75 s
+//     -> 1.7 s; a 0.75 s mark on the 4x track's sweepers is a stub, and skid
+//     marks are how the drift system reads), the dead-slot write elision that
+//     every tier gets, and the runtime governor below, which is the mechanism
+//     that will actually find this tier's ceiling on real hardware.
+//
+//   low — new, and where the real reduction lives. Roughly 40% of desktop
+//     emission against ~29% of desktop pool slots, so the pools are not merely
+//     emptier, they are not allocated:
+//       PRESERVED — drift spray staging (the tier hue and the release cue),
+//         skid marks (0.95 s of trail), boost speed-lines, the boost plume, and
+//         surface-typed rolling contact with every gate, linger, value and
+//         crystal term intact. Those are the systems a player steers by, and
+//         they are the four the brief names: drift staging, skid marks, boost
+//         streaks and surface-typed contact.
+//       HALVED OR BETTER — spray/wash/crystal/spark/flame emission to 0.4 of
+//         desktop; one-shot event headcounts to ~0.42 (floored at 4 members, so
+//         a ring is still a ring and a countable tier chevron is still
+//         countable); storm snow to 0.26 (40 flakes of 154 — the arctic storm
+//         is Penguin Village's authored identity and may not be switched off,
+//         but every flake costs a full screen-velocity projection and a matrix
+//         compose, which makes it the largest fixed per-frame cost in the file);
+//         ground spindrift to ~0.32 of desktop, because it is the only cue in
+//         the module that shows the storm's BEARING (wave 4) and killing it
+//         would regress the art direction rather than the framerate.
+//       DROPPED — the ice glint (pure decorative sparkle, and it competes for
+//         burst slots with the drift sparks) and the idle exhaust (furniture by
+//         its own comment). Speed-line lanes drop 120-176 -> 48-72 and the
+//         inner discard radius opens 0.46 -> 0.52, which are the only levers
+//         this file has on the one full-screen fragment pass it owns. The
+//         radius is worth about eight points of the frame: the shader's early
+//         reject is an ellipse of semi-axes uInner/aspect by uInner around the
+//         look-ahead anchor, which at 16:9 covers ~36% of the frame at 0.46 and
+//         ~44% at 0.52, all of it returning before the atan and the two exps.
+//         Lane count is the bigger one — it divides the lit area directly — and
+//         the fatter streak is legibility, not cost: at a phone's pixel count a
+//         2 px line aliases into a dotted crawl.
+//
+// HOW A DEVICE LANDS ON ONE. `?particles=low|mid|high` pins a tier outright
+// (owner phone checks, and any future phone capture). Otherwise desktop is high
+// and a phone is mid unless it is small enough to fail the memory/core floor in
+// detectTierName, which is set deliberately low — see the comment there for why
+// a threshold tuned to catch a struggling Android also catches most iPhones.
+// The tier a struggling phone actually experiences is therefore usually
+// "mid under governor load", not "low": the governor scales emission inside the
+// mid pools and, through `ambientLoad` in update(), takes the decoration out
+// first and the gameplay tier never. Two steps down from mid is 0.33 of desktop
+// emission with the glint and the idle exhaust gone, i.e. slightly under the
+// low tier, at the cost of mid's pool allocation — which with the dead-slot
+// elision below is close to free when the slots are empty.
+//
+// Numbers that are arithmetic rather than measurement are marked as such. Per
+// frame, the pool iteration cost is the honest one to quote: 368 desktop slots
+// (208 + 160) were each paying a 16-float matrix write EVERY frame whether
+// alive or not; with the dead-slot elision below only the live ones do, which
+// in the module's own measured steady state is 66 + ~24 of those 368. On low
+// the same idle-frame cost is 108 slots instead of 368 before elision and ~0
+// after it. Nothing here is a measured millisecond — this package is forbidden
+// from running the build or the capture harness, so it does not invent one.
+const PARTICLE_TIERS = {
+  high: {
+    ambient: { glint: 1, idle: 1, spindrift: 1 },
+    budget: { crystal: 6, flame: 12, haze: 8, spark: 12, spindrift: 6, spray: 16, wash: 16 },
+    burstCount: 160,
+    emit: 1,
+    eventScale: 1,
+    glintRate: 40,
+    lanes: [120, 140, 160, 176],
+    lineInner: 0.46,
+    lineWidth: 0.003,
+    rateCap: { crystal: 90, spray: 460, wash: 420 },
+    skidSeconds: 2.8,
+    snowScale: 1,
+    sprayCount: 208,
+  },
+  mid: {
+    // glint 0.5 * emit 0.6 * base 40 = 12/s, which is what the shipped phone
+    // build ran (`(mobile ? 20 : 40) * poolScale`). Parity, restated.
+    ambient: { glint: 0.5, idle: 1, spindrift: 1 },
+    budget: { crystal: 3, flame: 6, haze: 4, spark: 6, spindrift: 3, spray: 8, wash: 8 },
+    burstCount: 72,
+    emit: 0.6,
+    eventScale: 0.6,
+    glintRate: 40,
+    lanes: [72, 84, 96, 104],
+    lineInner: 0.46,
+    lineWidth: 0.0044,
+    rateCap: { crystal: 40, spray: 200, wash: 150 },
+    skidSeconds: 1.7,
+    snowScale: 0.45,
+    sprayCount: 96,
+  },
+  low: {
+    ambient: { glint: 0, idle: 0, spindrift: 0.8 },
+    budget: { crystal: 2, flame: 4, haze: 3, spark: 4, spindrift: 2, spray: 6, wash: 5 },
+    burstCount: 48,
+    emit: 0.4,
+    eventScale: 0.42,
+    glintRate: 40,
+    lanes: [48, 56, 64, 72],
+    lineInner: 0.52,
+    lineWidth: 0.0058,
+    rateCap: { crystal: 26, spray: 130, wash: 95 },
+    skidSeconds: 0.95,
+    snowScale: 0.26,
+    sprayCount: 60,
+  },
+};
+
+// `?particles=low|mid|high` pins a tier. This exists because the tier a phone
+// lands on is otherwise unobservable from the outside, and because the owner's
+// phone re-check and any future capture of a phone framing both need to be able
+// to ask for a specific one rather than hoping the heuristic agrees.
+const readTierOverride = () => {
+  if (typeof window === 'undefined' || !window.location) return null;
+  try {
+    const raw = new URLSearchParams(window.location.search).get('particles');
+    return raw && PARTICLE_TIERS[raw] ? raw : null;
+  } catch {
+    // A sandboxed iframe can throw on location access; a missing override is
+    // not worth taking the race down for.
+    return null;
+  }
+};
+
+// Static tier pick. Deliberately coarse, because the signals are: iOS Safari
+// exposes no deviceMemory at all and reports hardwareConcurrency well below the
+// real core count, so anything cleverer than "is this device obviously small"
+// would be reading noise. The pick chooses POOL SIZES — the one thing that
+// cannot be changed later without reallocating — and the runtime governor
+// below does the actual quality arbitration inside them.
+const detectTierName = (mobile) => {
+  if (!mobile) return 'high';
+  const nav = typeof navigator !== 'undefined' ? navigator : null;
+  const cores = Number(nav?.hardwareConcurrency) || 0;
+  // Chrome-only, and quantised to 0.25/0.5/1/2/4/8. Under 4 GB is a phone that
+  // is swapping before it is drawing.
+  const memory = Number(nav?.deviceMemory) || 0;
+  // Deliberately OPTIMISTIC, and this is the important half of the design. iOS
+  // reports hardwareConcurrency at something near the efficiency-core count —
+  // an iPhone that would hold 60 fps comfortably reports 4 — so a threshold set
+  // where it would catch a struggling Android also catches most iPhones, and a
+  // static guess that demotes a fast phone costs exactly the art direction this
+  // wave is under instruction not to regress. The static pick therefore only
+  // catches devices too small to be worth allocating the mid pools for, and the
+  // governor demotes anything that actually misses frames — measurement beats a
+  // user-agent guess, and it is reversible.
+  if (memory > 0 && memory < 4) return 'low';
+  if (cores > 0 && cores <= 2) return 'low';
+  return 'mid';
+};
+
+// ---- Runtime load governor ----------------------------------------------
+// The honest half of the tier system. A static tier cannot know what a phone
+// will do with a track it has never rendered, and this module is about to be
+// asked to run over a lap four times as long as the one every number in it was
+// tuned against — so the emission scale is closed-loop.
+//
+// Measured off wall-clock frame INTERVALS taken inside update(), not off the
+// caller's dt: a caller that clamps or fixes its timestep would otherwise hand
+// the governor a number that cannot represent the thing being measured.
+// Hysteresis is asymmetric on purpose — dropping detail is cheap and reversible,
+// putting it back is what oscillates, so a step down needs one bad window and a
+// step up needs QUALITY_LOAD_UP_HOLD seconds of clear headroom.
+const QUALITY_LOAD_WINDOW = 1.25;
+// ~48 fps sustained. Below this the frame is already missing 60 and the player
+// is feeling it; above QUALITY_LOAD_UP_MS (~69 fps) there is real headroom.
+const QUALITY_LOAD_DOWN_MS = 21;
+const QUALITY_LOAD_UP_MS = 14.5;
+const QUALITY_LOAD_STEP = 0.225;
+// Two steps, and the floor is where the gameplay tier is still legible: at 0.55
+// the low tier's drift spray is ~0.22 of desktop, which is thin but is still a
+// staged, tier-coloured plume rather than an absent one.
+const QUALITY_LOAD_FLOOR = 0.55;
+const QUALITY_LOAD_UP_HOLD = 4;
+// Load, shader compiles and the first GLB uploads all land in the first couple
+// of seconds and none of them are this module's cost. 4 s is the same warmup
+// the project's own FPS gate settled on after it kept failing on frame one.
+const QUALITY_LOAD_WARMUP = 4;
+// A tab restore or a GC pause is not a quality signal; it is one sample worth
+// discarding.
+const QUALITY_LOAD_MAX_SAMPLE_MS = 250;
+const nowMs = () =>
+  typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+
+export const createRaceParticles = ({ isIce = false, mobile = false, onShake = null, tier: requestedTier = null } = {}) => {
   const group = new THREE.Group();
   group.name = 'g3-race-particles';
 
@@ -1114,10 +1387,52 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     onShake(Math.min(1, amount), event);
   };
 
-  // Emission scale. The mobile pools are ~40% of desktop, so emitting at the
-  // desktop rate there would recycle live particles and shorten every trail
-  // rather than thin it.
-  const poolScale = mobile ? 0.6 : 1;
+  // Tier resolution, in precedence order: an explicit request from the caller
+  // (nothing passes one today — the monolith hands this module `isIce` and
+  // `mobile` — but the renderer package that lands later in this programme
+  // owns the same decision and must be able to drive it), then the URL pin,
+  // then the device probe.
+  const tierName =
+    (requestedTier && PARTICLE_TIERS[requestedTier] && requestedTier) || readTierOverride() || detectTierName(mobile);
+  const quality = PARTICLE_TIERS[tierName];
+  // Emission scale. The pools below are a fraction of desktop, so emitting at
+  // the desktop rate into them would recycle live particles and shorten every
+  // trail rather than thin it. `emitScale` in update() multiplies this by the
+  // governor's live load term and by reducedMotion.
+  const poolScale = quality.emit;
+  const ambient = quality.ambient;
+  // One-shot event headcounts. Every cue in the wave-5 vocabulary is authored
+  // at its desktop count and scaled through here, which is what replaced a
+  // ternary per cue. The floor is the point: an expanding ring of tangential
+  // dashes stops being a ring below about four members, and the whole
+  // event-legibility contract is that the SHAPE survives a still frame — a cue
+  // scaled into three particles has lost the thing the tier was protecting.
+  const eventCount = (desktopCount) =>
+    quality.eventScale >= 1
+      ? desktopCount
+      : Math.max(Math.min(4, desktopCount), Math.ceil(desktopCount * quality.eventScale));
+
+  // Governor state. Only armed off desktop: the capture harness, every measured
+  // desktop number and the whole set of frames the critics score run at `high`,
+  // and a closed loop that can move under them is a closed loop that can make a
+  // capture unreproducible. See the QUALITY_LOAD_* block.
+  const adaptive = tierName !== 'high';
+  let loadScale = 1;
+  let loadWindowMs = 0;
+  let loadWindowFrames = 0;
+  let loadUpHold = 0;
+  let loadWarmup = QUALITY_LOAD_WARMUP;
+  let lastFrameAt = 0;
+  // Live probe surface. `window.__g3ParticlesDebug.quality` is how a smoke test
+  // or a phone re-check finds out which tier it actually got and whether the
+  // governor stepped it down — neither is inferable from the frame.
+  const qualityInfo = {
+    adaptive,
+    load: 1,
+    mobile,
+    pools: {},
+    tier: tierName,
+  };
 
   // -- 1. Surface particles (drift spray + contact wash + landing puff) -----
   // Raised from 150/64. The wash is now continuous on every surface rather
@@ -1125,7 +1440,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // ONE film rather than as countable objects — which is a headcount problem,
   // not a brightness problem. Instance matrices are ~5 KB per 64 slots and the
   // draw call count is unchanged; the frame budget has ~14 ms of headroom.
-  const sprayCount = mobile ? 96 : 208;
+  const sprayCount = quality.sprayCount;
   // Additive on BOTH tracks now. The arctic pool was normal-blended on the
   // reasoning that Penguin Village's surround sits at the bloom knee — but the
   // particles are emitted over the ROAD, and the road there measures (21,30,45)
@@ -1177,6 +1492,14 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     flat: false,
     floorY: -1e6,
     gravity: SPRAY_GRAVITY,
+    // 1 while this slot's instance matrix already holds HIDDEN_POSE. The pools
+    // are built hidden, so it starts true, and it is what lets the update loop
+    // stop re-writing a 16-float matrix every frame for every DEAD slot — which
+    // at the desktop pool sizes was 368 writes a frame for the two pools
+    // combined against a measured live steady state of about 90, and on a phone
+    // is the one cost that scales with the pool rather than with what is
+    // actually on screen.
+    hidden: true,
     life: 0,
     // Hard angular ceiling, or 0 to take the path default (FLAT_MAX_ANGLE for a
     // ground quad, MAX_SPRITE_ANGLE for a billboard). The burst pool has carried
@@ -1252,7 +1575,9 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   };
 
   // -- 2. Skid marks (ring buffer, one geometry updated in place) -----------
-  const skidQuads = mobile ? 128 : 256;
+  // Authored in SECONDS OF TRAIL and derived here — see SKID_TOP_SPEED_REF for
+  // why the 4x track moves this number and lap length does not.
+  const skidQuads = skidQuadsFor(quality.skidSeconds);
   const skidPositions = new Float32Array(skidQuads * 4 * 3);
   const skidColors = new Float32Array(skidQuads * 4 * 4);
   const skidIndices = new Uint16Array(skidQuads * 6);
@@ -1324,7 +1649,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // Raised from 128/56 for the cue vocabulary this wave adds (item pickup,
   // item use, coin loss, ice glints, idle exhaust) — same reasoning and same
   // zero draw-call cost as the spray pool above.
-  const burstCount = mobile ? 72 : 160;
+  const burstCount = quality.burstCount;
   const burstMesh = makeBillboardPool(burstCount, { size: 0.5 });
   burstMesh.renderOrder = 32;
   group.add(burstMesh);
@@ -1354,6 +1679,8 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     flat: false,
     flicker: 0,
     gravity: -7.5,
+    // See the spray pool's field of the same name.
+    hidden: true,
     life: 0,
     // Per-particle multiplier on stretchMax, for the same reason the spray pool
     // carries a jittered ceiling: the smear saturates, so without it every
@@ -1442,7 +1769,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     // streak over the ribbon lifts the asphalt by a handful of counts, which
     // reads as the surface smearing rather than as a scratch in it.
     uGroundFade: { value: 0.3 },
-    uInner: { value: 0.46 },
+    // Tiered. This pass is the only full-screen fragment cost this module owns
+    // and it runs exactly when the frame is already at its most expensive, so
+    // the bottom tier opens the inner discard radius. The shader rejects
+    // everything inside it before the atan and the two exps, and the rejected
+    // ellipse (semi-axes uInner/aspect by uInner) goes from ~36% of a 16:9
+    // frame at 0.46 to ~44% at 0.52.
+    uInner: { value: quality.lineInner },
     // Road half-width in p.x per unit of vertical drop below the anchor.
     // Measured off wave3-r2/comeback-city-p0_24: the vanishing point sits at
     // vUv.y ~ 0.5 and the drivable ribbon spans very nearly the full frame
@@ -1451,7 +1784,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     // than out in the barriers.
     uRoadWedge: { value: 1.6 },
     uIntensity: { value: 0 },
-    uLanes: { value: mobile ? 84 : 140 },
+    uLanes: { value: quality.lanes[1] },
     // 0.16, not 0.35: the sky and the skyline are at infinity and cannot rush
     // past the lens, so streaks up there read as scratches ON the image rather
     // than as motion through it — the wave-2 artefact hunter measured them
@@ -1462,7 +1795,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     // Streak half-width as a fraction of frame HEIGHT (r is measured in the
     // same units). ~2.7 px at 900 p; a phone gets a fatter line because at its
     // pixel count a 2 px streak just aliases into a dotted crawl.
-    uWidth: { value: mobile ? 0.0044 : 0.003 },
+    uWidth: { value: quality.lineWidth },
     uTint: { value: new THREE.Color(PAD_BOOST_TINT) },
   };
   const speedLines = new THREE.Mesh(
@@ -1485,7 +1818,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // an odd count would split one streak down the middle of the screen edge.
   // Tier raises the DENSITY of the field rather than its brightness — a purple
   // tier-3 boost should look busier, not blown out.
-  const LANES_BY_TIER = mobile ? [72, 84, 96, 104] : [120, 140, 160, 176];
+  const LANES_BY_TIER = quality.lanes;
   const speedLineTint = new THREE.Color();
   let boostEnergy = 0;
   let boostPunch = 0;
@@ -1502,7 +1835,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // Built only on the arctic track, so Comeback City's draw-call count and its
   // measured-correct neon dusk are both untouched by this system existing.
   const snowShells = isIce
-    ? SNOW_SHELLS.map((shell) => ({ ...shell, count: Math.max(8, Math.round(shell.count * (mobile ? 0.45 : 1))) }))
+    ? SNOW_SHELLS.map((shell) => ({ ...shell, count: Math.max(8, Math.round(shell.count * quality.snowScale)) }))
     : [];
   const snowCount = snowShells.reduce((total, shell) => total + shell.count, 0);
   const snowMesh = snowCount
@@ -1536,6 +1869,32 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // 1 while a flake is drawn at a reduced value, so the frame that stops
   // elongating it knows it owes one write back to full.
   const snowLitLast = new Uint8Array(snowCount);
+  // 1 while this flake's instance matrix already holds HIDDEN_POSE — same
+  // elision the two sprite pools use, and it is what makes the governor's snow
+  // cut a real saving rather than a hidden-but-still-written one.
+  const snowHidden = new Uint8Array(snowCount);
+  // 1 while a flake owes a re-seed — set when the governor parks it, spent on
+  // the frame the governor brings it back.
+  const snowSeedPending = new Uint8Array(snowCount);
+  // First index of each shell, and how many of that shell the governor is
+  // currently running. The flakes are laid out contiguously per shell, so a
+  // load step has to cut PER SHELL rather than off the tail of the array — the
+  // near shell is the last 36 slots and it is the one that carries the streak
+  // read, so a tail cut would delete the storm and keep the specks.
+  const snowShellStart = new Uint16Array(snowShells.length);
+  const snowShellActive = new Uint16Array(snowShells.length);
+  const setSnowLoad = (scale) => {
+    let start = 0;
+    snowShells.forEach((shell, shellIndex) => {
+      snowShellStart[shellIndex] = start;
+      // Floor of 6 per shell: two shells at different distances IS the depth
+      // half of the storm contract, and a shell reduced below a handful of
+      // members stops being a distance band.
+      snowShellActive[shellIndex] = Math.max(Math.min(6, shell.count), Math.round(shell.count * scale));
+      start += shell.count;
+    });
+  };
+  setSnowLoad(1);
   const snowPosition = new THREE.Vector3();
   const snowVelocity = new THREE.Vector3();
   // Seeded on the first frame rather than at build time: the box is carried by
@@ -1568,6 +1927,16 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     snowMesh.instanceColor.needsUpdate = true;
   }
 
+  // Pool census for the probe. Reported rather than inferred: the tier a phone
+  // landed on and what that cost it are otherwise invisible from outside.
+  qualityInfo.pools = {
+    burst: burstCount,
+    skidQuads,
+    skidSeconds: quality.skidSeconds,
+    snow: snowCount,
+    spray: sprayCount,
+  };
+
   // Places one flake at a uniformly random point inside its own shell's box.
   const seedFlake = (index) => {
     const half = snowShells[snowShellOf[index]].half;
@@ -1588,9 +1957,35 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       snowSeeded = true;
     }
     let snowColorDirty = false;
+    let snowMatrixDirty = false;
+    // One helper for every exit path in this loop, so a flake can never be left
+    // visible at a stale pose and can never pay for a matrix write it does not
+    // need. See snowHidden.
+    const hideFlake = (index) => {
+      if (snowHidden[index]) return;
+      snowMesh.setMatrixAt(index, HIDDEN_POSE);
+      snowHidden[index] = 1;
+      snowMatrixDirty = true;
+    };
     const wake = snowWake.strength;
     for (let index = 0; index < snowCount; index += 1) {
-      const shell = snowShells[snowShellOf[index]];
+      const shellIndex = snowShellOf[index];
+      // Governor cut. Skipped entirely rather than drawn small: the per-flake
+      // cost here is a full screen-velocity projection (one matrix4 and one
+      // quaternion apply) plus a matrix compose, and that is the cost being
+      // reclaimed. Their positions simply stop advancing; when the load comes
+      // back the box has moved on, so the flake is re-seeded rather than
+      // teleporting in from wherever it was parked.
+      if (index - snowShellStart[shellIndex] >= snowShellActive[shellIndex]) {
+        hideFlake(index);
+        snowSeedPending[index] = 1;
+        continue;
+      }
+      if (snowSeedPending[index]) {
+        seedFlake(index);
+        snowSeedPending[index] = 0;
+      }
+      const shell = snowShells[shellIndex];
       const half = shell.half;
       const base = index * 3;
       const phase = snowPhase[index];
@@ -1644,7 +2039,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       snowPosition.set(x, y, z);
       const depth = screenVelocityOf(snowPosition, snowVelocity);
       if (depth <= 0.2) {
-        snowMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideFlake(index);
         continue;
       }
       // Two fades, both geometric. Under normal blending there is no
@@ -1656,7 +2051,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       const fade = clamp01(edge / SNOW_EDGE_FADE) * nearFade * nearFade;
       const width = Math.min(shell.size * fade, depth * SNOW_MAX_ANGLE);
       if (width < depth * MIN_SPRITE_ANGLE) {
-        snowMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideFlake(index);
         continue;
       }
       // Length is the distance this flake covers relative to the lens over one
@@ -1680,6 +2075,8 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
           : snowPhase[index];
       scratchRoll.setFromAxisAngle(Z_AXIS, roll).premultiply(scratchQuaternion);
       snowMesh.setMatrixAt(index, scratchMatrix.compose(snowPosition, scratchRoll, scratchScale.set(width, length, 1)));
+      snowHidden[index] = 0;
+      snowMatrixDirty = true;
       // Spread the flake's light over the smear rather than repeating it along
       // it. Only once it is visibly elongated — a dot has nothing to conserve,
       // and touching every flake every frame would just dim the whole layer.
@@ -1697,7 +2094,11 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // on every frame it is round, i.e. on nearly all of them.
       snowLitLast[index] = dim !== 1 ? 1 : 0;
     }
-    snowMesh.instanceMatrix.needsUpdate = true;
+    // Only re-upload the instance buffer if something in it actually moved. In
+    // a race that is every frame; on the grid, in the pre-race camera and under
+    // a governor cut it is not, and an InstancedMesh upload is the whole buffer
+    // every time it is flagged.
+    if (snowMatrixDirty) snowMesh.instanceMatrix.needsUpdate = true;
     if (snowColorDirty) snowMesh.instanceColor.needsUpdate = true;
   };
 
@@ -2133,7 +2534,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // flat on the road; a few lifted puffs sit over it so the impact has volume
   // as well as a footprint.
   const spawnLandingPuff = (context, strength, look, tint) => {
-    const ringCount = Math.round((mobile ? 7 : 12) * (0.45 + strength * 0.55));
+    const ringCount = Math.round(eventCount(12) * (0.45 + strength * 0.55));
     spawnGroundRing(context, {
       brightness: (isIce ? 0.62 : 0.5) * (0.6 + strength * 0.6),
       count: ringCount,
@@ -2152,7 +2553,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     // brighter. The FLAT ring above is untouched — that is the grounding half of
     // the landing and the half a still frame reads as contact; these lifted puffs
     // are the volume half, and they were the loudest object in the module.
-    const airCount = Math.round((mobile ? 4 : 8) * (0.3 + strength * 1.2) * (0.6 + look.lift));
+    const airCount = Math.round(eventCount(8) * (0.3 + strength * 1.2) * (0.6 + look.lift));
     for (let index = 0; index < airCount; index += 1) {
       const item = nextSpray();
       const angle = (index / Math.max(1, airCount)) * Math.PI * 2 + Math.random() * 0.8;
@@ -2467,7 +2868,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     const scale = clamp01(strength);
     spawnShockRing(context, {
       brightness: 0.9,
-      count: mobile ? 10 : 16,
+      count: eventCount(16),
       point: impact,
       radius: 0.9,
       size: 0.34 + scale * 0.12,
@@ -2477,7 +2878,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     });
     spawnBurst(context, {
       color: IMPACT_SPARK_TINT,
-      count: mobile ? 6 : 10,
+      count: eventCount(10),
       gravity: -18,
       maxAngle: SPARK_MAX_ANGLE,
       origin: impact,
@@ -2493,7 +2894,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     // this is only what says it happened on the road and not in the air.
     spawnGroundRing(context, {
       brightness: (isIce ? 0.5 : 0.4) * (0.6 + scale * 0.4),
-      count: mobile ? 6 : 10,
+      count: eventCount(10),
       origin: impact,
       radius: 2.2,
       size: 2 * currentLook.grow,
@@ -2510,7 +2911,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // the one emitter that wants the soft dot's alpha plateau, because stretched,
   // a plateau produces a bright bar with abrupt ends, which is a chip.
   const spawnBoxShards = (context, point) => {
-    const count = mobile ? 9 : 15;
+    const count = eventCount(15);
     for (let index = 0; index < count; index += 1) {
       const item = nextBurst();
       const angle = (index / count) * Math.PI * 2 + Math.random() * 0.5;
@@ -2690,7 +3091,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // a frame with slow coloured paper in it cannot be any other event.
   const spawnConfetti = (context, wave) => {
     const palette = isIce ? CONFETTI_COLORS_ICE : CONFETTI_COLORS_CITY;
-    const count = Math.round((mobile ? 13 : 24) * (context.reducedMotion ? 0.5 : 1));
+    const count = Math.round(eventCount(24) * (context.reducedMotion ? 0.5 : 1));
     for (let index = 0; index < count; index += 1) {
       const item = nextBurst();
       const angle = Math.random() * Math.PI * 2;
@@ -2962,7 +3363,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // but its trailing edge.
       spawnGroundRing(context, {
         brightness: 0.34,
-        count: mobile ? 5 : 8,
+        count: eventCount(8),
         origin: anchorToWorld(context, 0, 0, 5.4),
         radius: 3,
         size: 0.55,
@@ -2982,7 +3383,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // rising column over a ground ring, which is the point.
       spawnBurst(context, {
         color: '#FFD34F',
-        count: mobile ? 5 : 7,
+        count: eventCount(7),
         size: 0.9,
         speed: 2.6,
         stretch: 0.9,
@@ -2994,7 +3395,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // losing them looks like losing them rather than like collecting them.
       spawnBurst(context, {
         color: '#FFC53F',
-        count: mobile ? 6 : 10,
+        count: eventCount(10),
         gravity: -26,
         originY: context.groundY + 1.8,
         size: 0.75,
@@ -3017,7 +3418,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // of the truth and moving at 285 either way.
       spawnBoxShards(context, context.itemBoxPoint || anchorToWorld(context, 0, 2.6, 5.2));
       lastItemTint = itemTintFor(context.heldItem);
-      const count = mobile ? 6 : 9;
+      const count = eventCount(9);
       const cos = Math.cos(context.yaw);
       const sin = Math.sin(context.yaw);
       for (let index = 0; index < count; index += 1) {
@@ -3051,7 +3452,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       spawnShockRing(context, {
         aspect: 2.6,
         brightness: 0.85,
-        count: mobile ? 7 : 11,
+        count: eventCount(11),
         point: anchorToWorld(context, 0, 2, 5.4),
         radius: 0.8,
         size: 0.3,
@@ -3065,7 +3466,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         anchor: [0, 2, 5.4],
         color: lastItemTint,
         cone: 0.5,
-        count: mobile ? 8 : 13,
+        count: eventCount(13),
         gravity: -4,
         size: 0.85,
         speed: 22,
@@ -3085,13 +3486,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         strength: Number.isFinite(context.impactStrength) ? context.impactStrength : 1,
       });
     } else if (cue === 'spin-out') {
-      spawnScuffCloud(context, currentLook, groundTint, mobile ? 10 : 18, 1);
+      spawnScuffCloud(context, currentLook, groundTint, eventCount(18), 1);
       // ...plus a shockwave ON the road. The airborne burst alone reads as a
       // puff floating over the kart; the ring is what says the kart hit
       // something and the surface felt it.
       spawnGroundRing(context, {
         brightness: isIce ? 0.7 : 0.55,
-        count: mobile ? 8 : 14,
+        count: eventCount(14),
         radius: 3,
         size: 3 * currentLook.grow,
         speed: 26,
@@ -3115,7 +3516,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       });
       spawnSpinArcs(context, {
         arms: 3,
-        perArm: mobile ? 4 : 6,
+        perArm: eventCount(6),
         // Which way the kart is going round, when the runtime knows. Sign only.
         spin: (context.spinDirection || 0) < 0 ? -1 : 1,
       });
@@ -3129,7 +3530,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // so the banked-tier flash keeps the weight it was tuned to have.
       const bankedTier = Math.min(3, Number(cue.slice(5)) || 1);
       sparkTint.set(DRIFT_FEEL.sparkColors[bankedTier]);
-      for (let index = 0; index < (mobile ? 12 : 20); index += 1) spawnSpark(context, sparkTint);
+      for (let index = 0; index < eventCount(20); index += 1) spawnSpark(context, sparkTint);
       // ...and the countable half of the readout. See spawnTierPips: the tier is
       // a NUMBER, and a number that only exists as a hue is a number half the
       // viewers and every still frame will get wrong.
@@ -3154,7 +3555,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
           anchor: [side * 3.4, 1.6, -4.6],
           color: DRIFT_FEEL.sparkColors[releaseTier],
           cone: 0.55,
-          count: mobile ? 8 : 12,
+          count: eventCount(12),
           gravity: -14,
           size: 0.9 + releaseTier * 0.16,
           speed: 16 + releaseTier * 4,
@@ -3166,7 +3567,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       spawnTierChevrons(context, releaseTier, sparkTint);
       spawnGroundRing(context, {
         brightness: 0.5,
-        count: mobile ? 5 : 9,
+        count: eventCount(9),
         radius: 2.6,
         size: 2.6 * currentLook.grow,
         speed: 18,
@@ -3189,7 +3590,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         brightness: 0.8,
         color: PAD_BOOST_TINT,
         cone: 0.45,
-        count: mobile ? 6 : 10,
+        count: eventCount(10),
         gravity: -8,
         size: 0.8,
         speed: 14,
@@ -3249,6 +3650,47 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   const update = (context) => {
     const { camera, dt } = context;
     clock = (clock + dt) % 1000;
+    // Runtime load governor. See the QUALITY_LOAD_* block: the static tier picks
+    // the pool sizes, this decides how much of them to use, and it is measured
+    // rather than assumed because nobody has profiled a phone against any of
+    // what this module grew into — let alone against a lap four times as long.
+    // Never armed on desktop, so every captured frame and every measured desktop
+    // number in this programme is unaffected by its existence.
+    if (adaptive) {
+      const frameAt = nowMs();
+      const sample = lastFrameAt ? frameAt - lastFrameAt : 0;
+      lastFrameAt = frameAt;
+      if (loadWarmup > 0) {
+        loadWarmup -= dt;
+      } else if (sample > 0 && sample < QUALITY_LOAD_MAX_SAMPLE_MS) {
+        loadWindowMs += sample;
+        loadWindowFrames += 1;
+        if (loadWindowMs >= QUALITY_LOAD_WINDOW * 1000) {
+          const meanMs = loadWindowMs / loadWindowFrames;
+          loadWindowMs = 0;
+          loadWindowFrames = 0;
+          if (meanMs > QUALITY_LOAD_DOWN_MS && loadScale > QUALITY_LOAD_FLOOR) {
+            loadScale = Math.max(QUALITY_LOAD_FLOOR, loadScale - QUALITY_LOAD_STEP);
+            loadUpHold = 0;
+            setSnowLoad(loadScale);
+            qualityInfo.load = loadScale;
+          } else if (meanMs < QUALITY_LOAD_UP_MS && loadScale < 1) {
+            // Asymmetric on purpose: one bad window takes detail away, several
+            // consecutive clear ones give it back. The reverse oscillates, and
+            // an oscillating particle density is more distracting than a low one.
+            loadUpHold += QUALITY_LOAD_WINDOW;
+            if (loadUpHold >= QUALITY_LOAD_UP_HOLD) {
+              loadScale = Math.min(1, loadScale + QUALITY_LOAD_STEP);
+              loadUpHold = 0;
+              setSnowLoad(loadScale);
+              qualityInfo.load = loadScale;
+            }
+          } else {
+            loadUpHold = 0;
+          }
+        }
+      }
+    }
     camera.getWorldQuaternion(scratchQuaternion);
     inverseCameraQuaternion.copy(scratchQuaternion).invert();
     // camera.matrixWorldInverse is only rebuilt inside render(), so it cannot
@@ -3285,7 +3727,20 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     const look = resolveSurfaceLook(context.surface, context.offRoad, isIce);
     currentLook = look;
     surfaceTint.set(look.tint);
-    const emitScale = (context.reducedMotion ? 0.5 : 1) * poolScale;
+    // Emission scale for the GAMEPLAY tier: the tier's own rate, the governor's
+    // live load term, and reducedMotion. Ambient systems take this and then
+    // their own `ambient.*` multiplier on top, which is what lets the bottom
+    // tier drop the decoration without touching the four systems the player
+    // steers by.
+    const emitScale = (context.reducedMotion ? 0.5 : 1) * poolScale * loadScale;
+    // ...and the ambient systems pay before the gameplay ones do. This is the
+    // whole tier philosophy expressed as a curve rather than as a table: the
+    // first governor step halves the decoration, the second removes what is
+    // purely decorative, and the drift spray, the wash, the skids and the boost
+    // streaks are still there at the floor. 1 whenever the governor is idle, so
+    // desktop and an unstressed phone are untouched.
+    const ambientLoad =
+      loadScale >= 1 ? 1 : Math.max(0, (loadScale - QUALITY_LOAD_FLOOR) / (1 - QUALITY_LOAD_FLOOR));
 
     // Boost envelope. Computed before the emitters because the exhaust rate
     // rides it: an EVENT, not furniture — fast attack, slow release, gated by
@@ -3345,8 +3800,8 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         Math.min(0.7, Math.max(0.28, (WASH_WINDOW * 1.4) / Math.max(30, speed))) * look.linger;
       sprayAccumulator +=
         dt *
-        Math.min(mobile ? 200 : 460, (speed / WASH_SPACING) * (0.62 + context.tier * 0.28) * emitScale);
-      let budget = mobile ? 8 : 16;
+        Math.min(quality.rateCap.spray, (speed / WASH_SPACING) * (0.62 + context.tier * 0.28) * emitScale);
+      let budget = quality.budget.spray;
       while (sprayAccumulator >= 1 && budget > 0) {
         sprayAccumulator -= 1;
         budget -= 1;
@@ -3383,19 +3838,20 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // steady state with both running at tier 3: 66 spray-pool sprites drawn
       // of 208 desktop, 35 of 96 mobile.
       const rate = Math.min(
-        mobile ? 150 : 420,
+        quality.rateCap.wash,
         (speed / WASH_SPACING) *
           look.density *
           (0.45 + contactLoad * 0.55) *
           (spraying ? 0.5 : 1) *
           (context.reducedMotion ? 0.4 : 1) *
-          poolScale
+          poolScale *
+          loadScale
       );
       contactAccumulator += dt * rate;
       // Hard ceiling per frame. A frame-time spike (tab restore, first frame
       // after a load) would otherwise dump a whole second of emission into one
       // instant and recycle every live particle in the pool.
-      let budget = mobile ? 8 : 16;
+      let budget = quality.budget.wash;
       while (contactAccumulator >= 1 && budget > 0) {
         contactAccumulator -= 1;
         budget -= 1;
@@ -3416,9 +3872,9 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       if (look.crystal > 0) {
         crystalAccumulator +=
           dt *
-          Math.min(mobile ? 40 : 90, (speed / WASH_SPACING) * 0.18 * look.crystal * (0.4 + contactLoad * 0.6)) *
+          Math.min(quality.rateCap.crystal, (speed / WASH_SPACING) * 0.18 * look.crystal * (0.4 + contactLoad * 0.6)) *
           emitScale;
-        let crystalBudget = mobile ? 3 : 6;
+        let crystalBudget = quality.budget.crystal;
         while (crystalAccumulator >= 1 && crystalBudget > 0) {
           crystalAccumulator -= 1;
           crystalBudget -= 1;
@@ -3443,11 +3899,17 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // time — which is a stray speck, not a surface property. Each fleck is
       // also a fraction of the screen area it used to be now that it lies in
       // the road plane, so the headcount has to carry the read.
-      glintAccumulator += dt * (mobile ? 20 : 40) * look.glint * poolScale;
-      while (glintAccumulator >= 1) {
+      glintAccumulator += dt * quality.glintRate * look.glint * emitScale * ambient.glint * ambientLoad;
+      // Budgeted like every other emitter in the file: a frame-time spike must
+      // not dump a second of sparkle into one instant and recycle the drift
+      // sparks out of the burst pool behind it.
+      let glintBudget = quality.budget.spindrift;
+      while (glintAccumulator >= 1 && glintBudget > 0) {
         glintAccumulator -= 1;
+        glintBudget -= 1;
         spawnGlint(context);
       }
+      if (glintBudget <= 0) glintAccumulator = 0;
     } else {
       glintAccumulator = 0;
     }
@@ -3460,11 +3922,17 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     // in practice, since the flat proximity ramp retires them at the lens),
     // against the wash's measured 66 — so it cannot starve the gameplay tier.
     if (isIce && !context.reducedMotion) {
-      spindriftAccumulator += dt * SPINDRIFT_RATE * poolScale;
+      // Thinned by the governor but never taken to zero, unlike the glint and
+      // the idle exhaust: this is the only cue in the module that shows the
+      // storm's BEARING (see the SPINDRIFT_* block), and Penguin Village's brief
+      // is a storm front. A phone that cannot hold the framerate still gets an
+      // arctic track with a wind direction in it.
+      spindriftAccumulator +=
+        dt * SPINDRIFT_RATE * emitScale * ambient.spindrift * (0.35 + 0.65 * ambientLoad);
       // Budgeted like every other emitter here: a frame-time spike must not dump
       // a second of weather into one instant and recycle the wash out of the
       // pool behind it.
-      let spindriftBudget = mobile ? 3 : 6;
+      let spindriftBudget = quality.budget.spindrift;
       while (spindriftAccumulator >= 1 && spindriftBudget > 0) {
         spindriftAccumulator -= 1;
         spindriftBudget -= 1;
@@ -3509,9 +3977,22 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     const kartZ = context.kartPosition.z;
 
     let sprayColorDirty = false;
+    let sprayMatrixDirty = false;
+    // One exit for every path that takes a sprite out of the frame, and it
+    // writes HIDDEN_POSE only if the slot is not already holding it. The pools
+    // are mostly dead most of the time — 66 of 208 in this file's own measured
+    // steady state — and the shipped loop paid a 16-float instance write per
+    // dead slot per frame, i.e. a cost that scales with the POOL rather than
+    // with what is on screen. That is exactly the wrong shape for a phone tier.
+    const hideSpray = (item, index) => {
+      if (item.hidden) return;
+      sprayMesh.setMatrixAt(index, HIDDEN_POSE);
+      item.hidden = true;
+      sprayMatrixDirty = true;
+    };
     sprayPool.forEach((item, index) => {
       if (item.life <= 0) {
-        sprayMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideSpray(item, index);
         return;
       }
       item.life -= dt;
@@ -3534,7 +4015,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         // lifetime in this state, and freeing the slot is what keeps the pool
         // from recycling particles that are still on screen.
         item.life = 0;
-        sprayMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideSpray(item, index);
         return;
       }
       const screenSpeed = scratchScreenVelocity.length();
@@ -3548,7 +4029,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       const angleCap = depth * (item.maxAngle || (item.flat ? FLAT_MAX_ANGLE : MAX_SPRITE_ANGLE));
       const width = Math.min((item.sizeEnd + (item.sizeStart - item.sizeEnd) * fade) * prox, angleCap);
       if (width < depth * MIN_SPRITE_ANGLE) {
-        sprayMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideSpray(item, index);
         return;
       }
       // Contact-footprint mask. Hidden rather than drawn at zero brightness: an
@@ -3559,7 +4040,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
           ? contactMaskAt(item.position.x - kartX, item.position.z - kartZ, kartCos, kartSin)
           : 1;
       if (mask <= 0) {
-        sprayMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideSpray(item, index);
         return;
       }
       // Angular energy conservation, ground quads only. A billboard already pays
@@ -3597,6 +4078,8 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         scratchRoll.setFromAxisAngle(Z_AXIS, aimed + item.roll * (1 - aim)).premultiply(scratchQuaternion);
       }
       sprayMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
+      item.hidden = false;
+      sprayMatrixDirty = true;
       // Fade brightness as well as size — a sprite that only shrinks pops out.
       // Under additive blending brightness IS opacity, so this is a real
       // dissolve on both tracks and the proximity term applies on both.
@@ -3606,7 +4089,11 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       );
       sprayColorDirty = true;
     });
-    sprayMesh.instanceMatrix.needsUpdate = true;
+    // Only flag the upload if the buffer actually changed — an InstancedMesh
+    // re-uploads all of it every time this is set, and on the grid, in the
+    // pre-race camera and on any frame where nothing is emitting, none of it
+    // moved.
+    if (sprayMatrixDirty) sprayMesh.instanceMatrix.needsUpdate = true;
     if (sprayColorDirty) sprayMesh.instanceColor.needsUpdate = true;
 
     // Skids: lay while drifting on the ground; a break in the drift breaks
@@ -3655,7 +4142,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // at tier 3, which the pool absorbs because a spark's ttl is ~0.15 s.
       sparkAccumulator += dt * (78 + context.tier * 60) * emitScale;
       sparkTint.set(DRIFT_FEEL.sparkColors[context.tier] || DRIFT_FEEL.sparkColors[1]);
-      let sparkBudget = mobile ? 6 : 12;
+      let sparkBudget = quality.budget.spark;
       while (sparkAccumulator >= 1 && sparkBudget > 0) {
         sparkAccumulator -= 1;
         sparkBudget -= 1;
@@ -3684,7 +4171,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       if (EXHAUST_TIER_PULL > 0 && tier >= 1) sparkTint.lerp(EXHAUST_COLOR, EXHAUST_TIER_PULL);
       // Frame-time spikes would otherwise dump a whole second of emission into
       // one instant and recycle the pool; two sprites go out per iteration.
-      let budget = mobile ? 6 : 12;
+      let budget = quality.budget.flame;
       while (flameAccumulator >= 1 && budget > 0) {
         flameAccumulator -= 1;
         budget -= 1;
@@ -3702,7 +4189,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         (FLAME_HAZE_IDLE_RATE + speed / FLAME_HAZE_SPACING) *
         (0.55 + boostEnergy * 0.45) *
         emitScale;
-      let hazeBudget = mobile ? 4 : 8;
+      let hazeBudget = quality.budget.haze;
       while (flameHazeAccumulator >= 1 && hazeBudget > 0) {
         flameHazeAccumulator -= 1;
         hazeBudget -= 1;
@@ -3713,12 +4200,19 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       // Idle exhaust so the kart is never inert. Rate rises gently with speed —
       // it is engine load, not a cue — and stays an order of magnitude below
       // the boost plume so a boost is still unambiguous.
-      flameAccumulator += dt * (2.5 + (speed / maxSpeed) * 5) * poolScale;
+      flameAccumulator += dt * (2.5 + (speed / maxSpeed) * 5) * poolScale * loadScale * ambient.idle * ambientLoad;
       sparkTint.set(EXHAUST_TINT);
-      while (flameAccumulator >= 1) {
+      // Same spike guard as the boost plume above. `ambient.idle` is 0 on the
+      // bottom tier, where this system is dropped outright — it is furniture by
+      // its own comment, and it is the only emitter that runs on every frame of
+      // a lap whether anything is happening or not.
+      let idleBudget = quality.budget.flame;
+      while (flameAccumulator >= 1 && idleBudget > 0) {
         flameAccumulator -= 1;
+        idleBudget -= 1;
         spawnIdleFlame(context, sparkTint);
       }
+      if (idleBudget <= 0) flameAccumulator = 0;
       flameHazeAccumulator = 0;
     } else {
       flameAccumulator = 0;
@@ -3727,9 +4221,17 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
 
     // Bursts: ballistic, camera-billboarded, shrink out.
     let burstColorDirty = false;
+    let burstMatrixDirty = false;
+    // See hideSpray above — same elision, same reason.
+    const hideBurst = (item, index) => {
+      if (item.hidden) return;
+      burstMesh.setMatrixAt(index, HIDDEN_POSE);
+      item.hidden = true;
+      burstMatrixDirty = true;
+    };
     burstPool.forEach((item, index) => {
       if (item.life <= 0) {
-        burstMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideBurst(item, index);
         return;
       }
       item.life -= dt;
@@ -3746,7 +4248,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       if (prox <= 0.001) {
         // Same retirement rule as the spray pool above.
         item.life = 0;
-        burstMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideBurst(item, index);
         return;
       }
       // Combustion is not steady — a per-particle scale jitter is what stops a
@@ -3774,7 +4276,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       const angleCap = depth * (item.maxAngle || MAX_SPRITE_ANGLE * Math.min(1, item.size * 0.6));
       const width = Math.min(item.size * (0.5 + fade * 0.8) * prox * flicker * tumbleWidth, angleCap);
       if (width < depth * MIN_SPRITE_ANGLE) {
-        burstMesh.setMatrixAt(index, HIDDEN_POSE);
+        hideBurst(item, index);
         return;
       }
       if (item.flat) {
@@ -3785,7 +4287,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
           ? contactMaskAt(item.position.x - kartX, item.position.z - kartZ, kartCos, kartSin)
           : 1;
         if (flatMask <= 0) {
-          burstMesh.setMatrixAt(index, HIDDEN_POSE);
+          hideBurst(item, index);
           return;
         }
         // Ground-aligned and anisotropic: the surface caught the light. A
@@ -3796,6 +4298,8 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         scratchScale.set(width * item.aspect, width, 1);
         scratchRoll.setFromAxisAngle(Y_AXIS, item.spin).multiply(FLAT_QUAT);
         burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
+        item.hidden = false;
+        burstMatrixDirty = true;
         burstMesh.setColorAt(
           index,
           scratchColor
@@ -3820,6 +4324,8 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         const aim = clamp01((stretch - 1) / 0.5);
         scratchRoll.setFromAxisAngle(Z_AXIS, roll + item.roll * (1 - aim)).premultiply(scratchQuaternion);
         burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
+        item.hidden = false;
+        burstMatrixDirty = true;
       } else {
         // The unstretched path is the only one that reads `aspect`, and every
         // emitter that uses it authors an orientation to go with it: the shock
@@ -3830,6 +4336,8 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         scratchScale.set(width, width * aspect, 1);
         scratchRoll.setFromAxisAngle(Z_AXIS, item.roll).premultiply(scratchQuaternion);
         burstMesh.setMatrixAt(index, scratchMatrix.compose(item.position, scratchRoll, scratchScale));
+        item.hidden = false;
+        burstMatrixDirty = true;
       }
       // Eased to zero, not floored at 0.25 — a sprite that dies at a quarter
       // brightness blinks out and reads as a dropped object.
@@ -3839,7 +4347,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       );
       burstColorDirty = true;
     });
-    burstMesh.instanceMatrix.needsUpdate = true;
+    if (burstMatrixDirty) burstMesh.instanceMatrix.needsUpdate = true;
     if (burstColorDirty) burstMesh.instanceColor.needsUpdate = true;
 
     // Storm snow. Ambient by definition, so reducedMotion hides it outright
@@ -3879,7 +4387,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     speedLineUniforms.uTime.value = (speedLineUniforms.uTime.value + dt) % 1000;
     speedLineUniforms.uAspect.value = camera.isPerspectiveCamera && camera.aspect ? camera.aspect : 16 / 9;
     // The field retreats to the corners and slows as the boost bleeds out.
-    speedLineUniforms.uInner.value = 0.46 - 0.1 * Math.min(1, intensity);
+    speedLineUniforms.uInner.value = quality.lineInner - 0.1 * Math.min(1, intensity);
     // Higher density = SHORTER streaks (density is cycles per unit radius), so
     // the field tightens up as it peaks instead of growing 600 px rods.
     speedLineUniforms.uDensity.value = 2.7 + Math.min(1, intensity) * 1.1;
@@ -3952,6 +4460,10 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     dispose,
     group,
     onCue,
+    // Resolved tier, pool census and the governor's live load term. Read by
+    // window.__g3ParticlesDebug in the monolith, which is how a headless smoke
+    // or an owner phone check can assert which tier it actually got.
+    quality: qualityInfo,
     onImpact: (context, options) => spawnImpactEvent(context, options),
     speedLines,
     update,

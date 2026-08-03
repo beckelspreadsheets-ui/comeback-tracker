@@ -24,12 +24,36 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
   laps: COMEBACK_CITY_COURSE_V2.laps || 3,
   // Spawn just past the finish line so the gate frames the lap wrap at
   // progress 0 without crowding the spawn camera.
-  startOffset: 0.03,
-  // Bridge band peaks at progress ~0.467 where the climb crosses over the
-  // dive (which passes under at ~0.191); peak must clear kart visual
-  // height. Measured from the generated centerline's self-intersection.
-  // crestLaunch: the bridge top is a free ballistic launch (kicker + jump).
-  elevation: { bridgeBand: { from: 0.4, peak: 21, to: 0.534 }, crestLaunch: true },
+  //
+  // AAA wave 8: 0.03 -> 0.0075. This is a WORLD DISTANCE expressed as a
+  // progress fraction, which is exactly the class of constant a 4x lap breaks
+  // silently. 0.03 put the grid 87 units past the gate on the 2,897-unit loop;
+  // on the 11,654-unit loop it would put it 349 units past — a second and a
+  // third of driving between the gate the camera frames and the karts it is
+  // supposed to be framing. 0.0075 is that same 87 units.
+  startOffset: 0.0075,
+  // THE VIADUCT. Candidate C's set piece and the reason this layout was picked:
+  // the lap crosses over itself. The band is placed off the measured crossing —
+  // the viaduct passes over the start straight at p0.843 / p0.009, 8.6 units
+  // apart in plan, i.e. the same piece of ground. A crest at p0.825 puts ~30
+  // units of air over the start/finish line (half again the old bridge) and
+  // leaves 582 units = 2.2 s of descent before the viaduct hairpin's entry,
+  // which is what keeps that corner off the crest's shoulder. Peak 40 over the
+  // 0.785-0.865 band solves to a 13.5% max gradient — inside the shipped,
+  // proven 17-18% range with room to spare.
+  //
+  // underpassBand is the OTHER half of the crossing: where the lap drives
+  // UNDER the deck it will later drive over. Measured on the shipped
+  // centerline at 3,000 samples — the two branches close to 1.8 units apart at
+  // p0.0093 (elevation 0) and p0.8437 (elevation 29.7) — so this band is that
+  // point widened by roughly the deck's own width. The chase camera reads it
+  // and ducks the boom; nothing else consumes it, and a track without one
+  // (Penguin Village has no self-intersection) simply omits the key.
+  elevation: {
+    bridgeBand: { from: 0.785, peak: 40, to: 0.865 },
+    crestLaunch: true,
+    underpassBand: { from: 0.003, to: 0.017 },
+  },
   // Procedural opening-facade run + roadside scatter are comeback-city-only
   // dressing; new tracks bring their own.
   dressing: { openingFacades: true, roadsideProps: true },
@@ -228,9 +252,16 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
         assetId: 'barrier.neon-pylon',
         color: '#36e2ff',
         endProgress: 0.98,
-        every: 0.045,
+        every: 0.0112,
         key: 'neon-edge-pylons',
         kind: 'barrier-family',
+        // AAA wave 8: `every` is a progress fraction, so on the 4x lap 0.045
+        // spaced the pylons 524 world units apart instead of the authored 130.
+        // 0.0112 is that same 130 units. maxInstances holds the draw budget,
+        // so the run now covers the first ~40% of the lap at the authored pitch
+        // rather than the whole lap at a pitch nobody would read as a barrier.
+        // (This whole block only renders under ?trackVisuals=1, which is off by
+        // default — corrected anyway so the lab is not measuring a lie.)
         maxInstances: 42,
         offset: 5.5,
         scale: 1,
@@ -240,27 +271,38 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
     ],
   },
   // Ramps live on the straights, off the center line so they're a
-  // deliberate line choice; the bridge crest is a free natural launch.
+  // deliberate line choice; the viaduct crest is a free natural launch.
+  // Re-seated onto the new lap: one on the market row's exit run, one on the
+  // long climb into the viaduct ramp.
   ramps: [
-    { progress: 0.075, side: -0.35 },
-    { progress: 0.685, side: 0.35 },
+    { progress: 0.45, side: -0.55 },
+    { progress: 0.63, side: 0.5 },
   ],
-  // Shortcut dare-ramp: jump the entire south carousel from the inside
-  // line. Only sticks if you arrive ABOVE natural top speed; case it slow
-  // and you crash-land mid-corner. Risk ≈ 4-5s lost, reward ≈ 2-3s won.
+  // The RAIL-YARD CUT. Same contract as the old carousel dare: leave the road
+  // inside the Rail chicane, fly the sidings, and rejoin on the run to the
+  // viaduct ramp. It only sticks above 238 u/s and casing it drops you in the
+  // yard. Risk ~4-5 s lost, reward ~2-3 s won.
   shortcut: {
     failFlightTime: 0.85,
-    failLandProgress: 0.272,
+    failLandProgress: 0.605,
     failSpeed: 40,
     failSpin: 1.8,
-    flightTime: 1.55,
-    landProgress: 0.365,
-    launchProgress: 0.212,
-    minSpeed: 232,
-    peakHeight: 26,
+    flightTime: 1.45,
+    landProgress: 0.635,
+    launchProgress: 0.575,
+    minSpeed: 238,
+    peakHeight: 22,
     side: -0.7,
   },
   // QA gate budgets (kart-playable): deterministic autoplay must finish
   // within finishSeconds and hold at least speedFloor mid-race.
-  budgets: { finishSeconds: 45, speedFloor: 140 },
+  //
+  // 45 -> 180. The geometric solve for this lap is 134.35 s over three laps
+  // and the shipped telemetry runs ~1.7% slower than the solve (the grid start
+  // spends the first two seconds accelerating from a standstill), so the real
+  // number to beat is ~137 s. 180 keeps the SAME ~34% margin the old 45 held
+  // over the old 33.5 s solve — a budget is only a regression detector if its
+  // headroom is proportional, and one set to 140 here would fire on a bad lap
+  // rather than on a broken build.
+  budgets: { finishSeconds: 180, speedFloor: 140 },
 });

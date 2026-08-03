@@ -29,6 +29,86 @@ import * as THREE from 'three';
 // if the shadow map is off.
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const smoothstep01 = (value) => {
+  const t = clamp(value, 0, 1);
+  return t * t * (3 - 2 * t);
+};
+
+// AAA WAVE 8 — THE SECOND FAULT, MEASURED. READ THIS BEFORE TOUCHING TIER 2.
+//
+// Wave 7 fixed the arithmetic that clamped the wave-5 mitigation away on Penguin
+// Village, and the frames STILL showed no grounding. Wave 8 was asked to explain
+// a contradiction: with the contact patch clamped at 0.700 — a 70% multiply wipe
+// on the framebuffer — the road under the kart measured a flat 49-56 across
+// 540px, including a 169-value lane dash the patch had plainly not touched.
+//
+// It was measured directly, on a running build, with three probes:
+//
+//   1. The decal's own state at penguin-village p0.06: visible, in the world,
+//      frustumCulled false, blending CustomBlending(ZERO, ONE_MINUS_SRC_ALPHA),
+//      opacity 0.7079, sitting 0.08-0.12 above the road with nothing between it
+//      and the asphalt. Every input correct.
+//   2. The decal's opacity pinned to 1.0 — a TOTAL wipe, i.e. every pixel it
+//      covers forced to black. Penguin Village measured 50-53 before and 50-53
+//      after, and the 169 lane dash stayed 169. Comeback City, same pin, same
+//      frame, put a jet-black ellipse on the road. So the decal reaches the
+//      framebuffer, and on PV it lands somewhere nobody can see.
+//   3. The same decal 4x wider, opacity still 1.0. Penguin Village's road went
+//      to 3-10 across 450px. It draws. It is simply too small.
+//
+// THE PATCH IS NARROWER ON SCREEN THAN THE KART THAT CASTS IT. It is authored
+// as "the kart's own footprint and nothing more" (see contactPatchProfile), and
+// from a chase camera sitting barely above the deck a kart occludes its own
+// footprint completely. Tier 2 is therefore invisible on EVERY grounded frame,
+// on BOTH tracks — Comeback City's contact patch is equally hidden; the pinning
+// test above proves it. CC gets away with it because its 21-degree key throws an
+// 18-unit cast shadow that lands beside the kart in plain sight. Penguin
+// Village's 12-degree key throws 33 units of ribbon whose only high-contrast end
+// is the strip immediately beside the wheels, which is exactly the strip the
+// kart's body covers. Confirmed by forcing PV's key to 45 degrees at runtime: a
+// clean cast shadow appears immediately, and it fades out smoothly as the
+// elevation is walked back down (45 -> 32 -> 25 -> 20 -> 16 -> 12).
+//
+// That is why every mitigation since wave 5 has failed. contactPatchKeyStrength,
+// CONTACT_WIPE_CAP, contactWipeCapFor, the whole 1 -> 1.55 opacity boost below:
+// all of them scale HOW DARK a patch nobody can see is. Opacity on an occluded
+// decal is arithmetically live and visually inert. The quantity that was never
+// touched is its AREA.
+//
+// So the area gets the key-driven term, and it is derived from the light the
+// frame is actually lit by rather than from a per-track constant: the rig
+// publishes the key's elevation each frame (see update()), and
+// contactPatchShadowBoost reads it. Same module, and the caller runs
+// shadowRig.update() immediately before contactPatchShadowBoost() in the same
+// frame block, so the value is always this frame's.
+//
+// The thresholds deliberately match the monolith's contactPatchKeyStrength
+// (0.34 readable / 0.12 hopeless) so the opacity half and the area half of the
+// same idea can never disagree about which track they are on.
+//
+// COMEBACK CITY IS BIT-IDENTICAL BY CONSTRUCTION: sin(21 degrees) = 0.3584 is
+// above CONTACT_KEY_READABLE_SIN, so the smoothstep argument is negative, clamps
+// to 0, and every term below multiplies by exactly 1.
+const CONTACT_KEY_READABLE_SIN = 0.34;
+const CONTACT_KEY_HOPELESS_SIN = 0.12;
+// Seeded to Comeback City's key so the very first frame of any race — before
+// update() has run once — is the neutral, shipped behaviour rather than a pop.
+let liveKeySinElevation = Math.sin((21 * Math.PI) / 180);
+const keyGroundingDeficit = () =>
+  smoothstep01(
+    (CONTACT_KEY_READABLE_SIN - clamp(liveKeySinElevation, 0, 1)) /
+      (CONTACT_KEY_READABLE_SIN - CONTACT_KEY_HOPELESS_SIN)
+  );
+// How far the patch may grow, as a linear multiplier on each axis, when the key
+// is doing none of the work. 0.55 takes Penguin Village's authored 8.4 x 12.6
+// (already x sqrt(contactStrength) = 1.105 at build time) to roughly 13 x 20 —
+// i.e. back to the 12 x 21 blob this decal WAS before the shadow map landed, and
+// no further. That blob shipped for two waves without anyone calling it a hole
+// in the road; what drew the "black slab" and "oversized detached blob" notes
+// was a blob that size sitting NEXT TO a cast shadow, or one that grew without
+// getting lighter. Neither happens here: this term is zero on any track whose
+// key casts, and the opacity taper below is the second half of the fix.
+const CONTACT_KEY_SPREAD_GAIN = 0.55;
 
 // AAA WAVE 7 ROUND 2 — normalBias IS A GROUND GAP, AND IT WAS 1.8x WIDER ON
 // PENGUIN VILLAGE THAN ON COMEBACK CITY FOR THE SAME NUMBER.
@@ -453,8 +533,14 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
     // sunDirection points FROM the subject TOWARD the sun and is unit length, so
     // its y IS sin(elevation). Written every frame because it is a uniform and
     // because the caller is free to move the sun (palette moments already do).
+    const sinElevation = Math.abs(sunDirection.y) || Math.sin(CC_SUN_ELEVATION);
+    // Published for tier 2. contactPatchShadowBoost needs to know how much of
+    // the grounding job this frame's key can actually do, and this is the only
+    // place in the module that sees the light. The caller runs this update()
+    // immediately before it calls contactPatchShadowBoost(), so the two are
+    // always looking at the same frame — see the wave 8 block at the top.
+    liveKeySinElevation = sinElevation;
     if (active) {
-      const sinElevation = Math.abs(sunDirection.y) || Math.sin(CC_SUN_ELEVATION);
       sun.shadow.normalBias = clamp(
         NORMAL_BIAS_GROUND_GAP * sinElevation,
         NORMAL_BIAS_MIN,
@@ -645,6 +731,18 @@ export const contactPatchProfile = (shadowsEnabled, contactGrounding) =>
  * -0.995) carries a large, clean cast shadow, so PV's rig, caster policy and
  * ortho box are all sound.
  *
+ * CORRECTION, AAA WAVE 8 — the rig/caster/ortho half of that paragraph holds
+ * (measured: the player sits at shadow-camera NDC (0.000, 0.005, -0.289), dead
+ * centre of the frustum, with 567 marked casters and a live 3072 map), but "PV
+ * carries a large clean cast shadow at p0_33" does NOT. With tier 2 hidden and
+ * the umbra forced to 1.0, Penguin Village renders NO cast shadow anywhere in
+ * frame — not from the kart, not from the roadside pylons — while Comeback City
+ * under the identical toggle puts a large unmistakable kart shadow on the road.
+ * Forcing PV's key up to 45 degrees at runtime makes one appear immediately, and
+ * walking it back down (45 -> 32 -> 25 -> 20 -> 16 -> 12) fades it out smoothly,
+ * so this is a gradient in the key's elevation and not a broken switch. What was
+ * mistaken for a shadow in that frame is the road's own baked edge shading.
+ *
  * What is actually per-track is the ribbon's LENGTH: at 12 degrees a 7-unit kart
  * throws 32.9 units against 18.2 at Comeback City's 21, so the same silhouette
  * is smeared over five kart-lengths of road and, thrown side-on, its far two
@@ -671,10 +769,47 @@ export const contactPatchShadowBoost = (awayDot, out = { opacity: 1, scale: 1 })
   // through the middle of the turn.
   const t = clamp((awayDot - 0.05) / 0.75, 0, 1);
   const hidden = t * t * (3 - 2 * t);
+  // AAA WAVE 8 — THE AREA TERM. See the block at the top of this file for the
+  // three measurements that root-caused it; the short version is that this
+  // patch is narrower on screen than the kart standing on it, so every opacity
+  // term in this function has been invisible on grounded frames since it was
+  // written, and area is the only quantity that can get the mass out from under
+  // its own caster.
+  //
+  // `hidden` is about AZIMUTH — where the ribbon points. `deficit` is about
+  // ELEVATION — whether the key can put a readable mass on the road at all.
+  // They are independent failures and they are combined, not maxed: a low key
+  // whose ribbon ALSO points away from the lens is the worst case in the game
+  // and is exactly a start-line frame on Penguin Village.
+  const deficit = keyGroundingDeficit();
+  const spread = 1 + hidden * 0.45 + deficit * CONTACT_KEY_SPREAD_GAIN;
+  out.scale = spread;
+  // ...AND IT DOES NOT ALSO GET DARKER. A penumbra conserves energy — the same
+  // rule wave 7 had to put back into the air fade (airSpreadNormalise in the
+  // monolith), for the same reason: a patch that grows without softening is not
+  // a shadow, it is a bigger stamp, and that is precisely what drew "an
+  // unmotivated dark blob composited across the racing line" when wave 7 round 3
+  // tried growing it.
+  //
+  // The taper is applied to the AZIMUTH GAIN ONLY, never to the base 1.0, and
+  // that constraint is not cosmetic: the monolith reads `(boost.opacity - 1) /
+  // 0.55` back out as this frame's own measure of "tier 1 cannot be seen", and
+  // uses it to hold an airborne kart's patch above CONTACT_AIR_HIDDEN_FLOOR.
+  // Pushing opacity below 1 would silently zero that branch and take the
+  // grounding cue off exactly the frames — PV's crest and bridge — where it is
+  // the only cue on screen. So the contract stays: >= 1, and (opacity - 1) /
+  // 0.55 stays in [0, 1].
+  //
+  // The patch's own base opacity is deliberately NOT reduced. What the growth
+  // newly exposes is the texture's 0.44-0.84 radius band, where the ramp runs
+  // 0.9 -> 0.08 alpha; the near-solid core stays where it always was, under the
+  // kart. The mass that arrives beside the wheels is therefore a 0.3-0.6 wipe,
+  // which is a soft shadow, not the 0.8 the file's own note calls a hole cut
+  // through the asphalt.
+  const keySoften = 1 / Math.sqrt(1 + deficit * CONTACT_KEY_SPREAD_GAIN);
   // Written into a caller-owned record. This runs once a frame for the whole
   // race; returning a fresh object would be ~4KB/s of garbage for two numbers.
-  out.opacity = 1 + hidden * 0.55;
-  out.scale = 1 + hidden * 0.45;
+  out.opacity = 1 + hidden * 0.55 * keySoften;
   return out;
 };
 

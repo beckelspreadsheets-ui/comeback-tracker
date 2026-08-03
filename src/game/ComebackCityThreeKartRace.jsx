@@ -477,7 +477,46 @@ const formatGap = (seconds) => {
   return `${sign}${Math.abs(seconds).toFixed(1)}s`;
 };
 
-const TRACK_SAMPLES = 112;
+// Centreline sampling PITCH for the two "is this spot clear of the road?"
+// searches (building placement and bridge-pillar footing). Was a flat 112
+// samples, which is 26 world units on the old 2,897-unit loop and 104 units on
+// the 11,654-unit one — and a 104-unit chord straight past a 30-unit-wide
+// road means a prop can sit ON the tarmac and measure as clear. Expressed as
+// the spacing it always really was, so it survives the next length change too.
+// Floor 112 keeps a small track from under-sampling; ceiling 640 keeps the
+// O(props x samples) placement search bounded.
+const TRACK_SAMPLE_UNITS = 26;
+const trackSampleCount = (sampler) => clamp(Math.round(sampler.length / TRACK_SAMPLE_UNITS), 112, 640);
+
+// AAA wave 8 — DRESSING DENSITY IS A SPACING, NOT A COUNT.
+//
+// Every roadside run in this file was a fixed iteration count over a progress
+// fraction: 24 props at (0.035 + i*0.041), 11 chevron pairs at (0.04 + i*0.085),
+// 7 tyre stacks at (0.12 + i*0.12). On the 2,897-unit loop those are one every
+// 121 / 263 / 414 units, which is what the frames were tuned against. On an
+// 11,654-unit lap the identical code puts one every 485 / 1059 / 1665 units —
+// a nine-second straight with two lamp posts on it.
+//
+// The plan for this wave is explicit that BEATS must not be multiplied (that is
+// what buys MK8 pacing for free), but dressing is not a beat and an empty verge
+// is a regression in the only thing this project is graded on: the frames. So
+// spacing is honoured and the COUNT is capped, which keeps the draw-call growth
+// bounded and stated rather than proportional.
+const dressingCount = (sampler, spacingUnits, min, max) =>
+  clamp(Math.round(sampler.length / spacingUnits), min, max);
+
+// A prop anchored at `progress` is placed at sampler.pointAt(progress), whose y
+// IS the elevation — so anything landing inside a bridge/viaduct band gets
+// planted in mid-air beside the deck. That was already true of the old bridge
+// (four of the 24 scatter props fell inside Comeback City's 0.4-0.534 band) and
+// the new viaduct is twice the height, so it is now a 40-unit float. Nothing is
+// moved; the anchor is skipped and the run carries on.
+const onElevatedSpan = (trackDef, progress) => {
+  const band = trackDef?.elevation?.bridgeBand;
+  if (!band) return false;
+  const p = wrap01(progress);
+  return p > band.from - 0.004 && p < band.to + 0.004;
+};
 const MAX_SPEED = 228;
 const BOOST_SPEED = 284;
 // One scale for every kart — mixed sizes read as a bug (owner feedback).
@@ -517,17 +556,42 @@ export const KART_CHARACTERS = [
 // the measured autoplay spread is 1.0s and every kart WINS. V2 NOTE (owner, same
 // message): when tracks reach MK-length 2-3 min races the spreads can
 // widen back out — pre-rebalance values are in git at 511dc12b.
+//
+// AAA WAVE 8 — THAT CONDITION IS NOW MET, so top speed goes ±2% -> ±3.5%.
+// The owner's call was explicitly conditional on race length, and this wave
+// lands a 134 s race in place of the 34 s one the ±2% was measured against.
+//
+// Why 3.5 and not the −6/+8 this came from. The 2026-07-13 probe is the number
+// that matters and it is a RATIO, not an absolute: at ±3% a 2% top-speed
+// deficit cost the Miami Cruiser 3.7 s over 34 seconds, i.e. ~11% of the race,
+// which is far more than a top-speed difference should be worth and is why it
+// lost outright. The same multiplier over a 134 s race is worth the same
+// PERCENTAGE of lap time but is now spread across four times as much racing, so
+// a 3.5% edge is roughly a second and a half a lap — enough that the choice is
+// legible, small enough that a driver still overturns it. The old −6/+8 was
+// asymmetric as well as wide and would put 14 points between the ends of the
+// roster; this stays symmetric so `hero` remains the honest 1.0 baseline the QA
+// gates gate against.
+//
+// Accel and handling are UNCHANGED at ±4/±5. They were never the complaint,
+// they are self-limiting on a long track (an acceleration edge is spent once
+// per corner exit rather than accumulated down a straight), and changing three
+// axes at once would make the next balance probe unreadable.
+//
+// NOT verified in a build — this package cannot run the capture harness. The
+// autoplay spread wants re-probing on the new tracks before it goes to the
+// owner; the reasoning above is the design intent, not a measurement.
 export const KART_OPTIONS = [
   { key: 'hero', name: 'Hero Kart', stats: { accel: 1.0, handling: 1.0, topSpeed: 1.0 }, tagline: 'Balanced' },
-  { key: 'icesled', name: 'Ice Sled', stats: { accel: 0.97, handling: 0.96, topSpeed: 1.015 }, tagline: 'Fast & slippery' },
-  { key: 'kenney', name: 'Dragster', stats: { accel: 1.04, handling: 1.02, topSpeed: 0.99 }, tagline: 'Quick off the line' },
+  { key: 'icesled', name: 'Ice Sled', stats: { accel: 0.97, handling: 0.96, topSpeed: 1.026 }, tagline: 'Fast & slippery' },
+  { key: 'kenney', name: 'Dragster', stats: { accel: 1.04, handling: 1.02, topSpeed: 0.982 }, tagline: 'Quick off the line' },
   // K5 owner picks 2026-07-12 ("i meant the ice racer and miami cruser"):
-  { key: 'iceracer', name: 'Ice Racer', stats: { accel: 0.98, handling: 0.95, topSpeed: 1.02 }, tagline: 'Frozen top end' },
-  { key: 'miamicruiser', name: 'Miami Cruiser', stats: { accel: 1.03, handling: 1.04, topSpeed: 0.985 }, tagline: 'Grips the neon' },
+  { key: 'iceracer', name: 'Ice Racer', stats: { accel: 0.98, handling: 0.95, topSpeed: 1.035 }, tagline: 'Frozen top end' },
+  { key: 'miamicruiser', name: 'Miami Cruiser', stats: { accel: 1.03, handling: 1.04, topSpeed: 0.974 }, tagline: 'Grips the neon' },
   // K8 owner picks 2026-07-17 (themed round: "the ice block cart is funny
   // enough to add" + "lets make a full bitcoin themed cart" -> B1):
-  { key: 'iceblock', name: 'Cold Storage', stats: { accel: 0.96, handling: 0.97, topSpeed: 1.015 }, tagline: 'Frozen assets' },
-  { key: 'btckart', name: 'Block Reward', stats: { accel: 1.02, handling: 0.98, topSpeed: 1.005 }, tagline: 'Number go up' },
+  { key: 'iceblock', name: 'Cold Storage', stats: { accel: 0.96, handling: 0.97, topSpeed: 1.026 }, tagline: 'Frozen assets' },
+  { key: 'btckart', name: 'Block Reward', stats: { accel: 1.02, handling: 0.98, topSpeed: 1.009 }, tagline: 'Number go up' },
 ];
 // Generated kart bodies arrive in two facing conventions: Tripo = nose +X
 // (mount -π/2), Meshy = nose -X (mount +π/2). Lab-verified per kart.
@@ -680,11 +744,48 @@ const makeElevation = (trackDef) => {
   };
 };
 
+// AAA wave 8 — ARC-LENGTH RESOLUTION HAS TO SCALE WITH THE TRACK.
+//
+// getPointAt(u) is not a spline evaluation, it is a lookup: three builds a
+// table of arc lengths at `arcLengthDivisions` samples and LINEARLY
+// interpolates the curve parameter between them. The default is 200, which on
+// the old 2,897-unit loop put a sample every 14 units and was fine. On an
+// 11,654-unit loop it is a sample every 58 units, and inside one of those spans
+// the mapping is a straight line through a corner it cannot see.
+//
+// This is not cosmetic. Progress advances at speed/trackLength — that is how
+// the player, every rival and every projectile move — so a non-uniform
+// getPointAt makes the kart's REAL world speed swing away from its nominal
+// one. Measured over 4,000 samples, worst-case step against the ideal:
+//
+//   divisions      Skyline            Bayfront
+//     200 (dflt)   x0.738 .. x1.263   x0.450 .. x1.679
+//    1000          x0.805 .. x1.185   x0.759 .. x1.187
+//    2000          x0.890 .. x1.067   x0.895 .. x1.076
+//    4000          x0.962 .. x1.009   x0.965 .. x1.015
+//
+// Bayfront at the default is the striking one: a kart crawling at 45% of its
+// own speed on the way into the hairpin and sprinting at 168% on the way out,
+// for no reason the player can see. The shipped 2,897-unit loop measured
+// x0.731..x1.254 at the default, so ~3 units per division is roughly the
+// resolution this game has always actually run at — this makes that a property
+// of the geometry instead of an accident of the track being small.
+//
+// Cost is one build-time pass (getLength already walks the default table; this
+// walks a longer one once) and ~32 KB of Float32 per track. Nothing per frame.
+const CURVE_ARC_UNITS_PER_DIVISION = 3;
 const makeTrackCurve = (trackDef, elevationAt) => {
   const points = trackDef.course.centerline.map(
     (point, index, list) => new THREE.Vector3(point.x, elevationAt(index / list.length), point.z)
   );
-  return new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.38);
+  const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.38);
+  // Chicken-and-egg: the length is needed to choose the resolution, so measure
+  // at the default first. The default's own length error is ~0.14%, which is
+  // far inside the rounding on a divisions count.
+  const coarseLength = curve.getLength();
+  curve.arcLengthDivisions = clamp(Math.round(coarseLength / CURVE_ARC_UNITS_PER_DIVISION), 200, 4096);
+  curve.updateArcLengths();
+  return curve;
 };
 
 // Smoothed road-width table from the authored ribbons — wide carousels,
@@ -2219,17 +2320,36 @@ Object.assign(MIAMI_ASSETS, PV_TRIBUTE_ASSETS);
 // box rows 0.06-0.74) so nothing crowds a pickup; clearBuildingPlacement /
 // centerline checks still guard the racing line at mount time. The casino
 // corner (craps + blackjack) sits on the market row.
+// AAA wave 8: re-seated onto the Bayfront lap and roughly doubled, so the run
+// keeps a ~700-unit pitch instead of the ~1,670 the old seven fractions would
+// give on a 4x lap. Nothing between p0.164 and p0.217 — that is the pressure
+// ridge crest and an anchor there floats at deck height. Placements still sit
+// clear of every pad (0.08/0.32/0.55/0.82) and box row so nothing crowds a
+// pickup, and the casino corner (craps + blackjack) stays together on the
+// fish-market row.
 const PV_TRIBUTE_TRACKSIDE = [
-  { asset: 'pvBitcoinMonument', footprint: 22, progress: 0.08, side: 1 },
-  { asset: 'pvTokenCluster', footprint: 10, progress: 0.22, side: -1 },
-  { asset: 'pvRunestone', footprint: 14, progress: 0.38, side: 1 },
-  { asset: 'pvCraps', footprint: 16, progress: 0.5, side: -1 },
-  { asset: 'pvBlackjack', footprint: 14, progress: 0.54, side: -1 },
-  { asset: 'pvOddsBoard', footprint: 20, progress: 0.66, side: 1 },
-  { asset: 'pvTokenCluster', footprint: 11, progress: 0.9, side: 1 },
+  { asset: 'pvBitcoinMonument', footprint: 22, progress: 0.045, side: 1 },
+  { asset: 'pvTokenCluster', footprint: 10, progress: 0.1, side: -1 },
+  { asset: 'pvRunestone', footprint: 14, progress: 0.145, side: 1 },
+  { asset: 'pvTokenCluster', footprint: 11, progress: 0.255, side: -1 },
+  { asset: 'pvRunestone', footprint: 14, progress: 0.305, side: 1 },
+  { asset: 'pvOddsBoard', footprint: 20, progress: 0.355, side: -1 },
+  { asset: 'pvCraps', footprint: 16, progress: 0.405, side: -1 },
+  { asset: 'pvBlackjack', footprint: 14, progress: 0.44, side: -1 },
+  { asset: 'pvTokenCluster', footprint: 10, progress: 0.5, side: 1 },
+  { asset: 'pvBitcoinMonument', footprint: 22, progress: 0.585, side: -1 },
+  { asset: 'pvRunestone', footprint: 14, progress: 0.645, side: 1 },
+  { asset: 'pvOddsBoard', footprint: 20, progress: 0.735, side: -1 },
+  { asset: 'pvTokenCluster', footprint: 11, progress: 0.795, side: 1 },
+  { asset: 'pvRunestone', footprint: 14, progress: 0.855, side: -1 },
+  { asset: 'pvTokenCluster', footprint: 10, progress: 0.915, side: 1 },
+  { asset: 'pvBitcoinMonument', footprint: 22, progress: 0.975, side: -1 },
 ];
-const addPvTributeTrackside = (world, sampler, roadWidth) => {
+const addPvTributeTrackside = (world, sampler, roadWidth, trackDef = null) => {
   PV_TRIBUTE_TRACKSIDE.forEach((entry) => {
+    // Belt-and-braces against the crest band: the list is authored clear of it,
+    // and this stops a retune from silently hanging a monument in the air.
+    if (onElevatedSpan(trackDef, entry.progress)) return;
     const { normal, point, tangent } = sampler.pointAt(entry.progress);
     const position = point.clone().addScaledVector(normal, entry.side * (sampler.widthAt(entry.progress) * 0.85 + 10));
     if (minCenterlineDistance(sampler, position.x, position.z) < roadWidth * 0.62) return;
@@ -2415,31 +2535,69 @@ const makeTickerTexture = (accent) => {
 // condo tower gets a smaller footprint because footprint scales the
 // horizontal bounds and the tower is ~3x taller than wide.
 // `ticker` mounts the G2 scrolling marquee strip on that building's facade.
+// AAA wave 8: re-seated onto the Skyline lap. The old five sat between p0.072
+// and p0.16 because that WAS the opening straight on a 2,897-unit loop — the
+// same fractions on an 11,654-unit lap put the whole city block inside the
+// first 15% and then nothing for 40 seconds. This is the same street run
+// (twelve buildings at the authored ~230-unit pitch, which is what makes it
+// read as a continuous facade rather than as scattered boxes) along the
+// harbour straight and around the east lobe, where the sightlines are longest
+// and the frames are captured.
 const MIAMI_OPENING_RUN = [
-  { asset: 'retroDiner', footprint: 34, progress: 0.072, side: -1 },
-  { asset: 'decoHotel', footprint: 52, progress: 0.092, side: -1, ticker: '#ff4fd8' },
-  { asset: 'condoTower', footprint: 36, progress: 0.112, side: 1 },
-  { asset: 'cornerArcade', footprint: 48, progress: 0.136, side: 1, ticker: '#46d9ef' },
-  { asset: 'decoHotel', footprint: 52, progress: 0.16, side: 1 },
+  { asset: 'retroDiner', footprint: 34, progress: 0.018, side: -1 },
+  { asset: 'decoHotel', footprint: 52, progress: 0.038, side: -1, ticker: '#ff4fd8' },
+  { asset: 'condoTower', footprint: 36, progress: 0.058, side: 1 },
+  { asset: 'cornerArcade', footprint: 48, progress: 0.078, side: 1, ticker: '#46d9ef' },
+  { asset: 'decoHotel', footprint: 52, progress: 0.098, side: 1 },
+  { asset: 'retroDiner', footprint: 34, progress: 0.118, side: -1 },
+  { asset: 'condoTower', footprint: 36, progress: 0.152, side: -1 },
+  { asset: 'decoHotel', footprint: 52, progress: 0.185, side: 1, ticker: '#ffd34f' },
+  { asset: 'cornerArcade', footprint: 48, progress: 0.218, side: -1 },
+  { asset: 'condoTower', footprint: 36, progress: 0.252, side: 1 },
+  { asset: 'decoHotel', footprint: 52, progress: 0.288, side: -1 },
+  { asset: 'retroDiner', footprint: 34, progress: 0.322, side: 1 },
 ];
 const MIAMI_DISTRICT_ASSETS = ['decoHotel', 'condoTower', 'cornerArcade', 'retroDiner', 'decoHotel'];
 // G2: palms carry wind sway (world-height scaled, trunks planted); the
 // per-cluster world-position phase keeps the rows from waving in unison.
 const PALM_SWAY = { heightRef: 9, speed: 1.3, strength: 0.34 };
+// Re-spread over the Skyline lap. Twenty-four rather than ten (a ~485-unit
+// pitch against the old ~290) — deliberately NOT the 4x that would hold the old
+// pitch exactly, because each of these is a cloned GLB group and therefore a
+// draw call, and +14 is a cost worth stating where +30 is not.
+//
+// NOTHING lands between p0.78 and p0.87: that is the viaduct, and an anchor
+// there is planted at deck height with 40 units of air under it. The deck gets
+// its own dressing from the belt and the backdrop instead.
 const MIAMI_ROADSIDE = [
-  { asset: 'palmCluster', footprint: 18, progress: 0.05, side: 1, sway: PALM_SWAY },
-  { asset: 'palmCluster', footprint: 16, progress: 0.21, side: -1, sway: PALM_SWAY },
-  { asset: 'lifeguard', footprint: 14, progress: 0.3, side: 1 },
-  { asset: 'palmCluster', footprint: 18, progress: 0.4, side: 1, sway: PALM_SWAY },
-  { asset: 'palmCluster', footprint: 16, progress: 0.52, side: -1, sway: PALM_SWAY },
-  { asset: 'retroDiner', footprint: 26, progress: 0.6, side: -1 },
-  { asset: 'palmCluster', footprint: 17, progress: 0.68, side: 1, sway: PALM_SWAY },
-  { asset: 'lifeguard', footprint: 14, progress: 0.78, side: -1 },
-  { asset: 'palmCluster', footprint: 18, progress: 0.88, side: 1, sway: PALM_SWAY },
-  { asset: 'palmCluster', footprint: 16, progress: 0.95, side: -1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 18, progress: 0.025, side: 1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.068, side: -1, sway: PALM_SWAY },
+  { asset: 'lifeguard', footprint: 14, progress: 0.105, side: 1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.142, side: -1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.178, side: 1, sway: PALM_SWAY },
+  { asset: 'retroDiner', footprint: 26, progress: 0.212, side: -1 },
+  { asset: 'palmCluster', footprint: 17, progress: 0.246, side: 1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 18, progress: 0.282, side: -1, sway: PALM_SWAY },
+  { asset: 'lifeguard', footprint: 14, progress: 0.318, side: 1 },
+  { asset: 'palmCluster', footprint: 16, progress: 0.352, side: -1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 18, progress: 0.392, side: 1, sway: PALM_SWAY },
+  { asset: 'retroDiner', footprint: 26, progress: 0.428, side: -1 },
+  { asset: 'palmCluster', footprint: 17, progress: 0.462, side: 1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.498, side: -1, sway: PALM_SWAY },
+  { asset: 'lifeguard', footprint: 14, progress: 0.534, side: 1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.568, side: -1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.604, side: 1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 17, progress: 0.642, side: -1, sway: PALM_SWAY },
+  { asset: 'retroDiner', footprint: 26, progress: 0.678, side: 1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.715, side: -1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.752, side: 1, sway: PALM_SWAY },
+  { asset: 'lifeguard', footprint: 14, progress: 0.885, side: -1 },
+  { asset: 'palmCluster', footprint: 18, progress: 0.925, side: 1, sway: PALM_SWAY },
+  { asset: 'palmCluster', footprint: 16, progress: 0.965, side: -1, sway: PALM_SWAY },
 ];
-const addMiamiTrackside = (world, sampler, roadWidth, ambient = null) => {
+const addMiamiTrackside = (world, sampler, roadWidth, ambient = null, trackDef = null) => {
   MIAMI_OPENING_RUN.forEach((entry) => {
+    if (onElevatedSpan(trackDef, entry.progress)) return;
     const { normal, point, tangent } = sampler.pointAt(entry.progress);
     const placement = clearBuildingPlacement(sampler, point, normal, entry.side, 64);
     if (!placement) return;
@@ -2453,6 +2611,7 @@ const addMiamiTrackside = (world, sampler, roadWidth, ambient = null) => {
     world.add(group);
   });
   MIAMI_ROADSIDE.forEach((entry) => {
+    if (onElevatedSpan(trackDef, entry.progress)) return;
     const { normal, point, tangent } = sampler.pointAt(entry.progress);
     const position = point.clone().addScaledVector(normal, entry.side * (sampler.widthAt(entry.progress) * 0.85 + 8));
     if (minCenterlineDistance(sampler, position.x, position.z) < roadWidth * 0.62) return;
@@ -3664,16 +3823,69 @@ varying float vRoadIce;`,
   road.userData.kind = 'real-3d-track-mesh';
   world.add(road);
 
-  const grassTexture = makeNoiseTexture(
-    palette.ground || {
-      base: '#1f4636',
-      repeat: 38,
-      speckles: [
-        { color: '#28593f', count: 380, size: 3.4 },
-        { color: '#16352a', count: 320, size: 4.2 },
-      ],
+  // ---- GROUND EXTENT: the one thing on this track pinned to the origin -----
+  //
+  // AAA wave 8. Everything else in the frame is anchored to something that
+  // moves — the backdrop rings ride the camera, the dome is pinned to the far
+  // plane, the shadow rig is a 32-unit box around the kart, the belt is built
+  // from the centreline. The ground is a plane at (0,0,0), so it is the only
+  // piece of the world that has to be sized for how big the TRACK is.
+  //
+  // The shipped 2600 (half-extent 1300) was sized for loops that spanned ~350
+  // units off the origin. The 4x layouts span 1,716 (Skyline) and 1,798
+  // (Bayfront) after recentring, so most of both laps would have been driven
+  // over the void with the backdrop showing through. Both new tracks are
+  // recentred on their own bounding box precisely so this number only has to
+  // cover EXTENT and never also an offset.
+  //
+  // The margin is the authored one, not a new guess: 1300 was chosen because at
+  // FogExp2 0.0013 the plane's edge sits at ~94% haze and therefore dissolves
+  // instead of ending. That is a property of the distance from the CAMERA to
+  // the edge, so it has to be preserved as a distance BEYOND the track, not as
+  // a total. Segment count and texel repeat then follow from the size, so the
+  // 27-unit vertex pitch (what lets the third mottle octave exist at all) and
+  // the authored texel density both survive a track-size change:
+  //
+  //   track half-extent   plane        segs    pitch
+  //   350 (shipped)       2600         96      27.1
+  //   1716 (Skyline)      6032         222     27.2
+  //   1798 (Bayfront)     6196         228     27.2
+  //
+  // Cost is real and stated: 6032^2 at 222 segments is ~50k vertices / 99k
+  // triangles against the shipped 18.4k, still ONE draw call, and the relief
+  // pass below is accelerated with a lattice so its build time does not go up
+  // with the square of this.
+  const GROUND_FOG_MARGIN = 1300;
+  const GROUND_VERTEX_PITCH = 27;
+  const GROUND_REFERENCE_SIZE = 2600;
+  let trackHalfExtent = 0;
+  {
+    const extentSamples = trackSampleCount(sampler);
+    for (let index = 0; index < extentSamples; index += 1) {
+      const { center } = sampler.pointAt(index / extentSamples);
+      trackHalfExtent = Math.max(trackHalfExtent, Math.abs(center.x), Math.abs(center.z));
     }
-  );
+  }
+  const groundSize = Math.max(GROUND_REFERENCE_SIZE, Math.ceil((trackHalfExtent + GROUND_FOG_MARGIN) * 2));
+  const groundScale = groundSize / GROUND_REFERENCE_SIZE;
+  const groundSegments = Math.round(groundSize / GROUND_VERTEX_PITCH);
+
+  const groundPalette = palette.ground || {
+    base: '#1f4636',
+    repeat: 38,
+    speckles: [
+      { color: '#28593f', count: 380, size: 3.4 },
+      { color: '#16352a', count: 320, size: 4.2 },
+    ],
+  };
+  // The palette authors `repeat` against the 2600 reference plane, so it has to
+  // be scaled with the plane or a bigger track gets a proportionally coarser
+  // speckle map — which is the same "one flat colour across the infield" the
+  // 16 -> 38 bump was made to fix.
+  const grassTexture = makeNoiseTexture({
+    ...groundPalette,
+    repeat: Math.round((groundPalette.repeat ?? 38) * groundScale),
+  });
   // 2600 half-extent 1300, not the old 1120x1060: the track spans ~350 units
   // off origin, so a 560 half-extent put the ground's terminator as close as
   // 210 units and it died against the backdrop on a razor-straight line. At
@@ -3687,7 +3899,9 @@ varying float vRoadIce;`,
   // critics measured both verges as single flat values at exactly the distances
   // the camera spends its time — 27-unit pitch is what lets the third octave
   // below exist at all. 18.4k tris, still one draw call.
-  const groundGeometry = new THREE.PlaneGeometry(2600, 2600, 96, 96);
+  // (sized above — the literals in this note are the 2600-reference values the
+  // ratios below are still authored against.)
+  const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, groundSegments, groundSegments);
   // Macro break-up, zero bytes. The speckle map repeats every ~68 units, so
   // at the 200-500 unit distances the camera actually sees, the infield
   // measured as ONE colour (stdev 7.6 over a 250x70 sample) — an explicit
@@ -3788,10 +4002,15 @@ varying float vRoadIce;`,
     // tier-3 grounding patch on both tracks is planted at this plane's height.
     const reliefDisplace = reliefCfg.displace ?? 0.3;
     if (reliefNormal > 0 || reliefDisplace > 0) {
-      // Coarse centreline table for the road-clearance fade. 128 samples over a
-      // ~1400-unit lap is an 11-unit chord, well under the 27-unit vertex pitch
-      // this is being compared against, so the fade cannot alias into the ramp.
-      const CLEAR_SAMPLES = 128;
+      // Coarse centreline table for the road-clearance fade. The rule this
+      // count has to satisfy is that the chord between samples stays well
+      // under the 27-unit vertex pitch it is compared against, or the fade
+      // aliases into the ramp — a fixed 128 was an 11-unit chord on a
+      // ~1400-unit lap and would be a 91-unit chord on an 11,654-unit one, i.e.
+      // three times COARSER than the thing it is meant to resolve. Expressed
+      // as the chord it always was.
+      const CLEAR_CHORD_UNITS = 11;
+      const CLEAR_SAMPLES = clamp(Math.round(sampler.length / CLEAR_CHORD_UNITS), 128, 1200);
       const centreline = new Float32Array(CLEAR_SAMPLES * 2);
       let widestHalfRoad = 0;
       for (let sample = 0; sample < CLEAR_SAMPLES; sample += 1) {
@@ -3819,17 +4038,66 @@ varying float vRoadIce;`,
       // would be blind to precisely the octave carrying the surface read, which
       // is why the octaves and this number have to be chosen together.
       const STEP = 16;
+      // AAA wave 8 — a uniform lattice over the centreline samples, because the
+      // brute-force nearest search this replaces is the product of the two
+      // numbers a 4x track multiplies. It used to be 9.4k vertices x 128
+      // samples = 1.2M distance tests; at the new plane and chord it would be
+      // 50k x 1060 = 53 MILLION, on the main thread, in front of a loading
+      // screen. Cell size is clearOuter, so a vertex only ever has to look at
+      // the 3x3 neighbourhood around itself — past clearOuter the fade is
+      // saturated at 1 and the exact distance stops mattering, which is what
+      // makes the truncation EXACT rather than an approximation. Everything
+      // outside the track's own bounding band short-circuits to fade 1.
+      const cellSize = Math.max(clearOuter, 1);
+      const cells = new Map();
+      const cellKey = (cx, cz) => cx * 73856093 + cz * 19349663;
+      let bandMinX = Infinity;
+      let bandMaxX = -Infinity;
+      let bandMinZ = Infinity;
+      let bandMaxZ = -Infinity;
+      for (let sample = 0; sample < CLEAR_SAMPLES; sample += 1) {
+        const sx = centreline[sample * 2];
+        const sz = centreline[sample * 2 + 1];
+        if (sx < bandMinX) bandMinX = sx;
+        if (sx > bandMaxX) bandMaxX = sx;
+        if (sz < bandMinZ) bandMinZ = sz;
+        if (sz > bandMaxZ) bandMaxZ = sz;
+        const key = cellKey(Math.floor(sx / cellSize), Math.floor(sz / cellSize));
+        const bucket = cells.get(key);
+        if (bucket) bucket.push(sample);
+        else cells.set(key, [sample]);
+      }
+      const clearRangeSq = clearOuter * clearOuter;
       for (let index = 0; index < position.count; index += 1) {
         const x = position.getX(index);
         const z = position.getY(index);
         let nearest = Infinity;
-        for (let sample = 0; sample < CLEAR_SAMPLES; sample += 1) {
-          const dx = x - centreline[sample * 2];
-          const dz = z - centreline[sample * 2 + 1];
-          const distanceSq = dx * dx + dz * dz;
-          if (distanceSq < nearest) nearest = distanceSq;
+        if (
+          x >= bandMinX - clearOuter &&
+          x <= bandMaxX + clearOuter &&
+          z >= bandMinZ - clearOuter &&
+          z <= bandMaxZ + clearOuter
+        ) {
+          const cx = Math.floor(x / cellSize);
+          const cz = Math.floor(z / cellSize);
+          for (let ox = -1; ox <= 1; ox += 1) {
+            for (let oz = -1; oz <= 1; oz += 1) {
+              const bucket = cells.get(cellKey(cx + ox, cz + oz));
+              if (!bucket) continue;
+              for (let entry = 0; entry < bucket.length; entry += 1) {
+                const sample = bucket[entry];
+                const dx = x - centreline[sample * 2];
+                const dz = z - centreline[sample * 2 + 1];
+                const distanceSq = dx * dx + dz * dz;
+                if (distanceSq < nearest) nearest = distanceSq;
+              }
+            }
+          }
         }
-        const fade = smoothstep01((Math.sqrt(nearest) - clearInner) / (clearOuter - clearInner));
+        // Anything the lattice did not resolve is provably past clearOuter, so
+        // it takes the saturated fade without a distance being computed at all.
+        const fade =
+          nearest > clearRangeSq ? 1 : smoothstep01((Math.sqrt(nearest) - clearInner) / (clearOuter - clearInner));
         // Central differences on the height field. dh/dx and dh/dz ARE the
         // surface tangent slopes, so the world normal is (-dh/dx, 1, -dh/dz)
         // normalised — the same construction a normal map bakes, evaluated at
@@ -4417,7 +4685,22 @@ uniform float uRailMinNdc;`,
     emissive: bridgeCfg.glow || '#36e2ff',
     emissiveIntensity: 1.1,
   });
-  const SKIRT_STEPS = 26;
+  // AAA wave 8 — every constant in this block used to be a LAP FRACTION, and
+  // the viaduct is 2.4x the old bridge's span, so every one of them meant a
+  // different piece of the world after the rebuild. Re-expressed as the world
+  // distances they were authored at on the 2,897-unit reference lap:
+  //   SKIRT_STEPS 26 over a 0.134 band  = one rib every 15 units
+  //   skirt overhang 0.008              = 23 units past each ramp foot
+  //   pillar pitch 0.018                = a pillar pair every 52 units
+  //   pillar inset 0.012 / 0.010        = 35 / 29 units inside the band ends
+  // A 26-step skirt stretched over the 932-unit viaduct would be a 36-unit rib
+  // pitch on a curved deck (visible faceting on the one piece of geometry this
+  // layout is built around), and a 0.018 pillar pitch would give the whole
+  // crossing FOUR pillar pairs.
+  const bridgeSpanUnits = Math.max(1, (bridgeBand.to - bridgeBand.from) * sampler.length);
+  const bridgeUnitsToProgress = (units) => units / sampler.length;
+  const SKIRT_STEPS = clamp(Math.round(bridgeSpanUnits / 15), 26, 160);
+  const SKIRT_OVERHANG = bridgeUnitsToProgress(23);
   [-1, 1].forEach((side) => {
     [
       { depth: 6.2, material: skirtMat, top: 0.26 },
@@ -4426,7 +4709,10 @@ uniform float uRailMinNdc;`,
       const positions = [];
       const indices = [];
       for (let step = 0; step <= SKIRT_STEPS; step += 1) {
-        const p = bridgeBand.from - 0.008 + (bridgeBand.to - bridgeBand.from + 0.016) * (step / SKIRT_STEPS);
+        const p =
+          bridgeBand.from -
+          SKIRT_OVERHANG +
+          (bridgeBand.to - bridgeBand.from + SKIRT_OVERHANG * 2) * (step / SKIRT_STEPS);
         const { point } = sampler.pointAt(p, side);
         positions.push(point.x, point.y + top, point.z, point.x, Math.max(0.05, point.y - depth), point.z);
         if (step < SKIRT_STEPS) {
@@ -4454,13 +4740,19 @@ uniform float uRailMinNdc;`,
   // A pillar position that lands on the lower road (the routes share ground at
   // the crossing) would stand in the racing line — skip those.
   const onLowerRoad = (x, z) => {
-    for (let index = 0; index < TRACK_SAMPLES; index += 1) {
-      const { center } = sampler.pointAt(index / TRACK_SAMPLES);
+    const samples = trackSampleCount(sampler);
+    for (let index = 0; index < samples; index += 1) {
+      const { center } = sampler.pointAt(index / samples);
       if (center.y < 2 && Math.hypot(center.x - x, center.z - z) < roadWidth * 0.62) return true;
     }
     return false;
   };
-  for (let p = bridgeBand.from + 0.012; p < bridgeBand.to - 0.01; p += 0.018) {
+  const pillarPitch = bridgeUnitsToProgress(52);
+  for (
+    let p = bridgeBand.from + bridgeUnitsToProgress(35);
+    p < bridgeBand.to - bridgeUnitsToProgress(29);
+    p += pillarPitch
+  ) {
     const deckHeight = sampler.elevationAt(p);
     if (deckHeight < 3.2) continue;
     const { point: beamPoint, tangent } = sampler.pointAt(p, 0);
@@ -4493,7 +4785,10 @@ uniform float uRailMinNdc;`,
     railMat.side = THREE.DoubleSide;
     const positions = [];
     const indices = [];
-    const RAIL_STEPS = 30;
+    // Same rule as the skirt: 30 steps over the old 388-unit span is a 13-unit
+    // segment, and the rail is the only bridge element the DRIVER sees, so it
+    // is the last one that should be allowed to facet.
+    const RAIL_STEPS = clamp(Math.round(bridgeSpanUnits / 13), 30, 180);
     const RAIL_TOP = 1.5;
     const RAIL_BAND = 0.45;
     [-1, 1].forEach((side) => {
@@ -4594,8 +4889,12 @@ uniform float uRailMinNdc;`,
   const chevronPositions = [];
   const chevronColors = [];
   const chevronIndices = [];
-  for (let index = 0; index < 11; index += 1) {
-    const progress = (0.04 + index * 0.085) % 1;
+  // Authored pitch: 11 pairs over the 2,897-unit reference lap = one every 263
+  // units. Capped at 44 because these all merge into ONE geometry, so the cap
+  // is a vertex budget rather than a draw budget. See dressingCount.
+  const chevronRuns = dressingCount(sampler, 263, 11, 44);
+  for (let index = 0; index < chevronRuns; index += 1) {
+    const progress = (0.04 + index * (1 / chevronRuns)) % 1;
     [-0.38, 0.38].forEach((lane) => {
       const base = chevronPositions.length / 3;
       for (let column = 0; column <= CHEVRON_COLUMNS; column += 1) {
@@ -5388,8 +5687,9 @@ const addFinishGate = (world, sampler, trackDef, trackVisuals = resolveTrackVisu
 // Clearance covers road half (28) + building half (~27) + margin.
 const minCenterlineDistance = (sampler, x, z) => {
   let minDistance = Infinity;
-  for (let index = 0; index < TRACK_SAMPLES; index += 1) {
-    const { center } = sampler.pointAt(index / TRACK_SAMPLES);
+  const samples = trackSampleCount(sampler);
+  for (let index = 0; index < samples; index += 1) {
+    const { center } = sampler.pointAt(index / samples);
     const distance = Math.hypot(center.x - x, center.z - z);
     if (distance < minDistance) minDistance = distance;
   }
@@ -5503,8 +5803,15 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
 
   // Roadside scatter (trees / lamps / cones / planters) is comeback-city
   // neon-district dressing — opt-in; new tracks bring their own props.
-  if (trackDef.dressing?.roadsideProps) for (let index = 0; index < 24; index += 1) {
-    const progress = (0.035 + index * 0.041) % 1;
+  // Authored pitch: 24 props over the 2,897-unit reference lap = one every 121
+  // units. Capped at 64 — these are ~2 draw calls each, so the cap is what
+  // holds the growth on a 370-draw frame to about +80 rather than to +4x.
+  const scatterRuns = dressingCount(sampler, 121, 24, 64);
+  if (trackDef.dressing?.roadsideProps) for (let index = 0; index < scatterRuns; index += 1) {
+    const progress = (0.035 + index * (1 / scatterRuns)) % 1;
+    // Skip the deck: a prop anchored on the viaduct is planted at deck height,
+    // 40 units in the air beside the road. See onElevatedSpan.
+    if (onElevatedSpan(trackDef, progress)) continue;
     const side = index % 2 === 0 ? -1 : 1;
     const { normal, point, tangent } = sampler.pointAt(progress);
     const group = new THREE.Group();
@@ -5555,8 +5862,11 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
     propCount += 1;
   }
 
-  if (trackDef.dressing?.roadsideProps) for (let index = 0; index < 7; index += 1) {
-    const progress = (0.12 + index * 0.12) % 1;
+  // Authored pitch: 7 stacks over the reference lap = one every 414 units.
+  const tyreRuns = dressingCount(sampler, 414, 7, 20);
+  if (trackDef.dressing?.roadsideProps) for (let index = 0; index < tyreRuns; index += 1) {
+    const progress = (0.12 + index * (1 / tyreRuns)) % 1;
+    if (onElevatedSpan(trackDef, progress)) continue;
     const side = index % 2 === 0 ? -1 : 1;
     const { normal, point } = sampler.pointAt(progress);
     const stack = new THREE.Group();
@@ -5667,12 +5977,12 @@ const addDistrictsAndProps = (world, sampler, loader, trackDef, trackVisuals = r
   // straight (old facade-run anchors) and dresses the roadside with palms,
   // lifeguard towers, and the diner. CC-only (openingFacades dressing).
   if (miamiMode && trackDef.dressing?.openingFacades) {
-    addMiamiTrackside(world, sampler, roadWidth, ambient);
+    addMiamiTrackside(world, sampler, roadWidth, ambient, trackDef);
   }
   // W3: the Penguin Village tribute set rides the same gate — ?skyLab=0
   // strips it with the rest of the generated dressing.
   if (miamiMode && trackDef.dressing?.penguinVillage) {
-    addPvTributeTrackside(world, sampler, roadWidth);
+    addPvTributeTrackside(world, sampler, roadWidth, trackDef);
   }
 
   return propCount;
@@ -6377,11 +6687,16 @@ const makeIceBlockBarrier = () => {
 const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => {
   const roadWidth = trackDef.course.mainRoadWidth || 56;
   // Giant ordinal-penguin ice statues at signature spots — the landmark.
+  // AAA wave 8: 0.16 sat on the pressure-ridge crest after the rebuild, which
+  // would have planted a 48-unit statue at deck height. Moved onto the glacier
+  // shore, the frozen river and the snowfield esses — the three places on the
+  // new lap with a long enough sightline to read a landmark at all.
   [
-    { p: 0.16, side: 1, h: 48 },
-    { p: 0.5, side: -1, h: 42 },
-    { p: 0.82, side: 1, h: 46 },
+    { p: 0.27, side: 1, h: 48 },
+    { p: 0.6, side: -1, h: 42 },
+    { p: 0.9, side: 1, h: 46 },
   ].forEach(({ p, side, h }) => {
+    if (onElevatedSpan(trackDef, p)) return;
     const { normal, point } = sampler.pointAt(p);
     const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 64));
     if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.7) return;
@@ -6391,8 +6706,12 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
     world.add(statue);
   });
   // Igloos around the loop.
-  for (let i = 0; i < 10; i += 1) {
-    const p = (0.04 + i * 0.097) % 1;
+  // Authored pitch: 10 igloos over the 2,443-unit reference lap = one every 244
+  // units. Capped at 32 — see dressingCount.
+  const iglooRuns = dressingCount(sampler, 244, 10, 32);
+  for (let i = 0; i < iglooRuns; i += 1) {
+    const p = (0.04 + i * (1 / iglooRuns)) % 1;
+    if (onElevatedSpan(trackDef, p)) continue;
     const side = i % 2 === 0 ? -1 : 1;
     const { normal, point, tangent } = sampler.pointAt(p);
     const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 26 + (i % 3) * 10));
@@ -6403,8 +6722,11 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
     world.add(setFlatTransform(igloo));
   }
   // Snow mounds + ice-shard clusters as low filler, tuned to the concept palette.
-  for (let i = 0; i < 16; i += 1) {
-    const p = (0.02 + i * 0.061) % 1;
+  // Authored pitch: 16 pieces over the reference lap = one every 153 units.
+  const fillerRuns = dressingCount(sampler, 153, 16, 56);
+  for (let i = 0; i < fillerRuns; i += 1) {
+    const p = (0.02 + i * (1 / fillerRuns)) % 1;
+    if (onElevatedSpan(trackDef, p)) continue;
     const side = i % 2 === 0 ? 1 : -1;
     const { normal, point } = sampler.pointAt(p);
     const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 14 + (i % 4) * 6));
@@ -6912,7 +7234,10 @@ const createScene = ({
   // the world always overdraws them; camera.far 1800 is the shipped value
   // when the backdrop is on (?skyLab=0 diagnostic drops back to 860). The
   // old "fog.far must stay <= 840" rule retired with the sky pass: the
-  // ground now runs to 1300 and both tracks fog past 840 on purpose.
+  // ground now runs well past 840 (its half-extent is derived from the track's
+  // own extent plus a 1300-unit fog margin — see the GROUND EXTENT block in
+  // addTrack — so it is 1300 on a small loop and ~3016 on the 4x ones) and
+  // both tracks fog past 840 on purpose.
   // backdrop stays null when the tier is off; the frame loop null-checks.
   let backdrop = null;
   const skyLab = skyLabConfig();
@@ -7081,9 +7406,17 @@ const createScene = ({
   // with a poster behind it. The belt fills that band. It is authored against a
   // fixed interface so the module and this call site could land independently;
   // 64 evenly spaced centreline samples is the shared coordinate system.
+  // 64 samples was one every 45 world units on the reference lap; on a 4x lap
+  // the same count is one every 182, and the belt lays its shapes ALONG this
+  // polyline — at 182-unit chords a corner's belt cuts the corner and the ring
+  // stops following the road it is meant to frame. Expressed as the ~45-unit
+  // pitch it was authored at, capped at 256 so the belt's own instancing
+  // budget cannot be blown by a longer track.
+  const BELT_SAMPLE_UNITS = 45;
+  const beltSamples = clamp(Math.round(sampler.length / BELT_SAMPLE_UNITS), 64, 256);
   const beltCenterline = [];
-  for (let index = 0; index < 64; index += 1) {
-    const progress = index / 64;
+  for (let index = 0; index < beltSamples; index += 1) {
+    const progress = index / beltSamples;
     const sample = sampler.pointAt(progress);
     beltCenterline.push({
       progress,
@@ -8090,38 +8423,52 @@ const rivalDrawLane = (sampler, progress, lane) => {
 
 // Autoplay item sense: the demo driver dodges what a human sees — fish
 // bones sitting ahead on its line and rival snowballs closing from behind.
-// Deterministic, progress-space windows (~0.02 of a lap ≈ 50-60 wu) so it
-// stays track-size agnostic. Without this, kart-vs-kart contact keeps the
-// autoplay kart in real traffic where rival item gates connect (the old
-// ghost-through overtakes dodged items by accident, not by skill).
-const autoplayDodgeBias = (race) => {
+// Without this, kart-vs-kart contact keeps the autoplay kart in real traffic
+// where rival item gates connect (the old ghost-through overtakes dodged items
+// by accident, not by skill).
+//
+// AAA wave 8 — the windows are now WORLD UNITS and the sampler length is a
+// parameter. The old comment claimed "progress-space windows so it stays
+// track-size agnostic", which is exactly backwards: 0.022 of a lap was the
+// 64 units it was tuned at on the 2,897-unit loop and would be 256 units on the
+// 4x lap, so the demo driver would start swerving around a fish bone a full
+// second before reaching it and hold the swerve the whole way in. A reaction
+// distance is a distance.
+const AUTOPLAY_DODGE_AHEAD_UNITS = 64;
+const AUTOPLAY_DODGE_BEHIND_UNITS = 72;
+const AUTOPLAY_DODGE_CROSSER_UNITS = 87;
+const autoplayDodgeBias = (race, trackLength) => {
   let bias = 0;
+  const ahead = AUTOPLAY_DODGE_AHEAD_UNITS / Math.max(1, trackLength);
+  const behind = AUTOPLAY_DODGE_BEHIND_UNITS / Math.max(1, trackLength);
   const away = (threatLane) =>
     threatLane === race.lane ? (threatLane >= 0 ? -1 : 1) : Math.sign(race.lane - threatLane);
   race.fishBones?.forEach((bone) => {
     const aheadBy = wrap01(bone.progress - race.progress);
-    if (aheadBy < 0.022 && Math.abs(bone.lane - race.lane) < 0.34) {
-      bias += away(bone.lane) * (1 - aheadBy / 0.022);
+    if (aheadBy < ahead && Math.abs(bone.lane - race.lane) < 0.34) {
+      bias += away(bone.lane) * (1 - aheadBy / ahead);
     }
   });
   race.projectiles?.forEach((ball) => {
     const behindBy = wrap01(race.progress - ball.progress);
-    if (ball.owner !== 'player' && behindBy < 0.025 && Math.abs(ball.lane - race.lane) < 0.3) {
-      bias += away(ball.lane) * (1 - behindBy / 0.025);
+    if (ball.owner !== 'player' && behindBy < behind && Math.abs(ball.lane - race.lane) < 0.3) {
+      bias += away(ball.lane) * (1 - behindBy / behind);
     }
   });
   // K4: dodge crossers the same way rivals do — they're slow and partial
   // width, so a lane change always clears them (kart-playable's gate).
   race.crossers?.instances?.forEach((crosser) => {
     const aheadBy = wrap01(crosser.progress - race.progress);
-    if (aheadBy < 0.03 && Math.abs(crosser.lane - race.lane) < 0.5) {
-      bias += away(crosser.lane) * (1 - aheadBy / 0.03) * 1.4;
+    // 87 units — what 0.03 of a lap meant on the reference loop.
+    const crosserWindow = AUTOPLAY_DODGE_CROSSER_UNITS / Math.max(1, trackLength);
+    if (aheadBy < crosserWindow && Math.abs(crosser.lane - race.lane) < 0.5) {
+      bias += away(crosser.lane) * (1 - aheadBy / crosserWindow) * 1.4;
     }
   });
   return clamp(bias, -1, 1);
 };
 
-const readInput = (input, autoplay, race, cornerPush = 0) => {
+const readInput = (input, autoplay, race, cornerPush = 0, trackLength = 1) => {
   if (!autoplay) return input.current;
   // Steer against the centrifugal push (into the corner) plus a pull back
   // toward the demo driver's target lane, with the item-dodge bias strong
@@ -8138,7 +8485,7 @@ const readInput = (input, autoplay, race, cornerPush = 0) => {
   // field. Revert by restoring `- race.lane * 0.9`.
   const apexLane = clamp(-cornerPush * 0.5, -1, 1) * 0.45;
   const desired = clamp(
-    -cornerPush * 1.4 - (race.lane - apexLane) * 0.9 + autoplayDodgeBias(race) * 1.2,
+    -cornerPush * 1.4 - (race.lane - apexLane) * 0.9 + autoplayDodgeBias(race, trackLength) * 1.2,
     -1,
     1
   );
@@ -8612,10 +8959,15 @@ export const ComebackCityThreeKartRace = ({
       // Road-edge lanes — the rivals start ahead and sweep the straight, and
       // anything inside their racing line gets eaten before the camera
       // arrives.
-      race.fishBones.push({ grace: 0, lane: -0.8, owner: 'showcase', progress: wrap01(startProgress + 0.038) });
+      // "Just past the spawn" is 110/128/145 world units, which is what these
+      // three fractions meant on the 2,897-unit loop. On the 4x lap the same
+      // fractions park the props 440-580 units up the road, i.e. off camera —
+      // which is the exact failure mode this capture hook exists to avoid.
+      const showcaseAt = (units) => wrap01(startProgress + units / engine.sampler.length);
+      race.fishBones.push({ grace: 0, lane: -0.8, owner: 'showcase', progress: showcaseAt(110) });
       race.projectiles.push(
-        { lane: 0.8, owner: 'showcase', progress: wrap01(startProgress + 0.044), skin: 'carrot', speed: 0, ttl: 9999 },
-        { lane: -0.8, owner: 'showcase', progress: wrap01(startProgress + 0.05), skin: 'iceshard', speed: 0, ttl: 9999 }
+        { lane: 0.8, owner: 'showcase', progress: showcaseAt(128), skin: 'carrot', speed: 0, ttl: 9999 },
+        { lane: -0.8, owner: 'showcase', progress: showcaseAt(145), skin: 'iceshard', speed: 0, ttl: 9999 }
       );
       race.shieldActive = true;
     }
@@ -8959,10 +9311,13 @@ export const ComebackCityThreeKartRace = ({
       // Six of the eighteen capture frames put the hero metres off the deck
       // with nothing on the road under it, and three critics all read that as
       // "the kart is detached from the track". It is not a shadow bug — those
-      // frames are genuine ballistic flight (Comeback City's bridge crest at
-      // progress 0.4-0.534 has crestLaunch true and its ramps sit at 0.075 and
-      // 0.685, which is where those marks land), and contactPatchAirFade is
-      // correctly suppressing a cue that would otherwise lie about contact.
+      // frames are genuine ballistic flight (Comeback City's crest band has
+      // crestLaunch true and it also carries two ramps, and those marks land on
+      // them), and contactPatchAirFade is correctly suppressing a cue that
+      // would otherwise lie about contact. Wave 8 moved the band to the viaduct
+      // at 0.785-0.865 and the ramps to 0.45 / 0.63, and raised the peak from
+      // 21 to 40, so there is now MORE airtime per lap, not less — this term
+      // matters more than it did, not less.
       //
       // But a real shadow does not just get FAINTER as its caster rises, it
       // gets WIDER and softer, and that widening is the entire difference
@@ -9269,7 +9624,7 @@ export const ComebackCityThreeKartRace = ({
       const elapsedWindow = frameTimes.length > 1 ? (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000 : 1;
       const fpsEstimate = frameTimes.length > 1 ? (frameTimes.length - 1) / Math.max(0.001, elapsedWindow) : 60;
       const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
-      const input = readInput(inputRef, autoplay, race, cornerPush);
+      const input = readInput(inputRef, autoplay, race, cornerPush, engine.sampler.length);
       if (input.restart) {
         inputRef.current.restart = false;
         restartRace();
@@ -9529,28 +9884,43 @@ export const ComebackCityThreeKartRace = ({
           const spinningNow = race.spinTimer > 0;
           if (spinningNow && !race.wasSpinning) race.coins = coinsAfterSpin(race.coins);
           race.wasSpinning = spinningNow;
+          // AAA wave 8 — PICKUP WINDOWS ARE WORLD DISTANCES, NOT LAP FRACTIONS.
+          //
+          // These were 0.012 and 0.014 of a lap, i.e. 35 and 41 world units on
+          // the 2,897-unit loop — a pad-and-a-bit either side of the trigger,
+          // which is what makes a pad feel like a thing you drive over. On the
+          // 11,654-unit lap the identical constants are 140 and 163 units:
+          // a boost pad you collect from four car-lengths away, an item box
+          // that fires before it is on screen, and a re-arm distance
+          // (0.04/0.05 -> 466/583 units) long enough that two adjacent boxes
+          // could share a latch. Re-expressed as the distances they were.
+          const padArmUnits = 35;
+          const padRearmUnits = 116;
+          const boxArmUnits = 41;
+          const boxRearmUnits = 145;
+          const arcDelta = (a, b) => shortProgressDelta(a, b) * engine.sampler.length;
           trackDef.course.boostPads.forEach((pad) => {
             const key = `boost-${pad.key}`;
-            if (shortProgressDelta(race.progress, pad.progress) < 0.012 && Math.abs(race.lane - (pad.side || 0)) < 0.36) {
+            if (arcDelta(race.progress, pad.progress) < padArmUnits && Math.abs(race.lane - (pad.side || 0)) < 0.36) {
               if (!race[key]) {
                 race[key] = true;
                 race.boostHits += 1;
                 race.boostTimer = 1.15;
               }
-            } else if (shortProgressDelta(race.progress, pad.progress) > 0.04) {
+            } else if (arcDelta(race.progress, pad.progress) > padRearmUnits) {
               race[key] = false;
             }
           });
           trackDef.course.itemBoxes.forEach((box, index) => {
             const key = `item-${index}`;
-            if (shortProgressDelta(race.progress, box.progress) < 0.014 && Math.abs(race.lane - (box.side || 0)) < 0.42) {
+            if (arcDelta(race.progress, box.progress) < boxArmUnits && Math.abs(race.lane - (box.side || 0)) < 0.42) {
               if (!race[key]) {
                 race[key] = true;
                 race.itemPickups += 1;
                 if (!race.heldItem)
                   race.heldItem = itemForPickup(index, race.lap, race.position, race.lap === race.laps);
               }
-            } else if (shortProgressDelta(race.progress, box.progress) > 0.05) {
+            } else if (arcDelta(race.progress, box.progress) > boxRearmUnits) {
               race[key] = false;
             }
           });
@@ -10723,8 +11093,23 @@ export const ComebackCityThreeKartRace = ({
         // distance — which is exactly the frame where the hero ends up
         // guillotined by the bottom-left corner. Trailing the kart's heading
         // instead always lands the eye on road the kart has just driven.
-        // Slight duck under the bridge.
-        const underpass = race.progress > 0.15 && race.progress < 0.24;
+        // Slight duck where the lap passes UNDER its own elevated section, so
+        // the boom does not climb into the deck.
+        //
+        // AAA wave 8: this was a hardcoded 0.15-0.24 — Comeback City's old
+        // harbour dive, which passed under the old bridge at p0.191. Both the
+        // number and the assumption that every track has one were wrong on the
+        // new layouts: Skyline crosses itself at p0.0093 (under) / p0.844
+        // (over, 29.7 units of air, measured off the shipped centerline), and
+        // Bayfront does not cross itself at all — validateCenterline reports
+        // zero self-intersections — so ducking anywhere on Penguin Village
+        // would be ducking under nothing. Authored per track now, absent by
+        // default. Band is the crossing +/- ~60 units, i.e. the deck's own
+        // width plus the angle it crosses at.
+        const underpassBand = trackDef.elevation?.underpassBand || null;
+        const underpass = Boolean(
+          underpassBand && race.progress > underpassBand.from && race.progress < underpassBand.to
+        );
         // Owner 2026-07-12: "you look tiny ... hard to control" + "the
         // camera changes ... and looks wild" — phones get ONE pinned
         // framing (closer + narrower), never re-evaluated: the soft lock

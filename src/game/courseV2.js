@@ -89,232 +89,218 @@ export const KartTuningV2 = Object.freeze({
   tierChargeTimes: [0.55, 1.3, 2.15],
 });
 
-// Owner feedback 2026-06-12: the lap needed MK-scale room to drift with a
-// full field of karts — the whole course is scaled up from the authored
-// points (longer straights, broader corner radii). Progress-based data
-// (pads, boxes, anchors) is scale-invariant; absolute world coordinates
-// below are multiplied through.
-const TRACK_SCALE = 1.35;
-// AAA wave 7: the authored loop used to close with a point at {-193, 46}, only
-// 2.2 authored units (3.0 scaled) from centerline[0] {-195, 45}, where every
-// other gap on the loop is ~24-29. The runtime builds this as a CLOSED
-// CatmullRomCurve3 with UNIFORM parameterisation, so a segment an order of
-// magnitude shorter than its neighbours gets the same slice of curve parameter
-// as a full-length one and the spline whips through it. The layout previewer
-// measured the result as two unauthored kinks of radius 20.2 and 34.7 sitting
-// directly ON the start/finish line — tighter than anything either track
-// authors (min 72) and crossed once per lap. Dropping the point leaves a seam
-// gap of 28.5 authored units against its neighbour's 29.2, i.e. the loop now
-// closes at its own natural spacing. Verified: 7 corners (2 kink) ->
-// 5 corners (0 kink), min radius 20.2 -> 110.5.
+// ---------------------------------------------------------------------------
+// AAA WAVE 8 — THE 4x LAP. Comeback City is now candidate C, "SKYLINE VIADUCT"
+// (owner-picked from the three plan views in tmp/track-candidates/).
 //
-// AAA WAVE 7 ROUND 2 — THE SEAM WAS STILL THE TIGHTEST POINT ON THE LOOP.
+// WHAT CHANGED AND WHY. The shipped loop was 2,897 units — 11.15 s a lap, a
+// 33.5 s race, and a longest straight of 2.19 s. That last number is the whole
+// reason for this rebuild: 2.19 s is not a passing window, so there was never a
+// place on either track to set a move up. Skyline is 11,643 units, 44.78 s a
+// lap, a 134.35 s race, and its viaduct deck is a 2,528-unit / 9.72 s straight.
+// Sixteen corners (7 sweeper, 2 hairpin, 7 turn, 0 kink) against the old five.
 //
-// Dropping the stray point removed the PATHOLOGY but not the problem. The
-// authored polyline's own turn radius is a poor proxy for what the runtime
-// draws: makeTrackCurve feeds these 80 points to a CLOSED CatmullRomCurve3 with
-// UNIFORM parameterisation and tension 0.38, and it is THAT curve the road, the
-// racing line and every progress query are built from.
+// WHY IT IS GENERATED AND NOT HAND-PLACED. The old centerline was 80 authored
+// points, and two of the three worst geometry defects this project has had came
+// out of that: a near-duplicate seam point that the uniform-parameterised
+// CatmullRom whipped through (wave 7 round 1) and a join-angle kink on the
+// start/finish line that took a swept search to remove (wave 7 round 2). Both
+// are impossible here. `buildCenterline` runs exact straights between exact
+// fillet arcs, so a radius is a number you STATE rather than one you measure
+// off the sheet afterwards, and the previewer now reports ZERO kinks on a loop
+// with three times the corners. The waypoints and radii below are candidate C's
+// verbatim (tmp/track-candidates/candidate-c.mjs) — do not "tidy" them; every
+// corner classification, straight length and beat gap in the measured sheet is
+// downstream of these exact numbers.
 //
-// Re-derived off it (three r184, 4000 samples, three-point circumfit), the seam
-// at authored index 0 measured R=43.1 against a non-seam minimum of 47.7 and a
-// per-authored-point median of 230 — i.e. still the tightest corner on the
-// course, and one every lap crosses at full throttle. It held that ranking at
-// every measurement scale (h = 0.0005 -> 0.008 of a lap).
-//
-// The cause is the JOIN ANGLE, not the spacing. Point 79 {-222,54} arrives on a
-// heading of about -18 degrees while points 1..12 run dead flat at z=45, so the
-// spline had to absorb the whole heading change inside the one segment that
-// straddles the line. Lifting point 0 by TWO authored units in +z (the outward
-// side) lets the closing arc finish its turn ACROSS the seam instead of at it.
-//
-// Measured for this change, same probe:
-//     h        seam R (base -> +2z)   non-seam min R
-//   0.0005        32.8 -> 47.9             37.4
-//   0.001         36.4 -> 53.4             40.8
-//   0.002         43.1 -> 61.5             47.7
-//   0.004         56.7 -> 78.8             61.6
-//   0.008         84.4 -> 109.8            85.8
-//
-// The seam now clears the loop's own tightest non-seam corner by 28-30% at every
-// scale, and the course's global minimum radius moves OFF the start/finish to
-// the south carousel at t=0.300, where a carousel is supposed to be. Closure
-// spacing stays natural: 37.65 scaled units into the seam, 32.51 out of it,
-// against a 30.8-45.9 range everywhere else.
-//
-// +2 is the SMALLEST displacement that clears the bar with margin — a swept
-// search over +/-10 authored units in both axes found nothing closer — and
-// bigger nudges in the same direction REVERSE the win (dz=+4 is back to 43.8,
-// dz=+6 to 32.8) because the join then over-rotates the other way. That is why
-// this is a measured number and not "a few units outward".
-// Owner feedback 2026-06-12 round 2: corners must be long sustained sweepers
-// that reward holding a drift. This centerline is GENERATED from exact
-// arc/straight primitives (three drift carousels R~108-143 scaled, a dive,
-// a bridge climb, two overtaking straights) and densely sampled so the
-// runtime CatmullRom follows the intended radii. Generator + validation
-// (crossing/curvature/race-sim): see git history of tmp track-gen scripts.
-const authoredCenterline = [
-  // Start/finish. z is 47, not 45 — see the seam block above; this is the one
-  // point on the loop whose value is a curvature measurement rather than a
-  // layout choice.
-  { x: -195, z: 47 },
-  { x: -171, z: 45 },
-  { x: -147, z: 45 },
-  { x: -123, z: 45 },
-  { x: -99, z: 45 },
-  { x: -75, z: 45 },
-  { x: -51, z: 45 },
-  { x: -27, z: 45 },
-  { x: -3, z: 45 },
-  { x: 21, z: 45 },
-  { x: 45, z: 45 },
-  { x: 69, z: 45 },
-  { x: 93, z: 45 },
-  { x: 124, z: 43 },
-  { x: 151, z: 33 },
-  { x: 173, z: 16 },
-  { x: 190, z: -7 },
-  { x: 200, z: -28 },
-  { x: 211, z: -49 },
-  { x: 222, z: -70 },
-  { x: 233, z: -91 },
-  { x: 243, z: -112 },
-  { x: 255, z: -141 },
-  { x: 257, z: -170 },
-  { x: 248, z: -198 },
-  { x: 229, z: -220 },
-  { x: 204, z: -234 },
-  { x: 175, z: -239 },
-  { x: 147, z: -233 },
-  { x: 122, z: -217 },
-  { x: 105, z: -194 },
-  { x: 98, z: -166 },
-  { x: 101, z: -137 },
-  { x: 114, z: -109 },
-  { x: 126, z: -89 },
-  { x: 137, z: -69 },
-  { x: 153, z: -44 },
-  { x: 171, z: -25 },
-  { x: 197, z: -7 },
-  { x: 216, z: 6 },
-  { x: 235, z: 20 },
-  { x: 254, z: 33 },
-  { x: 273, z: 46 },
-  { x: 292, z: 59 },
-  { x: 316, z: 79 },
-  { x: 333, z: 102 },
-  { x: 344, z: 130 },
-  { x: 346, z: 159 },
-  { x: 339, z: 188 },
-  { x: 325, z: 214 },
-  { x: 305, z: 235 },
-  { x: 279, z: 250 },
-  { x: 251, z: 256 },
-  { x: 217, z: 257 },
-  { x: 193, z: 257 },
-  { x: 169, z: 257 },
-  { x: 145, z: 257 },
-  { x: 121, z: 257 },
-  { x: 97, z: 257 },
-  { x: 73, z: 257 },
-  { x: 49, z: 257 },
-  { x: 25, z: 257 },
-  { x: 1, z: 257 },
-  { x: -23, z: 257 },
-  { x: -47, z: 257 },
-  { x: -71, z: 257 },
-  { x: -95, z: 257 },
-  { x: -119, z: 257 },
-  { x: -143, z: 257 },
-  { x: -167, z: 257 },
-  { x: -199, z: 255 },
-  { x: -227, z: 245 },
-  { x: -252, z: 228 },
-  { x: -270, z: 205 },
-  { x: -282, z: 177 },
-  { x: -285, z: 148 },
-  { x: -280, z: 118 },
-  { x: -267, z: 92 },
-  { x: -247, z: 69 },
-  { x: -222, z: 54 },
+// RECENTRING. The authored walk closes around (-1145, 119) with a half-extent
+// of 1,716 units. The ground plane is the ONE piece of world geometry pinned to
+// the origin (everything else — backdrop rings, dome, shadow rig — is camera
+// or centreline anchored), so an off-origin loop would need a plane sized for
+// the offset AND the extent. Recentring is a rigid translation: every length,
+// radius, corner angle, sightline and lap time is invariant under it, and it
+// takes the plane the loop needs from 6,032 units square down to 6,032 — i.e.
+// it is the difference between a plane that has to cover 2,861 units of offset
+// and one that only has to cover 1,716 units of track. Free, so do it.
+import { buildCenterline } from './race/tracks/buildCenterline.js';
+
+// Driving order, x east / z south. Start straight east, up and around the east
+// lobe, west along the north edge through three chicanes, out to the far west,
+// then the VIADUCT diagonally back across everything it just drove, and two
+// stop-and-turn hairpins home. The lap CROSSES ITSELF at the viaduct crest —
+// the deck passes ~30 units over the start/finish straight, which is the one
+// thing on this track a player will describe to someone else.
+const SKYLINE_WAYPOINTS = [
+  { x: -1500, z: 1150 }, // C16 Harbour Corner — the last corner onto the start straight
+  { x: 100, z: 1150 }, // C1  the viaduct passes 40u overhead ~210u ahead of here
+  { x: 588, z: 454 }, // C2  east lobe
+  { x: 432, z: -126 }, // C3  Plaza chicane
+  { x: 508, z: -289 }, // C4  Plaza chicane
+  { x: 54, z: -1157 }, // C5  onto the north edge
+  { x: -796, z: -1157 }, // C6  Market chicane
+  { x: -916, z: -1278 }, // C7  Market chicane
+  { x: -1270, z: -1285 }, // C8  Rail chicane
+  { x: -1467, z: -1423 }, // C9  Rail chicane
+  { x: -2313, z: -1387 }, // C10
+  { x: -2482, z: -1025 }, // C11
+  { x: -2681, z: -910 }, // C12
+  { x: -2892, z: -456 }, // C13 — the VIADUCT ramp begins here
+  { x: -877, z: 1559 }, // C14 VIADUCT HAIRPIN — off the crest, hard left
+  { x: -1768, z: 1684 }, // C15 HARBOUR HAIRPIN — stop and turn, back onto the straight
 ];
-const centerline = authoredCenterline.map((point) => ({
-  x: point.x * TRACK_SCALE,
-  z: point.z * TRACK_SCALE,
-}));
+
+// Per-corner fillet radii in world units. Mid-band by design: the corners are
+// the rhythm, the viaduct is the event. The two hairpins are the only radii
+// under 120, which is what makes them the only two stop-and-turns on the lap.
+const SKYLINE_RADII = [
+  170, // C16 Harbour Corner
+  190, // C1
+  200, // C2
+  130, // C3 chicane
+  140, // C4 chicane
+  185, // C5
+  130, // C6 chicane
+  135, // C7 chicane
+  140, // C8 chicane
+  140, // C9 chicane
+  175, // C10
+  160, // C11
+  160, // C12
+  150, // C13 — opens onto the viaduct
+  100, // C14 VIADUCT HAIRPIN
+  95, // C15 HARBOUR HAIRPIN
+];
+
+// 26, not the shipped 22: the lap is four times longer and a uniform
+// CatmullRom does not need 530 control points to follow a 200-unit radius —
+// and points sitting too close together is the single authoring mistake that
+// produces a kink (see the wave-7 seam above).
+const SKYLINE_SPACING = 26;
+
+// Rigid translation onto the origin — see the RECENTRING note above. Exported
+// because the track's world-space anchors (water, collision volumes) are
+// derived from the same points rather than hand-typed, so nothing can go stale
+// when the layout is retuned.
+const recentreLoop = (points) => {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (const point of points) {
+    if (point.x < minX) minX = point.x;
+    if (point.x > maxX) maxX = point.x;
+    if (point.z < minZ) minZ = point.z;
+    if (point.z > maxZ) maxZ = point.z;
+  }
+  const centreX = (minX + maxX) / 2;
+  const centreZ = (minZ + maxZ) / 2;
+  return points.map((point) => ({ x: point.x - centreX, z: point.z - centreZ }));
+};
+
+const centerline = recentreLoop(buildCenterline(SKYLINE_WAYPOINTS, { radius: SKYLINE_RADII, spacing: SKYLINE_SPACING }));
 
 const minimapPath = centerline.map((point) => ({ ...point }));
 
+// World-space anchor helper. Every absolute coordinate on this track used to be
+// typed by hand against a 350-unit loop; at 1,716 units they would all have had
+// to be retyped, and a stale one puts a building on the racing line (which is
+// exactly what happened at the carousel entry, owner-reported 2026-06-12).
+// These are DERIVED from the centerline instead, so they follow the layout.
+// `progress` here is index-space, not arc length — good enough for scenery that
+// only has to be near a section, and deliberately not used for anything the
+// kart interacts with.
+const anchorAt = (progress, side, distance) => {
+  const count = centerline.length;
+  const index = ((Math.round(progress * count) % count) + count) % count;
+  const here = centerline[index];
+  const next = centerline[(index + 1) % count];
+  const dx = next.x - here.x;
+  const dz = next.z - here.z;
+  const length = Math.hypot(dx, dz) || 1;
+  // sampler builds its normal as (-tangent.z, 0, tangent.x); match it so `side`
+  // means the same thing here as it does everywhere else on the track.
+  return {
+    x: here.x + (-dz / length) * side * distance,
+    z: here.z + (dx / length) * side * distance,
+  };
+};
+
+// Evenly spaced hazard field for the legacy 2D racer (raceTracks.js). The kart
+// runtime does not read these — it drops fish bones dynamically — but the field
+// is still authored to the LAP rather than to a count, so it does not thin out
+// to nothing on a track four times longer.
+const bananaPlacements = Array.from({ length: 24 }, (_, index) => ({
+  progress: Number(((index + 0.5) / 24).toFixed(4)),
+  side: index % 3 === 0 ? -0.18 : index % 3 === 1 ? 0.2 : -0.1,
+}));
+
 export const COMEBACK_CITY_COURSE_V2 = Object.freeze({
   key: 'comeback-city',
-  version: 'v2-authored-kart',
+  version: 'v2-skyline-4x',
   laps: 3,
   kartOnly: true,
-  mainRoadWidth: 56,
-  sampleCount: 132,
-  startProgress: 0.012,
-  startLabel: 'Start Boulevard',
+  mainRoadWidth: 54,
+  // 0.003, not the old 0.012. Both are "the finish gate sits just past the
+  // seam", but a PROGRESS constant means a different world distance on a
+  // different-length track: 0.012 was 35 units on the 2,897-unit loop and would
+  // be 140 units here. This is that same 35 units, re-expressed.
+  startProgress: 0.003,
+  startLabel: 'Harbour Straight',
   centerline,
   minimapPath,
-  // Width profile (owner direction 2026-06-12): the drift carousels open up
-  // wide; everything else stays narrow so the lap takes skill. The runtime
-  // smooths these into a continuous width along the lap.
+  // Width is C's second story, running alongside its elevation one. The market
+  // row is the narrowest road on the lap; the viaduct deck is the widest thing
+  // after the start straight, and it OPENS as it climbs, which is the opposite
+  // of everything else here and is why the crossing reads as a set piece. The
+  // twin hairpins drop 20 units off the deck they fall from, and the ribbon
+  // starts at 0.85 — ~2 sigma of the runtime's width smoother ahead of C14's
+  // 0.875 entry — so the full 42 is delivered by the time the corner arrives
+  // rather than half of it.
   roadRibbons: [
-    { key: 'start-straight', role: 'main', width: 47, shoulderWidth: 6, startProgress: 0, endProgress: 0.1 },
-    { key: 'harbor-dive', role: 'main', width: 45, shoulderWidth: 5.5, startProgress: 0.1, endProgress: 0.2 },
-    { key: 'south-carousel', role: 'main', width: 56, shoulderWidth: 7, startProgress: 0.2, endProgress: 0.4 },
-    { key: 'bridge-climb', role: 'main', width: 45, shoulderWidth: 5.5, startProgress: 0.4, endProgress: 0.53 },
-    { key: 'east-loop', role: 'main', width: 56, shoulderWidth: 7, startProgress: 0.53, endProgress: 0.66 },
-    { key: 'top-straight', role: 'main', width: 47, shoulderWidth: 6, startProgress: 0.66, endProgress: 0.78 },
-    { key: 'seam-carousel', role: 'main', width: 54, shoulderWidth: 6.5, startProgress: 0.78, endProgress: 1 },
+    { key: 'harbour-straight', role: 'main', width: 60, shoulderWidth: 7, startProgress: 0, endProgress: 0.14 },
+    { key: 'east-lobe', role: 'main', width: 54, shoulderWidth: 6.5, startProgress: 0.14, endProgress: 0.34 },
+    { key: 'market-row', role: 'main', width: 44, shoulderWidth: 5, startProgress: 0.34, endProgress: 0.52 },
+    { key: 'west-approach', role: 'main', width: 56, shoulderWidth: 6.5, startProgress: 0.52, endProgress: 0.625 },
+    { key: 'viaduct', role: 'main', width: 62, shoulderWidth: 7.5, startProgress: 0.625, endProgress: 0.85 },
+    { key: 'twin-hairpins', role: 'main', width: 42, shoulderWidth: 5, startProgress: 0.85, endProgress: 0.965 },
+    { key: 'harbour-approach', role: 'main', width: 54, shoulderWidth: 6.5, startProgress: 0.965, endProgress: 1 },
   ],
   branches: [],
+  // Telemetry-only classification zones (raceTelemetry.js). Re-seated onto the
+  // new sections; nothing in the kart sim reads them.
   surfaceZones: [
-    { key: 'start-asphalt', type: 'asphalt', progress: 0.04, radius: 120 },
-    { key: 'food-wet-cleanup', type: 'wet', progress: 0.335, side: -8, radius: 16 },
-    { key: 'lab-bridge-grip', type: 'asphalt', progress: 0.57, radius: 80 },
-    { key: 'clinic-clean-tile', type: 'wet', progress: 0.72, side: 7, radius: 15 },
-    { key: 'waterfront-offroad-edge', type: 'offroad', progress: 0.88, side: 31, radius: 26 },
+    { key: 'harbour-asphalt', type: 'asphalt', progress: 0.06, radius: 140 },
+    { key: 'plaza-wet-cleanup', type: 'wet', progress: 0.26, side: -8, radius: 18 },
+    { key: 'market-row-grip', type: 'asphalt', progress: 0.43, radius: 90 },
+    { key: 'viaduct-deck-clean', type: 'asphalt', progress: 0.74, radius: 120 },
+    { key: 'hairpin-runoff-edge', type: 'offroad', progress: 0.915, side: 31, radius: 26 },
   ],
-  // Pads/boxes re-seated for the drift-sweeper layout: pad into the carousel
-  // commit, pad onto the bridge climb, risk/reward inside-line pad in the
-  // seam carousel.
+  // Candidate C's beats, verbatim. Four pads and seven boxes over a 44.8 s lap,
+  // which with the ramps, the shortcut and the crest launch is 15 events at a
+  // 2.99 s mean gap — MK8 pacing. The shipped 13-16 beats over an 11 s lap was
+  // one every 0.70 s, i.e. a cram; this is the SAME authored content spread
+  // across four times the road, which is the entire point of the rebuild and
+  // the reason nothing here was multiplied to match the new length.
   boostPads: [
-    { key: 'start-boulevard-pad', progress: 0.055, side: 0 },
-    { key: 'carousel-commit-pad', progress: 0.205, side: 0.16 },
-    { key: 'bridge-climb-pad', progress: 0.435, side: 0 },
-    { key: 'seam-inside-pad', progress: 0.875, side: -0.28 },
+    { key: 'harbour-pad', progress: 0.09, side: 0 },
+    { key: 'plaza-pad', progress: 0.3, side: 0.18 },
+    { key: 'viaduct-pad', progress: 0.7, side: -0.2 },
+    { key: 'south-loop-pad', progress: 0.965, side: 0.22 },
   ],
   itemBoxes: [
-    { progress: 0.025, side: -0.18 },
-    { progress: 0.115, side: 0.16 },
-    { progress: 0.225, side: -0.16 },
-    { progress: 0.36, side: 0.18 },
-    { progress: 0.5, side: -0.16 },
-    { progress: 0.6, side: 0.18 },
-    { progress: 0.74, side: -0.18 },
-    { progress: 0.86, side: 0.16 },
+    { progress: 0.03, side: -0.18 },
+    { progress: 0.16, side: 0.16 },
+    { progress: 0.22, side: -0.16 },
+    { progress: 0.38, side: 0.18 },
+    { progress: 0.52, side: -0.16 },
+    { progress: 0.77, side: 0.18 },
+    { progress: 0.905, side: -0.16 },
   ],
-  bananaPlacements: [
-    { progress: 0.045, side: -0.18 },
-    { progress: 0.095, side: 0.18 },
-    { progress: 0.15, side: -0.08 },
-    { progress: 0.205, side: 0.22 },
-    { progress: 0.265, side: -0.2 },
-    { progress: 0.325, side: 0.12 },
-    { progress: 0.385, side: -0.18 },
-    { progress: 0.445, side: 0.22 },
-    { progress: 0.505, side: -0.1 },
-    { progress: 0.565, side: 0.16 },
-    { progress: 0.625, side: -0.2 },
-    { progress: 0.685, side: 0.12 },
-    { progress: 0.745, side: -0.16 },
-    { progress: 0.805, side: 0.2 },
-    { progress: 0.865, side: -0.14 },
-    { progress: 0.925, side: 0.18 },
-    { progress: 0.965, side: -0.08 },
-    { progress: 0.99, side: 0.12 },
-  ],
+  bananaPlacements,
+  // Five districts spread over the lap instead of bunched into its first third.
+  // NONE sits inside 0.785-0.865: that band is the elevated viaduct, and a
+  // district is placed at sampler.pointAt(progress), whose y IS the deck
+  // height — an anchor there would hang a building 40 units in the air.
   districtAnchors: [
     {
       key: 'gym',
@@ -323,7 +309,7 @@ export const COMEBACK_CITY_COURSE_V2 = Object.freeze({
       dark: '#1f5f35',
       icon: 'dumbbell',
       label: 'GYM',
-      progress: 0.18,
+      progress: 0.155,
       roof: '#e9f7ce',
       setback: 86,
       side: 1,
@@ -335,7 +321,7 @@ export const COMEBACK_CITY_COURSE_V2 = Object.freeze({
       dark: '#9d4516',
       icon: 'utensils',
       label: 'FOOD COURT',
-      progress: 0.31,
+      progress: 0.3,
       roof: '#fff0b0',
       setback: 84,
       side: -1,
@@ -347,7 +333,7 @@ export const COMEBACK_CITY_COURSE_V2 = Object.freeze({
       dark: '#38206f',
       icon: 'flask',
       label: 'LAB',
-      progress: 0.56,
+      progress: 0.44,
       roof: '#f0e2ff',
       setback: 92,
       side: 1,
@@ -359,7 +345,7 @@ export const COMEBACK_CITY_COURSE_V2 = Object.freeze({
       dark: '#7c202c',
       icon: 'cross',
       label: 'CLINIC',
-      progress: 0.72,
+      progress: 0.585,
       roof: '#f3ece0',
       setback: 88,
       side: -1,
@@ -371,31 +357,42 @@ export const COMEBACK_CITY_COURSE_V2 = Object.freeze({
       dark: '#143d78',
       icon: 'wrench',
       label: 'GARAGE',
-      progress: 0.88,
+      progress: 0.905,
       roof: '#e4f8ff',
       setback: 92,
       side: 1,
     },
   ],
+  // Legacy 2D-racer collision volumes, derived from the districts they belong
+  // to rather than typed as absolute coordinates (see anchorAt).
   collisionZones: [
-    { key: 'gym-facade', shape: 'circle', position: { x: 128 * TRACK_SCALE, z: -20 * TRACK_SCALE }, radius: 24 },
-    { key: 'food-stalls', shape: 'circle', position: { x: 22 * TRACK_SCALE, z: -208 * TRACK_SCALE }, radius: 28 },
-    { key: 'lab-tower', shape: 'circle', position: { x: -32 * TRACK_SCALE, z: 96 * TRACK_SCALE }, radius: 28 },
-    { key: 'clinic-plaza-building', shape: 'circle', position: { x: 318 * TRACK_SCALE, z: 126 * TRACK_SCALE }, radius: 26 },
-    { key: 'garage-waterfront-building', shape: 'circle', position: { x: -72 * TRACK_SCALE, z: 352 * TRACK_SCALE }, radius: 28 },
-    { key: 'finish-roundabout-core', shape: 'circle', position: { x: -224 * TRACK_SCALE, z: 150 * TRACK_SCALE }, radius: 22 },
+    { key: 'gym-facade', shape: 'circle', position: anchorAt(0.155, 1, 96), radius: 24 },
+    { key: 'food-stalls', shape: 'circle', position: anchorAt(0.3, -1, 96), radius: 28 },
+    { key: 'lab-tower', shape: 'circle', position: anchorAt(0.44, 1, 104), radius: 28 },
+    { key: 'clinic-plaza-building', shape: 'circle', position: anchorAt(0.585, -1, 100), radius: 26 },
+    { key: 'garage-hairpin-building', shape: 'circle', position: anchorAt(0.905, 1, 104), radius: 28 },
+    { key: 'harbour-roundabout-core', shape: 'circle', position: anchorAt(0.985, -1, 150), radius: 22 },
   ],
+  // Only `water` is still rendered (the W0 promotion deleted the procedural
+  // skyline and the boxy bridge in favour of the painted backdrop rings and the
+  // real viaduct geometry), so this is one anchor and three retired keys are
+  // simply not authored any more.
+  //
+  // The bay sits outboard of the HARBOUR HAIRPIN, which is both the thematic
+  // home for it and — measured, not guessed — the only place a 1200x560 sheet
+  // of water fits on this layout. A sweep of every (progress, side, offset)
+  // this helper can produce scored each candidate box by its distance to the
+  // nearest centerline point; this one clears the road by 440 units and the
+  // next best clears it by 198. The old hand-typed anchor would have put the
+  // bay under the viaduct hairpin.
   sceneryAnchors: [
-    { kind: 'water', x: -58 * TRACK_SCALE, z: 322 * TRACK_SCALE, w: 210 * TRACK_SCALE, d: 96 * TRACK_SCALE, color: '#0ea5c8' },
-    { kind: 'bridge', x: 18 * TRACK_SCALE, z: 42 * TRACK_SCALE, w: 126 * TRACK_SCALE, d: 18, color: '#65717f' },
-    { kind: 'roundabout', x: -226 * TRACK_SCALE, z: 150 * TRACK_SCALE, r: 38, color: '#2cc8ff' },
-    { kind: 'skyline', x: 48 * TRACK_SCALE, z: -318 * TRACK_SCALE, w: 520 * TRACK_SCALE, d: 64, color: '#315b8d' },
+    { kind: 'water', ...anchorAt(0.94, -1, 720), w: 1200, d: 560, color: '#0ea5c8' },
   ],
   cameraCheckpoints: [
-    { key: 'mobile-start', profile: 'mobile', progress: 0.04, targetBandFromBottom: [0.25, 0.33] },
-    { key: 'desktop-start', profile: 'desktop', progress: 0.04, targetBandFromBottom: [0.14, 0.22] },
-    { key: 'early-route-readability', profile: 'all', progress: 0.245 },
-    { key: 'camera-near-lab', profile: 'all', progress: 0.56, collisionClearanceMin: 1.5 },
+    { key: 'mobile-start', profile: 'mobile', progress: 0.012, targetBandFromBottom: [0.25, 0.33] },
+    { key: 'desktop-start', profile: 'desktop', progress: 0.012, targetBandFromBottom: [0.14, 0.22] },
+    { key: 'early-route-readability', profile: 'all', progress: 0.26 },
+    { key: 'camera-viaduct-crest', profile: 'all', progress: 0.825, collisionClearanceMin: 1.5 },
   ],
   assetLoadState: {
     state: 'procedural-ready',
