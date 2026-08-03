@@ -1,7 +1,62 @@
 # AAA kart overhaul — handoff for the next run
 
-**Written 2026-08-03 after wave 8.** Paste the loop prompt at the bottom into a
-fresh context. Everything below is verified state, not recollection.
+**Written 2026-08-03 after wave 8, updated after wave 9.** Paste the loop prompt
+at the bottom into a fresh context. Everything below is verified state, not
+recollection.
+
+---
+
+## WAVE 9 (2026-08-03) — items 1-4 are DONE
+
+Branch `aaa-kart-ci`, commits `d9ae56d4` and `4ea01c28`, pushed. Still nothing
+deployed, `main` still untouched.
+
+1. **The five kart bodies were ALREADY WIRED** at `b9eb09e1` — imports,
+   `Promise.all`, `kartScenes`, `KART_OPTIONS` and `KART_NOSE_YAW` all present
+   and manifest-registered. Item 1 below was already paid for. Verified, not
+   assumed.
+2. **Coin rows 8 -> 30 per track.** Density restored to 0.670/0.668 rows per
+   second against the shipped 0.717, and 30 (not 4x of 8) is what leaves the
+   coin economy untouched — time-to-cap stays ~14 s.
+3. **Previewer re-baselined and green.**
+4. **PV cast shadows: SOLVED by splitting the key**, not by raising it. 65% of
+   the energy stays at 12 degrees and carries the sunset, 35% sits at 20 degrees
+   and casts. Owner picked this option.
+
+### Three corrections to what wave 8 handed over
+
+- **`test:race` had been RED SINCE WAVE 4** and the "ALL CHECKS PASS" line above
+  never covered it. Wave 4 (`e658f8b8`) deliberately moved kart roughness
+  0.68 -> 0.58 and did not update the gate, so the script aborted there and
+  **every assertion below it went unrun for five waves**. Now green.
+- **The candidate coin sheets were NOT "clear of every pickup by ±0.02"** as
+  claimed — 14 of 30 CC rows and 11 of 30 PV rows sat inside it. But ±0.02 is
+  itself the wrong unit: it was authored on the 2,897-unit lap where it meant
+  58 units, and 58 units is the real guard. Same class as `startOffset`.
+- **"A shadow-only light that contributes no diffuse" cannot work.** three
+  darkens by removing the casting light's own contribution, so a zero-intensity
+  caster renders nothing. Splitting the key is the working form.
+
+### Method note worth keeping
+
+**Pixel A/B cannot verify a render change on this harness.** A control capture
+of *identical code* differs on 4-20% of pixels (snow, boost flames, rival
+positions) with darkening ≈ brightening. Verify by walking the live scene graph
+instead — boot with `?playableAutoplay=1&track=<key>`, reach a scene object via
+`window.__g2AmbientDebug.snow`, then walk `.parent` to the Scene. Measure a
+kart-riding light's direction as `position - target.position`, never from the
+world origin.
+
+### Still open from wave 9
+
+- **`test:audio:kart` and `test:kart-playable` are not cleared.** Both die on
+  `page.waitForFunction` timeouts. `test:audio:kart` was confirmed to fail
+  IDENTICALLY at `b9eb09e1`, so it is pre-existing, not wave 9 — but neither has
+  been seen green, and the machine never dropped below load 6.4 all session.
+  **Re-run both quiet before calling wave 9 green.**
+- **PV mean speed 248 -> 260 is INFERRED, not measured** (the ice stopped being
+  a full-width tax in wave 8). Needs a real PV autoplay capture.
+- Items 5-8 below are untouched.
 
 ---
 
