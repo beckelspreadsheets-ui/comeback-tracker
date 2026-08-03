@@ -108,6 +108,21 @@ export const KART_CONTACT = {
   // autoplay player twice per lap (probe 2026-07-06); at 85 max-speed
   // deltas (284 boost vs ~228 cruise = 56) stay under it.
   spinSpeedDiff: 85, // closing wu/s the rear kart needs to trigger the spin
+  // PIT MANOEUVRE (owner 2026-08-03: "I want pit maneuvers to work if I slide
+  // up on someone and try to spin them up from the side"). The rear hit above
+  // is a straight-line ram; this is the opposite input — alongside, moving
+  // sideways INTO them, landing on their back half.
+  //
+  // Three gates, and all three matter. Without the lateral-speed gate every
+  // side-by-side corner becomes a spin. Without the rear-quarter band you could
+  // pit someone by leaning on their nose, which is not a pit. Without the
+  // minimum lateral offset it would fire on rear hits that are already handled
+  // above, and the two would double-spin.
+  pitLateralSpeed: 26, // wu/s of sideways closing needed — a deliberate flick
+  pitMinLatUnits: 3.5, // must be genuinely alongside, not square behind
+  pitRearQuarterMin: 0.5, // attacker's nose must be at/behind the victim's middle
+  pitRearQuarterMax: 9, // ...and no further back than a kart length
+  pitAttackerSpeedScale: 0.94, // a pit costs the attacker a little, too
   spinSpeedScale: 0.5, // matches a projectile hit's speed penalty
 };
 
@@ -401,6 +416,10 @@ export const updateRivalRacers = (field, ctx) => {
       cooldown: player.bumpCooldown || 0,
       grounded: !player.airborne,
       lane: player.lane,
+      // Sideways world speed. Free-body gives the player a real one; on rails
+      // it is 0 and the pit manoeuvre simply never triggers, which is correct —
+      // you cannot slide into someone on a rail.
+      lateralVel: player.lateralVel || 0,
       ref: null,
       speed: player.speed,
       spinning: Boolean(player.spinning),
@@ -410,6 +429,9 @@ export const updateRivalRacers = (field, ctx) => {
       cooldown: rival.bumpCooldown,
       grounded: !rival.air.airborne,
       lane: rival.lane,
+      // Rivals steer in lane space; laneVel is their sideways rate, converted
+      // to world units so both sides of a pit are measured the same way.
+      lateralVel: (rival.laneVel || 0) * laneScale,
       ref: rival,
       speed: rival.speed,
       spinning: rival.spinTimer > 0,
@@ -462,6 +484,72 @@ export const updateRivalRacers = (field, ctx) => {
       const front = rearFirst ? karts[b] : karts[a];
       const square = Math.abs(latUnits) < KART_CONTACT.spinLatUnits;
       const closing = rear.speed - front.speed;
+
+      // PIT MANOEUVRE — checked BEFORE the rear hit, because a kart that is
+      // alongside and sliding in is doing something deliberate and should not
+      // be reinterpreted as a glancing bump.
+      //
+      // The attacker is the one carrying sideways speed TOWARD the other. The
+      // victim is whoever is slightly ahead of that contact point, so the hit
+      // lands on their back half and spins the tail out — which is what a pit
+      // actually is.
+      const longitudinalGap = Math.abs(front.total - rear.total) * trackLength;
+      const laterallyAlongside = Math.abs(latUnits) >= KART_CONTACT.pitMinLatUnits;
+      const inRearQuarter =
+        longitudinalGap >= KART_CONTACT.pitRearQuarterMin &&
+        longitudinalGap <= KART_CONTACT.pitRearQuarterMax;
+      // Sideways closing, measured from the ATTACKER'S INPUT ONLY — not as a
+      // relative velocity between the two karts.
+      //
+      // Relative velocity is the obvious formula and it is wrong here. The
+      // separation layer above pushes overlapping karts apart every frame, so
+      // the victim always acquires lateral velocity AWAY from the attacker, and
+      // that subtracts into the closing term as if the attacker were flicking
+      // harder. The result was a feedback loop where merely leaning on someone
+      // long enough eventually read as a pit — caught by the "gentle lean" case
+      // in test-pit-manoeuvre.
+      //
+      // Using the rear kart's own sideways speed toward the victim also matches
+      // what the owner described: "if I slide up on someone". It is the
+      // attacker's deliberate input that earns the spin, not the geometry the
+      // collision response happens to produce.
+      const toward = Math.sign(front.lane - rear.lane) || 1;
+      const lateralClosing = (rear.lateralVel || 0) * toward;
+      if (
+        laterallyAlongside &&
+        inRearQuarter &&
+        lateralClosing > KART_CONTACT.pitLateralSpeed &&
+        !front.spinning &&
+        !rear.spinning
+      ) {
+        const frontApart = front === karts[a] ? apart : -apart;
+        rear.cooldown = KART_CONTACT.spinCooldown;
+        front.cooldown = KART_CONTACT.spinCooldown;
+        if (front.ref) {
+          front.ref.bumpCooldown = KART_CONTACT.spinCooldown;
+          front.ref.spinTimer = ITEM_FEEL.spinDuration;
+          front.ref.speed = Math.max(46, front.ref.speed * KART_CONTACT.spinSpeedScale);
+          front.ref.lane = clamp(front.ref.lane + frontApart * KART_CONTACT.spinLanePush, -wallLane, wallLane);
+        } else {
+          playerSpin = true;
+          playerBump = {
+            cooldown: KART_CONTACT.spinCooldown,
+            lanePush: frontApart * KART_CONTACT.spinLanePush,
+            speedScale: 1,
+          };
+        }
+        if (rear.ref) {
+          rear.ref.bumpCooldown = KART_CONTACT.spinCooldown;
+          rear.ref.speed *= KART_CONTACT.pitAttackerSpeedScale;
+        } else {
+          playerBump = {
+            cooldown: KART_CONTACT.spinCooldown,
+            lanePush: -frontApart * 0.04,
+            speedScale: KART_CONTACT.pitAttackerSpeedScale,
+          };
+        }
+        continue;
+      }
       if (square && closing > KART_CONTACT.spinSpeedDiff && !front.spinning && !rear.spinning) {
         // Perfect rear hit: the front kart spins out; the attacker keeps
         // nearly all its speed. The longer spin cooldown stops the same

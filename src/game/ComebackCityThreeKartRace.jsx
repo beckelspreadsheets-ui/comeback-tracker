@@ -10693,6 +10693,11 @@ export const ComebackCityThreeKartRace = ({
               aurora: race.auroraTimer > 0,
               bumpCooldown: race.bumpCooldown,
               lane: race.lane,
+              // P6 — sideways world speed, for the pit manoeuvre. Free-body
+              // gives the player a real one; on rails it is 0 and a pit simply
+              // cannot trigger, which is correct — you cannot slide into
+              // someone on a rail.
+              lateralVel: race.freeBody?.lateralVel || 0,
               progress: race.progress,
               speed: race.speed,
               spinning: race.spinTimer > 0,
