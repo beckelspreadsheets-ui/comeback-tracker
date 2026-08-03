@@ -704,3 +704,71 @@ Kept so the next reader can calibrate how much to trust an inherited plan.
 6. **Verify a claim before carrying it forward** — this rewrite dropped four
    items that were already fixed or never real.
 7. **Never `git add -A`.** Stage owned paths explicitly.
+
+---
+
+## Owner playtest backlog — from playing the preview build, 2026-08-03
+
+The first feedback in nine waves that came from someone actually driving the
+game. It supersedes the critic fix-lists where the two disagree.
+
+### Done same day
+
+| item | commit |
+|---|---|
+| Bitcoin coins for PV item boxes | `15fc0056` |
+| Ice shield expires (had **no** timer — lasted the whole race) | `15fc0056` |
+| Ice shield "didn't stop things" — bump was applied before the shield check | `e2e90508` |
+| Finish-line walker patrols, and is disarmed + hidden for the first 12s | `e2e90508` |
+
+### Approved, not started
+
+- **FREE-BODY KART.** Owner: *"yes lets make it more free body I think it will
+  make it harder to drive too overall."* Today the kart is on rails —
+  `race.lane` clamped to ±0.95 with position derived from the spline, no heading
+  and no velocity vector. This is why you cannot turn around, why there is no
+  off-map, and why a pit manoeuvre cannot really exist. See the sequencing note
+  below before starting.
+- **Pit manoeuvres** — spin a rival by sliding into their side. Partially
+  possible on rails today (`playerBump.lanePush` + rival `spinTimer` already
+  exist), fully natural once free-body lands.
+- **Off-map with a rescue** — does NOT need full free-body: open the lane clamp
+  in authored spans, apply the `offroad` grip that already exists in
+  `surfacePhysics.js` and is currently unreachable, add a return-to-track.
+
+### Still open from the playtest
+
+- **Finish-line walker is SITTING** — asset, not code.
+  `outplayasians-crosser.glb` is a single static mesh (0 animations, 0 skins,
+  1 node). Needs a regenerated standing/walking model; no sim work can fix it.
+- **"THE ICE IS NICE" sign looks cheap** — because it is: `MeshBasicMaterial`
+  with a generated text texture on a flat unlit plane
+  (`ComebackCityThreeKartRace.jsx` ~:7376).
+- **PV background "goes crazy" on some right-hand turns**, left side solid.
+  Likely the same backdrop plate two wave-9 critics independently called a
+  floating ice ridge. Needs a look on the owner's machine.
+- **Drifting feels harder than it was.** `DRIFT_FEEL` has not been touched since
+  the original gameplay commit, so nothing regressed it — suspect the 4x tracks:
+  same corner radii, far longer in them, and `minSpeed: 62` gates whether a
+  drift starts at all. Measure before tuning.
+
+### End of project
+
+- **Music and correct audio** — Suno is acceptable to the owner.
+- **Menu revamp** — "look way better", Higgsfield acceptable.
+- **Trailers.**
+- **Full item pass** — owner: *"we will check all the items once the game is
+  done."* The ice-shield 8s is a starting value for that pass, not a tuned one.
+
+### Sequencing note for free-body
+
+Everything in the race is expressed in `progress` + `lane`: rival AI, projectile
+targeting, coin rows, crosser hits, lap counting, the shortcut, the camera.
+A big-bang rewrite would break all of it at once.
+
+The cheap path is to make world position **authoritative for the player only**
+and keep `progress`/`lane` as a DERIVED projection onto the spline, recomputed
+each frame. Rivals stay on rails, every item and hazard keeps working unchanged,
+and the player gets heading, velocity and real off-road. Known hazard: lap
+counting assumes progress increases monotonically — a player who turns around
+can run it backwards, so it needs an explicit guard before this ships.
