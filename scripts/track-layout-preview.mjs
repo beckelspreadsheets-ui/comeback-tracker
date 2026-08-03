@@ -46,15 +46,59 @@ const OUT_DIR = resolve(ROOT, 'tmp/track-preview');
 // that turns world units into seconds, which is the only unit a layout can be
 // judged in. CC is measured: tmp/k2.5-launch-repro/telemetry-autoplay.json
 // means 257 u/s over the moving part of the race and the lap solves at 260.
-// PV is the same measurement on the shorter loop. --speed overrides.
-const MEAN_SPEED = { 'comeback-city': 260, 'penguin-village': 248 };
+// --speed overrides.
+//
+// PV: 248 -> 260, and this one is INFERRED, not measured. 248 was measured on
+// the pre-wave-8 loop, where the ice was a STRIPE across the middle 75% of the
+// road for a fifth of the lap — a surface tax every racer paid, worth roughly
+// the 12 u/s that separated PV from CC. Wave 8 re-authored it as a risk/reward
+// line: ice now runs only down the inside of C6/C7 and the default racing line
+// never touches it. With no forced surface change, PV should mean what CC
+// means, so it carries CC's measured number rather than a stale tax.
+//
+// This is the one figure in this file that is a reasoned estimate rather than a
+// measurement, and it needs a real PV autoplay capture to settle. The report
+// labels any track without applicable telemetry as a pure geometric solve at
+// +/-3%, which is exactly what this is.
+const MEAN_SPEED = { 'comeback-city': 260, 'penguin-village': 260 };
 
-// Ground truth the tool must agree with, or the maths is wrong and the tool
-// is worse than useless. CC only — it is the track with shipped telemetry.
-const GROUND_TRUTH = {
-  'comeback-city': { lengthUnits: 2897, lapSeconds: 11.15, raceSeconds: 33.5, telemetryRaceSeconds: 34.08 },
-};
+// The tool must be CHECKABLE, not merely plausible — but the thing worth
+// checking is the SOLVER, not the track.
+//
+// This used to pin Comeback City's shipped measurements (2,897 u / 11.15 s /
+// 33.5 s), which meant every re-author of the layout read as a maths failure:
+// wave 8 rebuilt CC at 4x and the tool began reporting ~302% deviation and
+// exiting 1 while its arithmetic was entirely correct. A validation that goes
+// red when the CONTENT changes is not validating the code, and worse, it
+// trains you to ignore it.
+//
+// The check is now closed-form and track-independent: run the real sampler and
+// the real curvature estimator over a CIRCLE of known radius, where the answers
+// are exactly 2*pi*r and r. That exercises the two quantities every number in
+// this report is built on — arc length and corner radius — and stays valid
+// however many times the tracks are re-authored.
+//
+// The radii are swept across the band the tool actually REPORTS corners in
+// (authored radii run 72-256; CORNER_ENTER_RADIUS is 250), because that is
+// where the estimator's accuracy has to hold. It is a smoothed finite-
+// difference estimator, so it is exact where corners live and degrades as the
+// geometry approaches straight — measured against closed form: 0.00% at r100,
+// 0.06% at r150, 0.02% at r250, then 3.8% at r450, 10.9% at r900 and 13.9% at
+// r1800. That tail is not a defect and is not worth gating on: past
+// CORNER_EXIT_RADIUS (450) the tool has already classified the geometry as
+// straight, where a radius figure means nothing. Gating a near-straight radius
+// would have failed this check for a number the report never uses.
+const SOLVER_SELF_CHECK = { radii: [100, 150, 250], points: 64, lengthTolerancePct: 0.5, radiusTolerancePct: 1 };
+
+// Measured autoplay telemetry, used only when it applies TO THE TRACK BEING
+// REPORTED. The k2.5 capture drove a 2,897-unit loop; grading a 4x layout
+// against it is what produced the "race 294% vs measured autoplay 34.08s" line.
+// Applicability is a geometric test — the lap length the telemetry itself
+// implies (mean moving speed x race time / laps) against the analysed length —
+// so a stale capture is reported AS stale rather than silently grading a track
+// it never drove.
 const TELEMETRY_PATH = resolve(ROOT, 'tmp/k2.5-launch-repro/telemetry-autoplay.json');
+const TELEMETRY_MATCH_PCT = 12;
 
 // Curvature sampling. 2 units between samples is ~1/40th of the tightest
 // authored fillet (72), so a real corner gets ~40 samples and the discrete
@@ -469,11 +513,15 @@ const FALLBACK_ASPHALT = {
 // --strict-contrast; they just do not turn the exit code red on every run of an
 // unrelated preview. Anything NOT on this list that fails is a new regression
 // and exits non-zero. Same shape as a lint baseline, for the same reason.
-const KNOWN_CONTRAST_DEBT = {
-  'penguin-village': {
-    'pond-sweep@0.240': 'pv-p0_33: ice pond 152.7 vs 151.0 snow shoulder (measured in the monolith road-mesh comment); three wave-6 critics could not locate the track in that frame.',
-  },
-};
+// Empty because the debt was PAID, not because the mechanism was abandoned.
+// The single entry here was 'pond-sweep@0.240' — an ice pond the wave-6 critics
+// could not pick out of the snow shoulder. Wave 8 re-authored Penguin Village
+// and there is no pond-sweep ribbon any more (the ribbons are now main-street,
+// lantern-chicane, glacier-shore, fish-market-row, frozen-river, beacon-hairpin,
+// snowfield-esses), and the run reports 0 illegible segments on both tracks, so
+// the entry was suppressing nothing. Left in place, it would have been a
+// standing claim that a fixed fault was still outstanding.
+const KNOWN_CONTRAST_DEBT = {};
 
 // The one place the model is checked against a pixel. If a future edit makes the
 // tool call penguin-village p0.33 legible, the tool is wrong — not the frame.
@@ -785,20 +833,14 @@ const SIGHT_MARKS = [0.06, 0.15, 0.24, 0.33, 0.45, 0.56, 0.67, 0.78, 0.9];
 // baseline nobody verified is just a way of silencing the tool. The keys carry
 // the corner's progress, so a centerline edit that moves a corner drops it out
 // of the baseline and it fails loudly, which is the safe direction.
-const KNOWN_SIGHT_DEBT = {
-  'comeback-city': {
-    'C4@0.532':
-      'the bridge crest. cc-p0_45 (progress 0.446, 277 km/h) shows the road terminating at the crest ~90u ahead with nothing beyond it; the model gives that mark 0.34s of forward sight and the corner 0.44s of announcement. Same fault the blind-A/B judge filed as "the next corner is unreadable".',
-  },
-  'penguin-village': {
-    'C3@0.383':
-      'first of the twin r88 corners: its entry sits outside the right frame edge until the previous left has been taken. pv-p0_33 is the frame — the road ahead leaves the lens and the value collapse in the same frame removes the only other cue.',
-    'C4@0.450':
-      'second of the twin r88 corners. pv-p0_45 is captured AT the entry and the road ahead bends out of frame right within ~120u.',
-    'C5@0.678':
-      'crest-hidden sweeper on the far side of the ice ramp; 0.51s of announcement against a 0.8s bar.',
-  },
-};
+// Empty for the same reason as KNOWN_CONTRAST_DEBT: every entry was retired by
+// the wave-8 rebuild, not by lowering the bar. Both tables' keys carry a
+// progress precisely so a re-authored centerline drops them, and all four
+// (CC C4@0.532; PV C3@0.383, C4@0.450, C5@0.678) named corners on layouts that
+// no longer exist. The current run clears the gate outright — worst corner
+// announcement 1.3s on Comeback City and 1.89s on Penguin Village against a
+// 0.8s bar — so there is no live debt for them to describe.
+const KNOWN_SIGHT_DEBT = {};
 
 // Ground truth for the AIM, measured off the shipped frames rather than assumed:
 // the rubric critic's red-body segmentation of the nine wave6-r2 Penguin Village
@@ -1268,15 +1310,69 @@ const readTelemetryCheck = () => {
     const rows = JSON.parse(readFileSync(TELEMETRY_PATH, 'utf8'));
     const finished = rows.find((row) => row.finished);
     const moving = rows.filter((row) => row.raceTime > 1).map((row) => row.speed);
+    const raceSeconds = finished ? finished.raceTime : null;
+    const meanMovingSpeed = moving.length ? round(moving.reduce((a, b) => a + b, 0) / moving.length, 1) : null;
     return {
       source: 'tmp/k2.5-launch-repro/telemetry-autoplay.json',
-      raceSeconds: finished ? finished.raceTime : null,
-      meanMovingSpeed: moving.length ? round(moving.reduce((a, b) => a + b, 0) / moving.length, 1) : null,
+      raceSeconds,
+      meanMovingSpeed,
       peakSpeed: moving.length ? Math.max(...moving) : null,
+      // The lap length this capture implies, which is how we tell whether it
+      // drove the track being analysed or a different one.
+      impliedLapUnits: raceSeconds && meanMovingSpeed ? round((meanMovingSpeed * raceSeconds) / 3, 1) : null,
     };
   } catch {
     return null;
   }
+};
+
+// Closed-form check of the two quantities the whole report rests on. A circle
+// of radius r has arc length 2*pi*r and constant radius r, so running the REAL
+// sampler and the REAL curvature estimator over one is a check on the code
+// rather than on the content. Cached — it does not vary per track.
+let solverSelfCheckCache = null;
+const runSolverSelfCheck = () => {
+  if (solverSelfCheckCache) return solverSelfCheckCache;
+  const { radii, points, lengthTolerancePct, radiusTolerancePct } = SOLVER_SELF_CHECK;
+  const cases = radii.map((radius) => {
+    const centerline = Array.from({ length: points }, (_, index) => {
+      const theta = (index / points) * Math.PI * 2;
+      return { x: Math.cos(theta) * radius, z: Math.sin(theta) * radius };
+    });
+    // A bare synthetic course: makeElevation and makeWidthTable both fall back
+    // cleanly when elevation and ribbons are absent, which is the same path a
+    // draft layout takes.
+    const sampler = makeSampler({ course: { centerline, mainRoadWidth: 50 } });
+    const expectedLength = 2 * Math.PI * radius;
+    const lengthDeltaPct = round(((sampler.length - expectedLength) / expectedLength) * 100, 3);
+
+    // Curvature: reuse the production estimator, then compare to r. A perfect
+    // circle is entirely "corner", so read the sampled radius band rather than
+    // the corner segmentation (which has nothing to segment).
+    const geometry = analyseGeometry(sampler, 260);
+    const sampled = geometry.samples.map((sample) => sample.radius).filter((value) => Number.isFinite(value) && value > 0);
+    const meanRadius = sampled.length ? sampled.reduce((a, b) => a + b, 0) / sampled.length : 0;
+    const radiusDeltaPct = round(((meanRadius - radius) / radius) * 100, 3);
+    return {
+      radius,
+      expectedLength: round(expectedLength, 1),
+      measuredLength: round(sampler.length, 1),
+      lengthDeltaPct,
+      measuredMeanRadius: round(meanRadius, 1),
+      radiusDeltaPct,
+      pass: Math.abs(lengthDeltaPct) <= lengthTolerancePct && Math.abs(radiusDeltaPct) <= radiusTolerancePct,
+    };
+  });
+
+  solverSelfCheckCache = {
+    cases,
+    lengthTolerancePct,
+    radiusTolerancePct,
+    worstLengthDeltaPct: cases.reduce((a, c) => (Math.abs(c.lengthDeltaPct) > Math.abs(a) ? c.lengthDeltaPct : a), 0),
+    worstRadiusDeltaPct: cases.reduce((a, c) => (Math.abs(c.radiusDeltaPct) > Math.abs(a) ? c.radiusDeltaPct : a), 0),
+    pass: cases.every((c) => c.pass),
+  };
+  return solverSelfCheckCache;
 };
 
 const analyseTrack = (trackDef, { meanSpeedOverride, tier = 'desktop' } = {}) => {
@@ -1415,22 +1511,25 @@ const analyseTrack = (trackDef, { meanSpeedOverride, tier = 'desktop' } = {}) =>
   };
 
   // Validation — the tool must be checkable, not merely plausible.
-  const truth = GROUND_TRUTH[key];
-  if (truth) {
-    const pct = (a, b) => round(((a - b) / b) * 100, 2);
-    const telemetry = readTelemetryCheck();
-    report.validation = {
-      groundTruth: truth,
-      telemetry,
-      lengthDeltaPct: pct(report.lengthUnits, truth.lengthUnits),
-      lapDeltaPct: pct(report.lapSeconds, truth.lapSeconds),
-      raceDeltaPct: pct(report.raceSeconds, truth.raceSeconds),
-      // The measured race is SLOWER than the geometric solve because the grid
-      // start spends the first ~2 s accelerating from a standstill.
-      vsTelemetryPct: telemetry?.raceSeconds ? pct(report.raceSeconds, telemetry.raceSeconds) : null,
-      pass: Math.abs(pct(report.lengthUnits, truth.lengthUnits)) < 1 && Math.abs(pct(report.lapSeconds, truth.lapSeconds)) < 3,
-    };
-  }
+  const pct = (a, b) => round(((a - b) / b) * 100, 2);
+  const solver = runSolverSelfCheck();
+  const telemetry = readTelemetryCheck();
+  // Does this capture belong to this track? Compared geometrically, so a
+  // capture from a superseded layout can never quietly grade a new one.
+  const telemetryDeltaPct = telemetry?.impliedLapUnits ? pct(telemetry.impliedLapUnits, report.lengthUnits) : null;
+  const telemetryApplies = telemetryDeltaPct !== null && Math.abs(telemetryDeltaPct) <= TELEMETRY_MATCH_PCT;
+  report.validation = {
+    solver,
+    // The measured race is SLOWER than the geometric solve because the grid
+    // start spends the first ~2 s accelerating from a standstill.
+    telemetry: telemetryApplies ? telemetry : null,
+    staleTelemetry: telemetry && !telemetryApplies ? { ...telemetry, impliedLapDeltaPct: telemetryDeltaPct } : null,
+    vsTelemetryPct: telemetryApplies && telemetry.raceSeconds ? pct(report.raceSeconds, telemetry.raceSeconds) : null,
+    // The SOLVER is the pass condition. Lap time here is a geometric solve and
+    // is honestly labelled as one until a race on this layout is measured;
+    // absent telemetry is a missing measurement, not a failure.
+    pass: solver.pass,
+  };
   return report;
 };
 
@@ -1928,18 +2027,26 @@ ${report.beats.list
 collectible layer, not beats, and are excluded from the density figure — they appear as small gold dots on the plan.</div>`;
 
 const validationBlock = (report) => {
-  if (!report.validation) {
-    return `<div class="flag ok">No shipped telemetry for this track, so lap time is a pure geometric solve:
-      length ÷ mean speed. Treat it as ±3% until a race is measured.</div>`;
-  }
+  if (!report.validation) return '';
   const v = report.validation;
-  const cls = v.pass ? 'flag ok' : 'flag';
-  return `<div class="${cls}">
-    <b>${v.pass ? 'VALIDATED' : 'FAILS GROUND TRUTH'}</b> — length ${report.lengthUnits} vs ${v.groundTruth.lengthUnits} (${v.lengthDeltaPct}%),
-    lap ${report.lapSeconds}s vs ${v.groundTruth.lapSeconds}s (${v.lapDeltaPct}%),
-    race ${report.raceSeconds}s vs measured autoplay ${v.telemetry?.raceSeconds ?? '—'}s (${v.vsTelemetryPct ?? '—'}%).
-    The measured race is the slower of the two because the grid start burns ~2 s accelerating from a standstill.
-  </div>`;
+  const s = v.solver;
+  const solverLine = `<b>${s.pass ? 'SOLVER VALIDATED' : 'SOLVER FAILS CLOSED FORM'}</b> — over circles of radius
+    ${s.cases.map((c) => c.radius).join(', ')} (the band corners are authored in), the sampler's worst arc-length error
+    is ${s.worstLengthDeltaPct}% against the exact 2&pi;r (tolerance ±${s.lengthTolerancePct}%) and the curvature
+    estimator's worst radius error is ${s.worstRadiusDeltaPct}% (tolerance ±${s.radiusTolerancePct}%):
+    ${s.cases.map((c) => `r${c.radius} → ${c.measuredMeanRadius} (${c.radiusDeltaPct}%)`).join(', ')}.
+    This checks the arithmetic, not the layout, so re-authoring a track cannot make it red.`;
+  const measured = v.telemetry
+    ? `<br>Race ${report.raceSeconds}s vs measured autoplay ${v.telemetry.raceSeconds}s (${v.vsTelemetryPct}%). The
+       measured race is the slower of the two because the grid start burns ~2 s accelerating from a standstill.`
+    : v.staleTelemetry
+      ? `<br><b>No measured race for this layout.</b> The one capture on disk (${esc(v.staleTelemetry.source)})
+         implies a ${v.staleTelemetry.impliedLapUnits}u lap, ${v.staleTelemetry.impliedLapDeltaPct}% off this track's
+         ${report.lengthUnits}u — it drove a superseded layout, so it is not used. Lap time here is a pure geometric
+         solve, length ÷ mean speed; treat it as ±3% until a race on this track is measured.`
+      : `<br>No autoplay telemetry on disk, so lap time is a pure geometric solve: length ÷ mean speed. Treat it as
+         ±3% until a race is measured.`;
+  return `<div class="flag ${s.pass ? 'ok' : ''}">${solverLine}${measured}</div>`;
 };
 
 const contrastTable = (report) => {
@@ -2378,13 +2485,27 @@ const main = async () => {
 
     if (report.validation) {
       const v = report.validation;
+      const s = v.solver;
       process.stdout.write(
-        `  validation      length ${v.lengthDeltaPct}% / lap ${v.lapDeltaPct}% vs ground truth; ` +
-          `race ${v.vsTelemetryPct ?? '?'}% vs measured autoplay ${v.telemetry?.raceSeconds ?? '?'}s -> ${v.pass ? 'PASS' : 'FAIL'}\n`
+        `  solver check    circles r${s.cases.map((c) => c.radius).join('/')}: worst length ${s.worstLengthDeltaPct}% ` +
+          `(tol ${s.lengthTolerancePct}%), worst radius ${s.worstRadiusDeltaPct}% (tol ${s.radiusTolerancePct}%) -> ` +
+          `${s.pass ? 'PASS' : 'FAIL'}\n`
       );
+      if (v.telemetry) {
+        process.stdout.write(
+          `  vs autoplay     race ${report.raceSeconds}s vs measured ${v.telemetry.raceSeconds}s (${v.vsTelemetryPct}%)\n`
+        );
+      } else if (v.staleTelemetry) {
+        process.stdout.write(
+          `  vs autoplay     none for this layout — ${v.staleTelemetry.source} implies a ` +
+            `${v.staleTelemetry.impliedLapUnits}u lap (${v.staleTelemetry.impliedLapDeltaPct}% off this one), so it drove a ` +
+            `different track. Lap time below is a pure geometric solve; treat it as +/-3% until a race is measured.\n`
+        );
+      }
       if (!v.pass) {
         process.stderr.write(
-          `\nFAIL: the tool disagrees with shipped ground truth. The maths is wrong; do not trust any layout it reports.\n`
+          `\nFAIL: the solver disagrees with closed form on a circle of known radius. ` +
+            `The maths is wrong; do not trust any layout it reports.\n`
         );
         process.exitCode = 1;
       }

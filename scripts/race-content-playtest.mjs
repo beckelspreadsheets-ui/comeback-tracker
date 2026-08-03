@@ -232,6 +232,10 @@ import {
   collectCoinsForFrame,
   respawnCoins,
 } from '../src/game/race/raceCoins.js';
+// The coin-placement gate measures against the tracks' own geometry rather
+// than a hardcoded copy of it — see validateRaceCoinHelpers.
+import { KART_TRACKS } from '../src/game/race/tracks/index.js';
+import { validateCenterline } from '../src/game/race/tracks/buildCenterline.js';
 import { createRaceCameraRuntime } from '../src/game/race/raceCameraRuntime.js';
 import { createRaceMotionRuntime } from '../src/game/race/raceMotionRuntime.js';
 import { createRaceRuntimeScene } from '../src/game/race/raceSceneRuntime.js';
@@ -348,7 +352,11 @@ const REQUIRED_TRACKS = {
   'comeback-city': {
     bananaCount: 18,
     hazards: ['wet', 'pulseZone', 'laser', 'mineCart', 'gate'],
-    itemBoxes: { ground: 8 },
+    // ground: 8 -> 7. Wave 8's Skyline re-author placed seven boxes. This
+    // table is a "did content go missing" guard, so the number is meant to be
+    // updated deliberately alongside a re-author — it just never was, because
+    // the gate had already aborted upstream since wave 4.
+    itemBoxes: { ground: 7 },
     kartOnly: true,
     signature: 'boost',
   },
@@ -406,7 +414,15 @@ const validateAssetManifest = async () => {
 
 const validateComebackCityV2 = (track) => {
   const course = track.courseV2;
-  if (!course || course.version !== 'v2-authored-kart') fail('Comeback City must expose CourseV2Definition data', { version: course?.version });
+  // Checks the course FAMILY, not the revision. This pinned the exact string
+  // 'v2-authored-kart' until wave 7 re-authored the layout as 'v2-skyline-4x'
+  // and turned it red — but the thing being guarded here is "this is a V2
+  // course, not the legacy v1 loop", and a version string is supposed to be
+  // free to move when the layout is re-authored. An exact match made every
+  // legitimate re-author a gate failure for a reason unrelated to the check.
+  if (!course || !String(course.version || '').startsWith('v2')) {
+    fail('Comeback City must expose CourseV2Definition data', { version: course?.version });
+  }
   if (!track.kartOnly || !course.kartOnly) fail('Comeback City V2 must be kart-only', { courseKartOnly: course.kartOnly, trackKartOnly: track.kartOnly });
   if ((track.switchPads || []).length || (track.vehicleZones || []).length || (track.vehicleLocks || []).length) {
     fail('Comeback City V2 must not preserve vehicle switching hooks', {
@@ -415,9 +431,18 @@ const validateComebackCityV2 = (track) => {
       vehicleZones: track.vehicleZones?.length || 0,
     });
   }
+  // A SANITY band on kart-drivable width, not a pin to the current layout.
+  // Was 42-56, which predated the wave-8 Skyline re-author and went red on two
+  // ribbons that are deliberate: the harbour straight at 60 and the viaduct
+  // deck at 62. Width is that layout's second story — the market row is the
+  // narrowest road on the lap and the viaduct is the widest and OPENS as it
+  // climbs, which is what makes the crossing read as a set piece — so the band
+  // has to have room for authored width to say something. 40-64 keeps the
+  // check meaningful (it still catches a road authored at 5 units or 500)
+  // while leaving the authored 42-62 spread its headroom.
   const mainWidths = (course.roadRibbons || []).filter((ribbon) => ribbon.role === 'main').map((ribbon) => ribbon.width);
-  const badMain = mainWidths.filter((width) => width < 42 || width > 56);
-  if (badMain.length || mainWidths.length < 5) fail('Main V2 roads must be authored at 42-56 world units', { badMain, mainWidths });
+  const badMain = mainWidths.filter((width) => width < 40 || width > 64);
+  if (badMain.length || mainWidths.length < 5) fail('Main V2 roads must be authored at 40-64 world units', { badMain, mainWidths });
   const branchWidths = (course.branches || []).map((branch) => branch.width);
   if (branchWidths.length) fail('Comeback City proof track must stay branchless until the main lap is approved', { branchWidths });
   const loopLength = courseDistance(course.centerline, true);
@@ -3283,7 +3308,14 @@ const validateKartPhysicsHelpers = () => {
     basicRaceMaterial.color.getHexString() !== '123456' ||
     !basicRaceMaterial.flatShading ||
     basicRaceMaterial.metalness !== 0.02 ||
-    basicRaceMaterial.roughness !== 0.68 ||
+    // 0.68 -> 0.58: wave 4 (e658f8b8) dropped base roughness deliberately, as
+    // the cheapest answer to "nothing picks up bounce from the sky it sits
+    // under" — a grazing-angle sky fresnel, F0 untouched at the dielectric
+    // 0.04. The gate was never updated, so it has aborted HERE since wave 4 and
+    // every assertion below it — coins, items, rival gates — went unrun for
+    // five waves. Kept as an exact-match gate on purpose: this is a deliberate
+    // art constant and it should break loudly when it moves.
+    basicRaceMaterial.roughness !== 0.58 ||
     Math.abs(vehicleModel.group.scale.x - 0.82) > 0.001 ||
     vehicleModel.wheels.length !== 4 ||
     frontWheelCount !== 2 ||
@@ -10280,16 +10312,43 @@ const validateRaceCoinHelpers = () => {
   if (coinsAfterSpin(10) !== 10 - COIN_FEEL.spinLoss) fail('spin loss wrong');
   if (coinsAfterSpin(1) !== 0) fail('spin loss must floor at zero');
 
-  // Placement discipline: every row clear of its track's pads and boxes.
-  const MARKERS = {
-    'comeback-city': [0.055, 0.205, 0.435, 0.875, 0.025, 0.115, 0.225, 0.36, 0.5, 0.6, 0.74, 0.86],
-    'penguin-village': [0.12, 0.33, 0.58, 0.85, 0.06, 0.18, 0.3, 0.46, 0.6, 0.74],
-  };
+  // Placement discipline: every row clear of its track's pads, boxes and ramps.
+  //
+  // This used to compare against a HARDCODED marker list, which was a copy of
+  // the pre-4x tracks' pad/box progresses and had been a dead baseline since
+  // wave 8 rebuilt both layouts — it was still guarding 'comeback-city' at
+  // 0.055/0.205/0.435/0.875 when the shipped pads are 0.09/0.3/0.7/0.965. A
+  // gate that duplicates the data it checks stops checking it the moment the
+  // data moves, so the markers are now read off the track definitions.
+  //
+  // The guard is a WORLD DISTANCE. The rule was authored as "+/-0.02" on the
+  // 2,897-unit lap, i.e. 58 units / ~0.22 s at racing speed — that separation
+  // is the thing that keeps two pickups out of the same moment, and it does not
+  // scale with lap length. Held as a fraction on the 11.6k lap it would demand
+  // 233 units and blank out over half the road.
+  const COIN_CLEARANCE_UNITS = 58;
   for (const [trackKey, rows] of Object.entries(COIN_ROWS)) {
+    const track = KART_TRACKS.find((entry) => entry.key === trackKey);
+    if (!track) fail('coin rows for a track that does not exist', { trackKey });
+    const { length } = validateCenterline(track.course.centerline);
+    const markers = [
+      ...track.course.boostPads.map((pad) => ({ at: pad.progress, kind: 'boostPad' })),
+      ...track.course.itemBoxes.map((box) => ({ at: box.progress, kind: 'itemBox' })),
+      ...(track.ramps || []).map((ramp) => ({ at: ramp.progress, kind: 'ramp' })),
+    ];
     for (const row of rows) {
-      for (const marker of MARKERS[trackKey]) {
-        const delta = Math.min(Math.abs(row - marker), 1 - Math.abs(row - marker));
-        if (delta < 0.02) fail('coin row crowds a pickup marker', { marker, row, trackKey });
+      for (const marker of markers) {
+        const delta = Math.min(Math.abs(row - marker.at), 1 - Math.abs(row - marker.at));
+        const units = delta * length;
+        if (units < COIN_CLEARANCE_UNITS) {
+          fail('coin row crowds a pickup', {
+            kind: marker.kind,
+            marker: marker.at,
+            row,
+            trackKey,
+            units: Math.round(units),
+          });
+        }
       }
     }
   }
