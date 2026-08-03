@@ -66,7 +66,10 @@ import pvRunestoneUrl from '../assets/game/models/pv-tribute/pv-runestone.glb?ur
 import pvOddsBoardUrl from '../assets/game/models/pv-tribute/pv-odds-board.glb?url';
 import pvTokenClusterUrl from '../assets/game/models/pv-tribute/pv-token-cluster.glb?url';
 import itemBoxCcCoinUrl from '../assets/game/models/items/item-box-cc-coin.glb?url';
-import itemBoxPvIceUrl from '../assets/game/models/items/item-box-pv-ice.glb?url';
+// item-box-pv-ice.glb is retired from the shipped set (owner 2026-08-03: bitcoin
+// coins on Penguin Village). The file stays in the repo and the manifest; the
+// import is dropped so the GLB leaves the bundle. Re-roll = restore this line
+// and point 'penguin-village' at it in ITEM_BOX_ASSETS.
 import backdropCcFarUrl from '../assets/game/generated/backdrops/cc-far.webp';
 import backdropCcNearUrl from '../assets/game/generated/backdrops/cc-near.webp';
 import backdropPvFarUrl from '../assets/game/generated/backdrops/pv-far.webp';
@@ -99,6 +102,7 @@ import {
 import {
   ageFishBones,
   AURORA,
+  ICE_SHIELD,
   AVALANCHE,
   BLIZZARD,
   dropBlizzard,
@@ -864,6 +868,11 @@ const createInitialRace = (
   squash: 1,
   steer: 0,
   shieldActive: false,
+  // Owner 2026-08-03, after playing the preview: "the ice shield lasts too
+  // long". It had NO timer at all — shieldActive was set true on use and only
+  // ever cleared by absorbing a hit, so on a clean lap it lasted the whole
+  // 2m14s race. Now it expires on ICE_SHIELD.duration as well.
+  shieldTimer: 0,
   tricksLanded: 0,
   wallContact: false,
 });
@@ -5633,7 +5642,13 @@ const makeWinterItemCrate = (accent = '#00E5FF') => {
 // Miami set uses, so kart-playable fails loud on a 404.
 const ITEM_BOX_ASSETS = {
   'comeback-city': itemBoxCcCoinUrl,
-  'penguin-village': itemBoxPvIceUrl,
+  // Owner 2026-08-03, after playing the preview: "just bitcoin coins for the
+  // items on the penguin map". The ice-crate variant is retired from the
+  // shipped set rather than deleted — the import below stays so a re-roll is a
+  // one-word change. This also makes the two pickups on PV agree: the coin
+  // FIELD already mounts itemBoxCcCoinUrl on both tracks, so the item box was
+  // the only thing on Penguin Village still wearing the ice skin.
+  'penguin-village': itemBoxCcCoinUrl,
 };
 const itemBoxTemplateCache = new Map();
 // Scratch transforms for the instanced coin field — one compose per face
@@ -9392,7 +9407,10 @@ export const ComebackCityThreeKartRace = ({
         { lane: 0.8, owner: 'showcase', progress: showcaseAt(128), skin: 'carrot', speed: 0, ttl: 9999 },
         { lane: -0.8, owner: 'showcase', progress: showcaseAt(145), skin: 'iceshard', speed: 0, ttl: 9999 }
       );
+      // Capture showcase, not gameplay: hold the bubble up for the whole run so
+      // a shielded kart is guaranteed to be in frame at every progress mark.
       race.shieldActive = true;
+      race.shieldTimer = Number.POSITIVE_INFINITY;
     }
     // ?giveItem=<key> keeps that item in the slot whenever it's empty —
     // deterministic captures/tests of any single item (autoplay fires it on
@@ -10158,6 +10176,7 @@ export const ComebackCityThreeKartRace = ({
               race.speed = clamp(race.speed + DRIFT_FEEL.boostKick[1], 0, BOOST_SPEED);
             } else if (race.heldItem === 'iceshield') {
               race.shieldActive = true;
+              race.shieldTimer = ICE_SHIELD.duration;
             } else if (race.heldItem === 'fishbone') {
               dropFishBone(race.fishBones, 'player', race.progress, race.lane, engine.sampler.length);
             } else if (race.heldItem === 'snowball') {
@@ -10205,6 +10224,13 @@ export const ComebackCityThreeKartRace = ({
           }
           race.boostTimer = Math.max(0, race.boostTimer - dt);
           race.auroraTimer = Math.max(0, race.auroraTimer - dt);
+          // The shield now runs out as well as being spent. Guarded on
+          // shieldActive so an expired shield cannot be "re-expired", and the
+          // Infinity the capture showcase sets stays Infinity under subtraction.
+          if (race.shieldActive) {
+            race.shieldTimer = Math.max(0, race.shieldTimer - dt);
+            if (race.shieldTimer <= 0) race.shieldActive = false;
+          }
           const auroraActive = race.auroraTimer > 0;
           // Kart stats: top speed cap, throttle accel, and steering rate all
           // scale with the chosen kart (hero = 1/1/1, the gate baseline).
@@ -10367,6 +10393,7 @@ export const ComebackCityThreeKartRace = ({
           ) {
             if (race.shieldActive) {
               race.shieldActive = false;
+              race.shieldTimer = 0;
             } else {
               race.spinTimer = ITEM_FEEL.spinDuration;
               race.bumpCooldown = KART_CONTACT.spinCooldown;
@@ -10405,6 +10432,7 @@ export const ComebackCityThreeKartRace = ({
             ) {
               if (race.shieldActive) {
                 race.shieldActive = false;
+                race.shieldTimer = 0;
                 race.crosserGraceTimer = 1.2;
               } else {
                 race.spinTimer = ITEM_FEEL.spinDuration;
@@ -10422,6 +10450,7 @@ export const ComebackCityThreeKartRace = ({
               // doesn't care)
               if (race.shieldActive) {
                 race.shieldActive = false;
+                race.shieldTimer = 0;
               } else {
                 race.spinTimer = ITEM_FEEL.spinDuration;
                 race.bumpCooldown = KART_CONTACT.spinCooldown;
@@ -10435,6 +10464,7 @@ export const ComebackCityThreeKartRace = ({
             if (fishBoneHit && race.auroraTimer <= 0) {
               if (race.shieldActive) {
                 race.shieldActive = false;
+                race.shieldTimer = 0;
               } else {
                 race.spinTimer = ITEM_FEEL.spinDuration;
                 race.bumpCooldown = KART_CONTACT.spinCooldown;

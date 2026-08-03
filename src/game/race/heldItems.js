@@ -34,6 +34,21 @@ export const AURORA = {
   speedKick: 60,
 };
 
+// Ice Shield: absorbs ONE hit, or expires on its own, whichever comes first.
+//
+// Owner 2026-08-03, after playing the preview: "the ice shield lasts too long".
+// It had no duration at all — the runtime set a boolean on use and only cleared
+// it when something hit you, so on a clean lap it stayed up for the whole
+// 2m14s race and the shield bubble sat over the kart the entire time.
+//
+// 8s is a starting value, not a tuned one: long enough to cover the stretch
+// after a pickup where a snowball or fish bone is actually likely, short enough
+// that it is a window rather than a state. Owner has said the full item pass
+// comes "once the game is done", so this is deliberately one number to move.
+export const ICE_SHIELD = {
+  duration: 8,
+};
+
 // Comeback logic (owner direction): the further back you are, the more
 // aggressive your pickups. Leaders get defense only, mid-pack gets skirmish
 // and zone items, tailenders get the passing tools. Deterministic — table
