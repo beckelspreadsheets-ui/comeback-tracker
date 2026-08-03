@@ -56,6 +56,7 @@
     "race:proof:compare": "node scripts/compare-race-visuals.mjs",
     "deploy:andrew": "npm run build:andrew && npx wrangler pages deploy dist --project-name=comeback-andrew --branch=main --commit-dirty=true",
     "deploy:alexander": "npm run build:alexander && npx wrangler pages deploy dist --project-name=comeback-alexander --branch=main --commit-dirty=true",
+    "deploy:kart:preview": "npm run build:kart && npx wrangler pages deploy dist-kart --project-name=comeback-city-kart --branch=aaa-preview --commit-dirty=true",
     "deploy:kart": "npm run build:kart && npx wrangler pages deploy dist-kart --project-name=comeback-city-kart --branch=main --commit-dirty=true"
   },
   "dependencies": {
