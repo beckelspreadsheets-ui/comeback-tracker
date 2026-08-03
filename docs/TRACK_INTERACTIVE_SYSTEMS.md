@@ -67,4 +67,4 @@ Wired into V2 before the dare shortcut launch in `ComebackCityThreeKartRace.jsx`
 
 ## Testing
 
-All new modules are importable in Node without Three.js. The acceptance gates are `npm run build`, `npm run test:kart-proof`, `npm run test:kart-playable`, and `npm run test:race`.
+All new modules are importable in Node without Three.js. The acceptance gates are `npm run build`, `npm run test:kart-playable`, and `npm run test:race`.

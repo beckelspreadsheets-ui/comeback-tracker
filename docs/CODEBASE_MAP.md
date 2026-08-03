@@ -251,7 +251,7 @@ sequenceDiagram
 - **Modify cloud sync / schema** → `src/hooks/usePersistedState.js` (client: bump `SCHEMA_VERSION`, add a `migrate` step) AND `functions/api/sync/_shared.js` (server: `validateState` version) together.
 - **Modify auth** → `functions/api/sync/_shared.js` (`verifyAccessJwt`, `SYNC_USERS_JSON` allowlist). CF Access config lives in the CF dashboard, not the repo.
 - **Add a food data source** → `src/lib/foodApi.js` (+ add origin to CSP `connect-src` in `public/_headers`).
-- **Debug/QA a race** → use URL params (`?track=`/`?character=`/`?kart=`/`?giveItem=`/`?playableAutoplay=1`); Node scripts in `scripts/` (`test:kart-proof`, `test:kart-playable`, `test:race`).
+- **Debug/QA a race** → use URL params (`?track=`/`?character=`/`?kart=`/`?giveItem=`/`?playableAutoplay=1`); Node scripts in `scripts/` (`test:kart-playable`, `test:race`).
 
 ---
 

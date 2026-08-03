@@ -8,7 +8,7 @@ updated `tmp/v2-approval-preview.html` for owner review.
 
 - Runtime: `src/game/ComebackCityThreeKartRace.jsx` (single-file Three.js runtime mounted at `/#race` via `RaceScreen.jsx`). Neon-dusk world, bloom + shadows, MK-style track-locked camera.
 - Art is owner-approved: Tripo hero-card kart = player body; Kenney recolors = rival bodies; roster = CRRT Bunny (player), CRRT Penguin (Blue Speed), Seth Penguin (Purple Lab); Orange Muscle seat open.
-- QA gates (all must pass after every phase): `npm run build`, `test:kart-proof`, `test:kart-playable`, `test:kart-3d-spike` (FPS median ≥ 34 on production build), `test:race`. Visual check: `node scripts/camera-probe-capture.mjs`.
+- QA gates (all must pass after every phase): `npm run build`, `test:kart-playable`, `test:kart-3d-spike` (FPS median ≥ 34 on production build), `test:race`. Visual check: `node scripts/camera-probe-capture.mjs`.
 - Key sim facts: progress is 0..1 along a CatmullRom centerline (`sampler.pointAt(progress, lane)`); lane is −0.66..0.66; speed max 228 (boost 284); lap wrap at progress 0; physics constants live at the top of the runtime file. Legacy modules under `src/game/race/` (kartTuning.js has 3-tier drift constants; raceAudio.js exists) can be mined for tuning values.
 
 ## Phase 1 — Drift & mini-turbo feel (the central mechanic)
@@ -85,7 +85,7 @@ We are executing the gameplay feel plan phase by phase, starting with Phase 1
 (drift & mini-turbo). The art direction is owner-approved and locked — do not
 change the look, lighting, models, or camera framing. Work only in
 src/game/ComebackCityThreeKartRace.jsx and new modules under src/game/race/.
-After each phase: run npm run build, test:kart-proof, test:kart-playable,
+After each phase: run npm run build, test:kart-playable,
 test:kart-3d-spike, test:race; regenerate the camera probe
 (node scripts/camera-probe-capture.mjs); update tmp/v2-approval-preview.html
 with a phase section; and stop for my feel-check before the next phase.

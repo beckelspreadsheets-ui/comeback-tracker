@@ -75,7 +75,7 @@
   "filePath": "src/game/comebackCityVisuals.jsx",
   "source": "Procedural React/CSS components authored in-repo",
   "license": "Project-owned",
-  "role": "District closeups and garage kart design sheet",
+  "role": "QA/reference visual surface — district closeups, plaza and mobile race reference; not imported by production code",
   "sizeBudget": "Runtime CSS/DOM only; no external binary asset",
   "fallback": "Textured CSS model and district cards"
  },

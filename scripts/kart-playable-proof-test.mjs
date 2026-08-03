@@ -107,10 +107,10 @@ const assertControlVisualEffect = async (page, viewport, label) => {
 };
 
 const writeContactSheet = async () => {
-  const proofCapture = path.join(root, 'tmp', 'kart-proof-static-guard', 'desktop.png');
-  const proofDesktop = (await fileExists(proofCapture))
-    ? proofCapture
-    : path.join(root, 'src', 'assets', 'game', 'proof', 'comeback-city-kart-proof-desktop-v1.png');
+  // The checked-in PNG directly. This used to prefer a fresh capture from
+  // tmp/kart-proof-static-guard/, but that gate is retired and its output dir
+  // is gone, so the preference was dead and only the fallback ever ran.
+  const proofDesktop = path.join(root, 'src', 'assets', 'game', 'proof', 'comeback-city-kart-proof-desktop-v1.png');
   const legacyDesktop = path.join(root, 'tmp', 'race-playtests', 'comeback-city-free-switch-1.png');
   const entries = [
     {
@@ -371,10 +371,13 @@ const run = async () => {
   await rm(outputDir, { force: true, recursive: true });
   await mkdir(outputDir, { recursive: true });
 
-  const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
-  if (packageJson.scripts?.['test:kart-proof'] !== 'node scripts/kart-proof-static-guard.mjs') {
-    fail('Phase 1 static proof guard script is missing');
-  }
+  // The `test:kart-proof` existence assertion that used to sit here is gone with
+  // the gate itself. That guard captured a static proof PNG off App.jsx's
+  // #visual-* reference routes, which the app split (76513be9) deliberately
+  // deleted — ArcadeKartProofScene had no consumer left, so the element it
+  // waited on was never rendered and it could not pass. What it was really
+  // checking, "does the kart game render at desktop and mobile", is what THIS
+  // test does by capturing the live game on both tracks.
 
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   // K1: the kart battery points this at the kart build via

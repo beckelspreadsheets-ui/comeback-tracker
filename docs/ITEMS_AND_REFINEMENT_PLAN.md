@@ -26,7 +26,7 @@ then more tracks. Continues from `docs/GAMEPLAY_FEEL_PLAN.md` (Phases 1–3.5 al
   - Blender headless bakes: `scripts/blender/bake-spike-segment.py` (track shell A/B),
     `bake-buildings.py` (building family → `public/baked-buildings.glb`, swapped in via
     `buildingSwaps` registry). Unlit MeshBasicMaterial in-engine = zero lighting cost.
-- QA gates after every change: `npm run build`, `test:kart-proof`, `test:kart-playable`,
+- QA gates after every change: `npm run build`, `test:kart-playable`,
   `test:race`, `test:kart-3d-spike` (FPS median ≥ 34 — ONLY trustworthy on an idle machine;
   the owner's parallel AI sessions run GPU Blender bakes that crush WebGL; never optimize
   visuals off a busy-machine reading). Visual check: `node scripts/camera-probe-capture.mjs`.

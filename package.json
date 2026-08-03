@@ -36,7 +36,6 @@
     "test:ci:release": "node scripts/ci-release-automation-audit.mjs",
     "test:race": "node scripts/race-content-playtest.mjs",
     "test:audio:kart": "node scripts/kart-audio-smoke-test.mjs",
-    "test:kart-proof": "node scripts/kart-proof-static-guard.mjs",
     "test:kart-playable": "KART_PLAYABLE_PROOF_SERVER_SCRIPT=dev:kart node scripts/kart-playable-proof-test.mjs",
     "test:kart-playable:kart": "npm run build:kart && KART_PLAYABLE_PROOF_SERVER_SCRIPT=preview:kart node scripts/kart-playable-proof-test.mjs",
     "test:track-visuals": "node scripts/validate-track-visuals.mjs",

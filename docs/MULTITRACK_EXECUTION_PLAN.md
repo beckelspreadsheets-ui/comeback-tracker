@@ -45,7 +45,7 @@ orientation lab, select-portraits booth) rather than re-deriving — they encode
 hard-won gotchas.
 
 Standing rules for every phase: the current neon track is UNTOUCHED and stays green in the
-gates; every round ends with `npm run build` + `test:kart-proof` + `test:kart-playable` +
+gates; every round ends with `npm run build` + `test:kart-playable` +
 `test:race`, a probe/capture, a new top section in `tmp/v2-approval-preview.html`, and an
 owner feel-check. FPS floor 34 (idle machine only). Readability beats spectacle.
 

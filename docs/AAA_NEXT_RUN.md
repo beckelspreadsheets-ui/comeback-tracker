@@ -76,10 +76,14 @@ they now share `scripts/lib/chromium-gl-args.mjs`.
 
 - **PV mean speed 248 → 260 is INFERRED, not measured** (the ice stopped being
   a full-width tax in wave 8). Needs a real PV autoplay capture.
-- **`test:kart-proof` is red and it is not load.** `ArcadeKartProofScene` in
-  `comebackCityVisuals.jsx` has no consumer anywhere in `src/`, so the element
-  the gate waits on is never rendered. Re-mount it or retire the gate — a call,
-  not a cleanup.
+- ~~`test:kart-proof` is red~~ **RETIRED 2026-08-03.** It guarded a reference
+  route the app split (`76513be9`) deliberately deleted, ran against the FITNESS
+  app for a kart artifact, and its real coverage — does the kart game render at
+  desktop and mobile — is done better by `test:kart-playable` capturing the live
+  game on both tracks. Removed with it: the three orphaned exports in
+  `comebackCityVisuals.jsx` (`ArcadeKartProofScene`, `PlayableKartProofScene`,
+  `KartDesignSheet`) and that module's ~4.5 MiB proof-PNG imports. The PNGs stay
+  on disk as artifacts and one still feeds the kart-playable contact sheet.
 - Items 5–8 below are untouched.
 
 ---
@@ -146,10 +150,9 @@ budget only. `test:race` was red from wave 4 to wave 9, and `test:audio:kart` /
 ```
 GREEN  build:kart · test:bundle:kart · test:race · test:track-visuals
        test:audio:kart (9/9) · test:kart-playable
-RED    test:kart-proof — pre-existing, and NOT a load artifact:
-       ArcadeKartProofScene has no consumer anywhere in src/, so the
-       [data-visual-section="kart-proof"] element the gate waits on is
-       never rendered. Re-mount it or retire the gate.
+RED    (none)
+
+test:kart-proof was RETIRED 2026-08-03 rather than fixed — see below.
 ```
 
 Axes still under the bar: **camera** (lowest throughout), **lighting**,
