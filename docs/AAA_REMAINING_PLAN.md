@@ -60,7 +60,15 @@ Two things found while committing it:
 - The ruling **changes no historical score**. All thirty critic reports in
   `tmp/aaa-plan/` already carry exactly eleven score keys — axis 11 has never
   been scored by anyone — so this writes down the instrument that has been
-  running since wave 1. Every wave stays comparable; nothing needs re-scoring.
+  running since wave 1. ~~Every wave stays comparable; nothing needs
+  re-scoring.~~
+  **CORRECTED 2026-08-03, after wave 9 was scored.** The comparability claim was
+  overreach. It was verified for the **axis set** and asserted for the whole
+  instrument, but the *dispatch prompt* in `AAA_CRITIC_BRIEF.md` was newly
+  written here — wave 8's critics were given an uncommitted prompt whose text
+  nobody has. Wave 9 then scored 67/68/67 against wave 8's 86/77/79 with **every
+  one of eleven axes down**, including axes wave 9 could not have touched. Cross-
+  wave totals are **not** comparable across `448d65b4`; see Phase 1.
 - **`88` was redundant even on its own terms.** Eleven axes each ≥ 8 forces a
   total ≥ 88, so the per-axis floor was always the binding constraint. Rule 4 of
   this plan — *a gate that duplicates the data it checks stops checking it* —
@@ -298,7 +306,78 @@ also fails past progress 0.26.
 
 ---
 
-## Phase 1 — score wave 9 · S · checkpoint, not a gate
+## Phase 1 — score wave 9 · SCORED 2026-08-03 · ✅
+
+Fresh capture at HEAD (`tmp/aaa-visual/wave9-r3`, 18/18 frames, 0 console errors,
+58–65 fps, draw calls stable at 571 CC / 875 PV). HEAD is wave 9's build: the only
+`src/` change since `a9fa2499` is `0e78badc`, which retired dead components not
+reachable from the kart entry. Three independent critics, dispatched with the
+committed brief → `tmp/aaa-plan/wave9-r3-critics.json`.
+
+**All three FAIL. Totals 67 / 68 / 67.** Unanimously under 8 on **seven** axes:
+lighting (5/4/3), materials (5/4/5), trackLegibility (6/7/7), environment (5/5/6),
+vfx (5/5/5), camera (7/6/6), post (6/6/5). No axis is unanimously ≥ 8.
+
+### THE SCORE IS NOT COMPARABLE TO WAVE 8. That is a defect in my instrument change.
+
+Wave 8 read 86/77/79; wave 9 reads 67/68/67 — and **every one of the eleven axes
+fell**, including `sky`, `trackLegibility`, `hud` and Comeback City's materials.
+Wave 9 changed PV shadows, coin density and four test gates. None of those can
+degrade a Comeback City sky. A uniform drop across all axes is the signature of a
+changed instrument, not a changed build.
+
+The instrument did change, and the commit that changed it (`448d65b4`) claimed
+otherwise: *"every historical score stays directly comparable"*. That was verified
+for the **axis set** — all thirty prior reports carry the same eleven keys — but
+**not for the dispatch prompt**, which I newly authored. It now tells critics
+"Be harsh, the default verdict is FAIL" and carries the wave-6 cyan-noise warning.
+Wave 8's critics were given an uncommitted prompt whose text nobody has.
+
+**Do not read 80.7 → 67.3 as a regression.** The control that would settle it is a
+re-score of `wave8-r3`'s frames under the new brief; if wave 8 also lands near 67,
+the drop is the instrument. Until that runs, wave 9 is the first point on a new
+scale and there is no trend.
+
+### What survives regardless of the instrument
+
+**1. Wave 9's headline deliverable did not land.** Verified three independent ways:
+a 3× magnified crop of `penguin-village-p0_33` shows the tyres meeting snow with no
+contact patch and no cast ribbon anywhere; two of three critics measured the same;
+and the configuration explains it —
+
+```
+penguinVillage.js:642  sun: { azimuthDeg: 195, elevationDeg: 12,
+                              shadowKey: { elevationDeg: 20, share: 0.35 } }
+comebackCity.js:72     sun: { azimuthDeg: 248, elevationDeg: 21 }   ← no split, casts cleanly
+```
+
+The caster carries 35% of the key and sits at azimuth 195, close to the view
+vector, so what little it throws hides under the chassis. Comeback City, which
+never got a split key, is the one track with a real shadow (measured −21% under
+the kart against lateral road).
+
+**The one critic who reported the shadow as working was wrong**, and said so from a
+crop. Weight its other positives accordingly — this is the concrete case of the
+warning below.
+
+**2. Floating geometry — an automatic blocker.** Penguin Village's ice ridge is
+widest at the top of frame, tapers downward and terminates in mid-air with haze
+visible beneath. Two critics flagged it independently, in seven of nine frames,
+and it is visible in `penguin-village-p0_33` without magnification.
+
+**3. Nothing but the kart casts a shadow**, on either track — all three critics.
+
+**4. There is no minimap, and Phase 7 was wrong to drop it** — see that phase.
+
+### The warning in this phase was right, and inverted
+
+It said wave 8's environment regression was carried by one critic, so a re-score
+that fails to reproduce it proves nothing. The same hazard appeared here with the
+opposite sign: one critic **credited** the wave's headline fix, and that positive
+was the outlier. Single-critic findings need adjudication whichever way they point.
+
+<details><summary>Original text of this phase</summary>
+
 
 Wave 9 is unscored and shipped a lighting change. Only the **lighting** sub-item
 in Phase 3 is genuinely score-gated; everything else is a named defect that needs
@@ -307,6 +386,8 @@ fixing regardless. Do not block other phases on this.
 When reading the result: wave 8's environment regression is **carried entirely by
 one critic** (−3). A wave-10 re-score that does not reproduce it is *not*
 automatically evidence the fix worked.
+
+</details>
 
 ---
 
@@ -488,9 +569,17 @@ dead**, and do not assume phones are already on a cheap path.
 - **On-demand kart pool, runtime half** — real, but justify it on **first-load
   time and VRAM**. The bundle-budget rationale is foreclosed by the manifest in
   five separate places.
-- ~~Legacy 2D minimap~~ — **dropped. Not a defect.** `raceTracks.js:128` affects
-  only a dev harness excluded from the build, and the kart HUD's minimap
-  auto-normalises. Effort priced against it is wasted.
+- **Minimap — REINSTATED 2026-08-03, and reframed. The drop was wrong.** It read:
+  *"dropped. Not a defect. `raceTracks.js:128` affects only a dev harness excluded
+  from the build, and the kart HUD's minimap auto-normalises."* The auto-
+  normalising minimap is in `raceHud.jsx`, which is rendered **only** by
+  `ArcadeRace3D.jsx` — the *fitness app's* race screen. The kart build goes
+  `index.kart.html` → `src/kart/main.jsx` → `KartApp.jsx`, which imports only
+  `ComebackCityThreeKartRace.jsx` and never loads `raceHud.jsx`. The other
+  minimap lives in `comebackCityVisuals.jsx`, which nothing imports at all.
+  **The shipped kart game has no minimap.** All three wave-9 critics reported it
+  from the frames before the import graph confirmed it. Not a broken minimap —
+  no minimap, on a 2m14s course where the player cannot see the next corner.
 - ~~Driver hero rim~~ — **dropped, already shipped.** Both tracks carry a
   `heroRim`; the comment at `:2360` claiming CC ships rim-off is stale. Fix the
   comment. Only the seat anchor is real (Phase 2).
@@ -578,6 +667,9 @@ Kept so the next reader can calibrate how much to trust an inherited plan.
 | `MEAN_SPEED['comeback-city']` is measured, only PV is inferred | **both were wrong** — CC's 260 came from the retired 2,897-unit loop. Measured: 245.7 for both. |
 | CI capture: "the race ends in game time before later marks arrive" | **backwards** — the race barely starts. A 150s wall-clock deadline against a race running at ~8% of wall time. |
 | Off-road ground is flatter than the road corridor | **holds on Comeback City only** (2.6×). Penguin Village is 1.4×, near parity. |
+| Critic scores are comparable across the brief commit | **wrong, and mine** — the axis set was checked, the dispatch prompt was not. Wave 9 fell on all eleven axes including ones it could not touch. |
+| Legacy minimap is not a defect: "the kart HUD's minimap auto-normalises" | **wrong** — that minimap is in `raceHud.jsx`, rendered only by the fitness app's `ArcadeRace3D.jsx`. The kart build never loads it. There is no minimap at all. |
+| Wave 9 shipped working PV cast shadows | **did not land** — caster carries `share: 0.35` at azimuth 195, down the view vector. CC, with no split key, is the only track that casts. |
 | Wave 7 scored `85/80/82 → 93 at r2` | **unsourced** — found while committing the brief. The only wave-7 artifact reads **83/85/65**, and no `-r2` file exists for any wave after wave 1. A 93 would be the best score ever recorded. Corrected in `AAA_NEXT_RUN.md`. |
 
 ## Rules this plan leans on
