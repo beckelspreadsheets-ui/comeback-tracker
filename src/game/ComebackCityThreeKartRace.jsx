@@ -83,6 +83,7 @@ import {
 } from './race/raceCoins.js';
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
+import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
 import {
   DRIFT_FEEL,
   createDriftState,
@@ -852,6 +853,16 @@ const createInitialRace = (
   position: 1 + RIVALS.length,
   previousProgress: startProgressFor(trackDef),
   progress: startProgressFor(trackDef),
+  // P2 of docs/FREE_BODY_PLAN.md. Null until the flag turns it on, and null is
+  // the rails path — so the default build is byte-for-byte the behaviour that
+  // shipped, and free-body cannot regress it while it is being tuned.
+  // Populated in createEngine, where the sampler exists to seed position and
+  // heading from the grid slot.
+  freeBody: null,
+  // Signed cumulative laps, for P3. Advanced by the same per-frame delta that
+  // moves progress, so driving backwards subtracts. Rails advances it too, so
+  // the counter is identical on both paths and P3 can land independently.
+  cumulativeProgress: 0,
   raceTime: 0,
   // Independent rival sim (Phase 2) — player starts at the back of the grid.
   rivals: createRivalRacers(rivalSeats, { gridProgress: startProgressFor(trackDef) }),
@@ -9420,6 +9431,21 @@ export const ComebackCityThreeKartRace = ({
       race.shieldActive = true;
       race.shieldTimer = Number.POSITIVE_INFINITY;
     }
+    // P2 of docs/FREE_BODY_PLAN.md — ?freebody=1 hands the kart a real heading
+    // and world position. OFF by default while it is tuned, so the shipped
+    // build keeps the rails behaviour the owner has already played.
+    //
+    // Seeded from the grid slot the rails path would have put the kart in, so
+    // both paths start identically: position from pointAt at the current
+    // progress and lane, heading from the spline tangent there.
+    if (new URLSearchParams(window.location.search).get('freebody') === '1') {
+      const seat = engine.sampler.pointAt(race.progress, race.lane);
+      race.freeBody = createFreeBody({
+        heading: Math.atan2(seat.tangent.x, seat.tangent.z),
+        x: seat.point.x,
+        z: seat.point.z,
+      });
+    }
     // ?giveItem=<key> keeps that item in the slot whenever it's empty —
     // deterministic captures/tests of any single item (autoplay fires it on
     // the next straight).
@@ -9731,15 +9757,27 @@ export const ComebackCityThreeKartRace = ({
       onRestart?.();
     };
 
-    const updateVehiclePose = (kartModel, sample, steer = 0, drift = false, pose = null) => {
+    const updateVehiclePose = (kartModel, sample, steer = 0, drift = false, pose = null, freeBody = null) => {
       const group = kartModel.group;
       group.position.copy(sample.point);
+      // P2: on the free-body path the kart's own world position is the truth,
+      // not the reprojection of it. Using pointAt(progress, lane) here instead
+      // would reintroduce the round-trip error measured in test-spline-
+      // projection (up to ~24cm off-road) as visible position jitter.
+      if (freeBody) {
+        group.position.x = freeBody.x;
+        group.position.z = freeBody.z;
+      }
       group.position.y += 0.05 + (pose?.hop || 0);
       // Player pose carries the smoothed drift slide yaw (kart visibly points
       // off its velocity direction); rivals keep the simple steer-based yaw.
       // extraYaw carries trick spins and spin-outs for either.
       const yawOffset = pose ? pose.slideYaw + steer * (drift ? 0 : 0.16) : steer * (drift ? 0.32 : 0.16);
-      group.rotation.y = Math.atan2(sample.tangent.x, sample.tangent.z) - yawOffset + (pose?.extraYaw || 0);
+      // Free-body yaw is REAL, not a cosmetic offset from the spline tangent —
+      // that is the whole point of the change, and it is what lets the kart be
+      // pointed anywhere including backwards.
+      const baseYaw = freeBody ? freeBody.heading : Math.atan2(sample.tangent.x, sample.tangent.z);
+      group.rotation.y = baseYaw - yawOffset + (pose?.extraYaw || 0);
       group.rotation.z = pose ? -(pose.slideYaw * 0.3 + steer * 0.1) : -steer * 0.12;
       group.rotation.x =
         Math.sin(race.raceTime * 12) * clamp(race.speed / MAX_SPEED, 0, 1) * 0.025 - (pose?.pitch || 0);
@@ -10303,9 +10341,42 @@ export const ComebackCityThreeKartRace = ({
               dt > 0 ? laneOffsetFor(engine.sampler, race.progress, race.lane - laneBeforeSteer) / dt : 0,
             speed: race.speed,
           });
-          race.progress = wrap01(
-            race.progress + (race.speed * dt) / (engine.sampler.length * race.laneArcScale)
-          );
+          if (race.freeBody) {
+            // FREE-BODY PATH (P2). The kart integrates in world space and
+            // progress/lane are read back off the spline, so everything
+            // downstream — rivals, items, coins, crossers, camera — keeps
+            // consuming exactly the two numbers it always has.
+            stepFreeBody(race.freeBody, {
+              dt,
+              drifting: race.drift,
+              handling: playerKart.stats.handling,
+              offRoad: Math.abs(race.lane) > 1,
+              speed: race.speed,
+              steer: race.steer,
+              steerAuthority: airState.airborne ? 0 : spinning ? 0.12 : 1,
+            });
+            const solved = engine.sampler.projectToSpline(
+              race.freeBody.x,
+              race.freeBody.z,
+              race.progress
+            );
+            race.progress = solved.progress;
+            race.lane = solved.lane;
+            race.laneArcScale = 1; // arc scaling is implicit once the kart drives its own path
+          } else {
+            race.progress = wrap01(
+              race.progress + (race.speed * dt) / (engine.sampler.length * race.laneArcScale)
+            );
+          }
+          // Signed cumulative progress, on BOTH paths. P3 replaces the wrap
+          // test below with this, so it is accumulated here where the delta is
+          // already known to be one frame's worth.
+          {
+            let delta = race.progress - race.previousProgress;
+            if (delta > 0.5) delta -= 1;
+            if (delta < -0.5) delta += 1;
+            race.cumulativeProgress += delta;
+          }
           if (race.previousProgress > 0.86 && race.progress < 0.18) {
             // Close the split BEFORE the finish branch: the last lap is a lap
             // and belongs in the best-lap comparison even though it also ends
@@ -10697,7 +10768,7 @@ export const ComebackCityThreeKartRace = ({
         pitch: airPitchFor(race.airState) + shortcutPitchFor(race.shortcut),
         slideYaw: driftState.slideYaw,
         squash: race.squash,
-      });
+      }, race.freeBody);
       updateKartBodyMotion(engine.playerModel, {
         airborne: race.airState.airborne || driftState.hopTimer > 0 || race.shortcut.active,
         boosting: race.boostTimer > 0 || driftState.miniTurboTimer > 0,
