@@ -12,9 +12,25 @@ did"**.
 
 ## How to score
 
-Score each axis 0–10. A frame **passes AAA** only when **every axis is ≥ 8
-and the total is ≥ 88/120**. Anything with a 0–4 on any axis is an automatic
-fail regardless of total — one broken axis is what a player notices.
+Score each **scored** axis 0–10. A frame **passes AAA** only when **every scored
+axis is ≥ 8.** There is no total threshold. Anything with a 0–4 on any axis is an
+automatic fail regardless of the rest — one broken axis is what a player notices.
+
+**Eleven of the twelve axes are scored.** Axis 11, *Motion & feel*, is
+video/telemetry-only and no scorer exists yet, so still-frame critics skip it.
+That has been true of every critic report since wave 1; the rule is written down
+now rather than newly imposed. Axis numbers are **never renumbered** — ten waves
+of history reference them.
+
+The old `total ≥ 88/120` bar was deleted on 2026-08-03 (owner's ruling). It
+counted an axis nobody scores, and it was redundant besides: eleven axes each ≥ 8
+already forces a total ≥ 88, so the per-axis floor was always the binding
+constraint.
+
+**The instrument critics are actually dispatched with is
+[docs/AAA_CRITIC_BRIEF.md](AAA_CRITIC_BRIEF.md).** Change the bar there too, or
+this document becomes a description of a rule nobody applies — which is exactly
+how the 88/120 line survived nine waves.
 
 Be harsh. The default verdict is FAIL. "Pretty good for a web game" is a
 FAIL — the whole point is that the web-game excuse is not available. If you
@@ -33,7 +49,7 @@ make it good.
 | 8 | **Camera** | Speed is felt through FOV, lag and shake. Camera leads drifts, settles on landing, keeps the horizon stable, and frames the kart at a consistent screen position with a readable amount of road ahead. |
 | 9 | **Post & grade** | The frame has a considered look: bloom only on genuine emitters, coherent colour grade, clean anti-aliasing at native-ish resolution, subtle vignette. Never muddy, never blown out, never soft from upscaling. |
 | 10 | **HUD** | Clear hierarchy, big readable position/lap, a real item slot, state changes animate. Never a row of identical grey pills. |
-| 11 | **Motion & feel** *(video/telemetry only)* | Acceleration, drift stages, off-road penalty, collisions and landings all read distinctly and satisfyingly. |
+| 11 | **Motion & feel** — **NOT SCORED** *(video/telemetry only)* | Acceleration, drift stages, off-road penalty, collisions and landings all read distinctly and satisfyingly. **No scorer exists.** Omit the key; do not guess it from stills. Wiring it is a prerequisite of Phase 5, which is the phase whose work lands on this axis. |
 | 12 | **Frame integrity** | No console errors, no popping, no missing meshes, no flicker, no tearing, stable frame pacing. |
 
 ## Automatic blockers
@@ -62,6 +78,11 @@ When handed a `pair-XX/left.png` + `right.png`:
 
 ## Reporting format
 
-Every critic returns: per-axis scores, total, PASS/FAIL, the automatic
-blockers found, and a ranked list of the **specific** next fixes with the file
-and technique named. Vague feedback wastes an implementation round.
+Every critic returns: per-axis scores for the eleven scored axes, their total,
+PASS/FAIL, the automatic blockers found, and a ranked list of the **specific**
+next fixes with the file and technique named. Vague feedback wastes an
+implementation round.
+
+The exact JSON schema — key names, severity values, and the `total`-equals-sum
+check — is in [docs/AAA_CRITIC_BRIEF.md](AAA_CRITIC_BRIEF.md). Emit that shape;
+`scripts/aaa-approval-sheet.mjs --critics <json>` consumes it directly.

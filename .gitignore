@@ -48,3 +48,6 @@ tmp/ordinal-roster/
 
 # Kart concept pick sheet dist (regenerable)
 tmp/kart-picks-dist/
+
+# Claude-created agent worktrees (each ~985 MiB, regenerable)
+.claude/worktrees/

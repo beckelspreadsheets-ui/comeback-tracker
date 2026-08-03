@@ -14,7 +14,20 @@ Ends in a **preview deploy on a new branch**. Production and `main` untouched.
 
 ## Phase −1 — preconditions. Nothing dispatches before these · S
 
-**1. Set the worktree base ref. This is the one that kills everything else.**
+> **STATUS 2026-08-03: all three CLOSED.** Items 1 and 2 applied; item 3 ruled on
+> by the owner. Dispatch is unblocked.
+
+**1. ~~Set the worktree base ref~~ — DONE.** `{"worktree":{"baseRef":"head"}}`
+merged into `.claude/settings.local.json` alongside the existing `permissions`
+key. Confirmed absent from both the project and user settings beforehand. That
+file is gitignored globally (`~/.config/git/ignore`), so **this setting does not
+travel with the branch** — a fresh clone or another machine must set it again, or
+every agent lands on `main` as described below.
+
+**2. ~~Add `.claude/worktrees/` to `.gitignore`~~ — DONE.** Committed, so this
+one does travel.
+
+**Original text of item 1, kept because the failure mode is worth carrying:**
 
 Claude-created worktrees default to `worktree.baseRef: "fresh"`, which branches
 from the **remote default branch**. Here that is `main` — nine waves behind, an
@@ -32,10 +45,39 @@ Budget **~985 MiB per agent** once this is set (~557 MiB tracked + ~428 MiB
 `node_modules`); the default's 0.45 MiB checkout is small only because it cannot
 build the project.
 
-**2. Add `.claude/worktrees/` to `.gitignore`.** It is not there today, so every
-agent worktree surfaces as untracked files in every `git status`.
+(And why item 2 mattered: without it every agent worktree surfaces as untracked
+files in every `git status` — noise that makes rule 7, *never `git add -A`*,
+much easier to violate.)
 
-**3. Decide the pass bar — it is currently unanswerable.** The rubric says
+**3. ~~Decide the pass bar~~ — ANSWERED 2026-08-03. Option (a), with the axis-11
+wiring moved to Phase 5.** The bar is **eleven scored axes, every axis ≥ 8, no
+total threshold**; `88/120` is deleted from the rubric. The instrument is now
+committed at **`docs/AAA_CRITIC_BRIEF.md`** and is what critics are dispatched
+with, so a rubric edit finally changes what gets scored.
+
+Two things found while committing it:
+
+- The ruling **changes no historical score**. All thirty critic reports in
+  `tmp/aaa-plan/` already carry exactly eleven score keys — axis 11 has never
+  been scored by anyone — so this writes down the instrument that has been
+  running since wave 1. Every wave stays comparable; nothing needs re-scoring.
+- **`88` was redundant even on its own terms.** Eleven axes each ≥ 8 forces a
+  total ≥ 88, so the per-axis floor was always the binding constraint. Rule 4 of
+  this plan — *a gate that duplicates the data it checks stops checking it* —
+  describes how the number then drifted to a `/120` denominator unchallenged.
+
+Under the new bar, still nothing passes. Wave 8's best is 86 with four axes under
+8, and all three critics agree on three of them: **`materials`, `environment`,
+`post`** (`lighting` is sub-8 for two of three). That is the live target list, and
+it is a check on this plan's sequencing: Phase 2 aims at environment, materials
+and lighting, Phase 6 owns post. No phase is aimed at an axis already passing.
+
+**Phase 8's exit criteria are now defined.** The axis-11 scorer is a Phase 5
+prerequisite — see that phase.
+
+<details><summary>The original open question, kept for the record</summary>
+
+The rubric said
 "every axis ≥ 8 **and total ≥ 88/120**" across twelve axes. Axis 11, *Motion &
 feel*, is video/telemetry-only and the still-frame critics score **eleven**. So
 the 12-axis gate has never been evaluable and **"nothing has passed" is not a
@@ -54,6 +96,8 @@ Owner's call, one of:
   this is wiring, not new capture.
 
 Phase 7's exit criteria are undefined until this is answered.
+
+</details>
 
 ---
 
@@ -226,7 +270,25 @@ over 34 seconds have never been checked over 134. A design pass.
 
 Now measurable rather than eyeballed: autoplay telemetry runs at real speed since
 the GL-flag fix, so judge on lead changes and gap-over-time across the full race.
-**This lands on axis 11, which is currently unscored** — see Phase −1 item 3.
+
+**PREREQUISITE — wire axis 11 before the design pass, not after.** This is the
+phase whose work lands on *Motion & feel*, and it is the only phase that does. Do
+the design pass without the scorer and it is the one piece of the overhaul with
+no gate at all, judged by the same eyeballing this phase exists to replace.
+
+The scorer is wiring over artefacts that already exist — `desktop-10s.webm`,
+`mobile-10s.webm`, and autoplay telemetry that has run at real speed since
+`f2d4b026`. Adding it: score `motionFeel` into `scores`, restore the row in the
+rubric table, and update the header of `docs/AAA_CRITIC_BRIEF.md`. **Do not
+renumber the other axes** — ten waves of history reference them — and **do not
+reintroduce a total threshold**; with twelve axes each ≥ 8 the total is implied
+again, which is how the deleted one came to be wrong.
+
+Sequencing consequence: Phase 8 can run its final critics on eleven axes if the
+scorer is not in by then. It cannot run them on twelve *and* have Phase 5's work
+be the first thing ever measured on the new axis — the axis would be scoring
+itself into existence with no prior reading to compare against. Wire it first,
+take a baseline reading on the current build, then do the design pass.
 
 ---
 
@@ -276,8 +338,12 @@ dead**, and do not assume phones are already on a cheap path.
 1. Full battery at load < 5: `build:kart`, `test:bundle:kart`, `test:race`,
    `test:track-visuals`, `test:audio:kart`, `test:kart-playable`, the previewer,
    `test:core`.
-2. Final capture, critics, blind A/B against baseline. **Exit criteria depend on
-   Phase −1 item 3 being answered.**
+2. Final capture, critics, blind A/B against baseline. **Exit criteria (defined
+   2026-08-03):** three independent critics dispatched with
+   `docs/AAA_CRITIC_BRIEF.md`; every scored axis ≥ 8 on all three; no automatic
+   blockers; blind A/B still picks the build over baseline. No total threshold.
+   Score twelve axes if Phase 5 landed the axis-11 scorer, eleven if not — the
+   brief's header states which, and it is the authority over this line.
 3. Preview deploy:
 
 ```
@@ -332,8 +398,9 @@ Kept so the next reader can calibrate how much to trust an inherited plan.
 | Snow: tune the existing `nearFade` | **no-op** — wrong particle system entirely |
 | Legacy minimap is an open item | **not a defect** |
 | Camera "needs the same +1 as six other axes" | **four** other axes sit at min 7 |
-| `AAA_NEXT_RUN.md` introduced the 88/110 conflation | **upstream** — it faithfully reports an uncommitted brief's scale |
+| `AAA_NEXT_RUN.md` introduced the 88/110 conflation | **upstream** — it faithfully reports an uncommitted brief's scale. *Resolved: the brief is committed at `docs/AAA_CRITIC_BRIEF.md` and the threshold is deleted.* |
 | Elevation and dressing are independent | **wrong** — `onElevatedSpan` deletes dressing on 8 sites |
+| Wave 7 scored `85/80/82 → 93 at r2` | **unsourced** — found while committing the brief. The only wave-7 artifact reads **83/85/65**, and no `-r2` file exists for any wave after wave 1. A 93 would be the best score ever recorded. Corrected in `AAA_NEXT_RUN.md`. |
 
 ## Rules this plan leans on
 

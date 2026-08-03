@@ -101,9 +101,19 @@ they now share `scripts/lib/chromium-gl-args.mjs`.
 
 ### Nine waves, measured
 
-Three independent critics score every round against `docs/AAA_KART_RUBRIC.md`.
-Pass bar is 88/110 **with every axis ≥ 8**. Nothing has passed; the honest
-state is "much better, still failing".
+Three independent critics score every round against `docs/AAA_KART_RUBRIC.md`,
+dispatched with `docs/AAA_CRITIC_BRIEF.md`.
+
+**Pass bar (owner's ruling, 2026-08-03): eleven scored axes, every axis ≥ 8, no
+total threshold.** The old `88/110` line is gone — it was redundant, since eleven
+axes each ≥ 8 already forces a total ≥ 88. Axis 11 *Motion & feel* stays unscored
+until Phase 5 wires the video/telemetry scorer. Nothing has passed under either
+reading; the honest state is "much better, still failing".
+
+Totals below are the sum of the eleven scored axes (max 110), kept because the
+trend is informative — but **the totals are not the gate.** The gate at wave 8 is
+`materials`, `environment` and `post`, which all three critics put under 8, plus
+`lighting`, which two of three do.
 
 | wave | what landed | totals |
 |---|---|---|
@@ -113,9 +123,19 @@ state is "much better, still failing".
 | 4 | chase camera, **real cast shadows**, PV sky root-caused, env probe | 77/71/61 |
 | 5 | six monolith handoffs, kart materials, event VFX | 75/68/73 |
 | 6 | **arc-length/lane progress**, HUD markup, camera feel *(tier package reverted)* | — |
-| 7 | kart diet, spline kinks, JS chunk split | 85/80/82 → **93** at r2 |
+| 7 | kart diet, spline kinks, JS chunk split | **83/85/65** *(see note)* |
 | 8 | **both 4× tracks built**, dead normal maps stripped, PV shadow split | 86/77/79 |
 | 9 | coin density, **PV cast shadows via a split key**, four stale gates fixed | not scored |
+
+**Wave 7's row was wrong and is corrected above.** It read `85/80/82 → 93 at r2`.
+The only wave-7 artifact on disk is `tmp/aaa-plan/wave7-r3-critics.json`, whose
+three totals are **83/85/65** — and there is no `wave7-r2-critics.json` at all,
+for any wave except wave 1. **The 93 has no artifact behind it**, and a 93 would
+have been the best score ever recorded, so it is the last number that should have
+gone uncited. Treat it as unsourced rather than as a lost result.
+
+Verified while correcting this: in all thirty reports on disk, the stored `total`
+equals the sum of the eleven scores. The arithmetic is sound; only this row was.
 
 **Blind A/B has picked the build over the original baseline 18/18 with zero
 ties, every wave since wave 1.**
