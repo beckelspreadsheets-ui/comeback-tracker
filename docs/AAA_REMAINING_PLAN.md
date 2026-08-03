@@ -306,7 +306,26 @@ also fails past progress 0.26.
 
 ---
 
-## Phase 1 — score wave 9 · SCORED 2026-08-03 · ✅
+## Phase 1 — score wave 9 · ⛔ SCORE VOID — DO NOT BUILD ON IT
+
+> **The wave-9 score is invalid for two independent reasons and must not be
+> quoted, trended, or used to scope work.**
+>
+> 1. **The frames came off the wrong machine.** Owner's standing instruction:
+>    frames for scoring must be captured on a free or gaming machine, never his
+>    main one, which permanently runs a VM at 200%+ CPU and load 10–20. Frames
+>    taken there measure the capture conditions, not the build. This was known
+>    and I captured locally anyway.
+> 2. **The instrument changed underneath it** — see below.
+>
+> Everything in this phase that rests on PIXELS is void: the totals, the axis
+> scores, the floating ice ridge, the missing prop shadows, the AA and material
+> findings. Everything that rests on SOURCE survives, because source does not
+> care what machine read it — the `share: 0.35` caster config and the minimap
+> import graph. Those two are kept below and flagged as such.
+>
+> Re-capture on a proper machine before wave 9 is scored at all.
+
 
 Fresh capture at HEAD (`tmp/aaa-visual/wave9-r3`, 18/18 frames, 0 console errors,
 58–65 fps, draw calls stable at 571 CC / 875 PV). HEAD is wave 9's build: the only
