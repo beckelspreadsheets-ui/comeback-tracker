@@ -863,6 +863,9 @@ const createInitialRace = (
   // moves progress, so driving backwards subtracts. Rails advances it too, so
   // the counter is identical on both paths and P3 can land independently.
   cumulativeProgress: 0,
+  // Laps already credited from cumulativeProgress. Without it, oscillating
+  // across a lap boundary would re-award on every forward crossing.
+  lapsAwarded: 0,
   raceTime: 0,
   // Independent rival sim (Phase 2) — player starts at the back of the grid.
   rivals: createRivalRacers(rivalSeats, { gridProgress: startProgressFor(trackDef) }),
@@ -10377,7 +10380,21 @@ export const ComebackCityThreeKartRace = ({
             if (delta < -0.5) delta += 1;
             race.cumulativeProgress += delta;
           }
-          if (race.previousProgress > 0.86 && race.progress < 0.18) {
+          // P3 of docs/FREE_BODY_PLAN.md — LAPS COUNT ON DISTANCE, NOT ON A WRAP.
+          //
+          // The old test was `previousProgress > 0.86 && progress < 0.18`: a
+          // wrap detector. On rails that was sound because progress only ever
+          // increased. Free-body lets the kart turn round, and then a wrap
+          // fires every time you cross the line in EITHER direction — so you
+          // could sit on the start straight reversing and re-crossing and farm
+          // a lap every few seconds.
+          //
+          // cumulativeProgress is signed and accumulated per frame, so driving
+          // backwards gives back exactly what it took. A lap is awarded when it
+          // crosses the next whole lap going forwards, and `lapsAwarded` means
+          // re-crossing the same boundary cannot award twice.
+          if (race.cumulativeProgress >= race.lapsAwarded + 1) {
+            race.lapsAwarded += 1;
             // Close the split BEFORE the finish branch: the last lap is a lap
             // and belongs in the best-lap comparison even though it also ends
             // the race.
