@@ -11,9 +11,22 @@ shared. Production and `main` are not touched.
 
 ## The goal, and the honest distance to it
 
-Pass bar is **88/110 with every axis ≥ 8**, scored by three independent critics
-against `docs/AAA_KART_RUBRIC.md`. Wave 8 scored **86 / 77 / 79**. Nothing has
-passed.
+Pass bar, read off `docs/AAA_KART_RUBRIC.md` itself: **every axis ≥ 8 and the
+total ≥ 88/120**, with any axis at 0–4 an automatic fail. Wave 8 scored
+**86 / 77 / 79**. Nothing has passed.
+
+**The rubric has TWELVE axes, not eleven, and the twelfth has never been
+scored.** Axis 11, *Motion & feel*, is marked "(video/telemetry only)" and the
+still-frame critic pipeline skips it — so the critics score 11 axes worth 110,
+while the 88 threshold was written against 120. `AAA_NEXT_RUN.md`'s "88/110"
+silently conflates the two, which makes the bar look ~7% harder than authored.
+Two consequences worth acting on:
+
+- The capture harness already produces `desktop-10s.webm` / `mobile-10s.webm`
+  and full autoplay telemetry, so **Motion & feel is scoreable today** — nobody
+  has asked for it.
+- Phase 5 (rival AI) and the drift/feel work land on that axis. Right now they
+  would improve something no one measures.
 
 Per-axis **minimum across the three critics**, by wave. The minimum is the
 number that matters: the bar is "every axis ≥ 8", so one critic at 6 fails the
@@ -75,7 +88,20 @@ the residual cause is written down.
 
 ---
 
-## Phase 1 — score wave 9 · S · before any new work
+## How this runs: one pass, with scoring as a checkpoint
+
+An earlier draft gated everything behind scoring wave 9. That was over-cautious.
+The only work genuinely gated on a score is the **lighting** sub-item in Phase 3
+— if wave 9's split key already moved lighting 6 → 8, that sub-item disappears.
+Everything else is a named defect with a known cause and needs fixing whatever a
+critic says.
+
+So: run it as one continuous pass. Score at Phase 1 (cheap, and it retires the
+lighting question), and again at Phase 9. Do not block Phases 2, 4–8 on either.
+
+---
+
+## Phase 1 — score wave 9 · S · checkpoint, not a gate
 
 Wave 9 is **unscored** and it shipped a change to a failing axis. A wave-8
 critic measured PV's contact shadow as intermittent — luma delta under the kart
@@ -95,15 +121,34 @@ next three phases are guesswork.
 
 Biggest gap, known cause, so this is redistribution work rather than invention.
 
-- **Dressing density over an 11.6k lap.** Districts, scenery anchors and the
-  mid-ground belt were authored for a 2,897-unit loop and were never
-  re-distributed when the lap quadrupled.
-- **The flat untextured tan ground**, named directly by the critic.
-- **Penguin Village needs the same audit** — same 4× stretch, same
-  authored-for-a-short-loop dressing.
+**MEASURED 2026-08-03, and the critic understated it.** Local standard deviation
+in the off-road ground band (σ < 2.0 = untextured), across all nine capture
+marks per track:
 
-Verify at all nine marks per track, not two: empty stretches are exactly what a
-sparse capture misses.
+```
+Comeback City    62.3% flat, and 9 of 9 marks are majority-flat
+Penguin Village  52.0% flat, 3 of 9 majority-flat
+```
+
+So it is not "roughly half of Comeback City" — it is **~62% of the off-road
+band at every single mark on the lap**, and Penguin Village has the same disease
+more mildly.
+
+**The fix is the NEAR-GROUND layer, not more buildings.** This is the important
+refinement: eyeballing p0.24 and p0.67 reads as "well dressed", because the
+skyline and mid-ground buildings genuinely are. What is missing is the layer
+between the road edge and the buildings — a large, flat, untextured expanse.
+That maps onto two rubric criteria at once:
+
+- Materials — "No large flat untextured expanses"
+- Environment craft — "Layered depth (near dressing → mid buildings → far
+  skyline)"
+
+Both are failing axes, so **one fix moves two axes**. Work the ground-plane
+material and near dressing first; only then look at anchor redistribution.
+
+Verify at all nine marks per track, not two — and re-run the flatness measure
+rather than judging by eye, since eye and measurement disagreed here.
 
 **Exit:** environment ≥ 8 from all three critics.
 
@@ -117,11 +162,18 @@ Each has a named cause already on record.
   atlas: half the body texels come from a cell that is one flat value. Needs a
   **new atlas cell**, not a cleverer remap. (Filed as a "smaller open item" in
   the old handoff. It is not small — it is a failing axis.)
-- **Materials/kart — the driver.** Wave-8 critic: the character's near-black
-  back gets no rim term so it merges with the roll hoop and seat, and the torso
-  sits behind the seat back at this camera. Add the hero rim to the character
-  material; raise/forward the seat anchor a few cm. **Explicitly deferred to
-  "the wave-9 kart/driver pass" and never claimed.**
+- **Materials/kart — the driver, but HALF of this is already done.** The wave-8
+  critic asked to "add the hero rim to the character material and raise/forward
+  the seat anchor". Checked: `mountDriverAvatar` already routes every driver
+  mesh through `applyHeroRim`, and **both** tracks now ship a `heroRim` — CC
+  `{power 2.4, strength 0.4, tint #4fd8ff}` (`comebackCity.js:203`), PV the
+  owner-picked V6 ice white. The rim is not missing.
+  **The comment at `ComebackCityThreeKartRace.jsx:2360` saying "Comeback City
+  has no heroRim key and ships rim-off" is STALE** and is what makes this look
+  outstanding — fix the comment.
+  What remains genuinely open is the **seat anchor geometry** (torso sitting
+  behind the seat back at this camera), and possibly rim *strength* on a
+  near-black material. Re-read against frames before touching either.
 - **Lighting —** re-read after Phase 1. If the split key moved PV, what remains
   is CC's own shading.
 - **Post —** scored 6/7/6. Treat the *quality* complaints here; *tiering* is
@@ -150,8 +202,13 @@ Six axes need exactly +1.
   C16 (1.45 s) are both under it and flagged `tight`.
 - **VFX — near-plane snow.** Storm-snow quads scale to 40–60 px at the near
   plane and composite as opaque grey-white spheres sitting still while
-  everything beside them is motion-blurred — they read as floating balls. Needs
-  a near-distance size clamp plus alpha fade inside ~2–3 units.
+  everything beside them is motion-blurred — they read as floating balls.
+  The critic asked for "a near-distance size clamp plus an alpha fade", but an
+  **alpha near-fade already exists** — `raceParticles.js:2196`,
+  `nearFade = clamp01((depth - SNOW_NEAR_FADE) / (SNOW_NEAR_FADE * 1.4))`,
+  applied squared. So this is **tune the existing fade and add the SIZE clamp**,
+  not add a fade. Check `SNOW_NEAR_FADE`'s value against the depth these quads
+  actually reach.
 
 **Exit: every axis ≥ 8. This is the pass bar.**
 
