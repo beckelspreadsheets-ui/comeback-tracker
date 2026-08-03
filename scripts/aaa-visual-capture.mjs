@@ -41,7 +41,26 @@ const WIDTH = Number(arg('width', 1600));
 const HEIGHT = Number(arg('height', 900));
 const EXTRA_QUERY = arg('query', '');
 const OUT_ROOT = arg('out', path.join(root, 'tmp', 'aaa-visual'));
-const TIMEOUT_MS = Number(arg('timeout', 150000));
+// THE RACE DEADLINE IS WALL TIME; THE RACE ADVANCES IN GAME TIME.
+//
+// This is why CI capture reached 2 of 9 marks. The boot budget below and the
+// screenshot budget were both widened for software rendering; this one was not,
+// and it is the one that bounds the race. Under SwiftShader rAF runs at ~2 fps
+// and the engine clamps dt to ~1/24 s per frame, so game time advances at
+// roughly 8% of wall time (see scripts/lib/chromium-gl-args.mjs).
+//
+// The last mark is at progress 0.9 of lap 1. A Comeback City lap is 47.45 s of
+// game time (measured, scripts/measure-mean-speed.mjs), so reaching that mark
+// costs ~42.7 s of game time = ~510 s of wall time. Against a 150 s deadline the
+// loop expires having reached ~12.5 s of game time, i.e. progress ~0.26 — which
+// covers marks 0.06, 0.15 and 0.24, and boot overhead eats one of those. Two.
+//
+// So the earlier hypothesis — "the race ends in game time before later marks
+// arrive" — was backwards. The race does not end early; it barely starts. The
+// loop exits as soon as every mark is captured, so this only has to cover the
+// first 90% of one lap, not a whole race.
+const SOFTWARE_RACE_MS = 900000;
+const TIMEOUT_MS = Number(arg('timeout', process.env.AAA_CAPTURE_GL === 'swiftshader' ? SOFTWARE_RACE_MS : 150000));
 const KEEP = flag('keep');
 // Software rasterisation (CI, no GPU) is roughly two orders of magnitude
 // slower than a real GPU here, so every browser-side deadline needs widening.
@@ -222,15 +241,30 @@ try {
       await page.waitForTimeout(30);
     }
 
+    // Say WHY marks were missed. "MISSED 0.33, 0.45, ..." is indistinguishable
+    // between a broken game and a deadline that expired, and that ambiguity is
+    // what left the 2-of-9 result unexplained for two waves.
+    const ranOut = Date.now() >= deadline;
     manifest.tracks[track] = {
       captured: captured.sort((a, b) => a.point - b.point),
       missed: [...pending],
       laps,
+      lastProgress,
+      timedOut: ranOut,
       consoleErrors: errors.slice(0, 20),
     };
     manifest.consoleErrors.push(...errors.slice(0, 10).map((text) => `${track}: ${text}`));
     log(`${track}: ${captured.length}/${POINTS.length} captured, ${errors.length} console errors`);
-    if (pending.size) log(`${track}: MISSED ${[...pending].join(', ')}`);
+    if (pending.size) {
+      log(`${track}: MISSED ${[...pending].join(', ')}`);
+      if (ranOut) {
+        log(
+          `${track}: the ${Math.round(TIMEOUT_MS / 1000)}s WALL-CLOCK deadline expired at progress ` +
+            `${lastProgress.toFixed(3)} — the race did not stall, it ran out of real time. ` +
+            `Game time advances at ~8% of wall time under software rendering; raise --timeout.`
+        );
+      }
+    }
     await page.close();
   }
 } catch (error) {

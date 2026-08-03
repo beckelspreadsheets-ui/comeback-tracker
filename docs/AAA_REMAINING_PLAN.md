@@ -101,7 +101,20 @@ Phase 7's exit criteria are undefined until this is answered.
 
 ---
 
-## Phase 0 — corrections that DELETE work · S · do these first
+## Phase 0 — corrections that DELETE work · S · ✅ ALL FOUR DONE 2026-08-03
+
+> **Outcome: Phase 3 has no corner work left, and Phase 2 is narrowed to one
+> track.** Every item here was "correct an instrument before trusting what it
+> measured", and three of the four found the instrument wrong in a way that had
+> created work which does not exist. Not one line of game code changed.
+>
+> | item | result |
+> |---|---|
+> | 1 · arc-length mirror | deleted CC's crest defect · found the sampler's "CHECKED" claim was false |
+> | 2 · flatness metric | rebuilt · off-road/road gap holds on **CC only**, not PV |
+> | 3 · mean speed | **both** tracks were wrong, not just PV · deleted CC's second corner defect |
+> | 4 · CI capture 2/9 | hypothesis was **backwards** · a wall-clock deadline, not slow motion |
+
 
 Every item here either removes a later phase or fixes an instrument the later
 phases are measured by. Cheapest work in the plan.
@@ -251,11 +264,37 @@ bar. Both tracks now report **zero non-passing corners**, and `--strict-sight`
 exits 0 for the first time. Caveat worth keeping: C16 clears by 0.04s, so it is
 marginal rather than comfortable, and a future layout edit could push it back.
 
-**4. CI capture reaches 2 of 9 marks.** Hypothesis (still unverified): under
-SwiftShader the frames are genuinely slow, the dt clamp turns that into slow
-motion, and the race ends in *game* time before later marks arrive. Fix by
-driving game time directly rather than waiting on it. **Labelled a hypothesis
-because it has not been tested.**
+**4. ~~CI capture reaches 2 of 9 marks~~ — DONE. The hypothesis was backwards.**
+
+It read: "the race ends in *game* time before later marks arrive." The race does
+not end early — **it barely starts.** `aaa-visual-capture.mjs` widened its boot
+budget and its screenshot budget for software rendering and left the **race
+deadline at a flat 150s of WALL time**, while the race advances in game time at
+~8% of wall under SwiftShader.
+
+The arithmetic matches the observed failure without needing a CI run:
+
+| | |
+|---|---|
+| last mark | progress 0.90 of lap 1 |
+| CC lap | 47.45s game *(measured in item 3)* |
+| game time to last mark | ~42.7s |
+| wall time at ~8% | **~510s** |
+| deadline | **150s** → reaches ~12.5s game = progress ~0.26 |
+| marks under 0.26 | 0.06, 0.15, 0.24 → 3, less boot overhead |
+
+Observed: **2**. Predicted: 2–3.
+
+Fix: the deadline is now software-aware (900s, since the loop already exits as
+soon as every mark is captured and so only has to cover 90% of one lap, not a
+race). The manifest also records `lastProgress` and `timedOut`, and a miss now
+says the deadline expired and at what progress — "MISSED 0.33, 0.45, …" reads
+identically for a broken game and an expired clock, and that ambiguity is why
+this sat unexplained for two waves.
+
+Not run under SwiftShader to confirm end-to-end; the diagnosis is arithmetic
+against a measured lap time, and the remaining risk is that something *else*
+also fails past progress 0.26.
 
 ---
 
@@ -536,6 +575,9 @@ Kept so the next reader can calibrate how much to trust an inherited plan.
 | Previewer's "hidden by crest" corners are `CC C14, C16` | **C16 was never a crest corner** — it is `frame-side` before and after. A one-corner defect counted as two. |
 | Those corners are "an artifact of a 200-division sampler" | **half right** — the crest occlusion is real and still there on both tracks. The *announcement shortfall* was the artifact: C14 measured 1.30s, actually 1.64s. |
 | The previewer's sampler duplication is "CHECKED" by a ground-truth assertion | **no such assertion existed**, and its quoted numbers were from the retired 2,897-unit loop. Written in v1, carried through v2 and v3 unchallenged. |
+| `MEAN_SPEED['comeback-city']` is measured, only PV is inferred | **both were wrong** — CC's 260 came from the retired 2,897-unit loop. Measured: 245.7 for both. |
+| CI capture: "the race ends in game time before later marks arrive" | **backwards** — the race barely starts. A 150s wall-clock deadline against a race running at ~8% of wall time. |
+| Off-road ground is flatter than the road corridor | **holds on Comeback City only** (2.6×). Penguin Village is 1.4×, near parity. |
 | Wave 7 scored `85/80/82 → 93 at r2` | **unsourced** — found while committing the brief. The only wave-7 artifact reads **83/85/65**, and no `-r2` file exists for any wave after wave 1. A 93 would be the best score ever recorded. Corrected in `AAA_NEXT_RUN.md`. |
 
 ## Rules this plan leans on
