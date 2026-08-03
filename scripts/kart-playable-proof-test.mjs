@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import { chromiumGlArgs } from './lib/chromium-gl-args.mjs';
 import { PNG } from 'pngjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -397,7 +398,10 @@ const run = async () => {
   let browser;
   try {
     await waitForServer(baseUrl);
-    browser = await chromium.launch({ headless: true });
+    // GL flags are load-bearing: without them rAF runs at ~2 fps, the dt clamp
+    // turns that into ~9% speed game time, and every wait keyed to race
+    // progress times out. See scripts/lib/chromium-gl-args.mjs.
+    browser = await chromium.launch({ headless: true, args: chromiumGlArgs() });
     const visualQaPage = await browser.newPage({ viewport: { width: 1365, height: 768 }, deviceScaleFactor: 1 });
     await visualQaPage.goto(`${baseUrl}/#race`, { waitUntil: 'networkidle' });
     await assertPlayableShell(visualQaPage, 'desktop visual qa');

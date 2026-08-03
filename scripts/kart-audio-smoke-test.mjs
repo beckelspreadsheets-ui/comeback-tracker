@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { chromiumGlArgs } from './lib/chromium-gl-args.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -57,7 +58,14 @@ const run = async () => {
   };
   try {
     if (server) await waitForServer(baseUrl);
-    browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+    // The GL flags are NOT optional here. Without them headless chromium runs
+    // rAF at ~2 fps, the engine's per-frame dt clamp turns that into ~9% speed
+    // game time, and the `countdown <= 0` wait below cannot finish inside any
+    // sane deadline — which is exactly how this gate was failing. See
+    // scripts/lib/chromium-gl-args.mjs for the measurements.
+    browser = await chromium.launch({
+      args: chromiumGlArgs({ extra: ['--autoplay-policy=no-user-gesture-required'] }),
+    });
     const page = await browser.newPage({ viewport: { width: 1365, height: 768 } });
     const consoleErrors = [];
     page.on('pageerror', (error) => consoleErrors.push(String(error)));
