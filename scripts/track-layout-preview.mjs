@@ -140,17 +140,92 @@ const CHICANE_MAX_GAP_UNITS = 60;
 const wrap01 = (value) => ((value % 1) + 1) % 1;
 const lerp = (a, b, t) => a + (b - a) * t;
 const round = (value, dp = 2) => Number(value.toFixed(dp));
+// Defined here rather than beside the camera helpers because makeSampler needs
+// it: the arc-length scaling below is the first thing in the file to use it.
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+
+// The sampler constants this file mirrors from ComebackCityThreeKartRace.jsx.
+// They are named — rather than written inline where they are used — so that
+// mirrorCheck() below can compare THE VALUE THIS FILE ACTUALLY USES against the
+// monolith's source. A mirror check against a second hardcoded copy of the
+// number would pass while makeWidthTable quietly used something else, which is
+// the decorative version of this check and not worth having.
+const CURVE_ARC_UNITS_PER_DIVISION = 3;
+const CURVE_TENSION = 0.38;
+const WIDTH_TABLE_SIZE = 224;
+const WIDTH_SMOOTH_PASSES = 14;
 
 // ---------------------------------------------------------------------------
 // SAMPLER — a faithful mirror of makeSampler/makeElevation/makeTrackCurve/
 // makeWidthTable in src/game/ComebackCityThreeKartRace.jsx. It is duplicated
-// rather than imported because that file is a 10.8k-line React/THREE monolith
-// that cannot be loaded in node. Duplication is only safe because it is
-// CHECKED: comebackCity solves to 2896.9 against the shipped 2897, and the
-// resulting lap time solves to 11.14 s against the shipped 11.15 s. If the
-// monolith's curve tension, elevation shape or width smoothing ever changes,
-// the ground-truth assertion below fails loudly instead of drifting quietly.
+// rather than imported because that file is a 12.6k-line React/THREE monolith
+// that cannot be loaded in node.
+//
+// THIS COMMENT USED TO CLAIM THE DUPLICATION WAS CHECKED. It was not. It said
+// "comebackCity solves to 2896.9 against the shipped 2897 ... the ground-truth
+// assertion below fails loudly instead of drifting quietly", and there was no
+// such assertion anywhere in the file — the numbers were also from the retired
+// 2,897-unit loop, three tracks ago. The mirror then drifted exactly as an
+// unchecked duplicate does: wave 8 gave makeTrackCurve arc-length scaling and
+// this copy kept three's default 200 divisions, so for two waves the previewer
+// described a curve the game does not drive on, and reported a crest-blinded
+// corner on Comeback City that the shipped curve does not have.
+//
+// So the claim is now true instead of aspirational: mirrorCheck() below reads
+// the monolith's SOURCE TEXT and compares the four constants this sampler
+// duplicates. It cannot verify behaviour — only an import could, and that is
+// what the monolith's size forecloses — but it does fail loudly on the specific
+// drift that has actually happened. See rule 2 in docs/AAA_REMAINING_PLAN.md:
+// a check that could not have failed is not a check.
 // ---------------------------------------------------------------------------
+
+// The four constants this file duplicates from the monolith, with the pattern
+// that finds each one in its source. Patterns are deliberately anchored to the
+// surrounding code so a rename fails the check rather than silently matching
+// some other 224 elsewhere in 12.6k lines.
+const MIRRORED_CONSTANTS = [
+  {
+    name: 'curve tension',
+    mine: CURVE_TENSION,
+    pattern: /new THREE\.CatmullRomCurve3\(points, true, 'catmullrom', ([\d.]+)\)/,
+  },
+  {
+    name: 'arc units per division',
+    mine: CURVE_ARC_UNITS_PER_DIVISION,
+    pattern: /const CURVE_ARC_UNITS_PER_DIVISION = ([\d.]+);/,
+  },
+  {
+    name: 'width table size',
+    mine: WIDTH_TABLE_SIZE,
+    pattern: /const makeWidthTable = [\s\S]{0,400}?const N = (\d+);/,
+  },
+  {
+    name: 'width smoothing passes',
+    mine: WIDTH_SMOOTH_PASSES,
+    pattern: /const makeWidthTable = [\s\S]{0,900}?for \(let pass = 0; pass < (\d+); pass \+= 1\)/,
+  },
+];
+
+const MONOLITH_PATH = resolve(ROOT, 'src/game/ComebackCityThreeKartRace.jsx');
+
+// Returns one row per mirrored constant. `found: null` means the pattern did
+// not match at all, which is itself a failure — it means the monolith was
+// restructured and this mirror can no longer be verified, which is precisely
+// when it is most likely to be wrong.
+const mirrorCheck = () => {
+  let source;
+  try {
+    source = readFileSync(MONOLITH_PATH, 'utf8');
+  } catch {
+    return { available: false, pass: false, rows: [], note: `cannot read ${MONOLITH_PATH}` };
+  }
+  const rows = MIRRORED_CONSTANTS.map((entry) => {
+    const match = source.match(entry.pattern);
+    const found = match ? Number(match[1]) : null;
+    return { name: entry.name, mine: entry.mine, found, agrees: found !== null && found === entry.mine };
+  });
+  return { available: true, pass: rows.every((row) => row.agrees), rows };
+};
 
 const makeElevation = (trackDef) => {
   // A draft layout may carry no elevation at all; that is a flat track, not
@@ -168,7 +243,7 @@ const makeElevation = (trackDef) => {
 };
 
 const makeWidthTable = (trackDef) => {
-  const N = 224;
+  const N = WIDTH_TABLE_SIZE;
   // A draft with no authored ribbons still has a road: fall back to the
   // course's single mainRoadWidth rather than refusing to draw.
   const ribbons =
@@ -182,7 +257,7 @@ const makeWidthTable = (trackDef) => {
       ribbons.find((entry) => p >= entry.startProgress && p < entry.endProgress) || ribbons[ribbons.length - 1];
     table[index] = ribbon.width;
   }
-  for (let pass = 0; pass < 14; pass += 1) {
+  for (let pass = 0; pass < WIDTH_SMOOTH_PASSES; pass += 1) {
     const copy = Float32Array.from(table);
     for (let index = 0; index < N; index += 1) {
       table[index] = (copy[(index + N - 1) % N] + copy[index] * 2 + copy[(index + 1) % N]) / 4;
@@ -196,7 +271,25 @@ const makeSampler = (trackDef) => {
   const points = trackDef.course.centerline.map(
     (point, index, list) => new THREE.Vector3(point.x, elevationAt(index / list.length), point.z)
   );
-  const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.38);
+  const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', CURVE_TENSION);
+  // Mirror makeTrackCurve's wave-8 arc-length scaling. Without it this sampler
+  // runs at three's default 200 divisions while the shipped curve runs at ~3
+  // units per division, and getPointAt is a LINEAR interpolation between table
+  // entries — so the two disagree about where the road is. Measured over 4,000
+  // samples against the shipped curve, before this line existed:
+  //
+  //             length delta   worst position gap   step uniformity
+  //   Skyline      15.5u        5.99u (mean 2.22)    x0.745 .. x1.267
+  //   Bayfront     15.4u       10.12u (mean 1.61)    x0.223 .. x2.002
+  //
+  // Bayfront's 10-unit gap is most of a road width, and its step uniformity is
+  // worse than the x0.450..x1.679 the monolith recorded at wave 8 because the
+  // layout has been re-authored since. Everything downstream is affected, not
+  // just corner announcement: lap time, beat gaps, coin placement, the contrast
+  // samples and the sightline walk all index this curve.
+  const coarseLength = curve.getLength();
+  curve.arcLengthDivisions = clamp(Math.round(coarseLength / CURVE_ARC_UNITS_PER_DIVISION), 200, 4096);
+  curve.updateArcLengths();
   const length = curve.getLength();
   const widthTable = makeWidthTable(trackDef);
   const widthAt = (progress) => {
@@ -749,7 +842,6 @@ const analyseSurfaceContrast = (trackDef) => {
 // Same one-sided contract as the contrast gate above. See TRACK_DESIGN_NOTES §8.
 // ---------------------------------------------------------------------------
 
-const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 const degToRad = (deg) => (deg * Math.PI) / 180;
 
 // The rig, mirrored. Every number here is a SHIPPED value and every one is
@@ -1518,17 +1610,23 @@ const analyseTrack = (trackDef, { meanSpeedOverride, tier = 'desktop' } = {}) =>
   // capture from a superseded layout can never quietly grade a new one.
   const telemetryDeltaPct = telemetry?.impliedLapUnits ? pct(telemetry.impliedLapUnits, report.lengthUnits) : null;
   const telemetryApplies = telemetryDeltaPct !== null && Math.abs(telemetryDeltaPct) <= TELEMETRY_MATCH_PCT;
+  const mirror = mirrorCheck();
   report.validation = {
     solver,
+    mirror,
     // The measured race is SLOWER than the geometric solve because the grid
     // start spends the first ~2 s accelerating from a standstill.
     telemetry: telemetryApplies ? telemetry : null,
     staleTelemetry: telemetry && !telemetryApplies ? { ...telemetry, impliedLapDeltaPct: telemetryDeltaPct } : null,
     vsTelemetryPct: telemetryApplies && telemetry.raceSeconds ? pct(report.raceSeconds, telemetry.raceSeconds) : null,
-    // The SOLVER is the pass condition. Lap time here is a geometric solve and
-    // is honestly labelled as one until a race on this layout is measured;
-    // absent telemetry is a missing measurement, not a failure.
-    pass: solver.pass,
+    // The SOLVER checks the maths against closed form; the MIRROR checks that
+    // the maths is still the maths the game runs. Both are pass conditions —
+    // a solver that agrees with a circle it solved correctly says nothing about
+    // whether this file still describes the shipped curve. Lap time is a
+    // geometric solve and is honestly labelled as one until a race on this
+    // layout is measured; absent telemetry is a missing measurement, not a
+    // failure.
+    pass: solver.pass && mirror.pass,
   };
   return report;
 };
@@ -2491,6 +2589,12 @@ const main = async () => {
           `(tol ${s.lengthTolerancePct}%), worst radius ${s.worstRadiusDeltaPct}% (tol ${s.radiusTolerancePct}%) -> ` +
           `${s.pass ? 'PASS' : 'FAIL'}\n`
       );
+      const m = v.mirror;
+      process.stdout.write(
+        `  mirror check    vs ComebackCityThreeKartRace.jsx: ` +
+          `${m.rows.map((row) => `${row.name} ${row.found === null ? 'NOT FOUND' : row.found}`).join(', ')} -> ` +
+          `${m.pass ? 'PASS' : 'FAIL'}\n`
+      );
       if (v.telemetry) {
         process.stdout.write(
           `  vs autoplay     race ${report.raceSeconds}s vs measured ${v.telemetry.raceSeconds}s (${v.vsTelemetryPct}%)\n`
@@ -2502,7 +2606,24 @@ const main = async () => {
             `different track. Lap time below is a pure geometric solve; treat it as +/-3% until a race is measured.\n`
         );
       }
-      if (!v.pass) {
+      if (!v.mirror.pass) {
+        process.stderr.write(
+          `\nFAIL: this previewer's sampler no longer mirrors the shipped one.\n` +
+            v.mirror.rows
+              .filter((row) => !row.agrees)
+              .map((row) =>
+                row.found === null
+                  ? `  ${row.name}: NOT FOUND in the monolith — it was restructured, so the mirror cannot be verified at all.\n`
+                  : `  ${row.name}: this file uses ${row.mine}, the monolith uses ${row.found}.\n`
+              )
+              .join('') +
+            `Update makeSampler/makeWidthTable to match, then re-run. Until then every number\n` +
+            `this tool reports describes a curve the game does not drive on — which is exactly\n` +
+            `how a crest-blinded corner was reported on Comeback City for two waves.\n`
+        );
+        process.exitCode = 1;
+      }
+      if (!s.pass) {
         process.stderr.write(
           `\nFAIL: the solver disagrees with closed form on a circle of known radius. ` +
             `The maths is wrong; do not trust any layout it reports.\n`

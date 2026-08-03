@@ -106,12 +106,53 @@ Phase 7's exit criteria are undefined until this is answered.
 Every item here either removes a later phase or fixes an instrument the later
 phases are measured by. Cheapest work in the plan.
 
-**1. Fix the previewer's arc-length mirror (~3 lines).** The previewer's sampler
-does not mirror the shipped curve's arc-length resolution. Consequence: Phase 4's
-corner-announcement numbers are wrong, and **once fixed there is zero
-crest-caused announcement defect on either track**. The "hidden by crest" tight
-corners (CC C14, C16) are an artifact of a 200-division sampler. This deletes
-one of Phase 4's two named defects outright.
+**1. ~~Fix the previewer's arc-length mirror~~ — DONE, and the headline claim
+holds.** The previewer ran at three's default 200 arc-length divisions while
+`makeTrackCurve` has scaled to ~3 units per division since wave 8. Fixed by
+mirroring that scaling. **Comeback City's crest-caused announcement defect is
+gone**, exactly as predicted — one of Phase 3's two named defects deleted.
+
+Measured, before → after:
+
+| | before | after |
+|---|---|---|
+| CC non-passing corners | C14 (crest) 1.30s, C16 (frame-side) 1.45s | **C16 only** |
+| CC length / lap | 11643.4u / 44.78s | 11659.0u / 44.84s |
+| PV length / lap | 11128.7u / 42.80s | 11144.1u / 42.86s |
+| worst position gap vs shipped | CC 5.99u, **PV 10.12u** | 0 |
+| step uniformity | CC ×0.745–1.267, **PV ×0.223–2.002** | ×0.958–1.012 |
+
+**Two corrections to the wording above, which the measurement contradicts:**
+
+- **C16 was never crest-hidden.** It is `frame-side` in both the before and the
+  after report. Only C14 was ever a crest corner. Calling them "the *corners*"
+  overcounted a one-corner defect as two.
+- **The crest occlusion is not an artifact — the announcement shortfall was.**
+  C14 is still crest-occluded after the fix, and so is PV's C5; the `hiddenBy`
+  histogram is unchanged on both tracks (CC `crest:1`, PV `crest:1`). What the
+  200-division sampler got wrong was *how much announcement the crest costs*:
+  C14 measures **1.30s → 1.64s**, which crosses the 1.5s authoring bar and turns
+  `tight` into `pass`. Nobody should go looking for a crest to move.
+
+**A second finding, and the reason this drifted at all.** The sampler's header
+comment claimed the duplication was "CHECKED", with a "ground-truth assertion
+below [that] fails loudly instead of drifting quietly". **No such assertion
+existed anywhere in the file**, and its quoted numbers (2896.9u, 11.14s lap) were
+from the retired 2,897-unit loop. An unchecked duplicate then drifted for two
+waves exactly as one does.
+
+So the check now exists: `mirrorCheck()` reads the monolith's source text and
+compares the four constants this sampler duplicates — curve tension, arc units
+per division, width-table size, width smoothing passes. It cannot verify
+behaviour, only an import could, and the monolith's size forecloses that; but it
+fails loudly on the drift that actually happened, and on the monolith being
+restructured so that the mirror can no longer be verified at all.
+
+Each of the four rows was **individually falsified before being trusted** — the
+first draft compared a hardcoded `224` against the monolith rather than the value
+`makeWidthTable` uses, so three of the four rows would have passed while the file
+did something else. The first negative test also caught the gate printing `FAIL`
+and still exiting 0. Rule 2 earned its place twice in one item.
 
 **2. Rebuild the flatness metric before trusting it.** The 62.3% figure that
 justified the largest work item does not survive audit:
@@ -218,10 +259,16 @@ scoped to include the trackVisuals experiment.
 
 ## Phase 3 — camera · M · AFTER Phase 0's previewer fix
 
-Re-check first: Phase 0 item 1 likely **deletes the crest-occlusion defect**. The
-single remaining tight corner is limited by frame edge, which elevation and
-crests do not touch. Do not start camera work until the previewer is fixed and
-the defect is re-measured — it may not exist.
+**Re-measured 2026-08-03, after Phase 0 item 1: confirmed.** Comeback City's
+crest defect is gone and **`C16@0.983 sweeper left r189.1, announced 1.45s,
+hidden by frame-side` is the only non-passing corner on either track.** It is
+limited by the frame edge, which elevation and crests do not touch — so Phase 4
+cannot fix it and neither can moving a crest. The levers are a longer approach, a
+wider entry, or the lens.
+
+Note it is *tight*, not *blind*: 1.45s against a 1.5s authoring bar and a 0.8s
+blind gate, and the sightline gate passes. This is authoring debt, not a corner
+nobody can drive on sight. Penguin Village has no non-passing corner at all.
 
 Camera is a **genuine two-file split**, not monolith-dominant and not
 `chaseCameraFeel.js`-only:
@@ -400,6 +447,9 @@ Kept so the next reader can calibrate how much to trust an inherited plan.
 | Camera "needs the same +1 as six other axes" | **four** other axes sit at min 7 |
 | `AAA_NEXT_RUN.md` introduced the 88/110 conflation | **upstream** — it faithfully reports an uncommitted brief's scale. *Resolved: the brief is committed at `docs/AAA_CRITIC_BRIEF.md` and the threshold is deleted.* |
 | Elevation and dressing are independent | **wrong** — `onElevatedSpan` deletes dressing on 8 sites |
+| Previewer's "hidden by crest" corners are `CC C14, C16` | **C16 was never a crest corner** — it is `frame-side` before and after. A one-corner defect counted as two. |
+| Those corners are "an artifact of a 200-division sampler" | **half right** — the crest occlusion is real and still there on both tracks. The *announcement shortfall* was the artifact: C14 measured 1.30s, actually 1.64s. |
+| The previewer's sampler duplication is "CHECKED" by a ground-truth assertion | **no such assertion existed**, and its quoted numbers were from the retired 2,897-unit loop. Written in v1, carried through v2 and v3 unchallenged. |
 | Wave 7 scored `85/80/82 → 93 at r2` | **unsourced** — found while committing the brief. The only wave-7 artifact reads **83/85/65**, and no `-r2` file exists for any wave after wave 1. A 93 would be the best score ever recorded. Corrected in `AAA_NEXT_RUN.md`. |
 
 ## Rules this plan leans on
