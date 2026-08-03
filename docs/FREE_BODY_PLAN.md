@@ -1,5 +1,32 @@
 # Free-body kart — execution plan
 
+> **STATUS 2026-08-03: P1–P6 LANDED. P7 is gated on the owner driving it.**
+>
+> | | | commit |
+> |---|---|---|
+> | P1 | projection primitive, inert | `a67d96dd` |
+> | P2 | free-body behind `?freebody=1` | `381a01d4` |
+> | P3 | backwards laps do not count | `eae2d1ec` |
+> | P4 | TURN AROUND sign | `70a8252c` |
+> | P5 | off-road + rescue | `2a2ef20e` |
+> | P6 | pit manoeuvres | `d14d691e` |
+>
+> **Rails is still the default.** Everything above is behind `?freebody=1`;
+> `freeBody` null IS the rails path, so the shipped build is unchanged.
+>
+> **Drive it:** `https://aaa-preview.comeback-city-kart.pages.dev/?freebody=1`
+> once the preview is redeployed — it currently serves the pre-free-body build.
+>
+> Seven sim suites now gate this work, all runnable headless with no frames and
+> so no gaming machine needed: `test:spline`, `test:freebody`, `test:laps`,
+> `test:wrongway`, `test:offroad`, `test:pit`, plus `test:race`.
+>
+> Each of P3–P6 had a real bug caught by its own test before shipping: the lap
+> exploit awarded 10 laps under the old rule, the wrong-way timer hung for ten
+> seconds after a long reverse, the off-road test's control was invalid, and the
+> pit's closing term fed back on its own separation impulse.
+
+
 Owner approved 2026-08-03 after playing the preview: *"yes lets make it more
 free body I think it will make it harder to drive too overall"*, plus *"add the
 backwards not counting and a little thing that says turn around like mario kart
