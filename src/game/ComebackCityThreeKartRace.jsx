@@ -147,7 +147,7 @@ import {
 import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
 import { arcProgressScaleFor, LANE_ARC, laneLimitFor } from './race/physics/kartPhysics.js';
-import { SURFACE_ROAD_SHEEN, SURFACE_ROAD_TINT, surfaceTypeAt } from './race/physics/surfacePhysics.js';
+import { SURFACE_ROAD_SHEEN, SURFACE_ROAD_TINT, SURFACE_TYPES, surfaceTypeAt } from './race/physics/surfacePhysics.js';
 import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
 import {
   contactPatchAirFade,
@@ -872,6 +872,12 @@ const createInitialRace = (
   // normal driving is worse than no sign.
   wrongWayTimer: 0,
   wrongWay: false,
+  // P5 — the rescue. `lostTimer` counts how long the kart has been beyond
+  // recovery: far off the road, or crawling out there. `rescueFlash` drives the
+  // fade so the replace is not an instant teleport.
+  lostTimer: 0,
+  rescueFlash: 0,
+  rescues: 0,
   raceTime: 0,
   // Independent rival sim (Phase 2) — player starts at the back of the grid.
   rivals: createRivalRacers(rivalSeats, { gridProgress: startProgressFor(trackDef) }),
@@ -946,6 +952,14 @@ const makeElevation = (trackDef) => {
 // Cost is one build-time pass (getLength already walks the default table; this
 // walks a longer one once) and ~32 KB of Float32 per track. Nothing per frame.
 const CURVE_ARC_UNITS_PER_DIVISION = 3;
+
+// P5 rescue bounds. RESCUE_LANE is in lane units, where 1.0 is the road edge —
+// so 2.6 is roughly a road-and-a-half off the tarmac, far enough that a wide
+// cut or a scenic detour is allowed and only genuinely leaving the course
+// triggers a replace. RESCUE_SECONDS keeps a brief excursion from snapping you
+// back mid-recovery.
+const RESCUE_LANE = 2.6;
+const RESCUE_SECONDS = 2.2;
 const makeTrackCurve = (trackDef, elevationAt) => {
   const points = trackDef.course.centerline.map(
     (point, index, list) => new THREE.Vector3(point.x, elevationAt(index / list.length), point.z)
@@ -10279,6 +10293,7 @@ export const ComebackCityThreeKartRace = ({
           }
           race.boostTimer = Math.max(0, race.boostTimer - dt);
           race.auroraTimer = Math.max(0, race.auroraTimer - dt);
+          race.rescueFlash = Math.max(0, race.rescueFlash - dt);
           // The shield now runs out as well as being spent. Guarded on
           // shieldActive so an expired shield cannot be "re-expired", and the
           // Infinity the capture showcase sets stays Infinity under subtraction.
@@ -10295,12 +10310,25 @@ export const ComebackCityThreeKartRace = ({
             (race.boostTimer > 0 || driftState.miniTurboTimer > 0 || auroraActive ? BOOST_SPEED : MAX_SPEED) *
             playerKart.stats.topSpeed *
             coinSpeedMultiplier(race.coins);
-          const accel = throttle && !spinning ? 118 * playerKart.stats.accel : spinning ? -150 : -48;
+          // P5 — OFF-ROAD. Only reachable on the free-body path: the rails
+          // clamp pins |lane| at 0.95, which is why SURFACE_TYPES.offroad has
+          // sat in the physics table unused since it was written. Its own
+          // comment says it is "what a lane clamp wider than the road resolves
+          // to once the outer wheel can leave the tarmac" — this is that.
+          const offRoad = race.freeBody != null && Math.abs(race.lane) > 1;
+          const offRoadAccel = offRoad ? SURFACE_TYPES.offroad.accelerationMultiplier : 1;
+          const accel =
+            (throttle && !spinning ? 118 * playerKart.stats.accel : spinning ? -150 : -48) * offRoadAccel;
           const miniTurboAccel = driftState.miniTurboTimer > 0 ? 150 : auroraActive ? 130 : 0;
           const brakeDrag = brake ? -180 : 0;
           const steeringDrag = Math.abs(race.steer) * (race.drift ? -8 : -22);
           race.speed = clamp(race.speed + (accel + miniTurboAccel + brakeDrag + steeringDrag) * dt, 0, maxSpeed);
           if (!throttle && !brake) race.speed = Math.max(0, race.speed - 38 * dt);
+          // Rolling drag off the tarmac. Applied as a rate rather than a cap so
+          // it bleeds momentum you already had instead of teleporting the
+          // speedometer — cutting a corner should cost you the exit, not stop
+          // you dead.
+          if (offRoad) race.speed = Math.max(0, race.speed - 150 * dt);
           if (spinning) race.speed = Math.max(46, race.speed);
           // Blizzard fog caps grounded karts — yours included. Fly over it,
           // steer around it, or plow through it with an aurora.
@@ -10359,10 +10387,12 @@ export const ComebackCityThreeKartRace = ({
               dt,
               drifting: race.drift,
               handling: playerKart.stats.handling,
-              offRoad: Math.abs(race.lane) > 1,
+              offRoad,
               speed: race.speed,
               steer: race.steer,
-              steerAuthority: airState.airborne ? 0 : spinning ? 0.12 : 1,
+              steerAuthority:
+                (airState.airborne ? 0 : spinning ? 0.12 : 1) *
+                (offRoad ? SURFACE_TYPES.offroad.steerMultiplier : 1),
             });
             const solved = engine.sampler.projectToSpline(
               race.freeBody.x,
@@ -10372,6 +10402,33 @@ export const ComebackCityThreeKartRace = ({
             race.progress = solved.progress;
             race.lane = solved.lane;
             race.laneArcScale = 1; // arc scaling is implicit once the kart drives its own path
+
+            // P5 — THE RESCUE. Two ways to be lost, because they are genuinely
+            // different failures: driving miles into the void, and grinding to
+            // a halt somewhere off the tarmac with nothing to push against.
+            const farOut = Math.abs(race.lane) > RESCUE_LANE;
+            const stranded = Math.abs(race.lane) > 1 && race.speed < 30;
+            race.lostTimer = farOut || stranded ? race.lostTimer + dt : 0;
+            if (race.lostTimer > RESCUE_SECONDS) {
+              // Replace on the centreline at the progress the kart actually
+              // reached, facing down the road — NOT at the last on-road
+              // position. Putting it back where it left would let a player
+              // shortcut across a hairpin and be returned to the far side.
+              const home = engine.sampler.pointAt(race.progress, 0);
+              race.freeBody.x = home.point.x;
+              race.freeBody.z = home.point.z;
+              race.freeBody.heading = Math.atan2(home.tangent.x, home.tangent.z);
+              race.freeBody.lateralVel = 0;
+              race.lane = 0;
+              race.speed = Math.min(race.speed, 90);
+              race.lostTimer = 0;
+              race.rescueFlash = 0.45;
+              race.rescues += 1;
+              // Brief grace so the player is not immediately re-hit by whatever
+              // they were dodging when they went off.
+              race.crosserGraceTimer = Math.max(race.crosserGraceTimer, 1.2);
+              race.bumpCooldown = Math.max(race.bumpCooldown, KART_CONTACT.spinCooldown);
+            }
           } else {
             race.progress = wrap01(
               race.progress + (race.speed * dt) / (engine.sampler.length * race.laneArcScale)
@@ -10684,7 +10741,26 @@ export const ComebackCityThreeKartRace = ({
           });
           // Separation is continuous (karts never render through each
           // other); the bump impulse stays cooldown-gated.
-          if (playerNudgeLane) race.lane = clamp(race.lane + playerNudgeLane, -0.95, 0.95);
+          // P5 — on the free-body path, writing race.lane does nothing: lane is
+          // DERIVED from the body's world position and is overwritten next
+          // frame. A shove has to move the body. Converted to lateral velocity
+          // along the road normal, scaled by the local half-width so a lane
+          // delta means the same distance it always did.
+          const applyLaneShove = (laneDelta) => {
+            if (!laneDelta) return;
+            if (!race.freeBody) {
+              race.lane = clamp(race.lane + laneDelta, -0.95, 0.95);
+              return;
+            }
+            const frame = engine.sampler.pointAt(race.progress, 0);
+            const units = laneDelta * engine.sampler.widthAt(race.progress) * 0.44;
+            race.freeBody.x += frame.normal.x * units;
+            race.freeBody.z += frame.normal.z * units;
+            // A shove is an impulse, not a teleport: carry some of it as
+            // lateral velocity so the kart keeps sliding after contact.
+            race.freeBody.lateralVel += units * 6;
+          };
+          if (playerNudgeLane) applyLaneShove(playerNudgeLane);
           if (playerBump) {
             race.bumpCooldown = playerBump.cooldown;
             // Owner 2026-08-03: "the ice shield also didn't seem to stop
@@ -10698,7 +10774,7 @@ export const ComebackCityThreeKartRace = ({
             // expires on its own clock now, so it does not need spending here
             // to stop being permanent.
             if (!race.shieldActive) {
-              race.lane = clamp(race.lane + playerBump.lanePush, -0.95, 0.95);
+              applyLaneShove(playerBump.lanePush);
               race.speed *= playerBump.speedScale;
             }
           }
