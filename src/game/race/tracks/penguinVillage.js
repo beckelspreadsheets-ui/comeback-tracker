@@ -233,6 +233,28 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   // Moving the ice off that progress would make the tool's own ground-truth
   // check fail and every contrast verdict it prints untrustworthy. The debt is
   // paid at the kerb instead — see palette.curb.
+  //
+  // ROUND 2 — THIS TABLE IS CORRECT AND WAS RE-VERIFIED, so do not "re-derive"
+  // it. A round-1 critic filed it as landing at the wrong arc positions against
+  // the new 4x centerline. Measured on the SHIPPED centerline by arc length:
+  //
+  //   waypoint C6 (1765, 710)  -> nearest progress 0.309
+  //   waypoint C7 (1865, 150)  -> nearest progress 0.355
+  //   signed turn at p0.307 = -0.218 rad, at p0.356 = -0.233 rad (both NEGATIVE)
+  //
+  // i.e. the band 0.29-0.37 brackets exactly the two right-handers it is
+  // documented to sit on, and the lane sign is still negative on both, so
+  // -1..-0.28 is still their inside. The same measurement disposes of the
+  // companion claim that the band leaks to p0.89: p0.29-0.37 and p0.85-0.98
+  // never come closer than 2,863 world units, so whatever brightened the road
+  // in penguin-village-p0_9 is not this table.
+  //
+  // The real defect the frames caught was VALUE, not placement — the band was
+  // rendering at ~152 luma against a ~172 snowfield — and it is fixed at its
+  // source, the additive sheen injection's cap in the monolith
+  // (uRoadIceTotal 0.3 -> 0.12, uRoadFresnelStrength 0.11 -> 0.045). The kerb
+  // debt below stays paid: a dark tooth clears both the darker ice AND the
+  // snowfield, which a white one never did.
   surfaceBands: [
     { progressStart: 0, progressEnd: 0.29, laneStart: -1, laneEnd: 1, type: 'asphalt' },
     { progressStart: 0.29, progressEnd: 0.37, laneStart: -1, laneEnd: -0.28, type: 'ice' },

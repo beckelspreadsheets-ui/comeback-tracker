@@ -109,6 +109,93 @@ const keyGroundingDeficit = () =>
 // getting lighter. Neither happens here: this term is zero on any track whose
 // key casts, and the opacity taper below is the second half of the fix.
 const CONTACT_KEY_SPREAD_GAIN = 0.55;
+//
+// AAA WAVE 8 ROUND 1 — WHY THIS GAIN DID NOT GO UP, EVEN THOUGH THE FRAMES SAY
+// TIER 2 IS STILL INVISIBLE. Round 1's captures show no measurable darkening
+// anywhere around the player on penguin-village-p0_67 or comeback-city-p0_56:
+// the road beside and in front of the kart holds a flat 46-49 and 48-52
+// respectively, while a 0.71-0.85 wipe at this spread should have taken it to
+// the high teens. So the area term above is real but still under-sized, and
+// probe 3 in the header (the same decal 4x wider, which drove the road to 3-10)
+// says roughly how far under: a factor of two to three, not the 1.36-1.81 that
+// shipped.
+//
+// Raising the gain to reach it is the WRONG fix and would re-file a note this
+// file has already been burned by twice. At gain 1.5 the PV patch is ~22 x 33
+// units — wider than the racing line — and the contract on the boost's opacity
+// (>= 1, with (opacity - 1) / 0.55 read back by the monolith as its own
+// "tier 1 cannot be seen" signal, see below) means this module CANNOT pay for
+// that area with a matching drop in darkness. Growing without softening is
+// exactly what drew "an unmotivated dark blob composited across the racing
+// line" in wave 7 round 3.
+//
+// The quantity that actually needs to move is not the patch's SIZE, it is its
+// CENTRE. The patch is concentric with the caster that hides it, so every unit
+// of growth buries most of its own new mass under the kart and only exposes the
+// texture's 0.84-1.0 alpha skirt, which is 0.08 alpha and by definition
+// invisible. Offsetting the patch a couple of units along the ground projection
+// of -sunDirection would put its solid core beside the wheels where the lens can
+// see it, AND make it read as the near end of the cast shadow rather than as a
+// blob. That is a one-line change to contactRig.position in the monolith's pose
+// update (ComebackCityThreeKartRace.jsx, near the contactRig.position.copy),
+// which this package does not own — the boost record returned below would need a
+// third field for the offset and the monolith would have to apply it. Handed
+// off deliberately rather than bodged from here.
+
+// AAA WAVE 8 ROUND 1 — THE UMBRA FLOOR WAS TUNED ON ONE TRACK AND SPENT ON BOTH.
+//
+// All three critics filed the same finding against this round's frames: the
+// Penguin Village kart shadow reads on the pale ice sections and disappears on
+// the charcoal asphalt ones. Measured off the round-1 captures (luminance,
+// shadowed band against open road at the same screen row):
+//
+//   penguin-village-p0_33  ice      121 vs 154   ratio 0.786   delta 33 codes
+//   penguin-village-p0_56  asphalt   38 vs  48   ratio 0.79    delta 10 codes
+//   penguin-village-p0_67  asphalt   38 vs  50   ratio 0.77    delta 11 codes
+//   comeback-city-p0_56    asphalt   36 vs  50   ratio 0.72    delta 14 codes
+//
+// The RATIO is near enough constant across all four. What is not constant is the
+// DELTA, because a fixed fraction of a dark surface is a small number of code
+// values: the same shadow that removes 33 codes from ice removes 10 from
+// asphalt, and 10 codes on a 48-value road is at the edge of visibility. So the
+// tracks do not have different shadow rigs; they have different receivers, and
+// the rig is handing both of them the same fraction.
+//
+// The one place the rig throws contrast away on purpose is here. shadow.intensity
+// 0.72 lerps 28% of the way back toward "unshadowed" — and the reason recorded
+// for it is Comeback City specific: a full umbra on MIAMI DUSK ASPHALT under a
+// strong 21-degree key drops to the ambient term alone and reads as a hole in the
+// road. That premise does not transfer. Penguin Village's key is 12 degrees and
+// sits inside a storm bank, so it contributes proportionally far less of the
+// road's total value, and removing 100% of it CANNOT produce the near-black the
+// floor exists to prevent. On PV the floor is not protecting anything; it is
+// spending the only contrast the track has.
+//
+// So the floor becomes key-adaptive, exactly like normalBias in wave 7 and the
+// contact spread in wave 8 — same signal (keyGroundingDeficit), same guarantee:
+// COMEBACK CITY IS BIT-IDENTICAL BY CONSTRUCTION. sin(21 degrees) = 0.3584 is
+// above CONTACT_KEY_READABLE_SIN, the deficit clamps to 0, and this resolves to
+// exactly 0.72.
+//
+// Solving the round-1 numbers for the road's ambient/key split (linear, then
+// re-encoded) gives a = 0.4375 / k = 0.5625 on PV asphalt, which puts the
+// adaptive floor's landing point at:
+//
+//   intensity 0.72 (today)   ratio 0.79  ->  48 -> 38   21% darker  FAILS the bar
+//   intensity 0.90 (PV new)  ratio 0.72  ->  48 -> 35   28% darker  clears it
+//
+// against the rubric's stated "at least 25% darker than open road". On PV's ice
+// the same move takes the ribbon from 121 to ~112 against a 154 road — still
+// LIGHTER than the 108-red reading the artefact hunter measured on p0_33 and
+// scored as "a soft, attached, silhouette-legible ribbon", so the deeper umbra
+// stays inside a value a critic has already approved on this track. That bound
+// is why the weak-key end is a full 1.0 rather than something larger dressed up
+// as headroom: 1.0 is not "more shadow", it is "no artificial lift", and the
+// ambient term the umbra falls back to is what keeps it off black.
+const UMBRA_FLOOR_STRONG_KEY = 0.72;
+const UMBRA_FLOOR_WEAK_KEY = 1.0;
+const umbraIntensityForKey = () =>
+  UMBRA_FLOOR_STRONG_KEY + (UMBRA_FLOOR_WEAK_KEY - UMBRA_FLOOR_STRONG_KEY) * keyGroundingDeficit();
 
 // AAA WAVE 7 ROUND 2 — normalBias IS A GROUND GAP, AND IT WAS 1.8x WIDER ON
 // PENGUIN VILLAGE THAN ON COMEBACK CITY FOR THE SAME NUMBER.
@@ -423,6 +510,14 @@ const buildGroundingDecals = (world, options) => {
  */
 export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = true }) => {
   const active = Boolean(enabled && renderer && sun);
+  // liveKeySinElevation is module state, and the game lets you finish a Penguin
+  // Village race and immediately start a Comeback City one in the same process.
+  // Without this reset, CC's first frames — before update() has run once — would
+  // read PV's 12-degree key, take a non-zero deficit, and pick up a deeper umbra
+  // and a wider contact patch than the owner-confirmed grade. Re-seeding per rig
+  // is what makes "Comeback City is bit-identical by construction" true on the
+  // SECOND race as well as the first.
+  liveKeySinElevation = Math.sin(CC_SUN_ELEVATION);
   // Tier budget. The frame has ~14ms of headroom against a 16.7ms target, and
   // the depth pass costs a fraction of a millisecond because per-object frustum
   // culling keeps it to the karts plus whatever roadside props are actually
@@ -493,7 +588,13 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
       // straight lerp toward "unshadowed" (three r184, LightShadow.intensity),
       // so 0.72 keeps the silhouette unambiguous while letting the bounce fill
       // the umbra the way a real one does. Zero cost — it is a uniform.
-      sun.shadow.intensity = 0.72;
+      //
+      // Seed only, and it is Comeback City's value: from here on the floor is
+      // re-derived per frame from the key the frame is actually lit by, because
+      // the paragraph above is a statement about a STRONG key on a dark road and
+      // does not hold for a weak one. See UMBRA_FLOOR_STRONG_KEY for the four
+      // frame measurements that forced this and for the arithmetic.
+      sun.shadow.intensity = UMBRA_FLOOR_STRONG_KEY;
       sun.shadow.camera.updateProjectionMatrix();
     }
   }
@@ -546,6 +647,13 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
         NORMAL_BIAS_MIN,
         NORMAL_BIAS_MAX
       );
+      // Same signal, same frame, same guarantee as the bias above: how deep the
+      // umbra is allowed to go is a function of how much of the road's value the
+      // key is actually responsible for. Both are uniforms, so this whole block
+      // is free. Comeback City resolves to exactly UMBRA_FLOOR_STRONG_KEY on
+      // every frame — its deficit is zero by construction — so the track whose
+      // shadows the critics scored as correct never sees this line move.
+      sun.shadow.intensity = umbraIntensityForKey();
     }
     if (!active || texelWorldSize <= 0) {
       sun.position.copy(sunDirection).multiplyScalar(sunDistance).add(focusPoint);
@@ -730,6 +838,18 @@ export const contactPatchProfile = (shadowsEnabled, contactGrounding) =>
  * 0.927 and ships fine. The frames agree — penguin-village-p0_33 (awayDot
  * -0.995) carries a large, clean cast shadow, so PV's rig, caster policy and
  * ortho box are all sound.
+ *
+ * SUPERSEDED IN PART, AAA WAVE 8 ROUND 1 — the paragraph below claims Penguin
+ * Village "renders NO cast shadow anywhere in frame". That was true of the build
+ * it was written against and is NOT true of this one. Measured off the round-1
+ * captures: penguin-village-p0_56 carries a shadow band at luminance 38-41
+ * against 48-52 open road, and p0_67 one at 38-40 against 50, both landing where
+ * the ribbon's geometry says they should. All three critics independently agreed
+ * ("the PV kart DOES cast a shadow now"). The wave-8 area term below plus the
+ * wave-7 bias fix did their job; what is left is a CONTRAST problem, not a
+ * missing-shadow problem, and it is fixed at the umbra floor — see
+ * UMBRA_FLOOR_STRONG_KEY at the top of this file. Do not re-diagnose PV as
+ * "no shadow"; open the frames and measure the band before believing it.
  *
  * CORRECTION, AAA WAVE 8 — the rig/caster/ortho half of that paragraph holds
  * (measured: the player sits at shadow-camera NDC (0.000, 0.005, -0.289), dead

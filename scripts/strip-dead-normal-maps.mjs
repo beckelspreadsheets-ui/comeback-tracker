@@ -296,7 +296,13 @@ const processKart = async (file) => {
     beforeBytes: beforeBytes.byteLength,
     beforeGz: (await gzip(beforeBytes)).byteLength,
     beforeHash: sha256(beforeBytes),
-    beforeTextureBytes: textureBytes(document) + removed.reduce((s, r) => s + r.bytes, 0),
+    // Sum the snapshot taken BEFORE the slots were cleared. Clearing a slot only
+    // drops the material's reference — the Texture and its image are still in
+    // the document until prune() runs — so measuring the live document here and
+    // adding `removed` back would count every stripped map twice and overstate
+    // the saving to whoever reads the report next.
+    beforeTextureBytes: beforeTextures.reduce((sum, texture) => sum + texture.bytes, 0),
+    beforeTextures,
     file,
     removed,
     slug: file.replace(/\.glb$/, ''),
@@ -307,6 +313,11 @@ const processKart = async (file) => {
     result.afterBytes = result.beforeBytes;
     result.afterGz = result.beforeGz;
     result.afterHash = result.beforeHash;
+    // An already-stripped body keeps exactly the textures it had, so the report
+    // reads the same shape for skipped and stripped bodies. Re-running this
+    // script is a no-op by design; the report has to say so in numbers.
+    result.afterTextureBytes = result.beforeTextureBytes;
+    result.afterTextures = beforeTextures;
     return result;
   }
 
@@ -352,7 +363,6 @@ const processKart = async (file) => {
   }
   result.ok = findings.length === 0;
   result.buffer = afterBuffer;
-  result.beforeTextures = beforeTextures;
   return result;
 };
 
@@ -415,13 +425,44 @@ const main = async () => {
     );
   }
 
+  // The report is written on EVERY exit path, including --dry-run and a failed
+  // verification. Measuring without writing is the main reason to run this
+  // script at all now that the fleet is stripped, and a --dry-run --report that
+  // silently produced no file (the original behaviour) made the flag pair look
+  // broken. `applied` records which it was, so a report can never be mistaken
+  // for proof that the GLBs on disk changed.
+  const writeReport = async (applied) => {
+    if (!REPORT) return;
+    const reportPath = path.resolve(repoRoot, REPORT);
+    await fs.mkdir(path.dirname(reportPath), { recursive: true });
+    await fs.writeFile(
+      reportPath,
+      `${JSON.stringify(
+        {
+          applied,
+          bodies: results.map(({ buffer, ...rest }) => rest),
+          dryRun: DRY,
+          failures,
+          generatedAt: new Date().toISOString(),
+          method: METHOD,
+          totals,
+        },
+        null,
+        2
+      )}\n`
+    );
+    console.log(`report ${path.relative(repoRoot, reportPath)}`);
+  };
+
   if (failures) {
     console.error(`\n${failures} body/bodies failed verification — NOTHING was written.`);
+    await writeReport(false);
     process.exitCode = 1;
     return;
   }
   if (DRY) {
     console.log('\ndry run — nothing written. Drop --dry-run to apply.');
+    await writeReport(false);
     return;
   }
 
@@ -434,26 +475,11 @@ const main = async () => {
     await fs.rename(tmp, target);
     console.log(`wrote ${path.relative(repoRoot, target)}  ${result.afterHash}`);
   }
-  console.log('\nUPDATE THE MANIFEST: outputHash and sizeBudget for every body above, or the asset audit fails on hash drift.');
-
-  if (REPORT) {
-    const reportPath = path.resolve(repoRoot, REPORT);
-    await fs.mkdir(path.dirname(reportPath), { recursive: true });
-    await fs.writeFile(
-      reportPath,
-      `${JSON.stringify(
-        {
-          bodies: results.map(({ buffer, ...rest }) => rest),
-          generatedAt: new Date().toISOString(),
-          method: METHOD,
-          totals,
-        },
-        null,
-        2
-      )}\n`
-    );
-    console.log(`report ${path.relative(repoRoot, reportPath)}`);
+  if (changed.length) {
+    console.log('\nUPDATE THE MANIFEST: outputHash and sizeBudget for every body above, or the asset audit fails on hash drift.');
   }
+
+  await writeReport(changed.length > 0);
 };
 
 main().catch((error) => {

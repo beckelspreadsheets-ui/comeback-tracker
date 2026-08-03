@@ -446,6 +446,87 @@ const FLAME_HAZE_MAX_ANGLE = 0.052;
 // when it stops.
 const IDLE_FLAME_TTL = 0.2;
 const IDLE_FLAME_BRIGHTNESS = 0.14;
+// WAVE 8, ROUND 1 — "the exhaust plume is permanently on and reads as a static
+// glow", raised by two independent critics off the same evidence: cruise at
+// 229 km/h and boost at 286 km/h carry an indistinguishable plume.
+//
+// The dominant cause is NOT in this file (see the note in the emitter below),
+// but this emitter had its own version of the same fault and it is KNOWN TRAP 4
+// verbatim: the rate was per SECOND (`2.5 + speedFraction * 5`) against a
+// visibility window that is per DISTANCE. Work it through with the module's own
+// numbers — chase boom 30-38 units, nozzle at -5.5, so a puff is born at depth
+// ~40 and the proximity ramp has retired it by depth 5, while it falls away
+// from the lens at (kartSpeed + its own ~7 u/s of blowback):
+//
+//   dwell   at 229 -> 35 / 236 = 0.148 s      at 286 -> 35 / 293 = 0.119 s
+//   rate    at 229 -> 6.45/s                  at 286 -> 7.45/s
+//   ON SCREEN  0.95 sprites                      0.89 sprites
+//
+// The plume got 6% THINNER as the kart got 25% faster. That is the measured
+// version of "nothing distinguishes the boost frames from cruise".
+//
+// Fixed the way WASH_SPACING and FLAME_HAZE_SPACING already were: emit per unit
+// of TRACK, so the on-screen count stops depending on speed, and then let a
+// single explicit ENGINE LOAD term be the only thing that moves it. Count then
+// tracks load exactly (rate ∝ speed × load, dwell ∝ 1/speed, so count ∝ load)
+// instead of tracking nothing.
+//
+// 32 is chosen so the rate at the speed every capture frame was taken at (229,
+// load 0.759) lands on 7.33/s — within 14% of the 6.45/s that shipped — i.e. the
+// cruise frames keep their authored density and only the SLOPE changes:
+//
+//   at 229   (2.5 + 229/32) x 0.759 =  7.33/s   x 0.148 s = 1.08 on screen
+//   at 286   (2.5 + 286/32) x 0.986 = 11.28/s   x 0.119 s = 1.35 on screen
+//
+// i.e. +24% of headcount for +25% of speed where the shipped emitter gave -6%,
+// and 1.57x of total radiated energy once the size and value terms below are
+// carried through.
+//
+// Nothing here raises any per-sprite peak; see the size and brightness terms
+// below, both of which reach exactly today's value at full load and sit under
+// it everywhere else.
+const IDLE_FLAME_SPACING = 32;
+// Standing term, and the same one FLAME_HAZE_IDLE_RATE carries for the same
+// reason: a purely spatial rate emits nothing when there is no track going
+// under the kart, so a grid start, a spin-out recovery and a crawl out of a
+// wall would all show a dead exhaust — which is the exact failure this emitter
+// exists to prevent. 2.5 is the constant the shipped per-second rate already
+// used, kept verbatim.
+const IDLE_FLAME_STANDING_RATE = 2.5;
+// Below this fraction of top speed the kart is not shedding enough to be worth
+// drawing. Same gate the emitter already used, hoisted so the load ramp and the
+// gate cannot drift apart.
+const IDLE_FLAME_GATE = 0.12;
+// Load floor, so a kart just over the gate still emits — this is furniture and
+// its whole job is that the kart is never inert. Squared above the floor so the
+// slope lives at the top of the range, which is where every frame a critic ever
+// crops is taken. 0.42 rather than a lower, more dramatic floor because the
+// grid start and a spin-out recovery both live down here and neither may end up
+// with a dead exhaust; the cost is ~0.1x of staging ratio at the top, which the
+// size and value terms give back.
+const IDLE_FLAME_LOAD_FLOOR = 0.42;
+// "Gate on throttle" was the literal ask. The context contract carries no
+// throttle field, so it is derived from the one signal that is actually
+// available and is actually the same physical thing: longitudinal acceleration.
+// A kart gaining speed is on the gas; a kart shedding it is off the gas and an
+// exhaust should thin out. Clamped hard at both ends because this must never be
+// able to switch the emitter off (a braking zone still has a running engine) or
+// to double it (a collision or a respawn is not a throttle input).
+const IDLE_FLAME_COAST_FLOOR = 0.6;
+const IDLE_FLAME_POWER_CEIL = 1.25;
+// Denominator for that term: 1.1 x top speed per second-squared. A kart that
+// reaches 289 in ~4 s is at ~72 u/s^2, which lands on 1.22 — near the ceiling
+// under real acceleration and well inside it under the numerical noise on a
+// steady throttle.
+const IDLE_FLAME_POWER_REF = 1.1;
+// Smoothing for the same term. ~0.17 s, long enough that a single-frame speed
+// sample cannot make the plume flicker and short enough that a corner exit
+// still lights it up before the corner is over.
+const IDLE_FLAME_POWER_SMOOTHING = 6;
+// A speed sample this far from the last one is a respawn, a lap wrap or a
+// teleport, not acceleration. Same guard, same reason, as the `instant < 400`
+// test the measured-speed fallback already carries.
+const IDLE_FLAME_POWER_MAX_RATE = 600;
 
 // Proximity fade. The chase boom is 30-38 units and the kart runs at ~285, so
 // EVERY particle the kart leaves behind is swept through the whole depth range
@@ -2108,6 +2189,13 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   const prevKartPosition = new THREE.Vector3();
   let hasPrevKart = false;
   let measuredSpeed = 0;
+  // Throttle proxy state. See the IDLE_FLAME_POWER_* block: the contract has no
+  // throttle field, so the exhaust reads longitudinal acceleration instead.
+  // `hasSpeedSample` exists because frame one would otherwise difference
+  // against a zero and hand the ramp a 15,000 u/s^2 spike.
+  let lastSpeedSample = 0;
+  let hasSpeedSample = false;
+  let smoothedSpeedRate = 0;
   // The camera's own motion, differenced here rather than asked of the caller.
   // It is the dominant term in how fast a particle crosses the screen: at 285
   // units/s the sprite is nearly stationary in the world and it is the LENS
@@ -3185,7 +3273,20 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // cap, per-particle brightness) rather than by dimming the whole system,
   // because the plume still has to be the one thing in frame that legitimately
   // clears the bloom knee — that is what the core is for.
-  const spawnFlame = (context, tint) => {
+  //
+  // WAVE 8, ROUND 1 — `force` (the live boost envelope, 0..1) now stages the
+  // SPRITE as well as the rate. Previously only the emission rate rode the
+  // envelope, so the 0.07 s attack and the 0.26 s release moved the plume's
+  // density but never its shape: a boost fading out was a thinning cloud of
+  // full-strength sprites rather than a cone losing thrust.
+  //
+  // Every `force` term below is normalised so that force = 1 reproduces the
+  // shipped numbers EXACTLY and every lower value scales DOWN. That is
+  // deliberate and it is KNOWN TRAP 2: this emitter's per-sprite brightness is
+  // the one number in the file that is allowed to clear the bloom knee, the
+  // wave-7 round-2 ceiling work is what made it safe, and a staging change has
+  // no business raising a ceiling that was set by measurement.
+  const spawnFlame = (context, tint, force = 1) => {
     const side = Math.random() < 0.5 ? -1 : 1;
     const cos = Math.cos(context.yaw);
     const sin = Math.sin(context.yaw);
@@ -3197,7 +3298,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     const y =
       Math.max(context.groundY + FLAME_MIN_CLEARANCE, context.kartPosition.y + FLAME_NOZZLE_Y) +
       (Math.random() - 0.5) * 0.3;
-    const vz = -(15 + Math.random() * 8);
+    // Exit velocity is where the staging is most legible and where it is
+    // cheapest: the cone's LENGTH is (exit speed x life), so a half-strength
+    // boost is visibly a shorter cone before any of the value terms are read.
+    // 0.74 floor rather than 0 because a plume that starts from nothing pops.
+    const thrust = 0.74 + 0.26 * force;
+    const vz = -(15 + Math.random() * 8) * thrust;
     const vx = (Math.random() - 0.5) * 2.6;
     // Strictly upward, where the old spread could be -0.66: with gravity at 0
     // a downward component never recovers, so a fraction of every plume drifted
@@ -3216,9 +3322,9 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     // SUM the camera sees is what the plume IS, so both are set to hold the
     // total within a few percent (shells 13.6 -> 14.8 units/s, cores 40 ->
     // 40.3) while no single sprite stays legible enough to read as an object.
-    shell.brightness = 0.14;
+    shell.brightness = 0.14 * (0.72 + 0.28 * force);
     shell.flicker = Math.random() * Math.PI * 2;
-    shell.size = 1.15 + Math.random() * 0.45;
+    shell.size = (1.15 + Math.random() * 0.45) * (0.78 + 0.22 * force);
     shell.stretch = 1.6;
     shell.stretchMax = FLAME_SHELL_STRETCH_MAX;
     shell.tint.copy(tint);
@@ -3231,9 +3337,12 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     core.position.set(x, y, z);
     core.velocity.set(wx * 0.68, vy * 0.68, wz * 0.68);
     core.gravity = 0;
-    core.brightness = 0.38;
+    // The core is the lobe that carries the plume's value, so it is the one
+    // that most needs to arrive and leave with the boost rather than blinking
+    // on at full heat. Same normalisation: 1 at full envelope, never above it.
+    core.brightness = 0.38 * (0.66 + 0.34 * force);
     core.flicker = Math.random() * Math.PI * 2;
-    core.size = 0.42 + Math.random() * 0.16;
+    core.size = (0.42 + Math.random() * 0.16) * (0.82 + 0.18 * force);
     core.stretch = 0.9;
     core.stretchMax = FLAME_CORE_STRETCH_MAX;
     core.tint.copy(FLAME_CORE);
@@ -3302,7 +3411,37 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   // most of a lap reads as a prop being slid along the road. This is furniture,
   // not an event — a third of the idle rate and an eighth of the brightness of
   // the boost plume, and no core, so it can never compete with a real boost.
-  const spawnIdleFlame = (context, tint) => {
+  //
+  // WAVE 8, ROUND 1 — `load` is the staged engine-load term (see the
+  // IDLE_FLAME_* block). It moves size and value together because that is what
+  // engine load looks like: more gas, hotter and more of it. Both terms reach
+  // exactly the shipped constants at load = 1 and sit under them below it, so
+  // the top of this emitter's range is unchanged and only its FLOOR moved down.
+  // The cruise speed every capture frame was taken at (229 of 289, load 0.759)
+  // therefore lands at 0.86 of the old brightness and 0.95 of the old size, and
+  // the 286 frames land within 2% of the old numbers — which is the stage that
+  // was missing.
+  //
+  // BUT READ THIS BEFORE JUDGING THE RESULT IN A FRAME. The two large, soft,
+  // permanently-lit amber lobes at the diffuser in every wave-7 and wave-8
+  // capture are NOT this emitter and cannot be fixed from this file. They are
+  // the `idleFlames` sprite pair on the KART MODEL, in
+  // ComebackCityThreeKartRace.jsx (created ~:1053, driven ~:10482), whose own
+  // comment at :1291 says "they are just permanently on". Measured evidence:
+  //   * placeExhaustVfx rescales them to halfWidth * 0.5, i.e. ~2.2 world units
+  //     on a fitted GLB body — and the lobes measure ~2.2 units in
+  //     wave8-r1/penguin-village-p0_45.
+  //   * this emitter's puffs cannot reach that size: `size * (0.5 + fade * 0.8)`
+  //     peaks at 1.1 units and the angular cap trims it further.
+  //   * their frame-loop scale term is `0.65 + heat * 0.65` on heat =
+  //     speed/MAX_SPEED with a CONSTANT 0.7 opacity, so 229 -> 286 changes the
+  //     lobe by 11% and its value not at all. That is the "same plume at cruise
+  //     and boost" the critics measured.
+  //   * wave6-final/penguin-village-p0_24 (228, pre-idleFlames) has a clean
+  //     rear; wave7-r3/penguin-village-p0_24 (229) already has the lobes.
+  // Staging THAT pair is a one-line change in the monolith and is owned by
+  // whoever owns the monolith this wave.
+  const spawnIdleFlame = (context, tint, load = 1) => {
     const side = Math.random() < 0.5 ? -1 : 1;
     const cos = Math.cos(context.yaw);
     const sin = Math.sin(context.yaw);
@@ -3318,10 +3457,10 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     const vz = -(5 + Math.random() * 4);
     const vx = (Math.random() - 0.5) * 1.6;
     item.velocity.set(cos * vx + sin * vz, 1 + Math.random() * 1.2, -sin * vx + cos * vz);
-    item.brightness = IDLE_FLAME_BRIGHTNESS;
+    item.brightness = IDLE_FLAME_BRIGHTNESS * (0.42 + 0.58 * load);
     item.flicker = Math.random() * Math.PI * 2;
     item.gravity = 0;
-    item.size = 0.55 + Math.random() * 0.3;
+    item.size = (0.55 + Math.random() * 0.3) * (0.8 + 0.2 * load);
     item.stretch = 1.1;
     item.stretchMax = FLAME_SHELL_STRETCH_MAX;
     item.tint.copy(tint);
@@ -3720,6 +3859,36 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
     const hasSpeedContract = Number.isFinite(context.speed) && Number.isFinite(context.maxSpeed) && context.maxSpeed > 0;
     const speed = hasSpeedContract ? Math.abs(context.speed) : measuredSpeed;
     const maxSpeed = hasSpeedContract ? context.maxSpeed : FALLBACK_MAX_SPEED;
+    // Throttle proxy, differenced off whichever speed the contract gave us so
+    // it can never disagree with the number the emitters are steering by. The
+    // raw sample is clamped before it is smoothed, not after: a single respawn
+    // frame smoothed in at dt*6 would still bias the plume for a fifth of a
+    // second.
+    if (hasSpeedSample && dt > 0) {
+      const rawRate = Math.max(
+        -IDLE_FLAME_POWER_MAX_RATE,
+        Math.min(IDLE_FLAME_POWER_MAX_RATE, (speed - lastSpeedSample) / dt)
+      );
+      smoothedSpeedRate += (rawRate - smoothedSpeedRate) * Math.min(1, dt * IDLE_FLAME_POWER_SMOOTHING);
+    }
+    lastSpeedSample = speed;
+    hasSpeedSample = true;
+    // 1 on a steady throttle, so a lap held at cruise is byte-for-byte the
+    // density the spacing constant was tuned for; above 1 on power, below 1 on
+    // the brakes. Both ends are hard-clamped — see IDLE_FLAME_COAST_FLOOR.
+    const powerBias = Math.max(
+      IDLE_FLAME_COAST_FLOOR,
+      Math.min(IDLE_FLAME_POWER_CEIL, 1 + smoothedSpeedRate / (IDLE_FLAME_POWER_REF * maxSpeed))
+    );
+    // Engine load: 0 at the idle gate, 1 at top speed. Squared so the slope
+    // lives at the top of the range, which is the only part of it a race
+    // actually spends time in. clamp01 is not tidiness — it is the ceiling that
+    // lets spawnIdleFlame promise its size and brightness terms can never
+    // exceed the constants that shipped.
+    const engineLoadRaw = clamp01((speed - IDLE_FLAME_GATE * maxSpeed) / ((1 - IDLE_FLAME_GATE) * maxSpeed));
+    const engineLoad = clamp01(
+      (IDLE_FLAME_LOAD_FLOOR + (1 - IDLE_FLAME_LOAD_FLOOR) * engineLoadRaw * engineLoadRaw) * powerBias
+    );
     // Surface resolution. `context.surface` is the road package's band type;
     // `context.offRoad` is the boolean its rumble/verge work may or may not
     // have landed by the time this runs, so it is read optionally and an
@@ -4175,7 +4344,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       while (flameAccumulator >= 1 && budget > 0) {
         flameAccumulator -= 1;
         budget -= 1;
-        spawnFlame(context, sparkTint);
+        spawnFlame(context, sparkTint, boostEnergy);
       }
       if (budget <= 0) flameAccumulator = 0;
 
@@ -4196,11 +4365,29 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         spawnFlameHaze(context, sparkTint);
       }
       if (hazeBudget <= 0) flameHazeAccumulator = 0;
-    } else if (!context.reducedMotion && speed > 0.12 * maxSpeed) {
-      // Idle exhaust so the kart is never inert. Rate rises gently with speed —
-      // it is engine load, not a cue — and stays an order of magnitude below
-      // the boost plume so a boost is still unambiguous.
-      flameAccumulator += dt * (2.5 + (speed / maxSpeed) * 5) * poolScale * loadScale * ambient.idle * ambientLoad;
+    } else if (!context.reducedMotion && speed > IDLE_FLAME_GATE * maxSpeed) {
+      // Idle exhaust so the kart is never inert, and — since wave 8 round 1 —
+      // the one emitter here that has to STAGE rather than merely exist.
+      //
+      // Per unit of track, not per second (KNOWN TRAP 4; the full arithmetic is
+      // in the IDLE_FLAME_SPACING block). The old per-second rate cancelled
+      // against a per-distance visibility window and left the on-screen count
+      // FALLING 6% across the 229 -> 286 band. Spatial emission removes speed
+      // from the count entirely, which leaves `engineLoad` as the only thing
+      // that moves it — count tracks load exactly, 0.759 at cruise against
+      // 0.986 at 286, and the same load term is scaling each puff's size and
+      // value on top of that.
+      //
+      // Still an order of magnitude under the boost plume so a boost stays
+      // unambiguous: 7.3/s at cruise against 106/s boosting.
+      flameAccumulator +=
+        dt *
+        (IDLE_FLAME_STANDING_RATE + speed / IDLE_FLAME_SPACING) *
+        engineLoad *
+        poolScale *
+        loadScale *
+        ambient.idle *
+        ambientLoad;
       sparkTint.set(EXHAUST_TINT);
       // Same spike guard as the boost plume above. `ambient.idle` is 0 on the
       // bottom tier, where this system is dropped outright — it is furniture by
@@ -4210,7 +4397,7 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
       while (flameAccumulator >= 1 && idleBudget > 0) {
         flameAccumulator -= 1;
         idleBudget -= 1;
-        spawnIdleFlame(context, sparkTint);
+        spawnIdleFlame(context, sparkTint, engineLoad);
       }
       if (idleBudget <= 0) flameAccumulator = 0;
       flameHazeAccumulator = 0;

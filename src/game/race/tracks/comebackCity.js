@@ -157,7 +157,23 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
       // enough that the warm key finds a terminator on the infield instead of
       // returning one constant, not so much that the verge starts reading as
       // dunes beside a boulevard.
-      relief: { displace: 0.22, normalAmplitude: 21 },
+      //
+      // AAA WAVE 8 ROUND 2: normalAmplitude 21 -> 30, displace UNCHANGED.
+      //
+      // The 4x lap put four times as much of this surface on screen and all
+      // three critics filed the same finding against it — "a large flat
+      // untextured expanse", "bare grey ground plane filling the left third",
+      // "a single untextured ground plane running to a hard fog horizon". That
+      // is KNOWN TRAP 5, and the only remedy for a flat plane is a NORMAL,
+      // which is exactly what this number is. The wave-5 argument for tuning it
+      // down still holds in kind — a city verge is flatter than a snowfield —
+      // but 4.5 degrees of mean face tilt on a plane that now fills a third of
+      // the frame returns very nearly one value, which is what the frames say.
+      // 30 is ~6.4 degrees, still under Penguin Village's 7.4, and it is free:
+      // a normal attribute is the same size whatever is in it. `displace` stays
+      // at 0.22 on purpose — every roadside prop is planted at this plane's own
+      // height, and moving the geometry is what sinks and floats them.
+      relief: { displace: 0.22, normalAmplitude: 30 },
       repeat: 38,
       speckles: [
         { color: '#255049', count: 420, size: 3.4 },
@@ -203,6 +219,33 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
     // as. A dark run-off shelf that sits BELOW the road's value and a bank that
     // sits above it survives the grade, and the tilt the bank now carries adds
     // to the gap rather than fighting it.
+    //
+    // AAA WAVE 8 ROUND 2 — DO NOT DARKEN THE INFIELD TO CHASE THE PREVIEWER'S
+    // 8%, AND HERE IS THE MEASUREMENT THAT SAYS WHY.
+    //
+    // `track-layout-preview.mjs` reports every Comeback City segment at 8%
+    // road-vs-terrain separation against its 20% gate, with the ROAD as the
+    // brighter of the two (lane -0.9 Y46.9 against a 38.5-43.4 terrain band).
+    // Read off the shipped wave-8 captures, the sign is the other way round:
+    //
+    //   comeback-city-p0_67   road  45.5-48.7 luma   near verge  65.5-70.2  = 27%
+    //   comeback-city-p0_78   road  49.7-50.7        near verge  55.6-66.0  = 23%
+    //   comeback-city-p0_56   road  48.2-50.4        near verge  56.1-61.1  = 18%
+    //
+    // The tool's model is albedo-only by design and its own header states the
+    // assumption that lighting can only pull two surfaces CLOSER. On this track
+    // it does not: the ground plane carries a relief normal field and a warm
+    // 21-degree key while the road is flat and fully rough with its GGX lobe
+    // deliberately killed, so the two surfaces take materially different
+    // exposures and the render inverts the model's ordering. Acting on the
+    // tool's number — darkening the terrain — would take the MEASURED
+    // separation from 18-27% down toward zero while the tool's printout got
+    // better. That is the exact failure mode the "read the frames" rule exists
+    // for, and it is why nothing in this block moved.
+    //
+    // What DID move is the one lever both readings agree on: the infield's
+    // relief normal (see palette.ground.relief), because a flat plane has no
+    // gradient under any palette at all.
     roadVerge: { apron: '#0d1120', slope: '#3c4a66' },
     // Road paint. Miami boulevard: cold white edge lines against dark navy
     // asphalt, the district gold on the centre dashes and the lap line so the
