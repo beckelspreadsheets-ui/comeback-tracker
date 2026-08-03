@@ -87,6 +87,76 @@
   z-index: 4;
 }
 
+/* P4 — TURN AROUND. Centred horizontally and sat above the middle of the
+   screen: over the road, under the horizon, clear of all four corner groups so
+   it can never collide with a chip. Not in a corner group on purpose — it is an
+   alert, not a stat.
+
+   The pulse is on OPACITY and TRANSFORM only, so it composites on the GPU and
+   cannot cost a layout on a frame where the player has just spun and the scene
+   is already doing the most work it ever does. */
+.three-kart-race__wrongway {
+  align-items: center;
+  animation: three-kart-race-wrongway-pulse 0.72s ease-in-out infinite;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  top: 26%;
+  transform: translateX(-50%);
+  will-change: opacity, transform;
+}
+
+.three-kart-race__wrongway-arrow {
+  color: #ff4d5e;
+  font-size: 46px;
+  line-height: 1;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.75);
+}
+
+.three-kart-race__wrongway-text {
+  background: rgba(12, 14, 22, 0.72);
+  border: 2px solid #ff4d5e;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  padding: 6px 18px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+@keyframes three-kart-race-wrongway-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.62;
+    transform: translateX(-50%) scale(0.965);
+  }
+}
+
+/* Phones: the plate has to shrink or it spans the whole landscape width. */
+@media (max-width: 820px) {
+  .three-kart-race__wrongway-arrow {
+    font-size: 32px;
+  }
+  .three-kart-race__wrongway-text {
+    font-size: 17px;
+    padding: 4px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .three-kart-race__wrongway {
+    animation: none;
+  }
+}
+
 /* Corner groups. Each is a stack anchored to its own corner; the plates it
    holds are static children, so adding or removing one reflows the group
    instead of leaving a hole at a hard-coded offset. */

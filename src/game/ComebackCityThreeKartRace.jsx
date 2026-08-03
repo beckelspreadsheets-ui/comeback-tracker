@@ -866,6 +866,12 @@ const createInitialRace = (
   // Laps already credited from cumulativeProgress. Without it, oscillating
   // across a lap boundary would re-award on every forward crossing.
   lapsAwarded: 0,
+  // P4 — how long the kart has been pointed back down the road, in seconds.
+  // Debounced rather than instantaneous: a drift, a spin-out and a hairpin all
+  // put the nose the "wrong" way for a moment, and a sign that strobes during
+  // normal driving is worse than no sign.
+  wrongWayTimer: 0,
+  wrongWay: false,
   raceTime: 0,
   // Independent rival sim (Phase 2) — player starts at the back of the grid.
   rivals: createRivalRacers(rivalSeats, { gridProgress: startProgressFor(trackDef) }),
@@ -10371,14 +10377,35 @@ export const ComebackCityThreeKartRace = ({
               race.progress + (race.speed * dt) / (engine.sampler.length * race.laneArcScale)
             );
           }
-          // Signed cumulative progress, on BOTH paths. P3 replaces the wrap
-          // test below with this, so it is accumulated here where the delta is
-          // already known to be one frame's worth.
+          // Signed cumulative progress, on BOTH paths. P3 counts laps off this,
+          // so it is accumulated here where the delta is already known to be one
+          // frame's worth.
           {
             let delta = race.progress - race.previousProgress;
             if (delta > 0.5) delta -= 1;
             if (delta < -0.5) delta += 1;
             race.cumulativeProgress += delta;
+
+            // P4 — TURN AROUND. Wrong-way is judged on the sign of that same
+            // delta rather than on heading vs tangent, and deliberately so: it
+            // is the direction the kart is actually MAKING GROUND in, which is
+            // what a lap cares about. Heading alone flags a full-lock drift or
+            // a spin-out where the nose swings wide but the kart is still
+            // travelling forwards, and those are the two false positives that
+            // would make the sign untrustworthy.
+            const goingBackwards = delta < 0 && race.speed > 12 && !spinning && !airState.airborne;
+            // CLAMPED at 1s, which is not cosmetic. Without the cap the timer
+            // accumulates for as long as you reverse, so a 30s wrong-way run
+            // leaves 30s of timer to bleed off and the sign hangs around for
+            // ten seconds after you have already turned round. Capping it makes
+            // the clear time bounded and independent of how long you were lost.
+            race.wrongWayTimer = goingBackwards
+              ? Math.min(1, race.wrongWayTimer + dt)
+              : Math.max(0, race.wrongWayTimer - dt * 3);
+            // Asymmetric: 0.6s to raise, and the 3x decay clears a full 1s
+            // timer in 0.33s. Slow to accuse, quick to forgive.
+            if (race.wrongWayTimer > 0.6) race.wrongWay = true;
+            else if (race.wrongWayTimer <= 0) race.wrongWay = false;
           }
           // P3 of docs/FREE_BODY_PLAN.md — LAPS COUNT ON DISTANCE, NOT ON A WRAP.
           //
@@ -12297,6 +12324,7 @@ export const ComebackCityThreeKartRace = ({
           progress: race.progress,
           raceTime: race.raceTime,
           shieldActive: race.shieldActive,
+          wrongWay: race.wrongWay,
           speed: race.speed,
           steer: race.steer,
         });
@@ -12493,6 +12521,22 @@ export const ComebackCityThreeKartRace = ({
           over. Only the two values whose CHANGE is an event a player needs told
           about carry a live region: lap roll-over and place change. */}
       <div className="three-kart-race__hud" data-hud-phase={hudPhase}>
+        {/* P4 — TURN AROUND. Centred over the road like Mario Kart's, because
+            that is where the eyes already are when you have just spun. aria-live
+            is "assertive": going the wrong way is exactly the class of event a
+            player must be told about immediately, and it fires rarely, so it
+            does not have the 7 Hz republish problem the note above describes. */}
+        {snapshot.wrongWay ? (
+          <div
+            aria-live="assertive"
+            className="three-kart-race__wrongway"
+            data-testid="race-wrongway"
+            role="alert"
+          >
+            <span className="three-kart-race__wrongway-arrow" aria-hidden="true">⟲</span>
+            <span className="three-kart-race__wrongway-text">TURN AROUND</span>
+          </div>
+        ) : null}
         <div className="three-kart-race__corner three-kart-race__corner--item">
           {/* A REAL ITEM SLOT, not a stat chip wearing a socket costume. The
               old markup was a badge whose icon/label the CSS had to reverse-

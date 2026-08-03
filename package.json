@@ -37,6 +37,7 @@
     "test:spline": "node scripts/test-spline-projection.mjs",
     "test:freebody": "node scripts/test-free-body.mjs",
     "test:laps": "node scripts/test-lap-counting.mjs",
+    "test:wrongway": "node scripts/test-wrong-way.mjs",
     "test:race": "node scripts/race-content-playtest.mjs",
     "test:audio:kart": "node scripts/kart-audio-smoke-test.mjs",
     "test:kart-playable": "KART_PLAYABLE_PROOF_SERVER_SCRIPT=dev:kart node scripts/kart-playable-proof-test.mjs",
