@@ -367,7 +367,16 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     // before K4) — revive them in V2 once they have shipped visuals.
     // Width 0.34 → 0.52 (owner 2026-07-17: "walk across the finish line
     // more"; a driving line still exists on the far side, rivals dodge).
-    { key: 'outplayasians-finish', progress: 0.015, direction: 1, speed: 0.16, width: 0.52, modelType: 'ordinalWalker' },
+    // Owner 2026-08-03, after playing the preview: "should be walking back n
+    // forth like something you got to avoid at the finish line but not when you
+    // start the race as well".
+    //   patrol          reflect off the shoulders instead of respawning on the
+    //                   far side, so he turns round in view and can be timed.
+    //   armAfterSeconds 12s covers the countdown and the launch off the grid —
+    //                   this crosser sits at progress 0.015, directly in front
+    //                   of a standing start. By the time the player is back
+    //                   here (a ~45s lap) he is long since walking.
+    { key: 'outplayasians-finish', progress: 0.015, direction: 1, speed: 0.16, width: 0.52, modelType: 'ordinalWalker', patrol: true, armAfterSeconds: 12 },
   ],
   // Arctic-neon palette: snow ground, icy dusk sky, ice-blue edges. Road
   // asphalt stays dark (readability rule — Sherbet Land does the same).

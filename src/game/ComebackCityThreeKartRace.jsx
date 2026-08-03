@@ -10564,8 +10564,20 @@ export const ComebackCityThreeKartRace = ({
           if (playerNudgeLane) race.lane = clamp(race.lane + playerNudgeLane, -0.95, 0.95);
           if (playerBump) {
             race.bumpCooldown = playerBump.cooldown;
-            race.lane = clamp(race.lane + playerBump.lanePush, -0.95, 0.95);
-            race.speed *= playerBump.speedScale;
+            // Owner 2026-08-03: "the ice shield also didn't seem to stop
+            // things". This was why. The shield was checked further down, so it
+            // cancelled the SPIN but never the SHOVE — a rival with your shield
+            // up still took your lane and your speed, which from the seat is
+            // indistinguishable from not having a shield at all. The shield now
+            // eats the whole contact.
+            //
+            // Still not consumed by a physical shove, per the note below: it
+            // expires on its own clock now, so it does not need spending here
+            // to stop being permanent.
+            if (!race.shieldActive) {
+              race.lane = clamp(race.lane + playerBump.lanePush, -0.95, 0.95);
+              race.speed *= playerBump.speedScale;
+            }
           }
           // A rival landed a perfect rear hit on the player. The ice shield
           // holds against a physical shove (and is NOT consumed — unlike
@@ -11402,8 +11414,14 @@ export const ComebackCityThreeKartRace = ({
       // rigs are mounted once and never touched again, so they need the band
       // assigned rather than ANDed or a single close pass would retire the
       // crosser for the rest of the race.
-      engine.crosserRigs?.forEach((rig) => {
-        rig.group.visible = lensClear(rig.group, 5);
+      engine.crosserRigs?.forEach((rig, index) => {
+        // A disarmed crosser must be INVISIBLE as well as un-hittable. The
+        // finish-line walker is disarmed for the first 12s so he is not a
+        // hazard off the grid; leaving him on screen but intangible would be
+        // worse than either state — the player learns to avoid a thing that
+        // cannot hit them, then gets hit by it on lap 2.
+        const instance = race.crossers?.instances?.[index];
+        rig.group.visible = (instance ? instance.active : true) && lensClear(rig.group, 5);
       });
       engine.projectilePool?.forEach((holder) => {
         if (holder.visible) holder.visible = lensClear(holder, 3.5);

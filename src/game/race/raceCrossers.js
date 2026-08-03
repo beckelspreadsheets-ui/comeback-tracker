@@ -66,8 +66,18 @@ export const createCrossers = (track = {}) => {
     instances: entries.map((entry, index) => {
       const key = entry.key || `crosser-${index}`
       const modelType = entry.modelType || CROSSER_DEFAULTS.modelType
+      // Owner 2026-08-03: the finish-line walker must not be a hazard as the
+      // grid launches — "not when you start the race as well". A crosser parked
+      // on the start/finish straight is directly in front of a standing start,
+      // so it is armed on a timer instead of being live from frame one. It is
+      // still live for every LATER pass of the same point, which is every lap
+      // boundary — the thing the owner actually wants to have to time.
+      const armAfterSeconds = entry.armAfterSeconds ?? 0
       return {
-        active: true,
+        active: armAfterSeconds <= 0,
+        armTimer: armAfterSeconds,
+        // Reflect off the shoulders instead of respawning on the far side.
+        patrol: Boolean(entry.patrol),
         crossedCount: 0,
         cycleTimer: 0,
         direction: Math.sign(entry.direction ?? CROSSER_DEFAULTS.direction) || 1,
@@ -95,7 +105,15 @@ export const updateCrossersForFrame = ({
   const halfWidth = 1
   const shoulder = 0.35
   crossers.instances.forEach((crosser) => {
-    if (!crosser.active) return
+    // Arming runs before the active gate, or a crosser that starts disarmed
+    // would never count down and would stay off for the whole race.
+    if (!crosser.active) {
+      if (!(crosser.armTimer > 0)) return
+      crosser.armTimer -= dt
+      if (crosser.armTimer > 0) return
+      crosser.armTimer = 0
+      crosser.active = true
+    }
     const type = CROSSER_TYPES[crosser.modelType] || CROSSER_TYPES.fishCart
     crosser.cycleTimer += dt
     const wobble = type.laneFrequency > 0
@@ -104,9 +122,28 @@ export const updateCrossersForFrame = ({
     const lateralSpeed = crosser.speed * crosser.direction * (1 + wobble * type.laneAmplitude)
     crosser.lane += lateralSpeed * dt
     const resetMargin = crosser.width * 0.5
-    if (Math.abs(crosser.lane) > halfWidth + shoulder + resetMargin) {
-      crosser.lane = -Math.sign(crosser.lane) * (halfWidth + shoulder)
-      crosser.crossedCount += 1
+    const bound = halfWidth + shoulder + resetMargin
+    if (Math.abs(crosser.lane) > bound) {
+      if (crosser.patrol) {
+        // PATROL: walk back and forth, don't teleport.
+        //
+        // Owner 2026-08-03: outplayasians "should be walking back n forth like
+        // something you got to avoid at the finish line". The original loop
+        // walked one way and respawned on the opposite shoulder, so from the
+        // seat the walker vanished and reappeared instead of turning round —
+        // which reads as a spawner, not a person you have to time.
+        //
+        // Reflect off the bound and flip direction. Position is mirrored back
+        // inside by the same amount it overshot, so the turn costs no distance
+        // and the patrol stays deterministic.
+        const overshoot = Math.abs(crosser.lane) - bound
+        crosser.lane = Math.sign(crosser.lane) * (bound - overshoot)
+        crosser.direction *= -1
+        crosser.crossedCount += 1
+      } else {
+        crosser.lane = -Math.sign(crosser.lane) * (halfWidth + shoulder)
+        crosser.crossedCount += 1
+      }
     }
   })
   return crossers
