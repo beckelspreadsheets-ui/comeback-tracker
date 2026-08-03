@@ -47,16 +47,40 @@ instead — boot with `?playableAutoplay=1&track=<key>`, reach a scene object vi
 kart-riding light's direction as `position - target.position`, never from the
 world origin.
 
+### The audio/playable gates are FIXED — and it was never load (`f2d4b026`)
+
+Both had been failing on `countdown <= 0` timeouts, blamed on machine load for
+waves. It was not load: the audio gate failed from a quiet start at load 5.3 and
+now **passes at load 12.0**.
+
+Headless chromium launched with no GL flags does not fail — it silently drives
+requestAnimationFrame at ~2 fps. The game's own work was fine there
+(`frameWorkMs` 2–4 ms); the gap BETWEEN frames was 412–1790 ms. The engine
+clamps dt per frame as every game loop must, and that clamp converts a slow
+renderer into SLOW MOTION: game time advanced ~1/24 s per frame however long the
+frame really took, so a 3-second countdown took 22 seconds and no 20-second
+deadline could cover it.
+
+```
+no GL flags   fpsEstimate 1-2    frameElapsedMs 412-1790   countdown took 22s
+these flags   fpsEstimate ~110   frameElapsedMs ~9         countdown took <2s
+                                                           raceTime tracks real time 1:1
+```
+
+The flags were never new — `aaa-visual-capture.mjs` always had them, which is
+why single-frame captures worked while anything needing SUSTAINED frames timed
+out. Three scripts had hand-rolled their own launch args and only one was right;
+they now share `scripts/lib/chromium-gl-args.mjs`.
+
 ### Still open from wave 9
 
-- **`test:audio:kart` and `test:kart-playable` are not cleared.** Both die on
-  `page.waitForFunction` timeouts. `test:audio:kart` was confirmed to fail
-  IDENTICALLY at `b9eb09e1`, so it is pre-existing, not wave 9 — but neither has
-  been seen green, and the machine never dropped below load 6.4 all session.
-  **Re-run both quiet before calling wave 9 green.**
-- **PV mean speed 248 -> 260 is INFERRED, not measured** (the ice stopped being
+- **PV mean speed 248 → 260 is INFERRED, not measured** (the ice stopped being
   a full-width tax in wave 8). Needs a real PV autoplay capture.
-- Items 5-8 below are untouched.
+- **`test:kart-proof` is red and it is not load.** `ArcadeKartProofScene` in
+  `comebackCityVisuals.jsx` has no consumer anywhere in `src/`, so the element
+  the gate waits on is never rendered. Re-mount it or retire the gate — a call,
+  not a cleanup.
+- Items 5–8 below are untouched.
 
 ---
 
@@ -71,7 +95,7 @@ world origin.
   binaries (several 50+ MB) into commit `9c8364bf`.
 - Nothing is running. Load was 5.6 at handoff.
 
-### Eight waves, measured
+### Nine waves, measured
 
 Three independent critics score every round against `docs/AAA_KART_RUBRIC.md`.
 Pass bar is 88/110 **with every axis ≥ 8**. Nothing has passed; the honest
@@ -87,21 +111,45 @@ state is "much better, still failing".
 | 6 | **arc-length/lane progress**, HUD markup, camera feel *(tier package reverted)* | — |
 | 7 | kart diet, spline kinks, JS chunk split | 85/80/82 → **93** at r2 |
 | 8 | **both 4× tracks built**, dead normal maps stripped, PV shadow split | 86/77/79 |
+| 9 | coin density, **PV cast shadows via a split key**, four stale gates fixed | not scored |
 
 **Blind A/B has picked the build over the original baseline 18/18 with zero
 ties, every wave since wave 1.**
 
 ### Current measurements
 
-```
-Comeback City  → Skyline Viaduct   11,643u · 44.78 s/lap · 134.35 s race
-Penguin Village → Bayfront Sweep    11,678u · 44.92 s/lap · 134.75 s race
-16 corners each · 0 kinks · longest straight 9.72 s / 9.67 s  (was 2.19 s)
-15 beats at a 2.99 s mean gap  (was one every 0.70 s)
+Re-measured in wave 9 by running the previewer, not copied forward:
 
-bundle 13.6/16 MiB raw · 10,948/12,000 KiB gz · ALL CHECKS PASS
+```
+Comeback City  → Skyline Viaduct   11,643.4u · 44.78 s/lap · 134.35 s race
+Penguin Village → Bayfront Sweep    11,128.7u · 42.80 s/lap · 128.41 s race
+16 corners each · 0 kinks · longest straight 9.72 s / 8.76 s  (was 2.19 s)
+15 beats at a 2.99 s / 2.85 s mean gap  (was one every 0.70 s)
+30 coin rows per track
+
+bundle 13.6/16 MiB raw · 10,948/12,000 KiB gz · all budget checks pass
 largest JS gzip 253/400 KiB  (was 425.9 and failing)
 18/18 frames · zero console errors
+```
+
+Two corrections to the wave-8 numbers this block used to carry. **Penguin
+Village is 11,128.7u, not 11,678** — the previewer's arc-length solve disagreed
+with the figure that was written down, and the tool's maths is now checked
+against closed form (below), so the tool is the one to believe. Its lap time
+moved for a second reason too: `MEAN_SPEED` for PV went 248 → 260, which is
+INFERRED and still owes a measurement.
+
+**"ALL CHECKS PASS" was never true of the test suite** — it described the bundle
+budget only. `test:race` was red from wave 4 to wave 9, and `test:audio:kart` /
+`test:kart-playable` were red until wave 9's GL-flag fix. Current honest state:
+
+```
+GREEN  build:kart · test:bundle:kart · test:race · test:track-visuals
+       test:audio:kart (9/9) · test:kart-playable
+RED    test:kart-proof — pre-existing, and NOT a load artifact:
+       ArcadeKartProofScene has no consumer anywhere in src/, so the
+       [data-visual-section="kart-proof"] element the gate waits on is
+       never rendered. Re-mount it or retire the gate.
 ```
 
 Axes still under the bar: **camera** (lowest throughout), **lighting**,
@@ -111,56 +159,76 @@ Axes still under the bar: **camera** (lowest throughout), **lighting**,
 
 ## What to do next, in order
 
-### 1. Wire the five kart bodies · S · do this first
+**Items 1-4 are DONE and struck through — the queue starts at item 5.** They are
+kept, not deleted, because each carries a correction worth reading once.
 
-The owner picked and approved these; they are dieted, turntable-verified,
-manifest-registered, and **now affordable** — wave 8's normal-map strip freed
-the room (bundle sits at 10,948/12,000 gz).
+### ~~1. Wire the five kart bodies~~ · DONE (was already done at wave 8)
 
-Files in `src/assets/game/models/karts/`: `hash-runner.glb` (314 KB),
-`cold-wallet.glb` (260), `sat-stacker.glb` (300), `pixel-pickup.glb` (251),
-`node-runner.glb` (251).
+All four edits per body were present at `b9eb09e1` — imports, `Promise.all`,
+`kartScenes`, `KART_OPTIONS`, `KART_NOSE_YAW` (`Math.PI / 2` on all five), and
+manifest entries with render proofs. Wave 9 verified rather than redid it. **If
+you are reading this as a task, it is not one.**
 
-Four edits per body in the monolith: an import, an entry in the `Promise.all`,
-an entry in `kartScenes`, a `KART_OPTIONS` row.
+### ~~2. Coin rows~~ · DONE in wave 9 (`d9ae56d4`)
 
-- **All five are Meshy lifts → nose faces local −X → `KART_NOSE_YAW: Math.PI / 2`.**
-  Measured per body in wave 7 against two independent cues each. **Do not
-  re-derive and do not guess** — the orientation lab exists because bbox
-  heuristics and eyeballing both produced wrong answers repeatedly.
-- `sat-stacker` is the tallest (0.96 vs 0.58–0.72) because of its crate stack,
-  so `KART_FIT_MAX_HEIGHT` will govern its scale rather than the footprint fit
-  — same clamp the ice block needed.
-- Top-speed spread was already widened ±2% → ±3.5% in wave 8 (the owner's
-  recorded call for when 2–3 minute tracks land). New karts should sit inside
-  that spread.
+8 → 30 rows per track. Two things the old text here got wrong, both worth
+carrying because they are general:
 
-### 2. Coin rows — currently 4× too sparse · S
+- The candidate sheets were **not** "hand-placed clear of every item-box row and
+  boost pad by ±0.02". 14 of 30 CC rows and 11 of 30 PV rows sat inside that,
+  eight and seven of them at 0.01. **Check a handoff's cheap claims.**
+- ±0.02 was the wrong UNIT anyway. It was authored on the 2,897-unit lap, where
+  it meant 58 world units — and 58 units is the real guard, the separation that
+  keeps two pickups out of the same moment. Held as a fraction on an 11.6k lap
+  it demands 233 units and blanks out over half the road. Same class as
+  `startOffset` 0.03 → 0.0075. The gate in `race-content-playtest.mjs` now
+  measures units against the tracks' own geometry.
 
-Both tracks still get **8 coin rows over a 45-second lap**, where the shipped
-density was 8 over an 11-second lap. `COIN_ROWS` in
-`src/game/race/raceCoins.js`.
+30 (not 4× of 8) is also what leaves the coin ECONOMY alone: time-to-cap on
+`COIN_FEEL.maxSpeedCoins` stays ~14 s. Multiplying by four would have capped the
+whole field inside the first quarter-lap and pinned the +4% bonus permanently
+on — flat, and larger than the entire ±3.5% top-speed spread between karts.
 
-The candidate sheets authored **30 rows each** and the lists are ready to
-paste: `tmp/track-candidates/candidate-c.mjs` and `candidate-a.mjs`, key
-`coinRows`. Placement rule in their header: rows are hand-placed clear of every
-item-box row and boost pad by ±0.02 so pickups never compete for the same
-moment.
+### ~~3. Re-baseline the previewer~~ · DONE in wave 9 (`d9ae56d4`)
 
-### 3. Re-baseline the previewer · S
+Exits 0. `GROUND_TRUTH` was **not** simply updated to the new numbers — pinning
+the current track's measurements is what made re-authoring a layout look like a
+maths failure in the first place, and setting it to the tool's own output would
+have made the check circular. It is now a **closed-form solver self-check**:
+circles of radius 100/150/250 (the band corners are authored in) against exact
+2πr and r. Worst arc-length error −0.019%, worst radius error 0.059%.
 
-`scripts/track-layout-preview.mjs` still validates against the OLD track, so it
-reports ~300% deviation and **exits 1**.
+The estimator's envelope was measured while doing it: exact to r250, then 3.8%
+at r450, 10.9% at r900, 13.9% at r1800. That tail is **not** a defect — past
+`CORNER_EXIT_RADIUS` (450) the tool has already classified the geometry as
+straight, where a radius figure means nothing.
 
-- `GROUND_TRUTH` for `comeback-city`: 2,897 / 11.15 / 33.5 → **11,643.4 / 44.78 / 134.35**
-- `MEAN_SPEED` for `penguin-village`: 248 was measured on the old ice-taxed
-  loop; the new PV has no forced ice and should be re-measured (probably near
-  CC's 260).
-- `KNOWN_CONTRAST_DEBT['penguin-village']['pond-sweep@0.240']` and the three PV
-  sightline debt entries are **dead baselines** — the debt they tracked was
-  designed out in wave 8. Delete them.
+Stale telemetry is now applicability-tested geometrically instead of used
+blindly, so both tracks honestly report "pure geometric solve, ±3% until a race
+is measured". Dead `KNOWN_CONTRAST_DEBT` / `KNOWN_SIGHT_DEBT` entries deleted
+after verifying they suppressed nothing. `CONTRAST_GROUND_TRUTH` at PV p0.33 is
+KEPT and still reproduces the measured frame.
 
-### 4. Penguin Village cast shadows — an owner decision, not a bug · M
+### ~~4. Penguin Village cast shadows~~ · DONE in wave 9 (`4ea01c28`)
+
+**Owner picked the split key.** 65% of the energy stays at 12° and carries the
+approved sunset, 35% sits at 20° and casts. Shared azimuth, so the ground
+projection is identical to six decimal places and the shadow falls on the side
+it always would have — elevation sets a shadow's *length*, not its side. Total
+diffuse conserved (3.315 + 1.785 = 5.100 = `palette.sunIntensity`). Comeback
+City authors no `shadowKey` and keeps one light, bit-identical.
+
+**The third option below cannot be built and the text is left only as a
+warning:** a "shadow-only second light that contributes no diffuse" renders
+nothing. three darkens by REMOVING the casting light's own contribution, so a
+zero-intensity caster removes zero. `raceShadowRig.js` says it outright —
+"shadow.intensity 1.0 removes ONE HUNDRED PERCENT of the key light".
+
+20° was not a guess: `contactPatchKeyStrength` already encodes
+`CONTACT_KEY_READABLE_SIN = 0.34 = sin(19.88°)`, which agrees with the wave-8
+probe sweep to a tenth of a degree, arrived at independently.
+
+<details><summary>Original wave-8 diagnosis, kept for the root-cause record</summary>
 
 Wave 8 split this into two faults after three waves of wrong diagnoses.
 
@@ -184,7 +252,13 @@ light at ~20° that contributes no diffuse, or re-author the backdrop so the
 sunset survives a higher key. Probe frames:
 `scratchpad/probe/sw-penguin-village-p0_06-elev*.png`.
 
-### 5. Rival AI over a 134-second race · M
+</details>
+
+---
+
+## THE QUEUE STARTS HERE
+
+### 5. Rival AI over a 134-second race · M · do this first
 
 `rivalRacers.js` is correctly parameterised in world units, so **nothing is
 broken** — but personalities tuned to be interesting over 34 seconds have never
@@ -251,6 +325,23 @@ room for grade that is not a set piece, and the geometry now supports it.
    `scratchpad/aaa-wave8.js`). Fixes do not propagate as knowledge otherwise —
    wave 4 reintroduced a bug wave 3 had already fixed.
 10. **Never deploy. Never switch branches.**
+11. **A browser test that waits on GAME time needs GL flags.** Headless chromium
+    with no GL args silently runs rAF at ~2 fps; the engine's dt clamp turns
+    that into ~9% speed game time, so a 3 s countdown takes 22 s. This is what
+    made `test:audio:kart` and `test:kart-playable` look load-flaky for waves.
+    Launch through `scripts/lib/chromium-gl-args.mjs` — never hand-roll args.
+12. **Pixel A/B cannot verify a render change on this harness.** A control
+    capture of IDENTICAL code differs on 4–20% of pixels (snow, boost flames,
+    rival positions), with darkening ≈ brightening. Verify by walking the live
+    scene graph: `window.__g2AmbientDebug.snow` → `.parent` up to the Scene.
+    Measure a kart-riding light's direction as `position - target.position`,
+    never from the world origin (it reads 1.99° instead of 20°).
+13. **A gate that duplicates the data it checks stops checking it.** Four were
+    found stale in wave 9, one red since wave 4. Derive from the source of
+    truth, or check the code against closed form instead of the content.
+14. **"Load-fake red" is a hypothesis, not a verdict.** Confirm it — the audio
+    gate failed from a quiet start at load 5.3 and passes at load 12.0 now that
+    the real cause is fixed. Blaming load hid a real bug for several waves.
 
 ---
 
@@ -270,7 +361,7 @@ room for grade that is not a set piece, and the geometry now supports it.
 
 Each iteration: (1) CHECK LOAD with sysctl -n vm.loadavg — if load1 > 12 do NOT launch a wave or a local capture, just reschedule; the owner runs Godot/Codex and load above ~7 fakes proof reds. (2) If a wave workflow is in flight, do nothing and reschedule. (3) When a wave finishes: read its critic verdicts, verify the build is green (npm run build:kart THEN npm run test:bundle:kart — it measures the existing dist so build first), LOOK AT THE FRAMES YOURSELF before believing any healthy report, commit honestly stating what still fails, republish the sheet with node scripts/aaa-publish-review.mjs --label <captureLabel> --wave <N> --critics <criticsJson>, record in tmp/aaa-plan/progress.json, and push. (4) Launch the next wave as a Workflow authored to a scratchpad file and launched with scriptPath (backticks inside template literals break the parser), ALWAYS including the KNOWN TRAPS section copied from scratchpad/aaa-wave8.js.
 
-WORK THE ORDER IN docs/AAA_NEXT_RUN.md: wire the five kart bodies first (small, already paid for, KART_NOSE_YAW is Math.PI/2 for all five — measured, do not guess), then coin rows (4x too sparse, lists ready in tmp/track-candidates/candidate-c.mjs and candidate-a.mjs), then re-baseline scripts/track-layout-preview.mjs (it exits 1 against the old track), then the Penguin Village shadow decision, then rival AI over a 134-second race, then post-chain and renderer tiers ONE FILE AT A TIME, then elevation.
+WORK THE ORDER IN docs/AAA_NEXT_RUN.md, STARTING AT ITEM 5 — items 1-4 are DONE (wave 9: karts were already wired, coin rows 8->30, previewer re-baselined onto a closed-form solver check, PV cast shadows solved by SPLITTING the key 12deg look + 20deg caster). So: rival AI over a 134-second race, then post-chain and renderer tiers ONE FILE AT A TIME, then elevation, then the smaller open items. Do NOT redo 1-4.
 
 STANDING RULES: never git add -A in a checkpoint; one monolith owner per wave; verify a failing package OWNS its fix's file; render-pipeline changes one at a time; verify any "module ships nothing" claim with grep; aaa-kart-overhaul-full must never be pushed. RESOLVED, do not relitigate: camera guard KEPT; Comeback City's Miami neon dusk grade is owner-confirmed; Penguin Village's arctic sunset is owner-confirmed and its 12-degree key is load-bearing.
 
