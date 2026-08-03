@@ -34,6 +34,7 @@
     "test:bundle": "node scripts/bundle-asset-budget-report.mjs",
     "test:bundle:kart": "BUNDLE_BUDGET_MODE=kart node scripts/bundle-asset-budget-report.mjs",
     "test:ci:release": "node scripts/ci-release-automation-audit.mjs",
+    "test:spline": "node scripts/test-spline-projection.mjs",
     "test:race": "node scripts/race-content-playtest.mjs",
     "test:audio:kart": "node scripts/kart-audio-smoke-test.mjs",
     "test:kart-playable": "KART_PLAYABLE_PROOF_SERVER_SCRIPT=dev:kart node scripts/kart-playable-proof-test.mjs",

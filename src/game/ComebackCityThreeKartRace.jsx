@@ -82,6 +82,7 @@ import {
   respawnCoins,
 } from './race/raceCoins.js';
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
+import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
 import {
   DRIFT_FEEL,
   createDriftState,
@@ -985,6 +986,13 @@ const makeSampler = (trackDef) => {
       const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
       const point = center.clone().addScaledVector(normal, lane * widthAt(p) * 0.44);
       return { center, normal, point, tangent };
+    },
+    // P1 of docs/FREE_BODY_PLAN.md — the inverse of pointAt, for free-body.
+    // The maths lives in race/splineProjection.js so the previewer can import
+    // the same function; duplicating geometry between these two files is what
+    // drifted for two waves last time.
+    projectToSpline(worldX, worldZ, hint = 0, window = DEFAULT_PROJECTION_WINDOW) {
+      return projectPointToSpline(curve, widthAt, worldX, worldZ, hint, window);
     },
     widthAt,
   };
