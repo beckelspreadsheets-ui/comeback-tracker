@@ -1,309 +1,350 @@
-# AAA kart overhaul — plan for the remaining work
+# AAA kart overhaul — plan for the remaining work (v3, audited)
 
-**Rewritten 2026-08-03 after wave 9.** Branch `aaa-kart-ci` @ `0e78badc`.
-Supersedes the wave-6 version of this file, whose Tier 1–3 is now all landed
-(4× tracks, spline kinks, JS chunk split, kart diet + wiring, PV shadows).
+**Rewritten 2026-08-03 after a 12-agent adversarial audit** (1.3M tokens, two
+stages: investigate-to-refute, then a second auditor attacking the first).
+Branch `aaa-kart-ci` @ `a7cd9a7b`.
 
-Ends in a **preview deploy on a new branch**, so the work can be looked at and
-shared. Production and `main` are not touched.
+**v2 of this plan would have failed on contact.** Three of its premises were
+wrong in ways that produce immediate, expensive failure. This version records
+what was verified, what was refuted, and — where a claim is still soft — says so.
 
----
-
-## The goal, and the honest distance to it
-
-Pass bar, read off `docs/AAA_KART_RUBRIC.md` itself: **every axis ≥ 8 and the
-total ≥ 88/120**, with any axis at 0–4 an automatic fail. Wave 8 scored
-**86 / 77 / 79**. Nothing has passed.
-
-**The rubric has TWELVE axes, not eleven, and the twelfth has never been
-scored.** Axis 11, *Motion & feel*, is marked "(video/telemetry only)" and the
-still-frame critic pipeline skips it — so the critics score 11 axes worth 110,
-while the 88 threshold was written against 120. `AAA_NEXT_RUN.md`'s "88/110"
-silently conflates the two, which makes the bar look ~7% harder than authored.
-Two consequences worth acting on:
-
-- The capture harness already produces `desktop-10s.webm` / `mobile-10s.webm`
-  and full autoplay telemetry, so **Motion & feel is scoreable today** — nobody
-  has asked for it.
-- Phase 5 (rival AI) and the drift/feel work land on that axis. Right now they
-  would improve something no one measures.
-
-Per-axis **minimum across the three critics**, by wave. The minimum is the
-number that matters: the bar is "every axis ≥ 8", so one critic at 6 fails the
-axis however generous the other two were. (Wave 6 is all zeros — the cyan-noise
-build.)
-
-| axis | w1 | w2 | w3 | w4 | w5 | w6 | w7 | w8 |
-|---|---|---|---|---|---|---|---|---|
-| **environment** | 5 | 6 | 6 | 6 | 7 | 0 | 7 | **5** |
-| **lighting** | 3 | 5 | 5 | 4 | 6 | 0 | 5 | **6** |
-| **materials** | 3 | 4 | 4 | 5 | 6 | 0 | 5 | **6** |
-| **post** | 4 | 6 | 5 | 6 | 7 | 0 | 6 | **6** |
-| camera | 2 | 3 | 3 | 4 | 4 | 0 | 7 | 7 |
-| vfx | 3 | 5 | 4 | 5 | 6 | 0 | 6 | 7 |
-| sky | 5 | 7 | 7 | 7 | 7 | 0 | 6 | 7 |
-| kart | 4 | 4 | 4 | 5 | 5 | 0 | 6 | 7 |
-| trackLegibility | 5 | 6 | 7 | 7 | 7 | 0 | 5 | 7 |
-| hud | 6 | 7 | 7 | 8 | 8 | 6 | 8 | 8 ✅ |
-| frameIntegrity | 2 | 3 | 4 | 4 | 5 | 0 | 4 | 8 ✅ |
-
-**Only two axes are at the bar.** Nine need at least +1, four need +2 or +3.
-
-### Correction to the standing story
-
-`AAA_NEXT_RUN.md` says the axes under the bar are "**camera** (lowest
-throughout), lighting, materials". **That is out of date, and believing it would
-have aimed this plan at the wrong axis.**
-
-Camera *was* the worst for five straight waves (2 → 3 → 3 → 4 → 4). The wave-4
-chase camera and wave-6 camera feel fixed it: it has sat at **7** for two waves
-and now needs the same +1 as six other axes.
-
-The worst axis today is **environment at 5**, and it is a **regression** — 7 at
-wave 7, 5 at wave 8. The cause is already diagnosed in the wave-8 critic notes:
-stretching the loop 4× without redistributing the dressing left "roughly half of
-Comeback City driving past a flat, untextured tan plane". The 4× rebuild bought
-the overtaking window and paid for it in environment.
-
-Order below therefore targets **environment (5) → the three 6s → the 7s**.
+Ends in a **preview deploy on a new branch**. Production and `main` untouched.
 
 ---
 
-## Phase 0 — close wave 9's loose ends · S
+## Phase −1 — preconditions. Nothing dispatches before these · S
 
-Both were blocked until the GL-flags fix made headless game time run at real
-speed, and both are now cheap.
+**1. Set the worktree base ref. This is the one that kills everything else.**
 
-1. **Measure Penguin Village's mean speed.** `MEAN_SPEED['penguin-village']` is
-   260 by *inference*, not measurement. Everything the previewer reports for PV
-   — lap, race, straight seconds, beat gaps — is scaled by it.
-2. **CI capture gets 2 of 9 marks per track.** Now explicable: under SwiftShader
-   frames are genuinely slow, the engine's dt clamp turns that into slow motion,
-   and the race ends in *game* time before the later marks come round. The fix
-   is not faster rendering — drive game time directly (seek to progress) instead
-   of waiting on it in real time.
+Claude-created worktrees default to `worktree.baseRef: "fresh"`, which branches
+from the **remote default branch**. Here that is `main` — nine waves behind, an
+obsolete 2025-era tree with a five-dependency manifest. Every dispatched agent
+would land somewhere it cannot build, and would either fail or "helpfully"
+rewrite from scratch. No settings file on this machine currently has a
+`worktree` key.
 
-**Exit:** previewer reports a measured PV lap; CI capture reaches ≥ 8/9 marks or
-the residual cause is written down.
+```json
+{ "worktree": { "baseRef": "head" } }
+```
+
+`baseRef` accepts only `"fresh"` or `"head"` — it cannot take a branch name.
+Budget **~985 MiB per agent** once this is set (~557 MiB tracked + ~428 MiB
+`node_modules`); the default's 0.45 MiB checkout is small only because it cannot
+build the project.
+
+**2. Add `.claude/worktrees/` to `.gitignore`.** It is not there today, so every
+agent worktree surfaces as untracked files in every `git status`.
+
+**3. Decide the pass bar — it is currently unanswerable.** The rubric says
+"every axis ≥ 8 **and total ≥ 88/120**" across twelve axes. Axis 11, *Motion &
+feel*, is video/telemetry-only and the still-frame critics score **eleven**. So
+the 12-axis gate has never been evaluable and **"nothing has passed" is not a
+measurement** — wave 10 could hit ≥8 on all eleven scored axes and there would
+still be no defined answer to "did it pass".
+
+Worse: the 11-axis instrument lives in an **uncommitted brief**, not in this
+repo. Editing `AAA_NEXT_RUN.md` or the rubric changes nothing about what the
+next critics actually score.
+
+Owner's call, one of:
+- **(a)** Declare the bar to be 11 axes, every axis ≥ 8, and delete `88/120`
+  from the rubric; or
+- **(b)** Stand up video/telemetry scoring for axis 11 — the harness already
+  emits `desktop-10s.webm`, `mobile-10s.webm` and full autoplay telemetry, so
+  this is wiring, not new capture.
+
+Phase 7's exit criteria are undefined until this is answered.
 
 ---
 
-## How this runs: one pass, with scoring as a checkpoint
+## Phase 0 — corrections that DELETE work · S · do these first
 
-An earlier draft gated everything behind scoring wave 9. That was over-cautious.
-The only work genuinely gated on a score is the **lighting** sub-item in Phase 3
-— if wave 9's split key already moved lighting 6 → 8, that sub-item disappears.
-Everything else is a named defect with a known cause and needs fixing whatever a
-critic says.
+Every item here either removes a later phase or fixes an instrument the later
+phases are measured by. Cheapest work in the plan.
 
-So: run it as one continuous pass. Score at Phase 1 (cheap, and it retires the
-lighting question), and again at Phase 9. Do not block Phases 2, 4–8 on either.
+**1. Fix the previewer's arc-length mirror (~3 lines).** The previewer's sampler
+does not mirror the shipped curve's arc-length resolution. Consequence: Phase 4's
+corner-announcement numbers are wrong, and **once fixed there is zero
+crest-caused announcement defect on either track**. The "hidden by crest" tight
+corners (CC C14, C16) are an artifact of a 200-division sampler. This deletes
+one of Phase 4's two named defects outright.
+
+**2. Rebuild the flatness metric before trusting it.** The 62.3% figure that
+justified the largest work item does not survive audit:
+
+- The measured band is **68% road on Comeback City** — a fixed vertical slab
+  (`x∈[35%,65%]`) cannot exclude a perspective trapezoid.
+- `σ < 2.0` is a **free parameter**: the σ distribution is unimodal with no
+  valley there, and the same frames read **45.6% or 83.4%** under equally
+  arbitrary radii.
+- The Penguin Village line in v2 **spliced two capture sets** — "52.0%" from
+  `tmp/aaa-visual/scratch` (where it is 7 of 9 marks, not 3) and "3 of 9" from
+  `wave7-r3` (where the total is 48.1%).
+- The script was never committed, yet v2 told a future agent to "re-run the
+  flatness measure".
+
+**What survives, and why it is still worth having:** within the measured band,
+CC's off-road ground reads **67–69% flat against 48–59% for the road corridor**,
+so the localisation to off-road ground holds; and the band statistic correlates
+**r = −0.71 with the critics' environment score across seven waves**. It is a
+cheap automated proxy for an expensive human gate. Rebuild it with **per-scanline
+road masking** and a threshold justified against the σ distribution, **commit it
+as a script**, and only then let a Phase 2 exit criterion depend on it.
+
+**3. Measure Penguin Village's mean speed.** `MEAN_SPEED['penguin-village']` is
+260 by inference. Every PV number the previewer reports scales by it.
+
+**4. CI capture reaches 2 of 9 marks.** Hypothesis (still unverified): under
+SwiftShader the frames are genuinely slow, the dt clamp turns that into slow
+motion, and the race ends in *game* time before later marks arrive. Fix by
+driving game time directly rather than waiting on it. **Labelled a hypothesis
+because it has not been tested.**
 
 ---
 
 ## Phase 1 — score wave 9 · S · checkpoint, not a gate
 
-Wave 9 is **unscored** and it shipped a change to a failing axis. A wave-8
-critic measured PV's contact shadow as intermittent — luma delta under the kart
-7.5% at p0.06, "no readable contact" at p0.15, against CC's 38.2% — and wave 9's
-split key exists to fix exactly that.
+Wave 9 is unscored and shipped a lighting change. Only the **lighting** sub-item
+in Phase 3 is genuinely score-gated; everything else is a named defect that needs
+fixing regardless. Do not block other phases on this.
 
-Capture 18 frames both tracks, run the three critics, blind A/B against
-`tmp/aaa-visual/baseline`, record in `tmp/aaa-plan/progress.json`, publish the
-sheet.
-
-**Why first:** it decides how much of Phase 3 is still needed. Without it the
-next three phases are guesswork.
+When reading the result: wave 8's environment regression is **carried entirely by
+one critic** (−3). A wave-10 re-score that does not reproduce it is *not*
+automatically evidence the fix worked.
 
 ---
 
-## Phase 2 — ENVIRONMENT · the 5, and the only regression · M–L
+## Phase 2 — THE MONOLITH BRANCH · single owner, serialized · L
 
-Biggest gap, known cause, so this is redistribution work rather than invention.
+The audit moved three items into this branch that v2 had outside it. All of the
+following edit `ComebackCityThreeKartRace.jsx` and **share the `attachCharacter`
+call site at `:9509-9551`**:
 
-**MEASURED 2026-08-03, and the critic understated it.** Local standard deviation
-in the off-road ground band (σ < 2.0 = untextured), across all nine capture
-marks per track:
+| item | where |
+|---|---|
+| near dressing | `:5981` `addDistrictsAndProps`, `:7011` `addPenguinVillageDressing`, + 9 monolith-local helpers |
+| **ground material** | `:4128-4415` — **not** `createTrackMesh.js` |
+| atlas recolour | `KENNEY_BODY_SWATCHES:2940`, `KENNEY_SWATCH_CONTRAST:2949`, `makeKartPaletteTexture:2951`, sites `:9538/:9600` |
+| driver seat anchor | anchor `:1105-1107`, overwritten `:3296` (authored bodies) and `:3336` (Kenney) |
 
-```
-Comeback City    62.3% flat, and 9 of 9 marks are majority-flat
-Penguin Village  52.0% flat, 3 of 9 majority-flat
-```
+**`createTrackMesh.js` is a dead tombstone.** It is not in the kart build —
+`vite.config.kart.js` has a single HTML entry and `race-playtest.html` is never
+bundled. It reaches the player through nothing. It **is** live to `test:race`
+(`race-content-playtest.mjs:4184`, `:4314`), so do not delete it.
 
-So it is not "roughly half of Comeback City" — it is **~62% of the off-road
-band at every single mark on the lap**, and Penguin Village has the same disease
-more mildly.
+### Three hazards inside this branch
 
-**The fix is the NEAR-GROUND layer, not more buildings.** This is the important
-refinement: eyeballing p0.24 and p0.67 reads as "well dressed", because the
-skyline and mid-ground buildings genuinely are. What is missing is the layer
-between the road edge and the buildings — a large, flat, untextured expanse.
-That maps onto two rubric criteria at once:
+**The contrast gate is a tripwire.** Comeback City has **zero road-vs-terrain
+margin on 7 of 7 segments** — any darkening of `palette.ground`
+(`comebackCity.js:147-165`) turns the previewer's contrast gate red and it exits
+non-zero. Penguin Village is exposed at exactly one segment,
+`glacier-shore@0.290`. Check the gate on every ground-material iteration.
 
-- Materials — "No large flat untextured expanses"
-- Environment craft — "Layered depth (near dressing → mid buildings → far
-  skyline)"
+**The atlas is a two-file system with a silent failure mode.** Recolour lives in
+the monolith; the **per-texel paint classifier** lives in
+`kartMaterials.js:112` (`PAINT_CHROMA = [0.08, 0.3]`) and reaches the shader via
+`toonRimShader.js:724/765`. Changing `KENNEY_SWATCH_CONTRAST` can push swatches
+across the 0.08 boundary and **reclassify paint as rubber** in a file this
+package does not own. `kartMaterials.js:110-113` documents exactly this trap.
+Either own both files in this branch or hold `PAINT_CHROMA` fixed and verify
+classification after every swatch change.
 
-Both are failing axes, so **one fix moves two axes**. Work the ground-plane
-material and near dressing first; only then look at anchor redistribution.
+**The atlas cap is CHEAP to fix, not expensive.** v2 said the 0.247 value-spread
+"needs a new atlas cell, not a cleverer remap". **Refuted.** Swatch1 is not one
+flat value — it carries a 14-step orange→amber gradient (G 157→114) that is
+invisible to HSL-L but present in luma. Re-keying the remap on **luma** recovers
+~0.12 raw / **~0.25 after the ×2.1 expansion at `:3036`**, with no new atlas
+cell. Do the cheap fix first.
 
-Verify at all nine marks per track, not two — and re-run the flatness measure
-rather than judging by eye, since eye and measurement disagreed here.
+### Scope and axes
 
-**Exit:** environment ≥ 8 from all three critics.
+Near-ground work is two code paths — `palette.ground` +
+the mottle/relief block at `:4218-4265`, and
+`dressingCount`/`buildDressingDensity` `:521-610` driving `:6089/:6166/:7043/:7064`
+— and it touches **three** failing axes, not two: environment (5), materials (6)
+and lighting (6). Its grounding behaviour is gated by `raceShadowRig`, not free.
+**Re-score materials after this lands** rather than assuming sufficiency.
 
----
-
-## Phase 3 — the three 6s: materials, lighting, post · M–L
-
-Each has a named cause already on record.
-
-- **Materials — rival value-spread capped at 0.247** by the shipped texture
-  atlas: half the body texels come from a cell that is one flat value. Needs a
-  **new atlas cell**, not a cleverer remap. (Filed as a "smaller open item" in
-  the old handoff. It is not small — it is a failing axis.)
-- **Materials/kart — the driver, but HALF of this is already done.** The wave-8
-  critic asked to "add the hero rim to the character material and raise/forward
-  the seat anchor". Checked: `mountDriverAvatar` already routes every driver
-  mesh through `applyHeroRim`, and **both** tracks now ship a `heroRim` — CC
-  `{power 2.4, strength 0.4, tint #4fd8ff}` (`comebackCity.js:203`), PV the
-  owner-picked V6 ice white. The rim is not missing.
-  **The comment at `ComebackCityThreeKartRace.jsx:2360` saying "Comeback City
-  has no heroRim key and ships rim-off" is STALE** and is what makes this look
-  outstanding — fix the comment.
-  What remains genuinely open is the **seat anchor geometry** (torso sitting
-  behind the seat back at this camera), and possibly rim *strength* on a
-  near-black material. Re-read against frames before touching either.
-- **Lighting —** re-read after Phase 1. If the split key moved PV, what remains
-  is CC's own shading.
-- **Post —** scored 6/7/6. Treat the *quality* complaints here; *tiering* is
-  Phase 7, deliberately separate.
-
-Already fixed, do not re-open: the fallback kart's `blackMat`/`seatMat` now
-carry `rim: true` (`tireMat` is deliberately excluded — see the comment at
-`ComebackCityThreeKartRace.jsx:1121`). Verified 2026-08-03.
+Secondary owner to be aware of: `race/tracks/trackVisualSchema.js` owns the
+`?trackVisuals=1` half of dressing. That path is dark by default
+(`trackVisualsEnabled` false at `:7451`), so it only matters if this branch is
+scoped to include the trackVisuals experiment.
 
 ---
 
-## Phase 4 — the 7s, and the pass bar · M
+## Phase 3 — camera · M · AFTER Phase 0's previewer fix
 
-Six axes need exactly +1.
+Re-check first: Phase 0 item 1 likely **deletes the crest-occlusion defect**. The
+single remaining tight corner is limited by frame edge, which elevation and
+crests do not touch. Do not start camera work until the previewer is fixed and
+the defect is re-measured — it may not exist.
 
-- **Camera — rival readability at distance.** Two independent sources land on
-  the same fix. The wave-6 plan: "the remaining camera fix is a screen-space
-  rival ghost". The wave-8 critic: "a rival 40m up the road is a flat coloured
-  lump with no silhouette read — you cannot tell which of the five bodies it
-  is." Position awareness from the chase camera is the camera axis's remaining
-  debt. Each body needs a distinct roof/wing silhouette and one high-contrast
-  accent that survives at distance — which overlaps the atlas work in Phase 3,
-  so sequence them together.
-- **Camera — corner announcement.** Previewer measures worst 1.3 s (CC) / 1.8 s
-  (PV) against a 0.8 s gate but a **1.5 s authoring bar**; CC's C14 (1.3 s) and
-  C16 (1.45 s) are both under it and flagged `tight`.
-- **VFX — near-plane snow.** Storm-snow quads scale to 40–60 px at the near
-  plane and composite as opaque grey-white spheres sitting still while
-  everything beside them is motion-blurred — they read as floating balls.
-  The critic asked for "a near-distance size clamp plus an alpha fade", but an
-  **alpha near-fade already exists** — `raceParticles.js:2196`,
-  `nearFade = clamp01((depth - SNOW_NEAR_FADE) / (SNOW_NEAR_FADE * 1.4))`,
-  applied squared. So this is **tune the existing fade and add the SIZE clamp**,
-  not add a fade. Check `SNOW_NEAR_FADE`'s value against the depth these quads
-  actually reach.
+Camera is a **genuine two-file split**, not monolith-dominant and not
+`chaseCameraFeel.js`-only:
 
-**Exit: every axis ≥ 8. This is the pass bar.**
+- The monolith owns the rig and the seed values — 6 real symbol sites
+  (`:424`, `:9376`, `:11591-11593`, `:11600`), handing `advanceChaseFeel` 17
+  named inputs including `boomBase`, `eyeBase`, `fovBase`, `lookUpBase`.
+- `chaseCameraFeel.js` (1052 lines, camera-only) owns the **dynamics** —
+  `CHASE_FEEL_DEFAULTS:105`, `advanceChaseFeel:650`, `solveFramingCorrection:957`.
+
+The surviving camera item is **rival readability at distance** ("a rival 40m up
+the road is a flat coloured lump"), which shares a root with the atlas work in
+Phase 2 — sequence them together.
+
+---
+
+## Phase 4 — elevation · M · and the coupling that reverses the order
+
+**MISSING COUPLING, found by the audit: elevation mechanically DELETES the near
+dressing Phase 2 adds.** The `onElevatedSpan` guard (defined `:625`) skips
+near-dressing at **8 call sites** — `:2494`, `:2742`, `:2756`, `:6089`, `:6166`,
+`:7023`, `:7043`, `:7064` — and today it blanks **8.0% of Comeback City's lap**
+(band 0.785–0.865) and **4.7% of Penguin Village's** (0.1665–0.2136). A Phase 4
+that adds relief across the lap, with that guard unchanged, deletes the dressing
+Phase 2 just paid for.
+
+(A ninth near-dressing run, the iceberg ring at `:7219+`, is deliberately exempt
+because it forces its own `y` — the comment at `:7223` says so. Verified: a raw
+`grep -c` returns 11, which is the definition plus two comments plus the eight
+real sites. Counting textual hits instead of call sites is how this kind of
+number goes wrong.)
+
+So the two are not independent and the naive order is wrong. Either:
+- change the guard so elevated spans carry their own near dressing, **then** add
+  relief; or
+- author the relief only outside the dressed bands and accept less grade.
+
+Resolve this **before** either phase, not between them.
 
 ---
 
 ## Phase 5 — rival AI over a 134-second race · M
 
-`rivalRacers.js` is correctly parameterised in world units, so **nothing is
-broken**. But personalities tuned to be interesting over 34 seconds have never
-been checked over 134, and pacing a field across three 45-second laps is a
-different design problem. A design pass, not a bug fix.
+`rivalRacers.js`, 7 monolith call sites. Nothing is broken — personalities tuned
+over 34 seconds have never been checked over 134. A design pass.
 
-Now measurable rather than eyeballed: autoplay telemetry runs at real speed, so
-judge on lead changes and gap-over-time across the full race, not finish order.
-
----
-
-## Phase 6 — elevation · M
-
-Both tracks author elevation as a **single sin bump**, so the viaduct is the only
-relief on an 11.6k lap and the rest is dead flat.
-
-Deliberately **after** the axis work and **before** the renderer tiers:
-elevation changes sightlines and crest occlusion, so it must settle before
-anything downstream is locked, and the previewer measures gradient and corner
-announcement cheaply.
+Now measurable rather than eyeballed: autoplay telemetry runs at real speed since
+the GL-flag fix, so judge on lead changes and gap-over-time across the full race.
+**This lands on axis 11, which is currently unscored** — see Phase −1 item 3.
 
 ---
 
-## Phase 7 — post-chain and renderer tiers · M · ONE FILE AT A TIME
+## Phase 6 — post-chain and renderer tiers · M · ONE CHANGE AT A TIME
 
-Last of the big work, for two reasons: **the combined tier package is what
-destroyed the render in wave 6**, and tiering should measure a scene that has
-stopped changing.
+The wave-6 revert is the precedent and it was **four files**, so the discipline
+must name all of them — including **`vite.config.kart.js`**, which v2 left
+outside the fence. The bundle coupling is documented history, not a forecast:
+reverting the chunk split immediately broke the largest-JS-gzip check by 26 KiB.
 
-- One file per change, each verified by its own capture. No exceptions.
-- `RACE_RENDER_SCALE` is hardcoded 0.85 desktop / 0.6 mobile — a fixed cut means
-  the game never renders at native resolution even on hardware that could.
-- Tiers must preserve the art direction: the LUT and vignette carry the look and
-  should survive; SMAA and the heavier effects are the drop candidates.
-- The phone build has not been re-measured since shadow maps, the three-pass
-  post chain, the mid-ground belt and the environment probe all landed.
+**Expect a false red.** `RACE_RENDER_SCALE` is imported by
+`scripts/race-content-playtest.mjs`, so changing it will turn `test:race` red as
+a **fixture mismatch, not a regression**. Update the fixture in the same change.
 
----
-
-## Phase 8 — remaining small items · S
-
-- **On-demand kart pool, runtime half** — designed in wave 7's notes, not built.
-- **Legacy 2D minimap** (`raceTracks.js` ~128): hardcoded +512/+384 offset
-  assuming a ~350-unit loop, now fed 449 points spanning ±1716. Only affects
-  `RacePlaytestHarness`, a dev tool excluded from the build, and the kart HUD's
-  minimap auto-normalises — **nothing shipped is wrong.** Fix or delete.
+`RACE_RENDER_SCALE` is 0.85 desktop / 0.6 mobile. The 0.6 branch is unreachable
+**on phones** (`touchControls === false` skips the soft lock at `:9230-9234`) but
+is reachable on any non-touch surface taller than 0.74 aspect — a narrow desktop
+window, docked devtools, a portrait headless capture. **Do not delete it as
+dead**, and do not assume phones are already on a cheap path.
 
 ---
 
-## Phase 9 — verify, then preview deploy · S
+## Phase 7 — remaining items · S
+
+- **On-demand kart pool, runtime half** — real, but justify it on **first-load
+  time and VRAM**. The bundle-budget rationale is foreclosed by the manifest in
+  five separate places.
+- ~~Legacy 2D minimap~~ — **dropped. Not a defect.** `raceTracks.js:128` affects
+  only a dev harness excluded from the build, and the kart HUD's minimap
+  auto-normalises. Effort priced against it is wasted.
+- ~~Driver hero rim~~ — **dropped, already shipped.** Both tracks carry a
+  `heroRim`; the comment at `:2360` claiming CC ships rim-off is stale. Fix the
+  comment. Only the seat anchor is real (Phase 2).
+- ~~Fallback kart `rim: true`~~ — **dropped, already fixed.** Do not re-open from
+  `docs/AAA_RESTART_PROMPT.md:20`; that note is stale and additionally mis-lists
+  `tireMat`, which is excluded on purpose.
+- **Near-plane snow — re-scoped.** Tuning `SNOW_NEAR_FADE` is a **no-op** on the
+  reported artifact: the blobs are the monolith's **ambient Points cloud**, not
+  the streak system in `raceParticles.js`. Severity is also lower than the critic
+  implied — ~1.8 flakes within the ≥44 px band at any instant, so one or two
+  conspicuous blobs, not a field.
+
+---
+
+## Phase 8 — verify, then preview deploy · S
 
 1. Full battery at load < 5: `build:kart`, `test:bundle:kart`, `test:race`,
    `test:track-visuals`, `test:audio:kart`, `test:kart-playable`, the previewer,
-   and `test:core`.
-2. Final 18-frame capture, three critics, blind A/B against baseline.
-3. **Preview deploy on a NEW branch:**
+   `test:core`.
+2. Final capture, critics, blind A/B against baseline. **Exit criteria depend on
+   Phase −1 item 3 being answered.**
+3. Preview deploy:
 
 ```
-npx wrangler pages deploy dist-kart \
-  --project-name=comeback-city-kart \
-  --branch=aaa-preview
+npm run deploy:kart:preview      # --branch=aaa-preview
 ```
 
-- Account is **Showcasedesigns.co@gmail.com** (`9f01a1b3…`) — verified, and the
-  only account this token can reach. Never Abel's.
-- **Do NOT use `npm run deploy:kart`.** It hardcodes `--branch=main`, which is
-  *production* for this Pages project. The preview gets its own npm script so
-  production is never one flag away.
-- Verify the deployed origin serves the new build — byte-check the GLBs, probe a
-  race — rather than trusting the deploy output.
+- Account **Showcasedesigns.co@gmail.com** (`9f01a1b3…`), verified, the only
+  account this token reaches. Never Abel's.
+- **Never `npm run deploy:kart`** — it targets `--branch=main`, which is
+  production for this Pages project.
+- Verify the deployed origin serves the new build rather than trusting the
+  deploy output.
 
-**Deliberately out of scope:** production deploy and `main` (owner's call, never
-given), and the **ordinal roster** — pipeline proven on 3 of ~100, the rest is
-blocked on the owner's art, not on engineering.
+**Out of scope:** production deploy and `main` (owner's call, never given), and
+the ordinal roster (blocked on the owner's art, not on engineering).
 
 ---
 
+## Parallelism: an honest reckoning
+
+The manager-of-branches model needs work that can actually be split. **This
+codebase mostly cannot be, yet.** After audit, the genuinely
+independent-of-the-monolith work is:
+
+- `scripts/track-layout-preview.mjs` — previewer sampler + flatness metric
+- `scripts/race-content-playtest.mjs` — the `RACE_RENDER_SCALE` fixture
+- `rivalRacers.js` internals, if the design pass avoids its 7 call sites
+
+Everything else — dressing, ground, atlas, seat anchor, camera seeds, the
+elevation guard — lands in one 12.6k-line file, and the project's own rule
+(*one monolith owner per verified capture*) exists because ignoring it already
+cost Penguin Village three waves.
+
+So: **run Phase 0 and Phase 5 as parallel branches; run Phase 2 as a single
+serialized owner.** Widening beyond that means decomposing the monolith first,
+which is its own project and is not in this plan.
+
+---
+
+## Corrections ledger — what v2 got wrong
+
+Kept so the next reader can calibrate how much to trust an inherited plan.
+
+| v2 claim | verdict |
+|---|---|
+| P2 ground material is self-contained in `createTrackMesh.js`, 0 monolith refs | **wrong** — that file is a dead tombstone; shipped ground is monolith `:4128-4415` |
+| "camera + ground material" is a safe parallel first-test pair | **wrong** — ground is monolith, so the pair collides with dressing |
+| Only 3 of 9 items own monolith work | **wrong** — 4+, and the count came from a circular check |
+| CC 62.3% flat off-road band | **band is 68% road**; threshold arbitrary; direction survives, number does not |
+| PV "52.0% flat, 3 of 9 marks" | **spliced two capture sets** |
+| Atlas cap "needs a new atlas cell, not a remap" | **refuted** — luma re-key recovers ~0.25, no new cell |
+| Snow: tune the existing `nearFade` | **no-op** — wrong particle system entirely |
+| Legacy minimap is an open item | **not a defect** |
+| Camera "needs the same +1 as six other axes" | **four** other axes sit at min 7 |
+| `AAA_NEXT_RUN.md` introduced the 88/110 conflation | **upstream** — it faithfully reports an uncommitted brief's scale |
+| Elevation and dressing are independent | **wrong** — `onElevatedSpan` deletes dressing on 8 sites |
+
 ## Rules this plan leans on
 
-1. **Read the frames.** A green build with zero console errors and 18/18 frames
-   rendered cyan noise in wave 6. Only looking caught it.
-2. **Render-pipeline changes one at a time**, each verified alone.
-3. **A gate that duplicates the data it checks stops checking it** — four found
-   stale in wave 9, one red since wave 4.
-4. **Pixel A/B cannot verify a render change here** — a control capture of
-   identical code differs on 4–20% of pixels. Walk the live scene graph.
-5. **"Load-fake red" is a hypothesis, not a verdict.** Blaming load hid a real
-   bug for several waves.
-6. **Verify a claim before carrying it forward.** This rewrite dropped two
-   inherited items that were already fixed, and corrected the axis the whole
-   plan was going to aim at.
+1. **Read the frames.** Wave 6: green build, zero console errors, 18/18 frames,
+   cyan noise. Only looking caught it.
+2. **A check that could not have failed is not a check.** Two audit rounds and
+   the v2 plan all shipped verdicts resting on greps that were guaranteed to
+   return what they returned.
+3. **Render-pipeline changes one at a time**, and name every file in the fence.
+4. **A gate that duplicates the data it checks stops checking it.**
+5. **"Load-fake red" is a hypothesis, not a verdict.**
+6. **Verify a claim before carrying it forward** — this rewrite dropped four
+   items that were already fixed or never real.
 7. **Never `git add -A`.** Stage owned paths explicitly.
