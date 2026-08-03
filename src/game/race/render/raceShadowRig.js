@@ -601,7 +601,7 @@ export const createRaceShadowRig = ({ renderer, sun, mobile = false, enabled = t
  * want the big soft blob that is their only grounding cue. Same on the
  * ?trackVisuals=1 branch, where nothing casts at all.
  */
-const contactPatchBaseProfile = (shadowsEnabled, contactGrounding) =>
+export const contactPatchProfile = (shadowsEnabled, contactGrounding) =>
   shadowsEnabled
     ? // ROUND 3 — `opacity` here is no longer an alpha, it is a DARKENING
       // FRACTION, and that is the whole fix for the four marks that measured
@@ -615,9 +615,7 @@ const contactPatchBaseProfile = (shadowsEnabled, contactGrounding) =>
       // That also makes the floor UNCONDITIONAL: a kart standing on the start
       // grid, with no boost, no speed and its cast shadow outside the ortho
       // frustum, still darkens its own footprint by 46%. Grounding at rest was
-      // the easiest case in the game and the one that kept failing — though see
-      // the round-3 block below for the half of that claim which was never true
-      // in pixels, only in the blend maths.
+      // the easiest case in the game and the one that kept failing.
       //
       // The numbers are chosen against the TONE MAP, not against the frame
       // buffer: the decal multiplies a linear-ish HDR target that ACES then
@@ -627,69 +625,6 @@ const contactPatchBaseProfile = (shadowsEnabled, contactGrounding) =>
       // sank round 2's first attempt.
       { width: 8.4, length: 12.6, opacity: contactGrounding ? 0.62 : 0.58, glowScale: 1.1 }
     : { width: 12, length: 21, opacity: contactGrounding ? 0.62 : 0.56, glowScale: 1.05 };
-
-//
-// AAA WAVE 7 ROUND 3 — A FOOTPRINT-SIZED PATCH UNDER A FOOTPRINT-SIZED BODY IS
-// INVISIBLE FROM A CHASE CAMERA. THAT IS WHY PENGUIN VILLAGE MEASURED ZERO.
-//
-// Three critics independently probed the road strip under a Penguin Village
-// kart against open road at the same image row and got 49.0 vs 49.2, 52-55 vs
-// 53-55, 57 vs 51 — i.e. nothing, or the wrong sign — while the identical probe
-// on Comeback City reads 42.9 vs 51.8. The natural conclusion ("the decal is not
-// being drawn on PV") is wrong: the mesh is in the graph, the blend survives,
-// and the same code path is what produces CC's number. What differs is that on
-// CC the pixels being measured are the CAST shadow, thrown 18 units at 21
-// degrees and landing beside the kart where the lens can see it; on PV the cast
-// shadow is 33 units long, thrown side-on, and gone off the edge of the frame.
-// PV therefore measures the tier-2 patch alone — and the tier-2 patch is sized
-// to `width 8.4 x length 12.6`, which IS the kart's own footprint. The chase
-// camera sits ~24 units behind and ~3.4 up, so the bodywork covers essentially
-// every ground pixel its own footprint occupies. A patch that never reaches
-// outside the silhouette that casts it cannot darken a pixel anybody can see,
-// on either track — CC just never had to notice.
-//
-// So the shadows-on patch grows a SKIRT: a rim of darkening that lands on road
-// the kart is not standing on. It is keyed on `keyStrength` — the same
-// per-track "how much of the grounding job can this sun actually do" signal the
-// opacity and the wipe cap already ride (contactPatchKeyStrength in the
-// monolith) — for two reasons. It keeps Comeback City, whose grade the owner
-// has confirmed, BIT-IDENTICAL: keyStrength is exactly 1 there, so both
-// multipliers are exactly 1. And it is the honest cause: the skirt exists to
-// stand in for a cast shadow the lens cannot see, so it should be sized by how
-// badly the sun is failing, not by taste.
-//
-// Sized against the read, not by feel. At keyStrength 1.2205 (Penguin Village)
-// the patch becomes 12.2 x 15.7 before the sqrt spread the caller applies,
-// i.e. ~13.5 x 17.4 in world units under a body ~7 across. The outer edge of a
-// rear tyre then sits at 0.52 of the patch's half-width, where the shipped
-// gradient still carries 0.68 alpha — roughly a 58% darkening at the tyre line,
-// falling to ~25% a unit outside it and to nothing by the rim. That is a soft
-// rim of contact OUTSIDE the silhouette, which is the thing every PV frame was
-// missing, and it is comfortably past the "at least 12% darker than open road
-// straddling the outer tyre edge" bar the rubric critic set.
-const CONTACT_SKIRT_WIDTH = 0.7;
-const CONTACT_SKIRT_LENGTH = 0.38;
-// contactPatchKeyStrength's own range is 1 -> 1.34, so this normalises the
-// track's key deficit back to 0..1 without importing the monolith's constants.
-const CONTACT_KEY_STRENGTH_SPAN = 0.34;
-export const contactPatchProfile = (shadowsEnabled, contactGrounding, keyStrength = 1) => {
-  // Exactly 0 on any track whose sun can put a readable shadow on the road, so
-  // the skirt is a no-op there by construction rather than by tuning.
-  const keyDeficit = clamp(((keyStrength || 1) - 1) / CONTACT_KEY_STRENGTH_SPAN, 0, 1);
-  const profile = contactPatchBaseProfile(shadowsEnabled, contactGrounding);
-  if (!shadowsEnabled || keyDeficit <= 0) return profile;
-  return {
-    ...profile,
-    // Width carries most of the skirt and length much less, because the chase
-    // camera's occlusion is not symmetric: the ground BESIDE a kart is fully
-    // visible from behind, the ground in FRONT of it is behind the bodywork at
-    // this depression angle, and only the strip aft of the rear axle reads.
-    // Spending the growth where the pixels are is what keeps this from being a
-    // bigger stamp rather than a better cue.
-    length: profile.length * (1 + keyDeficit * CONTACT_SKIRT_LENGTH),
-    width: profile.width * (1 + keyDeficit * CONTACT_SKIRT_WIDTH),
-  };
-};
 
 /**
  * Tier-2 boost for the frames where tier 1 cannot be seen.
@@ -714,13 +649,11 @@ export const contactPatchProfile = (shadowsEnabled, contactGrounding, keyStrengt
  * throws 32.9 units against 18.2 at Comeback City's 21, so the same silhouette
  * is smeared over five kart-lengths of road and, thrown side-on, its far two
  * thirds leave the frame laterally. Whatever replaces this term has to be keyed
- * on that, not on azimuth alone.
- *
- * ROUND 3 DOES THAT. The azimuth branch is kept unchanged — it is correct for
- * the case it describes — and the length/lateral branch the correction above
- * asked for is added beside it, as a MAX rather than a sum (the two describe the
- * same one fact, "the cast shadow is not doing its job this frame", and adding
- * them would double-count a frame that is both).
+ * on that, not on azimuth alone. It is left in place because it is correct for
+ * the case it does describe and because the wave-7 package could not run a
+ * capture to verify a replacement; see the monolith's CONTACT_WIPE_CAP block for
+ * the half of the fault that was fixed (this whole term was being clamped away
+ * on Penguin Village before it could do anything at all).
  *
  * `awayDot` is the dot product of the direction the shadow is thrown (the
  * ground projection of -sunDirection, normalised) with the camera's forward
@@ -728,72 +661,20 @@ export const contactPatchProfile = (shadowsEnabled, contactGrounding, keyStrengt
  * away from the lens and is entirely behind its own caster; -1 = it runs
  * straight at the lens and is the most visible it can ever be.
  *
- * `sunElevationSin` is sunDirection.y for the unit vector the caller already
- * holds — no trig at the call site. The ribbon a caster of height h throws is
- * h / tan(elevation), and tan follows from sin with one square root.
- *
  * Growing the patch back toward the old 12x21 blob EXACTLY when the cast shadow
  * is hidden is the case the tier-2 header comment says this tier exists for.
  * The two cues never both run hot, so nothing double-darkens.
  */
-// Nominal caster height, in world units. The kart silhouette from behind is ~7
-// across and ~7 tall with the driver (CHASE_SUBJECT_* in the monolith agree);
-// this is only ever used to turn an elevation into a ribbon length, so what
-// matters is that it is the same 7 both tracks were measured with.
-const CONTACT_CASTER_HEIGHT = 7;
-// Where a side-on ribbon stops being a mass beside the wheels and starts being
-// a smear. Comeback City throws 18.2 units at 21 degrees and its shadows were
-// scored as correct by every critic, so READABLE sits just above it; Penguin
-// Village throws 32.9 at 12 and reads as nothing, so LOST sits just above that.
-// The consequence worth stating plainly: on Comeback City this whole branch
-// evaluates to exactly 0, so its owner-confirmed grade is bit-identical.
-const CONTACT_RIBBON_READABLE = 20;
-const CONTACT_RIBBON_LOST = 34;
-export const contactPatchShadowBoost = (
-  awayDot,
-  sunElevationSin = 1,
-  out = { opacity: 1, scale: 1 }
-) => {
+export const contactPatchShadowBoost = (awayDot, out = { opacity: 1, scale: 1 }) => {
   // Smoothstep rather than a linear ramp: the transition happens as the camera
   // yaws through a corner, and a linear term makes the patch visibly breathe
   // through the middle of the turn.
   const t = clamp((awayDot - 0.05) / 0.75, 0, 1);
-  const away = t * t * (3 - 2 * t);
-  // BRANCH B — the ribbon is in shot, it is just not USEFUL.
-  //
-  // A long shadow thrown side-on puts its far two thirds off the frame and
-  // leaves in shot only the strip immediately beside the wheels, which the
-  // bodywork covers at the chase camera's depression angle. penguin-village-
-  // p0_56 is the frame that proves it: the ribbon measures 32% darker than open
-  // road, and it begins ~250px to the LEFT of the kart and never reaches the
-  // tyres. Length alone is not enough (a long ribbon aimed at the lens is the
-  // most readable shadow in the game — pv-p0_33, awayDot -0.995, ships a large
-  // clean one) and lateralness alone is not enough (CC is side-on for most of
-  // its lap and reads fine at 18 units). The failure is the PRODUCT.
-  const sinE = clamp(Math.abs(sunElevationSin) || 1, 1e-3, 1);
-  const cosE = Math.sqrt(Math.max(0, 1 - sinE * sinE));
-  const ribbon = (CONTACT_CASTER_HEIGHT * cosE) / sinE;
-  const smearT = clamp(
-    (ribbon - CONTACT_RIBBON_READABLE) / (CONTACT_RIBBON_LOST - CONTACT_RIBBON_READABLE),
-    0,
-    1
-  );
-  // |sin| of the throw angle away from the view axis: 0 when the ribbon runs
-  // along the lens (either straight at it or straight behind the kart, where
-  // branch A already owns the answer), 1 when it is thrown fully side-on.
-  const lateral = Math.sqrt(Math.max(0, 1 - awayDot * awayDot));
-  const sideOn = lateral * (smearT * smearT * (3 - 2 * smearT));
-  const hidden = Math.max(away, sideOn);
+  const hidden = t * t * (3 - 2 * t);
   // Written into a caller-owned record. This runs once a frame for the whole
   // race; returning a fresh object would be ~4KB/s of garbage for two numbers.
   out.opacity = 1 + hidden * 0.55;
-  // SCALE stays on the azimuth branch alone, deliberately. Branch B's answer is
-  // already carried by contactPatchProfile's skirt, which is authored, static,
-  // sized against the silhouette it has to escape, and does not stack with the
-  // air spread — growing the patch a second time here would put a 19-unit
-  // ellipse under a 7-unit kart and re-file the "oversized detached blob" note
-  // wave 7 round 2 spent a fix removing.
-  out.scale = 1 + away * 0.45;
+  out.scale = 1 + hidden * 0.45;
   return out;
 };
 
