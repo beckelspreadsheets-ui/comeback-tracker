@@ -84,6 +84,7 @@ import {
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
 import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
+import { createMinimap, minimapPointAt } from './race/raceMinimap.js';
 import {
   DRIFT_FEEL,
   createDriftState,
@@ -7946,6 +7947,13 @@ const createScene = ({
   }
 
   const sampler = makeSampler(trackDef);
+  // Course map outline, built ONCE from the same sampler the kart drives on, so
+  // the drawn track and the driven track cannot drift apart.
+  const minimap = createMinimap((p) => {
+    const pt = sampler.pointAt(p, 0);
+    return { x: pt.point.x, z: pt.point.z };
+  });
+
   const trackVisuals = resolveTrackVisuals(trackDef, { enabled: trackVisualsEnabled });
   const trackVisualPropCount = addTrack(world, sampler, trackDef, trackVisuals);
   // Mid-ground belt (wave-2 sibling package). Both tracks run two depth layers
@@ -8844,6 +8852,8 @@ const createScene = ({
     propCount,
     // Owns the PMREM cubeUV target — the one thing in the scene that the
     // teardown traversal below cannot reach, because it is not a scene child.
+    // Static course-map outline for the HUD. Built once from the sampler above.
+    minimap,
     raceEnvironment,
     renderer,
     rimLight,
@@ -12480,6 +12490,12 @@ export const ComebackCityThreeKartRace = ({
           raceTime: race.raceTime,
           shieldActive: race.shieldActive,
           wrongWay: race.wrongWay,
+          // Course map: the static outline plus where everyone is on it. The
+          // outline is the same object every frame — React sees a stable
+          // reference and does not rebuild the 180-point path.
+          minimap: engine.minimap,
+          minimapPlayer: minimapPointAt(engine.minimap, race.progress),
+          minimapRivals: race.rivals.map((rival) => minimapPointAt(engine.minimap, rival.progress)),
           speed: race.speed,
           steer: race.steer,
         });
@@ -12690,6 +12706,40 @@ export const ComebackCityThreeKartRace = ({
           >
             <span className="three-kart-race__wrongway-arrow" aria-hidden="true">⟲</span>
             <span className="three-kart-race__wrongway-text">TURN AROUND</span>
+          </div>
+        ) : null}
+        {/* COURSE MAP. The shipped kart game has never had one — all three
+            wave-9 critics reported it and the import graph confirmed it: the
+            auto-normalising minimap lives in raceHud.jsx, which only the fitness
+            app's ArcadeRace3D renders. It matters more since free-body landed,
+            because the player can now leave the road and turn around.
+
+            Static outline + one marker per racer. The path never changes, so it
+            is drawn from a stable object reference and React leaves it alone. */}
+        {snapshot.minimap ? (
+          <div className="three-kart-race__coursemap" data-testid="race-coursemap">
+            <svg viewBox={snapshot.minimap.viewBox} aria-hidden="true">
+              <path className="three-kart-race__coursemap-road" d={snapshot.minimap.path} />
+              {(snapshot.minimapRivals || []).map((dot, index) =>
+                dot ? (
+                  <circle
+                    className="three-kart-race__coursemap-rival"
+                    cx={dot.x}
+                    cy={dot.y}
+                    key={`rival-${index}`}
+                    r="3"
+                  />
+                ) : null
+              )}
+              {snapshot.minimapPlayer ? (
+                <circle
+                  className="three-kart-race__coursemap-player"
+                  cx={snapshot.minimapPlayer.x}
+                  cy={snapshot.minimapPlayer.y}
+                  r="4.4"
+                />
+              ) : null}
+            </svg>
           </div>
         ) : null}
         <div className="three-kart-race__corner three-kart-race__corner--item">

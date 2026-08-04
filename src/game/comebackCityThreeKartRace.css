@@ -87,6 +87,57 @@
   z-index: 4;
 }
 
+/* COURSE MAP. Bottom-centre: clear of all four corner groups, and the one
+   place a player's eyes already pass on the way back to the road. Sized in vmin
+   so it holds its proportion between a desktop window and a phone in landscape.
+
+   pointer-events stay off — it is information, not a control. */
+.three-kart-race__coursemap {
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  height: 15vmin;
+  left: 50%;
+  max-height: 132px;
+  max-width: 132px;
+  min-height: 78px;
+  min-width: 78px;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 15vmin;
+}
+
+.three-kart-race__coursemap svg {
+  height: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
+.three-kart-race__coursemap-road {
+  fill: rgba(10, 16, 28, 0.44);
+  stroke: rgba(190, 226, 255, 0.72);
+  stroke-linejoin: round;
+  stroke-width: 3.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.three-kart-race__coursemap-rival {
+  fill: rgba(226, 238, 255, 0.78);
+}
+
+/* The player reads first: warmer, larger, and outlined so it stays legible
+   where the marker crosses the track outline. */
+.three-kart-race__coursemap-player {
+  fill: #ffd34f;
+  stroke: rgba(12, 16, 26, 0.85);
+  stroke-width: 1.6;
+}
+
+@media (max-width: 820px) {
+  .three-kart-race__coursemap {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* P4 — TURN AROUND. Centred horizontally and sat above the middle of the
    screen: over the road, under the horizon, clear of all four corner groups so
    it can never collide with a chip. Not in a corner group on purpose — it is an
