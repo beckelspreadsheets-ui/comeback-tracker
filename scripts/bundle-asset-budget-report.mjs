@@ -22,6 +22,7 @@ const artifactDir =
 // a breach here means the split leaked, not that the app "grew". Supersedes
 // the 2026-07-02 A4 combined-build baseline (15 MiB / 8500).
 const fitnessThresholdDefaults = {
+  audioTotalMiB: 0.25,
   imageTotalMiB: 0.25,
   javascriptTotalGzipKiB: 450,
   javascriptTotalMiB: 1.6,
@@ -44,17 +45,39 @@ const fitnessThresholdDefaults = {
 // after being told the raise was the one thing blocking them): 13->16 MiB /
 // 9800->12000 KiB gz. This closes the long-pending ack above. JS caps stay
 // tight and unchanged — JS blocks first paint; GLB totals are CDN/disk only.
+// TOTALS RAISED AGAIN 2026-08-04, owner ack: "why can we not raise the budget it
+// still seems to run great so I dont see a problem" — for the soundtrack.
+// 16->22 MiB / 12000->17000 KiB gz, and audio gets its OWN cap rather than
+// quietly spending the shared total.
+//
+// He is right, and the reason is worth writing down because "it runs great" and
+// "the budget is fine" are two different claims that happen to agree here:
+// bundle size does not touch frame rate once the game is loaded. What these
+// totals protect is TIME-TO-PLAYABLE on a phone on cellular.
+//
+// And audio does not even cost that. vite.config.kart.js globs
+// **/*.{js,css,html,svg,png,ico,woff2,webp} for the service worker — no audio
+// extensions — so music streams on demand and is never in the precache or the
+// first-paint path. It is the same class as the GLBs: CDN/disk footprint, not
+// startup cost. Counting it against the same ceiling as JS was measuring the
+// wrong thing.
+//
+// So audioTotalMiB is separate, and the JS caps stay exactly where they are.
+// JS blocks first paint; a soundtrack cannot be allowed to buy headroom that
+// then gets spent on script.
 const kartThresholdDefaults = {
+  audioTotalMiB: 6.0,
   imageTotalMiB: 2.5,
   javascriptTotalGzipKiB: 500,
   javascriptTotalMiB: 2.0,
   largestFileMiB: 3.0,
   largestJavaScriptGzipKiB: 400,
-  totalGzipKiB: 12000,
-  totalMiB: 16.0,
+  totalGzipKiB: 17000,
+  totalMiB: 22.0,
 };
 const thresholdDefaults = budgetMode === 'kart' ? kartThresholdDefaults : fitnessThresholdDefaults;
 const budgetThresholds = {
+  audioTotalMiB: Number(process.env.BUNDLE_BUDGET_AUDIO_TOTAL_MIB || thresholdDefaults.audioTotalMiB),
   imageTotalMiB: Number(process.env.BUNDLE_BUDGET_IMAGE_TOTAL_MIB || thresholdDefaults.imageTotalMiB),
   javascriptTotalGzipKiB: Number(process.env.BUNDLE_BUDGET_JS_GZIP_KIB || thresholdDefaults.javascriptTotalGzipKiB),
   javascriptTotalMiB: Number(process.env.BUNDLE_BUDGET_JS_TOTAL_MIB || thresholdDefaults.javascriptTotalMiB),
@@ -213,6 +236,12 @@ const run = async () => {
       unit: 'MiB',
     },
     {
+      actual: categorySummary.audio?.sizeMiB || 0,
+      label: 'total audio size',
+      limit: budgetThresholds.audioTotalMiB,
+      unit: 'MiB',
+    },
+    {
       actual: mib(files[0].sizeBytes),
       label: 'largest single file size',
       limit: budgetThresholds.largestFileMiB,
@@ -246,6 +275,7 @@ const run = async () => {
     // the images headroom is the Phase C bake budget; WebP draws down the
     // total headroom ~1:1 in gzip terms (it barely compresses further).
     headroom: {
+      audioMiB: Number((budgetThresholds.audioTotalMiB - (categorySummary.audio?.sizeMiB || 0)).toFixed(3)),
       imagesMiB: Number((budgetThresholds.imageTotalMiB - (categorySummary.images?.sizeMiB || 0)).toFixed(3)),
       totalGzipKiB: Number((budgetThresholds.totalGzipKiB - finalizeBucket(total).gzipKiB).toFixed(2)),
       totalMiB: Number((budgetThresholds.totalMiB - finalizeBucket(total).sizeMiB).toFixed(3)),

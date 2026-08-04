@@ -51,16 +51,24 @@ loading and playback first. Budget for that before budgeting for content.
 **3. There are zero audio assets in the repo.** No `.mp3`, `.ogg`, `.wav`,
 `.m4a` anywhere under `src/assets`.
 
-**4. The bundle is the binding constraint, and music is big.**
-Headroom today: **2.97 MiB and 1637 KiB gzip.** Thresholds: `totalMiB` 16,
-`totalGzipKiB` 12000, `largestFileMiB` 3. There is **no audio category cap**, so
-music spends the shared total. `scripts/bundle-asset-budget-report.mjs:87` already
-classifies `.wav/.mp3/.ogg/.m4a` as `audio`, so it will show up the moment a file
-lands.
+**4. ~~The bundle is the binding constraint~~ — RAISED 2026-08-04, owner ack.**
+*"why can we not raise the budget it still seems to run great so I dont see a
+problem."* He was right, and the correction is worth carrying: bundle size does
+not touch frame rate once the game is loaded. These totals protect
+TIME-TO-PLAYABLE on a phone on cellular — a different claim that happened to
+agree with his.
 
-A 2-minute stereo loop at 128 kbps is ~1.9 MB. Three of those does not fit.
-Mono, 96 kbps, and short seamless loops are the difference between shipping and
-not. **Measure with `test:bundle:kart` after the first file, not after the last.**
+And audio does not even cost that, because it is not precached (trap 5): music
+streams on demand and is never in the first-paint path. It is the same class as
+the GLBs — CDN/disk footprint, not startup cost — so counting it against the
+same ceiling as JS was measuring the wrong thing.
+
+Now: **totals 16 -> 22 MiB and 12000 -> 17000 KiB gz, plus a dedicated
+`audioTotalMiB` cap of 6.** Headroom today is **8.97 MiB / 6637 KiB gz overall
+and a full 6 MiB of audio**, which comfortably fits three beds plus the SFX at
+good bitrates. JS caps are UNCHANGED and must stay that way — JS blocks first
+paint, and a soundtrack must not buy headroom that later gets spent on script.
+The audio cap is negative-tested: a 7 MB file fails it.
 
 **5. Audio is not precached by the service worker.** `vite.config.kart.js:85`
 globs `**/*.{js,css,html,svg,png,ico,woff2,webp}` — no audio extensions. So music
@@ -254,8 +262,8 @@ and images are already at ~1.92 MiB.
 ## Open questions for the owner
 
 1. ~~Music source~~ — **decided: Suno for beds (owner), mirelo for SFX (here).**
-2. **Bundle** — three music beds likely need more than the 2.97 MiB headroom. Raise
-   the budget, or ship shorter/lower-bitrate loops?
+2. ~~Bundle~~ — **raised 2026-08-04 with owner ack. 6 MiB of audio headroom;
+   beds do not need to be compromised.**
 3. **Offline** — audio is not precached, so the installed PWA is silent with no
    network. Fine, or should music join the precache?
 4. ~~What reads as cheap about the menus~~ — **answered: flat PNG plates of
