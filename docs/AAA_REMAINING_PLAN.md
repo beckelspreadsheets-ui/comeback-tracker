@@ -736,6 +736,43 @@ game. It supersedes the critic fix-lists where the two disagree.
   in authored spans, apply the `offroad` grip that already exists in
   `surfacePhysics.js` and is currently unreachable, add a return-to-track.
 
+### Closed 2026-08-03, second pass
+
+| item | commit / finding |
+|---|---|
+| PV kart casts no shadow | `8b4829d7` — caster `share` 0.35 → 0.88 |
+| ICE IS NICE sign | `8b4829d7` — lit board + additive neon, not an unlit plane |
+| Walker is sitting | `e212d0c6` — regenerated standing/mid-stride, 266 KB (was 842) |
+| Drifting feels harder | `c40e75ee` — **tiers 2 and 3 were unreachable**; retuned |
+| No minimap | `6c4f54fe` — course map built from the driven sampler |
+
+**Prop shadows — investigated, NO CHANGE MADE, and that is the finding.** The
+critics reported that nothing but the kart casts. The machinery is in fact wired
+end to end: desktop runs `propsCast: true`, `markSceneryCasters` is called and
+marks **357** props, and tier-3 far-field grounding runs for everything the
+frustum cannot reach. Two things explain the reports without a defect: on
+Penguin Village the entire shadow system was muted by the `share: 0.35` ceiling
+now fixed, and the frames the claim came from were captured on the owner's
+loaded machine.
+
+The one real limit found: the shadow frustum is ±32 units and rides the kart,
+while verge props sit ~39 units off the centreline, so most never enter the
+depth pass — which is exactly what tier 3 exists to cover. Widening the frustum
+would coarsen the kart's own shadow by 50% for a benefit nobody has seen. Not
+done on a visual claim that cannot be checked here. **Re-judge on the new build.**
+
+**PV background on right-hand turns — investigated, not diagnosed.** Source
+inspection rules out the obvious candidates: every belt archetype (SHARD,
+TABULAR, RIDGE, ARCH, CALVED, BLOCK) is authored base-down in the unit cube, the
+pressure ridge deliberately collapses both ends to a point so it dies into the
+snow, and `pv-far.webp` is a warm sunrise over mountains and an ice shelf with
+nothing that would read as forms hanging from the sky. The owner's report is
+specific to *some right-hand turns*, which points at placement or orientation
+visible in motion rather than at an archetype's geometry.
+
+This one genuinely needs frames from a machine that renders honestly. Guessing at
+backdrop geometry that cannot be seen is how the last nine waves went.
+
 ### Still open from the playtest
 
 - **Finish-line walker is SITTING** — asset, not code.
