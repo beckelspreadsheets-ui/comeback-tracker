@@ -9,7 +9,31 @@ export const DRIFT_FEEL = {
   // Immediate speed added on release per tier so the mini-turbo reads as a
   // kick, not just a higher ceiling.
   boostKick: [26, 40, 56],
-  chargeTimes: [0.55, 1.3, 2.15],
+  // Retuned 2026-08-03 (owner, after playing the preview: "drifting seems a bit
+  // harder than it was"). It was, and the cause was the 4x tracks rather than
+  // anything in this file — DRIFT_FEEL had not been touched since the original
+  // gameplay commit.
+  //
+  // MEASURED against the shipped layouts. Old 2,897-unit loop: 16 corners in an
+  // 11.15s lap, one every 0.70s, so a single held drift carried across several
+  // corners and banked tier 2 or 3 routinely. Today: 16 corners in a ~47s lap,
+  // one every ~2.97s with a median 1.8s straight between them. Every drift now
+  // starts from zero, and against the old 0.55/1.3/2.15 thresholds:
+  //
+  //   corner duration   CC min 0.43  median 0.74  max 1.00
+  //                     PV min 0.30  median 0.61  max 1.12
+  //   reachable tier    CC  7 corners reach NOTHING, 9 reach tier 1
+  //                     PV  3 reach nothing, 13 reach tier 1
+  //   tier 2 (1.3s)     UNREACHABLE on either track, in any corner
+  //   tier 3 (2.15s)    unreachable
+  //
+  // Two thirds of the drift system was dead content. 0.45/0.95/1.6 maps the
+  // ladder onto the geometry that actually shipped: tier 1 in a median corner,
+  // tier 2 in a good one, and tier 3 only by CHAINING — a chicane is two
+  // corners with a 0.17s gap, ~1.65s total, so the top tier stays an
+  // achievement rather than becoming routine. The reward is untouched;
+  // boostDurations and boostKick are exactly as they were.
+  chargeTimes: [0.45, 0.95, 1.6],
   hopDuration: 0.3,
   hopHeight: 2.1,
   minSpeed: 62,
