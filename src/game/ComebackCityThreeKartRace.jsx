@@ -6573,33 +6573,76 @@ const makePenguinSpectator = (s = 1.1) => {
 // Slogan banner texture matching the owner's reference: teal radial panel,
 // inset glowing border, and glowing white brushy text. The white outer frame
 // is geometry (built around this panel in the arch).
-const makeSloganTexture = (text) => {
+// Slogan artwork for the start/finish gantry.
+//
+// Owner 2026-08-03, after playing the preview: "the ice is nice sign needs a
+// major revamp to not look cheap". It looked cheap for three specific reasons,
+// all fixed here and at the call site: the panel was a zero-thickness
+// PlaneGeometry, its material was MeshBasicMaterial so it was unlit and could
+// not respond to the scene at all, and the glow was painted INTO the same
+// opaque texture as the background so it read as a printed sticker rather than
+// as light.
+//
+// Now the artwork comes in two layers. The BOARD is a real lit box; this
+// function paints only the lettering, on transparency, so it can sit proud of
+// the board on an additive pass and behave like neon tubing on a physical sign.
+const makeSloganTexture = (text, { glowOnly = false } = {}) => {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
   canvas.height = 256;
   const ctx = canvas.getContext('2d');
-  const grad = ctx.createRadialGradient(512, 128, 40, 512, 128, 640);
-  grad.addColorStop(0, '#1f6480');
-  grad.addColorStop(1, '#0b2c40');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 1024, 256);
-  // Inset glowing border.
-  ctx.strokeStyle = 'rgba(206,240,255,0.92)';
-  ctx.lineWidth = 6;
-  ctx.shadowColor = '#bfeaff';
-  ctx.shadowBlur = 18;
-  ctx.strokeRect(28, 28, 968, 200);
-  // Glowing white text — heavy condensed font + double-pass halo to read as
-  // the reference's brushy glow.
-  ctx.fillStyle = '#ffffff';
+
+  if (!glowOnly) {
+    // Board face, used as the lit panel's map: a deep teal with a soft centre
+    // lift so the panel is not one flat value under a toon ramp.
+    const grad = ctx.createRadialGradient(512, 128, 40, 512, 128, 640);
+    grad.addColorStop(0, '#1b5b76');
+    grad.addColorStop(1, '#082334');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 256);
+    // Brushed horizontal grain, so the board catches the eye as a surface
+    // rather than a fill. Very low contrast on purpose.
+    ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#bfeaff';
+    ctx.lineWidth = 1;
+    for (let y = 10; y < 246; y += 4) {
+      ctx.beginPath();
+      ctx.moveTo(16, y);
+      ctx.lineTo(1008, y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }
+
+  // GLOW LAYER — transparent everywhere except the tubing.
+  ctx.clearRect(0, 0, 1024, 256);
+  // Inner neon rail, inset from the board edge so the frame reads as a housing
+  // the tube sits inside.
+  ctx.strokeStyle = 'rgba(206,240,255,0.95)';
+  ctx.lineWidth = 5;
+  ctx.shadowColor = '#9fe4ff';
+  ctx.shadowBlur = 22;
+  ctx.strokeRect(30, 30, 964, 196);
+
   ctx.font = '900 italic 150px "Trebuchet MS", "Arial Black", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(150,220,255,0.95)';
-  ctx.shadowBlur = 30;
-  ctx.fillText(text, 512, 142);
-  ctx.shadowBlur = 14;
-  ctx.fillText(text, 512, 142);
+  // Three passes, widest and softest first: the bloom, the tube, then a hot
+  // core. One pass reads as a flat decal; the stack is what makes it look lit.
+  ctx.shadowColor = 'rgba(120,205,255,0.95)';
+  ctx.shadowBlur = 42;
+  ctx.fillStyle = 'rgba(150,225,255,0.55)';
+  ctx.fillText(text, 512, 140);
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = 'rgba(214,244,255,0.95)';
+  ctx.fillText(text, 512, 140);
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, 512, 140);
+
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
@@ -7427,18 +7470,49 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
       bar.position.set(dx, signY, 0);
       arch.add(bar);
     });
-    // Teal glowing sign panel (readable side faces oncoming racers).
-    const banner = new THREE.Mesh(
-      new THREE.PlaneGeometry(bannerW, bannerH),
-      new THREE.MeshBasicMaterial({ map: makeSloganTexture('THE ICE IS NICE'), side: THREE.DoubleSide })
+    // THE SIGN, rebuilt (owner 2026-08-03: "needs a major revamp to not look
+    // cheap"). Three layers instead of one unlit plane:
+    //
+    //   1. a BOARD with real thickness, on a LIT toon material, so it takes the
+    //      track's key and sits in the scene instead of floating on top of it;
+    //   2. the lettering as a separate ADDITIVE pass a few centimetres proud of
+    //      the board, which is what makes it read as neon tubing on a surface
+    //      rather than ink printed into it;
+    //   3. a recessed housing shadow at the board edge, so the frame around it
+    //      has somewhere to sit.
+    //
+    // Both faces are built, because racers see it from both sides of the lap.
+    const boardDepth = 1.1;
+    const board = new THREE.Mesh(
+      new RoundedBoxGeometry(bannerW, bannerH, boardDepth, 1, 0.35),
+      createToonMaterial('#ffffff', {
+        emissive: '#0d3547',
+        emissiveIntensity: 0.22,
+        map: makeSloganTexture('THE ICE IS NICE'),
+      })
     );
-    banner.position.set(0, signY, 0.2);
-    banner.rotation.y = Math.PI;
-    arch.add(banner);
-    const bannerBack = banner.clone();
-    bannerBack.position.z = -0.2;
-    bannerBack.rotation.y = 0;
-    arch.add(bannerBack);
+    board.position.set(0, signY, 0);
+    arch.add(board);
+
+    // The neon. Additive so it ADDS light rather than replacing the board's
+    // shading — an emissive-looking sticker and an actual glow differ exactly
+    // here, and it is the difference the owner is reacting to.
+    const glowMap = makeSloganTexture('THE ICE IS NICE', { glowOnly: true });
+    [1, -1].forEach((face) => {
+      const neon = new THREE.Mesh(
+        new THREE.PlaneGeometry(bannerW, bannerH),
+        new THREE.MeshBasicMaterial({
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          map: glowMap,
+          transparent: true,
+        })
+      );
+      neon.position.set(0, signY, face * (boardDepth / 2 + 0.12));
+      neon.rotation.y = face > 0 ? Math.PI : 0;
+      neon.renderOrder = 3;
+      arch.add(neon);
+    });
     addGlowSprite(arch, '#bfeaff', 30, 0.25, signY);
     arch.traverse((n) => {
       n.castShadow = false;

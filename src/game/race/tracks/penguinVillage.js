@@ -648,7 +648,33 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
     //
     // Comeback City authors no shadowKey, so it keeps ONE light and stays
     // bit-identical by construction.
-    sun: { azimuthDeg: 195, distance: 190, elevationDeg: 12, shadowKey: { elevationDeg: 20, share: 0.35 } },
+    // SHADOW KEY SHARE 0.35 -> 0.88 (owner playtest 2026-08-03 + wave-9 critics:
+    // the Penguin Village kart casts nothing).
+    //
+    // Wave 9 shipped the split key and the shadow still did not appear. This is
+    // why: three darkens a receiver by REMOVING the casting light's own
+    // contribution, so the caster's share is a hard ceiling on how dark a
+    // shadow can ever be. At 0.35, against the hemisphere fill bouncing off
+    // bright snow, the darkest attainable pixel was a few percent below its
+    // neighbours — measurably present, visually absent. A 3x crop of
+    // penguin-village-p0_33 shows tyres meeting snow with no contact patch and
+    // no cast ribbon at all.
+    //
+    // Comeback City, which has NO split key and therefore casts with the whole
+    // key, is the only track with a readable shadow (-21% under the kart against
+    // lateral road). 0.88 puts Penguin Village in the same regime.
+    //
+    // Total diffuse is still conserved, which the split key's contract requires
+    // so an owner-confirmed grade does not move. What does change is that most
+    // of the key now sits at 20 degrees rather than 12 — a modest shift in
+    // shading, same azimuth, so the lit side of everything is unchanged.
+    //
+    // NOT DONE, deliberately: a separate caster azimuth. It was suggested (throw
+    // the ribbon across the road instead of down the view vector) and it may
+    // still be right, but it moves which side shadows fall on, and that cannot
+    // be judged without frames from a machine that renders honestly. Share is
+    // the change whose effect is predictable from the maths.
+    sun: { azimuthDeg: 195, distance: 190, elevationDeg: 12, shadowKey: { elevationDeg: 20, share: 0.88 } },
     // Wave 3: 5.2 -> 4.2, and see sunColor. Penguin Village was running a
     // HOTTER and MORE intense key than Comeback City (#ffb85a at 4.4) over a
     // white track, and the arithmetic only goes one way: a cool #a9c2d2 belt
