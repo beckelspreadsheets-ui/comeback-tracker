@@ -8892,6 +8892,30 @@ const triangleCountForGeometry = (geometry) => {
   return triangles;
 };
 
+// Rough GPU bytes for every texture reachable from the scene's materials.
+// Counted per unique image, because the atlas shared by twelve karts costs
+// once — a per-material sum would report it twelve times and send an
+// optimisation pass after the wrong thing.
+const estimateTextureBytes = (world) => {
+  const seen = new Set();
+  let bytes = 0;
+  world.traverse((object) => {
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    materials.forEach((material) => {
+      if (!material) return;
+      Object.values(material).forEach((value) => {
+        if (!value?.isTexture || !value.image || seen.has(value.uuid)) return;
+        seen.add(value.uuid);
+        const width = value.image.width || value.image.videoWidth || 0;
+        const height = value.image.height || value.image.videoHeight || 0;
+        // 4 bytes/texel, x1.33 for a full mip chain.
+        bytes += width * height * 4 * (value.generateMipmaps === false ? 1 : 1.33);
+      });
+    });
+  });
+  return { bytes: Math.round(bytes), count: seen.size };
+};
+
 const estimateSceneRenderStats = (world, renderer) => {
   const geometries = new Set();
   let drawCalls = 0;
@@ -8908,10 +8932,59 @@ const estimateSceneRenderStats = (world, renderer) => {
       triangles += baseTriangles * (object.isInstancedMesh ? object.count || 1 : 1);
     }
   });
+  // The traversal numbers above are an ESTIMATE of what is in the graph. These
+  // are what the GPU was actually asked to do on the last frame — after
+  // frustum culling, and INCLUDING the shadow pass and every post-chain pass,
+  // none of which a traversal can see. On a scene with shadows and post the
+  // two differ by a lot, and only the second one is the performance number.
+  const sceneTextures = estimateTextureBytes(world);
+  // Opt-in deep breakdown for scripts/audit-renderer.mjs. Gated on a flag the
+  // audit sets, so the per-frame path costs exactly what it did before —
+  // "883 visible meshes" is only actionable once you know WHICH 883.
+  let breakdown = null;
+  if (typeof window !== 'undefined' && window.__kartRenderAudit) {
+    const byGeometry = new Map();
+    const byMaterial = new Map();
+    const byName = new Map();
+    world.traverse((object) => {
+      if (!object.visible || (!object.isMesh && !object.isInstancedMesh)) return;
+      const geoKey = object.geometry?.uuid || 'none';
+      byGeometry.set(geoKey, (byGeometry.get(geoKey) || 0) + 1);
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => {
+        if (!material) return;
+        const key = `${material.type}:${material.uuid}`;
+        byMaterial.set(key, (byMaterial.get(key) || 0) + 1);
+      });
+      // Group by the un-numbered stem so "rock_017" and "rock_018" collapse.
+      const stem = (object.name || object.geometry?.name || 'unnamed').replace(/[_-]?\d+$/, '') || 'unnamed';
+      const entry = byName.get(stem) || { count: 0, triangles: 0 };
+      entry.count += 1;
+      entry.triangles += triangleCountForGeometry(object.geometry) * (object.isInstancedMesh ? object.count || 1 : 1);
+      byName.set(stem, entry);
+    });
+    const topNames = [...byName.entries()]
+      .sort((a, b) => b[1].triangles - a[1].triangles)
+      .slice(0, 12)
+      .map(([name, value]) => ({ count: value.count, name, triangles: value.triangles }));
+    breakdown = {
+      // How many meshes share a geometry. ~1.0 means every object carries its
+      // own buffers and nothing is instanced or shared.
+      meshesPerGeometry: Number((meshCount / Math.max(1, byGeometry.size)).toFixed(2)),
+      meshesPerMaterial: Number((meshCount / Math.max(1, byMaterial.size)).toFixed(2)),
+      uniqueMaterials: byMaterial.size,
+      topByTriangles: topNames,
+    };
+  }
   return {
+    breakdown,
     drawCalls,
     geometries: geometries.size,
     meshCount,
+    gpuCalls: renderer.info.render.calls,
+    gpuTriangles: renderer.info.render.triangles,
+    textureBytes: sceneTextures.bytes,
+    sceneTextures: sceneTextures.count,
     // B3 acceptance check: the rim must add exactly one shared program
     // variant (merged customProgramCacheKey), never one per material.
     programs: renderer.info.programs?.length ?? null,
@@ -12425,6 +12498,15 @@ export const ComebackCityThreeKartRace = ({
       // B2: per-lap palette moments (no-op unless the race precompiled a
       // moments set — no track ships one until the owner picks).
       applyPaletteMoments(engine, race.progress);
+      // renderer.info resets itself at the start of EVERY renderer.render()
+      // call, and the post chain makes several per frame — so by the time
+      // telemetry reads it, it describes only the final pass, which is one
+      // fullscreen triangle. The audit duly reported "1 draw call, 1 triangle"
+      // for a scene drawing 571 meshes. Taking over the reset makes the
+      // counters cover the whole frame: scene pass, shadow pass and every post
+      // pass, which is the number that actually costs something.
+      engine.renderer.info.autoReset = false;
+      engine.renderer.info.reset();
       // pmndrs composer takes the frame delta (seconds) for time-based effects.
       if (engine.postChainEnabled) engine.composer.render(dt);
       else engine.composer.render();
