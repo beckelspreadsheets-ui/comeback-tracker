@@ -25,6 +25,8 @@ import {
   recordRaceFinish,
 } from './kartLocalStore.js';
 import { KartModelStage } from './KartModelStage.jsx';
+import { createKartAudio, readStoredMute } from '../game/race/kartAudio.js';
+import { KART_AUDIO_ASSETS } from '../game/race/kartAudioAssets.js';
 import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
 import charSethPenguinUrl from '../assets/game/select/char-seth-penguin.png';
 import charMizzleUrl from '../assets/game/select/char-mizzle.png';
@@ -578,6 +580,22 @@ export const KartApp = () => {
   const handleFinish = useCallback((result) => {
     recordRaceFinish(result);
   }, []);
+
+  // Menu music. The race component owns its own audio manager, so the menu
+  // needs one of its own — it is the first thing a player hears and it existed
+  // in silence until now. Torn down the moment the race takes over, which
+  // releases the AudioContext before the race creates its own (browsers cap
+  // how many can be live at once).
+  useEffect(() => {
+    if (characterReady) return undefined;
+    const audio = createKartAudio({ assets: KART_AUDIO_ASSETS, muted: readStoredMute() });
+    audio.attach();
+    audio.playMusic('menu');
+    return () => {
+      audio.stopMusic({ fadeMs: 260 });
+      audio.dispose();
+    };
+  }, [characterReady]);
 
   return (
     <div

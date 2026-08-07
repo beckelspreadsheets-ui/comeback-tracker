@@ -40,13 +40,23 @@ const musicModules = import.meta.glob('../../assets/game/audio/music/*.{mp3,m4a,
   query: '?url',
 });
 
-// Loop points, in SECONDS on the decoded buffer, for beds whose seam needs
-// help. A bed absent from this map loops over its whole buffer, which is only
-// right if it was cut at a zero crossing on a bar line. Filled in per-bed when
-// the beds are cut — see A3 in the plan: the seam is the real technical risk.
+// The EXACT musical length of each bed in seconds, straight out of
+// scripts/render-kart-music.mjs (bars x beats / bpm). These are not "roughly
+// how long the file is" — they are the number the loop has to be, and the file
+// is longer than this because mp3 encoding adds delay and padding.
+//
+// That padding is why this is a duration and not a pair of cut points. Encoder
+// delay is silence baked onto the head of the decoded buffer, and Chrome,
+// Firefox and Safari disagree about whether to strip it. Hard-coding loopStart
+// would be right on one browser and off-the-beat on another, every single
+// lap — so kartAudio.js MEASURES the lead-in on the decoded buffer at runtime
+// and derives loopStart from it, with loopEnd = loopStart + this number.
+//
 // `gain` trims a bed that mixes hotter or quieter than the others.
-export const MUSIC_LOOP_POINTS = {
-  // 'comeback-city': { loopStart: 0, loopEnd: 118.4, gain: 1 },
+export const MUSIC_LOOP_SECONDS = {
+  'comeback-city': 61.935484,
+  menu: 80,
+  'penguin-village': 68.571429,
 };
 
 // The engine loop is a WAV on purpose — see scripts/render-kart-engine.mjs.
@@ -64,7 +74,7 @@ export const KART_AUDIO_ASSETS = {
   music: Object.fromEntries(
     Object.entries(urlsByStem(musicModules)).map(([name, url]) => [
       name,
-      { url, ...(MUSIC_LOOP_POINTS[name] || {}) },
+      { loopSeconds: MUSIC_LOOP_SECONDS[name] || 0, url },
     ])
   ),
   sfx: urlsByStem(sfxModules),

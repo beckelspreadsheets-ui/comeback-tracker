@@ -17,7 +17,7 @@
 // GL, and therefore no sensitivity to machine load. kartAudio.js is kept free
 // of Vite-only syntax specifically so this import works; the `import.meta.glob`
 // lives in kartAudioAssets.js and the manifest is injected as data.
-import { createKartAudio } from '../src/game/race/kartAudio.js';
+import { createKartAudio, measureLoopWindow } from '../src/game/race/kartAudio.js';
 
 const cases = [];
 const check = (name, actual, expected) => {
@@ -45,6 +45,15 @@ const makeParam = (value) => ({
     this.value = v;
   },
 });
+
+// 25 ms of silence then a tone — what an mp3 decode of the beds looks like.
+const DECODED_CHANNEL = (() => {
+  const sampleRate = 44100;
+  const lead = Math.round(0.025 * sampleRate);
+  const data = new Float32Array(sampleRate * 120);
+  for (let i = lead; i < data.length; i += 1) data[i] = Math.sin(i * 0.05) * 0.4;
+  return data;
+})();
 
 const node = (kind, extra = {}) => ({
   kind,
@@ -116,7 +125,18 @@ class FakeAudioContext {
   decodeAudioData(raw, ok, bad) {
     this.decodeCalls += 1;
     if (this.decodeShouldFail) return Promise.resolve().then(() => bad(new Error('bad data')));
-    return Promise.resolve().then(() => ok({ decoded: true, duration: 120, raw }));
+    // A REALISTIC decoded buffer: 25 ms of encoder-delay silence on the head,
+    // then content. Returning a featureless stub here would let the loop-window
+    // measurement be skipped entirely and still look green.
+    return Promise.resolve().then(() =>
+      ok({
+        decoded: true,
+        duration: 120,
+        getChannelData: () => DECODED_CHANNEL,
+        raw,
+        sampleRate: 44100,
+      })
+    );
   }
   resume() {
     this.state = 'running';
@@ -193,7 +213,8 @@ const gainsOnPathToDestination = (from, ctx) => {
 const ASSETS = {
   engine: '/audio/engine-loop.wav',
   music: {
-    'comeback-city': { url: '/audio/comeback-city.mp3', loopEnd: 118.4, loopStart: 2.1 },
+    'comeback-city': { loopSeconds: 61.935484, url: '/audio/comeback-city.mp3' },
+    // No declared length -> must loop over the whole buffer.
     'penguin-village': { url: '/audio/penguin-village.mp3' },
   },
   sfx: { boost: '/audio/boost.mp3', coin: '/audio/coin.mp3' },
@@ -308,8 +329,13 @@ const bootUnlocked = async (options = {}) => {
   check('bed reported as playing', audio.currentMusic(), 'comeback-city');
   const bed = ctx.created.source[ctx.created.source.length - 1];
   check('bed loops', bed.loop, true);
-  check('bed honours manifest loopStart', bed.loopStart, 2.1);
-  check('bed honours manifest loopEnd', bed.loopEnd, 118.4);
+  // Measured off the decoded buffer, not read from the manifest.
+  check('bed loopStart is the MEASURED lead-in', Math.abs(bed.loopStart - 0.025) < 0.002, true);
+  check(
+    'bed loop length is the declared musical length',
+    Math.abs(bed.loopEnd - bed.loopStart - 61.935484) < 1e-6,
+    true
+  );
   const musicPath = gainsOnPathToDestination(bed, ctx);
   check('bed routes through music bus', musicPath?.map((g) => g.gain.value).includes(0.55), true);
   check('bed routes through master (so mute cuts it)', musicPath?.some((g) => g.gain.value === 0.5), true);
@@ -413,6 +439,69 @@ const bootUnlocked = async (options = {}) => {
   await flush();
   check('no engine file falls back to the synth', audio.engineSource(), 'synth');
   check('synth engine oscillators exist', audioWindow.ctx.created.oscillator.length >= 3, true);
+}
+
+// ── 11. The loop window is MEASURED off the decoded buffer ────────────────
+// mp3 encoder delay is silence on the head of the decoded buffer, and browsers
+// disagree about stripping it. Hard-coding loopStart is right on one browser
+// and a beat late on another — every lap, for the whole race. So the lead-in
+// is measured, and this is where that measurement is pinned down.
+{
+  const sampleRate = 44100;
+  const makeBuffer = (leadSeconds, musicSeconds) => {
+    const lead = Math.round(leadSeconds * sampleRate);
+    const data = new Float32Array(lead + Math.round(musicSeconds * sampleRate));
+    for (let i = lead; i < data.length; i += 1) data[i] = Math.sin(i * 0.05) * 0.5;
+    return data;
+  };
+
+  // Chrome-like: ~25 ms of encoder delay left on the front.
+  const withDelay = makeBuffer(0.025, 61.94);
+  const measured = measureLoopWindow(withDelay, sampleRate, 61.935484, withDelay.length / sampleRate);
+  check('lead-in detected', Math.abs(measured.loopStart - 0.025) < 0.002, true);
+  check(
+    'loop length is the musical length, not the file length',
+    Math.abs(measured.loopEnd - measured.loopStart - 61.935484) < 1e-6,
+    true
+  );
+
+  // Firefox-like: delay already stripped, music starts at sample 0.
+  const noDelay = makeBuffer(0, 61.94);
+  const stripped = measureLoopWindow(noDelay, sampleRate, 61.935484, noDelay.length / sampleRate);
+  // Within a sample of zero: the synthetic tone's own sample 0 is a zero
+  // crossing, so one sample of lead is the correct answer, not a miss.
+  check('no lead-in still measures cleanly', stripped.loopStart < 0.001, true);
+
+  // A bed that fades in from silence would give a bogus offset — better to
+  // loop the whole buffer than to trust it.
+  const fadeIn = new Float32Array(Math.round(0.5 * sampleRate));
+  check('an all-quiet head falls back to whole-buffer looping', measureLoopWindow(fadeIn, sampleRate, 0.4, 0.5), null);
+
+  // Numbers that disagree with the file must not loop past its end.
+  check(
+    'a loop longer than the buffer falls back',
+    measureLoopWindow(withDelay, sampleRate, 900, withDelay.length / sampleRate),
+    null
+  );
+  check('no declared length means no window', measureLoopWindow(withDelay, sampleRate, 0, 1), null);
+}
+
+// ── 12. A bed starts AT the music, not at the file ────────────────────────
+{
+  const { audio, audioWindow } = await bootUnlocked({
+    audioOptions: {
+      assets: {
+        engine: null,
+        music: { menu: { loopSeconds: 2, url: '/audio/menu.mp3' } },
+        sfx: {},
+      },
+    },
+  });
+  await audio.playMusic('menu');
+  await flush();
+  check('menu bed plays', audio.currentMusic(), 'menu');
+  const bed = audioWindow.ctx.created.source[audioWindow.ctx.created.source.length - 1];
+  check('bed loops', bed.loop, true);
 }
 
 // ── report ────────────────────────────────────────────────────────────────

@@ -104,6 +104,39 @@ export const cuesForTransition = (prev, next) => {
   return cues;
 };
 
+// Where does the music actually start inside the decoded buffer?
+//
+// mp3 encoding puts silence on the front of a file (encoder delay, ~1100
+// samples for LAME) and pads the tail to a whole frame. decodeAudioData may or
+// may not strip it — Chrome, Firefox and Safari behave differently, and Safari
+// has changed its mind across versions. Looping over the whole buffer would
+// therefore replay that silence every lap and shove the downbeat off the beat
+// by ~25 ms, cumulatively wrong on some browsers and fine on others: the worst
+// kind of bug to chase from a bug report.
+//
+// So it is measured, not assumed. The beds are rendered to start on a downbeat
+// (a kick and a pad attack at sample 0), so the first sample above the noise
+// floor IS the musical start wherever the decoder chose to put it.
+//
+// Exported and pure so the gate can drive it with synthetic buffers.
+export const measureLoopWindow = (channelData, sampleRate, loopSeconds, bufferDuration) => {
+  if (!loopSeconds || !channelData?.length || !sampleRate) return null;
+  const threshold = 3e-4;
+  // A real encoder delay is tens of milliseconds. Anything past 150 ms means
+  // the detection has gone wrong (a bed that fades in, say), and looping the
+  // whole buffer is the safer wrong answer than trusting a bogus offset.
+  const maxLead = Math.min(channelData.length - 1, Math.floor(sampleRate * 0.15));
+  let lead = 0;
+  while (lead < maxLead && Math.abs(channelData[lead]) < threshold) lead += 1;
+  if (lead >= maxLead) return null;
+  const loopStart = lead / sampleRate;
+  const loopEnd = loopStart + loopSeconds;
+  // If the measured window runs past the buffer the numbers disagree with the
+  // file; fall back rather than loop over the end.
+  if (bufferDuration && loopEnd > bufferDuration + 0.02) return null;
+  return { loopEnd, loopStart };
+};
+
 export const snapshotRaceForAudio = (race, driftState) => ({
   airborne: Boolean(race.airState?.airborne),
   boost: (race.boostTimer || 0) > 0,
@@ -431,15 +464,22 @@ export const createKartAudio = ({
     source.buffer = buffer;
     source.loop = true;
     // loopEnd of 0 means "to the end of the buffer" in the Web Audio spec, so
-    // only override when the bed actually carries cut points. A bed cut at a
-    // zero crossing on a bar line needs neither.
-    if (entry.loopEnd) {
-      source.loopStart = entry.loopStart || 0;
-      source.loopEnd = entry.loopEnd;
+    // it is only overridden when the bed declares its true musical length and
+    // the lead-in could actually be measured.
+    const window =
+      entry.loopSeconds && buffer.getChannelData
+        ? measureLoopWindow(buffer.getChannelData(0), buffer.sampleRate, entry.loopSeconds, buffer.duration)
+        : null;
+    if (window) {
+      source.loopStart = window.loopStart;
+      source.loopEnd = window.loopEnd;
     }
     source.connect(gain).connect(musicBus);
-    source.start(at);
-    music = { gain, name, source };
+    // Second argument is the offset INTO the buffer: start at the music, not
+    // at the file, so the first pass does not play the encoder's silence
+    // before the first downbeat.
+    source.start(at, window ? window.loopStart : 0);
+    music = { gain, loopWindow: window, name, source };
   };
 
   // Crossfades to `name`, or to silence when name is null. Returns whether a
