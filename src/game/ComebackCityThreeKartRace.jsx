@@ -3164,14 +3164,27 @@ const mountDriverAvatar = (
   { castsShadow = true, height = 5.7, lean = 0.13, yaw = 0 } = {}
 ) => {
   const rig = driverScene.clone(true);
+  // One material per texture, per rig — same reasoning as attachTripoKartBody.
+  // The driver rides the same proximity ghost as the body it sits in, and that
+  // ghost is one value per kart, so sharing within this rig is a no-op for the
+  // fade and removes a pile of identical materials. Across rigs it would fade
+  // every driver at once, hence the per-call Map.
+  const rigMaterials = new Map();
   rig.traverse((node) => {
     if (node.isMesh) {
-      node.material = applyHeroRim(
-        new THREE.MeshToonMaterial({
-          gradientMap: getToonGradient(),
-          map: node.material?.map || null,
-        })
-      );
+      const mapKey = node.material?.map?.uuid || 'nomap';
+      if (!rigMaterials.has(mapKey)) {
+        rigMaterials.set(
+          mapKey,
+          applyHeroRim(
+            new THREE.MeshToonMaterial({
+              gradientMap: getToonGradient(),
+              map: node.material?.map || null,
+            })
+          )
+        );
+      }
+      node.material = rigMaterials.get(mapKey);
       node.castShadow = castsShadow;
     }
   });
@@ -3344,21 +3357,43 @@ const fitKartScale = (size, fitLength) =>
 // mesh — no wheel nodes, so wheels are static (acceptable for the visual A/B).
 const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math.PI / 2, characterEntry = null) => {
   const rig = tripoScene.clone(true);
+  // One material per TEXTURE, per rig — not per mesh node. An authored body
+  // fuses into many nodes that all sample the same baked map, so the old
+  // per-node construction produced up to 17 byte-identical MeshToonMaterials
+  // for one kart; the 2026-08-07 audit found 44 copies of a single signature
+  // across the scene, and each one is a batching barrier and a candidate
+  // shader program.
+  //
+  // Scoped to THIS RIG deliberately, and that scope is the whole safety
+  // argument. The proximity ghost writes `mesh.material.opacity = proximity`
+  // over every mesh of a kart, with one proximity value per kart — so sharing
+  // WITHIN a kart writes the same value it would have written anyway, while
+  // sharing ACROSS karts would fade the entire field whenever one rival got
+  // close. Per-racer paint tint below is per-rig for the same reason.
+  const rigMaterials = new Map();
   rig.traverse((node) => {
     if (node.isMesh) {
-      const material = applyHeroRim(
-        new THREE.MeshToonMaterial({
-          gradientMap: getToonGradient(),
-          map: node.material?.map || null,
-        })
-      );
-      // Per-racer paint identity. These bodies keep whatever colour their GLB
-      // baked, so without this every seat that draws the same kart draws the
-      // same colour — the tint's saturation mask (see setKartPaintTint /
-      // applyKartShading) pushes the paint regions and leaves tyres, glass and
-      // trim alone. This call site is the only place that knows WHICH racer a
-      // material belongs to, which is why the shader package could not wire it.
-      if (characterEntry) setKartPaintTint(material, KART_PAINT_TINTS[characterEntry.key]);
+      const mapKey = node.material?.map?.uuid || 'nomap';
+      let material = rigMaterials.get(mapKey);
+      if (!material) {
+        material = applyHeroRim(
+          new THREE.MeshToonMaterial({
+            gradientMap: getToonGradient(),
+            map: node.material?.map || null,
+          })
+        );
+        // Per-racer paint identity. These bodies keep whatever colour their
+        // GLB baked, so without this every seat that draws the same kart draws
+        // the same colour — the tint's saturation mask (see setKartPaintTint /
+        // applyKartShading) pushes the paint regions and leaves tyres, glass
+        // and trim alone. This call site is the only place that knows WHICH
+        // racer a material belongs to, which is why the shader package could
+        // not wire it. Applied once per material rather than once per node:
+        // the tint is a property of the material, so re-applying it for every
+        // node sharing that material was always redundant work.
+        if (characterEntry) setKartPaintTint(material, KART_PAINT_TINTS[characterEntry.key]);
+        rigMaterials.set(mapKey, material);
+      }
       node.material = material;
       node.castShadow = castsShadow;
     }
@@ -9054,14 +9089,25 @@ const estimateSceneRenderStats = (world, renderer) => {
           material.vertexColors ? 'vc' : '',
           material.flatShading ? 'flat' : '',
         ].join('|');
-        const entry = bySignature.get(signature) || { instances: 0, materials: new Set() };
+        const entry = bySignature.get(signature) || { instances: 0, materials: new Set(), samples: [] };
         entry.instances += 1;
         entry.materials.add(material.uuid);
+        // Keep a couple of owner names so the report says WHERE the duplicates
+        // live. A signature alone tells you a material is duplicated 44 times
+        // and nothing about which factory to go and fix.
+        if (entry.samples.length < 3) {
+          entry.samples.push(`${object.name || 'unnamed'}<${object.parent?.name || '-'}`);
+        }
         bySignature.set(signature, entry);
       });
     });
     const duplicateSignatures = [...bySignature.entries()]
-      .map(([signature, value]) => ({ copies: value.materials.size, instances: value.instances, signature }))
+      .map(([signature, value]) => ({
+        copies: value.materials.size,
+        instances: value.instances,
+        samples: value.samples,
+        signature,
+      }))
       .filter((entry) => entry.copies > 1)
       .sort((a, b) => b.copies - a.copies)
       .slice(0, 10);

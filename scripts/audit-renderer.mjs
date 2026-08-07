@@ -185,7 +185,8 @@ const run = async () => {
         if (result.breakdown.duplicateSignatures?.length) {
           lines.push(`  duplicate materials        ${String(result.breakdown.wastedMaterials).padStart(12)}   copies that could be one`);
           result.breakdown.duplicateSignatures.slice(0, 6).forEach((entry) => {
-            lines.push(`    x${String(entry.copies).padStart(4)} copies  ${entry.signature.slice(0, 58)}`);
+            lines.push(`    x${String(entry.copies).padStart(4)} copies  ${entry.signature.slice(0, 48)}`);
+            lines.push(`              owners: ${(entry.samples || []).join(', ').slice(0, 90)}`);
           });
         }
         lines.push('  heaviest groups by triangles:');
