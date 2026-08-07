@@ -38,6 +38,17 @@ const PORTRAITS = [
   // K8 owner picks 2026-07-17 (Cold Storage + Block Reward, Meshy multi-view lifts):
   { model: '/src/assets/game/models/karts/ice-block.glb', name: 'kart-iceblock', yaw: MESHY_KART_POSE },
   { model: '/src/assets/game/models/karts/btc-kart.glb', name: 'kart-btckart', yaw: MESHY_KART_POSE },
+  // AAA wave 8 added these five to KART_OPTIONS and never added portraits, so
+  // the picker rendered `<img src={undefined}>` for five of twelve karts from
+  // that day until 2026-08-07. All five are Meshy lifts (KART_NOSE_YAW = +π/2),
+  // so they take the mirrored hero pose like the other Meshy bodies.
+  // They ship as .webp — five more PNGs at ~130 KB would have eaten essentially
+  // all of the image budget's remaining headroom.
+  { model: '/src/assets/game/models/karts/hash-runner.glb', name: 'kart-hashrunner', yaw: MESHY_KART_POSE },
+  { model: '/src/assets/game/models/karts/cold-wallet.glb', name: 'kart-coldwallet', yaw: MESHY_KART_POSE },
+  { model: '/src/assets/game/models/karts/sat-stacker.glb', name: 'kart-satstacker', yaw: MESHY_KART_POSE },
+  { model: '/src/assets/game/models/karts/pixel-pickup.glb', name: 'kart-pixelpickup', yaw: MESHY_KART_POSE },
+  { model: '/src/assets/game/models/karts/node-runner.glb', name: 'kart-noderunner', yaw: MESHY_KART_POSE },
 ];
 
 // PORTRAITS_ONLY=name1,name2 restricts a run to those entries — used when
