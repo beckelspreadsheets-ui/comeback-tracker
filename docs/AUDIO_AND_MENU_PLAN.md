@@ -1,5 +1,16 @@
 # Music, audio and the menu revamp — execution plan
 
+> **DONE AND SUPERSEDED, 2026-08-07. Do not work from this file.**
+> Every part of it shipped: the sample path, the 20 SFX, the sampled engine,
+> the three music beds, the live 3D select stage and the premium rebuild of all
+> three menu screens. The current handoff is **`docs/NEXT_RUN_RENDERER.md`**.
+>
+> Two things below are now WRONG and are corrected in that file: B2 suggests
+> reusing `raceShadowRig.js` (it is LEGACY — the monolith imports none of that
+> tree), and A2 offers Higgsfield's `mirelo`/`sonilo` as generators (both are
+> marked "Game pipeline only" and cannot be used for our assets).
+> Kept for the reasoning and the trap list, which are still accurate.
+
 Written 2026-08-03 for a **fresh context**. Everything needed to start is in this
 file; nothing depends on remembering the session that produced it.
 
