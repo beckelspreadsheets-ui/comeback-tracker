@@ -93,8 +93,15 @@ export default defineConfig({
           // strips are runtime-fetched hashed assets — cache them on first
           // use so a track raced once online replays offline. Hashed URLs
           // make staleness impossible; old entries age out.
+          //
+          // Audio joined this rule 2026-08-07 (owner's call) for the same
+          // reason and NOT the precache. Precaching the beds would download
+          // ~6 MB at install, before first play, which is exactly the
+          // time-to-playable cost on cellular that the bundle caps exist to
+          // protect. Here the cost is zero at install and a track you have
+          // already raced keeps its music and cues offline.
           {
-            urlPattern: /\/(?:assets\/[^?]+\.(?:glb|webp|png)|baked-spike\.glb)$/,
+            urlPattern: /\/(?:assets\/[^?]+\.(?:glb|webp|png|mp3|m4a|ogg|wav)|baked-spike\.glb)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'kart-runtime-assets',
@@ -151,6 +158,16 @@ export default defineConfig({
     target: 'es2020',
     sourcemap: false,
     outDir: 'dist-kart',
+    // Audio must NEVER be inlined. Vite's default inlines any asset under 4 KB
+    // as a base64 data URI, and 8 of the 20 SFX one-shots are under 4 KB — so
+    // the default silently base64'd them (at +33% size) straight into
+    // race-runtime.js. Three things wrong with that, none of them visible in a
+    // build log: it spends the JS budget, which is the one cap the audio work
+    // is explicitly not allowed to touch (JS blocks first paint, audio does
+    // not); it puts sound in the precache by the back door; and it makes the
+    // runtimeCaching rule below unable to see those cues at all. Everything
+    // else keeps the normal 4 KB behaviour.
+    assetsInlineLimit: (filePath) => (/\.(?:mp3|m4a|ogg|wav)$/i.test(filePath) ? false : undefined),
     rollupOptions: {
       input: kartHtmlPath,
       output: {

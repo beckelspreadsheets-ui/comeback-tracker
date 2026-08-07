@@ -65,6 +65,13 @@ const fitnessThresholdDefaults = {
 // So audioTotalMiB is separate, and the JS caps stay exactly where they are.
 // JS blocks first paint; a soundtrack cannot be allowed to buy headroom that
 // then gets spent on script.
+// imageTotalMiB STAYS AT 2.5. The owner approved a raise to 3.5 on 2026-08-07
+// for the menu backdrop plates, and then the plates did not need it: two
+// 1920x1072 webp backdrops came in at 0.217 MiB total, because flat toon colour
+// bands are close to the best case a webp encoder ever gets. Spending an
+// approval that turned out to be unnecessary would leave a cap that no longer
+// protects anything, so the approval is banked rather than used. If the menu
+// ever does need it, it is one number and the owner has already said yes.
 const kartThresholdDefaults = {
   audioTotalMiB: 6.0,
   imageTotalMiB: 2.5,
@@ -246,6 +253,19 @@ const run = async () => {
       label: 'largest single file size',
       limit: budgetThresholds.largestFileMiB,
       unit: 'MiB',
+    },
+    // Audio inlined as base64 does not show up as audio — it shows up as JS,
+    // silently, and only for the files small enough to trip Vite's 4 KB
+    // assetsInlineLimit. That happened on 2026-08-07: 8 of the 20 one-shots
+    // vanished from `assets/*.mp3` and reappeared inside race-runtime.js at
+    // +33% size, spending the one budget the audio work is not allowed to
+    // touch. vite.config.kart.js exempts audio from inlining; this is the
+    // check that notices if that exemption is ever removed.
+    {
+      actual: javascriptFiles.filter((file) => readFileSync(join(distDir, file.path)).includes('data:audio')).length,
+      label: 'JavaScript files with inlined audio',
+      limit: 0,
+      unit: 'files',
     },
     {
       actual: largestJavaScriptFile?.gzipKiB || 0,

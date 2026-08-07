@@ -93,6 +93,7 @@ import {
   updateDriftFeel,
 } from './race/driftFeel.js';
 import { createKartAudio, cuesForTransition, readStoredMute, snapshotRaceForAudio } from './race/kartAudio.js';
+import { KART_AUDIO_ASSETS } from './race/kartAudioAssets.js';
 import { createRaceParticles } from './race/render/raceParticles.js';
 import {
   createRivalRacers,
@@ -726,7 +727,11 @@ export const KART_OPTIONS = [
 ];
 // Generated kart bodies arrive in two facing conventions: Tripo = nose +X
 // (mount -π/2), Meshy = nose -X (mount +π/2). Lab-verified per kart.
-const KART_NOSE_YAW = {
+// Exported 2026-08-07 so the select-screen model stage mounts bodies at the
+// SAME measured yaw the race does. This project's standing rule is never to
+// guess a facing — so the menu must not carry a second copy of these values
+// that can drift from the lab measurements recorded in asset-manifest.json.
+export const KART_NOSE_YAW = {
   hero: -Math.PI / 2,
   icesled: -Math.PI / 2,
   iceracer: Math.PI / 2,
@@ -9089,6 +9094,10 @@ const publishTelemetry = (
     avalanchePending: Boolean(race.avalanche),
     audioMuted: runtimeStats.audioMuted ?? null,
     audioRunning: runtimeStats.audioRunning ?? false,
+    audioSamplesLoaded: runtimeStats.audioSamplesLoaded ?? 0,
+    audioSamplesFailed: runtimeStats.audioSamplesFailed ?? 0,
+    audioMusic: runtimeStats.audioMusic ?? null,
+    audioEngine: runtimeStats.audioEngine ?? null,
     bakedSpike: runtimeStats.bakedSpike ?? null,
     // Wave-6 camera + grounding proof hooks; see the call site for what the
     // harness is expected to assert on them.
@@ -9211,14 +9220,16 @@ export const ComebackCityThreeKartRace = ({
 }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
-  // Synthesized race audio (zero assets): context unlocks on first gesture,
-  // cues derive from state transitions inside updateFrame — see kartAudio.js.
+  // Race audio: context unlocks on first gesture, cues derive from state
+  // transitions inside updateFrame, and each cue plays its sample if one was
+  // generated or its oscillator recipe if not — see kartAudio.js. The asset
+  // manifest is a glob, so it is empty and harmless until files land.
   const audioRef = useRef(null);
   const [audioMuted, setAudioMuted] = useState(() => readStoredMute());
   useEffect(() => {
     // Created inside the effect (not render) so a StrictMode double-mount
     // gets a fresh manager after the first cleanup disposed it.
-    const audio = createKartAudio({ muted: readStoredMute() });
+    const audio = createKartAudio({ assets: KART_AUDIO_ASSETS, muted: readStoredMute() });
     audioRef.current = audio;
     audio.attach();
     const onVisibility = () => {
@@ -9471,6 +9482,13 @@ export const ComebackCityThreeKartRace = ({
     return new URLSearchParams(window.location.search).get('post') !== '0';
   }, []);
   const trackDef = trackByKey(trackKey);
+  // The bed follows the track. Declared after trackKey (and so after the
+  // audio effect above) purely so audioRef is populated by the time this
+  // runs. No-op until a bed file for this track key exists; the request is
+  // remembered and starts on the unlock gesture if it arrives first.
+  useEffect(() => {
+    audioRef.current?.playMusic(trackKey);
+  }, [trackKey]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -12418,6 +12436,13 @@ export const ComebackCityThreeKartRace = ({
       publishTelemetry(race, fpsEstimate, engine.propCount, mode, characterKey, kartKey, trackKey, {
         audioMuted: audioRef.current?.isMuted() ?? null,
         audioRunning: audioRef.current?.isRunning() ?? false,
+        // Sample-path proof. audioRunning only says a context exists — these
+        // three say whether a cue was a FILE or the synth quietly covering for
+        // a missing one, which is the regression a listening test cannot catch.
+        audioSamplesLoaded: audioRef.current?.loadedSampleCount() ?? 0,
+        audioSamplesFailed: audioRef.current?.failedSampleCount() ?? 0,
+        audioMusic: audioRef.current?.currentMusic() ?? null,
+        audioEngine: audioRef.current?.engineSource() ?? null,
         bakedSpike: engine.bakedSpike,
         miamiMounts: { ...miamiMountStats },
         paletteMoments: engine.paletteMoments,

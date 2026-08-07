@@ -91,6 +91,32 @@ const run = async () => {
       audioRunning: running.audioRunning,
     });
 
+    // The sample path, end to end in a real browser: the glob manifest
+    // resolved 20 URLs, the browser fetched them, and decodeAudioData accepted
+    // them. `audioRunning` alone would stay true with every single file 404ing,
+    // because the oscillator fallback would cover for all 20 without a console
+    // error — which is exactly the silent regression worth a gate.
+    await page
+      .waitForFunction(() => (window.__comebackCityKartTelemetry?.audioSamplesLoaded || 0) >= 20, null, {
+        timeout: 15000,
+      })
+      .catch(() => {});
+    const samples = await telemetry(page);
+    check('all 20 one-shots decoded from file', samples.audioSamplesLoaded >= 20, {
+      audioSamplesFailed: samples.audioSamplesFailed,
+      audioSamplesLoaded: samples.audioSamplesLoaded,
+    });
+    check('no one-shot fell back to the synth', samples.audioSamplesFailed === 0, {
+      audioSamplesFailed: samples.audioSamplesFailed,
+    });
+    // Owner replaced the oscillator engine with a looping sample (2026-08-07).
+    // `audioRunning` cannot tell the two apart, and the synth fallback is
+    // deliberately inaudible as a failure — so this is the only signal that the
+    // engine loop actually loaded in a real browser.
+    check('engine runs from the sampled loop', samples.audioEngine === 'sample', {
+      audioEngine: samples.audioEngine,
+    });
+
     // Full drift chain: start → tier 1-3 chirps → release → mini-turbo cue.
     await page.keyboard.down('ArrowRight');
     await page.keyboard.down('Space');

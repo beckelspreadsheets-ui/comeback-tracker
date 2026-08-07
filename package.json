@@ -44,6 +44,8 @@
     "test:minimap": "node scripts/test-minimap.mjs",
     "test:race": "node scripts/race-content-playtest.mjs",
     "test:audio:kart": "node scripts/kart-audio-smoke-test.mjs",
+    "test:audio:samples": "node scripts/test-kart-audio-samples.mjs",
+    "test:select:models": "node scripts/test-select-models.mjs",
     "test:kart-playable": "KART_PLAYABLE_PROOF_SERVER_SCRIPT=dev:kart node scripts/kart-playable-proof-test.mjs",
     "test:kart-playable:kart": "npm run build:kart && KART_PLAYABLE_PROOF_SERVER_SCRIPT=preview:kart node scripts/kart-playable-proof-test.mjs",
     "test:track-visuals": "node scripts/validate-track-visuals.mjs",
@@ -65,7 +67,8 @@
     "deploy:andrew": "npm run build:andrew && npx wrangler pages deploy dist --project-name=comeback-andrew --branch=main --commit-dirty=true",
     "deploy:alexander": "npm run build:alexander && npx wrangler pages deploy dist --project-name=comeback-alexander --branch=main --commit-dirty=true",
     "deploy:kart:preview": "npm run build:kart && npx wrangler pages deploy dist-kart --project-name=comeback-city-kart --branch=aaa-preview --commit-dirty=true",
-    "deploy:kart": "npm run build:kart && npx wrangler pages deploy dist-kart --project-name=comeback-city-kart --branch=main --commit-dirty=true"
+    "deploy:kart": "npm run build:kart && npx wrangler pages deploy dist-kart --project-name=comeback-city-kart --branch=main --commit-dirty=true",
+    "test:select:stage": "node scripts/test-select-stage.mjs"
   },
   "dependencies": {
     "@zxing/browser": "^0.1.5",
