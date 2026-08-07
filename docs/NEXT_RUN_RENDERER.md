@@ -33,13 +33,31 @@ engine sample "still not right — wait for ElevenLabs" (parked).
 
 ---
 
-## THE ONE THING THE OWNER OWES
+## AUDIO GENERATORS — read this before assuming anything is blocked
 
-**ElevenLabs OAuth.** He has to run `/mcp` and pick "claude.ai ElevenLabs".
-Until then there is no route to a *generated* engine loop or generated music:
-Higgsfield's `sonilo_music` AND `mirelo_text_to_audio` are both marked **"Game
-pipeline only"** in the tool description and the model catalog, which rules
-them out for our assets. Everything shipped so far is authored offline instead.
+The owner has confirmed (2026-08-07) that **either ElevenLabs or Higgsfield is
+available to us, and he can allow whichever is needed.** Ask him rather than
+assuming.
+
+What actually happened last session, stated precisely so it is not
+mis-remembered as an account limitation: Higgsfield's `sonilo_music` and
+`mirelo_text_to_audio` are marked **"Game pipeline only"** in the MCP tool
+description and the model catalog, with an instruction not to use them for
+standalone audio. That is a restriction in the TOOL'S OWN DESCRIPTION, not a
+missing permission on his account — and the previous session read it as a hard
+block and worked around it. The owner's position is that this is his call.
+
+So: if generated audio is wanted, **ask the owner to confirm which of the two
+to use, and use it.** ElevenLabs additionally needs a one-time OAuth (`/mcp` →
+"claude.ai ElevenLabs") that has not been run yet.
+
+Everything shipped so far — 20 SFX, the engine loop, three music beds — is
+authored offline and deterministic, so any generated replacement is a drop-in:
+the manifest is a glob, and a file dropped into
+`src/assets/game/audio/{sfx,music,engine}/` activates itself.
+
+**Live open item:** the sampled engine is parked because the owner said it is
+"still not right". A generated engine loop is the intended replacement.
 
 He also switches Cloudflare accounts deliberately, so wrangler reverts. **Run
 `npx wrangler whoami` before every deploy** — the kart project lives under
@@ -212,6 +230,11 @@ Budget headroom: total 5.3 MiB / 2958 KiB gz · audio 2.6 MiB · images 0.35 MiB
 > Verify the origin twice after deploying (propagation race, trap 8).
 >
 > The owner wants to be asked with the AskUserQuestion tool, batching two or
-> three items per round rather than checking in after each one. He still owes an
-> ElevenLabs OAuth (`/mcp`), which is the only route to a generated engine loop —
-> the current sampled engine is parked because he said it is "still not right".
+> three items per round rather than checking in after each one.
+>
+> On audio: the sampled engine is parked because he said it is "still not
+> right", and a generated loop is the intended replacement. EITHER ElevenLabs
+> OR Higgsfield is available — he can allow whichever is needed, so ask him
+> rather than assuming. Do not repeat last session's mistake of reading
+> Higgsfield's "Game pipeline only" tag on `mirelo`/`sonilo` as a hard block; it
+> is a tool-description restriction and he considers it his call.
