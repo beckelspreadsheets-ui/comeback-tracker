@@ -2871,6 +2871,42 @@ const createToonMaterial = (color, options = {}) => {
   return rim ? applyHeroRim(material) : material;
 };
 
+// ---- Shared scenery resources ---------------------------------------------
+// Scenery is built by makeX() helpers called once PER INSTANCE inside layout
+// loops, so every copy used to construct its own material and its own geometry
+// from byte-identical arguments. The 2026-08-07 renderer audit measured what
+// that costs: 592 unique materials and 816 geometries for 883 visible meshes on
+// Penguin Village — 1.08 meshes per geometry, i.e. essentially nothing shared —
+// which put the shader program count OVER budget at 101 and left the renderer
+// nothing it could batch.
+//
+// These caches are deliberately OPT-IN rather than being folded into
+// createBasicMaterial / createToonMaterial. Karts, brake lamps, ghost fades,
+// avalanche rings and palette moments all MUTATE their materials per instance
+// (see the `.material.opacity` writes in the frame loop); sharing those would
+// leak one object's state onto every other object built from the same call.
+// Only static scenery — built once, never touched again — goes through here.
+//
+// Safe to keep at module scope, but read the reason carefully before adding to
+// it. This file DOES dispose materials in three places — replaceBody and the
+// two GLB rig swaps — and all three traverse a KART BODY GROUP, never the
+// world. Scenery materials are therefore never disposed and a cached entry can
+// never become a handle to a dead resource. Route a kart material through here
+// and that stops being true: the next rig swap would dispose the shared
+// instance out from under every other object using it.
+//
+// Sharing strictly REDUCES total GPU memory across the rebuilds a session does.
+const sceneryMaterialCache = new Map();
+const sceneryGeometryCache = new Map();
+const sharedSceneryMaterial = (key, build) => {
+  if (!sceneryMaterialCache.has(key)) sceneryMaterialCache.set(key, build());
+  return sceneryMaterialCache.get(key);
+};
+const sharedSceneryGeometry = (key, build) => {
+  if (!sceneryGeometryCache.has(key)) sceneryGeometryCache.set(key, build());
+  return sceneryGeometryCache.get(key);
+};
+
 // ---- Authored models (Kenney Toy Car Kit v1.2, CC0) ------------------------
 // The procedural kart builds instantly as a fallback; the authored body is
 // hot-swapped in once the GLB resolves.
@@ -6923,29 +6959,43 @@ const makePenguinCrossingSign = () => {
 
 const makeChunkyIceCrystal = (scale = 1) => {
   const g = new THREE.Group();
-  const crystalMat = createBasicMaterial('#00E5FF', {
-    emissive: '#7EC8E8',
-    emissiveIntensity: 0.55,
-    opacity: 0.82,
-    transparent: true,
-  });
-  const capMat = createBasicMaterial('#F5F8FF', {
-    emissive: '#F5F8FF',
-    emissiveIntensity: 0.35,
-    opacity: 0.9,
-    transparent: true,
-  });
+  const crystalMat = sharedSceneryMaterial('crystal', () =>
+    createBasicMaterial('#00E5FF', {
+      emissive: '#7EC8E8',
+      emissiveIntensity: 0.55,
+      opacity: 0.82,
+      transparent: true,
+    })
+  );
+  const capMat = sharedSceneryMaterial('crystal-cap', () =>
+    createBasicMaterial('#F5F8FF', {
+      emissive: '#F5F8FF',
+      emissiveIntensity: 0.35,
+      opacity: 0.9,
+      transparent: true,
+    })
+  );
   [
     { r: 1.6, h: 6.2, x: 0, z: 0, ry: 0 },
     { r: 1.1, h: 4.4, x: -2.2, z: 0.8, ry: 0.5 },
     { r: 1.2, h: 4.8, x: 2.1, z: -0.6, ry: -0.4 },
     { r: 0.85, h: 3.2, x: 0.6, z: 2, ry: 0.9 },
   ].forEach(({ r, h, x, z, ry }) => {
-    const shard = new THREE.Mesh(new THREE.ConeGeometry(r * scale, h * scale, 5), crystalMat);
+    const shard = new THREE.Mesh(
+      sharedSceneryGeometry(`crystal-shard:${r}:${h}:${scale}`, () =>
+        new THREE.ConeGeometry(r * scale, h * scale, 5)
+      ),
+      crystalMat
+    );
     shard.position.set(x * scale, (h * scale) / 2, z * scale);
     shard.rotation.y = ry;
     g.add(shard);
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.55 * scale, h * 0.35 * scale, 5), capMat);
+    const cap = new THREE.Mesh(
+      sharedSceneryGeometry(`crystal-cap:${r}:${h}:${scale}`, () =>
+        new THREE.ConeGeometry(r * 0.55 * scale, h * 0.35 * scale, 5)
+      ),
+      capMat
+    );
     cap.position.set(x * scale, (h * scale) * 0.92, z * scale);
     cap.rotation.y = ry;
     g.add(cap);
@@ -6964,12 +7014,20 @@ const makeSnowMound = (scale = 1) => {
   // from the ground it sits on. #e2ecf6 is still clearly brighter than the
   // field's rendered 172-208 — a fresh drift catching the low sun — with enough
   // ceiling left for the toon ramp to put a terminator on the dome.
-  const snow = createToonMaterial('#e2ecf6', { emissive: '#EAF4FA', emissiveIntensity: 0.06 });
-  const mound = new THREE.Mesh(new THREE.SphereGeometry(4 * scale, 8, 6), snow);
+  const snow = sharedSceneryMaterial('snow-mound', () =>
+    createToonMaterial('#e2ecf6', { emissive: '#EAF4FA', emissiveIntensity: 0.06 })
+  );
+  const mound = new THREE.Mesh(
+    sharedSceneryGeometry(`mound-base:${scale}`, () => new THREE.SphereGeometry(4 * scale, 8, 6)),
+    snow
+  );
   mound.scale.set(1.5, 0.55, 1.5);
   mound.position.y = 0.6 * scale;
   g.add(mound);
-  const top = new THREE.Mesh(new THREE.SphereGeometry(2.2 * scale, 7, 5), snow);
+  const top = new THREE.Mesh(
+    sharedSceneryGeometry(`mound-top:${scale}`, () => new THREE.SphereGeometry(2.2 * scale, 7, 5)),
+    snow
+  );
   top.scale.set(1, 0.8, 1);
   top.position.y = 2.1 * scale;
   g.add(top);
@@ -7177,9 +7235,17 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
       mound.position.copy(pos);
       world.add(setFlatTransform(mound));
     } else {
+      // Three distinct heights across the whole loop, so three geometries and
+      // one material serve every shard on the track instead of one of each per
+      // shard.
+      const shardHeight = 6 + (i % 3) * 2;
       const shard = new THREE.Mesh(
-        new THREE.ConeGeometry(1.5, 6 + (i % 3) * 2, 5),
-        createBasicMaterial('#00E5FF', { emissive: '#7EC8E8', emissiveIntensity: 0.6 })
+        sharedSceneryGeometry(`verge-shard:${shardHeight}`, () =>
+          new THREE.ConeGeometry(1.5, shardHeight, 5)
+        ),
+        sharedSceneryMaterial('verge-shard', () =>
+          createBasicMaterial('#00E5FF', { emissive: '#7EC8E8', emissiveIntensity: 0.6 })
+        )
       );
       shard.position.copy(pos);
       shard.position.y = 3.2;
@@ -8967,7 +9033,42 @@ const estimateSceneRenderStats = (world, renderer) => {
       .sort((a, b) => b[1].triangles - a[1].triangles)
       .slice(0, 12)
       .map(([name, value]) => ({ count: value.count, name, triangles: value.triangles }));
+    // Which materials are DUPLICATES of each other? Two materials with the
+    // same type, colour, emissive and flags are the same material built twice,
+    // and each one is a batching barrier and a candidate shader program. This
+    // names the factory call worth converting next instead of leaving it to
+    // guesswork.
+    const bySignature = new Map();
+    world.traverse((object) => {
+      if (!object.visible || (!object.isMesh && !object.isInstancedMesh)) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      materials.forEach((material) => {
+        if (!material) return;
+        const signature = [
+          material.type,
+          material.color?.getHexString?.() ?? '-',
+          material.emissive?.getHexString?.() ?? '-',
+          material.emissiveIntensity ?? '-',
+          material.transparent ? `t${material.opacity}` : 'o',
+          material.map ? 'map' : '',
+          material.vertexColors ? 'vc' : '',
+          material.flatShading ? 'flat' : '',
+        ].join('|');
+        const entry = bySignature.get(signature) || { instances: 0, materials: new Set() };
+        entry.instances += 1;
+        entry.materials.add(material.uuid);
+        bySignature.set(signature, entry);
+      });
+    });
+    const duplicateSignatures = [...bySignature.entries()]
+      .map(([signature, value]) => ({ copies: value.materials.size, instances: value.instances, signature }))
+      .filter((entry) => entry.copies > 1)
+      .sort((a, b) => b.copies - a.copies)
+      .slice(0, 10);
+
     breakdown = {
+      duplicateSignatures,
+      wastedMaterials: duplicateSignatures.reduce((sum, entry) => sum + entry.copies - 1, 0),
       // How many meshes share a geometry. ~1.0 means every object carries its
       // own buffers and nothing is instanced or shared.
       meshesPerGeometry: Number((meshCount / Math.max(1, byGeometry.size)).toFixed(2)),

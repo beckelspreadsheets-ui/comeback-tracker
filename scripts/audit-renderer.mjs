@@ -182,6 +182,12 @@ const run = async () => {
       if (result.breakdown) {
         lines.push(`  meshes per geometry        ${String(result.breakdown.meshesPerGeometry).padStart(12)}   (1.0 = nothing shared or instanced)`);
         lines.push(`  meshes per material        ${String(result.breakdown.meshesPerMaterial).padStart(12)}   (${result.breakdown.uniqueMaterials} unique materials)`);
+        if (result.breakdown.duplicateSignatures?.length) {
+          lines.push(`  duplicate materials        ${String(result.breakdown.wastedMaterials).padStart(12)}   copies that could be one`);
+          result.breakdown.duplicateSignatures.slice(0, 6).forEach((entry) => {
+            lines.push(`    x${String(entry.copies).padStart(4)} copies  ${entry.signature.slice(0, 58)}`);
+          });
+        }
         lines.push('  heaviest groups by triangles:');
         result.breakdown.topByTriangles.forEach((entry) => {
           lines.push(`    ${entry.name.slice(0, 30).padEnd(31)} x${String(entry.count).padStart(4)}  ${String(entry.triangles).padStart(9)} tris`);
