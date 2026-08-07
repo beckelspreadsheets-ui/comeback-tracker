@@ -10,7 +10,7 @@ work from it. Its traps have been carried forward below where they still apply.
 
 ## STATE
 
-Branch `aaa-kart-ci`. **Ten commits, none pushed.** `main` untouched.
+Branch `aaa-kart-ci`, **pushed 2026-08-07**. `main` untouched, nothing on production.
 
 | commit | what |
 |---|---|
@@ -23,13 +23,15 @@ Branch `aaa-kart-ci`. **Ten commits, none pushed.** `main` untouched.
 | `4a29739c` | `npm run audit:renderer` |
 | `2331eca7` | scenery material/geometry sharing |
 | `c0d7465d` | per-rig kart materials (measured zero — read the message) |
+| `8b82e39e` | this handoff |
+| `7a7557da` | audio-generator correction |
 
 **Deployed:** everything up to and including the music (`9b18dd29`) is live and
 byte-verified at https://aaa-preview.comeback-city-kart.pages.dev. The three
 renderer commits are **committed but NOT deployed** — see the wrangler note.
 
 **Owner verdicts:** menus "premium now" ✅ · SFX "good" ✅ · music "good" ✅ ·
-engine sample "still not right — wait for ElevenLabs" (parked).
+engine sample "still not right" (parked, see audio generators below).
 
 ---
 
