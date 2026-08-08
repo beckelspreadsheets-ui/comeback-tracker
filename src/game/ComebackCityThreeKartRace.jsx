@@ -9043,7 +9043,14 @@ const estimateSceneRenderStats = (world, renderer) => {
   // audit sets, so the per-frame path costs exactly what it did before —
   // "883 visible meshes" is only actionable once you know WHICH 883.
   let breakdown = null;
-  if (typeof window !== 'undefined' && window.__kartRenderAudit) {
+  // `import.meta.env.DEV` FIRST, and it is load-bearing rather than defensive:
+  // Vite substitutes it with a literal `false` in a production build, so the
+  // whole block below — four traversals, the program decomposition and the
+  // instancing scan — is dead code the minifier drops, and dist-kart carries
+  // none of it. Measured: +1.5 KiB gzip when it shipped, against a JS budget
+  // that had 1.7 KiB of headroom in total. Every consumer runs against
+  // `dev:kart` (audit-renderer.mjs spawns it), so nothing loses the data.
+  if (import.meta.env.DEV && typeof window !== 'undefined' && window.__kartRenderAudit) {
     const byGeometry = new Map();
     const byMaterial = new Map();
     const byName = new Map();

@@ -180,8 +180,14 @@ if (!statsSuppressed) {
     const pace = percentiles();
     if (!telemetry || !pace) return;
     const stats = telemetry.rendererStats || {};
-    if (!Number.isFinite(stats.calls)) return;
-    mark = { calls: stats.calls, p50: pace.p50, triangles: stats.triangles };
+    // gpuCalls/gpuTriangles, not calls/triangles. `calls` has never existed on
+    // rendererStats (estimateSceneRenderStats returns drawCalls/gpuCalls), so
+    // this guard could never pass and the mark feature was dead — the draws
+    // line above rendered a dash for the same reason. The GPU pair is also the
+    // right one: it is post-cull and includes the shadow and post passes, which
+    // is what the audit judges and what a frame actually costs.
+    if (!Number.isFinite(stats.gpuCalls)) return;
+    mark = { calls: stats.gpuCalls, p50: pace.p50, triangles: stats.gpuTriangles };
   });
 
   const signed = (value) => (value > 0 ? `+${value}` : `${value}`);
@@ -216,10 +222,10 @@ if (!statsSuppressed) {
           )}ms   >20ms ${pace.spikes}/${pace.samples}`
         : 'pace  collecting…',
       verdictOf(pace, work),
-      `draws ${stats.calls ?? '—'}   tris ${stats.triangles ?? '—'}   programs ${stats.programs ?? '—'}   props ${telemetry.propCount ?? '—'}`,
+      `draws ${stats.gpuCalls ?? '—'}   tris ${stats.gpuTriangles ?? '—'}   programs ${stats.programs ?? '—'}   props ${telemetry.propCount ?? '—'}`,
       mark && pace
-        ? `vs mark  draws ${signed((stats.calls ?? 0) - mark.calls)}   tris ${signed(
-            (stats.triangles ?? 0) - mark.triangles
+        ? `vs mark  draws ${signed((stats.gpuCalls ?? 0) - mark.calls)}   tris ${signed(
+            (stats.gpuTriangles ?? 0) - mark.triangles
           )}   p50 ${signed(Number((pace.p50 - mark.p50).toFixed(2)))}ms`
         : '` = mark   shift+` = clear',
       mountLine,

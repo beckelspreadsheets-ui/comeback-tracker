@@ -18,6 +18,14 @@ if (!isLocalPreview) {
   });
 }
 
+// ?perf=1 — on-device frame readout. Deliberately opt-in and dynamically
+// imported: nobody who does not type the flag downloads the chunk. See
+// devicePerfProbe.js for why this has to ship rather than live in the dev-only
+// playtest harness.
+if (new URLSearchParams(window.location.search).get('perf') === '1') {
+  import('./devicePerfProbe.js').then(({ mountDevicePerfProbe }) => mountDevicePerfProbe());
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <KartApp />
