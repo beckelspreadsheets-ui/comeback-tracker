@@ -19,12 +19,13 @@ Branch `aaa-kart-ci`. `main` untouched, nothing on production.
 |---|---|
 | `aa1e0962` | the warm-up was compiling every material twice — the program fix |
 | `916677b4` | `?perf=1` device readout; audit breakdown stops shipping |
+| `33999f2d` | the engine is multi-sampled; JS gzip threshold 500 → 520 (owner ack) |
 
 **Deployed and byte-verified twice** at
 https://aaa-preview.comeback-city-kart.pages.dev (Showcasedesigns account,
 `9f01a1b31a298b112c22c3e00fe70a45`).
 
-All 15 gates green, twice, including once at load 32.
+All 15 gates green after every change, including a full pass at load 32.
 
 ---
 
@@ -158,17 +159,23 @@ Nothing is over. Texture memory is a non-issue; do not spend effort there.
 ## BUDGET — READ BEFORE WRITING A LINE OF SHIPPED CODE
 
 ```
-JS gzip   499.90 / 500 KiB      headroom 0.10 KiB
+JS gzip   500.20 / 520 KiB      headroom 19.8 KiB
+audio       3.45 / 6 MiB
 ```
 
-That is a pass with **100 bytes to spare**, and it is only affordable because
-the audit breakdown stopped shipping in the same change (`import.meta.env.DEV`
-lets the minifier drop it: 499.81 -> 498.71) to pay for the `?perf=1` probe.
+**Raised 500 → 520 on 2026-08-07 with the owner's ack** — the first time the JS
+caps have ever moved, and the reasoning is written into
+`scripts/bundle-asset-budget-report.mjs` rather than left as a number. The short
+version: the build had reached 499.90/500, which is a tripwire rather than a
+budget, and what spent the last of it was a **dynamically imported** diagnostic
+chunk that first load never requests, against a cap whose own note says it is a
+first-load budget.
 
-**The owner has been asked whether to raise the 500 KiB threshold.** Until he
-answers, treat the budget as full: any new shipped code needs bytes reclaimed
-first. Everything else has room — total 5.3 MiB / 2956 KiB gz, audio 2.6 MiB,
-images 0.35 MiB.
+This does not license growth in the first-paint path. If a future change spends
+this headroom on eagerly-loaded script, push back on that rather than on the
+number. Note also that audit-only code must not ship: `import.meta.env.DEV` in
+the condition lets Vite fold it to `false` and the minifier drop it, which is
+what reclaimed 1.5 KiB here.
 
 ---
 
@@ -188,26 +195,50 @@ requested.
 
 ---
 
-## AUDIO — the owner has chosen
+## AUDIO — the engine is rebuilt; it needs the owner's ear
 
-**ElevenLabs**, and he said he would run the one-time OAuth himself (`/mcp` →
-"claude.ai ElevenLabs"). Confirm it is authenticated before planning around it.
+**No audio generator can make SFX here, and settling that mattered less than
+what it uncovered.** The ElevenLabs connector exposes only `text_to_speech` (it
+is already authenticated — no OAuth needed, contrary to the last handoff).
+Higgsfield's `generate_audio` states in its own description that it cannot
+produce music or sound effects for general use. Everything shipped is authored
+offline by `scripts/render-kart-*.mjs`, deterministic, and that remains the
+route.
 
-The reasoning, so it is not re-litigated: its sound-effects model is built for
-short non-musical sound design, which is what a steady engine tone is.
-Higgsfield's two audio tools are foley-for-video (`mirelo`) and music
-(`sonilo`); their "Game pipeline only" tag is a restriction in the TOOL'S OWN
-DESCRIPTION, not a limit on his account, and he considers it his call — but
-neither is aimed at this.
+**But a generator was never the fix.** `engineFrequencyFor` runs 42 Hz at idle
+to 269 Hz on a boost, and the loop was rendered at 100 Hz — a **6.4x
+playbackRate range**. Resampling moves everything, so the induction hiss and
+every resonance were dragged 1.25 octaves down at idle and pushed 1.43 up on
+boost. That is what "still not right" was, and no single clip survives it.
 
-**Live open item:** the sampled engine is parked because he said it is "still
-not right". A generated loop is the intended replacement. The catch to design
-around: a generated clip is ONE fixed timbre, and the game varies RPM by
-`playbackRate`, so what to ask for is a steady mid-RPM loop.
+The engine is now **multi-sampled**: `engine-loop-56/112/224.wav`, an octave
+apart, each played near its native rate and crossfaded by speed. Worst-case
+stretch is 0.50 octaves instead of 1.43. Shipped and deployed.
 
-Everything shipped so far — 20 SFX, the engine loop, three music beds — is
-authored offline and deterministic, and the manifest is a glob: a file dropped
-into `src/assets/game/audio/{sfx,music,engine}/` activates itself.
+**Open: the owner has not heard it yet.** That is the next thing to ask for.
+If it is still wrong, the levers in order are (a) a fourth layer, which halves
+the crossover error again, (b) the harmonic stack and firing-pulse shape in
+`render-kart-engine.mjs`, (c) the mix constants in `kartAudio.js`, which he has
+already retuned once ("too loud to hear the whole time").
+
+Design notes worth keeping:
+
+- A base must be a multiple of **four**, not two: the seam closes only if the
+  fundamental AND the half-order firing pulse both complete whole cycles in the
+  0.5 s loop.
+- The noise layer is deliberately **not** scaled with the base. Its
+  coefficients are absolute, so every layer shares one induction band while the
+  harmonic stacks move — that is the whole difference between multi-sampling
+  and pitch-shifting.
+- The crossfade is constant **power**, not amplitude: the layers carry
+  independently seeded noise, so they sum incoherently and equal-amplitude
+  would dip ~3 dB through every handover.
+- Each base lives in its **file name** and is parsed by the manifest. Retuning
+  a layer is a re-render and nothing else. A file in that folder without a base
+  in its name is ignored.
+
+The manifest is a glob elsewhere too: a file dropped into
+`src/assets/game/audio/{sfx,music}/` activates itself.
 
 ---
 
@@ -288,14 +319,10 @@ The first five are new and each cost time this session.
 > owner takes himself at `?perf=1` on the preview; ask him for it, then read the
 > "If a device reading says geometry is the problem" list.
 >
-> The live work is AUDIO: a generated engine loop to replace the sampled one he
-> called "still not right". He chose ElevenLabs and said he would run the OAuth
-> (`/mcp` → "claude.ai ElevenLabs") — check it is authenticated first. Ask for a
-> steady mid-RPM loop, because the game varies RPM by playbackRate.
->
-> He also owes an answer on the JS gzip threshold: the build is at 499.90 / 500
-> KiB, so treat the budget as FULL and reclaim bytes before shipping any new
-> code until he rules.
+> AUDIO: the engine was rebuilt as a three-layer multi-sample and deployed, but
+> the owner has NOT heard it yet — ask him for that verdict first. Do not reach
+> for an audio generator: neither connector can produce sound effects, and the
+> fault was a 6.4x playbackRate stretch that no clip would have survived.
 >
 > Gates before and after: `npm run build:kart` then test:audio:samples /
 > select:models / select:stage / audio:kart / kart-playable / bundle:kart /
