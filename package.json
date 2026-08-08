@@ -69,7 +69,8 @@
     "deploy:kart:preview": "npm run build:kart && npx wrangler pages deploy dist-kart --project-name=comeback-city-kart --branch=aaa-preview --commit-dirty=true",
     "deploy:kart": "npm run build:kart && npx wrangler pages deploy dist-kart --project-name=comeback-city-kart --branch=main --commit-dirty=true",
     "test:select:stage": "node scripts/test-select-stage.mjs",
-    "audit:renderer": "node scripts/audit-renderer.mjs"
+    "audit:renderer": "node scripts/audit-renderer.mjs",
+    "probe:difficulty": "node scripts/kart-difficulty-probe.mjs"
   },
   "dependencies": {
     "@zxing/browser": "^0.1.5",

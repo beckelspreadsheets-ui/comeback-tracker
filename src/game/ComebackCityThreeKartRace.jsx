@@ -96,6 +96,7 @@ import { createKartAudio, cuesForTransition, readStoredMute, snapshotRaceForAudi
 import { KART_AUDIO_ASSETS } from './race/kartAudioAssets.js';
 import { createRaceParticles } from './race/render/raceParticles.js';
 import {
+  CORNER_LOAD_K,
   createRivalRacers,
   KART_CONTACT,
   playerPositionOf,
@@ -9271,8 +9272,12 @@ const trackCurvatureAt = (sampler, progress) => {
 // Calibration (κ^0.7 · v² · 0.00052 vs steer 0.72 / drift 1.15): gentle
 // bends need active steering at top speed, the p90 corners are full-speed
 // only in a drift, the hairpin caps a full drift near ~150.
+// CORNER_LOAD_K is imported from rivalRacers.js rather than repeated here. The
+// same number governs how fast a RIVAL may take a corner (its governor inverts
+// this expression), and when the two were separate literals a change to one
+// silently gave the field different cornering physics from the player.
 const cornerPushFor = (kappa, speed) =>
-  -Math.sign(kappa) * Math.min(4, Math.pow(Math.abs(kappa), 0.7) * speed * speed * 0.00052);
+  -Math.sign(kappa) * Math.min(4, Math.pow(Math.abs(kappa), 0.7) * speed * speed * CORNER_LOAD_K);
 
 // Same measurement as trackCurvatureAt, over a much wider symmetric baseline.
 // The corner push wants the LOCAL number (it is a steering force and should
@@ -10819,7 +10824,20 @@ export const ComebackCityThreeKartRace = ({
               (race.lane >= 0.95 && laneRate + cornerPush > 0) ||
               (race.lane <= -0.95 && laneRate + cornerPush < 0);
             // Wall scrape bleeds speed until the corner becomes holdable.
-            if (race.wallContact) race.speed = Math.max(70, race.speed - 200 * dt);
+            //
+            // RETUNED 2026-08-08, owner: "bad driving isn't punished". On rails
+            // the wall is the ONLY consequence for a bad line — the kart cannot
+            // leave the road, so lane 0.95 is a guide rail you can lean on all
+            // the way round. At 200/s with a floor of 70 that lean cost so
+            // little that riding the outside of a corner was a viable line
+            // rather than a mistake.
+            //
+            // 330/s makes a scrape shed speed faster than the kart can rebuild
+            // it (accel is ~118/s), so contact always loses ground. The floor
+            // drops 70 -> 45 because 70 was most of a corner's exit speed: it
+            // put a hard bound on how much a sustained scrape could cost, which
+            // is precisely the wrong shape for a punishment.
+            if (race.wallContact) race.speed = Math.max(45, race.speed - 330 * dt);
           } else {
             race.wallContact = false;
           }

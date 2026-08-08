@@ -42,7 +42,10 @@ export const RIVAL_PERSONALITIES = {
   'Blue Speed': {
     authority: 1.25,
     brakeLookahead: 26,
-    pace: 1.05,
+    // 1.05 -> 1.08. He is the front-runner and the design note below already
+    // says beating him is supposed to require mini-turbos and boost pads, which
+    // he does not have. At 1.05 a clean player out-drives him on raw pace alone.
+    pace: 1.08,
     risk: 0.92,
     wobble: 0.015,
   },
@@ -50,7 +53,10 @@ export const RIVAL_PERSONALITIES = {
   'Purple Lab': {
     authority: 1.1,
     brakeLookahead: 11,
-    pace: 0.99,
+    // 0.99 -> 1.03. The whole field now sits at or above the player's raw max,
+    // so a win has to come from lines, drifts and pads rather than from simply
+    // holding the throttle down for longer than three karts that cannot.
+    pace: 1.03,
     risk: 1.07,
     wobble: 0.06,
   },
@@ -59,19 +65,71 @@ export const RIVAL_PERSONALITIES = {
     authority: 1.15,
     brakeLookahead: 20,
     bumper: true,
-    pace: 0.96,
+    // 0.96 -> 1.00. He is the one who hunts the player's lane; at 0.96 he could
+    // never get close enough to do it except when the band dragged him there.
+    pace: 1.0,
     risk: 1.0,
     wobble: 0.03,
   },
 };
 
+// RETUNED 2026-08-08, owner: "we do need to make it more difficult in general
+// ... it's very easy to just mob around the whole map", and he picked "rivals
+// never threaten me" as one of the three causes.
+//
+// THE OLD BAND WAS MOST OF THE REASON, and the numbers look innocent until you
+// put them beside a lap: laps are ~49 s on the 4x tracks, so 3 and 4 seconds
+// are 6-8% of one. It made the race safe from BOTH ends at once.
+//
+//   Falling behind was self-correcting. Any rival more than 3 s up the road
+//   throttled to 0.93 until the player caught back up, so a bad lap cost almost
+//   nothing and the field waited for him.
+//
+//   A lead went safe exactly when it should not have. A rival more than 4 s
+//   behind chased at 1.12 — but on the FINAL LAP that dropped to 1.03, so the
+//   chase switched off at the one point in the race where being caught matters.
+//
+// Between them: you could not really lose ground, and once ahead on the last
+// lap you were done. That is "nobody ever threatens me", written as five
+// constants.
+//
+// The band keeps its real job — stopping a race becoming unrecoverable — and
+// loses the habit of handing a lead back. slowDown is a nudge rather than a
+// handbrake, a rival may build a deficit worth chasing, and finalLapCatchUp
+// deliberately REVERSES its old intent ("a lead the player earned holds to the
+// line"): the last lap is now where the pressure is highest.
+//
+// MEASURED, npm run probe:difficulty, autoplay driver over 4 races:
+// wins 3/4 -> 1/4, with Blue Speed taking the other three. Note that the probe
+// under-reads this change by design — autoplay drives conservatively and sits
+// mid-field, so it spends most of a race in the band's dead zone where none of
+// these constants apply at all.
 export const RUBBER_BAND = {
-  aheadMaxSeconds: 3,
-  behindMaxSeconds: 4,
-  catchUpBoost: 1.12,
-  finalLapCatchUp: 1.03,
-  slowDown: 0.93,
+  // Three seconds on an 11-second lap was a third of it; on a 49-second lap it
+  // is nothing. Scaled to the tracks that actually ship.
+  aheadMaxSeconds: 9,
+  behindMaxSeconds: 3,
+  catchUpBoost: 1.16,
+  finalLapCatchUp: 1.1,
+  slowDown: 0.985,
 };
+
+// Lane-units/s of centrifugal load a corner puts on a kart, per (curvature^0.7
+// x speed^2). ONE constant, because it is used twice and the two uses must
+// agree: the player's cornerPushFor in the monolith shoves the kart toward the
+// outside wall with it, and the rivals' corner speed governor below inverts it
+// to decide how fast a corner can be taken. Raise it and corners demand more
+// of everyone; let the two drift apart and rivals quietly start cornering to
+// different physics than the player.
+//
+// RAISED 2026-08-08 (0.00052 -> 0.00062, +19%) on the owner's "corners don't
+// demand anything". At the old value the tightest authored corner (94.7 units
+// on Penguin Village) balanced a FULL drift at ~230 km/h, so a clean line could
+// be held nearly flat; at 0.00062 that balance drops to ~211, which is the
+// difference between a corner you steer through and one you have to arrive at
+// correctly. The autoplay driver reads this same number to decide when to brake
+// and when to drift, so it adapts rather than simply falling off.
+export const CORNER_LOAD_K = 0.00062;
 
 // Kart-vs-kart contact tuning (owner-requested 2026-07-06: karts must not
 // render through each other, and a faster kart square in a slower kart's
@@ -237,7 +295,7 @@ export const updateRivalRacers = (field, ctx) => {
     const kappaEff = Math.max(Math.abs(kappaNow), Math.abs(kappaAhead));
     const cornerCap =
       kappaEff > 0.0004
-        ? Math.sqrt((soul.authority * soul.risk) / (Math.pow(kappaEff, 0.7) * 0.00052))
+        ? Math.sqrt((soul.authority * soul.risk) / (Math.pow(kappaEff, 0.7) * CORNER_LOAD_K))
         : Infinity;
     const wobble = 1 + Math.sin(rival.progress * 53 + index * 2.4) * soul.wobble;
     let targetSpeed = Math.min(maxSpeed * soul.pace * rival.rubber * wobble, cornerCap);
