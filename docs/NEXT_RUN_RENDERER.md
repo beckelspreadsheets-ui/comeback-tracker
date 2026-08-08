@@ -1,11 +1,11 @@
-# Handoff for the next run — the renderer is measured out; go and race it
+# Handoff for the next run — difficulty is the live thread
 
-**Rewritten 2026-08-07 (second session).** Paste the prompt at the bottom into a
-fresh context. Everything here is measured this session, not recollection.
+**Rewritten 2026-08-07/08.** Paste the prompt at the bottom into a fresh
+context. Everything here is measured, not recollection.
 
-The previous version of this file sent a run at two targets that **do not
-exist**. Both are disproven below with the numbers. Read that section before
-planning anything, or you will spend the round the way the last one nearly did.
+Two earlier versions of this file sent runs at targets that **did not exist**.
+Both are disproven below with the numbers. Read those sections before planning
+anything.
 
 `docs/AUDIO_AND_MENU_PLAN.md` is still DONE and still must not be worked from.
 
@@ -20,12 +20,101 @@ Branch `aaa-kart-ci`. `main` untouched, nothing on production.
 | `aa1e0962` | the warm-up was compiling every material twice — the program fix |
 | `916677b4` | `?perf=1` device readout; audit breakdown stops shipping |
 | `33999f2d` | the engine is multi-sampled; JS gzip threshold 500 → 520 (owner ack) |
+| `88d541be` | difficulty: rivals race, corners cost, the wall hurts |
 
 **Deployed and byte-verified twice** at
 https://aaa-preview.comeback-city-kart.pages.dev (Showcasedesigns account,
 `9f01a1b31a298b112c22c3e00fe70a45`).
 
 All 15 gates green after every change, including a full pass at load 32.
+
+---
+
+## DIFFICULTY — shipped, and waiting on his verdict
+
+Owner 2026-08-08: *"we do need to make it more difficult in general its very
+easy to just mob around the whole maps"*. Asked which of four causes, he picked
+three: **rivals never threaten · corners don't demand anything · bad driving
+isn't punished**. Items he did NOT pick, so they are untouched.
+
+`npm run probe:difficulty` is the measurement — it races the autoplay driver to
+the flag on both tracks and reports finishing position, share of the distance
+led, share of the race at 95%+ of sustained pace, and off-road time. Run-to-run
+spread is 0.1–1.2 s, so the numbers are real. `DIFFICULTY_PROBE_QUERY=freebody=1`
+runs the same measurement against a variant.
+
+| autoplay, 4 races | before | after |
+|---|---|---|
+| wins | 3/4 | **1/4** |
+| order at the flag | player 1st in 3 | Blue Speed 1st in 3 |
+| race time | 141–147 s | 140–145 s |
+
+**Read that table with its limits.** The probe under-reads the rival change by
+design: autoplay drives conservatively and sits mid-field, so it spends most of
+a race in the rubber band's dead zone where none of the changed constants apply.
+And it cannot show the corner change at all, because autoplay *reads*
+`cornerPushFor` to decide when to brake and drift — it adapts, so its speed trace
+keeps its old shape while the demand underneath rises. Flat-out share moved
+14% → 16% and slowest/fastest-10% moved 0.80 → 0.79; that is the adaptation, not
+the difficulty. **Only the owner can judge whether it is now right.**
+
+What changed, and why each one:
+
+- **The rubber band made the race safe from both ends.** Laps are ~49 s, so its
+  3 s and 4 s thresholds were 6–8% of one. Any rival more than 3 s up the road
+  throttled to 0.93 until the player caught up, and any rival more than 4 s
+  behind chased at 1.12 — except on the FINAL LAP, where it dropped to 1.03 and
+  the chase switched off at the only point where being caught matters. Now
+  9 s / 3 s / 0.985 / 1.16, and `finalLapCatchUp` 1.03 → 1.10, deliberately
+  reversing its old "a lead the player earned holds to the line" intent.
+- **Rival pace** 1.05/0.99/0.96 → 1.08/1.03/1.00, so the whole field sits at or
+  above the player's raw max and a win has to come from lines, drifts and pads.
+- **`CORNER_LOAD_K`** — the centrifugal constant was DUPLICATED, one copy in the
+  player's `cornerPushFor` and one in the rivals' corner governor, free to
+  disagree about the physics of a corner. Now one exported constant, raised 19%
+  to 0.00062: the tightest authored corner (94.7 units) used to balance a full
+  drift at ~230 km/h and now balances at ~211.
+- **The wall** 200/s floor 70 → **330/s floor 45**. On rails the kart cannot
+  leave the road, so lane 0.95 is the *only* consequence a bad line has, and at
+  the old numbers it was a guide rail you could lean on all the way round. 330/s
+  sheds speed faster than the kart's ~118/s rebuilds it.
+
+**If he says it is too hard**, `RUBBER_BAND` and the three `pace` values are the
+dial, in that order — they are the change with the most effect and the least
+coupling. If he says corners still feel free, raise `CORNER_LOAD_K` before
+touching anything else.
+
+---
+
+## FREE-BODY — the big remaining lever, and its real blocker
+
+This is the honest answer to "bad driving isn't punished": in the shipped build
+`race.freeBody` is null, so the kart is **on rails**, `SURFACE_TYPES.offroad` is
+unreachable, and the probe measures **0.0% off-road on both tracks**. Leaving
+the road is not possible, so cutting a corner cannot be a mistake.
+
+It is all built — P1–P6 of `docs/FREE_BODY_PLAN.md`, behind `?freebody=1`, with
+seven sim gates — and the owner approved the idea on 2026-08-03: *"yes lets make
+it more free body I think it will make it harder to drive too overall"*. P7
+reserves the promotion until he has driven it.
+
+**Measured 2026-08-08, and this is new: the autoplay driver CANNOT drive it.**
+`DIFFICULTY_PROBE_QUERY=freebody=1` times out, and the diagnostic shows why — a
+rescue loop. It drives off (lane 2.5+), grinds to 0 km/h, the P5 rescue snaps it
+back to lane 0, and it drives off again: **0.19 laps in 190 seconds.**
+
+Verified at `33999f2d`, i.e. BEFORE the difficulty tuning, so the tuning did not
+cause it. The cause is that autoplay steers in lane space (`desired =
+-cornerPush*1.4 - (lane - apexLane)*0.9`) with no notion of heading, which is
+fine on rails and meaningless once the kart owns its own path.
+
+So the concrete blocker for P7 is **a free-body autoplay controller** — not a
+feel judgement. Without one, promoting free-body fails `test:kart-playable`
+immediately. Note `scripts/test-off-road.mjs` already contains a road-following
+controller written for exactly this reason; start there.
+
+A human may well drive it fine. It is one URL away on the preview:
+`https://aaa-preview.comeback-city-kart.pages.dev/?freebody=1`
 
 ---
 
@@ -244,7 +333,16 @@ The manifest is a glob elsewhere too: a file dropped into
 
 ## TRAPS
 
-The first five are new and each cost time this session.
+The first six are new and each cost time this session.
+
+0. **`git stash push -- <paths>` saves NOTHING when those paths are clean, and
+   the later `git stash pop` then applies an unrelated older stash.** This repo
+   carries a deliberate long-lived `quarantine 2026-07-02` stash, and a pop
+   after a no-op push merged it into the working tree as conflicts across six
+   files. Nothing was lost (a conflicted pop does not drop the stash, and the
+   work was committed), but recovery cost a round. Check `git stash list` before
+   popping, or bisect with `git checkout <commit> -- <paths>` and no stash at
+   all.
 
 1. **A program is a CACHE KEY, not a material.** Before "fixing" a program count
    by deduplicating materials, read the audit's per-type program breakdown. It
@@ -319,10 +417,18 @@ The first five are new and each cost time this session.
 > owner takes himself at `?perf=1` on the preview; ask him for it, then read the
 > "If a device reading says geometry is the problem" list.
 >
-> AUDIO: the engine was rebuilt as a three-layer multi-sample and deployed, but
-> the owner has NOT heard it yet — ask him for that verdict first. Do not reach
-> for an audio generator: neither connector can produce sound effects, and the
-> fault was a 6.4x playbackRate stretch that no clip would have survived.
+> START BY ASKING FOR TWO VERDICTS, because both shipped overnight and neither
+> has been heard or driven: the DIFFICULTY tuning (rivals/corners/wall — the
+> dial is RUBBER_BAND, then the three pace values) and the three-layer
+> multi-sampled ENGINE. Measure difficulty with `npm run probe:difficulty`.
+>
+> Do not reach for an audio generator: neither connector can produce sound
+> effects, and the fault was a 6.4x playbackRate stretch no clip would survive.
+>
+> FREE-BODY is the biggest remaining difficulty lever and its blocker is now
+> known and concrete: autoplay cannot drive it (rescue loop, 0.19 laps in 190 s,
+> verified before the tuning landed), so P7 needs a free-body autoplay
+> controller before it can be promoted. Do not promote it without one.
 >
 > Gates before and after: `npm run build:kart` then test:audio:samples /
 > select:models / select:stage / audio:kart / kart-playable / bundle:kart /
