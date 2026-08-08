@@ -1,122 +1,127 @@
-# Handoff for the next run — renderer, trailers, and what audio/menus left behind
+# Handoff for the next run — the renderer is measured out; go and race it
 
-**Written 2026-08-07.** Paste the prompt at the bottom into a fresh context.
-Everything here is verified state, measured this session, not recollection.
+**Rewritten 2026-08-07 (second session).** Paste the prompt at the bottom into a
+fresh context. Everything here is measured this session, not recollection.
 
-This supersedes `docs/AUDIO_AND_MENU_PLAN.md`, which is now **DONE** — do not
-work from it. Its traps have been carried forward below where they still apply.
+The previous version of this file sent a run at two targets that **do not
+exist**. Both are disproven below with the numbers. Read that section before
+planning anything, or you will spend the round the way the last one nearly did.
+
+`docs/AUDIO_AND_MENU_PLAN.md` is still DONE and still must not be worked from.
 
 ---
 
 ## STATE
 
-Branch `aaa-kart-ci`, **pushed 2026-08-07**. `main` untouched, nothing on production.
+Branch `aaa-kart-ci`. `main` untouched, nothing on production.
 
 | commit | what |
 |---|---|
-| `bbc7f5c1` | sample-playback path in `kartAudio.js` + `test:audio:samples` |
-| `219949d1` | the 20 SFX one-shots, rendered offline |
-| `a9a3e162` | sampled looping engine |
-| `a510c744` | five missing kart portraits + `test:select:models` |
-| `b3d3cc66` | live 3D select stage + premium rebuild of all 3 menu screens |
-| `9b18dd29` | three music beds + measured mp3 loop point |
-| `4a29739c` | `npm run audit:renderer` |
-| `2331eca7` | scenery material/geometry sharing |
-| `c0d7465d` | per-rig kart materials (measured zero — read the message) |
-| `8b82e39e` | this handoff |
-| `7a7557da` | audio-generator correction |
+| `aa1e0962` | the warm-up was compiling every material twice — the program fix |
+| `916677b4` | `?perf=1` device readout; audit breakdown stops shipping |
 
-**Deployed:** everything up to and including the music (`9b18dd29`) is live and
-byte-verified at https://aaa-preview.comeback-city-kart.pages.dev. The three
-renderer commits are **committed but NOT deployed** — see the wrangler note.
+**Deployed and byte-verified twice** at
+https://aaa-preview.comeback-city-kart.pages.dev (Showcasedesigns account,
+`9f01a1b31a298b112c22c3e00fe70a45`).
 
-**Owner verdicts:** menus "premium now" ✅ · SFX "good" ✅ · music "good" ✅ ·
-engine sample "still not right" (parked, see audio generators below).
+All 15 gates green, twice, including once at load 32.
 
 ---
 
-## AUDIO GENERATORS — read this before assuming anything is blocked
+## THE ONE THING THE OWNER IS OWED NEXT: A NUMBER FROM REAL HARDWARE
 
-The owner has confirmed (2026-08-07) that **either ElevenLabs or Higgsfield is
-available to us, and he can allow whichever is needed.** Ask him rather than
-assuming.
+Nothing in the renderer is over budget any more. Everything left is a judgement
+call about where time actually goes, and **this machine cannot make it** — it
+ran at load 8–32 all session, and the repo's history is full of fps figures
+that measured the capture conditions rather than the build.
 
-What actually happened last session, stated precisely so it is not
-mis-remembered as an account limitation: Higgsfield's `sonilo_music` and
-`mirelo_text_to_audio` are marked **"Game pipeline only"** in the MCP tool
-description and the model catalog, with an instruction not to use them for
-standalone audio. That is a restriction in the TOOL'S OWN DESCRIPTION, not a
-missing permission on his account — and the previous session read it as a hard
-block and worked around it. The owner's position is that this is his call.
+So the next move is not code. It is:
 
-So: if generated audio is wanted, **ask the owner to confirm which of the two
-to use, and use it.** ElevenLabs additionally needs a one-time OAuth (`/mcp` →
-"claude.ai ElevenLabs") that has not been run yet.
+> Open **https://aaa-preview.comeback-city-kart.pages.dev/?perf=1** on the
+> gaming machine, and again on the phone. Race about half a lap on each track so
+> the window fills, then screenshot the panel.
 
-Everything shipped so far — 20 SFX, the engine loop, three music beds — is
-authored offline and deterministic, so any generated replacement is a drop-in:
-the manifest is a glob, and a file dropped into
-`src/assets/game/audio/{sfx,music,engine}/` activates itself.
+Add `&track=penguin-village` for the other track. The readout is five lines:
 
-**Live open item:** the sampled engine is parked because the owner said it is
-"still not right". A generated engine loop is the intended replacement.
+```
+buffer 1434x663  dpr 3
+p50 7.0ms (143 fps)  p95 7.8  worst 14.5
+floor 6.0ms  >20ms 0/512  work 3.1ms
+SOFT — occasional dropped beat
+comeback-city  draws 87  tris 519775  programs 51
+```
 
-He also switches Cloudflare accounts deliberately, so wrangler reverts. **Run
-`npx wrangler whoami` before every deploy** — the kart project lives under
-Showcasedesigns `9f01a1b31a298b112c22c3e00fe70a45`. If it says
-`beckelspreadsheets@`, stop and ask; do not work around it.
+**How to read it, because the verdict line decides what gets optimised:**
+
+- `floor` is the smallest frame the device has ever managed. If `p95` is close
+  to `floor`, the display is pacing us and there is headroom. If `p95` is ~2x
+  `floor`, we are dropping whole beats — a GPU spike or host contention, NOT a
+  uniformly more expensive frame. Those need opposite fixes.
+- `work` is our own JavaScript frame time. If it is more than ~60% of `p50`,
+  the CPU side owns the frame and geometry work is the wrong target.
+- `buffer` and `dpr` first, always. A phone's device pixel ratio squares the
+  post chain's fill cost, and no amount of triangle reduction touches that. On
+  a dpr-3 phone viewport the renderer already clamps a 2532-wide drawing buffer
+  to 1434 — confirm what a real phone does before assuming geometry is the
+  problem.
+
+The flag is opt-in and the chunk is not downloaded without it (verified), so it
+costs a normal player nothing.
+
+`npm run audit:renderer` remains the structural measurement and is safe to run
+anywhere. Its timing line is advisory and must never be quoted as a verdict.
 
 ---
 
-## OPEN WORK, in the order it is worth doing
+## THE TWO TARGETS THE LAST HANDOFF INVENTED
 
-### 1. Item-prop material sharing — the actual fix for the program count
+Neither survived measurement. Do not re-open either without new evidence.
 
-`npm run audit:renderer` measures this. Penguin Village is at **101 shader
-programs against a 90 budget**, the only metric over.
+### "Item-prop material sharing will fix the 101 shader programs" — no.
 
-The audit names the owners: the two largest duplicate groups (x44 and x17
-`MeshToonMaterial` with a map) belong to **item props and coins** — owners come
-back as `tripo_node_*` and `coin-flip`, with **106 props mounted** on Comeback
-City. Each prop is its own GLB clone with its own material, so the fix is a
-cache keyed by **prop type, shared across instances**.
+A shader program is one **program cache key**, and that key contains no material
+identity whatsoever. N byte-identical materials cost exactly ONE program between
+them. Sharing materials cannot change a program count, which is also why the
+per-rig kart attempt at `c0d7465d` measured exactly zero.
 
-**THE TRAP.** `fitItemPropScene` has an `unlit` branch for the blizzard fog
-shells, and those get per-instance opacity writes in the frame loop
-(`holder.userData.shells[0].material.opacity = 0.3 * fade`). A per-type cache
-must exclude that branch or every fog dome fades together. This is the same
-class of bug as the kart proximity ghost — which writes
-`mesh.material.opacity = proximity` over every mesh of a kart — so **any**
-material sharing has to be checked against who mutates it.
+The real cause, found by making the audit print programs by material type: every
+type had split into an `srgb` and an `srgb-linear` variant. `SpriteMaterial` and
+`PointsMaterial` had exactly two programs each with nothing else differing.
 
-Do NOT re-try per-rig sharing on kart bodies and driver avatars. It was tried
-at `c0d7465d` and measured exactly zero: those bodies already resolve to one
-material each.
+`renderer.compile()` links against the renderer's **current output state**, and
+the race draws through the post chain's render target, never to the canvas. Two
+cache-key fields flip on that difference: `outputColorSpace` and `toneMapping`.
+The countdown warm-up was linking an unused second variant of every material in
+the scene *and* leaving the variant the race renders cold.
 
-### 2. InstancedMesh for the procedural scenery
+```
+shader programs   Comeback City 86 -> 54    Penguin Village 103 -> 62   (budget 90)
+```
 
-The `unnamed` group is **812 meshes / 543k triangles** on Penguin Village,
-**476 / 447k** on Comeback City — repeated procedural scenery, the textbook
-`InstancedMesh` case, and the biggest remaining lever on draw calls and
-triangles. Bigger than item 1, and a real refactor of how scenery is built.
+### "812 meshes / 543k triangles of procedural scenery — the textbook InstancedMesh case" — it is the ROAD.
 
-Related and worth questioning independently: **106 individually-mounted GLB
-prop clones on one track** is a lot regardless of their materials.
+The audit now resolves each group to the builder that mounted it, and that
+`unnamed x812` group comes back as **`real-3d-track-mesh`**: the track ribbon,
+its edge profiles, rails and paint. Same on Comeback City (`x476`). It is not
+scatter dressing and it is not instanceable — every segment is a unique piece of
+road, and the segmentation is precisely what lets frustum culling throw most of
+it away (Penguin Village draws 236 of 883 meshes).
 
-### 3. Real-hardware frame timing
+The audit also prints the real candidate list, keyed on what an `InstancedMesh`
+actually requires — the same geometry object AND the same material object:
 
-Nothing in this session judged frame rate, on purpose. This machine ran at load
-**16–35** throughout. Structure (draw calls, triangles, texture bytes, program
-counts) reads identically under load and is reported as fact; timing does not
-and is printed by the audit as *advisory only*. Before optimising further it is
-worth getting real numbers from the owner's gaming machine and a phone, so
-effort goes where it is slow rather than where it is untidy.
+- **Comeback City: zero candidates.**
+- Penguin Village: best is 11 copies of an 80-triangle prop, spread over 4,368
+  world units.
 
-### 4. Trailers
+`meshes per geometry` is 1.19 / 1.22, i.e. nearly every procedural prop builds
+its own buffers. Instancing is not blocked by a missing refactor; there is
+nothing to instance until the builders are changed to share geometry first, and
+the payoff would be draw calls that are already 35% under budget.
 
-Owner wants these "at the end". The capture harness exists and there is finally
-a soundtrack to cut against. Frames for a trailer must NOT come from this
-machine — see the load note above.
+**And beware the spread column.** One `InstancedMesh` has one bounding sphere.
+Converting a batch spread across a 4,368-unit lap stops it being culled, so it
+trades draw calls for triangles actually drawn. On this track that is a loss.
 
 ---
 
@@ -124,84 +129,148 @@ machine — see the load note above.
 
 | | Comeback City | Penguin Village | budget |
 |---|---|---|---|
-| GPU draw calls/frame | 173–182 | 237 | 300 |
-| GPU triangles/frame | ~746k | ~659k | 900k |
-| shader programs | 85 | **101** | 90 |
+| GPU draw calls/frame | 194 | 236 | 300 |
+| GPU triangles/frame | 746k | 659k | 900k |
+| visible meshes | 571 | 883 | 900 |
+| shader programs | **54** | **62** | 90 |
 | texture memory | 27.7 MiB | 27.3 MiB | 220 MiB |
 | unique materials | 330 | 524 | — |
 | duplicate copies | 183 | 237 | — |
 | meshes per geometry | 1.19 | 1.22 | 1.0 = nothing shared |
 
-Verdict given to the owner: a well-built mid-tier scene whose gap to top-tier
-is **batching discipline, not visual features**. Texture memory is a non-issue;
-do not spend effort there.
+Nothing is over. Texture memory is a non-issue; do not spend effort there.
+
+**If a device reading says geometry is the problem**, the ranked levers are:
+
+1. **The palm cluster: 10,748 triangles x 17 mounts = 182k on Comeback City**,
+   about a quarter of everything drawn there. Rival kart bodies are 7,185 x 20
+   on both tracks. Decimation, not instancing, is the tool. (Note the standing
+   rule: never `gltf-transform optimize`.)
+2. Material dedup in `mountMiamiAsset` — every GLB mount clones its template but
+   builds fresh materials per node, which is where the 41/34/17 duplicate groups
+   come from. Cuts material count and helps batching; moves neither programs nor
+   draw calls. **Trap:** a module-level cache would be disposed by the teardown
+   traversal and then reused dead on the next race (this is trap 11's shape), so
+   any such cache must be per-race.
 
 ---
 
-## GATES — 16, all green at handoff
+## BUDGET — READ BEFORE WRITING A LINE OF SHIPPED CODE
+
+```
+JS gzip   499.90 / 500 KiB      headroom 0.10 KiB
+```
+
+That is a pass with **100 bytes to spare**, and it is only affordable because
+the audit breakdown stopped shipping in the same change (`import.meta.env.DEV`
+lets the minifier drop it: 499.81 -> 498.71) to pay for the `?perf=1` probe.
+
+**The owner has been asked whether to raise the 500 KiB threshold.** Until he
+answers, treat the budget as full: any new shipped code needs bytes reclaimed
+first. Everything else has room — total 5.3 MiB / 2956 KiB gz, audio 2.6 MiB,
+images 0.35 MiB.
+
+---
+
+## GATES — 15, all green
 
 Pure Node, immune to machine load:
-`test:audio:samples` (54 checks) · `test:select:models` · `test:spline` ·
-`test:freebody` · `test:laps` · `test:wrongway` · `test:offroad` · `test:pit` ·
-`test:drift` · `test:minimap` · `test:race` · `test:bundle:kart`
+`test:audio:samples` · `test:select:models` · `test:spline` · `test:freebody` ·
+`test:laps` · `test:wrongway` · `test:offroad` · `test:pit` · `test:drift` ·
+`test:minimap` · `test:race` · `test:bundle:kart`
 
-Playwright (judge a red against `uptime` first — see traps):
-`test:audio:kart` (12) · `test:select:stage` (14) · `test:kart-playable`
+Playwright: `test:audio:kart` · `test:select:stage` · `test:kart-playable`
 
-Not a gate, run it to measure: `npm run audit:renderer`
-Renderers of content: `render-kart-sfx.mjs`, `render-kart-engine.mjs`,
-`render-kart-music.mjs`, `select-portraits-capture.mjs` — all deterministic.
-
-Budget headroom: total 5.3 MiB / 2958 KiB gz · audio 2.6 MiB · images 0.35 MiB ·
-**JS gzip 1.7 KiB (498.3 / 500 — effectively full, treat as a hard wall).**
+Not a gate, run it to measure: `npm run audit:renderer`.
+Not a gate, one manual check if `?perf=1` is ever touched: load the preview
+with and without the flag — without it, nothing paints and the chunk is never
+requested.
 
 ---
 
-## TRAPS — every one of these cost time this session
+## AUDIO — the owner has chosen
 
-1. **`renderer.info` resets on every `render()` call**, and the post chain makes
-   several per frame. Reading it after the composer describes only the final
-   pass — one fullscreen triangle. The audit reported "1 draw call, 1 triangle"
-   for a scene drawing 571 meshes. `autoReset = false` + a manual `reset()` per
-   frame is already wired; do not undo it.
-2. **Vite inlines assets under 4 KB as base64.** Eight of the twenty SFX went
-   into `race-runtime.js` at +33%, spending the JS budget — the one cap the
-   audio work was barred from touching. `assetsInlineLimit` exempts audio and
-   `test:bundle:kart` fails on inlined audio. JS gzip has ~2 KiB left, so this
+**ElevenLabs**, and he said he would run the one-time OAuth himself (`/mcp` →
+"claude.ai ElevenLabs"). Confirm it is authenticated before planning around it.
+
+The reasoning, so it is not re-litigated: its sound-effects model is built for
+short non-musical sound design, which is what a steady engine tone is.
+Higgsfield's two audio tools are foley-for-video (`mirelo`) and music
+(`sonilo`); their "Game pipeline only" tag is a restriction in the TOOL'S OWN
+DESCRIPTION, not a limit on his account, and he considers it his call — but
+neither is aimed at this.
+
+**Live open item:** the sampled engine is parked because he said it is "still
+not right". A generated loop is the intended replacement. The catch to design
+around: a generated clip is ONE fixed timbre, and the game varies RPM by
+`playbackRate`, so what to ask for is a steady mid-RPM loop.
+
+Everything shipped so far — 20 SFX, the engine loop, three music beds — is
+authored offline and deterministic, and the manifest is a glob: a file dropped
+into `src/assets/game/audio/{sfx,music,engine}/` activates itself.
+
+---
+
+## TRAPS
+
+The first five are new and each cost time this session.
+
+1. **A program is a CACHE KEY, not a material.** Before "fixing" a program count
+   by deduplicating materials, read the audit's per-type program breakdown. It
+   prints the cache-key fields that differ within each type, which is the only
+   thing that can actually be changed.
+2. **Binding the composer's own `inputBuffer` around `renderer.compile()`
+   renders the entire scene BLACK.** From the first countdown tick on. Nothing
+   else breaks — the sim keeps running, the kart still reaches 112 km/h, the
+   draw calls and the corrected program count still report correctly. Only the
+   image is gone, behind an intact HUD. Use the 1x1 scratch target that is
+   there now: the only thing about the bound target that reaches the cache key
+   is whether it is null.
+3. **`test:kart-playable` caught that, and it is the ONLY gate that would
+   have.** Its manual-throttle motion check read changedRatio 0.02 against 0.53.
+   Trap 9 below is real, but do not reach for it before looking at a frame: a
+   red at load 5.6 that reproduces three times is not the machine.
+4. **Bisect a suspected regression against the commit, not against HEAD.**
+   `git stash` alone still leaves the committed change in place, which for one
+   round looked like proof the change was innocent.
+5. **Audit-only code costs production bytes.** The deep breakdown was 1.5 KiB
+   gzip against a budget with 1.7 KiB of headroom in total. `import.meta.env.DEV`
+   in the condition lets Vite fold it to `false` and the minifier drop it, and
+   every consumer runs against `dev:kart` anyway.
+6. **`renderer.info` resets on every `render()` call**, and the post chain makes
+   several per frame. `autoReset = false` + a manual `reset()` per frame is
+   already wired; do not undo it.
+7. **Vite inlines assets under 4 KB as base64.** `assetsInlineLimit` exempts
+   audio and `test:bundle:kart` fails on inlined audio. JS gzip is full, so this
    would breach it today.
-3. **mp3 encoder padding breaks loops.** The engine loop ships as WAV for this
-   reason. Music is mp3 and gets its loop point **measured** off the decoded
-   buffer at runtime, because Chrome/Firefox/Safari disagree about stripping
-   the delay.
-4. **Loop crossfades go on the START of a buffer**, blending in material that
-   followed the end. Fading the END connects to nothing. And judge a seam
-   against **p99** of sample steps, never the mean — a seam landing on a steep
-   part of the waveform is not a click.
-5. **Filters need a warm-up lap on a loop.** A biquad from zero state emits a
-   transient, and on a loop those samples ARE the loop point. Run it once
-   around discarding output first. Worth 5.14x → 0.02x on the menu bed.
-6. **StrictMode + `forceContextLoss()`** permanently retires a canvas element.
-   Create the canvas inside the effect, never in JSX, or the second mount gets
-   a dead element and the stage renders blank.
-7. **`navigator.webdriver` skips intro AND select.** Every harness races past
-   the menus; a "menu screenshot" photographs the track. `test:select:stage`
-   overrides it — copy that pattern for any menu work.
-8. **Cloudflare Pages propagation race:** a just-uploaded asset falls through
-   `_redirects` (`/* /index.html 200`) and returns **index.html at 2092 bytes
-   with a 200**, which looks exactly like a corrupt file. Verify a deploy
-   twice, or poll until sizes match.
-9. **Machine load fakes reds.** `test:kart-playable` failed at load 27.9 and
-   passed clean on re-run. Check `uptime` before diagnosing any Playwright red.
-   Greens always count.
-10. **`raceSceneTheme.js` and `raceShadowRig.js` are LEGACY** — the monolith
-    imports neither. Light anything new from the shipped track palettes
-    (`tracks/comebackCity.js`, `penguinVillage.js`).
-11. **Material disposal exists** at three sites (`replaceBody` + two GLB rig
-    swaps), all traversing kart body groups, never the world. Scenery caches
-    are safe *because of that*; route a kart material through a module-level
-    cache and the next rig swap disposes it out from under everything.
-12. **The menu mirror rule is retired.** `src/game/RaceScreen.jsx` is deleted;
+8. **mp3 encoder padding breaks loops.** The engine loop ships as WAV. Music is
+   mp3 and gets its loop point measured off the decoded buffer at runtime.
+9. **Loop crossfades go on the START of a buffer.** Fading the END connects to
+   nothing. Judge a seam against **p99** of sample steps, never the mean.
+10. **Filters need a warm-up lap on a loop.** A biquad from zero state emits a
+    transient, and on a loop those samples ARE the loop point.
+11. **StrictMode + `forceContextLoss()`** permanently retires a canvas element.
+    Create the canvas inside the effect, never in JSX.
+12. **`navigator.webdriver` skips intro AND select.** `test:select:stage`
+    overrides it — copy that pattern for any menu work.
+13. **Cloudflare Pages propagation race:** a just-uploaded asset falls through
+    `_redirects` and returns **index.html at 2092 bytes with a 200**, which
+    looks exactly like a corrupt file. It happened again this session on
+    `race-runtime`. Verify every deploy twice, comparing sizes against
+    `dist-kart/assets`.
+14. **Machine load fakes reds.** Check `uptime` before diagnosing any Playwright
+    red. Greens always count — the full battery passed at load 32.
+15. **`raceSceneTheme.js` and `raceShadowRig.js` are LEGACY** — the monolith
+    imports neither. Light anything new from the shipped track palettes.
+16. **Material disposal exists** at three sites, all traversing kart body
+    groups, never the world. Route a kart material through a module-level cache
+    and the next rig swap disposes it out from under everything.
+17. **The menu mirror rule is retired.** `src/game/RaceScreen.jsx` is deleted;
     `src/kart/KartApp.jsx` is the sole owner of intro → select.
+18. **`npx wrangler whoami` before every deploy.** The owner switches accounts,
+    so it reverts. The kart project is under Showcasedesigns
+    `9f01a1b31a298b112c22c3e00fe70a45`; if it says `beckelspreadsheets@`, stop
+    and ask. Deploy with `deploy:kart:preview`, NEVER `deploy:kart`.
 
 ---
 
@@ -209,34 +278,34 @@ Budget headroom: total 5.3 MiB / 2958 KiB gz · audio 2.6 MiB · images 0.35 MiB
 
 > Continue Penguin Kart in /Users/andrewferguson/Downloads/comeback-tracker,
 > branch `aaa-kart-ci`. Read `docs/NEXT_RUN_RENDERER.md` FIRST — it is the
-> authoritative handoff and lists twelve traps that each cost time last session.
-> Do not work from `docs/AUDIO_AND_MENU_PLAN.md`; audio and menus are done.
+> authoritative handoff. Do not work from `docs/AUDIO_AND_MENU_PLAN.md`.
 >
-> The work is renderer optimisation, in this order: (1) item-prop material
-> sharing per prop TYPE — the fix for Penguin Village's 101 shader programs
-> against a 90 budget — excluding the blizzard fog shells, which take
-> per-instance opacity writes; (2) `InstancedMesh` for the procedural scenery,
-> which is 812 meshes / 543k triangles on PV. Measure with
-> `npm run audit:renderer` before and after; it prints duplicate materials with
-> their owners, so nothing here needs guessing.
+> Renderer optimisation is PARKED and the reason matters: nothing is over budget
+> any more, and the last handoff's two targets were both disproven by
+> measurement — a shader program is a cache key so material sharing cannot move
+> the count, and the "812-mesh procedural scenery" is the road. Do not re-open
+> either. The next renderer decision is waiting on a real-hardware reading the
+> owner takes himself at `?perf=1` on the preview; ask him for it, then read the
+> "If a device reading says geometry is the problem" list.
+>
+> The live work is AUDIO: a generated engine loop to replace the sampled one he
+> called "still not right". He chose ElevenLabs and said he would run the OAuth
+> (`/mcp` → "claude.ai ElevenLabs") — check it is authenticated first. Ask for a
+> steady mid-RPM loop, because the game varies RPM by playbackRate.
+>
+> He also owes an answer on the JS gzip threshold: the build is at 499.90 / 500
+> KiB, so treat the budget as FULL and reclaim bytes before shipping any new
+> code until he rules.
 >
 > Gates before and after: `npm run build:kart` then test:audio:samples /
 > select:models / select:stage / audio:kart / kart-playable / bundle:kart /
 > spline / freebody / laps / wrongway / offroad / pit / drift / minimap / race.
-> Check `uptime` before believing any Playwright red — this machine runs at load
-> 16-35 and fakes failures. Never judge frames or frame rate here.
+> Check `uptime` before believing a Playwright red — but look at a frame before
+> blaming the machine, because that is how a real regression got through this
+> session. Never judge frames or frame rate here.
 >
-> Deploy with `npm run deploy:kart:preview` — NEVER `npm run deploy:kart`, which
-> is production. Run `npx wrangler whoami` first: the project is under
-> Showcasedesigns `9f01a1b3…`, and the owner switches accounts so it reverts.
-> Verify the origin twice after deploying (propagation race, trap 8).
+> Deploy with `npm run deploy:kart:preview` — NEVER `npm run deploy:kart`. Run
+> `npx wrangler whoami` first (Showcasedesigns `9f01a1b3…`) and verify the
+> origin twice afterwards against `dist-kart/assets` sizes.
 >
-> The owner wants to be asked with the AskUserQuestion tool, batching two or
-> three items per round rather than checking in after each one.
->
-> On audio: the sampled engine is parked because he said it is "still not
-> right", and a generated loop is the intended replacement. EITHER ElevenLabs
-> OR Higgsfield is available — he can allow whichever is needed, so ask him
-> rather than assuming. Do not repeat last session's mistake of reading
-> Higgsfield's "Game pipeline only" tag on `mirelo`/`sonilo` as a hard block; it
-> is a tool-description restriction and he considers it his call.
+> He wants to be asked with the AskUserQuestion tool, two or three items a round.
