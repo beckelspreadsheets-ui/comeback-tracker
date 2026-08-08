@@ -9059,15 +9059,86 @@ const estimateSceneRenderStats = (world, renderer) => {
       });
       // Group by the un-numbered stem so "rock_017" and "rock_018" collapse.
       const stem = (object.name || object.geometry?.name || 'unnamed').replace(/[_-]?\d+$/, '') || 'unnamed';
-      const entry = byName.get(stem) || { count: 0, triangles: 0 };
+      const entry = byName.get(stem) || { count: 0, kind: null, triangles: 0 };
       entry.count += 1;
       entry.triangles += triangleCountForGeometry(object.geometry) * (object.isInstancedMesh ? object.count || 1 : 1);
+      // A GLB node called "Mesh" names nothing. The nearest userData.kind above
+      // it names the builder that mounted it, which is the thing anyone reading
+      // this report can actually go and change.
+      if (!entry.kind) {
+        for (let node = object; node && !entry.kind; node = node.parent) entry.kind = node.userData?.kind || null;
+      }
       byName.set(stem, entry);
     });
     const topNames = [...byName.entries()]
       .sort((a, b) => b[1].triangles - a[1].triangles)
       .slice(0, 12)
-      .map(([name, value]) => ({ count: value.count, name, triangles: value.triangles }));
+      .map(([name, value]) => ({ count: value.count, kind: value.kind, name, triangles: value.triangles }));
+    // Procedural scenery carries no mesh name, so 812 of them collapse into a
+    // single "unnamed" line that says nothing about WHICH BUILDER to convert —
+    // and the builder is the only thing an InstancedMesh refactor can act on.
+    // Every dressing factory tags its group with userData.kind, so walk up to
+    // the nearest tagged ancestor. Sorted by mesh count, because meshes (and
+    // therefore draw calls) are what instancing removes; the triangles come
+    // along as context, since instancing does NOT remove those.
+    const byKind = new Map();
+    world.traverse((object) => {
+      if (!object.visible || (!object.isMesh && !object.isInstancedMesh)) return;
+      let kind = null;
+      for (let node = object; node && !kind; node = node.parent) kind = node.userData?.kind || null;
+      const entry = byKind.get(kind || 'untagged') || { count: 0, triangles: 0 };
+      entry.count += 1;
+      entry.triangles += triangleCountForGeometry(object.geometry) * (object.isInstancedMesh ? object.count || 1 : 1);
+      byKind.set(kind || 'untagged', entry);
+    });
+    const topKinds = [...byKind.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 14)
+      .map(([kind, value]) => ({ count: value.count, kind, triangles: value.triangles }));
+    // The InstancedMesh candidate list, stated as the thing an InstancedMesh
+    // actually requires: the SAME geometry object and the SAME material object,
+    // differing only by matrix. A name or a kind is a hint; this is the
+    // precondition. `spread` is the diagonal of the batch's bounding box in
+    // world units and is the reason not to convert blindly — one InstancedMesh
+    // has ONE bounding sphere, so a batch spread across the whole lap stops
+    // being frustum-culled and trades draw calls for triangles drawn.
+    const byPair = new Map();
+    const pairPoint = new THREE.Vector3();
+    world.traverse((object) => {
+      if (!object.visible || !object.isMesh || object.isInstancedMesh) return;
+      if (!object.geometry || !object.material || Array.isArray(object.material)) return;
+      const key = `${object.geometry.uuid}|${object.material.uuid}`;
+      let entry = byPair.get(key);
+      if (!entry) {
+        let kind = null;
+        for (let node = object; node && !kind; node = node.parent) kind = node.userData?.kind || null;
+        entry = {
+          count: 0,
+          kind: kind || object.name || object.geometry.name || 'untagged',
+          max: new THREE.Vector3(-Infinity, -Infinity, -Infinity),
+          min: new THREE.Vector3(Infinity, Infinity, Infinity),
+          triangles: triangleCountForGeometry(object.geometry),
+          type: object.material.type,
+        };
+        byPair.set(key, entry);
+      }
+      entry.count += 1;
+      object.getWorldPosition(pairPoint);
+      entry.min.min(pairPoint);
+      entry.max.max(pairPoint);
+    });
+    const instanceCandidates = [...byPair.values()]
+      .filter((entry) => entry.count > 3)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 14)
+      .map((entry) => ({
+        count: entry.count,
+        kind: entry.kind,
+        spread: Math.round(entry.max.distanceTo(entry.min)),
+        totalTriangles: entry.triangles * entry.count,
+        trianglesEach: entry.triangles,
+        type: entry.type,
+      }));
     // Which materials are DUPLICATES of each other? Two materials with the
     // same type, colour, emissive and flags are the same material built twice,
     // and each one is a batching barrier and a candidate shader program. This
@@ -9112,8 +9183,39 @@ const estimateSceneRenderStats = (world, renderer) => {
       .sort((a, b) => b.copies - a.copies)
       .slice(0, 10);
 
+    // WHICH programs? "101 shader programs" is no more actionable than "883
+    // visible meshes" was. A program is one PROGRAM CACHE KEY, and that key
+    // carries the material type, its defines, the light counts, sided-ness,
+    // and the rim's customProgramCacheKey — but NOT the material's identity.
+    // So N byte-identical materials cost exactly ONE program between them,
+    // and the lever here is the number of distinct shader CONFIGURATIONS, not
+    // the number of duplicate material objects. Grouped by material type and
+    // reduced to the key fields that actually differ inside each group, so
+    // the report names the knob instead of the symptom.
+    const byProgramType = new Map();
+    (renderer.info.programs || []).forEach((program) => {
+      const type = program.type || 'unknown';
+      const group = byProgramType.get(type) || { keys: [], programs: 0, usedTimes: 0 };
+      group.programs += 1;
+      group.usedTimes += program.usedTimes ?? 0;
+      group.keys.push(String(program.cacheKey ?? '').split(','));
+      byProgramType.set(type, group);
+    });
+    const programTypes = [...byProgramType.entries()]
+      .map(([type, group]) => {
+        const width = group.keys.reduce((widest, tokens) => Math.max(widest, tokens.length), 0);
+        const varying = [];
+        for (let field = 0; field < width; field += 1) {
+          const values = new Set(group.keys.map((tokens) => tokens[field] ?? ''));
+          if (values.size > 1) varying.push({ field, values: [...values].slice(0, 8) });
+        }
+        return { programs: group.programs, type, usedTimes: group.usedTimes, varying };
+      })
+      .sort((a, b) => b.programs - a.programs);
+
     breakdown = {
       duplicateSignatures,
+      programTypes,
       wastedMaterials: duplicateSignatures.reduce((sum, entry) => sum + entry.copies - 1, 0),
       // How many meshes share a geometry. ~1.0 means every object carries its
       // own buffers and nothing is instanced or shared.
@@ -9121,6 +9223,8 @@ const estimateSceneRenderStats = (world, renderer) => {
       meshesPerMaterial: Number((meshCount / Math.max(1, byMaterial.size)).toFixed(2)),
       uniqueMaterials: byMaterial.size,
       topByTriangles: topNames,
+      topByKind: topKinds,
+      instanceCandidates,
     };
   }
   return {
@@ -10399,20 +10503,49 @@ export const ComebackCityThreeKartRace = ({
     // empty half of the scene. The countdown is the one window with 2.2s of
     // spare frame budget and nothing to stutter.
     //
-    // CAVEAT for whoever reads the next manifest: compile() links against the
-    // renderer's CURRENT output state, and the race draws through the post
-    // chain's render target rather than to the screen. If a define differs
-    // between those two the warm-up links a variant the race never uses and the
-    // absolute `programs` count goes UP while the mid-run DELTA goes to zero.
-    // The delta is the number that was the bug; judge it on that, not the level.
+    // THE CAVEAT ABOVE WAS THE BUG, MEASURED 2026-08-07. compile() links
+    // against the renderer's CURRENT output state, and the race draws through
+    // the post chain's render target rather than to the screen — so warming
+    // with the canvas bound linked a variant of every material that the race
+    // never renders, and left the variant it does render cold. Two cache-key
+    // fields flip on that single difference (three's getParameters):
+    // `outputColorSpace` becomes the working space instead of srgb, and
+    // `toneMapping` becomes NoToneMapping. Neither is subtle — the audit's
+    // per-type program breakdown showed EVERY material type split srgb /
+    // srgb-linear, SpriteMaterial and PointsMaterial included at exactly two
+    // programs each with nothing else differing between them.
+    //
+    // It was therefore doubling the whole program count while warming nothing:
+    // Penguin Village 101 against a 90 budget, Comeback City 85. Binding the
+    // chain's own target first is the entire fix, and it is what makes the
+    // repeated countdown pass do the job it was written for.
+    //
+    // The mid-run DELTA is still the number that was the original bug; the
+    // level is now trustworthy too.
     const warmedTextures = new WeakSet();
+    let warmTarget = null;
     const warmSceneShaders = () => {
       try {
+        // A 1x1 SCRATCH target, deliberately NOT the chain's own buffer. Only
+        // one thing about the bound target reaches the cache key — whether it
+        // is null — so a one-pixel target selects exactly the variants the
+        // chain's multisampled buffer would, while touching nothing the
+        // composer owns. Binding the composer's real inputBuffer here rendered
+        // the whole scene BLACK from the first countdown tick onward (the sim
+        // kept running at speed; only the image was gone), which is what
+        // test:kart-playable's manual-throttle motion check catches.
+        if (!warmTarget) warmTarget = new THREE.WebGLRenderTarget(1, 1);
+        const previousTarget = engine.renderer.getRenderTarget();
+        engine.renderer.setRenderTarget(warmTarget);
         // engine.scene, NOT engine.world: the hemisphere fill and the shadow
         // key are parented to the scene, and compile() keys its programs on the
         // lights it can see. Warming against the world group would link a set of
         // no-light programs the race never renders and leave the real ones cold.
-        engine.renderer.compile(engine.scene, engine.camera);
+        try {
+          engine.renderer.compile(engine.scene, engine.camera);
+        } finally {
+          engine.renderer.setRenderTarget(previousTarget);
+        }
         engine.scene.traverse((node) => {
           const materials = node.material ? (Array.isArray(node.material) ? node.material : [node.material]) : null;
           if (!materials) return;
@@ -12779,6 +12912,9 @@ export const ComebackCityThreeKartRace = ({
       window.visualViewport?.removeEventListener('resize', handleResizeSettled);
       resizeSettleTimers.forEach(clearTimeout);
       engine.midGroundBelt?.dispose?.();
+      // The warm-up's 1x1 scratch target is created lazily and belongs to
+      // nothing else, so it is freed here with the rest of the GPU objects.
+      warmTarget?.dispose();
       // The chain owns its own composer plus the baked LUT texture, so its
       // dispose is the one that has to run — engine.composer IS that composer
       // on the ?post=1 path, and the legacy chain still needs the plain call.

@@ -189,10 +189,39 @@ const run = async () => {
             lines.push(`              owners: ${(entry.samples || []).join(', ').slice(0, 90)}`);
           });
         }
+        if (result.breakdown.programTypes?.length) {
+          lines.push('  shader programs by material type (a program is one CACHE KEY, not one material):');
+          result.breakdown.programTypes.forEach((entry) => {
+            lines.push(
+              `    ${entry.type.slice(0, 30).padEnd(31)} x${String(entry.programs).padStart(4)}  used ${entry.usedTimes}`
+            );
+            // Only the differing key fields explain why one type compiled more
+            // than once. Field indices are positions in three's cache key.
+            entry.varying.slice(0, 4).forEach((field) => {
+              lines.push(`              field ${String(field.field).padStart(2)}: ${field.values.join(' / ').slice(0, 84)}`);
+            });
+          });
+        }
         lines.push('  heaviest groups by triangles:');
         result.breakdown.topByTriangles.forEach((entry) => {
-          lines.push(`    ${entry.name.slice(0, 30).padEnd(31)} x${String(entry.count).padStart(4)}  ${String(entry.triangles).padStart(9)} tris`);
+          lines.push(
+            `    ${entry.name.slice(0, 30).padEnd(31)} x${String(entry.count).padStart(4)}  ${String(entry.triangles).padStart(9)} tris  ${entry.kind || 'untagged'}`
+          );
         });
+        if (result.breakdown.instanceCandidates?.length) {
+          lines.push('  InstancedMesh candidates (same geometry AND same material; spread = batch size in world units):');
+          result.breakdown.instanceCandidates.forEach((entry) => {
+            lines.push(
+              `    ${entry.kind.slice(0, 28).padEnd(29)} x${String(entry.count).padStart(4)}  ${String(entry.trianglesEach).padStart(6)} tris each  ${String(entry.totalTriangles).padStart(8)} total  spread ${entry.spread}`
+            );
+          });
+        }
+        if (result.breakdown.topByKind?.length) {
+          lines.push('  meshes by builder (userData.kind — this is what an InstancedMesh pass acts on):');
+          result.breakdown.topByKind.forEach((entry) => {
+            lines.push(`    ${entry.kind.slice(0, 30).padEnd(31)} x${String(entry.count).padStart(4)}  ${String(entry.triangles).padStart(9)} tris`);
+          });
+        }
       }
       lines.push(
         `  [advisory, NOT a verdict — this machine is loaded] frame ${result.advisoryFrameElapsedMs}ms elapsed, ${result.advisoryFrameWorkMs}ms work`
