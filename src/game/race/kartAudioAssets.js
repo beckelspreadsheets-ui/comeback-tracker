@@ -59,7 +59,7 @@ export const MUSIC_LOOP_SECONDS = {
   'penguin-village': 68.571429,
 };
 
-// The engine loop is a WAV on purpose — see scripts/render-kart-engine.mjs.
+// The engine loops are WAVs on purpose — see scripts/render-kart-engine.mjs.
 // mp3 encoder padding is silence baked onto each end of the file, which is an
 // inaudible latency on a one-shot and a GAP on something that loops twice a
 // second for the whole race.
@@ -69,8 +69,26 @@ const engineModules = import.meta.glob('../../assets/game/audio/engine/*.{wav,mp
   query: '?url',
 });
 
+// The engine is MULTI-SAMPLED: `engine-loop-<baseHz>.wav`, one per layer,
+// crossfaded by speed in kartAudio.js. The base frequency lives in the FILE
+// NAME rather than in a table here, because a table is a second place for the
+// same fact to live and the two would drift the first time a layer is retuned.
+// Anything in the folder that does not carry a base frequency is ignored —
+// which is what stops a stale single-loop file being loaded as a layer with no
+// pitch to play it at.
+//
+// Sorted ascending so the crossfade's neighbours are adjacent, and so the
+// order a gate reads them in is stable.
+export const ENGINE_LAYERS = Object.entries(urlsByStem(engineModules))
+  .map(([stem, url]) => {
+    const match = /^engine-loop-(\d+)$/.exec(stem);
+    return match ? { baseHz: Number(match[1]), url } : null;
+  })
+  .filter(Boolean)
+  .sort((a, b) => a.baseHz - b.baseHz);
+
 export const KART_AUDIO_ASSETS = {
-  engine: urlsByStem(engineModules)['engine-loop'] || null,
+  engine: ENGINE_LAYERS.length ? ENGINE_LAYERS : null,
   music: Object.fromEntries(
     Object.entries(urlsByStem(musicModules)).map(([name, url]) => [
       name,

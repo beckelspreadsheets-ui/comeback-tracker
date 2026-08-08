@@ -17,7 +17,7 @@
 // GL, and therefore no sensitivity to machine load. kartAudio.js is kept free
 // of Vite-only syntax specifically so this import works; the `import.meta.glob`
 // lives in kartAudioAssets.js and the manifest is injected as data.
-import { createKartAudio, measureLoopWindow } from '../src/game/race/kartAudio.js';
+import { createKartAudio, engineLayerGains, measureLoopWindow } from '../src/game/race/kartAudio.js';
 
 const cases = [];
 const check = (name, actual, expected) => {
@@ -211,7 +211,13 @@ const gainsOnPathToDestination = (from, ctx) => {
 };
 
 const ASSETS = {
-  engine: '/audio/engine-loop.wav',
+  // The engine is multi-sampled — one loop per base frequency, crossfaded by
+  // speed. Same shape kartAudioAssets.js parses out of the file names.
+  engine: [
+    { baseHz: 56, url: '/audio/engine-loop-56.wav' },
+    { baseHz: 112, url: '/audio/engine-loop-112.wav' },
+    { baseHz: 224, url: '/audio/engine-loop-224.wav' },
+  ],
   music: {
     'comeback-city': { loopSeconds: 61.935484, url: '/audio/comeback-city.mp3' },
     // No declared length -> must loop over the whole buffer.
@@ -233,8 +239,9 @@ const bootUnlocked = async (options = {}) => {
 {
   const { audio, audioWindow } = await bootUnlocked();
   const ctx = audioWindow.ctx;
-  // 3 = two one-shots + the engine loop, which preloads on the same gesture.
-  check('preload decoded both one-shots and the engine', audio.loadedSampleCount(), 3);
+  // 5 = two one-shots + the three engine layers, which preload on the same
+  // gesture.
+  check('preload decoded both one-shots and every engine layer', audio.loadedSampleCount(), 5);
   const oscBefore = ctx.created.oscillator.length;
   const sourcesBefore = ctx.created.source.length;
   audio.playCue('coin');
@@ -266,7 +273,7 @@ const bootUnlocked = async (options = {}) => {
   const oscBefore = ctx.created.oscillator.length;
   audio.playCue('finish'); // no finish.mp3 in ASSETS
   check('unsampled cue fell back to the synth', ctx.created.oscillator.length > oscBefore, true);
-  check('unsampled cue did not count as loaded', audio.loadedSampleCount(), 3);
+  check('unsampled cue did not count as loaded', audio.loadedSampleCount(), 5);
 }
 
 // ── 3. A 404 degrades to the synth, does not throw, and does not re-fetch ──
@@ -280,7 +287,7 @@ const bootUnlocked = async (options = {}) => {
   });
   const ctx = audioWindow.ctx;
   check('404 loaded nothing', audio.loadedSampleCount(), 0);
-  check('404 tombstoned every name', audio.failedSampleCount(), 3);
+  check('404 tombstoned every name', audio.failedSampleCount(), 5);
   const callsAfterPreload = calls;
   const oscBefore = ctx.created.oscillator.length;
   audio.playCue('coin');
@@ -404,8 +411,8 @@ const bootUnlocked = async (options = {}) => {
 
   // Selected by DECODED buffer, not by `loop` — the drift scrape is also a
   // looping BufferSource and is created first, so a naive find() picks it up.
-  const engineLoop = ctx.created.source.find((source) => source.loop && source.buffer?.decoded);
-  check('engine loop is looping', Boolean(engineLoop), true);
+  const engineLoops = ctx.created.source.filter((source) => source.loop && source.buffer?.decoded);
+  check('every engine layer is looping', engineLoops.length, 3);
 
   // Drive it at two speeds and assert the pitch ratio matches the shared
   // curve, so the sample and the synth can never diverge.
@@ -417,13 +424,55 @@ const bootUnlocked = async (options = {}) => {
   };
   frameAt(0);
   frameAt(0);
-  const idleRate = engineLoop.playbackRate.target;
+  const idleRates = engineLoops.map((source) => source.playbackRate.target);
   frameAt(240);
-  const fastRate = engineLoop.playbackRate.target;
-  check('engine pitch rises with speed', fastRate > idleRate, true);
-  // engineFrequencyFor(1, false) = 42 + 118 = 160 -> 160/100 = 1.6
-  check('engine pitch follows engineFrequencyFor', Number(fastRate.toFixed(4)), 1.6);
-  check('engine idle pitch follows the curve', Number(idleRate.toFixed(4)), 0.42);
+  const fastRates = engineLoops.map((source) => source.playbackRate.target);
+  check(
+    'every engine layer rises with speed',
+    fastRates.every((rate, index) => rate > idleRates[index]),
+    true
+  );
+  // engineFrequencyFor(1, false) = 42 + 118 = 160. Each layer resamples against
+  // ITS OWN base, which is the whole point: 160/56, 160/112, 160/224.
+  check('56 Hz layer follows engineFrequencyFor', Number(fastRates[0].toFixed(4)), Number((160 / 56).toFixed(4)));
+  check('112 Hz layer follows engineFrequencyFor', Number(fastRates[1].toFixed(4)), Number((160 / 112).toFixed(4)));
+  check('224 Hz layer follows engineFrequencyFor', Number(fastRates[2].toFixed(4)), Number((160 / 224).toFixed(4)));
+  check('idle pitch follows the curve on the low layer', Number(idleRates[0].toFixed(4)), Number((42 / 56).toFixed(4)));
+
+  // THE POINT OF MULTI-SAMPLING, asserted rather than assumed: whichever layer
+  // is carrying the sound must be playing near its native rate. A regression
+  // that silently fell back to one layer would still pass every check above.
+  const worstStretch = (frequency) =>
+    Math.min(...[56, 112, 224].map((baseHz) => Math.abs(Math.log2(frequency / baseHz))));
+  [42, 79.2, 158.4, 269].forEach((frequency) => {
+    check(`${frequency} Hz is within half an octave of a layer`, worstStretch(frequency) <= 0.51, true);
+  });
+}
+
+// ── 9b. The layer crossfade is constant POWER and exclusive at a base ─────
+// Pure arithmetic, so it is checked without an AudioContext. The layers carry
+// independently seeded noise and therefore sum incoherently: equal-AMPLITUDE
+// crossfading would dip about 3 dB through every handover, which on the one
+// sound that never stops is a pulse in the mix at every speed threshold.
+{
+  const bases = [56, 112, 224];
+  const power = (gains) => gains.reduce((sum, gain) => sum + gain * gain, 0);
+
+  const atBase = engineLayerGains(112, bases);
+  check('at a layer base that layer plays alone', Number(atBase[1].toFixed(6)), 1);
+  check('at a layer base its neighbours are silent', atBase[0] + atBase[2], 0);
+
+  const atCrossover = engineLayerGains(Math.sqrt(56 * 112), bases);
+  check('at a crossover both neighbours sound', atCrossover[0] > 0.1 && atCrossover[1] > 0.1, true);
+  check('crossover holds constant power', Number(power(atCrossover).toFixed(6)), 1);
+
+  // The ends of the curve: only one layer has any weight at all, and it is
+  // normalised back to full so the engine does not fade out at idle or on a
+  // boost — the failure the normalisation exists to prevent.
+  check('idle holds constant power', Number(power(engineLayerGains(42, bases)).toFixed(6)), 1);
+  check('full boost holds constant power', Number(power(engineLayerGains(269, bases)).toFixed(6)), 1);
+  check('idle leans on the lowest layer', engineLayerGains(42, bases)[0] > 0.99, true);
+  check('boost leans on the highest layer', engineLayerGains(269, bases)[2] > 0.99, true);
 }
 
 // ── 10. No engine file: the synth still runs the engine ───────────────────

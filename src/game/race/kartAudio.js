@@ -72,12 +72,46 @@ const ENGINE_SUB_GAIN = 0.32; // was 0.5
 const ENGINE_WOBBLE_HZ = 4.2; // was 7
 const ENGINE_WOBBLE_CENTS = 2.5; // was 4
 
-// The fundamental the engine loop was RENDERED at. playbackRate is the ratio
-// of the frequency the game wants to this, so the sampled engine follows the
-// exact same engineFrequencyFor curve the synth does — which is the whole
-// condition under which a sampled engine is an upgrade rather than a
-// downgrade. Must match BASE_HZ in scripts/render-kart-engine.mjs.
-const ENGINE_SAMPLE_BASE_HZ = 100;
+// ── The multi-sampled engine ──────────────────────────────────────────────
+//
+// A layer's playbackRate is the ratio of the frequency the game wants to the
+// frequency that layer was RENDERED at, so the sampled engine follows the exact
+// same engineFrequencyFor curve the synth does — the condition under which a
+// sampled engine is an upgrade rather than a downgrade.
+//
+// WHY THERE IS MORE THAN ONE LAYER. engineFrequencyFor spans 42 Hz at idle to
+// 269 Hz on a boost. Against ONE loop rendered at 100 Hz that was a 6.4x
+// playbackRate range — the whole timbre dragged 1.25 octaves down at idle and
+// pushed 1.43 up on boost, taking the induction hiss and every resonance with
+// it, because resampling moves everything. That is the owner's "still not
+// right", and no clip survives it. Three loops an octave apart, each played
+// near its native rate, cut the worst case to 0.5 octaves.
+//
+// The bases are not written here: they are parsed from the file names by
+// kartAudioAssets.js, so retuning a layer means re-rendering it and nothing
+// else. See scripts/render-kart-engine.mjs.
+//
+// ENGINE_LAYER_SPREAD is the crossfade width in octaves. It matches the
+// spacing of the layers, so at a layer's own base frequency its neighbours
+// have decayed to exactly zero and it plays alone at its native rate — the
+// point of the whole exercise. Widen this and the layers smear; narrow it and
+// the handover becomes audible.
+const ENGINE_LAYER_SPREAD = 1;
+
+// Constant POWER, not constant amplitude. The layers carry independently
+// seeded induction noise, so they sum incoherently and equal-amplitude
+// crossfading would dip ~3 dB through every handover. Exported for the gate:
+// this is arithmetic, and it should not need an AudioContext to check.
+export const engineLayerGains = (frequency, baseHzList) => {
+  const weights = baseHzList.map((baseHz) =>
+    Math.max(0, 1 - Math.abs(Math.log2(frequency / baseHz)) / ENGINE_LAYER_SPREAD)
+  );
+  // Below the lowest layer and above the highest, only one weight survives and
+  // it is less than 1 — normalising is what keeps the engine at full level out
+  // at the ends of the curve instead of quietly fading toward idle.
+  const power = Math.sqrt(weights.reduce((sum, weight) => sum + weight * weight, 0));
+  return power > 0 ? weights.map((weight) => weight / power) : baseHzList.map((_, index) => (index ? 0 : 1));
+};
 
 // Pure transition detector — given the previous and current snapshot, list
 // the cue names to fire this frame. Exported so it can be unit-tested without
@@ -215,7 +249,7 @@ export const createKartAudio = ({
   // is held at zero rather than torn down — the synth is still the fallback if
   // the file 404s, and it also has to stay alive because it was started once
   // and an OscillatorNode cannot be restarted.
-  let engineSample = null; // { filter, gain, source }
+  let engineSample = null; // { filter, gain, layers: [{ baseHz, gain, source }] }
   let music = null; // { gain, name, source }
   // What the game LAST ASKED FOR, which is not the same as what is playing:
   // a bed requested while muted is never fetched (a 2 MB download nobody can
@@ -411,21 +445,36 @@ export const createKartAudio = ({
   // synth keeps running at zero gain: it is the fallback if this never
   // resolves, and an OscillatorNode that has been stopped cannot be restarted.
   const startEngineSample = () => {
-    if (!assets?.engine || engineSample) return;
-    loadSample('engine', assets.engine).then((buffer) => {
-      if (!buffer || disposed || !ctx || engineSample) return;
+    const layers = assets?.engine;
+    if (!layers?.length || engineSample) return;
+    // ALL layers or none. A partial set would leave a hole in the speed range
+    // where the crossfade normalises a single distant layer up to full gain —
+    // audibly worse than the synth fallback, and silent about why.
+    Promise.all(layers.map((layer) => loadSample(`engine-${layer.baseHz}`, layer.url))).then((buffers) => {
+      if (disposed || !ctx || engineSample || buffers.some((buffer) => !buffer)) return;
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.value = ENGINE_FILTER_BASE;
       filter.Q.value = 0.7;
       const gain = ctx.createGain();
       gain.gain.value = 0;
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-      source.connect(filter).connect(gain).connect(master);
-      source.start();
-      engineSample = { filter, gain, source };
+      // One filter and one envelope for the whole engine, downstream of the
+      // crossfade: the layers are one instrument, and giving each its own would
+      // make the filter sweep audible as the handover moved between them.
+      const sources = buffers.map((buffer, index) => {
+        const layerGain = ctx.createGain();
+        // Starts at zero and is written on the first frame. Starting at full
+        // would sound every layer at once for a frame.
+        layerGain.gain.value = 0;
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(layerGain).connect(filter);
+        source.start();
+        return { baseHz: layers[index].baseHz, gain: layerGain, source };
+      });
+      filter.connect(gain).connect(master);
+      engineSample = { filter, gain, layers: sources };
       // Hand over: the synth engine goes silent the moment the sample is live.
       engine?.gain.gain.setTargetAtTime(0, now(), 0.05);
     });
@@ -624,9 +673,19 @@ export const createKartAudio = ({
       engine.sub.frequency.setTargetAtTime(freq / 2, time, 0.06);
       engine.filter.frequency.setTargetAtTime(cutoff, time, 0.08);
       if (engineSample) {
-        // Same curve, expressed as a resampling ratio. setTargetAtTime rather
-        // than a hard write so a speed spike glides instead of chirping.
-        engineSample.source.playbackRate.setTargetAtTime(freq / ENGINE_SAMPLE_BASE_HZ, time, 0.06);
+        // Same curve, expressed per layer as a resampling ratio against the
+        // frequency THAT layer was rendered at. setTargetAtTime rather than a
+        // hard write so a speed spike glides instead of chirping.
+        const gains = engineLayerGains(
+          freq,
+          engineSample.layers.map((layer) => layer.baseHz)
+        );
+        engineSample.layers.forEach((layer, index) => {
+          layer.source.playbackRate.setTargetAtTime(freq / layer.baseHz, time, 0.06);
+          // The crossfade glides on the same constant as the pitch, so a layer
+          // never arrives before the rate that makes it the right one.
+          layer.gain.gain.setTargetAtTime(gains[index], time, 0.06);
+        });
         engineSample.filter.frequency.setTargetAtTime(cutoff, time, 0.08);
       }
       // Engine sits out until the countdown ends, ducks while spun out.
@@ -667,9 +726,14 @@ export const createKartAudio = ({
     try {
       music?.source.stop();
     } catch {}
-    try {
-      engineSample?.source.stop();
-    } catch {}
+    // Every layer, not just the first: each one is its own started
+    // BufferSource, and a missed stop leaves a loop running on a context that
+    // is about to be closed.
+    engineSample?.layers.forEach((layer) => {
+      try {
+        layer.source.stop();
+      } catch {}
+    });
     engineSample = null;
     try {
       ctx?.close?.();

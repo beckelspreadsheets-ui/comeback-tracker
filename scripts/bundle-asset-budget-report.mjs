@@ -72,10 +72,31 @@ const fitnessThresholdDefaults = {
 // approval that turned out to be unnecessary would leave a cap that no longer
 // protects anything, so the approval is banked rather than used. If the menu
 // ever does need it, it is one number and the owner has already said yes.
+// JS GZIP RAISED 2026-08-07, OWNER ACK — 500 -> 520 KiB, and this is the FIRST
+// time the JS caps have moved. Every raise above deliberately left them alone,
+// on the reasoning that JS is what blocks first paint while GLBs and audio are
+// CDN/disk footprint. That reasoning still stands, so the new number is small
+// and the case for it is specific rather than general:
+//
+// The build had reached 499.90 / 500 — a pass with a hundred bytes left, which
+// is not a budget, it is a tripwire. What spent the last of it was the `?perf=1`
+// device readout (src/kart/devicePerfProbe.js), and that chunk is DYNAMICALLY
+// IMPORTED behind an opt-in flag, so it is never fetched on first load. This
+// cap's own note says it is a first-load budget; counting a chunk that first
+// load never requests measures more than the cap means to.
+//
+// It was also already paid for once: the audit's deep breakdown stopped
+// shipping in the same change (import.meta.env.DEV lets the minifier drop it),
+// which reclaimed 1.5 KiB of production bytes that were serving a script that
+// only ever runs against dev:kart.
+//
+// 520 restores roughly 4% of working headroom. It does not license growth in
+// the first-paint path — if a future change spends this on eagerly-loaded
+// script, that is the thing to push back on, not the number.
 const kartThresholdDefaults = {
   audioTotalMiB: 6.0,
   imageTotalMiB: 2.5,
-  javascriptTotalGzipKiB: 500,
+  javascriptTotalGzipKiB: 520,
   javascriptTotalMiB: 2.0,
   largestFileMiB: 3.0,
   largestJavaScriptGzipKiB: 400,
