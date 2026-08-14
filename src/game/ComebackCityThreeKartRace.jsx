@@ -84,6 +84,7 @@ import {
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
 import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
+import { autoplayApexLane, freeBodyAutoplayInput } from './race/autoplayDriver.js';
 import { createMinimap, minimapPointAt } from './race/raceMinimap.js';
 import {
   DRIFT_FEEL,
@@ -9373,8 +9374,35 @@ const autoplayDodgeBias = (race, trackLength) => {
   return clamp(bias, -1, 1);
 };
 
-const readInput = (input, autoplay, race, cornerPush = 0, trackLength = 1) => {
+const readInput = (input, autoplay, race, cornerPush = 0, sampler = null) => {
   if (!autoplay) return input.current;
+  const trackLength = sampler?.length ?? 1;
+  // FREE-BODY PATH (P7). The lane-space policy below cannot drive a free body:
+  // its output is "move the lane number", but free-body steering rotates a
+  // heading, and lane is a read-back. Feeding it that policy produced the
+  // rescue loop the difficulty probe measured (0.19 laps in 190s). Pure
+  // pursuit of a spline point ahead instead — the policy lives in
+  // race/autoplayDriver.js so scripts/test-autoplay.mjs can lap it in node.
+  // Same apex target and dodge bias as the rails driver, expressed as a point
+  // on the road rather than a lane velocity.
+  if (race.freeBody != null && sampler) {
+    return freeBodyAutoplayInput({
+      airborne: race.airState.airborne,
+      cornerPush,
+      freeBody: race.freeBody,
+      heldItem: Boolean(race.heldItem),
+      offRoad: Math.abs(race.lane) > 1,
+      pointAt: (progress, lane) => sampler.pointAt(progress, lane).point,
+      progress: race.progress,
+      speed: race.speed,
+      targetLane: clamp(
+        autoplayApexLane(cornerPush) + autoplayDodgeBias(race, trackLength) * 1.2,
+        -0.9,
+        0.9
+      ),
+      trackLength,
+    });
+  }
   // Steer against the centrifugal push (into the corner) plus a pull back
   // toward the demo driver's target lane, with the item-dodge bias strong
   // enough to beat that pull; drift the demanding bends, brake for the hairpin,
@@ -9483,6 +9511,10 @@ const publishTelemetry = (
     raceTime: Number(race.raceTime.toFixed(2)),
     renderer: 'three-kart',
     rendererStats: runtimeStats.rendererStats || null,
+    // P7 — the free-body acceptance number. On rails this is always 0; with
+    // ?freebody=1 the difficulty probe needs it to prove the autoplay driver
+    // races rather than rescue-loops.
+    rescues: race.rescues,
     rivalCount: RIVALS.length,
     rivalPositions: rivalPositionsOf((race.finished ? race.laps : race.lap - 1) + race.progress, race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
@@ -10601,7 +10633,7 @@ export const ComebackCityThreeKartRace = ({
       const elapsedWindow = frameTimes.length > 1 ? (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000 : 1;
       const fpsEstimate = frameTimes.length > 1 ? (frameTimes.length - 1) / Math.max(0.001, elapsedWindow) : 60;
       const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
-      const input = readInput(inputRef, autoplay, race, cornerPush, engine.sampler.length);
+      const input = readInput(inputRef, autoplay, race, cornerPush, engine.sampler);
       if (input.restart) {
         inputRef.current.restart = false;
         restartRace();

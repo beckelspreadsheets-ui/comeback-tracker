@@ -116,6 +116,7 @@ const runRace = async (browser, track, runIndex) => {
       position: t.position,
       raceTime: t.raceTime,
       rivalPositions: t.rivalPositions || [],
+      rescues: t.rescues ?? 0,
       samples: window.__difficultySamples || [],
       spinOuts: t.spinOuts,
     };
@@ -175,6 +176,7 @@ const runRace = async (browser, track, runIndex) => {
     position: result.position,
     raceTime: result.raceTime,
     rivalPositions: result.rivalPositions,
+    rescues: result.rescues,
     run: runIndex,
     sampleCount: samples.length,
     spinOuts: result.spinOuts,
@@ -242,6 +244,9 @@ const run = async () => {
         `  off-road              ${forTrack.map((result) => `${(result.offRoadShare * 100).toFixed(1)}%`).join(' / ')}`
       );
       lines.push(`  spin-outs             ${forTrack.map((result) => result.spinOuts).join(' / ')}`);
+      // P7: with ?freebody=1 this is the number that used to be the whole
+      // story (the rescue loop). On rails it is structurally 0.
+      lines.push(`  rescues               ${forTrack.map((result) => result.rescues).join(' / ')}`);
       lines.push(`  top speed             ${forTrack.map((result) => result.topSpeed).join(' / ')} km/h`);
       lines.push(
         `  run-to-run spread     race time ${spread(times).toFixed(1)}s, flat-out ${(

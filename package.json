@@ -39,6 +39,7 @@
     "test:laps": "node scripts/test-lap-counting.mjs",
     "test:wrongway": "node scripts/test-wrong-way.mjs",
     "test:offroad": "node scripts/test-off-road.mjs",
+    "test:autoplay": "node scripts/test-autoplay.mjs",
     "test:pit": "node scripts/test-pit-manoeuvre.mjs",
     "test:drift": "node scripts/test-drift-reach.mjs",
     "test:minimap": "node scripts/test-minimap.mjs",
