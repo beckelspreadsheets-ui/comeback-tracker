@@ -74,8 +74,15 @@ they now share `scripts/lib/chromium-gl-args.mjs`.
 
 ### Still open from wave 9
 
-- **PV mean speed 248 → 260 is INFERRED, not measured** (the ice stopped being
-  a full-width tax in wave 8). Needs a real PV autoplay capture.
+- ~~PV mean speed 248 → 260 is INFERRED, not measured~~ **MEASURED 2026-08-13**
+  via `scripts/measure-mean-speed.mjs`, three autoplay races per track at ~80fps,
+  wall/game 1.000, every run usable. Racing laps (lap 1 excluded): CC
+  47.10/47.32/47.11 s → **247.1 u/s** (spread 0.47%); PV 46.25/46.28/46.35 s →
+  **240.7 u/s** (spread 0.22%). The 2026-08-03 pair (245.7/245.7) was correct
+  when taken — the 2026-08-08 difficulty retune (corner load 0.00052→0.00062)
+  slowed PV 2.0%, outside its spread. `MEAN_SPEED` updated; the previewer (exit 0)
+  now reports CC 47.2 s lap / 141.6 s race and PV 46.3 s lap / 138.9 s race.
+  Any pace or corner-cost retune re-opens this measurement.
 - ~~`test:kart-proof` is red~~ **RETIRED 2026-08-03.** It guarded a reference
   route the app split (`76513be9`) deliberately deleted, ran against the FITNESS
   app for a kart artifact, and its real coverage — does the kart game render at
@@ -160,8 +167,11 @@ Two corrections to the wave-8 numbers this block used to carry. **Penguin
 Village is 11,128.7u, not 11,678** — the previewer's arc-length solve disagreed
 with the figure that was written down, and the tool's maths is now checked
 against closed form (below), so the tool is the one to believe. Its lap time
-moved for a second reason too: `MEAN_SPEED` for PV went 248 → 260, which is
-INFERRED and still owes a measurement.
+moved for a second reason too: `MEAN_SPEED` for PV went 248 → 260, which was
+INFERRED at the time. **MEASURED 2026-08-13** by `scripts/measure-mean-speed.mjs`
+(three races per track, all usable, wall/game 1.000): CC 247.1, PV 240.7 —
+the tracks do NOT share a number, because the 2026-08-08 difficulty retune's
+corner-cost raise taxes PV's lap harder than CC's.
 
 **"ALL CHECKS PASS" was never true of the test suite** — it described the bundle
 budget only. `test:race` was red from wave 4 to wave 9, and `test:audio:kart` /

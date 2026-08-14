@@ -46,28 +46,33 @@ const OUT_DIR = resolve(ROOT, 'tmp/track-preview');
 // that turns world units into seconds, which is the only unit a layout can be
 // judged in. --speed overrides.
 //
-// MEASURED 2026-08-03 on the shipped 4x layouts by scripts/measure-mean-speed.mjs
-// — four races, two per track, every one usable:
+// MEASURED 2026-08-13 on the shipped 4x layouts by scripts/measure-mean-speed.mjs
+// — six races, three per track, every one usable:
 //
-//   comeback-city    racing laps 47.44 / 47.46 s   11659.0 / 47.45 = 245.7
-//   penguin-village  racing laps 45.33 / 45.39 s   11144.1 / 45.36 = 245.7
+//   comeback-city    racing laps 47.10 / 47.32 / 47.11 s   11659.0 / 47.18 = 247.1
+//   penguin-village  racing laps 46.25 / 46.28 / 46.35 s   11144.1 / 46.29 = 240.7
 //
-// at 59-66 fps with the game clock tracking the wall clock to within 0.7%.
-// Lap 1 is excluded from both: it carries the standing start, which is a
-// property of the grid rather than of the layout.
+// at ~80 fps with the game clock tracking the wall clock to 1.000. Lap 1 is
+// excluded from every run: it carries the standing start, which is a property
+// of the grid rather than of the layout. Run-to-run lap spread was 0.47% (CC)
+// and 0.22% (PV) — that spread is the noise floor for these two numbers.
 //
-// BOTH TRACKS WERE WRONG BEFORE, not just Penguin Village. The previous pair of
-// 260s came from tmp/k2.5-launch-repro/telemetry-autoplay.json, and that capture
-// drove the retired 2,897-unit loop — a track ~75% shorter than either of these.
-// This file's own staleness check already refused to grade lap time against that
-// capture while the same file was setting the scale lap time is computed FROM,
-// which is rule 4: a gate that duplicates the data it checks stops checking it.
+// THE TRACKS NO LONGER SHARE A NUMBER, and the 2026-08-03 pair (245.7 / 245.7)
+// was not wrong when it was taken — the 2026-08-08 difficulty retune moved it.
+// Raising the corner-load constant (0.00052 -> 0.00062) made corners cost real
+// speed, and Penguin Village's lap carries more of that cost than Comeback
+// City's: PV slowed 2.0% (outside its 0.22% spread) while CC moved +0.6%
+// (barely outside its 0.47%). A constant measured from real races inherits the
+// tuning of the build it was measured on, so any retune that touches pace or
+// corner cost re-opens this measurement.
 //
-// The old comment reasoned that Penguin Village "should mean what Comeback City
-// means" once wave 8 moved the ice off the racing line. That reasoning was
-// RIGHT — the two now measure identically, to four significant figures. It was
-// the number being inherited that was stale, not the argument for sharing it.
-const MEAN_SPEED = { 'comeback-city': 245.7, 'penguin-village': 245.7 };
+// HISTORY. Before 2026-08-03 both tracks carried 260 from
+// tmp/k2.5-launch-repro/telemetry-autoplay.json — a capture that drove the
+// retired 2,897-unit loop, which this file's own staleness check already
+// refused to grade lap time against. A gate that duplicates the data it checks
+// stops checking it (rule 4); measure-mean-speed.mjs exists so this number is
+// re-measured on the layouts that ship, not inherited.
+const MEAN_SPEED = { 'comeback-city': 247.1, 'penguin-village': 240.7 };
 
 // The tool must be CHECKABLE, not merely plausible — but the thing worth
 // checking is the SOLVER, not the track.
@@ -1629,10 +1634,9 @@ const analyseTrack = (trackDef, { meanSpeedOverride, tier = 'desktop' } = {}) =>
     // The SOLVER checks the maths against closed form; the MIRROR checks that
     // the maths is still the maths the game runs. Both are pass conditions —
     // a solver that agrees with a circle it solved correctly says nothing about
-    // whether this file still describes the shipped curve. Lap time is a
-    // geometric solve and is honestly labelled as one until a race on this
-    // layout is measured; absent telemetry is a missing measurement, not a
-    // failure.
+    // whether this file still describes the shipped curve. Lap time is length
+    // over a MEASURED mean speed (see MEAN_SPEED); an absent race-time capture
+    // is a missing cross-check, not a failure.
     pass: solver.pass && mirror.pass,
   };
   return report;
@@ -2145,12 +2149,14 @@ const validationBlock = (report) => {
     ? `<br>Race ${report.raceSeconds}s vs measured autoplay ${v.telemetry.raceSeconds}s (${v.vsTelemetryPct}%). The
        measured race is the slower of the two because the grid start burns ~2 s accelerating from a standstill.`
     : v.staleTelemetry
-      ? `<br><b>No measured race for this layout.</b> The one capture on disk (${esc(v.staleTelemetry.source)})
+      ? `<br>The one race-time capture on disk (${esc(v.staleTelemetry.source)})
          implies a ${v.staleTelemetry.impliedLapUnits}u lap, ${v.staleTelemetry.impliedLapDeltaPct}% off this track's
-         ${report.lengthUnits}u — it drove a superseded layout, so it is not used. Lap time here is a pure geometric
-         solve, length ÷ mean speed; treat it as ±3% until a race on this track is measured.`
-      : `<br>No autoplay telemetry on disk, so lap time is a pure geometric solve: length ÷ mean speed. Treat it as
-         ±3% until a race is measured.`;
+         ${report.lengthUnits}u — it drove a superseded layout, so it is not used. Lap time here is length ÷ a
+         MEASURED mean speed (scripts/measure-mean-speed.mjs, 2026-08-13, three races per track, lap spread
+         ≤0.5%); a pace or corner-cost retune re-opens that measurement.`
+      : `<br>No autoplay race-time capture on disk. Lap time is length ÷ a MEASURED mean speed
+         (scripts/measure-mean-speed.mjs, 2026-08-13, lap spread ≤0.5%); a pace or corner-cost retune re-opens
+         that measurement.`;
   return `<div class="flag ${s.pass ? 'ok' : ''}">${solverLine}${measured}</div>`;
 };
 
@@ -2610,7 +2616,8 @@ const main = async () => {
         process.stdout.write(
           `  vs autoplay     none for this layout — ${v.staleTelemetry.source} implies a ` +
             `${v.staleTelemetry.impliedLapUnits}u lap (${v.staleTelemetry.impliedLapDeltaPct}% off this one), so it drove a ` +
-            `different track. Lap time below is a pure geometric solve; treat it as +/-3% until a race is measured.\n`
+            `different track. Lap time below is length / a MEASURED mean speed ` +
+            `(measure-mean-speed.mjs 2026-08-13, lap spread <=0.5%).\n`
         );
       }
       if (!v.mirror.pass) {
