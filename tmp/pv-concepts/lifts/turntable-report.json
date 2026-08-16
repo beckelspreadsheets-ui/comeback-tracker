@@ -1,0 +1,46 @@
+[
+  {
+    "slug": "arctic-whale",
+    "ok": true,
+    "meshes": 1,
+    "tris": 29272,
+    "size": [
+      1.898,
+      1.783,
+      1.126
+    ]
+  },
+  {
+    "slug": "aurora-surge",
+    "ok": true,
+    "meshes": 1,
+    "tris": 28521,
+    "size": [
+      1.897,
+      1.842,
+      0.422
+    ]
+  },
+  {
+    "slug": "penguin-statue",
+    "ok": true,
+    "meshes": 1,
+    "tris": 29888,
+    "size": [
+      1.061,
+      1.899,
+      1.058
+    ]
+  },
+  {
+    "slug": "snow-boulder",
+    "ok": true,
+    "meshes": 1,
+    "tris": 30076,
+    "size": [
+      1.825,
+      1.77,
+      1.899
+    ]
+  }
+]
