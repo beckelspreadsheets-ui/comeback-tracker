@@ -75,7 +75,7 @@
     "filePath": "src/game/comebackCityVisuals.jsx",
     "source": "Procedural React/CSS components authored in-repo",
     "license": "Project-owned",
-    "role": "QA/reference visual surface — district closeups, plaza and mobile race reference; not imported by production code",
+    "role": "QA/reference visual surface \u2014 district closeups, plaza and mobile race reference; not imported by production code",
     "sizeBudget": "Runtime CSS/DOM only; no external binary asset",
     "fallback": "Textured CSS model and district cards"
   },
@@ -234,18 +234,18 @@
   },
   {
     "filePath": "src/assets/game/models/avatars/lifoladen.glb",
-    "source": "Meshy multi-image-to-3D (job 6afd7358-9f6b-4847-bf65-79b438dbfe71, 4 views) from the owner's lifoladen-charactersheet.png (K6, 2026-07-12; NON-ordinal owner art — no ordinal-upload concern); raw mesh committed at tmp/k6-lifoladen/raw-lifoladen.glb with generation-record.json alongside",
+    "source": "Meshy multi-image-to-3D re-lift (job ac617ff0-50ee-4d5a-b762-aff78b0aac9f, 4 views, symmetry off) from a face-preserving nano_banana turnaround sheet (owner adopted roll 3, 2026-08-16; sheet + views in tmp/lifo-relift/); supersedes the K6 lift \u2014 owner verdict: old body's face 'looks so weird', PFP face designs are the identity",
     "license": "Owner-created/generated asset (owner character sheet through Meshy)",
-    "role": "Lifoladen driver avatar (K6 roster character, Miami Cruiser signature kart); orientation lab 2026-07-12: front = +Z, driverYaw 0",
-    "sizeBudget": "seated-character class; 353 KiB shipped, 20,920 tris (hard caps 1250KB/25k), 512px color texture",
+    "role": "Lifoladen driver avatar (K6 roster character, Miami Cruiser signature kart); orientation assumed +Z front / driverYaw 0 matching the K6 Meshy convention \u2014 VERIFY via tmp/k6-lifoladen/ingame-probe.mjs before deploy",
+    "sizeBudget": "seated-character class; 252.1 KiB shipped (was 353), 15,473 tris (hard caps 1250KB/25k), 512px color texture",
     "fallback": "Kart renders driverless if the avatar GLB fails to load",
     "assetId": "avatar.driver.lifoladen",
     "assetClass": "seated-character",
-    "status": "runtime-promoted-k6-lifoladen",
-    "runtimeTransform": "weld -> simplify ratio 0.68 error 0.004 (gentle; raw 30,766 tris exceeded the 25k hard cap, likeness verified raw-vs-diet at 4 yaws) -> resize 512 -> meshopt LAST (individual verbs); 2026-07-12 follow-up: normal texture stripped (mountDriverAvatar swaps in MeshToonMaterial{map} — avatar normal maps never render; 904 KiB -> 353 KiB, likeness re-verified at 4 yaws)",
-    "sourceHash": "sha256:d154cdae772ed40ff421004cf28afe463580ebca0608ed5a007876d3322b1808",
-    "outputHash": "sha256:bc80b690559c1d4500907dfd3220d3b493f4eb383d5e5a63de7b6873cc54c6e8",
-    "proof": "tmp/k6-lifoladen/ (lift views, orientation-capture.mjs turntable, portrait-capture.mjs)"
+    "status": "runtime-promoted-relift-2026-08-16",
+    "runtimeTransform": "scripts/diet-kart-bodies.mjs defaults: strip unsampled slots -> weld -> simplify 0.5/0.01 (30,952 -> 15,473 tris) -> resize 512 jpeg q82 -> meshopt high LAST; face designs verified surviving at 4 yaws (tmp/lifo-relift/diet/lifoladen-turntable.png)",
+    "sourceHash": "sha256:cce52d01c722b924b2ba7d527e84f1e7912ecde58be4e4160e9a118de536fd70",
+    "outputHash": "sha256:4b421b74fb39ce03483410181896a01cfca0638c42415b65d78041d63aaf879b",
+    "proof": "tmp/lifo-relift/ (sheet, 4 views, raw v1-v3 turntables, diet turntable + face zoom, diet-report.json; shipped-backup-lifoladen.glb = the replaced K6 body)"
   },
   {
     "filePath": "src/assets/game/models/avatars/layer23-penguin.glb",
@@ -300,7 +300,7 @@
     "filePath": "src/assets/game/models/items/fishbone-trap.glb",
     "source": "K7 prop round (2026-07-12 late, owner concept approval + 'lets keep going forward'): meshy image_to_3d job fef24559-9ff1-4b84-b9b1-89c61225729d from the approved fish-bone concept; diet weld -> simplify 0.15/0.008 -> resize 128 -> meshopt (raw lift local-only at tmp/k7-item-lab/raw-*.glb, gitignored; refetch via job id)",
     "license": "Owner-directed generated art (Higgsfield/Meshy, text-prompt concept only)",
-    "role": "Fish Bone trap world prop — swapped into fishBonePool by swapItemPropVisuals (procedural bone = load-failure fallback); orientation: radial trap, spins in place",
+    "role": "Fish Bone trap world prop \u2014 swapped into fishBonePool by swapItemPropVisuals (procedural bone = load-failure fallback); orientation: radial trap, spins in place",
     "sizeBudget": "item-box class; 65 KiB, 4,621 tris (hard 160KB/5000)",
     "fallback": "Procedural toon fish-bone mesh stays if the GLB fails to load",
     "assetId": "itemprop.fishbone",
@@ -324,7 +324,7 @@
     "filePath": "src/assets/game/models/items/avalanche-mound.glb",
     "source": "K7 prop round: meshy lift af705bf2-5aef-43d9-ab68-5e05baf12574 from the approved avalanche concept; diet weld -> simplify 0.12/0.012 -> resize 128 -> meshopt (raw lift local-only at tmp/k7-item-lab/raw-*.glb, gitignored; refetch via job id)",
     "license": "Owner-directed generated art (Higgsfield/Meshy)",
-    "role": "Avalanche ultimate marker mound — ADDED inside avalancheMarker (ring + glow + pulse logic unchanged)",
+    "role": "Avalanche ultimate marker mound \u2014 ADDED inside avalancheMarker (ring + glow + pulse logic unchanged)",
     "sizeBudget": "complex-prop class; 163 KiB, 7,707 tris (hard 500KB/8000)",
     "fallback": "Marker ring + glow alone (the pre-K7 look) if the GLB fails to load",
     "assetId": "itemprop.avalanche",
@@ -347,14 +347,14 @@
   {
     "filePath": "src/assets/game/items/*.webp",
     "source": "K7 held-item icon tiles (2026-07-12, owner approved the full concept set): nano_banana concept renders (job ids in tmp/k7-item-lab/generation-record.json) center-cropped to 192px webp by tmp/k7-item-lab/make-icon-tiles.mjs",
-    "license": "Owner-directed generated art (Higgsfield, text-prompt only — no ordinal inputs)",
+    "license": "Owner-directed generated art (Higgsfield, text-prompt only \u2014 no ordinal inputs)",
     "role": "ITEM_ICON_URLS: held-item HUD badge, smash button, pickup pop, and intro item guide icons (lucide stand-ins retired)",
     "sizeBudget": "Twelve 192px webp tiles, ~96 KB total",
     "fallback": "HeldItemIcon falls back to the plain snowball tile for unknown item keys"
   },
   {
     "filePath": "src/assets/game/select/*.webp",
-    "source": "Same portrait booth as the PNGs (scripts/select-portraits-capture.mjs) — lifoladen re-encoded to webp for the kart bundle diet (tmp/k7-item-lab/portrait-to-webp.mjs, 255KB png -> 40KB webp)",
+    "source": "Same portrait booth as the PNGs (scripts/select-portraits-capture.mjs) \u2014 lifoladen re-encoded to webp for the kart bundle diet (tmp/k7-item-lab/portrait-to-webp.mjs, 255KB png -> 40KB webp)",
     "license": "Project-owned renders derived from owner-created source models",
     "role": "Select-grid portraits that ship webp (currently char-lifoladen)",
     "sizeBudget": "40 KB webp at 480px",
@@ -419,7 +419,7 @@
   {
     "filePath": "src/assets/game/models/miami/deco-hotel.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId a000823b-e223-4e12-9a4b-4588bbd8c472, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.decoHotel mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:89ba210add205a43ebd7b987e3ec6f8f7fbfca72d1bdb3c5d0363235608c6068",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -438,7 +438,7 @@
   {
     "filePath": "src/assets/game/models/miami/condo-tower.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 30cefda6-db99-4a5d-9993-076938b83091, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.condoTower mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:76cb6aaf3e2a348728c5772677974092abcefcd30dd31846788293d94d636544",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -457,7 +457,7 @@
   {
     "filePath": "src/assets/game/models/miami/corner-arcade.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 3eb890c1-48bf-44ce-a682-193af14ba8a2, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.cornerArcade mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:cc8d6a40376ac90a9bd027ad55cd0e87855f034d8a59b943b50e9b965069d107",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -476,7 +476,7 @@
   {
     "filePath": "src/assets/game/models/miami/lifeguard-tower.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId f5ef8246-f0ef-4632-8dc2-3a4f2b805481, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.lifeguard mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:3df6243285e92f2f3102ec877ed1340d8916c07af5ef4c837b84e83a2a513517",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -495,7 +495,7 @@
   {
     "filePath": "src/assets/game/models/miami/palm-cluster.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 0649fa46-0219-4ee5-a088-71b5f4d02da6, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.palmCluster mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:a0c11bfb8a5c7bcbc134af324533030251f6b4875ea046fb298f3fab7f5426eb",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -514,7 +514,7 @@
   {
     "filePath": "src/assets/game/models/miami/retro-diner.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 9c7f509e-8e46-444f-9188-7a10fb887722, 2026-07-07; Claude-authored prompt under owner direction (raw CDN GLB local-only in tmp/m3-city-lab/); provenance tmp/m3-city-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime Miami trackside building (W0 promotion) - MIAMI_ASSETS.retroDiner mount in ComebackCityThreeKartRace.jsx",
     "sizeBudget": "trackside-building class (target 500KB raw); shipped sha256:ec387ba1fb46bfe7e9544f45d003d4a7e98c9af1d7ddc808892da809972c2705",
     "fallback": "mountMiamiAsset leaves the slot empty on load failure; kart-playable FAILS via the telemetry miamiMounts loud-failure guard",
@@ -533,7 +533,7 @@
   {
     "filePath": "src/assets/game/generated/backdrops/cc-far.webp",
     "source": "Higgsfield soul_location 2560x1080, jobId dfa46ac2-47b0-4474-a2d7-d4905a192c89, seed 413922, 2026-07-07; Claude-authored prompt under owner direction; far band, W0 reprocess: crop 2560x1072 + top-35% linear alpha fade (was 16% - hard seam), webp q85; provenance tmp/m3-sky-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"comeback-city\"] parallax ring",
     "sizeBudget": "images gate (bundle report); shipped sha256:8d1a65d539c81d8ad9626b1dff3d78493c646f5b31f2ee587023399f26e21435",
     "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
@@ -552,7 +552,7 @@
   {
     "filePath": "src/assets/game/generated/backdrops/cc-near.webp",
     "source": "Higgsfield soul_location 2560x1080, jobId 185dfe08-1fe6-439d-a7c6-c9ced2e8820b, seed 906461, 2026-07-07; Claude-authored prompt under owner direction; near silhouette row, magenta-keyed + despilled (PIL, cwebp -exact); provenance tmp/m3-sky-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"comeback-city\"] parallax ring",
     "sizeBudget": "images gate (bundle report); shipped sha256:4abf37d64e0a24e9dc2aa17219b3543921bae3d092c75d36ed0cd45a6a8d20be",
     "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
@@ -571,7 +571,7 @@
   {
     "filePath": "src/assets/game/generated/backdrops/pv-far.webp",
     "source": "Higgsfield soul_location 2560x1080, jobId 07fc4fa8-26e0-408f-8b48-c5fc2c6436d7, seed 973939, 2026-07-07; Claude-authored prompt under owner direction; far band (arctic-sunset correction b-take), W0 reprocess: top-35% fade, webp q85; provenance tmp/m3-sky-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"penguin-village\"] parallax ring",
     "sizeBudget": "images gate (bundle report); shipped sha256:30367685a6386c260240f1965d87e5c2182ca0ae7a8ef238a6c48305c1959b75",
     "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
@@ -590,7 +590,7 @@
   {
     "filePath": "src/assets/game/generated/backdrops/pv-near.webp",
     "source": "Higgsfield soul_location 2560x1080, jobId 70e8661f-90c2-4d04-aac1-9eded088fb07, seed 470250, 2026-07-07; Claude-authored prompt under owner direction; near silhouette row (arctic-sunset correction b-take), magenta-keyed + despilled; provenance tmp/m3-sky-lab/provenance.json",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); no third-party IP in prompts",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); no third-party IP in prompts",
     "role": "Runtime generated backdrop strip (W0 promotion) - SKY_LAB_STRIPS[\"penguin-village\"] parallax ring",
     "sizeBudget": "images gate (bundle report); shipped sha256:7fc6b2419bc3f652ceb96b119cf55c60c616245c54e1310a0c02ada6be9fd498",
     "fallback": "addBackdropRing skips a strip whose URL is falsy/fails; procedural sky gradient remains behind the rings",
@@ -608,9 +608,9 @@
   },
   {
     "filePath": "src/assets/game/models/items/item-box-cc-coin.glb",
-    "source": "Higgsfield tripo_3d text-to-3D, jobId da7bdf92-3772-4f5e-aa7e-8c32db8f4a37 (re-roll of 48cdfdca for the reverse face), 2026-07-07; COMPOSITE: two instances of the same mesh baked back-to-back, each clean ₿ face outward (tripo mirror-mangles one face of every roll — build script tmp/w2-item-boxes/build-coin-composite.mjs)",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); the bitcoin ₿ mark is deliberate owner-directed art (\"they could actually just be bitcoins\") — recorded exception to the no-text rule",
-    "role": "Runtime item box, Comeback City (W2 owner pick: \"the other for comeback city\") — ITEM_BOX_ASSETS mount replacing the procedural crate",
+    "source": "Higgsfield tripo_3d text-to-3D, jobId da7bdf92-3772-4f5e-aa7e-8c32db8f4a37 (re-roll of 48cdfdca for the reverse face), 2026-07-07; COMPOSITE: two instances of the same mesh baked back-to-back, each clean \u20bf face outward (tripo mirror-mangles one face of every roll \u2014 build script tmp/w2-item-boxes/build-coin-composite.mjs)",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); the bitcoin \u20bf mark is deliberate owner-directed art (\"they could actually just be bitcoins\") \u2014 recorded exception to the no-text rule",
+    "role": "Runtime item box, Comeback City (W2 owner pick: \"the other for comeback city\") \u2014 ITEM_BOX_ASSETS mount replacing the procedural crate",
     "sizeBudget": "item-box class (2026-07-07 revision: target 2500/hard 5000 tris, 160KB hard); shipped 4828 tris / 64KB sha256:594bb7aca7ff0b6194ace23a804c510af23ca8a0423b4d8f815788244e02c469",
     "fallback": "the procedural winter crate stays mounted until the GLB template resolves and remains if it fails (visible fallback, not silent); load failures count into the telemetry mounts guard",
     "assetId": "itembox.cc-coin",
@@ -628,8 +628,8 @@
   {
     "filePath": "src/assets/game/models/items/item-box-pv-ice.glb",
     "source": "Higgsfield tripo_3d text-to-3D, jobId 48c793ef-d3b3-471f-bfaa-202d5ec67dc2, 2026-07-07 (PENGUIN-FREE re-roll of d49b9b54 under the no-generic-penguins standing rule - the original had a generator-added generic penguin; owner: \"yeah we should change that\")",
-    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD §9); the bitcoin ₿ mark is deliberate owner-directed art (\"they could actually just be bitcoins\") — recorded exception to the no-text rule",
-    "role": "Runtime item box, Penguin Village (W2 owner pick: \"the icebox one for penguin city\") — ITEM_BOX_ASSETS mount replacing the procedural crate",
+    "license": "Owner-generated via Higgsfield under H0 (signed 2026-07-07, text-prompt only, PRD \u00a79); the bitcoin \u20bf mark is deliberate owner-directed art (\"they could actually just be bitcoins\") \u2014 recorded exception to the no-text rule",
+    "role": "Runtime item box, Penguin Village (W2 owner pick: \"the icebox one for penguin city\") \u2014 ITEM_BOX_ASSETS mount replacing the procedural crate",
     "sizeBudget": "item-box class (target 2500/hard 5000 tris, 160KB hard); shipped 1900 tris / 43KB sha256:16a0076f9563adf5fb7d5c244ffb8c4046bd18117a9dbdaa311f329ee72fe0c0",
     "fallback": "the procedural winter crate stays mounted until the GLB template resolves and remains if it fails (visible fallback, not silent); load failures count into the telemetry mounts guard",
     "assetId": "itembox.pv-ice",
@@ -761,9 +761,9 @@
   {
     "filePath": "src/assets/game/models/pv-tribute/outplayasians-crosser.glb",
     "source": "Meshy image-to-3D (Higgsfield image_to_3d, should_texture:true) from a nano_banana_pro concept generated FROM the approved 2026-07-07 likeness, owner credit authorisation 2026-08-03 verbatim: \"spend the higgsfield credits\". Concept sha256:cefbe1356e4b83981a7582dffc3eb6424d94dacb263444eb8df7cce02aa9bec4; raw lift sha256:f3bb6647e1aa9cfa0bb00377207345b82558b5db614777d8748e2ea2d58e35d8. Diet 2026-08-03 via scripts/diet-kart-bodies.mjs individual verbs (strip+prune -> weld -> simplify 0.5 -> resize 512 jpeg q82 -> meshopt high), 4302.9KB -> 266KB, 30947 -> 15473 tris.",
-    "license": "Owner-supplied likeness under H0 §2.2 per-file opt-in; community-member likeness with owner authorization",
-    "role": "K4 Penguin Village finish-line crosser. POSE REPLACED 2026-08-03 (owner, after playing the preview): \"asians is sitting down should be walking back n forth\". The previous mesh was a SEATED pose and is why no sim work could make it walk. Now standing, mid-stride. Likeness elements carried across unchanged: faceted cyan ice crown, red visor bar, orange diamond beak, black segmented collar, chest device, navy body with white belly, orange webbed feet. Orientation re-verified 2026-08-03 on a 15-degree turntable sweep: front-on at yaw 45 against a camera at azimuth 45, so front = +Z and mount yaw stays 0 — same as the retired mesh.",
-    "sizeBudget": "character crosser class; 266KB shipped (was 842KB — the new mesh is SMALLER despite standing taller); shipped sha256:2ac5c37c035435d7731a1a7e4247920b5bcf7301641378c22ed0616813973996",
+    "license": "Owner-supplied likeness under H0 \u00a72.2 per-file opt-in; community-member likeness with owner authorization",
+    "role": "K4 Penguin Village finish-line crosser. POSE REPLACED 2026-08-03 (owner, after playing the preview): \"asians is sitting down should be walking back n forth\". The previous mesh was a SEATED pose and is why no sim work could make it walk. Now standing, mid-stride. Likeness elements carried across unchanged: faceted cyan ice crown, red visor bar, orange diamond beak, black segmented collar, chest device, navy body with white belly, orange webbed feet. Orientation re-verified 2026-08-03 on a 15-degree turntable sweep: front-on at yaw 45 against a camera at azimuth 45, so front = +Z and mount yaw stays 0 \u2014 same as the retired mesh.",
+    "sizeBudget": "character crosser class; 266KB shipped (was 842KB \u2014 the new mesh is SMALLER despite standing taller); shipped sha256:2ac5c37c035435d7731a1a7e4247920b5bcf7301641378c22ed0616813973996",
     "fallback": "mount slot stays empty on load failure; kart-playable fails loud via the miamiMounts telemetry guard",
     "assetId": "pvtribute.outplayasiansCrosser",
     "assetClass": "seated-character",
@@ -779,7 +779,7 @@
     }
   },
   {
-    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — NO people/animals/penguins in every prompt)",
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 NO people/animals/penguins in every prompt)",
     "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-k5-kart",
@@ -791,7 +791,7 @@
     "sourceHash": "sha256:fdd9a7ef678c779fa7d697bfd7642517c6cdeaccf8016329bf5ba044f9cd19dc",
     "outputHash": "sha256:0f3d033e7f49dad6f9b43906519e450c79024f6346ce07e7f4daaa77759dd3bb",
     "sizeBudget": "hero-kart class; 210.6 KiB shipped / 181.7 KiB gz (was 526.8 KiB / 498.4 KiB gz before the 2026-08-02 dead-map strip, -60.0% raw); 14926 tris vs 18000 target / 25000 hard; shipped sha256:0f3d033e7f49dad6f9b43906519e450c79024f6346ce07e7f4daaa77759dd3bb",
-    "proof": "tmp/w4-kart-lab/ (concept, turntables, generation-jobs.json) + the 2026-08-02 strip evidence in tmp/dead-normal-maps/: ice-racer-toon-before.png vs ice-racer-toon-after.png are the SAME four yaws rendered through the runtime material path (MeshToonMaterial{gradientMap, map}) and differ on 0.024-0.047% of pixels at max channel delta 15/255 — band-edge jitter from the normal re-encode, nothing else. before/ice-racer-turntable.png vs after/ice-racer-turntable.png is the same pair under kart-turntable's MeshStandardMaterial, which DOES sample normalMap, and there the surface detail visibly disappears — that is the point: the map carries real data the game's material path cannot reach. strip-report.json holds the per-body bytes. RE-VERIFIED 2026-08-02 (wave 8 fix round 1): `node scripts/strip-dead-normal-maps.mjs --dry-run` reports 'no dead texture slots' on all NINE bodies in src/assets/game/models/karts/, so the strip is complete fleet-wide and re-running it is a proven no-op that cannot compound the normal drift; every kart outputHash still equals the sha256 of the bytes on disk and scripts/audit-game-assets.mjs passes all nine against the hero-kart budget; and the meshopt round trip is safe to ship because src/game/race/render/gltfLoader.js:8 calls setMeshoptDecoder(MeshoptDecoder) and createGameGltfLoader is the ONLY place a GLTFLoader is constructed anywhere in src/ (KNOWN TRAP 8 — a meshopt GLB renders NOTHING, silently and with no console error, without that decoder).",
+    "proof": "tmp/w4-kart-lab/ (concept, turntables, generation-jobs.json) + the 2026-08-02 strip evidence in tmp/dead-normal-maps/: ice-racer-toon-before.png vs ice-racer-toon-after.png are the SAME four yaws rendered through the runtime material path (MeshToonMaterial{gradientMap, map}) and differ on 0.024-0.047% of pixels at max channel delta 15/255 \u2014 band-edge jitter from the normal re-encode, nothing else. before/ice-racer-turntable.png vs after/ice-racer-turntable.png is the same pair under kart-turntable's MeshStandardMaterial, which DOES sample normalMap, and there the surface detail visibly disappears \u2014 that is the point: the map carries real data the game's material path cannot reach. strip-report.json holds the per-body bytes. RE-VERIFIED 2026-08-02 (wave 8 fix round 1): `node scripts/strip-dead-normal-maps.mjs --dry-run` reports 'no dead texture slots' on all NINE bodies in src/assets/game/models/karts/, so the strip is complete fleet-wide and re-running it is a proven no-op that cannot compound the normal drift; every kart outputHash still equals the sha256 of the bytes on disk and scripts/audit-game-assets.mjs passes all nine against the hero-kart budget; and the meshopt round trip is safe to ship because src/game/race/render/gltfLoader.js:8 calls setMeshoptDecoder(MeshoptDecoder) and createGameGltfLoader is the ONLY place a GLTFLoader is constructed anywhere in src/ (KNOWN TRAP 8 \u2014 a meshopt GLB renders NOTHING, silently and with no console error, without that decoder).",
     "promotion": {
       "approval": "Owner 2026-07-12: 'I love the carts' (concepts) + corrected pick 'i meant the ice racer and miami cruser'",
       "promotedAt": "2026-07-12",
@@ -799,7 +799,7 @@
     }
   },
   {
-    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — NO people/animals/penguins in every prompt)",
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 NO people/animals/penguins in every prompt)",
     "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-k5-kart",
@@ -811,7 +811,7 @@
     "sourceHash": "sha256:fd31887733b1fb3602705c8c29aaeea34d65e6086135438d80b01be6ebdef65b",
     "outputHash": "sha256:8078306e239bdd039015ee25d6fb31b5692b2a20466542637a264a7c44d46fdf",
     "sizeBudget": "hero-kart class; 221.4 KiB shipped / 192.3 KiB gz (was 571.8 KiB / 542.3 KiB gz before the 2026-08-02 dead-map strip, -61.3% raw); 15232 tris vs 18000 target / 25000 hard; shipped sha256:8078306e239bdd039015ee25d6fb31b5692b2a20466542637a264a7c44d46fdf",
-    "proof": "tmp/w4-kart-lab/ (concept, turntables, generation-jobs.json) + the 2026-08-02 strip evidence in tmp/dead-normal-maps/: miami-cruiser-toon-before.png vs miami-cruiser-toon-after.png are the SAME four yaws rendered through the runtime material path (MeshToonMaterial{gradientMap, map}) and differ on 0.006-0.015% of pixels at max channel delta 17/255 — band-edge jitter from the normal re-encode, nothing else. before/miami-cruiser-turntable.png vs after/miami-cruiser-turntable.png is the same pair under kart-turntable's MeshStandardMaterial, which DOES sample normalMap, and there the tyre and bodywork crinkle visibly disappears — that is the point: the map carries real data the game's material path cannot reach. strip-report.json holds the per-body bytes. RE-VERIFIED 2026-08-02 (wave 8 fix round 1): `node scripts/strip-dead-normal-maps.mjs --dry-run` reports 'no dead texture slots' on all NINE bodies in src/assets/game/models/karts/, so the strip is complete fleet-wide and re-running it is a proven no-op that cannot compound the normal drift; every kart outputHash still equals the sha256 of the bytes on disk and scripts/audit-game-assets.mjs passes all nine against the hero-kart budget; and the meshopt round trip is safe to ship because src/game/race/render/gltfLoader.js:8 calls setMeshoptDecoder(MeshoptDecoder) and createGameGltfLoader is the ONLY place a GLTFLoader is constructed anywhere in src/ (KNOWN TRAP 8 — a meshopt GLB renders NOTHING, silently and with no console error, without that decoder).",
+    "proof": "tmp/w4-kart-lab/ (concept, turntables, generation-jobs.json) + the 2026-08-02 strip evidence in tmp/dead-normal-maps/: miami-cruiser-toon-before.png vs miami-cruiser-toon-after.png are the SAME four yaws rendered through the runtime material path (MeshToonMaterial{gradientMap, map}) and differ on 0.006-0.015% of pixels at max channel delta 17/255 \u2014 band-edge jitter from the normal re-encode, nothing else. before/miami-cruiser-turntable.png vs after/miami-cruiser-turntable.png is the same pair under kart-turntable's MeshStandardMaterial, which DOES sample normalMap, and there the tyre and bodywork crinkle visibly disappears \u2014 that is the point: the map carries real data the game's material path cannot reach. strip-report.json holds the per-body bytes. RE-VERIFIED 2026-08-02 (wave 8 fix round 1): `node scripts/strip-dead-normal-maps.mjs --dry-run` reports 'no dead texture slots' on all NINE bodies in src/assets/game/models/karts/, so the strip is complete fleet-wide and re-running it is a proven no-op that cannot compound the normal drift; every kart outputHash still equals the sha256 of the bytes on disk and scripts/audit-game-assets.mjs passes all nine against the hero-kart budget; and the meshopt round trip is safe to ship because src/game/race/render/gltfLoader.js:8 calls setMeshoptDecoder(MeshoptDecoder) and createGameGltfLoader is the ONLY place a GLTFLoader is constructed anywhere in src/ (KNOWN TRAP 8 \u2014 a meshopt GLB renders NOTHING, silently and with no console error, without that decoder).",
     "promotion": {
       "approval": "Owner 2026-07-12: 'I love the carts' (concepts) + corrected pick 'i meant the ice racer and miami cruser'",
       "promotedAt": "2026-07-12",
@@ -831,7 +831,7 @@
     "sourceHash": "sha256:0c2c09d25c185f6056a0ebeb03417fed434ca4758f04a8fb3e83a3e733da44aa",
     "outputHash": "sha256:d3fb2c254377603a2c79d073ecef9117e89ac36f6aa1b1f0e878541567a9dc99",
     "sizeBudget": "hero-kart class; 166.5 KiB shipped / 141.1 KiB gz (was 411.6 KiB / 386.8 KiB gz before the 2026-08-02 dead-map strip, -59.5% raw); 15565 tris vs 18000 target / 25000 hard; shipped sha256:d3fb2c254377603a2c79d073ecef9117e89ac36f6aa1b1f0e878541567a9dc99",
-    "proof": "tmp/k8-kart-seats/ (concepts, turnarounds, turntables, generation-record.json) + the 2026-08-02 strip evidence in tmp/dead-normal-maps/: ice-block-toon-before.png vs ice-block-toon-after.png are the SAME four yaws rendered through the runtime material path (MeshToonMaterial{gradientMap, map}) and differ on 0.011-0.026% of pixels at max channel delta 15/255 — band-edge jitter from the normal re-encode, nothing else. before/ice-block-turntable.png vs after/ice-block-turntable.png is the same pair under kart-turntable's MeshStandardMaterial, which DOES sample normalMap, and there the surface detail visibly disappears — that is the point: the map carries real data the game's material path cannot reach. strip-report.json holds the per-body bytes. RE-VERIFIED 2026-08-02 (wave 8 fix round 1): `node scripts/strip-dead-normal-maps.mjs --dry-run` reports 'no dead texture slots' on all NINE bodies in src/assets/game/models/karts/, so the strip is complete fleet-wide and re-running it is a proven no-op that cannot compound the normal drift; every kart outputHash still equals the sha256 of the bytes on disk and scripts/audit-game-assets.mjs passes all nine against the hero-kart budget; and the meshopt round trip is safe to ship because src/game/race/render/gltfLoader.js:8 calls setMeshoptDecoder(MeshoptDecoder) and createGameGltfLoader is the ONLY place a GLTFLoader is constructed anywhere in src/ (KNOWN TRAP 8 — a meshopt GLB renders NOTHING, silently and with no console error, without that decoder).",
+    "proof": "tmp/k8-kart-seats/ (concepts, turnarounds, turntables, generation-record.json) + the 2026-08-02 strip evidence in tmp/dead-normal-maps/: ice-block-toon-before.png vs ice-block-toon-after.png are the SAME four yaws rendered through the runtime material path (MeshToonMaterial{gradientMap, map}) and differ on 0.011-0.026% of pixels at max channel delta 15/255 \u2014 band-edge jitter from the normal re-encode, nothing else. before/ice-block-turntable.png vs after/ice-block-turntable.png is the same pair under kart-turntable's MeshStandardMaterial, which DOES sample normalMap, and there the surface detail visibly disappears \u2014 that is the point: the map carries real data the game's material path cannot reach. strip-report.json holds the per-body bytes. RE-VERIFIED 2026-08-02 (wave 8 fix round 1): `node scripts/strip-dead-normal-maps.mjs --dry-run` reports 'no dead texture slots' on all NINE bodies in src/assets/game/models/karts/, so the strip is complete fleet-wide and re-running it is a proven no-op that cannot compound the normal drift; every kart outputHash still equals the sha256 of the bytes on disk and scripts/audit-game-assets.mjs passes all nine against the hero-kart budget; and the meshopt round trip is safe to ship because src/game/race/render/gltfLoader.js:8 calls setMeshoptDecoder(MeshoptDecoder) and createGameGltfLoader is the ONLY place a GLTFLoader is constructed anywhere in src/ (KNOWN TRAP 8 \u2014 a meshopt GLB renders NOTHING, silently and with no console error, without that decoder).",
     "promotion": {
       "approval": "Owner 2026-07-17: 'the ice block cart is funny enough to add' + 'lets ship it'",
       "promotedAt": "2026-07-17",
@@ -839,7 +839,7 @@
     }
   },
   {
-    "license": "Owner-generated via Higgsfield/Meshy pipeline; Bitcoin ₿ glyph = deliberate owner-directed art (same exception as the ₿ item boxes); no people/animals/penguins",
+    "license": "Owner-generated via Higgsfield/Meshy pipeline; Bitcoin \u20bf glyph = deliberate owner-directed art (same exception as the \u20bf item boxes); no people/animals/penguins",
     "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-k8-kart",
@@ -851,7 +851,7 @@
     "sourceHash": "sha256:939cd5fe972b7f1cf454d3c92c76e5a90c43be190ac12a9f20e1311f980a7a6e",
     "outputHash": "sha256:4f87d6a3d57a800c2e020ee0b18ad375b1201db3cc9809d443b6b174f63e80b6",
     "sizeBudget": "hero-kart class; 247.1 KiB shipped / 217.2 KiB gz (was 591.0 KiB / 561.2 KiB gz before the 2026-08-02 dead-map strip, -58.2% raw); 15462 tris vs 18000 target / 25000 hard; shipped sha256:4f87d6a3d57a800c2e020ee0b18ad375b1201db3cc9809d443b6b174f63e80b6",
-    "proof": "tmp/k8-kart-seats/ (concepts, turnarounds, turntables, generation-record.json) + the 2026-08-02 strip evidence in tmp/dead-normal-maps/: btc-kart-toon-before.png vs btc-kart-toon-after.png are the SAME four yaws rendered through the runtime material path (MeshToonMaterial{gradientMap, map}) and differ on 0.002-0.007% of pixels at max channel delta 7/255 — the ₿ glyph, the coin wheels and the tail lamps are pixel-for-pixel unchanged. before/btc-kart-turntable.png vs after/btc-kart-turntable.png is the same pair under kart-turntable's MeshStandardMaterial, which DOES sample normalMap, and there the surface detail visibly disappears — that is the point: the map carries real data the game's material path cannot reach. strip-report.json holds the per-body bytes. RE-VERIFIED 2026-08-02 (wave 8 fix round 1): `node scripts/strip-dead-normal-maps.mjs --dry-run` reports 'no dead texture slots' on all NINE bodies in src/assets/game/models/karts/, so the strip is complete fleet-wide and re-running it is a proven no-op that cannot compound the normal drift; every kart outputHash still equals the sha256 of the bytes on disk and scripts/audit-game-assets.mjs passes all nine against the hero-kart budget; and the meshopt round trip is safe to ship because src/game/race/render/gltfLoader.js:8 calls setMeshoptDecoder(MeshoptDecoder) and createGameGltfLoader is the ONLY place a GLTFLoader is constructed anywhere in src/ (KNOWN TRAP 8 — a meshopt GLB renders NOTHING, silently and with no console error, without that decoder).",
+    "proof": "tmp/k8-kart-seats/ (concepts, turnarounds, turntables, generation-record.json) + the 2026-08-02 strip evidence in tmp/dead-normal-maps/: btc-kart-toon-before.png vs btc-kart-toon-after.png are the SAME four yaws rendered through the runtime material path (MeshToonMaterial{gradientMap, map}) and differ on 0.002-0.007% of pixels at max channel delta 7/255 \u2014 the \u20bf glyph, the coin wheels and the tail lamps are pixel-for-pixel unchanged. before/btc-kart-turntable.png vs after/btc-kart-turntable.png is the same pair under kart-turntable's MeshStandardMaterial, which DOES sample normalMap, and there the surface detail visibly disappears \u2014 that is the point: the map carries real data the game's material path cannot reach. strip-report.json holds the per-body bytes. RE-VERIFIED 2026-08-02 (wave 8 fix round 1): `node scripts/strip-dead-normal-maps.mjs --dry-run` reports 'no dead texture slots' on all NINE bodies in src/assets/game/models/karts/, so the strip is complete fleet-wide and re-running it is a proven no-op that cannot compound the normal drift; every kart outputHash still equals the sha256 of the bytes on disk and scripts/audit-game-assets.mjs passes all nine against the hero-kart budget; and the meshopt round trip is safe to ship because src/game/race/render/gltfLoader.js:8 calls setMeshoptDecoder(MeshoptDecoder) and createGameGltfLoader is the ONLY place a GLTFLoader is constructed anywhere in src/ (KNOWN TRAP 8 \u2014 a meshopt GLB renders NOTHING, silently and with no console error, without that decoder).",
     "promotion": {
       "approval": "Owner 2026-07-17: 'lets make a full bitcoin themed cart' -> '#1 is the pick' -> 'lets ship it'",
       "promotedAt": "2026-07-17",
@@ -859,41 +859,41 @@
     }
   },
   {
-    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — no people/animals/penguins in the prompt)",
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
     "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
     "filePath": "src/assets/game/models/karts/hash-runner.glb",
-    "delivery": "STATIC `?url` IMPORT — and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) — i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget — do not reach for it as a budget lever, and do not undo these static imports to chase one.",
+    "delivery": "STATIC `?url` IMPORT \u2014 and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) \u2014 i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget \u2014 do not reach for it as a budget lever, and do not undo these static imports to chase one.",
     "source": "Owner-approved AAA kart concept -> meshy multi_image_to_3d lift, delivered as tmp/kart-lifts/hash-runner-raw.glb (4614 KB, 30272 tris, one primitive, one base-colour 2048 jpeg, no normal/MR/emissive slot)",
     "role": "Selectable player kart body (open-wheel single-seater, aubergine body + mint wing/engine). MEASURED nose direction: local -X. kart-turntable.mjs puts the camera at (3.2,1.9,3.2) looking at origin, so screen-right is normalize(cross(forward,up)) = (+0.707,0,-0.707) and at yaw 0 local +X projects screen-RIGHT; the mint front wing sits screen-LEFT at yaw 0 and screen-RIGHT at yaw 180, i.e. nose = -X (Meshy convention) -> KART_NOSE_YAW +PI/2",
     "assetId": "karts.hashRunner",
     "sourceHash": "sha256:03b7ba65b4134191ade2654c48407745f59ace6a017f86ab13d609084f2e5200",
     "outputHash": "sha256:84de25536e55a777681441fae1b698f2e51911c6001162fa2ee438de9424ccff",
     "sizeBudget": "hero-kart class; 314KB shipped / 279KB gz (was 4614KB raw, -93.2%); 15135 tris vs 18000 target / 25000 hard; shipped sha256:84de25536e55a777681441fae1b698f2e51911c6001162fa2ee438de9424ccff",
-    "proof": "tmp/kart-lifts/hash-runner-turntable.png (raw) vs tmp/kart-diet/hash-runner-turntable.png (dieted, silhouette read side by side) + tmp/kart-diet/diet-report.json (per-step bytes/tris) + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.899 x 0.620 x 0.989 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor — TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
+    "proof": "tmp/kart-lifts/hash-runner-turntable.png (raw) vs tmp/kart-diet/hash-runner-turntable.png (dieted, silhouette read side by side) + tmp/kart-diet/diet-report.json (per-step bytes/tris) + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.899 x 0.620 x 0.989 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor \u2014 TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
     "promotion": {
       "approval": "Owner-approved body, lifted and turntable-verified before the diet (tmp/kart-lifts/)",
       "promotedAt": "2026-08-02",
-      "labEvidence": "tmp/kart-diet/hash-runner-turntable.png; four-yaw strip compared against the raw strip — front wing, sidepods, exhaust stacks and engine block all intact at 0.5 ratio"
+      "labEvidence": "tmp/kart-diet/hash-runner-turntable.png; four-yaw strip compared against the raw strip \u2014 front wing, sidepods, exhaust stacks and engine block all intact at 0.5 ratio"
     }
   },
   {
-    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — no people/animals/penguins in the prompt)",
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
     "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
     "filePath": "src/assets/game/models/karts/cold-wallet.glb",
-    "delivery": "STATIC `?url` IMPORT — and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) — i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget — do not reach for it as a budget lever, and do not undo these static imports to chase one.",
+    "delivery": "STATIC `?url` IMPORT \u2014 and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) \u2014 i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget \u2014 do not reach for it as a budget lever, and do not undo these static imports to chase one.",
     "source": "Owner-approved AAA kart concept -> meshy multi_image_to_3d lift, delivered as tmp/kart-lifts/cold-wallet-raw.glb (4117 KB, 29882 tris, one primitive, one base-colour 2048 jpeg, no normal/MR/emissive slot)",
     "role": "Selectable player kart body (charcoal hardware-wallet slab, steel-blue bumpers front and rear). MEASURED nose direction: local -X. Both ends carry a blue bumper, so the bumper is NOT the cue; the amber tail lamps are. tmp/kart-lifts/cold-wallet-back.png shows the lamps on the BACK and cold-wallet-front.png shows a lamp-free front bumper; in the turntable those lamps appear only in the yaw-0 and yaw-270 frames, both of which show local +X, so +X is the TAIL and nose = -X (Meshy convention) -> KART_NOSE_YAW +PI/2",
     "assetId": "karts.coldWallet",
     "sourceHash": "sha256:477d581a41b5329a6c4ba7e1fb88d6fee9f7dafd6d00385f058543eefbcb7a13",
     "outputHash": "sha256:0ab7dc3d9e79a00f18cb95f28145bdcd73f9e44803ee11556b2f06cf649f2da4",
     "sizeBudget": "hero-kart class; 261KB shipped / 228KB gz (was 4117KB raw, -93.7%); 14940 tris vs 18000 target / 25000 hard; shipped sha256:0ab7dc3d9e79a00f18cb95f28145bdcd73f9e44803ee11556b2f06cf649f2da4",
-    "proof": "tmp/kart-lifts/cold-wallet-turntable.png (raw) vs tmp/kart-diet/cold-wallet-turntable.png (dieted) + tmp/kart-lifts/cold-wallet-front.png / -back.png (orientation cue) + tmp/kart-diet/diet-report.json + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.899 x 0.670 x 1.280 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor — TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
+    "proof": "tmp/kart-lifts/cold-wallet-turntable.png (raw) vs tmp/kart-diet/cold-wallet-turntable.png (dieted) + tmp/kart-lifts/cold-wallet-front.png / -back.png (orientation cue) + tmp/kart-diet/diet-report.json + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.899 x 0.670 x 1.280 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor \u2014 TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
     "promotion": {
       "approval": "Owner-approved body, lifted and turntable-verified before the diet (tmp/kart-lifts/)",
       "promotedAt": "2026-08-02",
@@ -901,20 +901,20 @@
     }
   },
   {
-    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — no people/animals/penguins in the prompt)",
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
     "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
     "filePath": "src/assets/game/models/karts/sat-stacker.glb",
-    "delivery": "STATIC `?url` IMPORT — and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) — i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget — do not reach for it as a budget lever, and do not undo these static imports to chase one.",
+    "delivery": "STATIC `?url` IMPORT \u2014 and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) \u2014 i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget \u2014 do not reach for it as a budget lever, and do not undo these static imports to chase one.",
     "source": "Owner-approved AAA kart concept -> meshy multi_image_to_3d lift, delivered as tmp/kart-lifts/sat-stacker-raw.glb (4338 KB, 29784 tris, one primitive, one base-colour 2048 jpeg, no normal/MR/emissive slot)",
-    "role": "Selectable player kart body (oxblood chassis, sand-yellow bodywork, stacked crates on a rear deck). MEASURED nose direction: local -X, on two independent cues that agree — the steering wheel and nose cone sit screen-LEFT at yaw 0 (= local -X) while the crate deck and the amber tail lamps sit screen-RIGHT (= local +X) -> Meshy convention -> KART_NOSE_YAW +PI/2. NOTE for the wiring package: the crate stack makes this the tallest body of the five (0.96 vs 0.58-0.72), so KART_FIT_MAX_HEIGHT (7.8) will govern its scale rather than the 15.6 footprint fit — the same clamp the ice block needed",
+    "role": "Selectable player kart body (oxblood chassis, sand-yellow bodywork, stacked crates on a rear deck). MEASURED nose direction: local -X, on two independent cues that agree \u2014 the steering wheel and nose cone sit screen-LEFT at yaw 0 (= local -X) while the crate deck and the amber tail lamps sit screen-RIGHT (= local +X) -> Meshy convention -> KART_NOSE_YAW +PI/2. NOTE for the wiring package: the crate stack makes this the tallest body of the five (0.96 vs 0.58-0.72), so KART_FIT_MAX_HEIGHT (7.8) will govern its scale rather than the 15.6 footprint fit \u2014 the same clamp the ice block needed",
     "assetId": "karts.satStacker",
     "sourceHash": "sha256:6404559bc7abbcb915297f2e20d9c2d9d88e6e2f967a08221b0801b62f483eb8",
     "outputHash": "sha256:b166c1fcbdc0afc5f397a2c4fbc3a1cd4cc87013bf2f747244a36fa7191e835f",
     "sizeBudget": "hero-kart class; 300KB shipped / 266KB gz (was 4338KB raw, -93.1%); 14891 tris vs 18000 target / 25000 hard; shipped sha256:b166c1fcbdc0afc5f397a2c4fbc3a1cd4cc87013bf2f747244a36fa7191e835f",
-    "proof": "tmp/kart-lifts/sat-stacker-turntable.png (raw) vs tmp/kart-diet/sat-stacker-turntable.png (dieted) + tmp/kart-diet/diet-report.json + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.897 x 0.910 x 1.333 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor — TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
+    "proof": "tmp/kart-lifts/sat-stacker-turntable.png (raw) vs tmp/kart-diet/sat-stacker-turntable.png (dieted) + tmp/kart-diet/diet-report.json + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.897 x 0.910 x 1.333 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor \u2014 TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
     "promotion": {
       "approval": "Owner-approved body, lifted and turntable-verified before the diet (tmp/kart-lifts/)",
       "promotedAt": "2026-08-02",
@@ -922,20 +922,20 @@
     }
   },
   {
-    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — no people/animals/penguins in the prompt)",
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
     "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
     "filePath": "src/assets/game/models/karts/pixel-pickup.glb",
-    "delivery": "STATIC `?url` IMPORT — and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) — i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget — do not reach for it as a budget lever, and do not undo these static imports to chase one.",
+    "delivery": "STATIC `?url` IMPORT \u2014 and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) \u2014 i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget \u2014 do not reach for it as a budget lever, and do not undo these static imports to chase one.",
     "source": "Owner-approved AAA kart concept, v2 re-roll (the v1 lift is parked in tmp/kart-lifts/rejected/) -> meshy multi_image_to_3d lift, delivered as tmp/kart-lifts/pixel-pickup-v2-raw.glb (4010 KB, 30196 tris, one primitive, one base-colour 2048 jpeg, no normal/MR/emissive slot)",
-    "role": "Selectable player kart body (mint-green mini pickup, cream bumpers, open cargo bed). MEASURED nose direction: local -X — the sloped hood is screen-LEFT at yaw 0 and yaw 90 (both = local -X) while the cargo bed is screen-RIGHT, so nose = -X (Meshy convention) -> KART_NOSE_YAW +PI/2. Shipped name drops the -v2 lift-revision suffix",
+    "role": "Selectable player kart body (mint-green mini pickup, cream bumpers, open cargo bed). MEASURED nose direction: local -X \u2014 the sloped hood is screen-LEFT at yaw 0 and yaw 90 (both = local -X) while the cargo bed is screen-RIGHT, so nose = -X (Meshy convention) -> KART_NOSE_YAW +PI/2. Shipped name drops the -v2 lift-revision suffix",
     "assetId": "karts.pixelPickup",
     "sourceHash": "sha256:b0099cab04349a5e37aaf4bdf0d59f6262fd4b2bbbda2b1537638f3c4b21e048",
     "outputHash": "sha256:79e9e08dfaea88bf59f8b3e4e3a0a3c6a95df8512e9b3b2d7b6fc0be2d1dd5df",
     "sizeBudget": "hero-kart class; 251KB shipped / 220KB gz (was 4010KB raw, -93.7%); 15098 tris vs 18000 target / 25000 hard; shipped sha256:79e9e08dfaea88bf59f8b3e4e3a0a3c6a95df8512e9b3b2d7b6fc0be2d1dd5df",
-    "proof": "tmp/kart-lifts/pixel-pickup-v2-turntable.png (raw) vs tmp/kart-diet/pixel-pickup-turntable.png (dieted) + tmp/kart-diet/diet-report.json + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.899 x 0.685 x 1.273 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor — TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
+    "proof": "tmp/kart-lifts/pixel-pickup-v2-turntable.png (raw) vs tmp/kart-diet/pixel-pickup-turntable.png (dieted) + tmp/kart-diet/diet-report.json + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.899 x 0.685 x 1.273 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor \u2014 TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
     "promotion": {
       "approval": "Owner-approved body (v2 re-roll; v1 rejected and parked in tmp/kart-lifts/rejected/)",
       "promotedAt": "2026-08-02",
@@ -943,20 +943,20 @@
     }
   },
   {
-    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content — no people/animals/penguins in the prompt)",
+    "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
     "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
     "filePath": "src/assets/game/models/karts/node-runner.glb",
-    "delivery": "STATIC `?url` IMPORT — and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) — i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget — do not reach for it as a budget lever, and do not undo these static imports to chase one.",
+    "delivery": "STATIC `?url` IMPORT \u2014 and that is now the correct call, which is the opposite of what this field said before 2026-08-03. The prerequisite it named landed: the dead-map strip took the four 2026-07 karts down by 1255.6 KiB raw / 1256.4 KiB gz (tmp/dead-normal-maps/strip-report.json), which paid for wiring all five of these. Wired at ComebackCityThreeKartRace.jsx:30-34 (imports), 2848-2852 (loads), 2889-2897 (scene map), and the built artifact MEASURES 13.608/16 MiB raw and 10948.3/12000 KiB gz with every budget check passing (tmp/bundle-budget-kart/bundle-asset-budget-report.json, captured 2026-08-03T02:34Z) \u2014 i.e. the projection in the old text was right to within 3.3 KiB gz. The one thing in that text still worth keeping: scripts/bundle-asset-budget-report.mjs walks EVERY file under dist-kart, so an on-demand pool would NOT reduce the measured number by a single byte. A pool buys first-load time and VRAM, never budget \u2014 do not reach for it as a budget lever, and do not undo these static imports to chase one.",
     "source": "Owner-approved AAA kart concept, v2 re-roll (the v1 lift is parked in tmp/kart-lifts/rejected/) -> meshy multi_image_to_3d lift, delivered as tmp/kart-lifts/node-runner-v2-raw.glb (3971 KB, 30688 tris, one primitive, one base-colour 2048 jpeg, no normal/MR/emissive slot)",
-    "role": "Selectable player kart body (hot-pink shell over navy frame, rear wing on struts, whitewall tyres). MEASURED nose direction: local -X — the splitter/nose is screen-LEFT at yaw 90 (= local -X) with the rear wing screen-RIGHT, and the pair swaps at yaw 180, so nose = -X (Meshy convention) -> KART_NOSE_YAW +PI/2. Shipped name drops the -v2 lift-revision suffix",
+    "role": "Selectable player kart body (hot-pink shell over navy frame, rear wing on struts, whitewall tyres). MEASURED nose direction: local -X \u2014 the splitter/nose is screen-LEFT at yaw 90 (= local -X) with the rear wing screen-RIGHT, and the pair swaps at yaw 180, so nose = -X (Meshy convention) -> KART_NOSE_YAW +PI/2. Shipped name drops the -v2 lift-revision suffix",
     "assetId": "karts.nodeRunner",
     "sourceHash": "sha256:d5cb2d24cfdd738516ca75866a9f6581680646db45d8da20fbdc408fe2332530",
     "outputHash": "sha256:75ececa48187b2f73c4dc1c98079576c5d18449c9c17e5004109bdb1c23bb9e2",
     "sizeBudget": "hero-kart class; 251KB shipped / 219KB gz (was 3971KB raw, -93.7%); 15344 tris vs 18000 target / 25000 hard; shipped sha256:75ececa48187b2f73c4dc1c98079576c5d18449c9c17e5004109bdb1c23bb9e2",
-    "proof": "tmp/kart-lifts/node-runner-v2-turntable.png (raw) vs tmp/kart-diet/node-runner-turntable.png (dieted) + tmp/kart-diet/diet-report.json + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.898 x 0.546 x 0.935 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor — TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
+    "proof": "tmp/kart-lifts/node-runner-v2-turntable.png (raw) vs tmp/kart-diet/node-runner-turntable.png (dieted) + tmp/kart-diet/diet-report.json + the v2-vs-v3 turntable pixel diff (max delta 4-25 of 255) + STATIC RENDER PROOF 2026-08-03 (`node scripts/strip-dead-normal-maps.mjs --check`): the shipped bytes decode through MeshoptDecoder to 1.898 x 0.546 x 0.935 world units on 1 primitive with POSITION/NORMAL/TEXCOORD_0 all present and a readable baseColor \u2014 TRAP 8 (a meshopt GLB renders NOTHING without the decoder, silently, with no console error) would fail this check, and every wave-8 capture frame drove the default red hero body so the frames prove nothing about these five either way.",
     "promotion": {
       "approval": "Owner-approved body (v2 re-roll; v1 rejected and parked in tmp/kart-lifts/rejected/)",
       "promotedAt": "2026-08-02",

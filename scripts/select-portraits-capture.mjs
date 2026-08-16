@@ -25,7 +25,7 @@ const PORTRAITS = [
   // NOTE: lifoladen SHIPS as char-lifoladen.webp (bundle diet 2026-07-12) —
   // after a rerun, re-convert the fresh png (tmp/k7-item-lab/portrait-to-webp.mjs)
   // and delete the png; both shells import the .webp.
-  { model: '/src/assets/game/models/avatars/lifoladen.glb', name: 'char-lifoladen', yaw: FRONT_Z_POSE },
+  { model: '/src/assets/game/models/avatars/lifoladen.glb', name: 'char-lifoladen', yaw: -0.55 },
   { model: '/src/assets/game/models/avatars/seth-penguin.glb', name: 'char-seth-penguin', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/avatars/mizzle.glb', name: 'char-mizzle', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/avatars/tclow-penguin.glb', name: 'char-tclow', yaw: TRIPO_POSE },
