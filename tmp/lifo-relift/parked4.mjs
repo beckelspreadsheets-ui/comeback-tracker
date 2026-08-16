@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+import { chromiumGlArgs } from '../../scripts/lib/chromium-gl-args.mjs';
+const browser = await chromium.launch({ args: chromiumGlArgs() });
+const page = await browser.newPage({ viewport: { width: 1365, height: 768 } });
+await page.goto('http://localhost:5173/kart-playtest.html?character=lifoladen&kart=miamicruiser&stats=0', { waitUntil: 'domcontentloaded' });
+await page.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, { timeout: 45000 });
+await page.waitForTimeout(6000);
+await page.screenshot({ path: process.env.OUT });
+await browser.close();
+console.log('done');

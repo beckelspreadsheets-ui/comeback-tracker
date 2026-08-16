@@ -1,0 +1,63 @@
+[
+  {
+    "slug": "lifoladen",
+    "source": "tmp/lifo-relift/in/lifoladen-raw.glb",
+    "output": "tmp/lifo-relift/diet/lifoladen.glb",
+    "sourceHash": "sha256:cce52d01c722b924b2ba7d527e84f1e7912ecde58be4e4160e9a118de536fd70",
+    "outputHash": "sha256:4b421b74fb39ce03483410181896a01cfca0638c42415b65d78041d63aaf879b",
+    "rawBytes": 5375384,
+    "shippedBytes": 258100,
+    "steps": [
+      {
+        "step": "raw",
+        "bytes": 5375384,
+        "triangles": 30952,
+        "textureBytes": 4286551,
+        "note": "as lifted"
+      },
+      {
+        "step": "strip+prune",
+        "bytes": 5374820,
+        "triangles": 30952,
+        "textureBytes": 4286551,
+        "note": "no unsampled texture slots present"
+      },
+      {
+        "step": "weld",
+        "bytes": 5374820,
+        "triangles": 30952,
+        "textureBytes": 4286551,
+        "note": "shared vertices restored so edge collapse has edges"
+      },
+      {
+        "step": "simplify",
+        "bytes": 4821000,
+        "triangles": 15473,
+        "textureBytes": 4286551,
+        "note": "ratio 0.5, error 0.01"
+      },
+      {
+        "step": "resize",
+        "bytes": 633312,
+        "triangles": 15473,
+        "textureBytes": 98861,
+        "note": "base colour -> 512px jpeg q82"
+      },
+      {
+        "step": "meshopt (SHIPPED)",
+        "bytes": 258100,
+        "triangles": 15473,
+        "textureBytes": 98861,
+        "note": "level high; EXT_meshopt_compression + KHR_mesh_quantization required"
+      }
+    ],
+    "settings": {
+      "ratio": 0.5,
+      "error": 0.01,
+      "texture": 512,
+      "quality": 82,
+      "textureFormat": "jpeg",
+      "meshoptLevel": "high"
+    }
+  }
+]
