@@ -39,7 +39,22 @@ export const RIVAL_PERSONALITIES = {
   // CRRT Penguin — clean, dependable lines: early braking, safe margins.
   // Front-runner: paces above the player's raw max — beating him takes
   // mini-turbos and boost pads, which he doesn't have.
+  //
+  // ARC (AAA item 5, 2026-08-17): personalities tuned for a 34 s sprint turned
+  // a 134 s race into a procession — the Aug-13 pacing capture measured Blue
+  // Speed leading FLAG TO FLAG in 3 of 4 races, zero lead changes among
+  // rivals. `arc` is a pace multiplier over race phase (early/mid/late,
+  // blended smoothly): the three curves CROSS, so the rival order itself has
+  // a story across three laps. Each arc averages ~1.0 over the race, so mean
+  // pace — and the player-facing difficulty the owner is still evaluating —
+  // stays where the 2026-08-08 retune put it.
   'Blue Speed': {
+    // Fast starter who fades: takes the early lead he always took, but his
+    // late pace (1.08 x 0.962 = 1.039) drops CLEARLY under Purple Lab's surge
+    // (1.079) — the first cut of this arc faded him to 1.064, which still
+    // out-paced the surge and measured ZERO lead changes over 4 races. A
+    // crossing has to actually cross.
+    arc: { early: 1.005, mid: 1.0, late: 0.962 },
     authority: 1.25,
     brakeLookahead: 26,
     // 1.05 -> 1.08. He is the front-runner and the design note below already
@@ -51,6 +66,10 @@ export const RIVAL_PERSONALITIES = {
   },
   // Seth Penguin — erratic late-braker: short lookahead, overcooks corners.
   'Purple Lab': {
+    // The closer: scrappy early, surges over the final lap. Late pace 1.03 x
+    // 1.048 = 1.079 vs Blue's fading 1.039 — a +4% differential across the
+    // last lap, enough to close a 2-4 s gap and take the lead on track.
+    arc: { early: 0.99, mid: 1.005, late: 1.048 },
     authority: 1.1,
     brakeLookahead: 11,
     // 0.99 -> 1.03. The whole field now sits at or above the player's raw max,
@@ -62,6 +81,9 @@ export const RIVAL_PERSONALITIES = {
   },
   // Orange Muscle — aggressive bumper: hunts the player's lane when close.
   'Orange Muscle': {
+    // Mid-race hunter: his strongest stretch is lap 2, which is exactly when
+    // his lane-hunting bumper behaviour has a pack around him to use it on.
+    arc: { early: 0.995, mid: 1.022, late: 0.998 },
     authority: 1.15,
     brakeLookahead: 20,
     bumper: true,
@@ -71,6 +93,36 @@ export const RIVAL_PERSONALITIES = {
     risk: 1.0,
     wobble: 0.03,
   },
+};
+
+// Smooth early -> mid -> late blend over race phase (0..1). Piecewise-linear
+// with the knee at half distance: no lap-line steps, no pop when a rival laps.
+export const arcPaceMultiplier = (arc, phase) => {
+  if (!arc) return 1;
+  const t = clamp(phase, 0, 1);
+  return t < 0.5 ? lerp(arc.early, arc.mid, t * 2) : lerp(arc.mid, arc.late, (t - 0.5) * 2);
+};
+
+// FIELD COMPRESSION (AAA item 5). The band above manages every rival's gap to
+// the PLAYER; nothing managed the rivals' gaps to EACH OTHER, and over 134 s
+// the personality pace spread (1.00-1.08) stretched the field into a parade —
+// Orange/Purple finished 4-7 s behind Blue every race and spent the middle 100
+// seconds alone. Any rival more than spreadMaxSeconds behind the RACE LEADER
+// (player included) gets a gentle chase; maxCombinedBand caps the stack with
+// the player-gap band so compression can never turn into a second catch-up
+// engine pointed at the player.
+export const FIELD_PACING = {
+  spreadMaxSeconds: 2.5,
+  fieldCatchUp: 1.06,
+  maxCombinedBand: 1.18,
+  // Leader ease: a RIVAL leading second place by more than this eases a
+  // touch. Measured need (2026-08-17, crossing-arc capture): Purple Lab's
+  // final-lap surge closes ~1.8 s/lap but Blue Speed enters lap 3 ~5 s clear,
+  // so the pass never lands on track — the pack has to stay within reach of
+  // its own front-runner for any arc to matter. Rivals only: a lead the
+  // PLAYER earned still holds to the line (the 2026-08-08 owner rule).
+  leaderEaseSeconds: 3,
+  leaderEase: 0.985,
 };
 
 // RETUNED 2026-08-08, owner: "we do need to make it more difficult in general
@@ -221,6 +273,7 @@ export const createRivalRacers = (rivals, { gridProgress = 0 } = {}) =>
     previousProgress: wrap01(gridProgress + 0.004 + index * 0.005),
     // Staggered grid slots just ahead of the player (player starts P4).
     progress: wrap01(gridProgress + 0.004 + index * 0.005),
+    fieldRubber: 1,
     rubber: 1,
     speed: 0,
     spinTimer: 0,
@@ -268,6 +321,24 @@ export const updateRivalRacers = (field, ctx) => {
   } = ctx;
 
   const { crestProgress, fishBones, ramps } = ctx;
+  // Total laps in this race — the personality arcs are phased over it. 3 is
+  // every shipped race; harnesses that predate the arc simply get the same
+  // three-lap story.
+  const raceLaps = ctx.raceLaps || 3;
+  // Race leader (player included), for field compression. Computed once per
+  // frame — the parade this fixes develops over seconds, not frames, so intra-
+  // frame staleness is irrelevant.
+  const leaderTotal = field.reduce(
+    (best, rival) => Math.max(best, totalProgressOf(rival)),
+    player.total
+  );
+  // Second-best total, for the leader-ease check (see FIELD_PACING).
+  let secondTotal = -Infinity;
+  {
+    const totals = [player.total, ...field.map((rival) => totalProgressOf(rival))];
+    totals.sort((a, b) => b - a);
+    secondTotal = totals[1] ?? player.total;
+  }
   // Avalanche (ultimate): on the final lap, the last-place racer earns the
   // leader-killer. If that's a rival, it fires once at a fixed progress
   // gate — deterministic comeback pressure aimed at whoever leads.
@@ -313,6 +384,28 @@ export const updateRivalRacers = (field, ctx) => {
     }
     rival.rubber = lerp(rival.rubber, rubberTarget, 1 - Math.pow(0.05, dt));
 
+    // Field compression: chase the race LEADER when dropped, so rival-vs-rival
+    // gaps stop stretching into a parade over the long race. Same smoothing as
+    // the player band; the combined product is capped below.
+    const rivalTotal = totalProgressOf(rival);
+    const leaderGapSeconds = ((leaderTotal - rivalTotal) * trackLength) / Math.max(60, maxSpeed);
+    // Is THIS rival the runaway leader? Ease him back toward second place.
+    const leadOverSecondSeconds =
+      rivalTotal >= leaderTotal ? ((rivalTotal - secondTotal) * trackLength) / Math.max(60, maxSpeed) : 0;
+    const fieldTarget =
+      leadOverSecondSeconds > FIELD_PACING.leaderEaseSeconds
+        ? FIELD_PACING.leaderEase
+        : leaderGapSeconds > FIELD_PACING.spreadMaxSeconds
+          ? FIELD_PACING.fieldCatchUp
+          : 1;
+    rival.fieldRubber = lerp(rival.fieldRubber || 1, fieldTarget, 1 - Math.pow(0.05, dt));
+    const bandProduct = Math.min(rival.rubber * rival.fieldRubber, FIELD_PACING.maxCombinedBand);
+
+    // Personality arc: where this rival is strong across the race's own
+    // timeline (see RIVAL_PERSONALITIES.arc).
+    const racePhase = (rival.lap - 1 + rival.progress) / raceLaps;
+    const arcPace = arcPaceMultiplier(soul.arc, racePhase);
+
     // Corner-aware speed governor: respect the worst curvature between here
     // and the personality's braking lookahead — late-brakers look shorter.
     const kappaNow = curvatureAt(rival.progress);
@@ -323,7 +416,7 @@ export const updateRivalRacers = (field, ctx) => {
         ? Math.sqrt((soul.authority * soul.risk) / (Math.pow(kappaEff, 0.7) * CORNER_LOAD_K))
         : Infinity;
     const wobble = 1 + Math.sin(rival.progress * 53 + index * 2.4) * soul.wobble;
-    let targetSpeed = Math.min(maxSpeed * soul.pace * rival.rubber * wobble, cornerCap);
+    let targetSpeed = Math.min(maxSpeed * soul.pace * arcPace * bandProduct * wobble, cornerCap);
     if (rival.boostTimer > 0) targetSpeed = Math.min(boostSpeed, targetSpeed + 70);
     rival.boostTimer = Math.max(0, rival.boostTimer - dt);
     rival.speed =
