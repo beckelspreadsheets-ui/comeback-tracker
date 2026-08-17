@@ -308,15 +308,20 @@ scripts/test-contact-tiers.mjs).
 
 ### 6. Post-chain and renderer quality tiers · M · one at a time
 
-Particles were tiered in wave 8. The post chain and renderer are still
-untiered, and the phone build has not been re-measured since shadow maps, the
-three-pass post chain, the mid-ground belt and the environment probe all
-landed.
+Particles were tiered in wave 8. **SLICE 1 DONE 2026-08-17: adaptive render
+scale** — RACE_RENDER_SCALE is now the FLOOR and a 60fps-budget governor in
+createRaceScene.js walks the scale up to RACE_RENDER_SCALE_MAX (1.0/0.8) on
+frame-timing headroom, down under load; verified alone by
+scripts/test-adaptive-render-scale.mjs (climbs 0.85→1.0 on the capture
+machine) + playable proof + a read frame. ?adaptiveScale=0 pins the floor.
+Trap for the next slice: do NOT estimate vsync from the rolling-min frame gap
+— uncapped rAF jitter reads as missed frames; judge against the fixed budget.
 
-**Do these ONE FILE AT A TIME, each verified by its own capture.** The combined
-tier package is what destroyed the render in wave 6. `RACE_RENDER_SCALE` is
-hardcoded 0.85 desktop / 0.6 mobile — a fixed cut means the game never renders
-at native resolution even on hardware that could.
+**Still open in this item, ONE FILE AT A TIME, each verified by its own
+capture** (the combined tier package is what destroyed the render in wave 6):
+the post chain itself is untiered beyond the mobile/touch flag, and the phone
+build has not been re-measured since shadow maps, the three-pass post chain,
+the mid-ground belt, the environment probe and now the governor all landed.
 
 ### 7. Elevation · M · the obvious next lever
 
