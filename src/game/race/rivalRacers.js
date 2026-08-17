@@ -182,6 +182,28 @@ export const KART_CONTACT = {
   pitRearQuarterMax: 9, // ...and no further back than a kart length
   pitAttackerSpeedScale: 0.94, // a pit costs the attacker a little, too
   spinSpeedScale: 0.5, // matches a projectile hit's speed penalty
+  // RAILS PIT GAIN (owner 2026-08-17: "you don't spin out other characters
+  // when you run into them... side swipes etc"). The pit gates were tuned for
+  // free-body flicks; on rails the player's sideways speed is laneRate ×
+  // laneScale, and FULL steer tops out ~19 wu/s — under the 26 wu/s gate, so
+  // a rails player could never pit anyone. The gain maps deliberate input
+  // back onto the gate's scale: full steer (0.72 lane/s × ~26 × 1.5 ≈ 28)
+  // clears 26, half-hearted leaning (~14) still doesn't. Applied ONLY to the
+  // rails-derived signal — free-body keeps its real physics.
+  railsPitGain: 1.5,
+  // WOBBLE — the middle tier between a routine bump and a full spin-out
+  // (owner 2026-08-17: contact response should scale with how hard you hit).
+  // A square rear hit closing faster than wobbleSpeedDiff but under the
+  // boost-grade spinSpeedDiff shakes the victim and costs real speed, without
+  // the 0.95 s control loss a spin carries. Gated by the ordinary 0.7 s
+  // bumpCooldown: leaning on someone can wobble them repeatedly, which is the
+  // point — sustained aggression stays felt — while the spin tier stays
+  // reserved for boost-grade rams (the 2026-07-06 chain-spin probe is why
+  // spinSpeedDiff must NOT come down instead).
+  wobbleSpeedDiff: 45, // closing wu/s for the wobble tier (spin tier at 85)
+  wobbleSpeedScale: 0.8, // victim speed penalty — between bump 0.96/0.9 and spin 0.5
+  wobbleLanePush: 0.14,
+  wobbleDuration: 0.55, // seconds of visual shake; no steering loss
 };
 
 export const createRivalRacers = (rivals, { gridProgress = 0 } = {}) =>
@@ -202,6 +224,7 @@ export const createRivalRacers = (rivals, { gridProgress = 0 } = {}) =>
     rubber: 1,
     speed: 0,
     spinTimer: 0,
+    wobbleTimer: 0,
   }));
 
 export const totalProgressOf = (racer) => racer.lap - 1 + racer.progress;
@@ -215,7 +238,9 @@ export const rivalPositionsOf = (playerTotal, field) => {
     { name: 'player', total: playerTotal },
     ...field.map((rival) => ({ name: rival.name, total: totalProgressOf(rival) })),
   ].sort((a, b) => b.total - a.total);
-  return standings.map((entry, index) => ({ name: entry.name, position: index + 1 }));
+  // total (lap-1 + progress) rides along for telemetry consumers that track
+  // gaps over time — the HUD reads only name/position.
+  return standings.map((entry, index) => ({ name: entry.name, position: index + 1, total: Number(entry.total.toFixed(4)) }));
 };
 
 // Advance every rival one frame. ctx supplies the shared track model:
@@ -465,6 +490,7 @@ export const updateRivalRacers = (field, ctx) => {
   //    the bigger penalty, both get knocked apart).
   field.forEach((rival) => {
     rival.bumpCooldown = Math.max(0, rival.bumpCooldown - dt);
+    rival.wobbleTimer = Math.max(0, (rival.wobbleTimer || 0) - dt);
   });
   let playerBump = null;
   let playerNudgeLane = 0;
@@ -637,6 +663,40 @@ export const updateRivalRacers = (field, ctx) => {
           playerBump = {
             cooldown: KART_CONTACT.spinCooldown,
             lanePush: -frontApart * 0.06,
+            speedScale: KART_CONTACT.frontSpeedScale,
+          };
+        }
+        continue;
+      }
+      // WOBBLE — the middle tier (see KART_CONTACT.wobbleSpeedDiff). A square
+      // rear hit that is genuinely hard but under boost grade shakes the
+      // victim and bleeds real speed; no control loss, no spin chain risk.
+      // Ordinary bumpCooldown gating: sustained ramming re-wobbles, which is
+      // the owner-requested "how hard you hit matters" feel.
+      if (square && closing > KART_CONTACT.wobbleSpeedDiff && !front.spinning && !rear.spinning) {
+        const frontApart = front === karts[a] ? apart : -apart;
+        rear.cooldown = KART_CONTACT.bumpCooldown;
+        front.cooldown = KART_CONTACT.bumpCooldown;
+        if (front.ref) {
+          front.ref.bumpCooldown = KART_CONTACT.bumpCooldown;
+          front.ref.wobbleTimer = KART_CONTACT.wobbleDuration;
+          front.ref.speed = Math.max(46, front.ref.speed * KART_CONTACT.wobbleSpeedScale);
+          front.ref.lane = clamp(front.ref.lane + frontApart * KART_CONTACT.wobbleLanePush, -wallLane, wallLane);
+        } else {
+          playerBump = {
+            cooldown: KART_CONTACT.bumpCooldown,
+            lanePush: frontApart * KART_CONTACT.wobbleLanePush,
+            speedScale: KART_CONTACT.wobbleSpeedScale,
+            wobble: true,
+          };
+        }
+        if (rear.ref) {
+          rear.ref.bumpCooldown = KART_CONTACT.bumpCooldown;
+          rear.ref.speed *= KART_CONTACT.frontSpeedScale;
+        } else {
+          playerBump = {
+            cooldown: KART_CONTACT.bumpCooldown,
+            lanePush: -frontApart * 0.05,
             speedScale: KART_CONTACT.frontSpeedScale,
           };
         }

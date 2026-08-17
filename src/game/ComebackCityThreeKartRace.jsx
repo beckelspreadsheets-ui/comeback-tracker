@@ -897,6 +897,8 @@ const createInitialRace = (
   speed: 0,
   spinOuts: 0,
   spinTimer: 0,
+  steerLaneRate: 0,
+  wobbleTimer: 0,
   // ₿ coins carried this race (owner concept: "bitcoins you collect").
   coins: 0,
   wasSpinning: false,
@@ -10366,6 +10368,16 @@ export const ComebackCityThreeKartRace = ({
     };
     const spinOutYaw = (spinTimer) =>
       spinTimer > 0 ? (1 - spinTimer / ITEM_FEEL.spinDuration) * Math.PI * 2 : 0;
+    // Wobble tier (KART_CONTACT.wobble*): a damped fishtail shake — a few
+    // fast yaw oscillations that decay over the wobble window. Visual only;
+    // the sim already took the speed. Amplitude ~0.28 rad reads as "rocked,
+    // kept it together" against the spin's full 2π twirl.
+    const wobbleYaw = (wobbleTimer) =>
+      wobbleTimer > 0
+        ? Math.sin((KART_CONTACT.wobbleDuration - wobbleTimer) * 26) *
+          0.28 *
+          (wobbleTimer / KART_CONTACT.wobbleDuration)
+        : 0;
 
     // G2 everything-animates: driver lean + suspension bob, shared by the
     // player and every rival (same kart factory). The driver rig pivots at
@@ -10675,6 +10687,7 @@ export const ComebackCityThreeKartRace = ({
           const airState = race.airState;
           const spinning = race.spinTimer > 0;
           race.spinTimer = Math.max(0, race.spinTimer - dt);
+          race.wobbleTimer = Math.max(0, (race.wobbleTimer || 0) - dt);
           // While airborne or spun out, the drift machine sees no input —
           // launching a ramp ends a drift, spinning cancels one.
           const driftEvents = updateDriftFeel(driftState, {
@@ -10845,12 +10858,16 @@ export const ComebackCityThreeKartRace = ({
           // Airborne karts fly straight (no lane control, no corner push);
           // spun-out karts barely steer.
           const laneBeforeSteer = race.lane;
+          race.steerLaneRate = 0;
           if (!airState.airborne) {
             const steerAuthority = spinning ? 0.12 : 1;
             const laneRate =
               (race.drift ? driftLaneRate(driftState, race.steer) * 1.15 : race.steer * 0.72) *
               steerAuthority *
               playerKart.stats.handling;
+            // Deliberate steering rate only (no cornerPush — track shove is
+            // not attacker intent): the rails-side pit-manoeuvre signal.
+            race.steerLaneRate = laneRate;
             race.lane = clamp(race.lane + (laneRate + cornerPush) * dt, -0.95, 0.95);
             race.wallContact =
               (race.lane >= 0.95 && laneRate + cornerPush > 0) ||
@@ -11206,10 +11223,17 @@ export const ComebackCityThreeKartRace = ({
               bumpCooldown: race.bumpCooldown,
               lane: race.lane,
               // P6 — sideways world speed, for the pit manoeuvre. Free-body
-              // gives the player a real one; on rails it is 0 and a pit simply
-              // cannot trigger, which is correct — you cannot slide into
-              // someone on a rail.
-              lateralVel: race.freeBody?.lateralVel || 0,
+              // gives the player a real one. On rails it is derived from the
+              // DELIBERATE steering rate (owner 2026-08-17: side swipes must
+              // spin rivals): laneRate × laneScale × railsPitGain, so a full-
+              // steer swipe clears the pit gate and a gentle lean does not.
+              // cornerPush is excluded — track shove is not attacker intent.
+              lateralVel: race.freeBody
+                ? race.freeBody.lateralVel || 0
+                : (race.steerLaneRate || 0) *
+                  engine.sampler.widthAt(race.progress) *
+                  0.44 *
+                  KART_CONTACT.railsPitGain,
               progress: race.progress,
               speed: race.speed,
               spinning: race.spinTimer > 0,
@@ -11293,6 +11317,12 @@ export const ComebackCityThreeKartRace = ({
             if (!race.shieldActive) {
               applyLaneShove(playerBump.lanePush);
               race.speed *= playerBump.speedScale;
+              // Wobble tier: a hard-but-not-boost-grade hit shakes the kart
+              // (visual yaw jitter, no steering loss — the speed penalty
+              // above is the mechanical cost).
+              if (playerBump.wobble && race.spinTimer <= 0) {
+                race.wobbleTimer = KART_CONTACT.wobbleDuration;
+              }
             }
           }
           // A rival landed a perfect rear hit on the player. The ice shield
@@ -11397,6 +11427,7 @@ export const ComebackCityThreeKartRace = ({
         extraYaw:
           race.airState.spin +
           spinOutYaw(race.spinTimer) +
+          wobbleYaw(race.wobbleTimer) +
           (race.shortcut.active && race.shortcut.styled ? race.shortcut.t * Math.PI * 2 : 0),
         hop:
           hopHeightFor(driftState.hopTimer) +
@@ -11948,7 +11979,7 @@ export const ComebackCityThreeKartRace = ({
           rivalDrawLane(engine.sampler, racer.progress, racer.lane + rival.model.motion.separationLane)
         );
         updateVehiclePose(rival.model, sample, clamp(racer.laneVel * 0.6, -1, 1), false, {
-          extraYaw: spinOutYaw(racer.spinTimer),
+          extraYaw: spinOutYaw(racer.spinTimer) + wobbleYaw(racer.wobbleTimer || 0),
           hop: racer.air.height,
           pitch: airPitchFor(racer.air),
           slideYaw: 0,
