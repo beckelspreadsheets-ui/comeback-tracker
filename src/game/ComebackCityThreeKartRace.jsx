@@ -152,7 +152,14 @@ import { createBasicMaterial } from './race/render/createKartModel.js';
 import { createMomentSample, resolveMoments, sampleMoments } from './race/paletteMoments.js';
 import { arcProgressScaleFor, LANE_ARC, laneLimitFor } from './race/physics/kartPhysics.js';
 import { SURFACE_ROAD_SHEEN, SURFACE_ROAD_TINT, SURFACE_TYPES, surfaceTypeAt } from './race/physics/surfacePhysics.js';
-import { createRaceRenderer, fitRaceRendererToCanvas } from './race/render/createRaceScene.js';
+import {
+  RACE_RENDER_SCALE,
+  RACE_RENDER_SCALE_MAX,
+  createRaceRenderer,
+  createRenderScaleGovernor,
+  fitRaceRendererToCanvas,
+  updateRenderScaleGovernor,
+} from './race/render/createRaceScene.js';
 import {
   contactPatchAirFade,
   contactPatchProfile,
@@ -9492,6 +9499,7 @@ const publishTelemetry = (
     finished: race.finished,
     frameElapsedMs: runtimeStats.frameElapsedMs ?? null,
     frameWorkMs: runtimeStats.frameWorkMs ?? null,
+    renderScale: runtimeStats.renderScale ?? null,
     heldItem: race.heldItem,
     fpsEstimate: Math.round(fpsEstimate),
     itemPickups: race.itemPickups,
@@ -9956,6 +9964,16 @@ export const ComebackCityThreeKartRace = ({
     // cannot distinguish "GPU-bound" from "browser throttled".
     const frameElapsedSamples = [];
     const frameWorkSamples = [];
+    // Adaptive render scale (AAA item 6): the static table becomes the floor,
+    // the governor climbs toward RACE_RENDER_SCALE_MAX when frame timing has
+    // headroom. ?adaptiveScale=0 pins the shipped floor — the escape hatch and
+    // the capture baseline. Autoplay/capture runs keep it ON deliberately: the
+    // capture asserts the telemetry field so the behaviour is measured, not
+    // assumed.
+    const adaptiveScaleEnabled =
+      typeof window === 'undefined' ||
+      new URLSearchParams(window.location.search).get('adaptiveScale') !== '0';
+    const scaleGovernor = createRenderScaleGovernor();
     let raf = 0;
     let disposed = false;
     let previousFrameTime = performance.now();
@@ -12880,6 +12898,23 @@ export const ComebackCityThreeKartRace = ({
       else engine.composer.render();
       frameWorkSamples.push(performance.now() - now);
       while (frameWorkSamples.length > 40) frameWorkSamples.shift();
+      // Adaptive render scale: fed AFTER this frame's work is measured, gated
+      // past the countdown so shader warmup never reads as GPU load. A step
+      // re-runs the full resize path (renderer + post chain), same as a
+      // window resize.
+      if (adaptiveScaleEnabled && race.countdown <= 0 && !race.finished) {
+        const stepped = updateRenderScaleGovernor(scaleGovernor, {
+          floor: viewport.mobile ? RACE_RENDER_SCALE.mobile : RACE_RENDER_SCALE.desktop,
+          frameElapsedMs: frameElapsedSamples[frameElapsedSamples.length - 1],
+          frameWorkMs: frameWorkSamples[frameWorkSamples.length - 1],
+          max: viewport.mobile ? RACE_RENDER_SCALE_MAX.mobile : RACE_RENDER_SCALE_MAX.desktop,
+          nowMs: now,
+        });
+        if (stepped) {
+          viewport.adaptiveScale = scaleGovernor.scale;
+          handleResize();
+        }
+      }
       // Audio observer: engine pitch + drift scrape follow this frame's state,
       // one-shot cues fire off state transitions (see kartAudio.js).
       audioRef.current?.updateFrame({ driftState: race.driftState, race });
@@ -12899,6 +12934,9 @@ export const ComebackCityThreeKartRace = ({
         postChainEnabled: engine.postChainEnabled,
         frameElapsedMs: rollingAverage(frameElapsedSamples),
         frameWorkMs: rollingAverage(frameWorkSamples),
+        // Live render scale, so a capture can ASSERT the governor's behaviour
+        // (floor on load, climbs with headroom, falls back under load).
+        renderScale: viewport.renderScale ?? null,
         proofCameraMode,
         rendererStats: rendererStatsForFrame(now),
         // Camera framing, published so the capture harness can ASSERT the
