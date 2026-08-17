@@ -291,12 +291,20 @@ sunset survives a higher key. Probe frames:
 
 ## THE QUEUE STARTS HERE
 
-### 5. Rival AI over a 134-second race · M · do this first
+### 5. Rival AI over a 134-second race · M · ~~do this first~~ **DONE 2026-08-17**
 
-`rivalRacers.js` is correctly parameterised in world units, so **nothing is
-broken** — but personalities tuned to be interesting over 34 seconds have never
-been checked over 134, and pacing a field across three 45-second laps is a
-genuinely different design problem. This is a design pass, not a bug fix.
+Measured problem (Aug-13 capture): Blue Speed flag-to-flag 3/4 races, zero
+rival lead changes, 6 s flag spread. Shipped fix, tuned over three measured
+4-race rounds: personality pace ARCS over race phase (Blue fades, Purple Lab
+surges lap 3 — the curves must genuinely cross), FIELD COMPRESSION (>2.5 s
+behind the leader chases at 1.06, capped 1.18 with the player band), and
+LEADER EASE (a rival >3 s clear of P2 eases 0.985 — rivals only; player leads
+still hold to the line). Result: lead changes 2→6, spread 6.0→3.5 s, mid-race
+position changes ~2×, autoplay 2/4 (baseline 1/4, n=4 noise; leaderEase is
+the difficulty knob). Evidence: tmp/aaa-plan/rival-pacing-raw.json + the
+harness tmp/aaa-plan/rival-pacing-capture.mjs. Same day, related:
+graduated kart contact (wobble tier + rails side-swipe PIT,
+scripts/test-contact-tiers.mjs).
 
 ### 6. Post-chain and renderer quality tiers · M · one at a time
 
