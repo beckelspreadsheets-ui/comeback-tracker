@@ -7218,6 +7218,61 @@ const makeIceBlockBarrier = () => {
   return g;
 };
 
+// PERF (draw-call diet): emit a repeated Group-of-meshes prop as one
+// InstancedMesh per part instead of one Group per copy. Every instance shares
+// the template's geometry + material for that part; the per-instance world
+// transform — and, for a uniformly-parameterised prop, its size — is baked into
+// instanceMatrix as groupWorld · S(scale) · childLocal, which is byte-for-byte
+// the world matrix three would have composed for that child mesh (child.matrixWorld
+// = group.matrixWorld · child.matrix). Two facts make this a true visual no-op:
+//   * three r184's defaultnormal_vertex divides instance normals by the squared
+//     instanceMatrix column lengths before applying it, i.e. it applies the
+//     correct inverse-transpose for any rotation+DIAGONAL-scale matrix (no shear),
+//     so a non-uniform child scale in the matrix (the penguin belly, the mound
+//     domes) shades exactly as the original separate mesh did; and
+//   * the ambient-sway chunk is USE_INSTANCING-aware (swayLocal = instanceMatrix
+//     * swayLocal), so world-position-phased sway stays correct — and identical —
+//     per instance because the field's own matrix is left at identity.
+// The uniform scale is only ever applied through S(scale) (diagonal), never a
+// shear, so the normal path above always holds. Bounding spheres are computed
+// over the placed instances so the lap-spanning field culls as a whole.
+const instanceTemplateField = (template, instances) => {
+  template.updateMatrixWorld(true);
+  const parts = [];
+  template.traverse((node) => {
+    if (node.isMesh && node.geometry) parts.push(node);
+  });
+  const meshes = parts.map((part) => {
+    const field = new THREE.InstancedMesh(part.geometry, part.material, instances.length);
+    field.castShadow = false;
+    field.receiveShadow = part.receiveShadow;
+    return field;
+  });
+  const scratch = new THREE.Object3D();
+  const scaleMatrix = new THREE.Matrix4();
+  const groupMatrix = new THREE.Matrix4();
+  const instanceMatrix = new THREE.Matrix4();
+  instances.forEach((data, index) => {
+    scratch.position.copy(data.position);
+    scratch.rotation.set(0, data.rotationY || 0, 0);
+    scratch.scale.setScalar(1);
+    scratch.updateMatrix();
+    const scale = data.scale ?? 1;
+    scaleMatrix.makeScale(scale, scale, scale);
+    groupMatrix.multiplyMatrices(scratch.matrix, scaleMatrix);
+    parts.forEach((part, partIndex) => {
+      instanceMatrix.multiplyMatrices(groupMatrix, part.matrix);
+      meshes[partIndex].setMatrixAt(index, instanceMatrix);
+    });
+  });
+  meshes.forEach((field) => {
+    field.instanceMatrix.needsUpdate = true;
+    field.computeBoundingSphere();
+    setFlatTransform(field);
+  });
+  return meshes;
+};
+
 const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => {
   const roadWidth = trackDef.course.mainRoadWidth || 56;
   // Giant ordinal-penguin ice statues at signature spots — the landmark.
@@ -7248,6 +7303,14 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
   // half of the change on the track that can afford it least.
   const iglooRuns = dressingCount(sampler, 244, 10, 36);
   const dressingDensity = buildDressingDensity(sampler);
+  // PERF (draw-call diet): each igloo was a Group of 3 meshes (dome + entrance +
+  // hole). Every dimension of makeIgloo scales linearly with radius, so the
+  // whole prop is a makeIgloo(1) template scaled uniformly per instance — radius
+  // and facing bake into instanceMatrix, and the 3 fields (dome, entrance, hole)
+  // replace up to 36*3 draws with 3. Placement, skips and facing unchanged. The
+  // dome/entrance share one snow material, the hole one dark material, across
+  // the whole field (each igloo previously built its own).
+  const iglooInstances = [];
   for (let i = 0; i < iglooRuns; i += 1) {
     const p = dressingProgressAt(dressingDensity, 0.04 + i / iglooRuns);
     if (onElevatedSpan(trackDef, p)) continue;
@@ -7255,10 +7318,14 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
     const { normal, point, tangent } = sampler.pointAt(p);
     const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 26 + (i % 3) * 10));
     if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.62) continue;
-    const igloo = makeIgloo(7 + (i % 3) * 1.6);
-    igloo.position.copy(pos);
-    igloo.rotation.y = Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);
-    world.add(setFlatTransform(igloo));
+    iglooInstances.push({
+      position: pos.clone(),
+      rotationY: Math.atan2(tangent.x, tangent.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2),
+      scale: 7 + (i % 3) * 1.6,
+    });
+  }
+  if (iglooInstances.length) {
+    instanceTemplateField(makeIgloo(1), iglooInstances).forEach((field) => world.add(field));
   }
   // Snow mounds + ice-shard clusters as low filler, tuned to the concept palette.
   // Authored pitch: 16 pieces over the reference lap = one every 153 units.
@@ -7269,6 +7336,14 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
   // change is ~+40 draws on an 854-draw frame (+4.7%) against a frame that
   // measures 3.1 ms of work in a 16.7 ms budget.
   const fillerRuns = dressingCount(sampler, 153, 16, 64);
+  // PERF (draw-call diet): mounds (2 meshes each) and shards (1 each) were one
+  // Group / mesh per copy. Collected here and emitted as InstancedMesh fields
+  // below — mounds as 2 fields (base + top) with per-instance size baked as a
+  // uniform matrix scale over a makeSnowMound(1) template, shards as one field
+  // per authored height bucket over the same shared cone geometry + material.
+  // Placement, skips, heights and sizes are unchanged.
+  const moundInstances = [];
+  const shardBuckets = new Map();
   for (let i = 0; i < fillerRuns; i += 1) {
     const p = dressingProgressAt(dressingDensity, 0.02 + i / fillerRuns);
     if (onElevatedSpan(trackDef, p)) continue;
@@ -7277,27 +7352,37 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
     const pos = point.clone().addScaledVector(normal, side * (sampler.widthAt(p) * 0.5 + 14 + (i % 4) * 6));
     if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.56) continue;
     if (i % 2 === 0) {
-      const mound = makeSnowMound(0.9 + (i % 3) * 0.12);
-      mound.position.copy(pos);
-      world.add(setFlatTransform(mound));
+      moundInstances.push({ position: pos.clone(), scale: 0.9 + (i % 3) * 0.12 });
     } else {
       // Three distinct heights across the whole loop, so three geometries and
       // one material serve every shard on the track instead of one of each per
       // shard.
       const shardHeight = 6 + (i % 3) * 2;
-      const shard = new THREE.Mesh(
-        sharedSceneryGeometry(`verge-shard:${shardHeight}`, () =>
-          new THREE.ConeGeometry(1.5, shardHeight, 5)
-        ),
-        sharedSceneryMaterial('verge-shard', () =>
-          createBasicMaterial('#00E5FF', { emissive: '#7EC8E8', emissiveIntensity: 0.6 })
-        )
-      );
-      shard.position.copy(pos);
-      shard.position.y = 3.2;
-      world.add(setFlatTransform(shard));
+      if (!shardBuckets.has(shardHeight)) shardBuckets.set(shardHeight, []);
+      shardBuckets.get(shardHeight).push(new THREE.Vector3(pos.x, 3.2, pos.z));
     }
   }
+  if (moundInstances.length) {
+    instanceTemplateField(makeSnowMound(1), moundInstances).forEach((field) => world.add(field));
+  }
+  const shardMaterial = sharedSceneryMaterial('verge-shard', () =>
+    createBasicMaterial('#00E5FF', { emissive: '#7EC8E8', emissiveIntensity: 0.6 })
+  );
+  shardBuckets.forEach((positions, shardHeight) => {
+    const shardGeometry = sharedSceneryGeometry(`verge-shard:${shardHeight}`, () =>
+      new THREE.ConeGeometry(1.5, shardHeight, 5)
+    );
+    const shardField = new THREE.InstancedMesh(shardGeometry, shardMaterial, positions.length);
+    shardField.castShadow = false;
+    const shardMatrix = new THREE.Matrix4();
+    positions.forEach((position, index) => {
+      shardMatrix.makeTranslation(position.x, position.y, position.z);
+      shardField.setMatrixAt(index, shardMatrix);
+    });
+    shardField.instanceMatrix.needsUpdate = true;
+    shardField.computeBoundingSphere();
+    world.add(setFlatTransform(shardField));
+  });
   // Pond-sweep prop dressing (0.24–0.42): chunky crystals, snow mounds, frozen tire bumpers.
   {
     const pondProps = [
@@ -7482,6 +7567,13 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
     world.add(setFlatTransform(berg));
   }
   // Penguin spectator clusters along the rails — more penguins everywhere.
+  // PERF (draw-call diet): the 16 penguins were 16 Groups of 4 meshes = 64
+  // draws. Collected here and emitted as 4 InstancedMesh fields (body, head,
+  // belly, beak) sharing one geometry + one sway material each. Placement,
+  // skips and per-penguin facing are unchanged; s=1.1 is constant across the
+  // field, so a single makePenguinSpectator(1.1) template supplies the shared
+  // geometry, and the sway (heightRef 3.74) is identical for every instance.
+  const penguinInstances = [];
   [0.1, 0.36, 0.6, 0.88].forEach((p, ci) => {
     const side = ci % 2 === 0 ? -1 : 1;
     const { normal, point, tangent } = sampler.pointAt(p);
@@ -7490,13 +7582,15 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
       const along = (k - 1.5) * 4.5;
       const pos = point.clone().addScaledVector(normal, side * lateral).addScaledVector(tangent, along);
       if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.5) continue;
-      const penguin = makePenguinSpectator(1.1);
-      penguin.position.copy(pos);
-      penguin.position.y = 0;
-      penguin.rotation.y = Math.atan2(point.x - pos.x, point.z - pos.z); // watch the race
-      world.add(setFlatTransform(penguin));
+      penguinInstances.push({
+        position: new THREE.Vector3(pos.x, 0, pos.z),
+        rotationY: Math.atan2(point.x - pos.x, point.z - pos.z), // watch the race
+      });
     }
   });
+  if (penguinInstances.length) {
+    instanceTemplateField(makePenguinSpectator(1.1), penguinInstances).forEach((field) => world.add(field));
+  }
   // Fish-market prop dressing along the market-row straight (0.42–0.72).
   {
     const marketProps = [
