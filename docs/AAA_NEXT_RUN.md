@@ -335,11 +335,38 @@ CC's 71 (3×)** — a draw-call-reduction task (instancing/merging), verifiable 
 `gpuCalls` before/after, folded into item 8. Post chain itself is untiered
 beyond the mobile/touch flag *by design*; that is the correct tiering for it.
 
-### 7. Elevation · M · the obvious next lever
+### 7. Elevation · **L (reassessed up from M)** · multi-slice, owner-gated
 
 Both tracks author elevation as a **single sin bump**, so the viaduct is the
-only relief on an 11.6k-unit lap and everything else is dead flat. A 4× lap has
-room for grade that is not a set piece, and the geometry now supports it.
+only relief on an 11.6k-unit lap and everything else is dead flat.
+
+**REASSESSED 2026-08-20 after a full hazard map** (`tmp/aaa-plan/elevation-hazard-map.md`):
+"the geometry supports it" is only half true. The runtime is a **2D (X/Z) sim
+with Y applied at render time**, so the road mesh, kart/rival Y, camera, coins,
+props and shadow frustum all AUTO-FOLLOW `elevationAt(progress)` — Y is never
+hardcoded on them. BUT a rolling grade breaks five systems that assume
+"flat except the one bridge band":
+
+1. **Infield ground plane is flat at `y=-0.06`** (`:4557`) — road clips/floats
+   through it. #1 hazard. Ground must become a heightfield following a TERRAIN
+   grade that is DISTINCT from the road grade (the bridge is a deck over a gap).
+2. **Viaduct understructure** (`:5100-5220`) only exists inside `bridgeBand` and
+   assumes flat ground beneath — graded road elsewhere has no support geometry.
+3. **No physics grade cost** — 3D `sampler.length` grows but lap time doesn't ⇒
+   MEAN_SPEED (247.1/240.7) + difficulty tuning drift, must be re-measured.
+4. **Previewer `maxGradientPct`** (`track-layout-preview.mjs:1520`) is
+   sine-bump-only ⇒ garbage on rolling grade; duplicated `makeElevation` must
+   stay in lockstep. It is also the ONLY (non-failing) safety tripwire.
+5. **Airborne is scripted at crest/ramp only**; the kart never pitches to grade.
+
+**No automated test catches broken monolith grounding.** And the grade SHAPE is
+an owner art-direction call (class of the confirmed neon-dusk grade / arctic
+sunset). So this is NOT a fire-and-forget wave. Decomposition (each verified
+alone) in the hazard map: **7a** terrain heightfield · **7b** understructure
+generalization · **7c** road-grade authoring (OWNER design input) · **7d**
+physics/calibration re-tune. 7a is coupled to 7c's shape, so the honest first
+step is an owner design pass on the grade, not code. **Deferred to owner review;
+engineering prep is done.**
 
 ### 8. Smaller open items
 
@@ -357,11 +384,34 @@ room for grade that is not a set piece, and the geometry now supports it.
   art. Batch as a workflow, one agent per penguin — inline exhausts context.
 - **CI capture** only gets 2 of 9 marks per track (at 1–2 fps under software
   rendering the race ends before later marks come round).
-- **Penguin Village draw calls: 218 vs Comeback City's 71** (measured
-  2026-08-20 at the mobile tier, `phone-remeasure-report.json`). Draw-call count
-  is a real mobile-GPU submission cost; PV submits 3× CC. Candidate for
-  instancing/merging its static scenery. Verifiable via `gpuCalls` before/after
-  in the same telemetry — no phone needed for the delta.
+- ~~**Penguin Village draw calls: 218 vs Comeback City's 71**~~ **DONE
+  2026-08-20 (`dd6efc4d`).** Instanced the three biggest repeated-mesh fields in
+  `addPenguinVillageDressing`: penguins 64→4, mounds+shards 91→5, igloos 102→3.
+  Deterministic scene-graph draw calls **883 → 638 (−245, −28%)**; measured
+  gpuCalls dropped every percentile; CC byte-identical (571→571). Frames read,
+  visual no-op. Icebergs left un-instanced (baked per-bearing vertex colors +
+  lap-span cull would trade draws for triangles). Remaining PV draw-call headroom
+  is the icebergs via REGIONAL chunking (each chunk still culls) — a further
+  ~60-draw win if wanted.
+- **Rival value-spread — the "new atlas cell" claim is REFUTED.** Scoped
+  2026-08-20: the fix is a self-contained edit to `makeKartPaletteTexture`
+  (`:3055-3154`), not a new asset. The recolour carries value through HSL-L, and
+  the orange body cell pins R=255/B=68 so HSL-L is identically flat — but its
+  green channel really ramps 114→157, a gradient HSL-L can't see. Re-key the
+  value carry on **luma** (0.299R+0.587G+0.114B) → spread widens to ~0.2-0.25
+  after the ×2.1 expansion, hue/sat/mean preserved. Verify DETERMINISTICALLY
+  (reproduce the canvas math headlessly, measure swatch spread before/after — not
+  pixel A/B). Gate: re-check the luminance-classified paint/chrome/rubber bands in
+  `kartMaterials.js:112/147/156` don't reclassify. `AAA_REMAINING_PLAN.md:448`
+  already reached this; the item-8 line above it (the "new atlas cell" framing)
+  is superseded.
+- **On-demand kart pool runtime half: SKIP.** Re-scoped 2026-08-20: the bundle
+  rationale is dead (16.66/22 MiB raw, 14/17 gz, both green), GLBs are already
+  lazy `?url` excluded from precache, so the only payoff is a one-time first-race
+  fetch trim on cellular — modest, CacheFirst-cached after. Against that it is
+  surgery on the monolith's most fragile block (the `:2968-2973` positional
+  destructure). Not worth it now; if ever built, gate on a throttled first-race
+  fetch/parse before-after, never on bundle budget.
 
 ---
 
