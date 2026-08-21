@@ -393,18 +393,21 @@ engineering prep is done.**
   lap-span cull would trade draws for triangles). Remaining PV draw-call headroom
   is the icebergs via REGIONAL chunking (each chunk still culls) — a further
   ~60-draw win if wanted.
-- **Rival value-spread — the "new atlas cell" claim is REFUTED.** Scoped
-  2026-08-20: the fix is a self-contained edit to `makeKartPaletteTexture`
-  (`:3055-3154`), not a new asset. The recolour carries value through HSL-L, and
-  the orange body cell pins R=255/B=68 so HSL-L is identically flat — but its
-  green channel really ramps 114→157, a gradient HSL-L can't see. Re-key the
-  value carry on **luma** (0.299R+0.587G+0.114B) → spread widens to ~0.2-0.25
-  after the ×2.1 expansion, hue/sat/mean preserved. Verify DETERMINISTICALLY
-  (reproduce the canvas math headlessly, measure swatch spread before/after — not
-  pixel A/B). Gate: re-check the luminance-classified paint/chrome/rubber bands in
-  `kartMaterials.js:112/147/156` don't reclassify. `AAA_REMAINING_PLAN.md:448`
-  already reached this; the item-8 line above it (the "new atlas cell" framing)
-  is superseded.
+- ~~**Rival value-spread — the "new atlas cell" claim is REFUTED.**~~ **DONE
+  2026-08-20.** Self-contained edit to `makeKartPaletteTexture`, NOT a new asset.
+  The recolour carried value through HSL-L, and the orange body cell pins
+  R=255/B=68 so HSL-L is identically flat — but its green channel really ramps
+  114→157, a gradient HSL-L can't see. Fix: the orange cell is flagged
+  `lumaCarry` and carries **luma** (0.299R+0.587G+0.114B); the grey cell reads
+  fine on HSL-L and is LEFT byte-identical (luma there is slightly worse). Verified
+  DETERMINISTICALLY (`scripts/verify-rival-value-spread.mjs`, pngjs+three replay
+  of the exact math): orange output value-spread **0.000 → 0.23-0.27** across
+  rival hues, mean held within 0.01; grey unchanged. Gate checked: the widened
+  orange band is bounded and mean-preserving, chroma untouched (`PAINT_CHROMA`
+  safe), and the `kartMaterials.js` chrome ceiling `[0.82,0.94]` is a graceful
+  smoothstep, so no hard reclassification — more trim variation is the goal.
+  `AAA_REMAINING_PLAN.md:448` reached the same conclusion; the "new atlas cell"
+  framing is superseded.
 - **On-demand kart pool runtime half: SKIP.** Re-scoped 2026-08-20: the bundle
   rationale is dead (16.66/22 MiB raw, 14/17 gz, both green), GLBs are already
   lazy `?url` excluded from precache, so the only payoff is a one-time first-race

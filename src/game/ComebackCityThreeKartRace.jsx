@@ -3043,7 +3043,12 @@ const loadKartAssets = () => {
 // to ship identical grey.
 const KENNEY_BODY_SWATCHES = [
   { lightScale: 1, satScale: 1, u0: 64 / 512, u1: 128 / 512, v0: 384 / 512, v1: 512 / 512 },
-  { lightScale: 1.42, satScale: 0.3, u0: 192 / 512, u1: 256 / 512, v0: 256 / 512, v1: 384 / 512 },
+  // lumaCarry: this kit-orange trim cell pins R=255 and B=68, so hsl.l is
+  // identically flat across it and the spread expansion below has nothing to
+  // widen. Its green channel really ramps, which Rec.601 luma sees — so this one
+  // cell carries value as luma. The grey cell above reads fine on hsl.l and is
+  // left on it. See makeKartPaletteTexture and scripts/measure — item 8, 2026-08-20.
+  { lightScale: 1.42, satScale: 0.3, lumaCarry: true, u0: 192 / 512, u1: 256 / 512, v0: 256 / 512, v1: 384 / 512 },
 ];
 
 // How hard each body swatch's internal value range is expanded about its own
@@ -3102,42 +3107,43 @@ const makeKartPaletteTexture = (colormapImage, bodyHex = null) => {
       const saturation = clamp(targetHsl.s * swatch.satScale, 0.3 * swatch.satScale, 0.55);
       // ...and the second half of the same finding: the value SPREAD.
       //
-      // The old lightness line was `hsl.l * (0.65 + targetHsl.l * 0.5)`, a pure
-      // multiply — and a multiply cannot widen a range, it can only shrink it.
-      // Measured on the shipped atlas (toy-car-kit/Textures/colormap.png): the
-      // grey body cell runs L 0.396-0.578 (a 0.153 spread) and the kit-orange
-      // cell is L 0.633 at EVERY texel, i.e. literally flat. Scaling by ~0.94
-      // took the one cell that had a gradient down to a 0.14 spread, which is
-      // why the recoloured rivals read as a single value however the hue landed.
-      //
-      // Expanding about each swatch's OWN mean is what makes this safe: the mean
-      // is preserved exactly, so the racer's paint lands at the same overall
-      // level it does today and only its internal contrast moves. A fixed
-      // midpoint would have shifted the flat orange trim cell to a different
-      // brightness for nothing.
-      let meanLightness = 0;
+      // The carry expands each cell's internal value about its OWN mean (mean
+      // preserved, so the paint's overall level is unchanged and only internal
+      // contrast moves), then 2.1 widens it to the range a three-band toon ramp
+      // needs. Measured on the shipped atlas (toy-car-kit/colormap.png): the grey
+      // body cell runs a ~0.18 spread and hsl.l reads it fine, so it STAYS on
+      // hsl.l — byte-identical to before. The kit-orange trim cell pins R=255 and
+      // B=68, so hsl.l is identically 0.633 across it and no contrast factor can
+      // widen a flat range; that cell is flagged lumaCarry and carries Rec.601
+      // luma instead, which sees its real green ramp (114->157). Deterministic
+      // replay (scripts/verify-rival-value-spread.mjs): orange output value-spread
+      // 0.000 -> ~0.25 across rival hues, mean held within 0.01; grey unchanged.
+      const carryValueAt = (index) => {
+        if (swatch.lumaCarry) {
+          return (0.299 * pixels.data[index] + 0.587 * pixels.data[index + 1] + 0.114 * pixels.data[index + 2]) / 255;
+        }
+        probe.setRGB(pixels.data[index] / 255, pixels.data[index + 1] / 255, pixels.data[index + 2] / 255);
+        probe.getHSL(hsl);
+        return hsl.l;
+      };
+      let meanValue = 0;
       let sampleCount = 0;
       for (let y = y0; y < y1; y += 1) {
         for (let x = x0; x < x1; x += 1) {
-          const index = (y * canvas.width + x) * 4;
-          probe.setRGB(pixels.data[index] / 255, pixels.data[index + 1] / 255, pixels.data[index + 2] / 255);
-          probe.getHSL(hsl);
-          meanLightness += hsl.l;
+          meanValue += carryValueAt((y * canvas.width + x) * 4);
           sampleCount += 1;
         }
       }
-      meanLightness = sampleCount ? meanLightness / sampleCount : 0.5;
+      meanValue = sampleCount ? meanValue / sampleCount : 0.5;
       const level = 0.65 + targetHsl.l * 0.5;
       for (let y = y0; y < y1; y += 1) {
         for (let x = x0; x < x1; x += 1) {
           const index = (y * canvas.width + x) * 4;
-          probe.setRGB(pixels.data[index] / 255, pixels.data[index + 1] / 255, pixels.data[index + 2] / 255);
-          probe.getHSL(hsl);
-          // The source lightness is carried through so each cell keeps its own
-          // baked gradient; only hue and saturation are replaced. 2.1 takes the
-          // body cell's 0.153 spread to 0.32 before the level scale, which is
-          // the range a three-band toon ramp needs to show more than one band.
-          const spread = clamp(meanLightness + (hsl.l - meanLightness) * KENNEY_SWATCH_CONTRAST, 0, 1);
+          // Only hue and saturation are replaced; the carried value keeps each
+          // cell's baked gradient (hsl.l for cells that read fine, luma for the
+          // flat orange trim). 2.1 expands about the cell mean.
+          const carried = carryValueAt(index);
+          const spread = clamp(meanValue + (carried - meanValue) * KENNEY_SWATCH_CONTRAST, 0, 1);
           probe.setHSL(targetHsl.h, saturation, clamp(spread * level * swatch.lightScale, 0.04, 0.92));
           pixels.data[index] = Math.round(probe.r * 255);
           pixels.data[index + 1] = Math.round(probe.g * 255);
