@@ -1,0 +1,44 @@
+{
+  "item": "6b — phone re-measure (mobile render tier)",
+  "measuredAt": "2026-08-20",
+  "harness": "scripts/measure-phone-tier.mjs",
+  "method": "390x844 portrait (aspect 0.46 < 0.74) forces the mobile render tier; raceAutoplay on both tracks; 18s/track, samples past raceTime>4s (governor warmup excluded); GL flags via scripts/lib/chromium-gl-args.mjs.",
+  "caveat": "Absolute fps is THIS machine's GPU, not a phone's. Portable signals are frameWorkMs (CPU work), drawCalls/gpuCalls (submission cost) and renderScale/postChainEnabled (mobile tier active). Real phone GPU frame time is not measurable here — the adaptive governor self-protects against it.",
+  "results": {
+    "comeback-city": {
+      "renderScaleFloorToSettled": "0.60 -> 0.78 (mobile floor 0.6, ceiling 0.8)",
+      "frameWorkMsMean": 1.75,
+      "frameWorkMsMax": 2.48,
+      "drawCalls": 571,
+      "gpuCalls": 71,
+      "triangles": 1314313,
+      "gpuTriangles": 512651,
+      "postChainEnabled": true,
+      "shadowMapEnabled": true,
+      "propCount": 106
+    },
+    "penguin-village": {
+      "renderScaleFloorToSettled": "0.60 -> 0.80 (hit mobile ceiling)",
+      "frameWorkMsMean": 2.0,
+      "frameWorkMsMax": 2.41,
+      "drawCalls": 883,
+      "gpuCalls": 218,
+      "triangles": 1012497,
+      "gpuTriangles": 665543,
+      "postChainEnabled": true,
+      "shadowMapEnabled": true,
+      "propCount": 0
+    }
+  },
+  "budget": "16.67 ms / 60 fps",
+  "interpretation": [
+    "CPU frame work is ~11-12% of the 60fps budget on both tracks — the CPU is NOT a bottleneck at the mobile tier, so post-chain tiering (which trims GPU work) would not help the number that is portable to a phone.",
+    "The post chain is ALREADY aggressively mobile-tiered (architecture map): MSAA off, SMAA off, bloomTight lobe dropped, bloom mip levels 4 (vs 6), LUT tetrahedral interp off, grain/aerial-haze/speed-blur reduced. The owner-approved grades survive: ACES tone map + per-track LUT3D + vignette stay on every tier.",
+    "The governor climbs render scale to near-ceiling on this machine (headroom), and self-limits on slower GPUs — so the mobile tier is self-protecting against phone GPU cost that cannot be measured on this desktop.",
+    "The one PORTABLE mobile-GPU lever measured: Penguin Village submits 218 gpuCalls vs Comeback City's 71 (3x). Draw-call count is a real per-frame submission cost on mobile. That is a draw-call-reduction task (instancing/merging), verifiable via gpuCalls before/after — folded into item 8, NOT post-chain trimming."
+  ],
+  "decision": {
+    "6c-post-chain-tiering": "NO speculative change. No measured CPU deficit; the chain is already binary-tiered for mobile; further GPU tiering is unverifiable without a real phone (would be a wave-6-class unverified render change, violating standing rules 5 and 12). Closed as 'already tiered — no measured further work'.",
+    "next": "item 7 (elevation) — a clear, measurable, high-value lever. PV draw-call reduction added to item 8."
+  }
+}

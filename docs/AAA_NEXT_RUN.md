@@ -317,11 +317,23 @@ machine) + playable proof + a read frame. ?adaptiveScale=0 pins the floor.
 Trap for the next slice: do NOT estimate vsync from the rolling-min frame gap
 — uncapped rAF jitter reads as missed frames; judge against the fixed budget.
 
-**Still open in this item, ONE FILE AT A TIME, each verified by its own
-capture** (the combined tier package is what destroyed the render in wave 6):
-the post chain itself is untiered beyond the mobile/touch flag, and the phone
-build has not been re-measured since shadow maps, the three-pass post chain,
-the mid-ground belt, the environment probe and now the governor all landed.
+**SLICE 2 DONE 2026-08-20: phone re-measured, and post-chain tiering closed as
+already-done.** The phone build was re-measured at the mobile tier
+(`scripts/measure-phone-tier.mjs`, report `tmp/aaa-plan/phone-remeasure-report.json`):
+390×844 forces the mobile render tier, governor climbs render scale 0.60→0.78
+(CC) / 0.60→0.80 (PV ceiling). CPU frame work is **1.75 ms (CC) / 2.0 ms (PV)**
+— ~11–12% of the 16.67 ms budget, so the CPU is not a bottleneck and post-chain
+tiering (a GPU-work cut) would not move the portable number. The architecture
+map confirms the post chain is **already aggressively mobile-tiered**: MSAA off,
+SMAA off, bloomTight lobe dropped, bloom mips 4 vs 6, LUT tetrahedral interp
+off, grain/aerial/speed-blur reduced — while the owner-approved grades survive
+(ACES tone map + per-track LUT3D + vignette stay on every tier). Building a
+deeper tier with no phone to verify against would be a wave-6-class unverified
+render change (rules 5, 12), so **6c gets no speculative change.** The one
+PORTABLE mobile-GPU lever the measure surfaced: **PV submits 218 `gpuCalls` vs
+CC's 71 (3×)** — a draw-call-reduction task (instancing/merging), verifiable via
+`gpuCalls` before/after, folded into item 8. Post chain itself is untiered
+beyond the mobile/touch flag *by design*; that is the correct tiering for it.
 
 ### 7. Elevation · M · the obvious next lever
 
@@ -345,6 +357,11 @@ room for grade that is not a set piece, and the geometry now supports it.
   art. Batch as a workflow, one agent per penguin — inline exhausts context.
 - **CI capture** only gets 2 of 9 marks per track (at 1–2 fps under software
   rendering the race ends before later marks come round).
+- **Penguin Village draw calls: 218 vs Comeback City's 71** (measured
+  2026-08-20 at the mobile tier, `phone-remeasure-report.json`). Draw-call count
+  is a real mobile-GPU submission cost; PV submits 3× CC. Candidate for
+  instancing/merging its static scenery. Verifiable via `gpuCalls` before/after
+  in the same telemetry — no phone needed for the delta.
 
 ---
 
