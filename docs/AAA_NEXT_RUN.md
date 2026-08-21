@@ -389,10 +389,16 @@ engineering prep is done.**
   `addPenguinVillageDressing`: penguins 64→4, mounds+shards 91→5, igloos 102→3.
   Deterministic scene-graph draw calls **883 → 638 (−245, −28%)**; measured
   gpuCalls dropped every percentile; CC byte-identical (571→571). Frames read,
-  visual no-op. Icebergs left un-instanced (baked per-bearing vertex colors +
-  lap-span cull would trade draws for triangles). Remaining PV draw-call headroom
-  is the icebergs via REGIONAL chunking (each chunk still culls) — a further
-  ~60-draw win if wanted.
+  visual no-op. Icebergs left un-instanced — **owner-gated, NOT a perf problem.**
+  CORRECTION to the earlier map: bergs are `ConeGeometry(r,h,5)` (5-segment cones,
+  ~50 tris each, ~900 across all 16), so "high-triangle, trades draws for triangles"
+  is FALSE — instancing them is perf-safe (drawing all 16 always is negligible vs a
+  1M-tri frame), a clean −48 draws (64→16, instance by the 4 height buckets
+  `58+(i%4)*24`). The ONLY cost: sharing one baked geometry per bucket drops backdrop
+  berg variety from 16 unique vertex-colour plate patterns to 4 + yaw — a visible
+  change to the owner-confirmed arctic backdrop. Marginal gain on top of the −245
+  already banked, so it needs the owner's OK on the variety tradeoff. Verify via
+  `gpuCalls` (drops ~48) AND `gpuTriangles` (barely moves).
 - ~~**Rival value-spread — the "new atlas cell" claim is REFUTED.**~~ **DONE
   2026-08-20.** Self-contained edit to `makeKartPaletteTexture`, NOT a new asset.
   The recolour carried value through HSL-L, and the orange body cell pins
