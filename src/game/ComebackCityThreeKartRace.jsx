@@ -4427,12 +4427,19 @@ varying float vRoadIce;`,
       const CLEAR_CHORD_UNITS = 11;
       const CLEAR_SAMPLES = clamp(Math.round(sampler.length / CLEAR_CHORD_UNITS), 128, 1200);
       const centreline = new Float32Array(CLEAR_SAMPLES * 2);
+      // AAA item 7 slice A — per-sample road elevation, so the infield can follow
+      // the road's grade near the track (see the setZ below). point.y IS the
+      // elevation (sampler bakes elevationAt into pointAt); today it is 0
+      // everywhere outside the bridge band, which is what makes the terrain term
+      // below a no-op until a rolling grade is authored into makeElevation.
+      const centrelineY = new Float32Array(CLEAR_SAMPLES);
       let widestHalfRoad = 0;
       for (let sample = 0; sample < CLEAR_SAMPLES; sample += 1) {
         const p = sample / CLEAR_SAMPLES;
         const { point } = sampler.pointAt(p);
         centreline[sample * 2] = point.x;
         centreline[sample * 2 + 1] = point.z;
+        centrelineY[sample] = point.y;
         widestHalfRoad = Math.max(widestHalfRoad, sampler.widthAt(p) * 0.44);
       }
       // Kerb + run-off bank + barrier foot live inside ~10 units past the road
@@ -4483,10 +4490,22 @@ varying float vRoadIce;`,
         else cells.set(key, [sample]);
       }
       const clearRangeSq = clearOuter * clearOuter;
+      // AAA item 7 slice A — terrain heightfield gate. Default on because it is a
+      // no-op with today's single-bump elevationAt (0 outside the bridge);
+      // ?terrainGrade=0 forces the pre-slice-A code path for an exact A/B.
+      const terrainGradeEnabled =
+        typeof window === 'undefined' ||
+        new URLSearchParams(window.location.search).get('terrainGrade') !== '0';
+      // The bridge deck is a span over a gap, so the infield must NOT rise to it —
+      // its progress band is excluded from the terrain follow, keeping the ground
+      // low for the pillars. This is also what makes the follow a no-op today: the
+      // ONLY nonzero elevation today is the bridge, and it is excluded here.
+      const bridgeBand = trackDef?.elevation?.bridgeBand;
       for (let index = 0; index < position.count; index += 1) {
         const x = position.getX(index);
         const z = position.getY(index);
         let nearest = Infinity;
+        let nearestSample = -1;
         if (
           x >= bandMinX - clearOuter &&
           x <= bandMaxX + clearOuter &&
@@ -4504,7 +4523,10 @@ varying float vRoadIce;`,
                 const dx = x - centreline[sample * 2];
                 const dz = z - centreline[sample * 2 + 1];
                 const distanceSq = dx * dx + dz * dz;
-                if (distanceSq < nearest) nearest = distanceSq;
+                if (distanceSq < nearest) {
+                  nearest = distanceSq;
+                  nearestSample = sample;
+                }
               }
             }
           }
@@ -4528,8 +4550,22 @@ varying float vRoadIce;`,
         normals[index * 3 + 1] = slopeZ * inverseLength;
         normals[index * 3 + 2] = inverseLength;
         // Local +z is world +y after the rotation, so this is a straight lift.
-        if (reliefDisplace > 0) {
-          position.setZ(index, (heightAt(x, z) - 0.5) * 2 * reliefDisplace * fade);
+        // AAA item 7 slice A — the infield follows the road's OWN elevation near
+        // the track (roadFollow = 1 - fade: full on the verge, gone by clearOuter),
+        // so an authored rolling grade keeps the ground under the road instead of
+        // the road clipping through this flat plane. The bridge band is excluded
+        // (its deck spans a gap the pillars fill). With today's elevationAt (0
+        // everywhere outside the bridge) terrainLift is identically 0, so this
+        // whole term is a NO-OP and the setZ matches the pre-slice-A value
+        // byte-for-byte until a rolling grade is authored. ?terrainGrade=0 skips it.
+        let terrainLift = 0;
+        if (terrainGradeEnabled && nearestSample >= 0 && nearest < clearRangeSq) {
+          const nearestProgress = nearestSample / CLEAR_SAMPLES;
+          const inBridge = bridgeBand && nearestProgress > bridgeBand.from && nearestProgress < bridgeBand.to;
+          if (!inBridge) terrainLift = centrelineY[nearestSample] * (1 - fade);
+        }
+        if (reliefDisplace > 0 || terrainLift !== 0) {
+          position.setZ(index, terrainLift + (heightAt(x, z) - 0.5) * 2 * reliefDisplace * fade);
         }
       }
       position.needsUpdate = true;

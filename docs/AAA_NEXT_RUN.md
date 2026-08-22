@@ -347,9 +347,17 @@ props and shadow frustum all AUTO-FOLLOW `elevationAt(progress)` — Y is never
 hardcoded on them. BUT a rolling grade breaks five systems that assume
 "flat except the one bridge band":
 
-1. **Infield ground plane is flat at `y=-0.06`** (`:4557`) — road clips/floats
-   through it. #1 hazard. Ground must become a heightfield following a TERRAIN
-   grade that is DISTINCT from the road grade (the bridge is a deck over a gap).
+1. ~~**Infield ground plane is flat at `y=-0.06`** (`:4557`)~~ **SLICE A DONE
+   2026-08-21.** The ground plane already subdivides + per-vertex displaces for
+   relief; slice A adds a terrain-follow term to that same setZ: near the track
+   the infield now follows the road's own `elevationAt(nearestProgress)*(1-fade)`,
+   the bridge band excluded (deck over a gap), fading to flat far out. Correction
+   to my earlier "7a is coupled to 7c's shape": the *mechanism* is shape-
+   INDEPENDENT — it follows whatever grade `makeElevation` returns, so it needed no
+   art decision. Gated `?terrainGrade` (default on). Proven a NO-OP today
+   (`scripts/verify-terrain-noop.mjs`: ground vertex Z byte-identical on/off, both
+   tracks, 50,176 verts, maxAbsDiff 0), because today's `elevationAt` is 0 outside
+   the excluded bridge. Ships nothing visible until a rolling term is authored.
 2. **Viaduct understructure** (`:5100-5220`) only exists inside `bridgeBand` and
    assumes flat ground beneath — graded road elsewhere has no support geometry.
 3. **No physics grade cost** — 3D `sampler.length` grows but lap time doesn't ⇒
