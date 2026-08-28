@@ -1516,8 +1516,21 @@ const analyseTrack = (trackDef, { meanSpeedOverride, tier = 'desktop' } = {}) =>
   const peakHeight = Math.max(...elevation);
   const band = trackDef.elevation?.bridgeBand || null;
   const bandLength = band ? (band.to - band.from) * sampler.length : 0;
-  // Steepest gradient on the climb: a sine bump's max slope is at its foot.
-  const maxGradientPct = band && bandLength > 0 ? round(((band.peak * Math.PI) / bandLength) * 100, 1) : 0;
+  // Steepest gradient anywhere on the lap, read from the ACTUAL elevation
+  // profile (numerical max |dY/d(arc length)|), so the safety metric holds for
+  // ANY authored grade — not only the single-sine-bump analytic form it used to
+  // hardcode (which reported garbage the moment a rolling term was added, AAA
+  // item 7). Sampled fine because the coarse per-percent profile above would
+  // step right over a bump's foot, exactly where a half-sine's slope peaks. For
+  // today's single bump this converges to the old peak*pi/bandLength value.
+  const GRAD_SAMPLES = 2000;
+  let maxGradient = 0;
+  for (let index = 0; index < GRAD_SAMPLES; index += 1) {
+    const dy = Math.abs(sampler.elevationAt((index + 1) / GRAD_SAMPLES) - sampler.elevationAt(index / GRAD_SAMPLES));
+    const dx = sampler.length / GRAD_SAMPLES;
+    if (dx > 0 && dy / dx > maxGradient) maxGradient = dy / dx;
+  }
+  const maxGradientPct = round(maxGradient * 100, 1);
 
   const widths = geometry.samples.map((sample) => sample.width);
 
