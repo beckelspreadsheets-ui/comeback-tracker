@@ -4507,9 +4507,10 @@ varying float vRoadIce;`,
         else cells.set(key, [sample]);
       }
       const clearRangeSq = clearOuter * clearOuter;
-      // AAA item 7 slice A — terrain heightfield gate. Default on because it is a
-      // no-op with today's single-bump elevationAt (0 outside the bridge);
-      // ?terrainGrade=0 forces the pre-slice-A code path for an exact A/B.
+      // AAA item 7 slice A — terrain heightfield gate. The infield follows the
+      // authored road grade (item 7c terrain features live); ?terrainGrade=0
+      // forces the pre-slice-A flat-ground code path (was a verified byte-for-byte
+      // no-op back when elevationAt was the single bridge bump).
       const terrainGradeEnabled =
         typeof window === 'undefined' ||
         new URLSearchParams(window.location.search).get('terrainGrade') !== '0';
@@ -4569,12 +4570,11 @@ varying float vRoadIce;`,
         // Local +z is world +y after the rotation, so this is a straight lift.
         // AAA item 7 slice A — the infield follows the road's OWN elevation near
         // the track (roadFollow = 1 - fade: full on the verge, gone by clearOuter),
-        // so an authored rolling grade keeps the ground under the road instead of
-        // the road clipping through this flat plane. The bridge band is excluded
-        // (its deck spans a gap the pillars fill). With today's elevationAt (0
-        // everywhere outside the bridge) terrainLift is identically 0, so this
-        // whole term is a NO-OP and the setZ matches the pre-slice-A value
-        // byte-for-byte until a rolling grade is authored. ?terrainGrade=0 skips it.
+        // so the authored rolling grade (item 7c) keeps the ground under the road
+        // instead of the road clipping through this flat plane. The bridge band is
+        // excluded (its deck spans a gap the pillars fill), so under the viaduct
+        // the ground stays low. ?terrainGrade=0 skips the term for the flat-ground
+        // baseline (which was a verified byte-for-byte no-op before 7c added terrain).
         let terrainLift = 0;
         if (terrainGradeEnabled && nearestSample >= 0 && nearest < clearRangeSq) {
           const nearestProgress = nearestSample / CLEAR_SAMPLES;
@@ -10424,13 +10424,15 @@ export const ComebackCityThreeKartRace = ({
     };
 
     // AAA item 7c — pitch angle of the road grade at a given progress. The
-    // sampler zeroes tangent.y, so the slope is read from elevationAt (baked into
-    // pointAt) at progress +/- eps; atan2 over the arc-length run gives the angle,
-    // sign-matched to pose.pitch (nose up on a climb = negative rotation.x).
+    // sampler zeroes tangent.y, so the slope is read from elevationAt (which
+    // pointAt bakes into point.y) at progress +/- eps; atan2 over the arc-length
+    // run gives the angle, sign-matched to pose.pitch (nose up on a climb =
+    // negative rotation.x). Uses sampler.elevationAt directly (NOT pointAt) so it
+    // costs two scalar lookups per kart, not two spline evals + Vector3 allocs.
     const kartGradePitch = (progress) => {
       const dp = 0.0025;
-      const y0 = engine.sampler.pointAt(wrap01(progress - dp)).point.y;
-      const y1 = engine.sampler.pointAt(wrap01(progress + dp)).point.y;
+      const y0 = engine.sampler.elevationAt(wrap01(progress - dp));
+      const y1 = engine.sampler.elevationAt(wrap01(progress + dp));
       return Math.atan2(y1 - y0, 2 * dp * engine.sampler.length);
     };
     const updateVehiclePose = (kartModel, sample, steer = 0, drift = false, pose = null, freeBody = null) => {
