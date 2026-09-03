@@ -1,5 +1,6 @@
 import { LIFTS, PROGRAM } from '../lib/program.js';
 import { deriveRaceGarage } from './raceProgression.js';
+import { exerciseProgress, meaningfulLog, nextSuggestedDay } from '../lib/workoutStatus.js';
 
 export const GAME_AVATARS = [
   {
@@ -117,35 +118,14 @@ export const GAME_AVATARS = [
 
 const XP_PER_LEVEL = 500;
 
-const hasSetEntry = (set) =>
-  String(set?.wt ?? '').trim() !== '' || String(set?.reps ?? '').trim() !== '';
-
-const prescribedSetCount = (exercise) => Math.max(1, Number(exercise?.sets) || 1);
-
 const dayFromLogKey = (key) => Number(key.match(/d(\d+)$/)?.[1]);
 
 const weekFromLogKey = (key) => Number(key.match(/^w(\d+)/)?.[1]);
 
-const meaningfulExercise = (exerciseLog) => (exerciseLog?.sets || []).some(hasSetEntry);
-
-const meaningfulLog = (log) => (log?.exercises || []).some(meaningfulExercise);
-
-const exerciseProgress = (exercise, exerciseLog) => {
-  const prescribed = prescribedSetCount(exercise);
-  const loggedSets = (exerciseLog?.sets || []).filter(hasSetEntry).length;
-  return {
-    prescribed,
-    loggedSets,
-    complete: loggedSets >= prescribed,
-  };
-};
-
-export const isWorkoutDayComplete = (dayData, log) => {
-  if (!dayData || !meaningfulLog(log)) return false;
-  return dayData.exercises.every((exercise, index) =>
-    exerciseProgress(exercise, log.exercises?.[index]).complete
-  );
-};
+// isWorkoutDayComplete / nextSuggestedDay and their helpers (hasSetEntry,
+// prescribedSetCount, meaningfulExercise, meaningfulLog, exerciseProgress) moved
+// to src/lib/workoutStatus.js so the tracker (HomeScreen) no longer imports from
+// src/game/. They are imported back at the top of this file.
 
 const summarizeWorkoutProgress = (state) => {
   let loggedSets = 0;
@@ -207,14 +187,6 @@ const countFoodDays = (foodLog = {}) =>
 
 const countMetricWeeks = (metrics = []) =>
   metrics.filter((row) => row?.bw || row?.waist || row?.arm || row?.thigh).length;
-
-export const nextSuggestedDay = (state) => {
-  const currentWeek = Number(state.currentWeek) || 1;
-  const firstOpen = PROGRAM.find(
-    (day) => !isWorkoutDayComplete(day, state.logs?.[`w${currentWeek}d${day.day}`])
-  );
-  return firstOpen?.day || 1;
-};
 
 export const deriveGameProfile = (state) => {
   const workout = summarizeWorkoutProgress(state);

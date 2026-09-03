@@ -9,7 +9,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { Card } from '../components/primitives.jsx';
-import { isWorkoutDayComplete, nextSuggestedDay } from '../game/gameProfile.js';
+import { isWorkoutDayComplete, nextSuggestedDay } from '../lib/workoutStatus.js';
 import { PROGRAM, LIFTS } from '../lib/program.js';
 import { phaseForWeek, isDeloadWeek } from '../lib/utils.js';
 
