@@ -72,7 +72,13 @@ const OUT_DIR = resolve(ROOT, 'tmp/track-preview');
 // refused to grade lap time against. A gate that duplicates the data it checks
 // stops checking it (rule 4); measure-mean-speed.mjs exists so this number is
 // re-measured on the layouts that ship, not inherited.
-const MEAN_SPEED = { 'comeback-city': 247.1, 'penguin-village': 240.7 };
+// Re-measured 2026-09-02 after the item-7c bold grade (measure-mean-speed.mjs,
+// wall/game 1.000, ~71fps). CC 247.2 (unchanged — the 2D physics is unaffected;
+// length grew 0.16% and lap time tracked it). PV 236.7, but its two runs spread
+// 46.67-47.52s (1.8%, vs the old <0.5%) — the grade widened the autoplay's
+// lap-time variance, so this PV number is soft; a quiet 3+ run re-measure would
+// tighten it (run 2 sat near the old 46.3 / 240.7).
+const MEAN_SPEED = { 'comeback-city': 247.2, 'penguin-village': 236.7 };
 
 // The tool must be CHECKABLE, not merely plausible — but the thing worth
 // checking is the SOLVER, not the track.

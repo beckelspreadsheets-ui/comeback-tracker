@@ -10423,6 +10423,16 @@ export const ComebackCityThreeKartRace = ({
       onRestart?.();
     };
 
+    // AAA item 7c — pitch angle of the road grade at a given progress. The
+    // sampler zeroes tangent.y, so the slope is read from elevationAt (baked into
+    // pointAt) at progress +/- eps; atan2 over the arc-length run gives the angle,
+    // sign-matched to pose.pitch (nose up on a climb = negative rotation.x).
+    const kartGradePitch = (progress) => {
+      const dp = 0.0025;
+      const y0 = engine.sampler.pointAt(wrap01(progress - dp)).point.y;
+      const y1 = engine.sampler.pointAt(wrap01(progress + dp)).point.y;
+      return Math.atan2(y1 - y0, 2 * dp * engine.sampler.length);
+    };
     const updateVehiclePose = (kartModel, sample, steer = 0, drift = false, pose = null, freeBody = null) => {
       const group = kartModel.group;
       group.position.copy(sample.point);
@@ -10445,8 +10455,15 @@ export const ComebackCityThreeKartRace = ({
       const baseYaw = freeBody ? freeBody.heading : Math.atan2(sample.tangent.x, sample.tangent.z);
       group.rotation.y = baseYaw - yawOffset + (pose?.extraYaw || 0);
       group.rotation.z = pose ? -(pose.slideYaw * 0.3 + steer * 0.1) : -steer * 0.12;
+      // Speed wobble - air/shortcut pitch - road GRADE pitch (item 7c: the kart
+      // tilts to the slope so a bold hill reads instead of the kart floating up
+      // it). Grade pitch fades out as the kart leaves the deck (airborne = follows
+      // its own arc, not the road).
+      const gradeAirFade = clamp(1 - (pose?.hop || 0) * 0.6, 0, 1);
       group.rotation.x =
-        Math.sin(race.raceTime * 12) * clamp(race.speed / MAX_SPEED, 0, 1) * 0.025 - (pose?.pitch || 0);
+        Math.sin(race.raceTime * 12) * clamp(race.speed / MAX_SPEED, 0, 1) * 0.025 -
+        (pose?.pitch || 0) -
+        (pose?.gradePitch || 0) * gradeAirFade;
       if (pose) group.scale.y = pose.squash;
       // The shadow stays on the ROAD the kart is over, flat and yaw-only. Air
       // height shrinks and fades it (the only cue a still frame has for how
@@ -11605,6 +11622,7 @@ export const ComebackCityThreeKartRace = ({
           race.airState.height +
           (race.shortcut.active ? shortcutArcHeight(race.shortcut, trackDef.shortcut) : 0),
         pitch: airPitchFor(race.airState) + shortcutPitchFor(race.shortcut),
+        gradePitch: kartGradePitch(race.progress),
         slideYaw: driftState.slideYaw,
         squash: race.squash,
       }, race.freeBody);
