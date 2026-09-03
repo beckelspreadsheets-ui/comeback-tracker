@@ -929,13 +929,30 @@ const crestProgressFor = (trackDef) => {
 };
 const makeElevation = (trackDef) => {
   const band = trackDef.elevation.bridgeBand;
+  const terrain = trackDef.elevation.terrain || [];
   return (progress) => {
     const p = wrap01(progress);
+    let y = 0;
+    // Bridge DECK: a half-sine bump, a deck over a gap. EXCLUDED from the infield
+    // ground-follow (slice A) because the pillars fill the gap beneath it.
     if (p > band.from && p < band.to) {
       const t = (p - band.from) / (band.to - band.from);
-      return Math.sin(t * Math.PI) * band.peak;
+      y += Math.sin(t * Math.PI) * band.peak;
     }
-    return 0;
+    // Signature TERRAIN (AAA item 7c): signed sin^2 humps/dips — amp>0 is a hill
+    // crest, amp<0 a valley. sin^2 has zero slope at both feature ends, so each
+    // blends into the flat road without a kink. The infield ground FOLLOWS these
+    // (slice A includes everything outside the bridge band), so the road rides ON
+    // the terrain instead of clipping through the flat plane. Bands are authored
+    // clear of the bridge; the previewer's maxGradientPct is the safety gate.
+    for (let i = 0; i < terrain.length; i += 1) {
+      const f = terrain[i];
+      if (p > f.from && p < f.to) {
+        const s = Math.sin(((p - f.from) / (f.to - f.from)) * Math.PI);
+        y += f.amp * s * s;
+      }
+    }
+    return y;
   };
 };
 

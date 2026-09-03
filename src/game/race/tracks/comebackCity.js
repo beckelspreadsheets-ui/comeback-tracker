@@ -53,6 +53,15 @@ export const COMEBACK_CITY_TRACK = Object.freeze({
     bridgeBand: { from: 0.785, peak: 40, to: 0.865 },
     crestLaunch: true,
     underpassBand: { from: 0.003, to: 0.017 },
+    // AAA item 7c — bold signature grade (first pass for owner review). Signed
+    // sin^2 humps/dips the infield ground follows (slice A). Placed clear of the
+    // bridge (0.785-0.865) and underpass. Amps are world units; the previewer's
+    // maxGradientPct is the safety gate (target < 17-18%).
+    terrain: [
+      { from: 0.1, to: 0.19, amp: 14 }, // downtown roll
+      { from: 0.34, to: 0.46, amp: 34 }, // signature hill crest
+      { from: 0.56, to: 0.68, amp: -26 }, // waterfront valley
+    ],
   },
   // Procedural opening-facade run + roadside scatter are comeback-city-only
   // dressing; new tracks bring their own.

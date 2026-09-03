@@ -241,16 +241,27 @@ const mirrorCheck = () => {
 
 const makeElevation = (trackDef) => {
   // A draft layout may carry no elevation at all; that is a flat track, not
-  // an error, so the previewer must not require the field.
+  // an error, so the previewer must not require the field. MUST stay in lockstep
+  // with the runtime makeElevation in ComebackCityThreeKartRace.jsx (bridge deck
+  // + signed sin^2 terrain features).
   const band = trackDef.elevation?.bridgeBand;
-  if (!band) return () => 0;
+  const terrain = trackDef.elevation?.terrain || [];
+  if (!band && terrain.length === 0) return () => 0;
   return (progress) => {
     const p = wrap01(progress);
-    if (p > band.from && p < band.to) {
+    let y = 0;
+    if (band && p > band.from && p < band.to) {
       const t = (p - band.from) / (band.to - band.from);
-      return Math.sin(t * Math.PI) * band.peak;
+      y += Math.sin(t * Math.PI) * band.peak;
     }
-    return 0;
+    for (let i = 0; i < terrain.length; i += 1) {
+      const f = terrain[i];
+      if (p > f.from && p < f.to) {
+        const s = Math.sin(((p - f.from) / (f.to - f.from)) * Math.PI);
+        y += f.amp * s * s;
+      }
+    }
+    return y;
   };
 };
 

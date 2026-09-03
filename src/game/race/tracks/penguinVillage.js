@@ -218,7 +218,18 @@ export const PENGUIN_VILLAGE_TRACK = Object.freeze({
   // alone would have taken the same 28-unit peak over 24 fewer world units and
   // pushed the gradient 16.7% -> 17.6%. This is the same ~525-unit ramp, and it
   // holds the 17.0% the note above is written against.
-  elevation: { bridgeBand: { from: 0.1665, peak: 28, to: 0.2136 }, crestLaunch: true },
+  elevation: {
+    bridgeBand: { from: 0.1665, peak: 28, to: 0.2136 },
+    crestLaunch: true,
+    // AAA item 7c — bold signature grade (first pass for owner review). Signed
+    // sin^2 humps/dips the infield ground follows (slice A). Clear of the bridge
+    // (0.1665-0.2136). Previewer maxGradientPct is the safety gate (< 17-18%).
+    terrain: [
+      { from: 0.34, to: 0.46, amp: -28 }, // bayfront valley
+      { from: 0.6, to: 0.74, amp: 32 }, // glacier climb
+      { from: 0.86, to: 0.95, amp: 12 }, // harbour return roll
+    ],
+  },
   ramps: [
     // Off the racing line so both are a deliberate line choice, not a trap:
     // one on the glacier shore, one on the exit of the beacon hairpin.
