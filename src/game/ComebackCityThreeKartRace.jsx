@@ -72,6 +72,8 @@ import itemBoxCcCoinUrl from '../assets/game/models/items/item-box-cc-coin.glb?u
 // and point 'penguin-village' at it in ITEM_BOX_ASSETS.
 import backdropCcFarUrl from '../assets/game/generated/backdrops/cc-far.webp';
 import backdropCcNearUrl from '../assets/game/generated/backdrops/cc-near.webp';
+// Release-push stand-in skyline (scripts/backdrops/cc_skyline_plate.py), ?ccSkyline=v2 until the owner picks.
+import backdropCcNearV2Url from '../assets/game/generated/backdrops/cc-near-v2.webp';
 import backdropPvFarUrl from '../assets/game/generated/backdrops/pv-far.webp';
 import backdropPvNearUrl from '../assets/game/generated/backdrops/pv-near.webp';
 import {
@@ -8168,7 +8170,10 @@ const createScene = ({
     const SKY_LAB_STRIPS = {
       'comeback-city': {
         far: backdropCcFarUrl,
-        near: backdropCcNearUrl,
+        near:
+          new URLSearchParams(window.location.search).get('ccSkyline') === 'v2'
+            ? backdropCcNearV2Url
+            : backdropCcNearUrl,
       },
       // PV ships the b-takes: the a-take ice row keyed out DARK (teal +
       // gold cracks) and read like CC's dark tower skyline — the owner
