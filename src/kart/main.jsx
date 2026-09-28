@@ -5,8 +5,11 @@ import '../index.css';
 import { registerSW } from 'virtual:pwa-register';
 
 const isLocalPreview = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+// Inside the iOS app (Capacitor) the bundle is already local and WKWebView
+// has no service workers for the capacitor:// scheme — never register one.
+const isNativeApp = Boolean(window.Capacitor?.isNativePlatform?.());
 
-if (!isLocalPreview) {
+if (!isLocalPreview && !isNativeApp) {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {

@@ -1,0 +1,12 @@
+{
+  "appId": "com.showcasedesigns.penguinkart",
+  "appName": "Penguin Kart",
+  "webDir": "dist-kart",
+  "backgroundColor": "#10151d",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#10151d",
+    "scrollEnabled": false,
+    "allowsLinkPreview": false
+  }
+}

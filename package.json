@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Personal training tracker PWA — The Comeback: 181 → 238 lbs",
+  "description": "Personal training tracker PWA \u2014 The Comeback: 181 \u2192 238 lbs",
   "scripts": {
     "dev": "vite",
     "dev:kart": "vite --config vite.config.kart.js",
@@ -71,9 +71,13 @@
     "deploy:kart": "npm run build:kart && npx wrangler pages deploy dist-kart --project-name=comeback-city-kart --branch=main --commit-dirty=true",
     "test:select:stage": "node scripts/test-select-stage.mjs",
     "audit:renderer": "node scripts/audit-renderer.mjs",
-    "probe:difficulty": "node scripts/kart-difficulty-probe.mjs"
+    "probe:difficulty": "node scripts/kart-difficulty-probe.mjs",
+    "ios:sync": "npm run build:kart && PATH=/opt/homebrew/opt/node@22/bin:$PATH npx cap sync ios",
+    "ios:open": "PATH=/opt/homebrew/opt/node@22/bin:$PATH npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "@zxing/browser": "^0.1.5",
     "lucide-react": "^0.400.0",
     "pixi.js": "^8.19.0",
@@ -84,6 +88,7 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@gltf-transform/cli": "~4.4.0",
     "@gltf-transform/core": "~4.4.0",
     "@gltf-transform/extensions": "~4.4.0",
