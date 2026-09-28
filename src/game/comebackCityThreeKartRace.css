@@ -1178,6 +1178,27 @@
   font: 700 14px/1.2 var(--tkr-display);
 }
 
+.three-kart-race__results-cup {
+  color: var(--tkr-cyan);
+  font: 700 11px/1 var(--tkr-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.three-kart-race__results-points {
+  color: var(--tkr-text);
+  font: 800 13px/1 var(--tkr-display);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.three-kart-race__results-points em {
+  color: var(--tkr-gold);
+  font-style: normal;
+  margin-right: 8px;
+}
+
 .three-kart-race__results-actions {
   display: flex;
   flex-wrap: wrap;

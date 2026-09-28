@@ -10,7 +10,7 @@
 // This file is now the ONLY owner of the intro → select flow; edit freely.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bitcoin, BookOpen } from 'lucide-react';
+import { Bitcoin, BookOpen, Trophy } from 'lucide-react';
 import {
   ComebackCityThreeKartRace,
   DEFAULT_CHARACTER_KEY,
@@ -27,6 +27,7 @@ import {
   recordRaceFinish,
 } from './kartLocalStore.js';
 import { KartModelStage } from './KartModelStage.jsx';
+import { applyRaceToCup, createCup, cupStandings, isCupOver } from './cupMode.js';
 import { createKartAudio, readStoredMute } from '../game/race/kartAudio.js';
 import { KART_AUDIO_ASSETS } from '../game/race/kartAudioAssets.js';
 import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
@@ -325,13 +326,84 @@ const KartSelectHero = ({ characterKey, kartKey, reducedMotion, trackKey }) => {
   );
 };
 
+const GAME_MODES = [
+  { key: 'cup', name: 'Grand Prix', tagline: 'Race the whole cup for points and a trophy' },
+  { key: 'single', name: 'Single Race', tagline: 'One track, your pick' },
+];
+
+// Cup finale: the podium. Top three on plinths, the rest listed below.
+const CupPodium = ({ cup, onDone }) => {
+  const standings = cupStandings(cup);
+  const nameToKey = Object.fromEntries(KART_CHARACTERS.map((entry) => [entry.name, entry.key]));
+  const podium = [standings[1], standings[0], standings[2]];
+  const heights = ['h-24', 'h-32', 'h-16'];
+  const playerPlace = standings.findIndex((row) => row.isPlayer) + 1;
+  return (
+    <div className="absolute inset-0 z-50 overflow-y-auto" data-testid="race-cup-podium">
+      <MenuBackdrop trackKey={cup.trackKeys[cup.trackKeys.length - 1]} />
+      <div className="relative flex min-h-full items-center justify-center p-4">
+        <div className="w-full max-w-2xl space-y-6 py-6 text-center">
+          <div>
+            <div className={EYEBROW}>Grand Prix complete</div>
+            <h2 className="mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white sm:text-4xl">
+              {playerPlace === 1 ? 'You won the cup!' : `You finished ${['1st', '2nd', '3rd'][playerPlace - 1] || `${playerPlace}th`}`}
+            </h2>
+          </div>
+          <div className="flex items-end justify-center gap-3">
+            {podium.map((row, index) =>
+              row ? (
+                <div className="flex w-28 flex-col items-center" key={row.name}>
+                  {nameToKey[row.name] ? (
+                    <img
+                      alt={row.name}
+                      className="h-24 w-24 object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.7)]"
+                      src={CHARACTER_PORTRAITS[nameToKey[row.name]]}
+                    />
+                  ) : null}
+                  <div className={`font-mono text-[11px] font-black uppercase ${row.isPlayer ? 'text-[#ffd34f]' : 'text-white'}`}>
+                    {row.name}
+                  </div>
+                  <div className="font-mono text-[10px] text-white/60">{row.total} pts</div>
+                  <div
+                    className={`mt-2 flex w-full items-start justify-center rounded-t-xl border border-[#ffd34f]/40 bg-gradient-to-b from-[#ffd34f]/30 to-[#ffd34f]/5 pt-2 ${heights[index]}`}
+                  >
+                    {index === 1 ? <Trophy className="text-[#ffd34f]" size={28} /> : (
+                      <span className="font-mono text-lg font-black text-[#ffd34f]">{index === 0 ? '2' : '3'}</span>
+                    )}
+                  </div>
+                </div>
+              ) : null
+            )}
+          </div>
+          {standings.length > 3 ? (
+            <ol className="mx-auto max-w-sm space-y-1.5 text-left">
+              {standings.slice(3).map((row, index) => (
+                <li
+                  className={`flex justify-between rounded-lg px-3 py-2 font-mono text-[12px] ${row.isPlayer ? 'bg-[#ffd34f]/15 text-[#ffd34f]' : 'bg-white/5 text-white/80'}`}
+                  key={row.name}
+                >
+                  <span>{index + 4}th · {row.name}</span>
+                  <span>{row.total} pts</span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          <button type="button" className={CTA} data-testid="race-cup-done" onClick={onDone}>
+            Back to menu
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const formatBestTime = (seconds) => {
   if (!Number.isFinite(seconds)) return null;
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${(seconds - minutes * 60).toFixed(2).padStart(5, '0')}`;
 };
 
-const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, raceClass, reducedMotion, selectedKey, setKartKey, setRaceClass, setSelectedKey, setTrackKey, trackKey }) => {
+const KartCharacterSelect = ({ gameMode, kartKey, onShowGuide, onStart, raceClass, reducedMotion, selectedKey, setGameMode, setKartKey, setRaceClass, setSelectedKey, setTrackKey, trackKey }) => {
   // Saved bests per track (kartLocalStore). Read per mount: the screen
   // remounts on every return from a race, which is when they change.
   const [bestResults] = useState(() => readRaceResults() || {});
@@ -367,7 +439,30 @@ const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, raceClass, reduced
         </button>
       </div>
       <div>
-        <h3 className={`${SECTION_TITLE} mb-3`}>Pick Your Track</h3>
+        <h3 className={`${SECTION_TITLE} mb-3`}>Pick Your Mode</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {GAME_MODES.map((entry) => {
+          const selected = entry.key === gameMode;
+          return (
+            <button
+              key={entry.key}
+              type="button"
+              data-testid={`race-mode-${entry.key}`}
+              onClick={() => setGameMode(entry.key)}
+              className={`p-3 text-left ${selected ? PANEL_SELECTED : `${PANEL} ${PANEL_HOVER}`}`}
+            >
+              <div className="font-mono text-[13px] font-black uppercase tracking-[0.05em] text-white">{entry.name}</div>
+              <div className="mt-1 text-[10px] leading-snug text-white/55">{entry.tagline}</div>
+            </button>
+          );
+        })}
+      </div>
+      <div>
+        <h3 className={`${SECTION_TITLE} mb-3`}>{gameMode === 'cup' ? 'The Cup' : 'Pick Your Track'}</h3>
+        {gameMode === 'cup' ? (
+          <p className="-mt-1 mb-3 text-[11px] text-white/40">Every track in order. Points for every finish; most points takes the trophy.</p>
+        ) : null}
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {KART_TRACKS.map((entry) => {
@@ -378,7 +473,10 @@ const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, raceClass, reduced
               type="button"
               data-testid={`race-track-${entry.key}`}
               onClick={() => setTrackKey(entry.key)}
-              className={`relative overflow-hidden p-4 text-left ${selected ? PANEL_SELECTED : `${PANEL} ${PANEL_HOVER}`}`}
+              disabled={gameMode === 'cup'}
+              className={`relative overflow-hidden p-4 text-left ${
+                gameMode === 'cup' ? PANEL : selected ? PANEL_SELECTED : `${PANEL} ${PANEL_HOVER}`
+              }`}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-mono text-[13px] font-black uppercase tracking-[0.06em] text-white">
@@ -589,6 +687,17 @@ export const KartApp = () => {
       return DEFAULT_TRACK_KEY;
     }
   });
+  const [gameMode, setGameMode] = useState(() => {
+    if (typeof window === 'undefined' || window.navigator?.webdriver) return 'single';
+    try {
+      return window.localStorage?.getItem('cc-kart-mode') === 'single' ? 'single' : 'cup';
+    } catch {
+      return 'cup';
+    }
+  });
+  // Live Grand Prix: null outside a cup. cupFinal shows the podium.
+  const [cup, setCup] = useState(null);
+  const [cupFinal, setCupFinal] = useState(false);
   // Engine class. QA harnesses race the tuned 150cc field so gate behaviour
   // is unchanged; players default to 100cc and the pick is remembered.
   const [raceClass, setRaceClass] = useState(() => {
@@ -602,7 +711,16 @@ export const KartApp = () => {
     }
   });
   const confirmCharacter = useCallback(() => {
+    if (gameMode === 'cup') {
+      const trackKeys = KART_TRACKS.map((entry) => entry.key);
+      setCup(createCup(trackKeys));
+      setCupFinal(false);
+      setKartTrackKey(trackKeys[0]);
+    } else {
+      setCup(null);
+    }
     try {
+      window.localStorage?.setItem('cc-kart-mode', gameMode);
       window.localStorage?.setItem('cc-kart-class', raceClass);
       window.localStorage?.setItem('cc-kart-character', characterKey);
       window.localStorage?.setItem('cc-kart-track', kartTrackKey);
@@ -611,7 +729,7 @@ export const KartApp = () => {
       // localStorage unavailable — the pick still applies this session.
     }
     setCharacterReady(true);
-  }, [characterKey, kartKey, kartTrackKey, raceClass]);
+  }, [characterKey, gameMode, kartKey, kartTrackKey, raceClass]);
   useEffect(() => {
     // W1: the URL seed is ONE-SHOT. Strip the select params once the
     // initializers above have consumed them, so a stale share/lab URL can't
@@ -632,6 +750,7 @@ export const KartApp = () => {
   }, []);
   const handleFinish = useCallback((result) => {
     recordRaceFinish(result);
+    setCup((current) => (current ? applyRaceToCup(current, result.standings) : current));
   }, []);
   // Race exits. Every new race is a fresh mount (keyed on raceNonce) so a
   // track change rebuilds the whole scene rather than trusting the race
@@ -639,8 +758,36 @@ export const KartApp = () => {
   const [raceNonce, setRaceNonce] = useState(1);
   const exitToMenu = useCallback(() => {
     setCharacterReady(false);
+    setCup(null);
+    setCupFinal(false);
     setRaceNonce((value) => value + 1);
   }, []);
+  // Cup: after a finish, the results button either starts the next round or
+  // opens the podium. The cup has already absorbed the race (handleFinish).
+  const cupAdvance = useCallback(() => {
+    if (!cup) return;
+    if (isCupOver(cup)) {
+      setCupFinal(true);
+      return;
+    }
+    setCup((current) => ({ ...current, round: current.results.length }));
+    setKartTrackKey(cup.trackKeys[cup.results.length]);
+    setRaceNonce((value) => value + 1);
+  }, [cup]);
+  const cupProp = useMemo(() => {
+    if (!cup) return null;
+    const summary = cup.lastRace && cup.results.length === cup.round + 1
+      ? cup.lastRace.map((row) => ({ gained: row.gained, name: row.name, total: cup.totals[row.name] || 0 }))
+      : null;
+    return { round: cup.round, rounds: cup.trackKeys.length, summary };
+  }, [cup]);
+  const cupNextLabel = cup
+    ? isCupOver(cup)
+      ? 'Final standings'
+      : cup.results.length === cup.round + 1
+        ? `Race ${cup.round + 2}: ${KART_TRACKS.find((entry) => entry.key === cup.trackKeys[cup.round + 1])?.name || ''}`
+        : null
+    : null;
   const nextTrack = useMemo(() => {
     const index = KART_TRACKS.findIndex((entry) => entry.key === kartTrackKey);
     return KART_TRACKS.length > 1 ? KART_TRACKS[(index + 1) % KART_TRACKS.length] : null;
@@ -679,14 +826,18 @@ export const KartApp = () => {
       data-race-track={kartTrackKey}
       data-testid="race-screen"
     >
-      {!introSeen ? (
+      {cupFinal && cup ? (
+        <CupPodium cup={cup} onDone={exitToMenu} />
+      ) : !introSeen ? (
         <KartIntroScreen onStart={dismissIntro} trackKey={kartTrackKey} />
       ) : !characterReady ? (
         <KartCharacterSelect
           kartKey={kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart}
           onShowGuide={() => setIntroSeen(false)}
+          gameMode={gameMode}
           onStart={confirmCharacter}
           raceClass={raceClass}
+          setGameMode={setGameMode}
           reducedMotion={reducedMotion}
           setRaceClass={setRaceClass}
           selectedKey={characterKey}
@@ -697,15 +848,17 @@ export const KartApp = () => {
         />
       ) : (
         <ComebackCityThreeKartRace
+          allowRestart={!cup}
+          cup={cupProp}
           character={characterKey}
           difficulty={raceClass}
           kart={kartKey}
           key={`race-${raceNonce}`}
           mode="race"
-          nextTrackLabel={nextTrack ? nextTrack.name : null}
+          nextTrackLabel={cup ? cupNextLabel : nextTrack ? nextTrack.name : null}
           onExit={exitToMenu}
           onFinish={handleFinish}
-          onNextTrack={nextTrack ? goNextTrack : null}
+          onNextTrack={cup ? (cupNextLabel ? cupAdvance : null) : nextTrack ? goNextTrack : null}
           reducedMotion={reducedMotion}
           runId={raceNonce}
           track={kartTrackKey}

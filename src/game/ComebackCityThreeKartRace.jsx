@@ -9819,6 +9819,11 @@ export const ComebackCityThreeKartRace = ({
   character = DEFAULT_CHARACTER_KEY,
   kart = null,
   mode = 'race',
+  // Cup context from the shell: { round, rounds, summary: [{ name, gained,
+  // total }] } — summary arrives after onFinish, so the results panel fills
+  // its points column on the next render. null outside a Grand Prix.
+  allowRestart = true,
+  cup = null,
   difficulty = QA_RACE_CLASS,
   onExit = null,
   onFinish = null,
@@ -9834,6 +9839,9 @@ export const ComebackCityThreeKartRace = ({
   // the state drives the overlay. The loop keeps its rAF alive while paused
   // but skips the sim and the draw, so the canvas holds the last frame.
   const pausedRef = useRef(false);
+  // Read by the key handler inside the long-lived race effect.
+  const allowRestartRef = useRef(allowRestart);
+  allowRestartRef.current = allowRestart;
   const [paused, setPausedState] = useState(false);
   const setPaused = useCallback((next) => {
     pausedRef.current = next;
@@ -10284,6 +10292,7 @@ export const ComebackCityThreeKartRace = ({
       const key = keyMap[event.code];
       if (!key) return;
       event.preventDefault();
+      if (key === 'restart' && !allowRestartRef.current) return;
       setInputKey(key, true);
     };
     const handleKeyUp = (event) => {
@@ -13439,6 +13448,7 @@ export const ComebackCityThreeKartRace = ({
           // HUD rail feeds off makes it real.
           bestLap: race.bestLap,
           place: race.position,
+          standings: race.standings || null,
           time: race.raceTime,
           trackKey,
         });
@@ -13924,21 +13934,36 @@ export const ComebackCityThreeKartRace = ({
               <dd>{snapshot.itemPickups}</dd>
             </div>
           </dl>
+          {cup ? (
+            <div className="three-kart-race__results-cup" data-testid="race-results-cup-round">
+              Grand Prix · race {cup.round + 1} of {cup.rounds}
+            </div>
+          ) : null}
           {snapshot.standings ? (
             <ol className="three-kart-race__results-standings" data-testid="race-results-standings">
-              {snapshot.standings.map((entry, index) => (
-                <li data-player={entry.isPlayer ? 'true' : 'false'} key={entry.name}>
-                  <span className="three-kart-race__results-place">{ordinal(index + 1)}</span>
-                  <span className="three-kart-race__results-name">{entry.isPlayer ? `${entry.name} (you)` : entry.name}</span>
-                </li>
-              ))}
+              {snapshot.standings.map((entry, index) => {
+                const cupRow = cup?.summary?.find((row) => row.name === entry.name);
+                return (
+                  <li data-player={entry.isPlayer ? 'true' : 'false'} key={entry.name}>
+                    <span className="three-kart-race__results-place">{ordinal(index + 1)}</span>
+                    <span className="three-kart-race__results-name">{entry.isPlayer ? `${entry.name} (you)` : entry.name}</span>
+                    {cupRow ? (
+                      <span className="three-kart-race__results-points">
+                        <em>+{cupRow.gained}</em> {cupRow.total} pts
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ol>
           ) : null}
           <div className="three-kart-race__results-actions">
-            <button type="button" onClick={restart} data-testid="race-results-restart">
-              <RotateCcw size={15} />
-              Race again
-            </button>
+            {allowRestart ? (
+              <button type="button" onClick={restart} data-testid="race-results-restart">
+                <RotateCcw size={15} />
+                Race again
+              </button>
+            ) : null}
             {onNextTrack ? (
               <button type="button" onClick={onNextTrack} data-testid="race-results-next">
                 <ArrowRight size={15} />
@@ -13962,10 +13987,12 @@ export const ComebackCityThreeKartRace = ({
               <Play size={16} />
               Resume
             </button>
-            <button type="button" onClick={restart} data-testid="race-pause-restart">
-              <RotateCcw size={16} />
-              Restart race
-            </button>
+            {allowRestart ? (
+              <button type="button" onClick={restart} data-testid="race-pause-restart">
+                <RotateCcw size={16} />
+                Restart race
+              </button>
+            ) : null}
             {onExit ? (
               <button type="button" onClick={onExit} data-testid="race-pause-menu-exit">
                 <Home size={16} />
