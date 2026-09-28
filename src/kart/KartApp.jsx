@@ -181,10 +181,14 @@ const KartIntroScreen = ({ onStart, trackKey }) => (
               <li><Key>↑</Key><Key>W</Key> accelerate</li>
               <li><Key>←</Key><Key>→</Key><Key>A</Key><Key>D</Key> steer</li>
               <li><Key>↓</Key><Key>S</Key> brake</li>
-              <li><Key>SHIFT</Key><Key>ENTER</Key><Key>E</Key><Key>F</Key> fire item</li>
+              <li><Key>SHIFT</Key><Key>ENTER</Key><Key>E</Key><Key>F</Key> fire item — <span className="text-white/90">hold</span> a fish bone, snowball or sardine to trail it behind you as a shield, release to use it</li>
+              <li><Key>ESC</Key><Key>P</Key> pause · controllers work too (A gas, B brake, RB drift, LB item)</li>
+              <li className="text-white/90">Rocket start: press gas just as the <span className="font-semibold text-[#ffd34f]">2</span> appears and hold it to GO. Too early floods the engine.</li>
+              <li>Tuck in behind a rival to build a <span className="font-semibold text-[#7eefff]">slipstream</span> — hold it and you slingshot past.</li>
               <li className="pt-1 text-white/55">
                 On mobile you auto-accelerate: drag to steer, flick the drag to drift, tap to throw — the big buttons
-                work too. <span className="text-white/80">TILT</span> switches to motion steering.
+                work too. <span className="text-white/80">TILT</span> switches to motion steering. Rocket start on mobile: hold
+                <span className="text-white/80"> DRIFT</span> on the 2. Hold the item button to trail your item behind you.
               </li>
             </ul>
           </GuideCard>

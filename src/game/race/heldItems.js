@@ -152,6 +152,8 @@ export const throwSardine = (projectiles, owner, progress, lane, speed, targetNa
 export const updateProjectiles = (projectiles, dt, trackLength, racers = null) => {
   for (let index = projectiles.length - 1; index >= 0; index -= 1) {
     const ball = projectiles[index];
+    // Held behind a kart: the runtime positions it; it neither flies nor ages.
+    if (ball.held) continue;
     if (ball.homing && racers) {
       const target = racers.find((racer) => racer.name === ball.homing);
       if (target) {
@@ -171,7 +173,7 @@ export const updateProjectiles = (projectiles, dt, trackLength, racers = null) =
 export const projectileHitFor = (projectiles, kartName, progress, lane, trackLength) => {
   for (let index = 0; index < projectiles.length; index += 1) {
     const ball = projectiles[index];
-    if (ball.owner === kartName) continue;
+    if (ball.owner === kartName || ball.held) continue;
     if (
       shortDelta(progress, ball.progress) * trackLength < SNOWBALL.hitProgress &&
       Math.abs(lane - ball.lane) < SNOWBALL.hitLane
@@ -234,6 +236,7 @@ export const ageFishBones = (fishBones, dt) => {
 export const fishBoneHitFor = (fishBones, kartName, progress, lane, trackLength) => {
   for (let index = 0; index < fishBones.length; index += 1) {
     const bone = fishBones[index];
+    if (bone.held) continue;
     if (bone.owner === kartName && bone.grace > 0) continue;
     if (bone.grace > 1.4 - ITEM_FEEL.fishBoneArmDelay) continue;
     if (

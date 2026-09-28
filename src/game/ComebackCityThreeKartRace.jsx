@@ -827,6 +827,14 @@ const rocketStartResult = (pressAt) => {
 // 60 fps; a touch shorter suits 45 s laps with seven boxes each.
 const ITEM_ROULETTE_SECONDS = 1.05;
 
+// Items that can be held behind the kart, and how far back they ride.
+const HOLDABLE_ITEMS = new Set(['fishbone', 'snowball', 'sardine']);
+const HOLD_BEHIND_UNITS = 9;
+const removeFromPool = (pool, entry) => {
+  const index = pool.indexOf(entry);
+  if (index >= 0) pool.splice(index, 1);
+};
+
 // Slipstream cone behind a rival, in world units, and its charge/boost.
 const SLIPSTREAM = Object.freeze({
   boostSeconds: 0.8,
@@ -868,6 +876,9 @@ const createInitialRace = (
   rocketStart: null,
   // { item, timer } while the item slot spins (see ITEM_ROULETTE_SECONDS).
   itemRoulette: null,
+  // { entry, item, pool } while an item is held behind the kart.
+  trailing: null,
+  itemBlocks: 0,
   // Slipstream: seconds of draft banked, whether drafting this frame, and
   // how many slingshots landed.
   draftCharge: 0,
@@ -9759,6 +9770,8 @@ const publishTelemetry = (
     speed: Math.round(race.speed),
     slipstreams: race.slipstreams,
     rocketStart: race.rocketStart,
+    holdingItem: race.trailing?.item || null,
+    itemBlocks: race.itemBlocks,
     spinOuts: race.spinOuts,
     steer: Number(race.steer.toFixed(2)),
     tricksLanded: race.tricksLanded,
@@ -11120,7 +11133,54 @@ export const ComebackCityThreeKartRace = ({
               race.itemRoulette = null;
             }
           }
-          if (input.item && race.heldItem && race.itemFireCooldown <= 0) {
+          // HOLD BEHIND (MK). Holding the button with a fish bone, snowball
+          // or sardine trails it behind the kart instead of firing; it rides
+          // in the normal fish-bone/projectile pools flagged `held`, blocks the
+          // next projectile that reaches you, and fires on release. A quick
+          // tap trails for a frame and fires, exactly as before.
+          const holdable = HOLDABLE_ITEMS.has(race.heldItem);
+          if (race.trailing) {
+            const entry = race.trailing.entry;
+            if (race.spinTimer > 0 || !race.heldItem) {
+              // Spun out while holding: a bone falls where it is (armed as a
+              // normal drop), a thrown item is lost. Either way the slot empties.
+              if (race.trailing.pool === race.fishBones) {
+                entry.held = false;
+                entry.grace = 1.4;
+              }
+              else removeFromPool(race.trailing.pool, entry);
+              race.trailing = null;
+              race.heldItem = null;
+            } else {
+              entry.progress = wrap01(race.progress - HOLD_BEHIND_UNITS / engine.sampler.length);
+              entry.lane = race.lane;
+            }
+          }
+          if (input.item && holdable && !race.trailing && race.itemFireCooldown <= 0 && race.spinTimer <= 0) {
+            const pool = race.heldItem === 'fishbone' ? race.fishBones : race.projectiles;
+            const entry = {
+              grace: 99,
+              held: true,
+              lane: race.lane,
+              owner: 'player',
+              progress: wrap01(race.progress - HOLD_BEHIND_UNITS / engine.sampler.length),
+              skin: race.heldItem === 'sardine' ? 'sardine' : playerCharacter.projectileSkin,
+              speed: 0,
+              ttl: 99,
+            };
+            pool.push(entry);
+            race.trailing = { entry, item: race.heldItem, pool };
+          }
+          const releaseFire = Boolean(race.trailing) && !input.item;
+          if (releaseFire) {
+            removeFromPool(race.trailing.pool, race.trailing.entry);
+            race.trailing = null;
+          }
+          if (
+            race.heldItem &&
+            race.itemFireCooldown <= 0 &&
+            ((input.item && !holdable) || releaseFire)
+          ) {
             if (race.heldItem === 'cocoa') {
               driftState.miniTurboTier = 2;
               driftState.miniTurboTimer = DRIFT_FEEL.boostDurations[1];
@@ -11559,7 +11619,15 @@ export const ComebackCityThreeKartRace = ({
           }
           if (!airState.airborne && !spinning && race.spinTimer <= 0) {
             const struck = projectileHitFor(race.projectiles, 'player', race.progress, race.lane, engine.sampler.length);
-            if (struck && race.auroraTimer <= 0) {
+            if (struck && race.trailing) {
+              // Every projectile travels forward faster than the karts, so
+              // one that reaches you came from behind — the held item eats it.
+              removeFromPool(race.trailing.pool, race.trailing.entry);
+              race.trailing = null;
+              race.heldItem = null;
+              race.itemFireCooldown = 0.35;
+              race.itemBlocks += 1;
+            } else if (struck && race.auroraTimer <= 0) {
               // (an aurora'd kart still destroys the projectile — it just
               // doesn't care)
               if (race.shieldActive) {
