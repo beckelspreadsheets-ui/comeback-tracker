@@ -771,14 +771,28 @@ const characterByKey = (key) =>
 // The three rival SEATS: fixed personalities (rivalRacers.js keys on `name`),
 // grid lanes, and AI flavor — whichever characters aren't the player fill
 // them in roster order.
+// Seats 4-7 fill as the roster grows (the field is every character, capped at
+// 8 karts): they take the front row around the player's slot, so the first
+// three seats' tuned starts are untouched.
 const RIVALS = [
   { lane: -0.46, name: 'Purple Lab' },
   { lane: 0.04, name: 'Blue Speed' },
   { lane: 0.52, name: 'Orange Muscle' },
+  { gridOffset: 0.0017, lane: -0.62, name: 'Green Line' },
+  { gridOffset: 0.0017, lane: 0.62, name: 'Gold Rush' },
+  { gridOffset: 0.0195, lane: -0.3, name: 'Red Line' },
+  { gridOffset: 0.0195, lane: 0.34, name: 'Silver Arrow' },
 ];
+// ?field=N (QA/perf A/B) caps the total field, player included.
+const fieldCapFromUrl = () => {
+  if (typeof window === 'undefined') return 8;
+  const value = Number(new URLSearchParams(window.location.search).get('field'));
+  return Number.isFinite(value) && value >= 2 ? Math.min(8, value) : 8;
+};
 const rivalSeatsFor = (playerKey) => {
   const remaining = KART_CHARACTERS.filter((entry) => entry.key !== playerKey);
-  return RIVALS.map((seat, index) => ({
+  const seatCount = Math.min(RIVALS.length, remaining.length, fieldCapFromUrl() - 1);
+  return RIVALS.slice(0, seatCount).map((seat, index) => ({
     ...seat,
     accent: remaining[index].accent,
     character: remaining[index],
@@ -786,7 +800,7 @@ const rivalSeatsFor = (playerKey) => {
     projectileSkin: remaining[index].projectileSkin,
   }));
 };
-const ordinal = (position) => ['1st', '2nd', '3rd', '4th'][position - 1] || `${position}th`;
+const ordinal = (position) => ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'][position - 1] || `${position}th`;
 // STATIC QA FLOOR, NOT A DENSITY LEVER. This is published as
 // `data-prop-count` for the headless proof gates (kart-playable-proof-test.mjs
 // fails under 20) and nothing reads it to decide how much dressing to build —
@@ -9768,7 +9782,7 @@ const publishTelemetry = (
     // ?freebody=1 the difficulty probe needs it to prove the autoplay driver
     // races rather than rescue-loops.
     rescues: race.rescues,
-    rivalCount: RIVALS.length,
+    rivalCount: race.rivals.length,
     rivalPositions: rivalPositionsOf(playerTotalOf(race), race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
     routeProgress: Number(race.progress.toFixed(3)),

@@ -95,6 +95,47 @@ export const RIVAL_PERSONALITIES = {
   },
 };
 
+// Seats 4-7 (release push, 2026-09-28): the field grows with the roster, so
+// these exist before their racers do. Each sits INSIDE the tuned envelope
+// above (pace 1.00-1.08, arcs averaging ~1.0) so adding karts adds traffic,
+// not difficulty, and each arc crosses the others at a different lap.
+RIVAL_PERSONALITIES['Green Line'] = {
+  // Steady mid-pack: never the fastest, never out of it.
+  arc: { early: 1.0, mid: 1.01, late: 1.0 },
+  authority: 1.2,
+  brakeLookahead: 22,
+  pace: 1.015,
+  risk: 0.98,
+  wobble: 0.025,
+};
+RIVAL_PERSONALITIES['Gold Rush'] = {
+  // Slow starter, strong finisher — a second closer behind Purple Lab.
+  arc: { early: 0.975, mid: 1.0, late: 1.03 },
+  authority: 1.12,
+  brakeLookahead: 16,
+  pace: 1.02,
+  risk: 1.03,
+  wobble: 0.04,
+};
+RIVAL_PERSONALITIES['Red Line'] = {
+  // Hot start, early fade: the lap-1 leader who drops into the pack.
+  arc: { early: 1.03, mid: 0.995, late: 0.975 },
+  authority: 1.18,
+  brakeLookahead: 18,
+  pace: 1.04,
+  risk: 1.05,
+  wobble: 0.035,
+};
+RIVAL_PERSONALITIES['Silver Arrow'] = {
+  // Metronome: flat arc, clean lines, sits where the band puts him.
+  arc: { early: 1.0, mid: 1.0, late: 1.0 },
+  authority: 1.22,
+  brakeLookahead: 24,
+  pace: 1.005,
+  risk: 0.95,
+  wobble: 0.012,
+};
+
 // Smooth early -> mid -> late blend over race phase (0..1). Piecewise-linear
 // with the knee at half distance: no lap-line steps, no pop when a rival laps.
 export const arcPaceMultiplier = (arc, phase) => {
@@ -270,9 +311,11 @@ export const createRivalRacers = (rivals, { gridProgress = 0 } = {}) =>
     pads: {},
     personality: RIVAL_PERSONALITIES[rival.name] || RIVAL_PERSONALITIES['Blue Speed'],
     projectileSkin: rival.projectileSkin || 'snowball',
-    previousProgress: wrap01(gridProgress + 0.004 + index * 0.005),
-    // Staggered grid slots just ahead of the player (player starts P4).
-    progress: wrap01(gridProgress + 0.004 + index * 0.005),
+    previousProgress: wrap01(gridProgress + (rival.gridOffset ?? 0.004 + index * 0.005)),
+    // Staggered grid slots just ahead of the player (player starts last).
+    // Seats may pin their own slot (gridOffset) so the three tuned seats keep
+    // their exact 0.004/0.009/0.014 starts when the field grows.
+    progress: wrap01(gridProgress + (rival.gridOffset ?? 0.004 + index * 0.005)),
     fieldRubber: 1,
     rubber: 1,
     speed: 0,
