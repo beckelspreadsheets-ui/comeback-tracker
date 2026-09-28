@@ -19,8 +19,10 @@ import {
   KART_OPTIONS,
 } from '../game/ComebackCityThreeKartRace.jsx';
 import { DEFAULT_TRACK_KEY, KART_TRACKS } from '../game/race/tracks/index.js';
+import { DEFAULT_RACE_CLASS, QA_RACE_CLASS, RACE_CLASSES } from '../game/race/raceClasses.js';
 import {
   migrateLegacyRaceResultsOnce,
+  readRaceResults,
   readReducedMotion,
   recordRaceFinish,
 } from './kartLocalStore.js';
@@ -323,7 +325,17 @@ const KartSelectHero = ({ characterKey, kartKey, reducedMotion, trackKey }) => {
   );
 };
 
-const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, reducedMotion, selectedKey, setKartKey, setSelectedKey, setTrackKey, trackKey }) => (
+const formatBestTime = (seconds) => {
+  if (!Number.isFinite(seconds)) return null;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${(seconds - minutes * 60).toFixed(2).padStart(5, '0')}`;
+};
+
+const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, raceClass, reducedMotion, selectedKey, setKartKey, setRaceClass, setSelectedKey, setTrackKey, trackKey }) => {
+  // Saved bests per track (kartLocalStore). Read per mount: the screen
+  // remounts on every return from a race, which is when they change.
+  const [bestResults] = useState(() => readRaceResults() || {});
+  return (
   <div className="absolute inset-0 z-40 overflow-y-auto" data-testid="race-character-select">
     <MenuBackdrop trackKey={trackKey} />
     <div className="relative flex min-h-full justify-center p-4 sm:p-6">
@@ -377,6 +389,33 @@ const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, reducedMotion, sel
                 </span>
               </div>
               <div className="mt-1.5 text-[11px] leading-snug text-white/55">{entry.tagline}</div>
+              {bestResults[entry.key]?.bestTime ? (
+                <div className="mt-2 flex flex-wrap gap-x-3 font-mono text-[10px] uppercase tracking-[0.1em] text-[#ffd34f]" data-testid={`race-track-best-${entry.key}`}>
+                  <span>Best {formatBestTime(bestResults[entry.key].bestTime)}</span>
+                  {bestResults[entry.key].bestLap ? <span>Lap {formatBestTime(bestResults[entry.key].bestLap)}</span> : null}
+                  {bestResults[entry.key].wins ? <span>{bestResults[entry.key].wins} {bestResults[entry.key].wins === 1 ? "win" : "wins"}</span> : null}
+                </div>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+      <div>
+        <h3 className={`${SECTION_TITLE} mb-3`}>Pick Your Class</h3>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {RACE_CLASSES.map((entry) => {
+          const selected = entry.key === raceClass;
+          return (
+            <button
+              key={entry.key}
+              type="button"
+              data-testid={`race-class-${entry.key}`}
+              onClick={() => setRaceClass(entry.key)}
+              className={`p-3 text-left ${selected ? PANEL_SELECTED : `${PANEL} ${PANEL_HOVER}`}`}
+            >
+              <div className="font-mono text-[15px] font-black uppercase tracking-[0.04em] text-white">{entry.name}</div>
+              <div className="mt-1 text-[10px] leading-snug text-white/55">{entry.tagline}</div>
             </button>
           );
         })}
@@ -468,7 +507,8 @@ const KartCharacterSelect = ({ kartKey, onShowGuide, onStart, reducedMotion, sel
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // W1: share/QA URLs may carry ?character/?kart/?track. They SEED the select
 // state here (visible as the preselected entry) and never override a later
@@ -549,8 +589,21 @@ export const KartApp = () => {
       return DEFAULT_TRACK_KEY;
     }
   });
+  // Engine class. QA harnesses race the tuned 150cc field so gate behaviour
+  // is unchanged; players default to 100cc and the pick is remembered.
+  const [raceClass, setRaceClass] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_RACE_CLASS;
+    if (window.navigator?.webdriver) return QA_RACE_CLASS;
+    try {
+      const saved = window.localStorage?.getItem('cc-kart-class');
+      return RACE_CLASSES.some((entry) => entry.key === saved) ? saved : DEFAULT_RACE_CLASS;
+    } catch {
+      return DEFAULT_RACE_CLASS;
+    }
+  });
   const confirmCharacter = useCallback(() => {
     try {
+      window.localStorage?.setItem('cc-kart-class', raceClass);
       window.localStorage?.setItem('cc-kart-character', characterKey);
       window.localStorage?.setItem('cc-kart-track', kartTrackKey);
       if (kartKey) window.localStorage?.setItem('cc-kart-kart', kartKey);
@@ -558,7 +611,7 @@ export const KartApp = () => {
       // localStorage unavailable — the pick still applies this session.
     }
     setCharacterReady(true);
-  }, [characterKey, kartKey, kartTrackKey]);
+  }, [characterKey, kartKey, kartTrackKey, raceClass]);
   useEffect(() => {
     // W1: the URL seed is ONE-SHOT. Strip the select params once the
     // initializers above have consumed them, so a stale share/lab URL can't
@@ -633,7 +686,9 @@ export const KartApp = () => {
           kartKey={kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart}
           onShowGuide={() => setIntroSeen(false)}
           onStart={confirmCharacter}
+          raceClass={raceClass}
           reducedMotion={reducedMotion}
+          setRaceClass={setRaceClass}
           selectedKey={characterKey}
           setKartKey={setKartKey}
           setSelectedKey={setCharacterKey}
@@ -643,6 +698,7 @@ export const KartApp = () => {
       ) : (
         <ComebackCityThreeKartRace
           character={characterKey}
+          difficulty={raceClass}
           kart={kartKey}
           key={`race-${raceNonce}`}
           mode="race"

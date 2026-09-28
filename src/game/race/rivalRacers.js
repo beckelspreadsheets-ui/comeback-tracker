@@ -321,6 +321,9 @@ export const updateRivalRacers = (field, ctx) => {
   } = ctx;
 
   const { crestProgress, fishBones, ramps } = ctx;
+  // Engine class (raceClasses.js). Absent = 150cc, the tuned field.
+  const rivalPace = ctx.rivalPace ?? 1;
+  const catchUpScale = ctx.catchUp ?? 1;
   // Total laps in this race — the personality arcs are phased over it. 3 is
   // every shipped race; harnesses that predate the arc simply get the same
   // three-lap story.
@@ -380,7 +383,7 @@ export const updateRivalRacers = (field, ctx) => {
     let rubberTarget = 1;
     if (gapSeconds > RUBBER_BAND.aheadMaxSeconds) rubberTarget = RUBBER_BAND.slowDown;
     else if (gapSeconds < -RUBBER_BAND.behindMaxSeconds) {
-      rubberTarget = finalLap ? RUBBER_BAND.finalLapCatchUp : RUBBER_BAND.catchUpBoost;
+      rubberTarget = 1 + ((finalLap ? RUBBER_BAND.finalLapCatchUp : RUBBER_BAND.catchUpBoost) - 1) * catchUpScale;
     }
     rival.rubber = lerp(rival.rubber, rubberTarget, 1 - Math.pow(0.05, dt));
 
@@ -416,7 +419,7 @@ export const updateRivalRacers = (field, ctx) => {
         ? Math.sqrt((soul.authority * soul.risk) / (Math.pow(kappaEff, 0.7) * CORNER_LOAD_K))
         : Infinity;
     const wobble = 1 + Math.sin(rival.progress * 53 + index * 2.4) * soul.wobble;
-    let targetSpeed = Math.min(maxSpeed * soul.pace * arcPace * bandProduct * wobble, cornerCap);
+    let targetSpeed = Math.min(maxSpeed * soul.pace * arcPace * bandProduct * wobble * rivalPace, cornerCap);
     if (rival.boostTimer > 0) targetSpeed = Math.min(boostSpeed, targetSpeed + 70);
     rival.boostTimer = Math.max(0, rival.boostTimer - dt);
     rival.speed =

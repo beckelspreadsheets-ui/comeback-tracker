@@ -86,6 +86,8 @@ export const migrateLegacyRaceResultsOnce = () => {
 // atom. result = { bestLap, place, time, trackKey } from onFinish.
 export const recordRaceFinish = (result) => {
   if (!result || typeof result !== 'object' || !result.trackKey) return;
+  // A non-finite place/time would persist NaN and poison every later min().
+  if (!Number.isFinite(result.place) || result.place < 1 || !Number.isFinite(result.time) || result.time <= 0) return;
   const results = readRaceResults();
   const previous = results[result.trackKey] || {};
   const bestTime =

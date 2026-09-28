@@ -81,6 +81,8 @@ import {
   collectCoinsForFrame,
   respawnCoins,
 } from './race/raceCoins.js';
+import { QA_RACE_CLASS, raceClassByKey } from './race/raceClasses.js';
+import { mergeGamepadInput, pollGamepad } from './race/gamepadInput.js';
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
 import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
@@ -117,6 +119,7 @@ import {
   insideBlizzard,
   ITEM_FEEL,
   ITEM_LABELS,
+  ITEM_KEYS,
   itemForPickup,
   MARCH,
   marchHitFor,
@@ -820,6 +823,21 @@ const rocketStartResult = (pressAt) => {
   return null;
 };
 
+// How long the item slot spins before the pick lands. MK8 is ~1.3 s at
+// 60 fps; a touch shorter suits 45 s laps with seven boxes each.
+const ITEM_ROULETTE_SECONDS = 1.05;
+
+// Slipstream cone behind a rival, in world units, and its charge/boost.
+const SLIPSTREAM = Object.freeze({
+  boostSeconds: 0.8,
+  chargeSeconds: 1.25,
+  decay: 2.5,
+  halfWidthUnits: 7,
+  maxUnits: 70,
+  minSpeed: 150,
+  minUnits: 8,
+});
+
 const playerTotalOf = (race) => race.startBase + race.cumulativeProgress;
 
 const createInitialRace = (
@@ -848,6 +866,15 @@ const createInitialRace = (
   // (or drift, on touch where gas is automatic), null while not held.
   rocketPressAt: null,
   rocketStart: null,
+  // { item, timer } while the item slot spins (see ITEM_ROULETTE_SECONDS).
+  itemRoulette: null,
+  // Slipstream: seconds of draft banked, whether drafting this frame, and
+  // how many slingshots landed.
+  draftCharge: 0,
+  // Kart-contact count (audio cue source).
+  bumps: 0,
+  drafting: false,
+  slipstreams: 0,
   // Frozen finishing order [{ isPlayer, name }], set at the flag.
   standings: null,
   // Tier-2 grounding strength for this frame, solved from the camera/sun angle
@@ -9730,6 +9757,8 @@ const publishTelemetry = (
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
     routeProgress: Number(race.progress.toFixed(3)),
     speed: Math.round(race.speed),
+    slipstreams: race.slipstreams,
+    rocketStart: race.rocketStart,
     spinOuts: race.spinOuts,
     steer: Number(race.steer.toFixed(2)),
     tricksLanded: race.tricksLanded,
@@ -9790,6 +9819,7 @@ export const ComebackCityThreeKartRace = ({
   character = DEFAULT_CHARACTER_KEY,
   kart = null,
   mode = 'race',
+  difficulty = QA_RACE_CLASS,
   onExit = null,
   onFinish = null,
   onNextTrack = null,
@@ -9853,6 +9883,22 @@ export const ComebackCityThreeKartRace = ({
   // icon oversized for ~0.6s (MK-style "you got X"), then the normal chip/
   // button display carries it. Purely cosmetic — input and item semantics
   // untouched.
+  // Roulette face: cycles the item set while the slot spins. Cosmetic only —
+  // the sim already knows the pick.
+  const [rouletteFace, setRouletteFace] = useState(null);
+  useEffect(() => {
+    if (!snapshot.itemRoulette) {
+      setRouletteFace(null);
+      return undefined;
+    }
+    let index = Math.floor(Math.random() * ITEM_KEYS.length);
+    setRouletteFace(ITEM_KEYS[index]);
+    const timer = setInterval(() => {
+      index = (index + 1) % ITEM_KEYS.length;
+      setRouletteFace(ITEM_KEYS[index]);
+    }, 75);
+    return () => clearInterval(timer);
+  }, [snapshot.itemRoulette]);
   const [itemPop, setItemPop] = useState(null);
   const lastHeldItemRef = useRef(null);
   useEffect(() => {
@@ -10082,6 +10128,14 @@ export const ComebackCityThreeKartRace = ({
     return new URLSearchParams(window.location.search).get('post') !== '0';
   }, []);
   const trackDef = trackByKey(trackKey);
+  // ?cc= overrides for QA/labs; otherwise the prop (menu pick).
+  const raceClass = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const forced = new URLSearchParams(window.location.search).get('cc');
+      if (forced) return raceClassByKey(forced.endsWith('cc') ? forced : `${forced}cc`);
+    }
+    return raceClassByKey(difficulty);
+  }, [difficulty]);
   // The bed follows the track. Declared after trackKey (and so after the
   // audio effect above) purely so audioRef is populated by the time this
   // runs. No-op until a bed file for this track key exists; the request is
@@ -10891,9 +10945,18 @@ export const ComebackCityThreeKartRace = ({
     };
     let nextWarmupAt = 0;
 
+    let padPauseWasDown = false;
+    // Lab/A-B switches for the MK-feel mechanics (default ON).
+    const mechanicsParams = new URLSearchParams(window.location.search);
+    const slipstreamEnabled = mechanicsParams.get('slipstream') !== '0';
+    const rouletteEnabled = mechanicsParams.get('roulette') !== '0';
     const frame = () => {
       if (disposed) return;
       const now = performance.now();
+      const pad = autoplay ? null : pollGamepad();
+      // Start/Options toggles pause on the press edge, paused or not.
+      if (pad?.pause && !padPauseWasDown && !race.finished) setPaused(!pausedRef.current);
+      padPauseWasDown = Boolean(pad?.pause);
       if (pausedRef.current) {
         // Hold the clock so resume does not arrive as one giant dt.
         previousFrameTime = now;
@@ -10917,7 +10980,7 @@ export const ComebackCityThreeKartRace = ({
       const elapsedWindow = frameTimes.length > 1 ? (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000 : 1;
       const fpsEstimate = frameTimes.length > 1 ? (frameTimes.length - 1) / Math.max(0.001, elapsedWindow) : 60;
       const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
-      const input = readInput(inputRef, autoplay, race, cornerPush, engine.sampler);
+      const input = mergeGamepadInput(readInput(inputRef, autoplay, race, cornerPush, engine.sampler), pad);
       if (input.restart) {
         inputRef.current.restart = false;
         restartRace();
@@ -11041,6 +11104,13 @@ export const ComebackCityThreeKartRace = ({
           // snowball forward (rendered with the character's projectile
           // skin), a slap-fish swipe, or the avalanche ultimate.
           race.itemFireCooldown = Math.max(0, race.itemFireCooldown - dt);
+          if (race.itemRoulette) {
+            race.itemRoulette.timer -= dt;
+            if (race.itemRoulette.timer <= 0) {
+              race.heldItem = race.itemRoulette.item;
+              race.itemRoulette = null;
+            }
+          }
           if (input.item && race.heldItem && race.itemFireCooldown <= 0) {
             if (race.heldItem === 'cocoa') {
               driftState.miniTurboTier = 2;
@@ -11394,8 +11464,15 @@ export const ComebackCityThreeKartRace = ({
               if (!race[key]) {
                 race[key] = true;
                 race.itemPickups += 1;
-                if (!race.heldItem)
-                  race.heldItem = itemForPickup(index, race.lap, race.position, race.lap === race.laps);
+                // ROULETTE (MK): the pick is decided now (same deterministic
+                // table), but the slot spins for ITEM_ROULETTE_SECONDS first.
+                // A box driven through mid-spin gives nothing, as in MK.
+                if (!race.heldItem && !race.itemRoulette) {
+                  race.itemRoulette = {
+                    item: itemForPickup(index, race.lap, race.position, race.lap === race.laps),
+                    timer: rouletteEnabled ? ITEM_ROULETTE_SECONDS : 0,
+                  };
+                }
               }
             } else if (arcDelta(race.progress, box.progress) > boxRearmUnits) {
               race[key] = false;
@@ -11531,6 +11608,8 @@ export const ComebackCityThreeKartRace = ({
             fishBones: race.fishBones,
             laneScale: engine.sampler.widthAt(race.progress) * 0.44,
             maxSpeed: MAX_SPEED,
+            catchUp: raceClass.catchUp,
+            rivalPace: raceClass.rivalPace,
             ramps: trackDef.ramps,
             projectiles: race.projectiles,
             player: {
@@ -11622,6 +11701,7 @@ export const ComebackCityThreeKartRace = ({
           };
           if (playerNudgeLane) applyLaneShove(playerNudgeLane);
           if (playerBump) {
+            race.bumps += 1;
             race.bumpCooldown = playerBump.cooldown;
             // Owner 2026-08-03: "the ice shield also didn't seem to stop
             // things". This was why. The shield was checked further down, so it
@@ -11665,6 +11745,39 @@ export const ComebackCityThreeKartRace = ({
             race.driftState.active = false;
             race.driftState.charge = 0;
             race.driftState.tier = 0;
+          }
+          // SLIPSTREAM (MK). Tuck in directly behind a rival at speed and the
+          // draft charges; hold it for SLIPSTREAM.chargeSeconds and you slingshot
+          // out on a short boost. Lateral distance is in world units so the
+          // cone is the same size on narrow and wide road.
+          {
+            const laneWorld = engine.sampler.widthAt(race.progress) * 0.44;
+            const trackLen = engine.sampler.length;
+            const drafting =
+              slipstreamEnabled &&
+              !race.airState.airborne &&
+              !race.shortcut.active &&
+              race.spinTimer <= 0 &&
+              race.boostTimer <= 0 &&
+              race.speed > SLIPSTREAM.minSpeed &&
+              race.rivals.some((rival) => {
+                const ahead = shortProgressDelta(race.progress, rival.progress) * trackLen;
+                const signedAhead = wrap01(rival.progress - race.progress) < 0.5 ? ahead : -ahead;
+                return (
+                  signedAhead > SLIPSTREAM.minUnits &&
+                  signedAhead < SLIPSTREAM.maxUnits &&
+                  Math.abs(rival.lane - race.lane) * laneWorld < SLIPSTREAM.halfWidthUnits
+                );
+              });
+            race.draftCharge = drafting
+              ? race.draftCharge + dt
+              : Math.max(0, race.draftCharge - dt * SLIPSTREAM.decay);
+            race.drafting = drafting;
+            if (race.draftCharge >= SLIPSTREAM.chargeSeconds) {
+              race.draftCharge = 0;
+              race.boostTimer = Math.max(race.boostTimer, SLIPSTREAM.boostSeconds);
+              race.slipstreams += 1;
+            }
           }
           race.position = playerPositionOf(playerTotal, race.rivals);
           // Gap to the adjacent rival — the one number that makes the POSITION
@@ -13304,6 +13417,8 @@ export const ComebackCityThreeKartRace = ({
           progress: race.progress,
           raceTime: race.raceTime,
           rocketStart: race.rocketStart,
+          itemRoulette: Boolean(race.itemRoulette),
+          drafting: race.drafting,
           standings: race.standings || null,
           shieldActive: race.shieldActive,
           wrongWay: race.wrongWay,
@@ -13375,7 +13490,7 @@ export const ComebackCityThreeKartRace = ({
         delete window.__comebackCityKartTrackVisualsEnabled;
       }
     };
-  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, postChainEnabled, proofCameraMode, reducedMotion, runId, trackVisualsEnabled]);
+  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, postChainEnabled, proofCameraMode, raceClass, reducedMotion, runId, trackVisualsEnabled]);
 
   const setTouch = (key, value) => {
     inputRef.current = { ...inputRef.current, [key]: value };
@@ -13571,12 +13686,16 @@ export const ComebackCityThreeKartRace = ({
           <div
             className="three-kart-race__item-slot"
             data-held-item={snapshot.heldItem || 'none'}
-            data-slot-state={snapshot.heldItem ? 'armed' : snapshot.shieldActive ? 'shield' : 'empty'}
+            data-slot-state={
+              snapshot.heldItem ? 'armed' : rouletteFace ? 'roulette' : snapshot.shieldActive ? 'shield' : 'empty'
+            }
             data-testid="race-held-item"
           >
             <span className="three-kart-race__item-slot-label">Item</span>
             <span className="three-kart-race__item-slot-socket">
-              {snapshot.heldItem ? (
+              {!snapshot.heldItem && rouletteFace ? (
+                <HeldItemIcon heldItem={rouletteFace} projectileSkin={playerCharacter.projectileSkin} />
+              ) : snapshot.heldItem ? (
                 <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} />
               ) : snapshot.shieldActive ? (
                 <HeldItemIcon heldItem="iceshield" />
@@ -13585,7 +13704,9 @@ export const ComebackCityThreeKartRace = ({
             <span className="three-kart-race__item-slot-name">
               {snapshot.heldItem
                 ? heldItemLabel(snapshot.heldItem, playerCharacter.projectileSkin)
-                : snapshot.shieldActive
+                : rouletteFace
+                  ? '· · ·'
+                  : snapshot.shieldActive
                   ? 'Shield'
                   : 'Empty'}
             </span>
@@ -13748,6 +13869,8 @@ export const ComebackCityThreeKartRace = ({
           ) : null}
         </div>
       ) : null}
+      {/* Slipstream wind: edge streaks while the draft charges. */}
+      {snapshot.drafting && !snapshot.finished ? <div aria-hidden="true" className="three-kart-race__draft" /> : null}
       {/* LAP ROLL-OVER banner. Final lap says so — until now the only cue that
           the last lap had begun was a counter in the corner changing by one. */}
       {lapFlash ? (
@@ -13921,6 +14044,8 @@ export const ComebackCityThreeKartRace = ({
             >
               {snapshot.heldItem ? (
                 <HeldItemIcon heldItem={snapshot.heldItem} projectileSkin={playerCharacter.projectileSkin} size={38} />
+              ) : rouletteFace ? (
+                <HeldItemIcon heldItem={rouletteFace} projectileSkin={playerCharacter.projectileSkin} size={38} />
               ) : (
                 <span style={{ filter: 'grayscale(0.7)', opacity: 0.45 }}>
                   <HeldItemIcon heldItem="snowball" projectileSkin={playerCharacter.projectileSkin} size={38} />

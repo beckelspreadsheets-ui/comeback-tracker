@@ -123,8 +123,12 @@ export const cuesForTransition = (prev, next) => {
     cues.push(`countdown-${next.countdownCeil}`);
   }
   if (prev.countdownCeil > 0 && next.countdownCeil <= 0) cues.push('go');
-  if (next.lap > prev.lap && !next.finished) cues.push('lap');
-  if (!prev.finished && next.finished) cues.push('finish');
+  if (next.lap > prev.lap && !next.finished && !next.finalLap) cues.push('lap');
+  if (!prev.finished && next.finished) cues.push(next.position === 1 ? 'victory' : 'finish');
+  if (next.finalLap && !prev.finalLap && !next.finished) cues.push('final-lap');
+  if (next.bumps > prev.bumps) cues.push('bump');
+  if (next.wall && !prev.wall) cues.push('wall');
+  if (next.roulette && !prev.roulette) cues.push('roulette');
   if (!prev.heldItem && next.heldItem) cues.push('item-pickup');
   if (prev.heldItem && !next.heldItem && !next.finished) cues.push('item-use');
   if (next.coins > prev.coins) cues.push('coin');
@@ -174,6 +178,11 @@ export const measureLoopWindow = (channelData, sampleRate, loopSeconds, bufferDu
 export const snapshotRaceForAudio = (race, driftState) => ({
   airborne: Boolean(race.airState?.airborne),
   boost: (race.boostTimer || 0) > 0,
+  bumps: race.bumps || 0,
+  finalLap: (race.laps || 0) > 1 && (race.lap || 1) >= race.laps,
+  position: race.position || 0,
+  roulette: Boolean(race.itemRoulette),
+  wall: Boolean(race.wallContact),
   coins: race.coins || 0,
   countdownCeil: Math.ceil(race.countdown || 0),
   drift: Boolean(race.drift),
@@ -646,6 +655,26 @@ export const createKartAudio = ({
       tone({ duration: 0.3, from: 220, peak: 0.07, to: 90, type: 'square' });
       whoosh({ duration: 0.18, from: 900, peak: 0.05, to: 300 });
     },
+    bump: () => {
+      tone({ duration: 0.12, from: 150, peak: 0.07, to: 70, type: 'sine' });
+      whoosh({ duration: 0.09, from: 1400, peak: 0.035, q: 3, to: 500 });
+    },
+    'final-lap': () => {
+      [392, 523, 659, 784].forEach((freq, index) =>
+        tone({ at: now() + index * 0.09, duration: index === 3 ? 0.42 : 0.1, from: freq, peak: 0.075, type: 'square' })
+      );
+    },
+    roulette: () => {
+      for (let index = 0; index < 8; index += 1) {
+        tone({ at: now() + index * 0.11, duration: 0.05, from: 900 + index * 70, peak: 0.028, type: 'square' });
+      }
+    },
+    victory: () => {
+      [523, 659, 784, 1047, 784, 1047, 1319].forEach((freq, index) =>
+        tone({ at: now() + index * 0.13, duration: index === 6 ? 0.7 : 0.12, from: freq, peak: 0.08, type: 'square' })
+      );
+    },
+    wall: () => whoosh({ duration: 0.22, from: 2400, peak: 0.05, q: 4, to: 700 }),
     'tier-1': () => tone({ duration: 0.11, from: 750, peak: 0.05, to: 900 }),
     'tier-2': () => tone({ duration: 0.11, from: 1000, peak: 0.055, to: 1200 }),
     'tier-3': () => tone({ duration: 0.12, from: 1250, peak: 0.06, to: 1550 }),
@@ -706,6 +735,15 @@ export const createKartAudio = ({
       driftLoop.gain.gain.setTargetAtTime(driftTarget, time, 0.05);
       driftLoop.filter.frequency.setTargetAtTime(900 + next.driftTier * 420, time, 0.06);
       cuesForTransition(prev, next).forEach(playCue);
+      // MK's final-lap lift: the bed runs ~6% faster (and brighter) once the
+      // last lap starts, back to normal for the next race.
+      if (music?.source?.playbackRate) {
+        const rate = next.finalLap && !next.finished ? 1.06 : 1;
+        if (music.rate !== rate) {
+          music.rate = rate;
+          music.source.playbackRate.setTargetAtTime(rate, time, 0.4);
+        }
+      }
     }
     prev = next;
   };

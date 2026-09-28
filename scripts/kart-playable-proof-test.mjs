@@ -294,7 +294,18 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
   const mid = await readTelemetry(page, `${mode} autoplay mid`);
   await page.screenshot({ path: path.join(outputDir, `${mode}-mid.png`), fullPage: false });
   await page.waitForTimeout(7600);
-  const end = await readTelemetry(page, `${mode} autoplay end`);
+  let end = await readTelemetry(page, `${mode} autoplay end`);
+  // The field throws items now (rival snowballs, roulette timing, slipstream
+  // shifting the pack), so a fixed-time sample can land inside a legitimate
+  // item-hit recovery — measured 2026-09-28: a rival snowball at CC p0.379
+  // lands ~18.6 s in on some runs and not others. That is the game working,
+  // not the autoplay failing to hold speed. If the sample caught a FRESH spin,
+  // give the kart the spin + re-accel window (KART_CONTACT.spinCooldown 2.4 s)
+  // and sample again; the speed floor below is unchanged.
+  if (end.speed < 140 && end.spinOuts > mid.spinOuts) {
+    await page.waitForTimeout(2500);
+    end = await readTelemetry(page, `${mode} autoplay end (post-spin resample)`);
+  }
   await page.screenshot({ path: path.join(outputDir, `${mode}-end.png`), fullPage: false });
   let finish = null;
   if (mode === 'desktop') {

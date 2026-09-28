@@ -1189,6 +1189,27 @@
   white-space: nowrap;
 }
 
+/* SLIPSTREAM wind: two soft streak fields on the frame edges, drifting
+   toward the viewer. Pointer-transparent and under the HUD. */
+.three-kart-race__draft {
+  animation: tkr-draft-flow 0.35s linear infinite;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 22px, rgba(220, 245, 255, 0.16) 22px 24px, transparent 24px 58px) left / 18% 100% no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 34px, rgba(220, 245, 255, 0.16) 34px 36px, transparent 36px 58px) right / 18% 100% no-repeat;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, transparent 20%, transparent 80%, #000 100%);
+  mask-image: linear-gradient(90deg, #000 0%, transparent 20%, transparent 80%, #000 100%);
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+@keyframes tkr-draft-flow {
+  0% { opacity: 0.55; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.04); }
+  100% { opacity: 0.55; transform: scaleY(1); }
+}
+
 /* PAUSE. Full-frame scrim, one centred column of big thumb targets. */
 .three-kart-race__pause {
   align-items: center;
