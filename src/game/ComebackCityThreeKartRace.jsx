@@ -4521,7 +4521,13 @@ varying float vRoadIce;`,
       const bridgeBand = trackDef?.elevation?.bridgeBand;
       for (let index = 0; index < position.count; index += 1) {
         const x = position.getX(index);
-        const z = position.getY(index);
+        // The -90deg X rotation maps local +y onto world -z, so world z is the
+        // NEGATED local y. Reading it un-negated looked up the road clearance
+        // and the terrain lift at the Z-mirrored point, which was invisible
+        // while the only lift was noise but, once 7c authored real grade,
+        // stood snow walls up to 32 units over the road wherever the mirror
+        // of a stretch landed on a hill (PV start grid, CC p0.30 / p0.62).
+        const z = -position.getY(index);
         let nearest = Infinity;
         let nearestSample = -1;
         if (
