@@ -9,7 +9,7 @@
 // longer routes to the game at all (its Race nav links out to this app).
 // This file is now the ONLY owner of the intro → select flow; edit freely.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bitcoin, BookOpen } from 'lucide-react';
 import {
   ComebackCityThreeKartRace,
@@ -580,6 +580,28 @@ export const KartApp = () => {
   const handleFinish = useCallback((result) => {
     recordRaceFinish(result);
   }, []);
+  // Race exits. Every new race is a fresh mount (keyed on raceNonce) so a
+  // track change rebuilds the whole scene rather than trusting the race
+  // effect to notice a prop change.
+  const [raceNonce, setRaceNonce] = useState(1);
+  const exitToMenu = useCallback(() => {
+    setCharacterReady(false);
+    setRaceNonce((value) => value + 1);
+  }, []);
+  const nextTrack = useMemo(() => {
+    const index = KART_TRACKS.findIndex((entry) => entry.key === kartTrackKey);
+    return KART_TRACKS.length > 1 ? KART_TRACKS[(index + 1) % KART_TRACKS.length] : null;
+  }, [kartTrackKey]);
+  const goNextTrack = useCallback(() => {
+    if (!nextTrack) return;
+    setKartTrackKey(nextTrack.key);
+    try {
+      window.localStorage?.setItem('cc-kart-track', nextTrack.key);
+    } catch {
+      // Session-only pick is fine.
+    }
+    setRaceNonce((value) => value + 1);
+  }, [nextTrack]);
 
   // Menu music. The race component owns its own audio manager, so the menu
   // needs one of its own — it is the first thing a player hears and it existed
@@ -622,10 +644,14 @@ export const KartApp = () => {
         <ComebackCityThreeKartRace
           character={characterKey}
           kart={kartKey}
+          key={`race-${raceNonce}`}
           mode="race"
+          nextTrackLabel={nextTrack ? nextTrack.name : null}
+          onExit={exitToMenu}
           onFinish={handleFinish}
+          onNextTrack={nextTrack ? goNextTrack : null}
           reducedMotion={reducedMotion}
-          runId={1}
+          runId={raceNonce}
           track={kartTrackKey}
         />
       )}

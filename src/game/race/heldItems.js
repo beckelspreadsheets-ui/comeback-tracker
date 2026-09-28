@@ -100,11 +100,16 @@ export const SNOWBALL = {
   ttl: 2.6,
 };
 
-export const throwSnowball = (projectiles, owner, progress, lane, speed, skin = 'snowball') => {
+// Projectiles spawn this many world units ahead of the thrower. It used to be
+// the fraction 6/3000, authored on the ~3,000-unit lap; on the 11k-unit tracks
+// that same fraction put the ball ~23 units out, leapfrogging close targets.
+const PROJECTILE_SPAWN_UNITS = 6;
+
+export const throwSnowball = (projectiles, owner, progress, lane, speed, skin = 'snowball', trackLength = 3000) => {
   projectiles.push({
     lane,
     owner,
-    progress: wrap01(progress + 6 / 3000),
+    progress: wrap01(progress + PROJECTILE_SPAWN_UNITS / trackLength),
     skin,
     speed: speed + SNOWBALL.relSpeed,
     ttl: SNOWBALL.ttl,
@@ -130,12 +135,12 @@ export const sardineTargetFor = (racers, shooterTotal) => {
   return target ? target.name : null;
 };
 
-export const throwSardine = (projectiles, owner, progress, lane, speed, targetName) => {
+export const throwSardine = (projectiles, owner, progress, lane, speed, targetName, trackLength = 3000) => {
   projectiles.push({
     homing: targetName, // null = flies straight, plain snowball rules
     lane,
     owner,
-    progress: wrap01(progress + 6 / 3000),
+    progress: wrap01(progress + PROJECTILE_SPAWN_UNITS / trackLength),
     skin: 'sardine',
     speed: speed + SARDINE.relSpeed,
     ttl: SARDINE.ttl,

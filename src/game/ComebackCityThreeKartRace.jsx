@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, Bitcoin, Flag, Gauge, RotateCcw, Sparkles, Trophy, Volume2, VolumeX } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowRight, Bitcoin, Flag, Gauge, Home, Pause, Play, RotateCcw, Sparkles, Trophy, Volume2, VolumeX } from 'lucide-react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -797,6 +797,31 @@ const VISUAL_ASSET_SET = 'comeback-city-v2-three-runtime';
 const startProgressFor = (trackDef) =>
   wrap01((trackDef.course.startProgress || 0) + (trackDef.startOffset || 0));
 
+// Rocket start windows, in countdown seconds remaining at the press. Pressing
+// between ~1.9 and 1.3 (just after "2" appears) is perfect; anything held
+// from before GO but later than that is a smaller boost; pressing while "3" is
+// still fresh floods the engine. Autoplay never holds gas early, so the gate
+// runs are unchanged.
+const ROCKET_START = Object.freeze({
+  floodBefore: 2.45,
+  floodSpin: 0.7,
+  goodBoost: 0.7,
+  goodFrom: 1.3,
+  goodTo: 0.35,
+  perfectBoost: 1.3,
+  perfectFrom: 1.9,
+});
+const rocketStartResult = (pressAt) => {
+  if (pressAt == null) return null;
+  if (pressAt > ROCKET_START.floodBefore) return 'flooded';
+  if (pressAt <= ROCKET_START.perfectFrom && pressAt > ROCKET_START.goodFrom) return 'perfect';
+  if (pressAt <= ROCKET_START.goodFrom && pressAt >= ROCKET_START.goodTo) return 'good';
+  if (pressAt > ROCKET_START.perfectFrom) return 'early';
+  return null;
+};
+
+const playerTotalOf = (race) => race.startBase + race.cumulativeProgress;
+
 const createInitialRace = (
   rivalSeats = rivalSeatsFor(DEFAULT_CHARACTER_KEY),
   trackDef = trackByKey(DEFAULT_TRACK_KEY)
@@ -816,7 +841,15 @@ const createInitialRace = (
   projectiles: [],
   boostTimer: 0,
   bumpCooldown: 0,
-  countdown: 2.2,
+  // 3.0, not the old 2.2: at 2.2 the "3" showed for 0.2 s and its tone never
+  // had a clean roll-over. Three full beats is also the rocket-start window.
+  countdown: 3,
+  // Rocket start (MK): the countdown value at which the player pressed gas
+  // (or drift, on touch where gas is automatic), null while not held.
+  rocketPressAt: null,
+  rocketStart: null,
+  // Frozen finishing order [{ isPlayer, name }], set at the flag.
+  standings: null,
   // Tier-2 grounding strength for this frame, solved from the camera/sun angle
   // once per frame and read by every kart's pose update (see
   // contactPatchShadowBoost). Seeded neutral so the first pose update — which
@@ -878,6 +911,14 @@ const createInitialRace = (
   // moves progress, so driving backwards subtracts. Rails advances it too, so
   // the counter is identical on both paths and P3 can land independently.
   cumulativeProgress: 0,
+  // Where the player's lap count starts from. Rivals score (lap - 1) +
+  // progress with laps wrapping at progress 0; the player's laps are awarded
+  // off cumulativeProgress from the grid, which sits ~0.01 past 0. Scoring the
+  // player with (lap - 1) + progress therefore dropped a WHOLE lap for the
+  // stretch between the wrap and the grid every lap: the HUD flickered to 4th
+  // once a lap and the flag froze that bogus place. startBase +
+  // cumulativeProgress is the same measure as the rivals', continuously.
+  startBase: startProgressFor(trackDef),
   // Laps already credited from cumulativeProgress. Without it, oscillating
   // across a lap boundary would re-award on every forward crossing.
   lapsAwarded: 0,
@@ -9685,7 +9726,7 @@ const publishTelemetry = (
     // races rather than rescue-loops.
     rescues: race.rescues,
     rivalCount: RIVALS.length,
-    rivalPositions: rivalPositionsOf((race.finished ? race.laps : race.lap - 1) + race.progress, race.rivals),
+    rivalPositions: rivalPositionsOf(playerTotalOf(race), race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
     routeProgress: Number(race.progress.toFixed(3)),
     speed: Math.round(race.speed),
@@ -9749,13 +9790,27 @@ export const ComebackCityThreeKartRace = ({
   character = DEFAULT_CHARACTER_KEY,
   kart = null,
   mode = 'race',
+  onExit = null,
   onFinish = null,
+  onNextTrack = null,
   onRestart = null,
+  nextTrackLabel = null,
   reducedMotion = false,
   runId = 1,
   track = DEFAULT_TRACK_KEY,
 }) => {
   const canvasRef = useRef(null);
+  // PAUSE. The ref is what the rAF loop reads (no effect re-run on toggle);
+  // the state drives the overlay. The loop keeps its rAF alive while paused
+  // but skips the sim and the draw, so the canvas holds the last frame.
+  const pausedRef = useRef(false);
+  const [paused, setPausedState] = useState(false);
+  const setPaused = useCallback((next) => {
+    pausedRef.current = next;
+    setPausedState(next);
+    if (next) audioRef.current?.suspend();
+    else audioRef.current?.resume();
+  }, []);
   const engineRef = useRef(null);
   // Race audio: context unlocks on first gesture, cues derive from state
   // transitions inside updateFrame, and each cue plays its sample if one was
@@ -9770,8 +9825,16 @@ export const ComebackCityThreeKartRace = ({
     audioRef.current = audio;
     audio.attach();
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') audio.suspend();
-      else audio.resume();
+      if (document.visibilityState === 'hidden') {
+        audio.suspend();
+        // Backgrounding the app (phone lock, app switch) pauses the race, the
+        // way every mobile game does; resuming is the player's tap.
+        const autoplaying = /[?&](playableAutoplay|raceAutoplay)=1/.test(window.location.search);
+        if (!autoplaying && !finishReportedRef.current) {
+          pausedRef.current = true;
+          setPausedState(true);
+        }
+      } else if (!pausedRef.current) audio.resume();
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
@@ -10159,6 +10222,11 @@ export const ComebackCityThreeKartRace = ({
       Space: 'drift',
     };
     const handleKeyDown = (event) => {
+      if ((event.code === 'Escape' || event.code === 'KeyP') && !race.finished) {
+        event.preventDefault();
+        if (!event.repeat) setPaused(!pausedRef.current);
+        return;
+      }
       const key = keyMap[event.code];
       if (!key) return;
       event.preventDefault();
@@ -10417,7 +10485,9 @@ export const ComebackCityThreeKartRace = ({
     // loud-failure guard.
 
     const restartRace = () => {
-      Object.assign(race, createInitialRace(rivalSeats));
+      // trackDef, not the default: without it a Penguin Village restart
+      // rebuilt Comeback City's grid (start offset) and dropped PV's crosser.
+      Object.assign(race, createInitialRace(rivalSeats, trackDef));
       // Coin rows reset with the race (carried count already zeroed above).
       if (engine.coinField) {
         respawnCoins(engine.coinField);
@@ -10824,6 +10894,12 @@ export const ComebackCityThreeKartRace = ({
     const frame = () => {
       if (disposed) return;
       const now = performance.now();
+      if (pausedRef.current) {
+        // Hold the clock so resume does not arrive as one giant dt.
+        previousFrameTime = now;
+        raf = window.requestAnimationFrame(frame);
+        return;
+      }
       // Countdown only: after the flag this must never run.
       if (race.countdown > 0 && now >= nextWarmupAt) {
         nextWarmupAt = now + 700;
@@ -10847,7 +10923,27 @@ export const ComebackCityThreeKartRace = ({
         restartRace();
       }
       if (!race.finished) {
+        const countdownBefore = race.countdown;
         race.countdown = Math.max(0, race.countdown - dt);
+        if (countdownBefore > 0) {
+          // ROCKET START. Gas on keyboard/pad; the drift button on touch,
+          // where throttle is automatic. Press on the "2" beat and hold to GO
+          // for a boost; mash during "3" and the engine floods. Releasing
+          // re-arms, so a nervous early tap can still be corrected.
+          const rocketHeld = !autoplay && (input.autoThrottle ? Boolean(input.drift) : Boolean(input.throttle));
+          if (!rocketHeld) race.rocketPressAt = null;
+          else if (race.rocketPressAt == null) race.rocketPressAt = countdownBefore;
+          if (race.countdown <= 0) {
+            const pressAt = race.rocketPressAt;
+            race.rocketStart = rocketStartResult(pressAt);
+            if (race.rocketStart === 'perfect' || race.rocketStart === 'good') {
+              race.boostTimer = race.rocketStart === 'perfect' ? ROCKET_START.perfectBoost : ROCKET_START.goodBoost;
+              race.boostHits += 1;
+            } else if (race.rocketStart === 'flooded') {
+              race.spinTimer = ROCKET_START.floodSpin;
+            }
+          }
+        }
         if (race.countdown <= 0) {
           race.raceTime += dt;
           if (race.shortcut.active) {
@@ -10957,7 +11053,15 @@ export const ComebackCityThreeKartRace = ({
             } else if (race.heldItem === 'fishbone') {
               dropFishBone(race.fishBones, 'player', race.progress, race.lane, engine.sampler.length);
             } else if (race.heldItem === 'snowball') {
-              throwSnowball(race.projectiles, 'player', race.progress, race.lane, race.speed, playerCharacter.projectileSkin);
+              throwSnowball(
+                race.projectiles,
+                'player',
+                race.progress,
+                race.lane,
+                race.speed,
+                playerCharacter.projectileSkin,
+                engine.sampler.length
+              );
             } else if (race.heldItem === 'slapfish') {
               race.slapTimer = SLAP_FISH.swingDuration;
               slapFishHitsFor(race.rivals, 'player', race.progress, race.lane, engine.sampler.length).forEach(
@@ -10979,14 +11083,15 @@ export const ComebackCityThreeKartRace = ({
                 race.position === 1 || !leadRival ? 'player' : leadRival.name;
               race.avalanche = { by: 'player', target, timer: AVALANCHE.warningDuration };
             } else if (race.heldItem === 'sardine') {
-              const playerTotalNow = race.lap - 1 + race.progress;
+              const playerTotalNow = playerTotalOf(race);
               throwSardine(
                 race.projectiles,
                 'player',
                 race.progress,
                 race.lane,
                 race.speed,
-                sardineTargetFor(race.rivals, playerTotalNow)
+                sardineTargetFor(race.rivals, playerTotalNow),
+                engine.sampler.length
               );
             } else if (race.heldItem === 'blizzard') {
               dropBlizzard(race.blizzards, 'player', race.progress, race.lane, engine.sampler.length);
@@ -11215,6 +11320,24 @@ export const ComebackCityThreeKartRace = ({
               race.lap = race.laps;
               race.finished = true;
               race.speed = 0;
+              // Final standings, frozen at the flag. Rivals still on track are
+              // ranked by where they are, which is also the order they will
+              // cross in (MK fills the board the same way).
+              race.standings = [
+                { isPlayer: true, name: playerCharacter.name, total: Infinity },
+                ...race.rivals.map((rival, index) => ({
+                  isPlayer: false,
+                  name: rivalSeats[index]?.character?.name || rival.name,
+                  total: totalProgressOf(rival),
+                })),
+              ]
+                .sort((a, b) => b.total - a.total)
+                .map((entry) => ({ isPlayer: entry.isPlayer, name: entry.name }));
+              // The player's slot is its live position, not first-by-Infinity.
+              const playerEntry = race.standings.find((entry) => entry.isPlayer);
+              race.standings = race.standings.filter((entry) => !entry.isPlayer);
+              race.position = playerPositionOf(playerTotalOf(race), race.rivals);
+              race.standings.splice(race.position - 1, 0, playerEntry);
             }
             // Coin rows respawn every lap (carried coins keep their bonus).
             if (engine.coinField) {
@@ -11385,7 +11508,7 @@ export const ComebackCityThreeKartRace = ({
           // Rivals run their own race; contact separates karts every frame
           // and a square rear hit spins the slower kart (both directions).
           race.bumpCooldown = Math.max(0, race.bumpCooldown - dt);
-          const playerTotal = (race.finished ? race.laps : race.lap - 1) + race.progress;
+          const playerTotal = playerTotalOf(race);
           // Lane/progress snapshot for the arc-length correction below. The sim
           // mutates rivals in place, and it has more than one advance path (the
           // spin-out branch returns early), so the frame's own delta is measured
@@ -13180,6 +13303,8 @@ export const ComebackCityThreeKartRace = ({
           position: race.position,
           progress: race.progress,
           raceTime: race.raceTime,
+          rocketStart: race.rocketStart,
+          standings: race.standings || null,
           shieldActive: race.shieldActive,
           wrongWay: race.wrongWay,
           // Course map: the static outline plus where everyone is on it. The
@@ -13348,6 +13473,7 @@ export const ComebackCityThreeKartRace = ({
   };
   const restart = () => {
     inputRef.current = { ...inputRef.current, restart: true };
+    if (pausedRef.current) setPaused(false);
   };
 
   return (
@@ -13486,6 +13612,17 @@ export const ComebackCityThreeKartRace = ({
           >
             {audioMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
           </button>
+          {!snapshot.finished ? (
+            <button
+              type="button"
+              className="three-kart-race__badge three-kart-race__audio-toggle"
+              data-testid="race-pause-toggle"
+              aria-label="Pause race"
+              onClick={() => setPaused(true)}
+            >
+              <Pause size={15} />
+            </button>
+          ) : null}
         </div>
         <div className="three-kart-race__corner three-kart-race__corner--status">
           {/* data-lap-flash carries the roll-over instant, so the chip can pulse
@@ -13600,6 +13737,15 @@ export const ComebackCityThreeKartRace = ({
       ) : goFlash ? (
         <div className="three-kart-race__countdown" data-countdown-step="go" key="count-go">
           Go
+          {snapshot.rocketStart && snapshot.rocketStart !== 'early' ? (
+            <span className="three-kart-race__rocket-start" data-rocket-start={snapshot.rocketStart}>
+              {snapshot.rocketStart === 'perfect'
+                ? 'Rocket start!'
+                : snapshot.rocketStart === 'good'
+                  ? 'Good start'
+                  : 'Flooded!'}
+            </span>
+          ) : null}
         </div>
       ) : null}
       {/* LAP ROLL-OVER banner. Final lap says so — until now the only cue that
@@ -13655,10 +13801,55 @@ export const ComebackCityThreeKartRace = ({
               <dd>{snapshot.itemPickups}</dd>
             </div>
           </dl>
-          <button type="button" onClick={restart}>
-            <RotateCcw size={15} />
-            Restart
-          </button>
+          {snapshot.standings ? (
+            <ol className="three-kart-race__results-standings" data-testid="race-results-standings">
+              {snapshot.standings.map((entry, index) => (
+                <li data-player={entry.isPlayer ? 'true' : 'false'} key={entry.name}>
+                  <span className="three-kart-race__results-place">{ordinal(index + 1)}</span>
+                  <span className="three-kart-race__results-name">{entry.isPlayer ? `${entry.name} (you)` : entry.name}</span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          <div className="three-kart-race__results-actions">
+            <button type="button" onClick={restart} data-testid="race-results-restart">
+              <RotateCcw size={15} />
+              Race again
+            </button>
+            {onNextTrack ? (
+              <button type="button" onClick={onNextTrack} data-testid="race-results-next">
+                <ArrowRight size={15} />
+                {nextTrackLabel || 'Next track'}
+              </button>
+            ) : null}
+            {onExit ? (
+              <button type="button" onClick={onExit} data-testid="race-results-menu">
+                <Home size={15} />
+                Menu
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      {paused && !snapshot.finished ? (
+        <div className="three-kart-race__pause" data-testid="race-pause-menu" role="dialog" aria-label="Paused">
+          <div className="three-kart-race__pause-panel">
+            <strong className="three-kart-race__pause-title">Paused</strong>
+            <button type="button" onClick={() => setPaused(false)} data-testid="race-pause-resume">
+              <Play size={16} />
+              Resume
+            </button>
+            <button type="button" onClick={restart} data-testid="race-pause-restart">
+              <RotateCcw size={16} />
+              Restart race
+            </button>
+            {onExit ? (
+              <button type="button" onClick={onExit} data-testid="race-pause-menu-exit">
+                <Home size={16} />
+                Quit to menu
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
       {touchControls && !snapshot.finished ? (

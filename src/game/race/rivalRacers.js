@@ -493,7 +493,7 @@ export const updateRivalRacers = (field, ctx) => {
       const action = rivalItemActionAt(index, rival.previousProgress, rival.progress);
       if (action === 'fishbone') {
         if (ctx.projectiles && gapSeconds < -0.8) {
-          throwSnowball(ctx.projectiles, rival.name, rival.progress, rival.lane, rival.speed, rival.projectileSkin);
+          throwSnowball(ctx.projectiles, rival.name, rival.progress, rival.lane, rival.speed, rival.projectileSkin, trackLength);
         } else {
           dropFishBone(fishBones, rival.name, rival.progress, rival.lane, trackLength);
         }

@@ -823,6 +823,23 @@
   border-color: rgba(126, 239, 255, 0.75);
 }
 
+/* Rocket-start verdict rides under GO: gold for a boost, red for a flood. */
+.three-kart-race__rocket-start {
+  color: var(--tkr-gold);
+  display: block;
+  font-size: 0.26em;
+  letter-spacing: 0.06em;
+  margin-top: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+  -webkit-text-stroke: 5px rgba(6, 10, 18, 0.94);
+  white-space: nowrap;
+}
+
+.three-kart-race__rocket-start[data-rocket-start='flooded'] {
+  color: #ff5a5a;
+}
+
 @keyframes tkr-count-beat {
   0% { opacity: 0.25; transform: translate(-50%, -50%) scale(1.85); }
   16% { opacity: 1; transform: translate(-50%, -50%) scale(0.92); }
@@ -1113,6 +1130,113 @@
   letter-spacing: 0.14em;
   min-height: 52px;
   padding: 0 22px;
+}
+
+/* Results v2 (release push): the panel stacks head -> standings -> tally ->
+   actions instead of one row, because it now carries the whole field and
+   three ways out. */
+.three-kart-race__results {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  max-height: calc(100svh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  max-width: calc(100vw - 32px);
+  overflow-y: auto;
+  text-align: left;
+}
+
+.three-kart-race__results-standings {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.three-kart-race__results-standings li {
+  align-items: center;
+  background: rgba(248, 251, 255, 0.05);
+  border-radius: 10px;
+  display: flex;
+  gap: 14px;
+  padding: 8px 12px;
+}
+
+.three-kart-race__results-standings li[data-player='true'] {
+  background: linear-gradient(90deg, rgba(255, 211, 79, 0.26), rgba(255, 211, 79, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(255, 211, 79, 0.55);
+}
+
+.three-kart-race__results-place {
+  color: var(--tkr-gold);
+  font: 900 16px/1 var(--tkr-display);
+  min-width: 2.6em;
+}
+
+.three-kart-race__results-name {
+  color: var(--tkr-text);
+  font: 700 14px/1.2 var(--tkr-display);
+}
+
+.three-kart-race__results-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.three-kart-race__results-actions button {
+  flex: 1 1 0;
+  white-space: nowrap;
+}
+
+/* PAUSE. Full-frame scrim, one centred column of big thumb targets. */
+.three-kart-race__pause {
+  align-items: center;
+  background: rgba(5, 9, 16, 0.62);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+  z-index: 8;
+}
+
+.three-kart-race__pause-panel {
+  background: var(--tkr-face);
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 1px rgba(126, 239, 255, 0.35), 0 26px 60px rgba(3, 6, 12, 0.6);
+  display: grid;
+  gap: 12px;
+  min-width: min(320px, calc(100vw - 48px));
+  padding: 22px;
+}
+
+.three-kart-race__pause-title {
+  color: var(--tkr-cyan);
+  font: 900 30px/1 var(--tkr-display);
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.three-kart-race__pause-panel button {
+  align-items: center;
+  background: rgba(248, 251, 255, 0.08);
+  border: 1px solid rgba(248, 251, 255, 0.22);
+  border-radius: 14px;
+  color: var(--tkr-text);
+  display: flex;
+  font: 800 13px/1 var(--tkr-display);
+  gap: 10px;
+  justify-content: center;
+  letter-spacing: 0.1em;
+  min-height: 52px;
+  text-transform: uppercase;
+}
+
+.three-kart-race__pause-panel button:first-of-type {
+  background: linear-gradient(180deg, rgba(126, 239, 255, 0.3), rgba(126, 239, 255, 0.1));
+  border-color: rgba(126, 239, 255, 0.7);
+  color: var(--tkr-cyan);
 }
 
 /* K3 mobile controls V2: analog joystick bottom-left, brake/drift/item
