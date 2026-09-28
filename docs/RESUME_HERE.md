@@ -1,4 +1,31 @@
-# RESUME HERE — Penguin Kart game (state as of 2026-09-03)
+# RESUME HERE — Penguin Kart game
+
+## 2026-09-28 RELEASE PUSH (read first)
+Owner goal: RELEASE as an **iOS app**, monetized by photo -> custom racer
+(card + crypto, owner-approve queue). Work happened in the ~/Downloads copy
+(SSD not mounted), fast-forwarded to origin first, all pushed to aaa-kart-ci.
+Commits b9d0743d..43ead54f:
+- FIX ground plane Z-mirror (terrain lift read local y as world z) — snow walls over
+  the road at PV start / CC p0.30,p0.62. Hills now render as intended.
+- W1 pause (Esc/P/HUD/app-background), results standings + Race again/Next/Menu,
+  rocket start, 3 s countdown, FIX player placement flicker (lap scoring), FIX PV
+  restart grid, FIX projectile spawn offset.
+- W2 item roulette, 50/100/150cc (raceClasses.js; QA = 150cc), slipstream,
+  gamepad (gamepadInput.js), bump/wall/roulette/final-lap/victory audio, best times.
+- W3 Grand Prix cup + podium (kart/cupMode.js), hold-item-behind, Time Trial +
+  replay ghost (race/replayGhost.js), field = whole roster (6 now, cap 8).
+- W4a CC skyline plate v2 behind ?ccSkyline=v2 (scripts/backdrops/cc_skyline_plate.py)
+  — AWAITING OWNER YES. Belt config levers were tried: no visible change, reverted.
+- W5a Capacitor 8 iOS scaffold (ios/, capacitor.config.json; npm run ios:sync
+  needs node 22). BLOCKED: Xcode license not accepted (sudo) -> no simulator build yet.
+Approval sheet: https://claude.ai/artifact/BftxMm2bSJBCMM2137TQQ2
+Owner owes: skyline yes, Xcode license, Apple dev account, name/icon/bundle id,
+Higgsfield credits (balance 0), payments-vs-Apple-IAP call, real iPhone perf check.
+Not started: W4 trackside dressing/HUD restyle, W6 photo->racer pipeline.
+
+---
+
+## Previous state (2026-09-03)
 
 **Read this first after a context clear.** Then `docs/AAA_NEXT_RUN.md` for the
 AAA-overhaul detail, and `docs/GAME_AUDIT.md` for the audit findings.
