@@ -83,6 +83,7 @@ import {
 } from './race/raceCoins.js';
 import { QA_RACE_CLASS, raceClassByKey } from './race/raceClasses.js';
 import { mergeGamepadInput, pollGamepad } from './race/gamepadInput.js';
+import { createGhostRecorder, ghostStateAt, readGhost, recordGhostFrame, saveGhostIfBest } from './race/replayGhost.js';
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
 import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
@@ -826,6 +827,10 @@ const rocketStartResult = (pressAt) => {
 // How long the item slot spins before the pick lands. MK8 is ~1.3 s at
 // 60 fps; a touch shorter suits 45 s laps with seven boxes each.
 const ITEM_ROULETTE_SECONDS = 1.05;
+
+// Time trial: cocoas in hand at the start, and the ghost's opacity.
+const TIME_TRIAL_COCOAS = 3;
+const REPLAY_GHOST_ALPHA = 0.42;
 
 // Items that can be held behind the kart, and how far back they ride.
 const HOLDABLE_ITEMS = new Set(['fishbone', 'snowball', 'sardine']);
@@ -9771,6 +9776,9 @@ const publishTelemetry = (
     slipstreams: race.slipstreams,
     rocketStart: race.rocketStart,
     holdingItem: race.trailing?.item || null,
+    timeTrial: Boolean(race.timeTrial),
+    ttRecord: Boolean(race.ttRecord),
+    ghostSamples: race.ghostRecorder ? race.ghostRecorder.samples.length / 3 : 0,
     itemBlocks: race.itemBlocks,
     spinOuts: race.spinOuts,
     steer: Number(race.steer.toFixed(2)),
@@ -9838,6 +9846,9 @@ export const ComebackCityThreeKartRace = ({
   allowRestart = true,
   cup = null,
   difficulty = QA_RACE_CLASS,
+  // Time trial: no rivals, no item boxes, three Hot Cocoas, and a replay
+  // ghost of the best run on this track (replayGhost.js).
+  timeTrial = false,
   onExit = null,
   onFinish = null,
   onNextTrack = null,
@@ -10170,7 +10181,19 @@ export const ComebackCityThreeKartRace = ({
     if (!canvas) return undefined;
     const crestProgress = crestProgressFor(trackDef);
     const startProgress = startProgressFor(trackDef);
-    const rivalSeats = rivalSeatsFor(characterKey);
+    const rivalSeats = timeTrial
+      ? [
+          {
+            accent: playerCharacter.accent,
+            character: { ...playerCharacter, kart: kartKey },
+            color: playerCharacter.color,
+            lane: 0,
+            name: 'Ghost',
+            projectileSkin: playerCharacter.projectileSkin,
+            replayGhost: true,
+          },
+        ]
+      : rivalSeatsFor(characterKey);
     const engine = createScene({
       canvas,
       // Phone tier for scene-build-time choices (sky cloud deck, backdrop
@@ -10203,6 +10226,23 @@ export const ComebackCityThreeKartRace = ({
     if (typeof window !== 'undefined') window.__g3ParticlesDebug = particles;
     let particlePrevSnapshot = null;
     const race = createInitialRace(rivalSeats, trackDef);
+    // Time trial state. The signature pins a stored ghost to this geometry.
+    const trackSignature = `${trackKey}:${Math.round(engine.sampler.length)}`;
+    // Re-read on every (re)start so "Race again" races the run just set.
+    let storedGhost = null;
+    let storedGhostVisible = false;
+    const applyTimeTrialSetup = () => {
+      if (!timeTrial) return;
+      storedGhost = readGhost(trackKey, trackSignature);
+      storedGhostVisible = Boolean(storedGhost);
+      race.timeTrial = true;
+      race.heldItem = 'cocoa';
+      race.ttBoosts = TIME_TRIAL_COCOAS - 1;
+      race.ghostRecorder = createGhostRecorder();
+      race.ttGhostTime = storedGhost?.time ?? null;
+      race.ttRecord = false;
+    };
+    applyTimeTrialSetup();
     // Chase-camera feel state (springs, drift lead, air/landing, shake, FOV).
     // Lives beside `race` rather than inside it because it is presentation, not
     // simulation: nothing in the sim may read it, and a restart throws it away
@@ -10560,10 +10600,31 @@ export const ComebackCityThreeKartRace = ({
     // addDistrictsAndProps/addMiamiTrackside with miamiMountStats as the
     // loud-failure guard.
 
+    // Drive the ghost seat from the stored run. No contact, no items, no AI:
+    // the returned shape matches updateRivalRacers' so the caller is shared.
+    const updateReplayGhost = (dt) => {
+      const ghostRacer = race.rivals[0];
+      if (ghostRacer && storedGhost) {
+        const { air, cum, lane } = ghostStateAt(storedGhost, race.countdown > 0 ? 0 : race.raceTime);
+        ghostRacer.air.height = air;
+        ghostRacer.air.airborne = air > 0.2;
+        const total = race.startBase + cum;
+        const previousProgress = ghostRacer.progress;
+        ghostRacer.previousProgress = previousProgress;
+        ghostRacer.lap = Math.floor(total) + 1;
+        ghostRacer.progress = wrap01(total);
+        ghostRacer.lane = lane;
+        const moved = shortProgressDelta(previousProgress, ghostRacer.progress) * engine.sampler.length;
+        ghostRacer.speed = dt > 0 ? lerp(ghostRacer.speed, moved / dt, 0.2) : ghostRacer.speed;
+      }
+      return { avalancheBy: null, playerBump: null, playerNudgeLane: null, playerSpin: false };
+    };
+
     const restartRace = () => {
       // trackDef, not the default: without it a Penguin Village restart
       // rebuilt Comeback City's grid (start offset) and dropped PV's crosser.
       Object.assign(race, createInitialRace(rivalSeats, trackDef));
+      applyTimeTrialSetup();
       // Coin rows reset with the race (carried count already zeroed above).
       if (engine.coinField) {
         respawnCoins(engine.coinField);
@@ -11242,6 +11303,10 @@ export const ComebackCityThreeKartRace = ({
             }
             race.heldItem = null;
             race.itemFireCooldown = 0.35;
+            if (race.timeTrial && race.ttBoosts > 0) {
+              race.ttBoosts -= 1;
+              race.heldItem = 'cocoa';
+            }
           }
           race.boostTimer = Math.max(0, race.boostTimer - dt);
           race.auroraTimer = Math.max(0, race.auroraTimer - dt);
@@ -11411,6 +11476,9 @@ export const ComebackCityThreeKartRace = ({
             if (delta > 0.5) delta -= 1;
             if (delta < -0.5) delta += 1;
             race.cumulativeProgress += delta;
+            if (race.ghostRecorder) {
+              recordGhostFrame(race.ghostRecorder, race.raceTime, race.cumulativeProgress, race.lane, race.airState.height);
+            }
 
             // P4 — TURN AROUND. Wrong-way is judged on the sign of that same
             // delta rather than on heading vs tangent, and deliberately so: it
@@ -11477,6 +11545,16 @@ export const ComebackCityThreeKartRace = ({
               race.standings = race.standings.filter((entry) => !entry.isPlayer);
               race.position = playerPositionOf(playerTotalOf(race), race.rivals);
               race.standings.splice(race.position - 1, 0, playerEntry);
+              if (race.timeTrial) {
+                race.standings = null;
+                race.position = 1;
+                race.ttRecord = saveGhostIfBest(trackKey, trackSignature, {
+                  character: characterKey,
+                  kart: kartKey,
+                  samples: race.ghostRecorder.samples,
+                  time: race.raceTime,
+                });
+              }
             }
             // Coin rows respawn every lap (carried coins keep their bonus).
             if (engine.coinField) {
@@ -11528,6 +11606,7 @@ export const ComebackCityThreeKartRace = ({
             }
           });
           trackDef.course.itemBoxes.forEach((box, index) => {
+            if (timeTrial) return;
             const key = `item-${index}`;
             if (arcDelta(race.progress, box.progress) < boxArmUnits && Math.abs(race.lane - (box.side || 0)) < 0.42) {
               if (!race[key]) {
@@ -11671,7 +11750,9 @@ export const ComebackCityThreeKartRace = ({
             lane: rival.lane,
             progress: rival.progress,
           }));
-          const { avalancheBy, playerBump, playerNudgeLane, playerSpin } = updateRivalRacers(race.rivals, {
+          const { avalancheBy, playerBump, playerNudgeLane, playerSpin } = timeTrial
+            ? updateReplayGhost(dt)
+            : updateRivalRacers(race.rivals, {
             boostPads: trackDef.course.boostPads,
             boostSpeed: BOOST_SPEED,
             cornerPushFor,
@@ -12247,7 +12328,7 @@ export const ComebackCityThreeKartRace = ({
       engine.itemBoxes.forEach((box, index) => {
         box.rotation.y += dt * 1.4;
         box.position.y += Math.sin(race.raceTime * 2.4 + index) * 0.012;
-        box.visible = !race[`item-${index}`] || race.finished;
+        box.visible = !timeTrial && (!race[`item-${index}`] || race.finished);
         // AAA wave 7 (d) — THE LAST DYNAMIC OBJECT ON THE ROAD WITH NO LENS
         // GUARD. Rivals ghost (proximity block), crossers/projectiles/bones get
         // a hard cull, coins shrink — and the item box, which is the one pickup
@@ -12414,7 +12495,8 @@ export const ComebackCityThreeKartRace = ({
           const racer = race.rivals[index];
           const self = index + 1;
           let push = 0;
-          for (let other = 0; other < sepArc.length; other += 1) {
+          // The replay ghost is intangible: it drives straight through you.
+          for (let other = 0; other < sepArc.length && !rival.replayGhost; other += 1) {
             if (other === self) continue;
             // Shortest signed arc between them — the pair can straddle the lap
             // seam, and an unwrapped difference there is a full lap wide.
@@ -12601,7 +12683,14 @@ export const ComebackCityThreeKartRace = ({
         // Cubic on the axial term only. The band is wide enough now that a
         // linear fade would leave a rival visibly translucent while it is still
         // a legitimate part of the shot; off-axis rivals never reach it at all.
-        const proximity = Math.min(lensBand, Math.max(nearBand * nearBand * nearBand, lateral));
+        const lensProximity = Math.min(lensBand, Math.max(nearBand * nearBand * nearBand, lateral));
+        // The time-trial ghost rides the same fade, capped see-through (and
+        // hidden outright when there is no stored run to replay).
+        const proximity = rival.replayGhost
+          ? storedGhostVisible
+            ? Math.min(REPLAY_GHOST_ALPHA, lensProximity)
+            : 0
+          : lensProximity;
         // Recorded EVERY frame, outside the change gate below: the gate only
         // guards the material writes, and telemetry that only updated on a
         // transition would report a stale alpha on exactly the held frames a
@@ -13495,6 +13584,10 @@ export const ComebackCityThreeKartRace = ({
           raceTime: race.raceTime,
           rocketStart: race.rocketStart,
           itemRoulette: Boolean(race.itemRoulette),
+          timeTrial: Boolean(race.timeTrial),
+          ttBoosts: race.ttBoosts ?? 0,
+          ttGhostTime: race.ttGhostTime ?? null,
+          ttRecord: Boolean(race.ttRecord),
           drafting: race.drafting,
           standings: race.standings || null,
           shieldActive: race.shieldActive,
@@ -13518,6 +13611,7 @@ export const ComebackCityThreeKartRace = ({
           place: race.position,
           standings: race.standings || null,
           time: race.raceTime,
+          timeTrial: Boolean(race.timeTrial),
           trackKey,
         });
       }
@@ -13568,7 +13662,7 @@ export const ComebackCityThreeKartRace = ({
         delete window.__comebackCityKartTrackVisualsEnabled;
       }
     };
-  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, postChainEnabled, proofCameraMode, raceClass, reducedMotion, runId, trackVisualsEnabled]);
+  }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, postChainEnabled, proofCameraMode, raceClass, reducedMotion, runId, timeTrial, trackVisualsEnabled]);
 
   const setTouch = (key, value) => {
     inputRef.current = { ...inputRef.current, [key]: value };
@@ -13976,7 +14070,7 @@ export const ComebackCityThreeKartRace = ({
       {snapshot.finished ? (
         <div className="three-kart-race__results" data-finish-place={snapshot.position}>
           <div className="three-kart-race__results-head">
-            <span>Finish · {ordinal(snapshot.position)}</span>
+            <span>{snapshot.timeTrial ? 'Time trial · finish' : `Finish · ${ordinal(snapshot.position)}`}</span>
             <strong>{formatTime(snapshot.raceTime)}</strong>
           </div>
           <dl className="three-kart-race__results-tally">
@@ -14002,6 +14096,17 @@ export const ComebackCityThreeKartRace = ({
               <dd>{snapshot.itemPickups}</dd>
             </div>
           </dl>
+          {snapshot.timeTrial ? (
+            <div className="three-kart-race__results-cup" data-testid="race-results-time-trial">
+              {snapshot.ttRecord
+                ? snapshot.ttGhostTime
+                  ? `New record! ${(snapshot.ttGhostTime - snapshot.raceTime).toFixed(2)}s faster than your ghost`
+                  : 'New record! Your ghost will race you next time'
+                : snapshot.ttGhostTime
+                  ? `+${(snapshot.raceTime - snapshot.ttGhostTime).toFixed(2)}s behind your ghost`
+                  : 'Time trial'}
+            </div>
+          ) : null}
           {cup ? (
             <div className="three-kart-race__results-cup" data-testid="race-results-cup-round">
               Grand Prix · race {cup.round + 1} of {cup.rounds}

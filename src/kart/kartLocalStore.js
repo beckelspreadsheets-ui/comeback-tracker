@@ -87,9 +87,20 @@ export const migrateLegacyRaceResultsOnce = () => {
 export const recordRaceFinish = (result) => {
   if (!result || typeof result !== 'object' || !result.trackKey) return;
   // A non-finite place/time would persist NaN and poison every later min().
-  if (!Number.isFinite(result.place) || result.place < 1 || !Number.isFinite(result.time) || result.time <= 0) return;
+  if (!Number.isFinite(result.time) || result.time <= 0) return;
+  // Time trials race nobody: they set bests, never places, runs or wins.
+  if (!result.timeTrial && (!Number.isFinite(result.place) || result.place < 1)) return;
   const results = readRaceResults();
   const previous = results[result.trackKey] || {};
+  if (result.timeTrial) {
+    results[result.trackKey] = {
+      ...previous,
+      bestLap: result.bestLap && (!previous.bestLap || result.bestLap < previous.bestLap) ? result.bestLap : previous.bestLap ?? null,
+      bestTime: !previous.bestTime || result.time < previous.bestTime ? result.time : previous.bestTime,
+    };
+    writeRaceResults(results);
+    return;
+  }
   const bestTime =
     !previous.bestTime || result.time < previous.bestTime ? result.time : previous.bestTime;
   const bestLap =

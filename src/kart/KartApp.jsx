@@ -333,6 +333,7 @@ const KartSelectHero = ({ characterKey, kartKey, reducedMotion, trackKey }) => {
 const GAME_MODES = [
   { key: 'cup', name: 'Grand Prix', tagline: 'Race the whole cup for points and a trophy' },
   { key: 'single', name: 'Single Race', tagline: 'One track, your pick' },
+  { key: 'timetrial', name: 'Time Trial', tagline: 'Solo against the clock and your ghost' },
 ];
 
 // Cup finale: the podium. Top three on plinths, the rest listed below.
@@ -445,7 +446,7 @@ const KartCharacterSelect = ({ gameMode, kartKey, onShowGuide, onStart, raceClas
       <div>
         <h3 className={`${SECTION_TITLE} mb-3`}>Pick Your Mode</h3>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {GAME_MODES.map((entry) => {
           const selected = entry.key === gameMode;
           return (
@@ -694,7 +695,8 @@ export const KartApp = () => {
   const [gameMode, setGameMode] = useState(() => {
     if (typeof window === 'undefined' || window.navigator?.webdriver) return 'single';
     try {
-      return window.localStorage?.getItem('cc-kart-mode') === 'single' ? 'single' : 'cup';
+      const saved = window.localStorage?.getItem('cc-kart-mode');
+      return saved === 'single' || saved === 'timetrial' ? saved : 'cup';
     } catch {
       return 'cup';
     }
@@ -856,6 +858,7 @@ export const KartApp = () => {
           cup={cupProp}
           character={characterKey}
           difficulty={raceClass}
+          timeTrial={!cup && gameMode === 'timetrial'}
           kart={kartKey}
           key={`race-${raceNonce}`}
           mode="race"
