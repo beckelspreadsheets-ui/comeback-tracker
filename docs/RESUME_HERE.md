@@ -1,6 +1,19 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-09-28 RELEASE PUSH (read first)
+## 2026-10-15 (read first) → docs/RELEASE_V1_PLAN.md is the queue
+- Owner's "drove through the snow and it distorted your character" was white
+  ground wedges across the Penguin Village valley road (p0.38-0.43). The 09-28
+  Z-mirror fix had only been verified at the centreline. Fixed in
+  `src/game/race/render/groundTerrain.js`, with the monolith wired to it and
+  the barrier back face plunging 1.0. New gate:
+  `node scripts/test-ground-clearance.mjs` (`--legacy` shows the old failure).
+  Build, bundle, node set and playable proof are green. `test:spline` was
+  already red (PV p0.4375 kink). **Uncommitted, waiting on the owner's go
+  (plan 1.0).** The Codex loop's fixes are also still uncommitted.
+- Fresh graphics, release and photo-racer audits are folded into
+  docs/RELEASE_V1_PLAN.md (phases + rules). Plan: one `/goal` per phase.
+
+## 2026-09-28 RELEASE PUSH
 Owner goal: RELEASE as an **iOS app**, monetized by photo -> custom racer
 (card + crypto, owner-approve queue). Work happened in the ~/Downloads copy
 (SSD not mounted), fast-forwarded to origin first, all pushed to aaa-kart-ci.
