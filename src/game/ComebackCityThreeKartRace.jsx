@@ -184,6 +184,7 @@ import {
   roadEdgeBarrierMul,
   roadEdgeSection,
 } from './race/render/buildRoadEdgeProfile.js';
+import { buildBarrierKit } from './race/render/barrierKit.js';
 import {
   GROUND_BASE_Y,
   createGroundTerrain,
@@ -4969,6 +4970,12 @@ uniform float uToothFadeFull;`,
   edgeProfile.receiveShadow = true;
   edgeProfile.userData.kind = 'real-3d-track-mesh';
   world.add(edgeProfile);
+  // RELEASE_V1_PLAN 1.6 (owner pick pending): LED slogan boards on the barrier
+  // face and lit rhythm posts on its crest, built off the same edge rings so
+  // they sit exactly on the welded barrier. Two draw calls. ?barrierKit=1.
+  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('barrierKit') === '1') {
+    buildBarrierKit({ roadFrames, trackKey: trackDef.key }).meshes.forEach((mesh) => world.add(mesh));
+  }
 
   // Continuous neon edge rail on the barrier cap — the "curb lights & edge
   // lighting" module from the roadside-props card. Both sides in one mesh.
