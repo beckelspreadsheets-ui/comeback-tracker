@@ -772,6 +772,32 @@ export const KART_NOSE_YAW = {
   noderunner: Math.PI / 2,
 };
 const kartByKey = (key) => KART_OPTIONS.find((entry) => entry.key === key) || KART_OPTIONS[0];
+// Signature rides for the three ordinals still on the recoloured Kenney toy
+// dragster (RELEASE_V1_PLAN 1.1, owner pick pending): ?rivalKarts=a|b moves
+// them onto authored bodies. It is the character's own `kart`, so the rival
+// seat, the select stage and the default kart pick all follow it. Rivals never
+// read kart stats (kartByKey is the player's alone), so a rival's pace is
+// unchanged; a player who keeps the signature ride gets that kart's stats.
+// Set a matches body paint to racer colour (purple Hash Runner, orange Block
+// Reward, tan Sat Stacker); set b matches the outfits instead.
+const SIGNATURE_KART_SETS = {
+  a: { layer23: 'satstacker', mizzle: 'btckart', 'seth-penguin': 'hashrunner' },
+  b: { layer23: 'coldwallet', mizzle: 'noderunner', 'seth-penguin': 'iceracer' },
+};
+{
+  const signatureSet =
+    typeof window === 'undefined'
+      ? null
+      : SIGNATURE_KART_SETS[new URLSearchParams(window.location.search).get('rivalKarts')];
+  if (signatureSet) {
+    KART_CHARACTERS.forEach((entry) => {
+      const kart = signatureSet[entry.key];
+      if (!kart) return;
+      entry.kart = kart;
+      entry.kartName = kartByKey(kart).name;
+    });
+  }
+}
 export const DEFAULT_CHARACTER_KEY = 'crrt-bunny';
 const characterByKey = (key) =>
   KART_CHARACTERS.find((entry) => entry.key === key) || KART_CHARACTERS[0];
