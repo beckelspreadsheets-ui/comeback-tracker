@@ -24,12 +24,18 @@ export const recordGhostFrame = (recorder, raceTime, cumulativeProgress, lane, a
 // re-authored track invalidates old ghosts instead of replaying them off-road.
 const keyFor = (trackKey) => `${STORAGE_PREFIX}${trackKey}`;
 
+// Playback needs complete finite triples and at least two frames.
+const validSamples = (samples) => Array.isArray(samples)
+  && samples.length >= GHOST_STRIDE * 2
+  && samples.length % GHOST_STRIDE === 0
+  && samples.every(Number.isFinite);
+
 export const readGhost = (trackKey, signature) => {
   try {
     const raw = window.localStorage?.getItem(keyFor(trackKey));
     if (!raw) return null;
     const ghost = JSON.parse(raw);
-    if (!ghost || ghost.signature !== signature || !Array.isArray(ghost.samples) || !Number.isFinite(ghost.time)) {
+    if (!ghost || ghost.signature !== signature || !validSamples(ghost.samples) || !Number.isFinite(ghost.time) || ghost.time <= 0) {
       return null;
     }
     return ghost;
@@ -41,13 +47,14 @@ export const readGhost = (trackKey, signature) => {
 // Saves only when there is no ghost yet or this run is faster. Returns
 // whether it saved (i.e. a new record).
 export const saveGhostIfBest = (trackKey, signature, { character, kart, samples, time }) => {
-  if (!Number.isFinite(time) || time <= 0 || samples.length < 4) return false;
+  if (!Number.isFinite(time) || time <= 0 || !validSamples(samples)) return false;
   const current = readGhost(trackKey, signature);
   if (current && current.time <= time) return false;
   try {
-    window.localStorage?.setItem(
+    window.localStorage.setItem(
       keyFor(trackKey),
-      JSON.stringify({ character, kart, samples, signature, time: Math.round(time * 1000) / 1000 })
+      // Keep comparison precision; rounding here can promote a slower run.
+      JSON.stringify({ character, kart, samples, signature, time })
     );
     return true;
   } catch {

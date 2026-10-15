@@ -92,10 +92,14 @@ export const recordRaceFinish = (result) => {
   if (!result.timeTrial && (!Number.isFinite(result.place) || result.place < 1)) return;
   const results = readRaceResults();
   const previous = results[result.trackKey] || {};
+  // Reject invalid new laps and recover bests poisoned by older saves.
+  const lap = Number.isFinite(result.bestLap) && result.bestLap > 0 ? result.bestLap : null;
+  const previousLap = Number.isFinite(previous.bestLap) && previous.bestLap > 0 ? previous.bestLap : null;
+  const bestLap = lap !== null && (previousLap === null || lap < previousLap) ? lap : previousLap;
   if (result.timeTrial) {
     results[result.trackKey] = {
       ...previous,
-      bestLap: result.bestLap && (!previous.bestLap || result.bestLap < previous.bestLap) ? result.bestLap : previous.bestLap ?? null,
+      bestLap,
       bestTime: !previous.bestTime || result.time < previous.bestTime ? result.time : previous.bestTime,
     };
     writeRaceResults(results);
@@ -103,10 +107,6 @@ export const recordRaceFinish = (result) => {
   }
   const bestTime =
     !previous.bestTime || result.time < previous.bestTime ? result.time : previous.bestTime;
-  const bestLap =
-    result.bestLap && (!previous.bestLap || result.bestLap < previous.bestLap)
-      ? result.bestLap
-      : previous.bestLap ?? null;
   results[result.trackKey] = {
     ...previous,
     bestLap,

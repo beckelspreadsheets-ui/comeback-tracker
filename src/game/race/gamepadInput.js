@@ -14,7 +14,14 @@ const trigger = (pad, index) => (pad.buttons[index]?.value ?? 0) > 0.35;
 
 export const pollGamepad = () => {
   if (typeof navigator === 'undefined' || !navigator.getGamepads) return null;
-  const pads = navigator.getGamepads();
+  let pads;
+  try {
+    pads = navigator.getGamepads();
+  } catch {
+    // Browser policy can deny this API; keyboard/touch must keep working.
+    return null;
+  }
+  let idlePad = null;
   for (let i = 0; i < pads.length; i += 1) {
     const pad = pads[i];
     if (!pad || !pad.connected || pad.mapping !== 'standard') continue;
@@ -30,9 +37,11 @@ export const pollGamepad = () => {
       throttle: pressed(pad, 0) || trigger(pad, 7),
     };
     const active = state.brake || state.drift || state.item || state.pause || state.throttle || steerAxis !== null;
-    return { ...state, active };
+    if (active) return { ...state, active };
+    // An idle controller in an earlier slot must not mask the one in use.
+    idlePad ??= { ...state, active };
   }
-  return null;
+  return idlePad;
 };
 
 // Merge a polled pad over the live keyboard/touch input object.
