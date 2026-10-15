@@ -5392,6 +5392,73 @@ uniform float uRailMinNdc;`,
     });
   });
 
+  // RELEASE_V1_PLAN 1.5 — the deck's underside was unlit, so the one place a
+  // road passes UNDER the viaduct (Comeback City's start straight) read as a
+  // dark slab across the sky. Three neon strips (centre and both wheel
+  // tracks) run along the underside wherever the deck is high enough to
+  // drive under: one merged mesh, one draw call, and only built when some
+  // other part of the lap actually passes beneath the deck.
+  {
+    const underGlow = bridgeCfg.underGlow || bridgeCfg.glow || '#36e2ff';
+    const deckClearance = 6;
+    const lapSamples = trackSampleCount(sampler);
+    // Deck centreline sampled once; the lap scan is then arithmetic only.
+    const deckCentres = [];
+    for (let step = 0; step <= SKIRT_STEPS; step += 1) {
+      deckCentres.push(sampler.pointAt(bridgeBand.from + (bridgeBand.to - bridgeBand.from) * (step / SKIRT_STEPS)).center);
+    }
+    const passesUnder = (() => {
+      const reach = roadWidth * 0.7;
+      for (let index = 0; index < lapSamples; index += 1) {
+        const lowP = index / lapSamples;
+        if (lowP > bridgeBand.from && lowP < bridgeBand.to) continue;
+        const low = sampler.pointAt(lowP).center;
+        for (const deck of deckCentres) {
+          if (deck.y - low.y > deckClearance && Math.hypot(deck.x - low.x, deck.z - low.z) < reach) return true;
+        }
+      }
+      return false;
+    })();
+    if (passesUnder) {
+      const positions = [];
+      const indices = [];
+      const STRIP_HALF = 0.45;
+      [-0.55, 0, 0.55].forEach((lane) => {
+        let previous = -1;
+        for (let step = 0; step <= SKIRT_STEPS; step += 1) {
+          const deckP = bridgeBand.from + (bridgeBand.to - bridgeBand.from) * (step / SKIRT_STEPS);
+          if (sampler.elevationAt(deckP) < deckClearance) {
+            previous = -1;
+            continue;
+          }
+          const { normal, point } = sampler.pointAt(deckP, lane);
+          const base = positions.length / 3;
+          const y = point.y - 0.9;
+          positions.push(
+            point.x - normal.x * STRIP_HALF, y, point.z - normal.z * STRIP_HALF,
+            point.x + normal.x * STRIP_HALF, y, point.z + normal.z * STRIP_HALF
+          );
+          if (previous >= 0) indices.push(previous, base, previous + 1, previous + 1, base, base + 1);
+          previous = base;
+        }
+      });
+      if (indices.length) {
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        const strips = new THREE.Mesh(
+          geometry,
+          createBasicMaterial(underGlow, { emissive: underGlow, emissiveIntensity: 1.2 })
+        );
+        strips.material.side = THREE.DoubleSide;
+        strips.castShadow = false;
+        strips.userData.kind = 'bridge-under-glow';
+        world.add(strips);
+      }
+    }
+  }
+
   const pillarMat = createBasicMaterial(bridgeCfg.pillar || '#3a4a63', {
     emissive: bridgeCfg.pillarEmissive || '#22304a',
     emissiveIntensity: 0.3,
@@ -6271,8 +6338,12 @@ const addRampApproachChevrons = (world, sampler, ramps) => {
 
 const addFinishGate = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const gateWidth = sampler.widthAt(0);
-  // Schema colors and the beacon/halo dressing are part of the ?trackVisuals=1
-  // experiment; flag-off reproduces the approved gate exactly.
+  // Schema colours are part of the ?trackVisuals=1 experiment. The beacon /
+  // halo / glow-bar dressing used to be too, which left the shipped finish
+  // line as two white posts and a board; RELEASE_V1_PLAN 1.5 lights it for
+  // everyone (default colours unless the experiment supplies its own).
+  // Ungated here on purpose: ?trackVisuals=1 also turns on per-band road
+  // banking, which groundTerrain.js assumes is flat.
   const gateVisual = (trackVisuals.enabled && trackDef.visual?.finishGate) || {};
   const gateAccent = gateVisual.beacon || '#38d7ff';
   const gateHalo = gateVisual.halo || '#ffd34f';
@@ -6287,9 +6358,7 @@ const addFinishGate = (world, sampler, trackDef, trackVisuals = resolveTrackVisu
   if (!trackDef.dressing?.customStartArch) {
     const postMat = createBasicMaterial(gateTrim);
     const boardMat = createBasicMaterial('#16213e', { emissive: gateAccent, emissiveIntensity: 0.4 });
-    const beaconMat = trackVisuals.enabled
-      ? createBasicMaterial(gateAccent, { emissive: gateAccent, emissiveIntensity: 1.25 })
-      : null;
+    const beaconMat = createBasicMaterial(gateAccent, { emissive: gateAccent, emissiveIntensity: 1.25 });
     [-1, 1].forEach((side) => {
       const post = new THREE.Mesh(new RoundedBoxGeometry(2.2, 30, 2.2, 1, 0.5), postMat);
       post.position.set(side * gateWidth * 0.58, 15, 0);
@@ -6314,7 +6383,7 @@ const addFinishGate = (world, sampler, trackDef, trackVisuals = resolveTrackVisu
       tile.position.set(x, 32.3, -1.8);
       group.add(tile);
     }
-    if (trackVisuals.enabled) {
+    {
       const haloRing = new THREE.Mesh(
         new THREE.TorusGeometry(gateWidth * 0.46, 0.42, 8, 44),
         new THREE.MeshBasicMaterial({
