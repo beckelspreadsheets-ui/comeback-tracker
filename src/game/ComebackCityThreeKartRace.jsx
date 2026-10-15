@@ -3458,6 +3458,118 @@ const fitItemPropScene = (scene, targetSize, { seat = false, unlit = false, yaw 
   return rig;
 };
 
+// RELEASE_V1_PLAN 1.4 — no generic penguins (standing owner rule: every
+// penguin in the game is one of his ordinals). Penguin Village's three giant
+// ice statues and its roadside spectators were procedural penguins; once the
+// driver GLBs land they become the roster's penguin ordinals instead, cycling
+// through every penguin character so new ordinals join automatically. Clones
+// share geometry; one material per ordinal. Each spectator is its own small
+// object so frustum culling keeps only the nearby cluster in the frame
+// (~4 x 13-22k triangles), where one InstancedMesh per ordinal would span the
+// whole lap and never cull. The seated driver pose reads as a spectator on
+// the bank and as a throne statue on the plinth.
+const fitOrdinalFigure = (scene, height, material, yaw) => {
+  const rig = scene.clone(true);
+  rig.traverse((node) => {
+    if (node.isMesh) {
+      node.material = material;
+      node.castShadow = false;
+    }
+  });
+  // driverYaw is the lab-verified turn that puts the figure's face on +Z,
+  // which is the side the statue / spectator holder turns toward the road.
+  rig.rotation.y = yaw;
+  const size = new THREE.Box3().setFromObject(rig).getSize(new THREE.Vector3());
+  rig.scale.setScalar(height / Math.max(0.0001, size.y));
+  rig.updateMatrixWorld(true);
+  const fitted = new THREE.Box3().setFromObject(rig);
+  const center = fitted.getCenter(new THREE.Vector3());
+  rig.position.set(-center.x, -fitted.min.y, -center.z);
+  return rig;
+};
+const ORDINAL_SPECTATOR_HEIGHT = 5.4;
+const swapOrdinalPenguins = (engine, driverScenes) => {
+  const ambient = engine.ambient;
+  if (!ambient) return;
+  const penguins = KART_CHARACTERS.filter((entry) => entry.projectileSkin === 'iceshard' && driverScenes[entry.key]);
+  if (!penguins.length) return;
+  const mapOf = (entry) => {
+    let map = null;
+    driverScenes[entry.key].traverse((node) => {
+      if (!map && node.isMesh) map = node.material?.map || null;
+    });
+    return map;
+  };
+  if (ambient.ordinalStatues.length) {
+    // Carved-ice read, but the ordinal's own texture stays under the frost so
+    // the hat / goggles / shades still say WHO it is. Albedo and emissive held
+    // to the levels the procedural statue was measured at (it clipped to flat
+    // white on this track's bright key when the emissive had no headroom).
+    const statueMaterials = new Map();
+    ambient.ordinalStatues.forEach((statue, index) => {
+      const entry = penguins[(index + 1) % penguins.length];
+      if (!statueMaterials.has(entry.key)) {
+        statueMaterials.set(
+          entry.key,
+          applyHeroRim(
+            new THREE.MeshToonMaterial({
+              color: '#c4dcec',
+              emissive: '#9fcfe6',
+              emissiveIntensity: 0.1,
+              gradientMap: getToonGradient(),
+              map: mapOf(entry),
+            })
+          )
+        );
+      }
+      const height = statue.userData.statueHeight;
+      const figure = fitOrdinalFigure(
+        driverScenes[entry.key],
+        // Seated, so the figure is compact for its height: 0.72 of the
+        // statue fills the plinth top the way the standing stand-in did.
+        height * 0.72,
+        statueMaterials.get(entry.key),
+        entry.driverYaw
+      );
+      figure.position.y += height * 0.4;
+      if (statue.userData.figure) statue.remove(statue.userData.figure);
+      statue.userData.figure = figure;
+      statue.add(figure);
+    });
+  }
+  const spectators = ambient.spectators;
+  if (spectators?.placements.length) {
+    const spectatorMaterials = new Map();
+    spectators.placements.forEach((placement, index) => {
+      const entry = penguins[index % penguins.length];
+      if (!spectatorMaterials.has(entry.key)) {
+        spectatorMaterials.set(
+          entry.key,
+          applyHeroRim(
+            new THREE.MeshToonMaterial({
+              gradientMap: getToonGradient(),
+              map: mapOf(entry),
+            })
+          )
+        );
+      }
+      const holder = new THREE.Group();
+      holder.position.copy(placement.position);
+      holder.rotation.y = placement.rotationY;
+      holder.add(
+        fitOrdinalFigure(driverScenes[entry.key], ORDINAL_SPECTATOR_HEIGHT, spectatorMaterials.get(entry.key), entry.driverYaw)
+      );
+      engine.world.add(holder);
+      ambient.spectatorFigures.push({ baseY: placement.position.y, holder, phase: index * 1.37 });
+    });
+    spectators.fields.forEach((field) => {
+      field.parent?.remove(field);
+      field.geometry?.dispose?.();
+    });
+    spectators.fields = [];
+  }
+};
+
 // K7 prop swaps: rendered GLBs replace the procedural stand-ins INSIDE the
 // existing pools — every position/visibility/burst hook drives the same
 // holders, so item SEMANTICS are untouched (validators prove it) and the
@@ -6640,6 +6752,10 @@ const makeIceStatue = (height) => {
   penguin.position.y = height * 0.4;
   g.add(penguin);
   addGlowSprite(g, '#bfeaff', height * 0.9, 0.22, height * 0.55);
+  // The procedural figure is only the stand-in until the ordinal driver GLBs
+  // load (swapOrdinalPenguins replaces it with one of the owner's ordinals).
+  g.userData.figure = penguin;
+  g.userData.statueHeight = height;
   return g;
 };
 
@@ -7432,6 +7548,7 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
     statue.position.copy(pos);
     statue.rotation.y = Math.atan2(point.x - pos.x, point.z - pos.z); // face the road
     world.add(statue);
+    ambient?.ordinalStatues.push(statue);
   });
   // Igloos around the loop.
   // Authored pitch: 10 igloos over the 2,443-unit reference lap = one every 244
@@ -7722,13 +7839,20 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
       const pos = point.clone().addScaledVector(normal, side * lateral).addScaledVector(tangent, along);
       if (minCenterlineDistance(sampler, pos.x, pos.z) < roadWidth * 0.5) continue;
       penguinInstances.push({
-        position: new THREE.Vector3(pos.x, 0, pos.z),
+        // At the road's own elevation, not world 0: Penguin Village's grade
+        // put the p0.36 cluster 7 units over the valley floor and half-buried
+        // the p0.88 one in the climb. The infield inside the road footprint
+        // follows the road (groundTerrain.js), less its small sag allowance.
+        position: new THREE.Vector3(pos.x, pos.y - 0.15, pos.z),
         rotationY: Math.atan2(point.x - pos.x, point.z - pos.z), // watch the race
       });
     }
   });
   if (penguinInstances.length) {
-    instanceTemplateField(makePenguinSpectator(1.1), penguinInstances).forEach((field) => world.add(field));
+    const fields = instanceTemplateField(makePenguinSpectator(1.1), penguinInstances);
+    fields.forEach((field) => world.add(field));
+    // Stand-ins until the ordinal GLBs land (see swapOrdinalPenguins).
+    if (ambient) ambient.spectators = { fields, placements: penguinInstances };
   }
   // Fish-market prop dressing along the market-row straight (0.42–0.72).
   {
@@ -8686,7 +8810,7 @@ const createScene = ({
   addFinishGate(world, sampler, trackDef, trackVisuals);
   // G2 ambient-animation handles: scenery builders drop live refs here
   // (marquee tickers, ice floes, snowfall) for the frame loop to drive.
-  const ambient = { floes: [], snow: null, tickers: [] };
+  const ambient = { floes: [], ordinalStatues: [], snow: null, spectatorFigures: [], spectators: null, tickers: [] };
   // Probe hook (same spirit as __comebackCityKartTelemetry): headless
   // smokes assert the ambient handles mounted without a scene traversal.
   if (typeof window !== 'undefined') window.__g2AmbientDebug = ambient;
@@ -10534,6 +10658,8 @@ export const ComebackCityThreeKartRace = ({
           if (fallback) marcher.inner.remove(fallback);
           marcher.inner.add(rig);
         });
+        // Penguin Village's statues and spectators: the same roster penguins.
+        swapOrdinalPenguins(engine, driverScenes);
         // W2 owner picks (2026-07-07): per-track GENERATED item boxes —
         // the golden ₿ coin on Comeback City, the ₿-frozen-in-ice cube on
         // Penguin Village ("keep the bottom two ... the icebox one for
@@ -12894,6 +13020,15 @@ export const ComebackCityThreeKartRace = ({
         particles.update(particleContext);
       }
 
+      // Ordinal spectators cheer: a small hop and lean, on the shared ambient
+      // clock so reducedMotion holds them still (same gate as the snow).
+      if (engine.ambient.spectatorFigures.length && !reducedMotion) {
+        const cheerTime = AMBIENT_SWAY_TIME.value;
+        engine.ambient.spectatorFigures.forEach(({ baseY, holder, phase }) => {
+          holder.position.y = baseY + Math.max(0, Math.sin(cheerTime * 4.6 + phase)) * 0.45;
+          holder.rotation.z = Math.sin(cheerTime * 2.3 + phase) * 0.07;
+        });
+      }
       const ambientSnow = engine.ambient.snow;
       if (ambientSnow) {
         // Static mid-air flakes read as a glitch — hide, don't freeze.
