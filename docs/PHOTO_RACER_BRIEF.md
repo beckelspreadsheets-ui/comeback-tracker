@@ -1,5 +1,11 @@
 # Photo → racer: design brief (researched 2026-10-15; not legal advice)
 
+> **Owner decisions later the same day override parts of this brief:** the 3D
+> step is Tripo's pay-as-you-go API (no Meshy subscription), the price is
+> $7.99 with a $4.99 founders' price, the concierge takes Stripe links and
+> Lightning, and Apple enrolment is the Showcase Designs company account. See
+> "Owner decisions 2026-10-15" in docs/RELEASE_V1_PLAN.md (Phase 5).
+
 ## Recommendation
 1. **Payment: Apple in-app purchase everywhere, plus a web store for card and crypto.**
    - Sell a consumable "Racer Token" ($4.99) through StoreKit 2. The Small Business Program rate is 15%.

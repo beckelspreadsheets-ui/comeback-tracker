@@ -94,12 +94,18 @@ Work top to bottom. Check items off here as they land; this file is what a
 ## Phase 2 — TestFlight build · ~2-3 days engineering once unblocked
 
 **Owner first (nothing native can be built without these):**
-`sudo xcodebuild -license accept` · Apple Developer Program enrolment
-($99/yr; an Organization needs a D-U-N-S number — start now) · final name +
-bundle id (permanent once the App Store Connect record exists) · icon (the
-current one is a generic penguin) · device floor (suggest iPhone-only, iOS
-17+) · written likeness OK from each ordinal holder in the roster · commercial
-terms for the music and generated assets.
+`sudo xcodebuild -license accept` · Apple Developer Program enrolment —
+**owner chose the COMPANY route (Showcase Designs), 2026-10-15**: it must be a
+registered LLC/corporation (no sole prop or DBA), needs a free D-U-N-S number
+(Apple's lookup tool, up to 5 business days, legal name spelled identically),
+a live website on the company's own domain plus an email on that domain, and
+the enroller must be able to bind the company; $99/yr, Apple may phone to
+verify · bundle id is `com.showcasedesigns.penguinkart` in capacitor.config.json
+(permanent once the App Store Connect record exists; display name can change)
+· icon (the current one is a generic penguin) · device floor (suggest
+iPhone-only, iOS 17+) · written likeness OK from each ordinal holder in the
+roster · commercial terms for the music ("Vice On Ice" came from MiniMax's free
+demo) and generated assets.
 
 **Engineering:** `ios:sync` (node 22) → simulator + device boot, check models,
 meshopt WASM and audio load from `capacitor://` · Info.plist/project:
@@ -126,32 +132,52 @@ age rating, privacy + support URLs, optional Game Center Time Trial boards
 
 ## Phase 5 — photo → custom racer (V1.1) · full brief: docs/PHOTO_RACER_BRIEF.md
 
-Not in V1's store build: it needs payments, moderation and a server. What the
-research (2026-10-15) settled:
+Not in V1's store build: it needs payments, moderation and a server.
 
-- **Payment:** inside the iOS app it must be Apple in-app purchase (a $4.99
-  consumable "Racer Token"; 15% under the Small Business Program — enrol
-  before the first sale). Card + crypto live on a web store; the app may link
-  to it in the US storefront only. The Aug-15 "app sells nothing, web sells
-  racers" plan breaks guideline 3.1.3(b). No crypto and no ordinal-ownership
-  unlocks inside the app.
-- **Vendors:** OpenAI image model for the 4-view sheet (Gemini's API terms
-  bar apps likely used by under-18s — fine for the adults-only concierge, not
-  for the app) → Meshy multi-image-to-3D called directly → our own diet in a
-  Cloudflare Container. Not Higgsfield (no 3D or Nano Banana Pro in its public
-  API; perpetual licence on inputs). ~$18 bake-off first (Meshy/Tripo/Rodin/
-  Hunyuan).
+**Owner decisions 2026-10-15** (these override the brief where they differ):
+- **3D vendor = Tripo's pay-as-you-go API, no subscription.** Meshy's API
+  needs a paid plan ($20/mo Pro minimum; the "$40" was Premium) and
+  Higgsfield is on its free tier with 0 credits and no packs offered. Tripo:
+  $0.01/credit, top up from $1; H3.1 multiview textured 30-40 credits
+  ($0.30-0.40), P1 game topology 50-60 ($0.50-0.60); paid-credit outputs are
+  ours and not trained on. Free sign-up credits leave rights with Tripo, so
+  use them for tests only. **Terms §3.2:** making the model available to end
+  users needs Tripo's written OK (business@vastai3d.com) — fine for the
+  concierge (we make and deliver the racer), ask before self-serve.
+- **Sheet step:** owner's ChatGPT by hand ($0) or an OpenAI API key
+  (gpt-image-2 ~$0.04-0.17/image). Keys go in the macOS Keychain
+  (`security add-generic-password -a "$USER" -s tripo-api-key -w`, likewise
+  `openai-api-key`), entered by the owner in his own Terminal; scripts read
+  them at run time and never print them.
+- **Cost:** ~$0.70-1.40 per delivered racer incl. one full re-roll.
+- **Price:** $7.99 standard with a **$4.99 founders' price** for the group's
+  first wave (first ~20 racers or two weeks). Profit per racer at $7.99 ≈
+  $6.05-6.75 card (Stripe 2.9%+30¢), $6.60-7.30 Lightning, $5.40-6.10 in-app
+  (Apple 15%); at $4.99 ≈ $3.15-3.85 / $3.60-4.30 / $2.85-3.55. $7.99 wins
+  while it keeps ≥55% of the $4.99 buyers; drop to $4.99-5.99 if sales fall
+  by more than half after founders' week. Later upsell: kart paint / name
+  plate ~$2.99. Market: Hero Forge custom file ~$8, Fortnite outfits ~$9-23,
+  photo-avatar apps $3-9/mo subscriptions, physical photo figurines $49-99+.
+- **Payment (concierge):** Stripe payment link AND Bitcoin Lightning. Inside
+  the iOS app it must be Apple in-app purchase.
+- **When:** build the `racer-forge` concierge while Apple verifies the company
+  account (Phase 2 wait), not ahead of Phase 1.
+
+Still standing from the research:
+- **Payment rules:** in-app = Apple IAP (consumable "Racer Token"; 15% under
+  the Small Business Program — enrol before the first sale). Web store for
+  card + crypto; the app may link to it in the US storefront only. Anything
+  sold on the web must also be buyable in-app (3.1.3(b)). No crypto and no
+  ordinal-ownership unlocks inside the app.
 - **Scope:** PFPs (ordinals included), character art, pets. No selfies yet
-  (Meshy terms bar personal data on standard plans and train on uploads;
-  biometric laws). 18+ gate; racers private to the buyer; owner approves each.
-- **Cost:** ~$1.40 vendor cost per delivered racer incl. re-rolls (cap $3);
-  ~$2.85 margin at $4.99 after Apple. Fixed: Meshy $40/mo, Workers $5/mo.
-- **Phases:** 0 concierge for the group now (~5 dev-days: off-app payment,
-  Claude runs a `racer-forge` script, owner approves on the approval sheet,
-  claim link loads the racer) → 1 self-serve iOS MVP (~3-4 weeks) → 2 no
-  waiting (AI judge after ~100 owner calls, web checkout, selfies later).
+  (vendor terms + biometric laws). 18+ gate (fal's terms also require 18+
+  end users if fal is ever used); owner approves each racer.
+- **Phases:** 0 concierge for the group (off-app payment, Claude runs
+  `racer-forge`, owner approves on the approval sheet, the racer reaches the
+  game) → 1 self-serve iOS MVP (~3-4 weeks) → 2 no waiting (AI judge after
+  ~100 owner calls, web checkout, selfies later).
 
-## Art round (needs Higgsfield credits; balance is 0)
+## Art round (pay-per-use now: OpenAI images + Tripo lifts; no Higgsfield plan needed)
 
 What still reads cheap after Phase 1 is Comeback City past the barrier: the
 painted skyline strip, procedural boxes, primitive trees, an empty plain.
