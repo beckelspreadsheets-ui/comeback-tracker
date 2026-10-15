@@ -10769,6 +10769,22 @@ export const ComebackCityThreeKartRace = ({
         attachCharacter(engine.playerModel, playerCharacter, true);
         engine.rivalModels.forEach((rival) => {
           attachCharacter(rival.model, rival.character, false);
+          // Rival bodies and drivers fade by DITHER rather than blending (see
+          // the proximity ghost). At opacity 1 a hashed material discards
+          // nothing, so a rival that is never ghosted renders exactly as
+          // before; flipping it here, at mount, keeps the one-off shader
+          // variant compile out of the race itself.
+          // The time-trial replay ghost keeps its blended, see-through look.
+          if (rival.replayGhost) return;
+          rival.model.bodyMeshes.forEach((mesh) => {
+            if (!mesh.material || mesh.material.alphaHash) return;
+            mesh.material.alphaHash = true;
+            mesh.material.transparent = false;
+            mesh.material.depthWrite = true;
+            mesh.material.needsUpdate = true;
+          });
+          // Force the ghost to re-apply on the next frame with the new path.
+          rival.model.proximity = -1;
         });
         // K7: rendered item props take over from the procedural stand-ins.
         swapItemPropVisuals(engine, itemPropScenes);
@@ -13011,7 +13027,17 @@ export const ComebackCityThreeKartRace = ({
         // Cubic on the axial term only. The band is wide enough now that a
         // linear fade would leave a rival visibly translucent while it is still
         // a legitimate part of the shot; off-axis rivals never reach it at all.
-        const lensProximity = Math.min(lensBand, Math.max(nearBand * nearBand * nearBand, lateral));
+        // RELEASE_V1_PLAN 1.10 — the occluder rule. nearBand calls a rival
+        // solid once it is within ~0.62 of the boom, which is right for a
+        // rival ALONGSIDE the player and wrong for one parked between the lens
+        // and the player's own kart: 10-12 units behind the hero, dead in
+        // line, it hid the player whole (PV t4/t6 captures, 2026-10-15). Any
+        // rival nearer the lens than the player AND inside the player's
+        // occluding cone now caps at 0.3, whatever its depth; level with the
+        // player (within 3 units along the boom) the cap lifts again.
+        const lensSide = clamp((subjectDistance - 3 - along) / 6, 0, 1);
+        const occlusionCap = 1 - 0.7 * lensSide * (1 - lateral);
+        const lensProximity = Math.min(lensBand, Math.max(nearBand * nearBand * nearBand, lateral), occlusionCap);
         // The time-trial ghost rides the same fade, capped see-through (and
         // hidden outright when there is no stored run to replay).
         const proximity = rival.replayGhost
@@ -13029,6 +13055,14 @@ export const ComebackCityThreeKartRace = ({
           rival.model.proximity = proximity;
           const ghosted = proximity < 1;
           rival.model.bodyMeshes.forEach((mesh) => {
+            if (mesh.material.alphaHash) {
+              // Dithered (screen-door) fade: stays in the opaque pass and keeps
+              // writing depth, so there is no sorting to get wrong — the
+              // see-through hull with a solid helmet inside it cannot happen.
+              mesh.material.opacity = proximity;
+              if (rivalsCastShadows) mesh.castShadow = proximity > 0.55;
+              return;
+            }
             mesh.material.transparent = ghosted;
             // depthWrite survives the shallow end of the fade. Dropping it the
             // instant alpha leaves 1.0 is what produced the see-through hull
