@@ -3325,10 +3325,76 @@ const KENNEY_BODY_YAW = Math.PI;
 
 // Seat the avatar on the kart's driver mount: toon-shaded with its baked
 // texture, normalized so the seated character reads MK-style oversized.
+// RELEASE_V1_PLAN 1.7 (owner A/B pending): the player's own driver reads as
+// a dark blob from the chase camera — the roster's ordinals are mostly black
+// penguins in dark jackets, and from behind and above the camera sees the
+// back of a dark head. ?driverPop=a gives the player's driver its own warm,
+// all-round rim (a backlight); ?driverPop=b traces it with an outline in the
+// character's accent colour. Player only; rivals keep the shared look.
+const driverPopVariant = () => {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get('driverPop');
+  return value === 'a' || value === 'b' ? value : null;
+};
+// A rim alone cannot reach the middle of a dark head seen from behind (the
+// fresnel is ~0 there), so A also carries a soft violet fill that lifts the
+// blacks a step off the asphalt without flattening the toon bands.
+const DRIVER_POP_RIM = Object.freeze({
+  color: '#ffe6b0',
+  fill: '#40385e',
+  fillIntensity: 0.55,
+  keyBias: [0.85, 1],
+  powerScale: 0.45,
+  strengthScale: 4,
+});
+// Re-points this ONE material's rim uniforms (each applyToonRim call owns its
+// own uniform objects; only the tint is shared, so it is replaced, not set).
+const boostDriverRim = (material) => {
+  const rim = material.userData.shaderInjections?.find((entry) => entry.name === 'toon-rim-v1');
+  if (!rim) return;
+  rim.uniforms.uRimColor = { value: new THREE.Color(DRIVER_POP_RIM.color) };
+  rim.uniforms.uRimKeyBias = { value: new THREE.Vector2(...DRIVER_POP_RIM.keyBias) };
+  rim.uniforms.uRimPower = { value: Math.max(1, rim.uniforms.uRimPower.value * DRIVER_POP_RIM.powerScale) };
+  rim.uniforms.uRimStrength = { value: rim.uniforms.uRimStrength.value * DRIVER_POP_RIM.strengthScale };
+  material.emissive.set(DRIVER_POP_RIM.fill);
+  material.emissiveIntensity = DRIVER_POP_RIM.fillIntensity;
+  material.needsUpdate = true;
+};
+// Inverted hull: the same geometry, back faces only, pushed out along its
+// normals, so only a rim of it shows around the silhouette. Width is in WORLD
+// units, divided back through the node's own scale (the avatar is fitted with
+// a large uniform scale, so an object-space width would come out arbitrary).
+const DRIVER_OUTLINE_WIDTH = 0.11;
+const addDriverOutline = (rig, color) => {
+  rig.updateMatrixWorld(true);
+  const scale = new THREE.Vector3();
+  const meshes = [];
+  rig.traverse((node) => {
+    if (node.isMesh) meshes.push(node);
+  });
+  meshes.forEach((node) => {
+    node.getWorldScale(scale);
+    const width = DRIVER_OUTLINE_WIDTH / Math.max(1e-4, (scale.x + scale.y + scale.z) / 3);
+    const material = addShaderInjection(
+      new THREE.MeshBasicMaterial({ color, side: THREE.BackSide }),
+      {
+        name: 'driver-outline-v1',
+        uniforms: { uOutlineWidth: { value: width } },
+        vertexAnchor: '#include <project_vertex>',
+        vertexChunk: 'transformed += normalize(normal) * uOutlineWidth;',
+        vertexPars: 'uniform float uOutlineWidth;',
+      }
+    );
+    const outline = new THREE.Mesh(node.geometry, material);
+    outline.castShadow = false;
+    outline.userData.kind = 'driver-outline';
+    node.add(outline);
+  });
+};
 const mountDriverAvatar = (
   kartModel,
   driverScene,
-  { castsShadow = true, height = 5.7, lean = 0.13, yaw = 0 } = {}
+  { castsShadow = true, height = 5.7, lean = 0.13, pop = null, popAccent = '#ffffff', yaw = 0 } = {}
 ) => {
   const rig = driverScene.clone(true);
   // One material per texture, per rig — same reasoning as attachTripoKartBody.
@@ -3378,6 +3444,8 @@ const mountDriverAvatar = (
   // The mount itself keeps carrying the per-frame drift lean and boost tuck
   // (updateKartBodyMotion writes driverMount.rotation.x/.z), so this is a
   // constant rest pose those animate AROUND rather than a competing term.
+  if (pop === 'a') rigMaterials.forEach((material) => boostDriverRim(material));
+  if (pop === 'b') addDriverOutline(rig, popAccent);
   const seat = new THREE.Group();
   seat.rotation.x = lean;
   seat.add(rig);
@@ -10692,6 +10760,8 @@ export const ComebackCityThreeKartRace = ({
             mountDriverAvatar(model, driverScene, {
               castsShadow: bodyCasts && engine.shadowRig.driversCast,
               height: characterEntry.driverHeight,
+              pop: isPlayer ? driverPopVariant() : null,
+              popAccent: characterEntry.accent,
               yaw: characterEntry.driverYaw,
             });
           }
