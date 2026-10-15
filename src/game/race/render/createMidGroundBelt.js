@@ -1764,7 +1764,11 @@ export const createMidGroundBelt = (options = {}) => {
         block: track.block,
         // Footings on the near two only: at 296 units a plinth is sub-pixel.
         collar: index < 2,
-        color: track.ringColors[Math.min(index, track.ringColors.length - 1)],
+        // palette.midGroundBelt.ringColors: a per-race override (the PV value
+        // pass A/B, RELEASE_V1_PLAN 1.8); the tuned table stays the default.
+        color: (palette.midGroundBelt?.ringColors || track.ringColors)[
+          Math.min(index, (palette.midGroundBelt?.ringColors || track.ringColors).length - 1)
+        ],
         // Neon crown on the near two rings only — a hot edge at 296 units
         // would out-punch the skyline plate behind it.
         crownShare: track.crown && index < 2 ? track.crown.share : 0,

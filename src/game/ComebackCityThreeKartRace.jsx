@@ -6978,14 +6978,14 @@ const shadeIceForm = (geometry, { crown = 1.14, facet = 0.12, root = 0.72 } = {}
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   return geometry;
 };
-const makeIceberg = (height) => {
+const makeIceberg = (height, colors = null) => {
   const g = new THREE.Group();
-  const ice = createToonMaterial(ICEBERG_ICE, {
+  const ice = createToonMaterial(colors?.ice || ICEBERG_ICE, {
     emissive: '#5d89a8',
     emissiveIntensity: 0.06,
     vertexColors: true,
   });
-  const shelf = createToonMaterial(ICEBERG_SHELF, {
+  const shelf = createToonMaterial(colors?.shelf || ICEBERG_SHELF, {
     emissive: '#3f6280',
     emissiveIntensity: 0.05,
     vertexColors: true,
@@ -7952,7 +7952,7 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
       pos = pos.clone().addScaledVector(normal, side * (clearance - distance + 10));
     }
     if (minCenterlineDistance(sampler, pos.x, pos.z) < clearance) continue;
-    const berg = makeIceberg(h);
+    const berg = makeIceberg(h, trackDef.palette?.iceberg);
     berg.position.set(pos.x, -2, pos.z);
     // Yaw off the anchor's own index rather than off a bearing about the origin:
     // the old `a * 1.7` was a function of the ring angle, so adjacent bergs on a
@@ -8227,6 +8227,44 @@ const nearRingParallax = (sampler) => {
   return clamp(1 - NEAR_RING_TRAIL_UNITS / (reach + 50), 0.72, 0.97);
 };
 
+// RELEASE_V1_PLAN 1.8 (owner A/B pending): Penguin Village reads washed out —
+// pale snow, pale ice, pale haze, and nothing dark enough to anchor the frame.
+//   ?pvValue=a  clearer air: fog density 0.0013 -> 0.0008 (FogExp2: ~14% -> ~6%
+//               haze at 300 units, ~34% -> ~15% at 500) and half the
+//               near-skyline haze, so the mid-ground keeps its contrast.
+//   ?pvValue=b  a + dark anchors: deeper iceberg shelves and ice, the
+//               mid-ground belt's rings one value step down, and a slightly
+//               deeper snow base, so the frame has values below the snow.
+// Palette-only, applied as a derived trackDef so every builder downstream
+// (scene, track, dressing) sees the same values. Geometry is untouched.
+const pvValuePassVariant = () => {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get('pvValue');
+  return value === 'a' || value === 'b' ? value : null;
+};
+const withPvValuePass = (trackDef) => {
+  const variant = pvValuePassVariant();
+  if (!variant || trackDef?.key !== 'penguin-village') return trackDef;
+  const base = trackDef.palette || {};
+  const clearer = {
+    backdropHaze: { ...base.backdropHaze, far: 0.22, near: 0.07 },
+    fog: { ...base.fog, density: 0.0008 },
+  };
+  const anchors =
+    variant === 'b'
+      ? {
+          ground: { ...base.ground, base: '#a7bbcf' },
+          iceberg: { ice: '#86afcb', shelf: '#4b6c8a' },
+          // The mid-ground belt's three rings were the pale slabs filling the
+          // middle of every frame (#6f8ca8 / #7f97ae / #98a2b4): one step down
+          // in value each, keeping their hue, so the snow has something
+          // darker to sit against.
+          midGroundBelt: { ringColors: ['#536f8b', '#667f98', '#7f8aa0'] },
+        }
+      : {};
+  return { ...trackDef, palette: { ...base, ...clearer, ...anchors } };
+};
+
 const createScene = ({
   canvas,
   mobile = false,
@@ -8237,6 +8275,7 @@ const createScene = ({
   trackDef = trackByKey(DEFAULT_TRACK_KEY),
   trackVisualsEnabled = false,
 }) => {
+  trackDef = withPvValuePass(trackDef);
   let palette = trackDef.palette || {};
   // Palette lab (dev QA, B1/B2 variant review): ?paletteLab=1 merges
   // window.__paletteLabOverrides over the track palette so the variant lab
