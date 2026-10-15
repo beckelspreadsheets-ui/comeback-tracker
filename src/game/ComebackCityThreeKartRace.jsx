@@ -185,6 +185,12 @@ import {
   roadEdgeSection,
 } from './race/render/buildRoadEdgeProfile.js';
 import {
+  GROUND_BASE_Y,
+  createGroundTerrain,
+  groundPlaneLayout,
+  measureTrackHalfExtent,
+} from './race/render/groundTerrain.js';
+import {
   createBackdropRingMaterial,
   createSkyDome,
   createSkyUniforms,
@@ -4387,20 +4393,16 @@ varying float vRoadIce;`,
   // triangles against the shipped 18.4k, still ONE draw call, and the relief
   // pass below is accelerated with a lattice so its build time does not go up
   // with the square of this.
-  const GROUND_FOG_MARGIN = 1300;
-  const GROUND_VERTEX_PITCH = 27;
-  const GROUND_REFERENCE_SIZE = 2600;
-  let trackHalfExtent = 0;
-  {
-    const extentSamples = trackSampleCount(sampler);
-    for (let index = 0; index < extentSamples; index += 1) {
-      const { center } = sampler.pointAt(index / extentSamples);
-      trackHalfExtent = Math.max(trackHalfExtent, Math.abs(center.x), Math.abs(center.z));
-    }
-  }
-  const groundSize = Math.max(GROUND_REFERENCE_SIZE, Math.ceil((trackHalfExtent + GROUND_FOG_MARGIN) * 2));
-  const groundScale = groundSize / GROUND_REFERENCE_SIZE;
-  const groundSegments = Math.round(groundSize / GROUND_VERTEX_PITCH);
+  //
+  // Sizing and everything that decides the ground's HEIGHT live in
+  // race/render/groundTerrain.js, so scripts/test-ground-clearance.mjs can run
+  // the same code over the same grid.
+  const groundCentreAt = (progress) => sampler.pointAt(progress).point;
+  const {
+    scale: groundScale,
+    segments: groundSegments,
+    size: groundSize,
+  } = groundPlaneLayout(measureTrackHalfExtent(groundCentreAt, sampler.length));
 
   const groundPalette = palette.ground || {
     base: '#1f4636',
@@ -4534,37 +4536,33 @@ varying float vRoadIce;`,
     // tier-3 grounding patch on both tracks is planted at this plane's height.
     const reliefDisplace = reliefCfg.displace ?? 0.3;
     if (reliefNormal > 0 || reliefDisplace > 0) {
-      // Coarse centreline table for the road-clearance fade. The rule this
-      // count has to satisfy is that the chord between samples stays well
-      // under the 27-unit vertex pitch it is compared against, or the fade
-      // aliases into the ramp — a fixed 128 was an 11-unit chord on a
-      // ~1400-unit lap and would be a 91-unit chord on an 11,654-unit one, i.e.
-      // three times COARSER than the thing it is meant to resolve. Expressed
-      // as the chord it always was.
-      const CLEAR_CHORD_UNITS = 11;
-      const CLEAR_SAMPLES = clamp(Math.round(sampler.length / CLEAR_CHORD_UNITS), 128, 1200);
-      const centreline = new Float32Array(CLEAR_SAMPLES * 2);
-      // AAA item 7 slice A — per-sample road elevation, so the infield can follow
-      // the road's grade near the track (see the setZ below). point.y IS the
-      // elevation (sampler bakes elevationAt into pointAt); today it is 0
-      // everywhere outside the bridge band, which is what makes the terrain term
-      // below a no-op until a rolling grade is authored into makeElevation.
-      const centrelineY = new Float32Array(CLEAR_SAMPLES);
-      let widestHalfRoad = 0;
-      for (let sample = 0; sample < CLEAR_SAMPLES; sample += 1) {
-        const p = sample / CLEAR_SAMPLES;
-        const { point } = sampler.pointAt(p);
-        centreline[sample * 2] = point.x;
-        centreline[sample * 2 + 1] = point.z;
-        centrelineY[sample] = point.y;
-        widestHalfRoad = Math.max(widestHalfRoad, sampler.widthAt(p) * 0.44);
+      // Road clearance and the terrain follow both come from groundTerrain.js:
+      // the relief fade (normals + displacement) keeps its approved band, and
+      // the terrain lift holds the infield at road height out to the road's
+      // whole footprint PLUS one ground triangle, so no 38-unit triangle can
+      // tilt up through the deck. The old follow started its ramp inside the
+      // footprint and stood snow wedges across Penguin Village's valley road
+      // (owner 2026-10-15: "it distorted your character").
+      // AAA item 7 slice A — terrain heightfield gate. The infield follows the
+      // authored road grade (item 7c terrain features live); ?terrainGrade=0
+      // forces the pre-slice-A flat-ground code path.
+      const terrainGradeEnabled =
+        typeof window === 'undefined' ||
+        new URLSearchParams(window.location.search).get('terrainGrade') !== '0';
+      // How far the welded kerb / run-off / barrier profile reaches past the
+      // road's own edge, at its widest curb.
+      let roadEdgeReach = 0;
+      for (const frame of roadFrames) {
+        roadEdgeReach = Math.max(roadEdgeReach, frame.section[frame.section.length - 1].u);
       }
-      // Kerb + run-off bank + barrier foot live inside ~10 units past the road
-      // edge (roadEdgeSection); 16 is that with margin, and the relief only
-      // reaches full a further 40 units out so the ramp itself never reads as a
-      // ridge running parallel to the track.
-      const clearInner = widestHalfRoad + 16;
-      const clearOuter = clearInner + 40;
+      const terrain = createGroundTerrain({
+        bridgeBand: trackDef?.elevation?.bridgeBand || null,
+        centreAt: groundCentreAt,
+        edgeReach: roadEdgeReach,
+        length: sampler.length,
+        terrainEnabled: terrainGradeEnabled,
+        widthAt: sampler.widthAt,
+      });
       // Its own lattice, offset from the albedo mottle's, so drifts and colour
       // patches do not coincide — coincident value and hue variation reads as
       // one painted texture rather than as a surface under a light.
@@ -4577,48 +4575,6 @@ varying float vRoadIce;`,
       // would be blind to precisely the octave carrying the surface read, which
       // is why the octaves and this number have to be chosen together.
       const STEP = 16;
-      // AAA wave 8 — a uniform lattice over the centreline samples, because the
-      // brute-force nearest search this replaces is the product of the two
-      // numbers a 4x track multiplies. It used to be 9.4k vertices x 128
-      // samples = 1.2M distance tests; at the new plane and chord it would be
-      // 50k x 1060 = 53 MILLION, on the main thread, in front of a loading
-      // screen. Cell size is clearOuter, so a vertex only ever has to look at
-      // the 3x3 neighbourhood around itself — past clearOuter the fade is
-      // saturated at 1 and the exact distance stops mattering, which is what
-      // makes the truncation EXACT rather than an approximation. Everything
-      // outside the track's own bounding band short-circuits to fade 1.
-      const cellSize = Math.max(clearOuter, 1);
-      const cells = new Map();
-      const cellKey = (cx, cz) => cx * 73856093 + cz * 19349663;
-      let bandMinX = Infinity;
-      let bandMaxX = -Infinity;
-      let bandMinZ = Infinity;
-      let bandMaxZ = -Infinity;
-      for (let sample = 0; sample < CLEAR_SAMPLES; sample += 1) {
-        const sx = centreline[sample * 2];
-        const sz = centreline[sample * 2 + 1];
-        if (sx < bandMinX) bandMinX = sx;
-        if (sx > bandMaxX) bandMaxX = sx;
-        if (sz < bandMinZ) bandMinZ = sz;
-        if (sz > bandMaxZ) bandMaxZ = sz;
-        const key = cellKey(Math.floor(sx / cellSize), Math.floor(sz / cellSize));
-        const bucket = cells.get(key);
-        if (bucket) bucket.push(sample);
-        else cells.set(key, [sample]);
-      }
-      const clearRangeSq = clearOuter * clearOuter;
-      // AAA item 7 slice A — terrain heightfield gate. The infield follows the
-      // authored road grade (item 7c terrain features live); ?terrainGrade=0
-      // forces the pre-slice-A flat-ground code path (was a verified byte-for-byte
-      // no-op back when elevationAt was the single bridge bump).
-      const terrainGradeEnabled =
-        typeof window === 'undefined' ||
-        new URLSearchParams(window.location.search).get('terrainGrade') !== '0';
-      // The bridge deck is a span over a gap, so the infield must NOT rise to it —
-      // its progress band is excluded from the terrain follow, keeping the ground
-      // low for the pillars. This is also what makes the follow a no-op today: the
-      // ONLY nonzero elevation today is the bridge, and it is excluded here.
-      const bridgeBand = trackDef?.elevation?.bridgeBand;
       for (let index = 0; index < position.count; index += 1) {
         const x = position.getX(index);
         // The -90deg X rotation maps local +y onto world -z, so world z is the
@@ -4628,42 +4584,12 @@ varying float vRoadIce;`,
         // stood snow walls up to 32 units over the road wherever the mirror
         // of a stretch landed on a hill (PV start grid, CC p0.30 / p0.62).
         const z = -position.getY(index);
-        let nearest = Infinity;
-        let nearestSample = -1;
-        if (
-          x >= bandMinX - clearOuter &&
-          x <= bandMaxX + clearOuter &&
-          z >= bandMinZ - clearOuter &&
-          z <= bandMaxZ + clearOuter
-        ) {
-          const cx = Math.floor(x / cellSize);
-          const cz = Math.floor(z / cellSize);
-          for (let ox = -1; ox <= 1; ox += 1) {
-            for (let oz = -1; oz <= 1; oz += 1) {
-              const bucket = cells.get(cellKey(cx + ox, cz + oz));
-              if (!bucket) continue;
-              for (let entry = 0; entry < bucket.length; entry += 1) {
-                const sample = bucket[entry];
-                const dx = x - centreline[sample * 2];
-                const dz = z - centreline[sample * 2 + 1];
-                const distanceSq = dx * dx + dz * dz;
-                if (distanceSq < nearest) {
-                  nearest = distanceSq;
-                  nearestSample = sample;
-                }
-              }
-            }
-          }
-        }
-        // Anything the lattice did not resolve is provably past clearOuter, so
-        // it takes the saturated fade without a distance being computed at all.
-        const fade =
-          nearest > clearRangeSq ? 1 : smoothstep01((Math.sqrt(nearest) - clearInner) / (clearOuter - clearInner));
+        const { displaceFade, reliefFade, terrainLift } = terrain.solve(x, z);
         // Central differences on the height field. dh/dx and dh/dz ARE the
         // surface tangent slopes, so the world normal is (-dh/dx, 1, -dh/dz)
         // normalised — the same construction a normal map bakes, evaluated at
         // build time instead of sampled per fragment.
-        const scale = (reliefNormal * fade) / (2 * STEP);
+        const scale = (reliefNormal * reliefFade) / (2 * STEP);
         const slopeX = (heightAt(x + STEP, z) - heightAt(x - STEP, z)) * scale;
         const slopeZ = (heightAt(x, z + STEP) - heightAt(x, z - STEP)) * scale;
         const inverseLength = 1 / Math.hypot(slopeX, 1, slopeZ);
@@ -4674,21 +4600,8 @@ varying float vRoadIce;`,
         normals[index * 3 + 1] = slopeZ * inverseLength;
         normals[index * 3 + 2] = inverseLength;
         // Local +z is world +y after the rotation, so this is a straight lift.
-        // AAA item 7 slice A — the infield follows the road's OWN elevation near
-        // the track (roadFollow = 1 - fade: full on the verge, gone by clearOuter),
-        // so the authored rolling grade (item 7c) keeps the ground under the road
-        // instead of the road clipping through this flat plane. The bridge band is
-        // excluded (its deck spans a gap the pillars fill), so under the viaduct
-        // the ground stays low. ?terrainGrade=0 skips the term for the flat-ground
-        // baseline (which was a verified byte-for-byte no-op before 7c added terrain).
-        let terrainLift = 0;
-        if (terrainGradeEnabled && nearestSample >= 0 && nearest < clearRangeSq) {
-          const nearestProgress = nearestSample / CLEAR_SAMPLES;
-          const inBridge = bridgeBand && nearestProgress > bridgeBand.from && nearestProgress < bridgeBand.to;
-          if (!inBridge) terrainLift = centrelineY[nearestSample] * (1 - fade);
-        }
         if (reliefDisplace > 0 || terrainLift !== 0) {
-          position.setZ(index, terrainLift + (heightAt(x, z) - 0.5) * 2 * reliefDisplace * fade);
+          position.setZ(index, terrainLift + (heightAt(x, z) - 0.5) * 2 * reliefDisplace * displaceFade);
         }
       }
       position.needsUpdate = true;
@@ -4719,7 +4632,7 @@ varying float vRoadIce;`,
     })
   );
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.06;
+  ground.position.y = GROUND_BASE_Y;
   ground.receiveShadow = true;
   world.add(setFlatTransform(ground));
 

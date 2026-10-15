@@ -102,13 +102,16 @@ const FACET_ROLES = new Set(['apron', 'verge']);
 // both the flat ground and the vertical barrier and the drivable edge closes
 // into one silhouette. The only element still allowed to plunge is the
 // barrier's back face, which SHOULD be buried (a barrier whose foot you can
-// see under is a barrier that is floating).
+// see under is a barrier that is floating). It plunges 1.0, not 0.45: the
+// terrain follow (groundTerrain.js) now drops the infield up to ~0.9 below the
+// road edge at sloped S-bends so it can never cut through the deck, and the
+// wall has to reach it there (scripts/test-ground-clearance.mjs).
 export const roadEdgeSection = ({
   apronWidth = 2.1,
   barrierHeight = 2.7,
   barrierThickness = 1.3,
   curbWidth = 3.2,
-  footDrop = 0.45,
+  footDrop = 1,
   vergeRise = 0.85,
   vergeWidth = 5.2,
 } = {}) => {
