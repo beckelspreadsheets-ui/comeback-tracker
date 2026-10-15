@@ -3504,6 +3504,18 @@ const swapItemPropVisuals = (engine, itemPropScenes) => {
       // terminator on it reads as a solid grey lump sitting on the road.
       const cloud = fitItemPropScene(itemPropScenes.blizzard, 15, { seat: true, unlit: true });
       cloud.position.y += 2.4;
+      // Fadeable, and still depth-writing (the transparent-material rule): the
+      // frame loop thins the cloud while the player is inside it and clears it
+      // as the chase camera comes through, so the solid lump neither swallows
+      // the driver nor pops when the lens crosses its back faces.
+      const cloudMaterials = [];
+      cloud.traverse((node) => {
+        if (!node.isMesh) return;
+        node.material.transparent = true;
+        node.material.depthWrite = true;
+        cloudMaterials.push(node.material);
+      });
+      holder.userData.cloudMaterials = cloudMaterials;
       holder.add(cloud);
     });
   }
@@ -3650,6 +3662,29 @@ const addGlowSprite = (parent, color, spriteScale, opacity = 0.5, y = 0) => {
   parent.add(sprite);
   return sprite;
 };
+
+// Slide a sprite's corners along their own view rays toward the eye by up to
+// `units`. Scaling a view-space position about the eye keeps x/z and y/z, so
+// the sprite covers exactly the same pixels at the same size; only its DEPTH
+// moves. That is what an item glow needs: a halo several units wide centred
+// 1.7 over the road was depth-tested against the road it hangs over and drawn
+// as a half-disc with a hard horizontal cut. Clamped short of the near plane.
+const pullSpriteTowardEye = (sprite, units) => {
+  sprite.material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace(
+      'gl_Position = projectionMatrix * mvPosition;',
+      `float eyeDepth = -mvPosition.z;
+	mvPosition.xyz *= max(eyeDepth - ${units.toFixed(1)}, min(eyeDepth, 1.5)) / eyeDepth;
+	gl_Position = projectionMatrix * mvPosition;`
+    );
+  };
+  sprite.material.customProgramCacheKey = () => `sprite-pull-${units}`;
+  return sprite;
+};
+// Projectile/held-item halo: tighter than the old 9-10 unit discs and pulled
+// clear of the road surface (see pullSpriteTowardEye).
+const ITEM_GLOW_SIZE = 7.5;
+const ITEM_GLOW_PULL = 4.5;
 
 const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(trackDef, { enabled: false })) => {
   const bridgeBand = trackDef.elevation.bridgeBand;
@@ -7868,18 +7903,34 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
     flakeGrad.addColorStop(1, 'rgba(235,246,255,0)');
     flakeCtx.fillStyle = flakeGrad;
     flakeCtx.fillRect(0, 0, 32, 32);
-    const snow = new THREE.Points(
-      snowGeometry,
-      new THREE.PointsMaterial({
-        color: '#ffffff',
-        depthWrite: false,
-        map: new THREE.CanvasTexture(flakeCanvas),
-        opacity: 0.85,
-        size: 1.15,
-        sizeAttenuation: true,
-        transparent: true,
-      })
-    );
+    const snowMaterial = new THREE.PointsMaterial({
+      color: '#ffffff',
+      depthWrite: false,
+      map: new THREE.CanvasTexture(flakeCanvas),
+      opacity: 0.85,
+      size: 1.15,
+      sizeAttenuation: true,
+      transparent: true,
+    });
+    // Attenuated size is size * (half the drawing-buffer height / depth), so a
+    // flake drifting between the lens and the kart (the chase boom is 30-38
+    // units) drew as a 100-400px blurred disc. Cap the sprite at 3% of the
+    // buffer's half-height (~12px at 768, DPR-proportional) and fade flakes
+    // out inside 6-18 units of the lens, well short of the kart at ~32.
+    snowMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying float vFlakeFade;')
+        .replace(
+          '#include <fog_vertex>',
+          `#include <fog_vertex>
+  vFlakeFade = smoothstep(6.0, 18.0, -mvPosition.z);
+  gl_PointSize = min(gl_PointSize, scale * 0.03);`
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vFlakeFade;')
+        .replace('#include <alphatest_fragment>', 'diffuseColor.a *= vFlakeFade;\n\t#include <alphatest_fragment>');
+    };
+    const snow = new THREE.Points(snowGeometry, snowMaterial);
     // The wrap box follows the player, so static bounds would cull it.
     snow.frustumCulled = false;
     world.add(snow);
@@ -8494,7 +8545,9 @@ const createScene = ({
     // over the bloom threshold — which is how a 340px trap ended up as one flat
     // white shape at comeback-city-p0_67. The halo still marks the hazard; it
     // no longer erases the thing it is marking.
-    addGlowSprite(holder, '#00E5FF', 9, 0.26, 1.6);
+    // Pulled toward the eye like the projectile halos, so the road no longer
+    // cuts the lower half of the hazard marker off flat.
+    pullSpriteTowardEye(addGlowSprite(holder, '#00E5FF', 9, 0.26, 1.6), ITEM_GLOW_PULL);
     world.add(holder);
     fishBonePool.push(holder);
   }
@@ -8513,7 +8566,7 @@ const createScene = ({
         createBasicMaterial('#F5F8FF', { emissive: '#00E5FF', emissiveIntensity: 0.7 })
       )
     );
-    addGlowSprite(snowball, '#00E5FF', 9, 0.45, 0);
+    pullSpriteTowardEye(addGlowSprite(snowball, '#00E5FF', ITEM_GLOW_SIZE, 0.45, 0), ITEM_GLOW_PULL);
     const carrot = new THREE.Group();
     carrot.userData.skin = 'carrot';
     const carrotBody = new THREE.ConeGeometry(1.5, 5.6, 8);
@@ -8527,7 +8580,7 @@ const createScene = ({
     carrot.add(
       new THREE.Mesh(carrotLeaf, createBasicMaterial('#5fd068', { emissive: '#4cba55', emissiveIntensity: 0.55 }))
     );
-    addGlowSprite(carrot, '#ffb066', 10, 0.55, 0);
+    pullSpriteTowardEye(addGlowSprite(carrot, '#ffb066', ITEM_GLOW_SIZE, 0.55, 0), ITEM_GLOW_PULL);
     const iceShard = new THREE.Group();
     iceShard.userData.skin = 'iceshard';
     const shardGeometry = new THREE.OctahedronGeometry(2.3);
@@ -8535,7 +8588,7 @@ const createScene = ({
     iceShard.add(
       new THREE.Mesh(shardGeometry, createBasicMaterial('#7EC8E8', { emissive: '#00E5FF', emissiveIntensity: 0.8 }))
     );
-    addGlowSprite(iceShard, '#00E5FF', 10, 0.55, 0);
+    pullSpriteTowardEye(addGlowSprite(iceShard, '#00E5FF', ITEM_GLOW_SIZE, 0.55, 0), ITEM_GLOW_PULL);
     // Rocket Sardine — a little silver fish with a rocket flame, nose-first.
     const sardine = new THREE.Group();
     sardine.userData.skin = 'sardine';
@@ -8556,7 +8609,7 @@ const createScene = ({
     sardine.add(
       new THREE.Mesh(sardineFlame, createBasicMaterial('#FF8C00', { emissive: '#FFD34F', emissiveIntensity: 1.2 }))
     );
-    addGlowSprite(sardine, '#FFD34F', 10, 0.55, 0);
+    pullSpriteTowardEye(addGlowSprite(sardine, '#FFD34F', ITEM_GLOW_SIZE, 0.55, 0), ITEM_GLOW_PULL);
     [snowball, carrot, iceShard, sardine].forEach((variant) => {
       variant.visible = false;
       variant.position.y = 1.7;
@@ -8583,7 +8636,8 @@ const createScene = ({
     );
     inner.scale.set(1, 0.5, 1);
     holder.add(inner);
-    addGlowSprite(holder, '#00E5FF', 20, 0.22, 5);
+    holder.userData.glow = addGlowSprite(holder, '#00E5FF', 20, 0.22, 5);
+    holder.userData.insideMix = 0;
     holder.userData.shells = [outer, inner];
     holder.traverse((node) => {
       node.castShadow = false;
@@ -10247,6 +10301,9 @@ export const ComebackCityThreeKartRace = ({
         { lane: 0.8, owner: 'showcase', progress: showcaseAt(128), skin: 'carrot', speed: 0, ttl: 9999 },
         { lane: -0.8, owner: 'showcase', progress: showcaseAt(145), skin: 'iceshard', speed: 0, ttl: 9999 }
       );
+      // A parked blizzard on the racing line, so a capture can watch the dome
+      // fade as the chase camera drives the player through it.
+      race.blizzards.push({ lane: 0, owner: 'showcase', progress: showcaseAt(240), ttl: 9999 });
       // Capture showcase, not gameplay: hold the bubble up for the whole run so
       // a shielded kart is guaranteed to be in frame at every progress mark.
       race.shieldActive = true;
@@ -12122,8 +12179,26 @@ export const ComebackCityThreeKartRace = ({
           holder.position.copy(sample.point);
           holder.rotation.y += dt * 0.8;
           const fade = Math.min(1, cloud.ttl / 1.2);
-          holder.userData.shells[0].material.opacity = 0.3 * fade;
-          holder.userData.shells[1].material.opacity = 0.4 * fade;
+          // Clear the dome as the chase camera comes through it (shells and
+          // cloud cull their back faces, so a lens inside them saw the cloud
+          // pop off and back on), and thin it while the player is inside so
+          // the driver stays readable. The slow-down itself is unchanged.
+          const lensDistance = Math.hypot(
+            engine.camera.position.x - sample.point.x,
+            engine.camera.position.y - (sample.point.y + 5),
+            engine.camera.position.z - sample.point.z
+          );
+          const lensFade = smoothstep01((lensDistance - 9) / 15);
+          const playerInside = insideBlizzard([cloud], race.progress, race.lane, engine.sampler.length);
+          holder.userData.insideMix +=
+            ((playerInside ? 1 : 0) - holder.userData.insideMix) * (1 - Math.pow(0.002, dt));
+          const visibility = fade * lensFade * (1 - holder.userData.insideMix * 0.6);
+          holder.userData.shells[0].material.opacity = 0.3 * visibility;
+          holder.userData.shells[1].material.opacity = 0.4 * visibility;
+          holder.userData.glow.material.opacity = 0.22 * visibility;
+          holder.userData.cloudMaterials?.forEach((material) => {
+            material.opacity = visibility;
+          });
         }
       });
       // Mirror the live fish-bone list onto the pooled meshes.
@@ -12832,7 +12907,13 @@ export const ComebackCityThreeKartRace = ({
             let flakeX = flakes[flake * 3] + Math.sin(snowTime * 0.9 + ambientSnow.phases[flake]) * rawDt * 1.6;
             let flakeY = flakes[flake * 3 + 1] - ambientSnow.speeds[flake] * rawDt;
             let flakeZ = flakes[flake * 3 + 2];
-            if (flakeY < 0.4) flakeY += ambientSnow.spanY;
+            // The fall band rides the player's elevation as well as x/z: Penguin
+            // Village climbs and drops ~28 units, and a band fixed at world y
+            // 0.4-55 left valleys snowless and parked the flakes at lens height
+            // on the climbs. Wrap both ways, so a fast descent re-seeds above.
+            const bandFloor = anchor.y + 0.4;
+            if (flakeY < bandFloor) flakeY += ambientSnow.spanY;
+            else if (flakeY > bandFloor + ambientSnow.spanY) flakeY -= ambientSnow.spanY;
             // World-fixed until the player-centered box edge passes — then
             // wrap across, so snow never reads as glued to the kart.
             if (flakeX - anchor.x > ambientSnow.spanXZ) flakeX -= ambientSnow.spanXZ * 2;
@@ -13442,6 +13523,7 @@ export const ComebackCityThreeKartRace = ({
       // curve so they do not double up into a lurch (racePostChain.js).
       engine.postChain?.update(dt, {
         boost: race.boostTimer > 0 || driftState.miniTurboTimer > 0 ? 1 : 0,
+        lensToKartUnits: engine.camera.position.distanceTo(playerSample.point),
       });
       // B2: per-lap palette moments (no-op unless the race precompiled a
       // moments set — no track ships one until the owner picks).

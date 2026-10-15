@@ -256,8 +256,11 @@ export const buildRacePostChain = ({
     },
     // boost01: 0 while cruising, 1 at full mini-turbo/pad boost. Smoothed here
     // rather than at the call site so the chain owns its own response curve.
-    update(dt, { boost = 0 } = {}) {
+    // lensToKartUnits: camera-to-player distance, which keeps the blur's near
+    // ramp behind the player's kart (speedBlurEffect.setNearBand).
+    update(dt, { boost = 0, lensToKartUnits } = {}) {
       if (!speedBlur) return;
+      speedBlur.setNearBand(lensToKartUnits);
       // Asymmetric on purpose, and the same 1-pow(k, dt) idiom the camera lerps
       // use: the streaks ARRIVE in ~0.08s so the boost lands as an event, and
       // LEAVE over ~0.4s so the frame decompresses instead of snapping.

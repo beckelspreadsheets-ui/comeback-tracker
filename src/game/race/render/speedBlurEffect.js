@@ -71,7 +71,10 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
 	// BEFORE tone mapping, so the grade downstream still owns the final look.
 	// Depth-masked with everything else, so the sky does not gain contrast
 	// during a boost while the road it sits over is the thing accelerating.
-	float punch = uBoost.z * clamp(uBoost.x * 14.0, 0.0, 1.0) * depthMask;
+	// Half-strength inside the radial clear zone: the road the player steers by
+	// still gets hotter, but the centre of the frame is not re-graded flat.
+	float punch = uBoost.z * clamp(uBoost.x * 14.0, 0.0, 1.0) * depthMask *
+		mix(0.5, 1.0, smoothstep(uBoost.y, 0.72, radius));
 	float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
 	color = lum + (color - lum) * (1.0 + punch * 0.38);
 	color = (color - 0.18) * (1.0 + punch * 0.24) + 0.18;
@@ -85,10 +88,14 @@ export const createSpeedBlurEffect = ({ mobile = false } = {}) => {
   // streak and a wider clear zone still: the mobile tier is already at 0.6
   // render scale, so the same uv offset is a much coarser walk.
   const boost = new THREE.Vector3(0, mobile ? 0.3 : 0.24, mobile ? 0.7 : 1);
-  // The near ramp ends at 26 units, which is just past the chase boom — the
-  // player kart and its driver are inside it and stay sharp. The far ramp
-  // starts at 150 (about where the mid-ground belt begins) and is out by 620,
-  // so the skyline, the backdrop rings and the sky never streak.
+  // The near ramp has to clear the player's kart. 9->26 was written for a
+  // boom that has since grown to 30-38 units, which left the kart and driver
+  // inside the full-strength band (only the radial clear zone was saving
+  // them, and the punch ignored even that). setNearBand re-seats the ramp
+  // behind the kart every frame from the real lens-to-kart distance; 9->26 is
+  // only the value before the first frame. The far ramp starts at 150 (about
+  // where the mid-ground belt begins) and is out by 620, so the skyline, the
+  // backdrop rings and the sky never streak.
   const depthBand = new THREE.Vector4(9, 26, 150, 620);
   // Slightly above frame centre: the chase camera's vanishing point sits above
   // the kart, and streaks that radiate from the true centre look like they
@@ -113,6 +120,13 @@ export const createSpeedBlurEffect = ({ mobile = false } = {}) => {
   effect.maxStreak = mobile ? 0.024 : 0.034;
   effect.setStrength = (value01) => {
     boost.x = Math.max(0, Math.min(1, value01)) * effect.maxStreak;
+  };
+  // Ramp in from 6 units past the kart to 22 past it: the kart, its driver
+  // and the spray right behind it stay sharp; the road ahead streaks.
+  effect.setNearBand = (lensToKartUnits) => {
+    if (!Number.isFinite(lensToKartUnits)) return;
+    depthBand.x = lensToKartUnits + 6;
+    depthBand.y = lensToKartUnits + 22;
   };
   effect.setTier = (isMobile) => {
     boost.y = isMobile ? 0.3 : 0.24;
