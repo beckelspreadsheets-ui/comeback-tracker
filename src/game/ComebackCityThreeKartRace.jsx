@@ -774,23 +774,24 @@ export const KART_NOSE_YAW = {
   noderunner: Math.PI / 2,
 };
 const kartByKey = (key) => KART_OPTIONS.find((entry) => entry.key === key) || KART_OPTIONS[0];
-// Signature rides for the three ordinals still on the recoloured Kenney toy
-// dragster (RELEASE_V1_PLAN 1.1, owner pick pending): ?rivalKarts=a|b moves
-// them onto authored bodies. It is the character's own `kart`, so the rival
-// seat, the select stage and the default kart pick all follow it. Rivals never
-// read kart stats (kartByKey is the player's alone), so a rival's pace is
-// unchanged; a player who keeps the signature ride gets that kart's stats.
-// Set a matches body paint to racer colour (purple Hash Runner, orange Block
-// Reward, tan Sat Stacker); set b matches the outfits instead.
+// Signature rides for the three ordinals that used to drive the recoloured
+// Kenney toy dragster (RELEASE_V1_PLAN 1.1). It is the character's own `kart`,
+// so the rival seat, the select stage and the default kart pick all follow it.
+// Rivals never read kart stats (kartByKey is the player's alone), so a rival's
+// pace is unchanged; a player who keeps the signature ride gets that kart's
+// stats. Set a matches body paint to racer colour (purple Hash Runner, orange
+// Block Reward, tan Sat Stacker); set b matches the outfits instead.
+// OWNER PICK 2026-10-15: set a ships. ?rivalKarts=b shows the other set and
+// ?rivalKarts=off puts all three back on the dragster.
 const SIGNATURE_KART_SETS = {
   a: { layer23: 'satstacker', mizzle: 'btckart', 'seth-penguin': 'hashrunner' },
   b: { layer23: 'coldwallet', mizzle: 'noderunner', 'seth-penguin': 'iceracer' },
 };
 {
   const signatureSet =
-    typeof window === 'undefined'
-      ? null
-      : SIGNATURE_KART_SETS[new URLSearchParams(window.location.search).get('rivalKarts')];
+    SIGNATURE_KART_SETS[
+      (typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('rivalKarts')) ?? 'a'
+    ];
   if (signatureSet) {
     KART_CHARACTERS.forEach((entry) => {
       const kart = signatureSet[entry.key];
@@ -3326,15 +3327,15 @@ const KENNEY_BODY_YAW = Math.PI;
 
 // Seat the avatar on the kart's driver mount: toon-shaded with its baked
 // texture, normalized so the seated character reads MK-style oversized.
-// RELEASE_V1_PLAN 1.7 (owner A/B pending): the player's own driver reads as
-// a dark blob from the chase camera — the roster's ordinals are mostly black
-// penguins in dark jackets, and from behind and above the camera sees the
-// back of a dark head. ?driverPop=a gives the player's driver its own warm,
-// all-round rim (a backlight); ?driverPop=b traces it with an outline in the
-// character's accent colour. Player only; rivals keep the shared look.
+// RELEASE_V1_PLAN 1.7: the player's own driver read as a dark blob from the
+// chase camera — the roster's ordinals are mostly black penguins in dark
+// jackets, and from behind and above the camera sees the back of a dark head.
+// 'b' traces the player's driver with an outline in the character's accent
+// colour; 'a' gives it its own warm, all-round rim (a backlight). Player only;
+// rivals keep the shared look. OWNER PICK 2026-10-15: b ships; ?driverPop=a
+// shows the rim and ?driverPop=off the plain driver.
 const driverPopVariant = () => {
-  if (typeof window === 'undefined') return null;
-  const value = new URLSearchParams(window.location.search).get('driverPop');
+  const value = (typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('driverPop')) ?? 'b';
   return value === 'a' || value === 'b' ? value : null;
 };
 // A rim alone cannot reach the middle of a dark head seen from behind (the
@@ -5039,10 +5040,11 @@ uniform float uToothFadeFull;`,
   edgeProfile.receiveShadow = true;
   edgeProfile.userData.kind = 'real-3d-track-mesh';
   world.add(edgeProfile);
-  // RELEASE_V1_PLAN 1.6 (owner pick pending): LED slogan boards on the barrier
-  // face and lit rhythm posts on its crest, built off the same edge rings so
-  // they sit exactly on the welded barrier. Two draw calls. ?barrierKit=1.
-  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('barrierKit') === '1') {
+  // RELEASE_V1_PLAN 1.6: LED slogan boards on the barrier face and lit rhythm
+  // posts on its crest, built off the same edge rings so they sit exactly on
+  // the welded barrier. Two draw calls. OWNER PICK 2026-10-15: on, with the
+  // shipped slogans; ?barrierKit=0 turns both off.
+  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('barrierKit') !== '0') {
     buildBarrierKit({ roadFrames, trackKey: trackDef.key }).meshes.forEach((mesh) => world.add(mesh));
   }
 
@@ -8227,19 +8229,19 @@ const nearRingParallax = (sampler) => {
   return clamp(1 - NEAR_RING_TRAIL_UNITS / (reach + 50), 0.72, 0.97);
 };
 
-// RELEASE_V1_PLAN 1.8 (owner A/B pending): Penguin Village reads washed out —
-// pale snow, pale ice, pale haze, and nothing dark enough to anchor the frame.
-//   ?pvValue=a  clearer air: fog density 0.0013 -> 0.0008 (FogExp2: ~14% -> ~6%
-//               haze at 300 units, ~34% -> ~15% at 500) and half the
-//               near-skyline haze, so the mid-ground keeps its contrast.
-//   ?pvValue=b  a + dark anchors: deeper iceberg shelves and ice, the
-//               mid-ground belt's rings one value step down, and a slightly
-//               deeper snow base, so the frame has values below the snow.
+// RELEASE_V1_PLAN 1.8: Penguin Village read washed out — pale snow, pale ice,
+// pale haze, and nothing dark enough to anchor the frame.
+//   a  clearer air: fog density 0.0013 -> 0.0008 (FogExp2: ~14% -> ~6% haze
+//      at 300 units, ~34% -> ~15% at 500) and half the near-skyline haze, so
+//      the mid-ground keeps its contrast.
+//   b  a + dark anchors: deeper iceberg shelves and ice, the mid-ground belt's
+//      rings one value step down, and a slightly deeper snow base, so the
+//      frame has values below the snow.
 // Palette-only, applied as a derived trackDef so every builder downstream
 // (scene, track, dressing) sees the same values. Geometry is untouched.
+// OWNER PICK 2026-10-15: b ships; ?pvValue=a or ?pvValue=off for comparison.
 const pvValuePassVariant = () => {
-  if (typeof window === 'undefined') return null;
-  const value = new URLSearchParams(window.location.search).get('pvValue');
+  const value = (typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('pvValue')) ?? 'b';
   return value === 'a' || value === 'b' ? value : null;
 };
 const withPvValuePass = (trackDef) => {

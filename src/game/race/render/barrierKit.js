@@ -12,8 +12,8 @@
 //                 units on both sides: the delineator beat that makes speed
 //                 legible in peripheral vision. One InstancedMesh.
 //
-// Owner pick pending: the race only builds this behind ?barrierKit=1 until he
-// approves the look and the slogans.
+// Owner pick 2026-10-15: on by default with these slogans; ?barrierKit=0 in
+// the race URL turns it off.
 import * as THREE from 'three';
 
 // Group in-jokes only: no brands, no betting or odds (App Store age rating).
