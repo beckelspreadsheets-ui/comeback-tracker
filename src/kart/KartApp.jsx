@@ -10,7 +10,7 @@
 // This file is now the ONLY owner of the intro → select flow; edit freely.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bitcoin, BookOpen, Trophy } from 'lucide-react';
+import { Bitcoin, BookOpen, ChevronDown, Sparkles, Trophy, Wind } from 'lucide-react';
 import {
   ComebackCityThreeKartRace,
   DEFAULT_CHARACTER_KEY,
@@ -27,6 +27,7 @@ import {
   recordRaceFinish,
 } from './kartLocalStore.js';
 import { KartModelStage } from './KartModelStage.jsx';
+import { GestureArt, RampGlyph } from './TouchGestureArt.jsx';
 import { applyRaceToCup, createCup, cupStandings, isCupOver } from './cupMode.js';
 import { createKartAudio, readStoredMute } from '../game/race/kartAudio.js';
 import { KART_AUDIO_ASSETS } from '../game/race/kartAudioAssets.js';
@@ -146,11 +147,14 @@ const ITEM_GUIDE = [
   { color: '#f4f8ff', item: 'march', name: 'Penguin March', rare: true, text: 'A waddle-train of ordinal penguins crosses the road ahead. Hit the line and you spin.' },
 ];
 
-const GuideCard = ({ children, title }) => (
-  <div className={`${PANEL} p-5`}>
+const GuideCard = ({ children, note, title, ...rest }) => (
+  <div className={`${PANEL} p-5`} {...rest}>
     <div className="mb-3 flex items-center gap-2">
       <span className="h-3.5 w-[3px] rounded-full bg-[#ffd34f]" />
       <span className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-[#ffd34f]">{title}</span>
+      {note ? (
+        <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.18em] text-white/40">{note}</span>
+      ) : null}
     </div>
     {children}
   </div>
@@ -162,52 +166,257 @@ const Key = ({ children }) => (
   </span>
 );
 
-const KartIntroScreen = ({ onStart, trackKey }) => (
-  <div className="absolute inset-0 z-40 overflow-y-auto" data-testid="race-intro-screen">
+// ── Touch-first guide (RELEASE_V1_PLAN 1.11) ─────────────────────────────
+// The iPhone app is most players' first controller, and the guide used to be
+// keyboard-first with the whole touch scheme in one grey sentence at the
+// bottom of the Drive card. Phones now get the touch card FIRST and the
+// keyboard behind a disclosure; desktops keep the keyboard cards on top and
+// get the touch card second.
+//
+// Same gate as the race's touch UI (`touchControls` in
+// ComebackCityThreeKartRace.jsx: ?touchControls=1|0, else a coarse primary
+// pointer), so the guide never teaches a scheme the race won't show. Not
+// maxTouchPoints: a touchscreen laptop reports touch points but races on the
+// keyboard, because its primary pointer is fine.
+const detectTouchFirst = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const forced = new URLSearchParams(window.location.search).get('touchControls');
+    if (forced === '1' || forced === '0') return forced === '1';
+    return window.matchMedia?.('(pointer: coarse)')?.matches === true;
+  } catch {
+    return false;
+  }
+};
+
+// Drift tiers in the colours the race paints them (DRIFT_FEEL.sparkColors in
+// src/game/race/driftFeel.js). Tier 2 is the boost gold #FFD34F; this guide
+// used to call it orange.
+const SparkLadder = () => (
+  <>
+    <span className="font-semibold text-[#00e5ff]">blue</span> →{' '}
+    <span className="font-semibold text-[#ffd34f]">gold</span> →{' '}
+    <span className="font-semibold text-[#c879ff]">purple</span>
+  </>
+);
+
+const Em = ({ children }) => <span className="font-semibold text-white/90">{children}</span>;
+
+// Miniatures of the race's own touch controls (.three-kart-race__cluster-*,
+// __tilt-toggle and the gold countdown digit in comebackCityThreeKartRace.css)
+// so the names here match what is on screen mid-race. Decorative: the sentence
+// beside each one says what it does.
+const CHIP = 'flex shrink-0 items-center justify-center border font-mono font-black uppercase leading-none';
+const BUTTON_CHIP = `${CHIP} h-10 w-10 flex-col gap-0.5 rounded-[11px] bg-white/[0.08] text-[7px]`;
+const Chip = ({ children, className }) => (
+  <span aria-hidden="true" className={className}>
+    {children}
+  </span>
+);
+const DriftChip = () => (
+  <Chip className={`${BUTTON_CHIP} border-[#38d7ff]/30 text-[#7ff4ff]`}>
+    <Sparkles size={15} />
+    Drift
+  </Chip>
+);
+const ItemChip = () => (
+  <Chip className={`${BUTTON_CHIP} border-[#ffd34f]/45 text-[#ffd34f]`}>
+    <HeldItemIcon heldItem="snowball" projectileSkin="snowball" size={17} />
+    Item
+  </Chip>
+);
+
+const TouchTip = ({ chips, children }) => (
+  <li className="flex items-center gap-3">
+    <span className="flex w-[84px] shrink-0 justify-end gap-1">{chips}</span>
+    <span className="min-w-0">{children}</span>
+  </li>
+);
+
+// Checked against the race's touch handlers (joystickDown/Move/End): the
+// steer zone is everything left of the button cluster, the stick floats from
+// wherever the thumb lands (±64px = full lock), a fast sideways flick during
+// a drag holds drift until the thumb lifts, and a tap under 220ms / 12px
+// fires the item.
+const TOUCH_GESTURES = [
+  {
+    kind: 'drag',
+    title: 'Drag to steer',
+    text: 'Touch down anywhere left of the buttons and slide left or right. Slide further to turn harder.',
+  },
+  {
+    kind: 'flick',
+    title: 'Flick to drift',
+    text: (
+      <>
+        Into a corner, flick your thumb fast toward the turn and keep it down. Sparks charge <SparkLadder />; lift to
+        fire the boost.
+      </>
+    ),
+  },
+  {
+    kind: 'tap',
+    title: 'Tap to throw',
+    text: 'A quick tap uses your item. The big gold button on the right shows what you’re holding.',
+  },
+];
+
+// raceTips: the two control-free tips that otherwise live only in the keyboard
+// cards — needed when those sit behind the disclosure.
+const TouchControlsCard = ({ note, raceTips }) => (
+  <GuideCard data-testid="race-touch-guide" note={note} title="Touch controls">
+    <p className="text-[13px] leading-relaxed text-white/75">
+      Your kart accelerates by itself. Steer, drift and throw with one thumb on the left of the screen.
+    </p>
+    <ul className="mt-4 grid gap-4 sm:grid-cols-3">
+      {TOUCH_GESTURES.map((gesture) => (
+        <li className="flex items-center gap-4 sm:flex-col sm:items-stretch sm:gap-3" key={gesture.kind}>
+          <span className="h-[76px] w-[108px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/30 sm:h-24 sm:w-full [@media(max-height:500px)]:h-20">
+            <GestureArt kind={gesture.kind} />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-mono text-[13px] font-black uppercase tracking-[0.08em] text-white">
+              {gesture.title}
+            </span>
+            <span className="mt-1 block text-[13px] leading-snug text-white/75">{gesture.text}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+    <div className="mt-5 border-t border-white/10 pt-4">
+      <div className={EYEBROW}>Buttons &amp; extras</div>
+      <ul className="mt-3 grid gap-x-6 gap-y-3 text-[13px] leading-snug text-white/75 md:grid-cols-2">
+        <TouchTip chips={<><DriftChip /><ItemChip /></>}>
+          Prefer buttons? Hold <Em>Drift</Em> through a corner and let go to boost, or tap <Em>Item</Em> to throw. The
+          red <span className="font-semibold text-[#ff8f8f]">↓</span> brakes.
+        </TouchTip>
+        <TouchTip chips={<ItemChip />}>
+          <Em>Shield trick:</Em> got a fish bone, snowball or sardine? Hold <Em>Item</Em> to trail it behind you — it
+          blocks the next shot. Let go to use it.
+        </TouchTip>
+        <TouchTip
+          chips={
+            <Chip className={`${CHIP} h-7 rounded-full border-[#38d7ff]/30 bg-[#0c101d]/70 px-2.5 text-[8px] text-[#9fc2d8]`}>
+              Tilt off
+            </Chip>
+          }
+        >
+          <Em>Tilt</Em> (top right) steers by tilting your phone. Your thumb still takes over whenever it’s down.
+        </TouchTip>
+        <TouchTip
+          chips={
+            <>
+              <Chip className={`${CHIP} h-10 w-10 rounded-full border-2 border-[#ffd34f]/70 text-[19px] text-[#ffd34f]`}>2</Chip>
+              <DriftChip />
+            </>
+          }
+        >
+          <Em>Rocket start:</Em> hold <Em>Drift</Em> just as the <span className="font-semibold text-[#ffd34f]">2</span>{' '}
+          appears and keep holding to GO. Too early floods the engine.
+        </TouchTip>
+        <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-white/15 text-[#7eefff]`}><RampGlyph /></Chip>}>
+          <Em>Tricks:</Em> tap <Em>Drift</Em> in mid-air off a ramp, then land it for a boost.
+        </TouchTip>
+        {raceTips ? (
+          <>
+            <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-white/15 text-[#7eefff]`}><Wind size={18} /></Chip>}>
+              <Em>Slipstream:</Em> tuck in behind a rival — hold it and you slingshot past.
+            </TouchTip>
+            <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-[#c879ff]/40 text-[#c879ff]`}><RampGlyph /></Chip>}>
+              The <span className="font-semibold text-[#c879ff]">purple dare ramp</span> jumps the whole corner, but only
+              at boost speed. Miss it and you crawl.
+            </TouchTip>
+          </>
+        ) : null}
+      </ul>
+    </div>
+  </GuideCard>
+);
+
+const KeyboardGuide = () => (
+  <div className="grid gap-4 lg:grid-cols-2">
+    <GuideCard title="Drive">
+      <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
+        <li><Key>↑</Key><Key>W</Key> accelerate</li>
+        <li><Key>←</Key><Key>→</Key><Key>A</Key><Key>D</Key> steer</li>
+        <li><Key>↓</Key><Key>S</Key> brake</li>
+        <li><Key>SHIFT</Key><Key>ENTER</Key><Key>E</Key><Key>F</Key> fire item — <span className="text-white/90">hold</span> a fish bone, snowball or sardine to trail it behind you as a shield, release to use it</li>
+        <li><Key>ESC</Key><Key>P</Key> pause · controllers work too (A gas, B brake, RB drift, LB item)</li>
+        <li className="text-white/90">Rocket start: press gas just as the <span className="font-semibold text-[#ffd34f]">2</span> appears and hold it to GO. Too early floods the engine.</li>
+        <li>Tuck in behind a rival to build a <span className="font-semibold text-[#7eefff]">slipstream</span> — hold it and you slingshot past.</li>
+      </ul>
+    </GuideCard>
+    <GuideCard title="Drift &amp; Tricks">
+      <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
+        <li><Key>SPACE</Key> in a corner — hop into a drift; hold it.</li>
+        <li>
+          Sparks charge <SparkLadder />; release for a bigger boost.
+        </li>
+        <li>Tap <Key>SPACE</Key> mid-air off any ramp — land a trick for a boost.</li>
+        <li>
+          The <span className="font-semibold text-[#c879ff]">purple dare ramp</span> jumps the whole corner — only
+          with boost speed. Miss it and you crawl.
+        </li>
+      </ul>
+    </GuideCard>
+  </div>
+);
+
+const KartIntroScreen = ({ onStart, trackKey }) => {
+  // Read once per mount, so plugging a keyboard into a tablet mid-read does
+  // not reshuffle the page under the player.
+  const [touchFirst] = useState(detectTouchFirst);
+  const [keysOpen, setKeysOpen] = useState(false);
+  return (
+  <div
+    className="absolute inset-0 z-40 overflow-y-auto"
+    data-testid="race-intro-screen"
+    data-touch-first={touchFirst ? '1' : '0'}
+  >
     <MenuBackdrop trackKey={trackKey} />
-    <div className="relative flex min-h-full justify-center p-4 sm:p-6">
-      <div className="my-auto w-full max-w-5xl space-y-6 py-6">
+    {/* Side padding clears the notch: the iPhone app runs landscape-only
+        under viewport-fit=cover, where the side safe-area inset (~47-59px)
+        is wider than the old 16/24px gutter. Short (landscape phone)
+        viewports lose the deep top padding so the three gestures fit the
+        first screen at 844x390. */}
+    <div className="relative flex min-h-full justify-center py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:py-6 sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] [@media(max-height:500px)]:py-2">
+      <div className="my-auto w-full max-w-5xl space-y-6 py-6 [@media(max-height:500px)]:space-y-4 [@media(max-height:500px)]:py-2">
         <div className="text-center">
           <div className={EYEBROW}>Comeback City</div>
-          <h2 className="mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] sm:text-4xl">
+          <h2 className="mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] sm:text-4xl [@media(max-height:500px)]:text-3xl">
             How to Race
           </h2>
           <div className="mx-auto mt-3 h-px w-24 bg-gradient-to-r from-transparent via-[#ffd34f]/70 to-transparent" />
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <GuideCard title="Drive">
-            <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
-              <li><Key>↑</Key><Key>W</Key> accelerate</li>
-              <li><Key>←</Key><Key>→</Key><Key>A</Key><Key>D</Key> steer</li>
-              <li><Key>↓</Key><Key>S</Key> brake</li>
-              <li><Key>SHIFT</Key><Key>ENTER</Key><Key>E</Key><Key>F</Key> fire item — <span className="text-white/90">hold</span> a fish bone, snowball or sardine to trail it behind you as a shield, release to use it</li>
-              <li><Key>ESC</Key><Key>P</Key> pause · controllers work too (A gas, B brake, RB drift, LB item)</li>
-              <li className="text-white/90">Rocket start: press gas just as the <span className="font-semibold text-[#ffd34f]">2</span> appears and hold it to GO. Too early floods the engine.</li>
-              <li>Tuck in behind a rival to build a <span className="font-semibold text-[#7eefff]">slipstream</span> — hold it and you slingshot past.</li>
-              <li className="pt-1 text-white/55">
-                On mobile you auto-accelerate: drag to steer, flick the drag to drift, tap to throw — the big buttons
-                work too. <span className="text-white/80">TILT</span> switches to motion steering. Rocket start on mobile: hold
-                <span className="text-white/80"> DRIFT</span> on the 2. Hold the item button to trail your item behind you.
-              </li>
-            </ul>
-          </GuideCard>
-          <GuideCard title="Drift &amp; Tricks">
-            <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
-              <li><Key>SPACE</Key> in a corner — hop into a drift; hold it.</li>
-              <li>
-                Sparks charge <span className="font-semibold text-[#46d9ef]">blue</span> →{' '}
-                <span className="font-semibold text-[#ff9a2e]">orange</span> →{' '}
-                <span className="font-semibold text-[#c879ff]">purple</span>; release for a bigger boost.
-              </li>
-              <li>Tap <Key>SPACE</Key> mid-air off any ramp — land a trick for a boost.</li>
-              <li>
-                The <span className="font-semibold text-[#c879ff]">purple dare ramp</span> jumps the whole corner — only
-                with boost speed. Miss it and you crawl.
-              </li>
-            </ul>
-          </GuideCard>
-        </div>
+        {touchFirst ? (
+          <>
+            <TouchControlsCard raceTips />
+            <div className="text-center">
+              <button
+                aria-controls="race-guide-keys"
+                aria-expanded={keysOpen}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-5 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-white/75 backdrop-blur-md transition-all duration-200 hover:border-[#7eefff]/60 hover:bg-[#7eefff]/10 hover:text-[#7eefff]"
+                data-testid="race-guide-keys-toggle"
+                onClick={() => setKeysOpen((open) => !open)}
+                type="button"
+              >
+                Keyboard &amp; controller
+                <ChevronDown className={`transition-transform duration-200 ${keysOpen ? 'rotate-180' : ''}`} size={14} />
+              </button>
+            </div>
+            {/* A bare wrapper carries `hidden`: on the grid itself Tailwind's
+                .grid display rule would beat preflight's [hidden]. */}
+            <div hidden={!keysOpen} id="race-guide-keys">
+              <KeyboardGuide />
+            </div>
+          </>
+        ) : (
+          <>
+            <KeyboardGuide />
+            <TouchControlsCard note="Phone & tablet" />
+          </>
+        )}
 
         <div>
           <div className="mb-3 flex items-center justify-between">
@@ -266,7 +475,8 @@ const KartIntroScreen = ({ onStart, trackKey }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Stat spread is 0.92–1.08 — map onto bars so the differences read.
 const statPercent = (value) => Math.round(clamp(((value - 0.9) / 0.18) * 100, 8, 100));
