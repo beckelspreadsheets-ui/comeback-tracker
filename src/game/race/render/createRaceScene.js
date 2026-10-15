@@ -11,9 +11,16 @@ export const RACE_RENDERER_OPTIONS = Object.freeze({
 // the 0.58 cut chased a headless-instrument artifact; headed canonical
 // captures on the reference hardware hold 144 FPS at 0.85 (worst sample
 // 143.5, frameWorkMs ~1.3ms). Mobile untouched (no mobile instrument yet).
+// `touch` (RELEASE_V1_PLAN 1.9): phones race in landscape, and the old
+// aspect-only test (width/height < 0.74) read every landscape phone as a
+// DESKTOP — 0.85 of a DPR-2 buffer with no AA, a floor the governor could not
+// drop below. Touch devices now take their own row whatever their aspect: a
+// floor the governor can fall back to and a ceiling it climbs toward on a
+// phone with headroom.
 export const RACE_RENDER_SCALE = Object.freeze({
   desktop: 0.85,
   mobile: 0.6,
+  touch: 0.6,
 });
 
 // Adaptive ceiling (AAA item 6, 2026-08-17). The fixed table above is now the
@@ -24,7 +31,12 @@ export const RACE_RENDER_SCALE = Object.freeze({
 export const RACE_RENDER_SCALE_MAX = Object.freeze({
   desktop: 1.0,
   mobile: 0.8,
+  touch: 0.85,
 });
+
+// Which row of the scale tables a viewport uses. Touch wins over aspect.
+export const renderScaleTier = (raceViewport) =>
+  raceViewport.touch ? 'touch' : raceViewport.mobile ? 'mobile' : 'desktop';
 
 // Render-scale governor. Deliberately dumb and slow-moving, judged against a
 // FIXED 60 fps budget rather than a detected refresh interval — the first cut
@@ -158,8 +170,8 @@ export const fitRaceRendererToCanvas = ({
   const rawDpr = Math.min(windowRef?.devicePixelRatio || 1, 2);
   // The governor's live scale (clamped to [floor, max] where it is updated)
   // overrides the static table when present; the table remains the floor.
-  const renderScale =
-    raceViewport.adaptiveScale ?? (raceViewport.mobile ? scaleTable.mobile : scaleTable.desktop);
+  const tier = renderScaleTier(raceViewport);
+  const renderScale = raceViewport.adaptiveScale ?? scaleTable[tier] ?? scaleTable.mobile;
   const dpr = Math.max(0.355, rawDpr * renderScale);
   const width = Math.max(1, Math.floor(rect.width * dpr));
   const height = Math.max(1, Math.floor(rect.height * dpr));

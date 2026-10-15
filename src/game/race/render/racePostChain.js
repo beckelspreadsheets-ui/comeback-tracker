@@ -30,6 +30,7 @@ import {
   EdgeDetectionMode,
   EffectComposer,
   EffectPass,
+  FXAAEffect,
   LUT3DEffect,
   NoiseEffect,
   RenderPass,
@@ -202,6 +203,17 @@ export const buildRacePostChain = ({
     smaaPass.enabled = !mobile;
     passes.push(smaaPass);
   }
+  // ---- Pass 3 (phones): FXAA instead ---------------------------------------
+  // The mobile tier dropped SMAA (three passes) and MSAA and shipped NO
+  // anti-aliasing at all, on the screens where shimmer on the road edges and
+  // skyline spires is most visible. FXAA is one cheap pass; it takes SMAA's
+  // slot, alone and last, and the tier switch flips between the two.
+  let fxaaPass = null;
+  if (wantSmaa) {
+    fxaaPass = new EffectPass(camera, new FXAAEffect());
+    fxaaPass.enabled = mobile;
+    passes.push(fxaaPass);
+  }
 
   passes.forEach((pass) => {
     // Ordered dither on the final write. This is the cheap half of the banding
@@ -247,6 +259,7 @@ export const buildRacePostChain = ({
       if (isMobile === currentMobile) return;
       currentMobile = isMobile;
       if (smaaPass) smaaPass.enabled = !isMobile;
+      if (fxaaPass) fxaaPass.enabled = isMobile;
       composer.multisampling = isMobile ? 0 : desktopSamples;
       if (bloomWide) bloomWide.mipmapBlurPass.levels = isMobile ? 4 : 6;
       if (bloomTight) bloomTight.blendMode.opacity.value = isMobile ? 0 : 1;

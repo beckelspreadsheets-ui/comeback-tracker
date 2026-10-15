@@ -213,7 +213,7 @@ const assertMiamiMountsHealthy = async (page, label) => {
   }
 };
 
-const assertPlayableShell = async (page, mode) => {
+const assertPlayableShell = async (page, mode, { expectTouch = false } = {}) => {
   await page.waitForSelector('[data-testid="race-screen"][data-race-renderer="three-kart"]', { timeout: 15000 });
   await page.waitForSelector('[data-testid="comeback-city-3d-kart-race"][data-race-renderer="three-kart"]', {
     timeout: 15000,
@@ -237,10 +237,11 @@ const assertPlayableShell = async (page, mode) => {
     facts.oldFallbackCanvasCount !== 0 ||
     facts.propCount < 20 ||
     !facts.shellVisible ||
-    // K3: touch controls are coarse-pointer-gated. Every proof context is a
-    // fine pointer, so ANY touch button here is a phantom-button regression.
+    // K3: touch controls are coarse-pointer-gated. Every fine-pointer proof
+    // context must show NONE (a phantom-button regression); the phone-landscape
+    // run forces touch on (?touchControls=1) and must show them.
     // The coarse-pointer layout contract lives in tmp/k3-mobile-controls-smoke.
-    facts.touchButtonCount !== 0
+    (expectTouch ? facts.touchButtonCount === 0 : facts.touchButtonCount !== 0)
   ) {
     fail(`${mode} Three kart race shell is incomplete or old renderer mounted`, facts);
   }
@@ -276,7 +277,7 @@ const runManualDesktopControls = async (browser) => {
   return { accelerating, braking, facts, idle, steering };
 };
 
-const runAutoplayEvidence = async (browser, mode, viewport) => {
+const runAutoplayEvidence = async (browser, mode, viewport, { expectTouch = false, query = '' } = {}) => {
   const context = await browser.newContext({
     deviceScaleFactor: 1,
     recordVideo: { dir: outputDir, size: viewport },
@@ -284,8 +285,8 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
   });
   const page = await context.newPage();
   const video = page.video();
-  await page.goto(`${baseUrl}/?playableAutoplay=1#race`, { waitUntil: 'networkidle' });
-  const facts = await assertPlayableShell(page, mode);
+  await page.goto(`${baseUrl}/?playableAutoplay=1${query}#race`, { waitUntil: 'networkidle' });
+  const facts = await assertPlayableShell(page, mode, { expectTouch });
   const visibleMotion = await assertVisibleMotion(page, viewport, `${mode} autoplay`);
   await page.waitForTimeout(1200);
   const start = await readTelemetry(page, `${mode} autoplay start`);
@@ -307,6 +308,16 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
     end = await readTelemetry(page, `${mode} autoplay end (post-spin resample)`);
   }
   await page.screenshot({ path: path.join(outputDir, `${mode}-end.png`), fullPage: false });
+  // RELEASE_V1_PLAN 1.9: a touch run must render at the touch tier. The old
+  // aspect-only test handed landscape phones the desktop scale (0.85 floor,
+  // 1.0 ceiling) with no anti-aliasing.
+  let touchRenderScale = null;
+  if (expectTouch) {
+    touchRenderScale = await page.evaluate(() => window.__comebackCityKartTelemetry?.renderScale ?? null);
+    if (!(Number.isFinite(touchRenderScale) && touchRenderScale <= 0.85 + 1e-6)) {
+      fail(`${mode} touch run is not on the touch render tier`, { touchRenderScale });
+    }
+  }
   let finish = null;
   if (mode === 'desktop') {
     // The 2026-06-12 track upscale (1.35×, owner-requested) makes a full
@@ -347,6 +358,7 @@ const runAutoplayEvidence = async (browser, mode, viewport) => {
     finish,
     mid,
     start,
+    touchRenderScale,
     video: path.relative(root, stableVideoPath),
     visibleMotion,
   };
@@ -424,11 +436,19 @@ const run = async () => {
     const manualDesktop = await runManualDesktopControls(browser);
     const desktopAutoplay = await runAutoplayEvidence(browser, 'desktop', { width: 1365, height: 768 });
     const mobileAutoplay = await runAutoplayEvidence(browser, 'mobile', { width: 390, height: 844 });
+    // The device that ships: a phone in landscape with touch controls.
+    const phoneLandscapeAutoplay = await runAutoplayEvidence(
+      browser,
+      'phone-landscape',
+      { width: 844, height: 390 },
+      { expectTouch: true, query: '&touchControls=1' }
+    );
     const penguinVillage = await runPenguinVillageEvidence(browser);
     const visibleMotionReport = {
       controlVisual,
       desktopAutoplay: desktopAutoplay.visibleMotion,
       mobileAutoplay: mobileAutoplay.visibleMotion,
+      phoneLandscapeAutoplay: phoneLandscapeAutoplay.visibleMotion,
     };
     const report = {
       baseUrl,
@@ -437,6 +457,7 @@ const run = async () => {
       manualDesktop,
       mobileAutoplay,
       outputDir: path.relative(root, outputDir),
+      phoneLandscapeAutoplay,
       passed: true,
       penguinVillage,
       visibleMotionReport: path.relative(root, path.join(outputDir, 'visible-motion-report.json')),

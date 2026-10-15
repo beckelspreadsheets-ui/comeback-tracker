@@ -164,6 +164,7 @@ import {
   createRaceRenderer,
   createRenderScaleGovernor,
   fitRaceRendererToCanvas,
+  renderScaleTier,
   updateRenderScaleGovernor,
 } from './race/render/createRaceScene.js';
 import {
@@ -10599,7 +10600,8 @@ export const ComebackCityThreeKartRace = ({
       typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('giveItem')
         : null;
-    const viewport = { aspect: 1, dpr: 1, height: 1, mobile: false, width: 1 };
+    // `touch` picks the phone render tier whatever the aspect (createRaceScene.js).
+    const viewport = { aspect: 1, dpr: 1, height: 1, mobile: false, touch: touchControls, width: 1 };
     const frameTimes = [];
     // A2 instrumentation: UNCLAMPED frame-to-frame elapsed vs post-render work
     // time. The elapsed/work split is what exposed the legacy rAF-throttling
@@ -13863,10 +13865,10 @@ export const ComebackCityThreeKartRace = ({
       // window resize.
       if (adaptiveScaleEnabled && race.countdown <= 0 && !race.finished) {
         const stepped = updateRenderScaleGovernor(scaleGovernor, {
-          floor: viewport.mobile ? RACE_RENDER_SCALE.mobile : RACE_RENDER_SCALE.desktop,
+          floor: RACE_RENDER_SCALE[renderScaleTier(viewport)],
           frameElapsedMs: frameElapsedSamples[frameElapsedSamples.length - 1],
           frameWorkMs: frameWorkSamples[frameWorkSamples.length - 1],
-          max: viewport.mobile ? RACE_RENDER_SCALE_MAX.mobile : RACE_RENDER_SCALE_MAX.desktop,
+          max: RACE_RENDER_SCALE_MAX[renderScaleTier(viewport)],
           nowMs: now,
         });
         if (stepped) {
