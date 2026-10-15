@@ -42,51 +42,53 @@ Work top to bottom. Check items off here as they land; this file is what a
 
 ## Phase 1 — looks like a real game (code only, no credits) · ~4-6 days
 
+`[~]` = built behind a URL switch, waiting for the owner's pick: https://claude.ai/artifact/Rm381M5UN4enxAUVbs1SqQ
+
 - [x] 1.0 *(7ed1bea6 snow fix, d055d9fb Codex fixes; build, bundle, clearance,
   node set and playable proof green before both)* Commit the snow fix (groundTerrain.js, test-ground-clearance.mjs,
   the monolith hunk, buildRoadEdgeProfile.js footDrop) and, after a read-through,
   the Codex loop fixes from docs/CODEX_LOOP_2026-10-01.md (kartLocalStore,
   replayGhost, gamepadInput, their tests, package.json script, the CI yaml) as
   their own commit.
-- [ ] 1.1 **Real karts for the ordinal rivals.** Seth Penguin, Mizzle and Layer
+- [~] 1.1 *(f4f8c18d — behind `?rivalKarts=a|b`; owner pick pending on the Phase 1 review page)* **Real karts for the ordinal rivals.** Seth Penguin, Mizzle and Layer
   23 still drive the recoloured Kenney toy dragster (roster ~line 681). Point
   them at existing authored bodies (iceracer, iceblock, btckart "Block Reward",
   hashrunner, coldwallet, satstacker, pixelpickup, noderunner) — owner picks
   the pairing on the approval page. Biggest visible jump for three lines.
   Kart stats differ by up to ~3%, so re-run `npm run probe:difficulty` after.
-- [ ] 1.2 **Skyline ring looms and pops.** `nearParallax` 0.72 was tuned for
+- [x] 1.2 *(b3524b53 — trail held at ~100 units: 0.948 CC / 0.953 PV)* **Skyline ring looms and pops.** `nearParallax` 0.72 was tuned for
   350-unit tracks; the 4x tracks reach r~1900-2100 so the camera nears or
   crosses the painted ring (BackSide → that side vanishes). Derive from track
   extent.
-- [ ] 1.3 **Artifact pass** — snowfall Points become 100-400px discs near the
+- [x] 1.3 *(618253d2 — snow cap + lens fade + elevation band; blizzard lens/inside fade; pulled item glows; blur band from the real boom)* **Artifact pass** — snowfall Points become 100-400px discs near the
   lens (add near fade + size clamp + player-anchored Y, or drop them: the
   storm shells already carry the weather); blizzard cloud sits at driver
   height, FrontSide pops when the camera enters, excluded from the camera
   guard; held-item glow (10u additive sprite) is sliced by the road — shrink +
   soft fade; speed-blur depth band (9→26u) is stale vs the 30-38u boom and
   the "punch" ignores the radial clear zone.
-- [ ] 1.4 **Ordinal-only penguins on Penguin Village** — generic statues
+- [x] 1.4 *(bcf6bb53 — statues + spectators are roster ordinals; spectators re-seated on the road elevation)* **Ordinal-only penguins on Penguin Village** — generic statues
   (makeIcePenguin) and 64 generic spectators (makePenguinSpectator) break the
   standing rule. Swap to instanced, decimated ordinal GLBs.
-- [ ] 1.5 **Start/finish moment** — CC's finish gate beacons/halo/glow bar only
+- [x] 1.5 *(489d846b — gate beacons/halo/glow bar ungated; CC viaduct underside strips)* **Start/finish moment** — CC's finish gate beacons/halo/glow bar only
   exist under `?trackVisuals=1`; ungate them; light the viaduct underside.
   (Ungate the gate pieces only: trackVisuals also turns on per-band road
   banking, and groundTerrain.js assumes a flat road — no band authors banking
   today, but re-run test-ground-clearance if one ever does.)
-- [ ] 1.6 **Barrier LED ad panels + rhythm posts** — UVs + one canvas atlas on
+- [~] 1.6 *(fad5383c — behind `?barrierKit=1`; owner pick + slogan OK pending)* **Barrier LED ad panels + rhythm posts** — UVs + one canvas atlas on
   the existing barrier face carrying the group's jokes (HODL, WAGMI,
   Polymarket odds, inscriptions); instanced posts every ~40u for speed read.
-- [ ] 1.7 **Driver pop** (A/B) — driver-only rim/back-light or outline; the
+- [~] 1.7 *(c195b76c — behind `?driverPop=a|b`; owner pick pending)* **Driver pop** (A/B) — driver-only rim/back-light or outline; the
   player's driver reads as a dark blob from the chase cam.
-- [ ] 1.8 **PV value pass** (A/B) — dark anchors (open-water leads, rock), less
+- [~] 1.8 *(a6720014 — behind `?pvValue=a|b`; modest; owner pick pending)* **PV value pass** (A/B) — dark anchors (open-water leads, rock), less
   near-ring haze, bright snow chunks instead of the grey wheel smudges.
-- [ ] 1.9 **Phone render tier** — render scale is keyed on aspect ratio, so
+- [x] 1.9 *(c3b6ff36 — touch tier 0.6→0.85, FXAA on mobile, phone-landscape run in the proof)* **Phone render tier** — render scale is keyed on aspect ratio, so
   landscape phones get desktop resolution at DPR 2 with no AA and a floor the
   governor can't drop below. Key on touch (0.7/0.85), add FXAA/SMAA-low, add a
   landscape touch run (844x390) to the playable proof.
-- [ ] 1.10 **Rivals at the lens** — near plane 1, nothing fades a kart between
+- [x] 1.10 *(0d6b3055 — occluder cap 0.3 + alphaHash dither fade; replay ghost keeps blending)* **Rivals at the lens** — near plane 1, nothing fades a kart between
   camera and player; add a dither fade.
-- [ ] 1.11 **Touch-first How-to-Race** + drift flick threshold (any ≥0.55 px/ms
+- [ ] 1.11 *(firm flick behind `?driftFlick=firm`: fa301282, owner feel-check pending; touch-first How to Race in progress)* **Touch-first How-to-Race** + drift flick threshold (any ≥0.55 px/ms
   swipe starts a drift that only ends on lift) — newcomers can't drift.
 - [ ] 1.12 Smooth the Penguin Village centreline kink at p0.4375 (spline R~80
   over 6 units) — turns `test:spline` green.
