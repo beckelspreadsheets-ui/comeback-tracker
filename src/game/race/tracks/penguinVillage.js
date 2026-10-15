@@ -130,10 +130,133 @@ const recentreLoop = (points) => {
   return points.map((point) => ({ x: point.x - centreX, z: point.z - centreZ }));
 };
 
+// RELEASE_V1_PLAN 1.12 — THE MARKET S-BEND KINK, AND WHY IT IS FIXED HERE.
+//
+// C9 and C10 (the fish-market dent and squeeze) sit 167 units apart and their
+// fillets use all but 6.3 of that: C9's tangent is capped at 0.49 of the edge
+// (r140 shrinks to 124.5) and C10's r120 takes 78.8. buildCenterline emits a
+// straight as max(1, round(l / spacing)) steps, so those 6.3 units became ONE
+// control-point step between a 24.1 and a 27.8. That is a 4.4:1 jump; nothing
+// else on either track goes past 1.27:1. A uniform CatmullRom gives every step
+// the same share of parameter, so it drove the short step with tangents about
+// twice its own length and the curve S-kinked at p0.4376 (measured on the
+// shipped curve):
+//   - radius 5.9 in plan (27 on groundTerrain.js's 3-unit walk), the tightest
+//     instant on the whole lap, tighter than the beacon hairpin. That is the
+//     kink the bend allowance there was reading;
+//   - the only projectToSpline round-trip failure on either track
+//     (test:spline, lane 0.95 at p0.4375);
+//   - a 40% spike in the spline's OWN y. Control-point elevation is keyed by
+//     index (elevationAt(i / n)), so the valley handed those 6.3 units the
+//     grade of a full 26-unit step. pointAt replaces that y with
+//     elevationAt(p), so the road never rendered it; it only bent the 3D
+//     arc-length table.
+// This is the case the SPACING note above warns about.
+//
+// The fix does not change the road. It only moves where the control points sit
+// ON it. The points around a short step are re-spaced evenly along the same
+// fillet path. A dense build of the same waypoints and radii traces that path
+// (corner tangent points do not depend on spacing, so the trace is the same
+// arcs and straights, its chords within 0.002 units of them). The point count,
+// every point outside the window and the path itself are all unchanged. On
+// this layout it moves ten points (indices 183-192) along the road and nothing
+// else. On a layout with no short step it is a no-op.
+//
+// Measured against the kinked curve: the lap is 0.15 units shorter (0.0013%).
+// On the road, nothing keyed by progress moves more than 0.1 units except the
+// two items that sat on the kink itself (shortcut failLand at p0.44 by 0.8, the
+// third market snowman at p0.445 by 0.4). Trackside dressing 40-50 units out at
+// p0.44 (the blackjack tribute, a market crate) swings 2-3 units, because the
+// old normal there was 2.4 degrees off the fillet and the new one is 1.1. The
+// S-bend now reads radius 30 at its tightest instant (49 on the 3-unit walk),
+// which is the same range as the lantern chicane and Comeback City's S-bends.
+// That figure is the spline's normal knot spike at tension 0.38, not a spacing
+// defect. test:spline's PV worst lane error goes from 1.9e-2 to 2.2e-4.
+const TRACE_SPACING = 1;
+// Under half of SPACING is a step the uniform spline cannot carry. The shortest
+// legitimate step on this layout is 21.0, and the market one is 6.3.
+const SHORT_STEP_UNITS = SPACING / 2;
+// Points re-spaced on EACH side of the short step. Five spreads its missing ~20
+// units over eleven steps, which keeps every step in the window within 8% of
+// its neighbours outside it.
+const EVEN_OUT_REACH = 5;
+
+const evenOutShortSteps = (points, trace) => {
+  const n = points.length;
+  const m = trace.length;
+  const lengthTo = new Float64Array(m + 1);
+  for (let j = 0; j < m; j += 1) {
+    const a = trace[j];
+    const b = trace[(j + 1) % m];
+    lengthTo[j + 1] = lengthTo[j] + Math.hypot(b.x - a.x, b.z - a.z);
+  }
+  const traceLength = lengthTo[m];
+  // Arc-length position of a point that lies on the path: nearest trace vertex,
+  // then its foot on whichever neighbouring chord is closer. Such a point is
+  // within 0.002 of the trace and separate parts of this lap never come within
+  // 340 units of each other, so the nearest vertex is unambiguous.
+  const lengthOf = (point) => {
+    let nearest = 0;
+    let nearestSq = Infinity;
+    for (let j = 0; j < m; j += 1) {
+      const d = (trace[j].x - point.x) ** 2 + (trace[j].z - point.z) ** 2;
+      if (d < nearestSq) {
+        nearestSq = d;
+        nearest = j;
+      }
+    }
+    let best = { d: Infinity, s: lengthTo[nearest] };
+    for (const j of [(nearest + m - 1) % m, nearest]) {
+      const a = trace[j];
+      const b = trace[(j + 1) % m];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const chord = dx * dx + dz * dz;
+      const t = chord > 0 ? Math.min(1, Math.max(0, ((point.x - a.x) * dx + (point.z - a.z) * dz) / chord)) : 0;
+      const d = (a.x + dx * t - point.x) ** 2 + (a.z + dz * t - point.z) ** 2;
+      if (d < best.d) best = { d, s: lengthTo[j] + Math.sqrt(chord) * t };
+    }
+    return best.s;
+  };
+  const pointAtLength = (s) => {
+    let low = 0;
+    let high = m;
+    while (high - low > 1) {
+      const mid = (low + high) >> 1;
+      if (lengthTo[mid] <= s) low = mid;
+      else high = mid;
+    }
+    const a = trace[low];
+    const b = trace[(low + 1) % m];
+    const segment = lengthTo[low + 1] - lengthTo[low];
+    const t = segment > 0 ? (s - lengthTo[low]) / segment : 0;
+    return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t };
+  };
+
+  const result = points.map((point) => ({ ...point }));
+  const steps = EVEN_OUT_REACH * 2 + 1;
+  for (let i = 0; i < n; i += 1) {
+    const a = points[i];
+    const b = points[(i + 1) % n];
+    if (Math.hypot(b.x - a.x, b.z - a.z) >= SHORT_STEP_UNITS) continue;
+    // The window's two end points stay exactly where buildCenterline put them;
+    // the steps - 1 points between them are re-spaced evenly along the path.
+    const first = (i - EVEN_OUT_REACH + n) % n;
+    const from = lengthOf(result[first]);
+    let span = lengthOf(result[(first + steps) % n]) - from;
+    if (span <= 0) span += traceLength;
+    for (let k = 1; k < steps; k += 1) {
+      result[(first + k) % n] = pointAtLength((from + (span * k) / steps) % traceLength);
+    }
+  }
+  return result;
+};
+
+const SCALED_WAYPOINTS = WAYPOINTS.map((point) => ({ x: point.x * LAP_TIME_SCALE, z: point.z * LAP_TIME_SCALE }));
 const centerline = recentreLoop(
-  buildCenterline(
-    WAYPOINTS.map((point) => ({ x: point.x * LAP_TIME_SCALE, z: point.z * LAP_TIME_SCALE })),
-    { radius: RADII, spacing: SPACING }
+  evenOutShortSteps(
+    buildCenterline(SCALED_WAYPOINTS, { radius: RADII, spacing: SPACING }),
+    buildCenterline(SCALED_WAYPOINTS, { radius: RADII, spacing: TRACE_SPACING })
   )
 );
 export const PENGUIN_VILLAGE_GEOMETRY = validateCenterline(centerline);
