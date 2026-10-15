@@ -7887,6 +7887,26 @@ const addPenguinVillageDressing = (world, sampler, trackDef, ambient = null) => 
   }
 };
 
+// The near skyline ring trails the camera by (1 - nearParallax) of the
+// camera's distance from the origin. 0.72 was tuned on ~350-unit tracks: a
+// ~100-unit trail inside the 590-unit ring, ~1.4x apparent scale swing per
+// lap. The 4x tracks reach 1876 (CC) and 2097 (PV, right at its start line),
+// where the same ratio is a 525-587 unit trail: the camera reaches the ring
+// wall, the near side looms, and past it the open cylinder shows only its far
+// side. Hold the TRAIL at the tuned ~100 units instead of the ratio. The +50
+// is the chase boom plus half a road, because the camera, not the centreline,
+// is what trails.
+const NEAR_RING_TRAIL_UNITS = 100;
+const nearRingParallax = (sampler) => {
+  const samples = 512;
+  let reach = 0;
+  for (let index = 0; index < samples; index += 1) {
+    const { point } = sampler.pointAt(index / samples);
+    reach = Math.max(reach, Math.hypot(point.x, point.z));
+  }
+  return clamp(1 - NEAR_RING_TRAIL_UNITS / (reach + 50), 0.72, 0.97);
+};
+
 const createScene = ({
   canvas,
   mobile = false,
@@ -8168,9 +8188,11 @@ const createScene = ({
     // while the track spans ~350 units off it, so the skyline's apparent
     // scale swung ~2.6x per lap on CC and ~4x on PV — it read as a painted
     // cylinder standing in the level, because it was. Full lock on the far
-    // band = an infinite horizon; 0.72 on the near silhouette row keeps a
-    // controlled parallax so the two layers still separate in depth. Two
-    // Vector3 writes per frame, in the frame loop beside the camera update.
+    // band = an infinite horizon; a partial lock on the near silhouette row
+    // keeps a controlled parallax so the two layers still separate in depth
+    // (0.72 here, re-derived from the track's reach once the sampler exists —
+    // see nearRingParallax). Two Vector3 writes per frame, in the frame loop
+    // beside the camera update.
     const backdropAnchorFar = new THREE.Group();
     const backdropAnchorNear = new THREE.Group();
     scene.add(backdropAnchorFar, backdropAnchorNear);
@@ -8265,6 +8287,7 @@ const createScene = ({
   }
 
   const sampler = makeSampler(trackDef);
+  if (backdrop) backdrop.nearParallax = nearRingParallax(sampler);
   // Course map outline, built ONCE from the same sampler the kart drives on, so
   // the drawn track and the driven track cannot drift apart.
   const minimap = createMinimap((p) => {
