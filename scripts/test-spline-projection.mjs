@@ -31,7 +31,9 @@ const PROGRESS_TOLERANCE = 0.001;
 // not the parameter it was offset from. The gap grows with the offset.
 //
 // Measured on Penguin Village at p=0.4375 (local radius 2436u, half-width
-// 20.3u), which is the worst case across both tracks:
+// 20.3u), which was the worst case across both tracks until RELEASE_V1_PLAN
+// 1.12 re-spaced a control-point kink there (PV's worst round trip is now
+// dlane 2.2e-4); the table still shows how the gap scales with lane:
 //
 //   lane 0.5   dprogress 1.1e-4   dlane 6.8e-4
 //   lane 0.95  dprogress 2.8e-4   dlane 6.0e-3

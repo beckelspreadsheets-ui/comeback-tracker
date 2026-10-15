@@ -126,9 +126,11 @@ export const createGroundTerrain = ({ bridgeBand = null, centreAt, edgeReach, le
   // 1/r^2 at distance r from that centre — so beside a tight bend on a grade
   // the field is curved in plan, and a 38-unit triangle's linear
   // interpolation misses it by D^2/8 * |y'| * R / r^2. The curvature has to be
-  // read FINER than the table: the spline kinks over a few units at some
-  // S-bend inflections (Penguin Village p0.438: R ~80 over 6 units where the
-  // 11-unit table reads R 190-380), and the triangle feels the kink. So each
+  // read FINER than the table: the spline can bend hard over a few units at an
+  // S-bend inflection, and the triangle feels it. Penguin Village p0.438 read
+  // R 27 on this walk while the 11-unit table read R 190-380, until
+  // RELEASE_V1_PLAN 1.12 re-spaced the control points there (now R ~49, in
+  // line with the other S-bends); the allowance keeps the check. So each
   // sample keeps the TIGHTEST radius within a triangle diagonal of it,
   // measured on a 3-unit walk of the real curve.
   const FINE_UNITS = 3;
