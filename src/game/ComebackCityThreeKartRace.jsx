@@ -14117,7 +14117,17 @@ export const ComebackCityThreeKartRace = ({
   const joystickPuckRef = useRef(null);
   const steerIndicatorRef = useRef(null);
   const JOYSTICK_RANGE_PX = 64;
-  const FLICK_SPEED_PX_MS = 0.55; // horizontal thumb speed that reads as a deliberate flick
+  // Horizontal thumb speed that reads as a deliberate flick, and the smallest
+  // single move that counts. RELEASE_V1_PLAN 1.11 (owner feel-check pending):
+  // at 0.55 px/ms an ordinary quick steer (10 px in one 16 ms pointer step)
+  // already engages a drift that then holds until the thumb lifts, so new
+  // players drift by accident. ?driftFlick=firm asks for a real flick.
+  const firmFlick = useMemo(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('driftFlick') === 'firm',
+    []
+  );
+  const FLICK_SPEED_PX_MS = firmFlick ? 0.9 : 0.55;
+  const FLICK_MIN_STEP_PX = firmFlick ? 12 : 8;
   const TAP_MAX_MS = 220;
   const TAP_MAX_PX = 12;
   const joystickDown = (event) => {
@@ -14153,7 +14163,7 @@ export const ComebackCityThreeKartRace = ({
     stick.lastY = event.clientY;
     stick.lastT = now;
     stick.maxDist = Math.max(stick.maxDist, Math.hypot(event.clientX - stick.originX, event.clientY - stick.originY));
-    if (!stick.flicked && Math.abs(stepX) >= 8 && Math.abs(stepX) / stepMs >= FLICK_SPEED_PX_MS) {
+    if (!stick.flicked && Math.abs(stepX) >= FLICK_MIN_STEP_PX && Math.abs(stepX) / stepMs >= FLICK_SPEED_PX_MS) {
       stick.flicked = true;
       setTouch('drift', true);
       steerIndicatorRef.current?.classList.add('three-kart-race__steer-indicator--drifting');
