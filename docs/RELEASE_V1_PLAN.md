@@ -14,7 +14,8 @@ Work top to bottom. Check items off here as they land; this file is what a
   `node scripts/test-ground-clearance.mjs`, the node set (`test:laps
   test:wrongway test:offroad test:autoplay test:minimap test:kart:regressions`)
   and, for anything visual or runtime, `test:kart-playable` (preview server).
-  `test:spline` is red before this plan (PV p0.4375 kink, item 1.12).
+  `test:spline` is green since 1.12 (it was red before this plan) — add it to
+  the node set.
 - **Look at a frame yourself** before believing a green report. Captures on the
   owner's main machine are fine for spotting bugs, never for scoring looks or
   fps (load is 10-25 there; check `sysctl -n vm.loadavg`, don't launch captures
@@ -50,7 +51,7 @@ Work top to bottom. Check items off here as they land; this file is what a
   the Codex loop fixes from docs/CODEX_LOOP_2026-10-01.md (kartLocalStore,
   replayGhost, gamepadInput, their tests, package.json script, the CI yaml) as
   their own commit.
-- [~] 1.1 *(f4f8c18d — behind `?rivalKarts=a|b`; owner pick pending on the Phase 1 review page)* **Real karts for the ordinal rivals.** Seth Penguin, Mizzle and Layer
+- [x] 1.1 *(f4f8c18d; OWNER PICK 2026-10-15: set A ships — Hash Runner / Block Reward / Sat Stacker; `?rivalKarts=b|off`)* **Real karts for the ordinal rivals.** Seth Penguin, Mizzle and Layer
   23 still drive the recoloured Kenney toy dragster (roster ~line 681). Point
   them at existing authored bodies (iceracer, iceblock, btckart "Block Reward",
   hashrunner, coldwallet, satstacker, pixelpickup, noderunner) — owner picks
@@ -75,12 +76,12 @@ Work top to bottom. Check items off here as they land; this file is what a
   (Ungate the gate pieces only: trackVisuals also turns on per-band road
   banking, and groundTerrain.js assumes a flat road — no band authors banking
   today, but re-run test-ground-clearance if one ever does.)
-- [~] 1.6 *(fad5383c — behind `?barrierKit=1`; owner pick + slogan OK pending)* **Barrier LED ad panels + rhythm posts** — UVs + one canvas atlas on
+- [x] 1.6 *(fad5383c; OWNER PICK 2026-10-15: on with the shipped slogans; `?barrierKit=0`)* **Barrier LED ad panels + rhythm posts** — UVs + one canvas atlas on
   the existing barrier face carrying the group's jokes (HODL, WAGMI,
   Polymarket odds, inscriptions); instanced posts every ~40u for speed read.
-- [~] 1.7 *(c195b76c — behind `?driverPop=a|b`; owner pick pending)* **Driver pop** (A/B) — driver-only rim/back-light or outline; the
+- [x] 1.7 *(c195b76c; OWNER PICK 2026-10-15: B, the accent outline; `?driverPop=a|off`)* **Driver pop** (A/B) — driver-only rim/back-light or outline; the
   player's driver reads as a dark blob from the chase cam.
-- [~] 1.8 *(a6720014 — behind `?pvValue=a|b`; modest; owner pick pending)* **PV value pass** (A/B) — dark anchors (open-water leads, rock), less
+- [x] 1.8 *(a6720014; OWNER PICK 2026-10-15: B, clearer air + darker anchors; `?pvValue=a|off`)* **PV value pass** (A/B) — dark anchors (open-water leads, rock), less
   near-ring haze, bright snow chunks instead of the grey wheel smudges.
 - [x] 1.9 *(c3b6ff36 — touch tier 0.6→0.85, FXAA on mobile, phone-landscape run in the proof)* **Phone render tier** — render scale is keyed on aspect ratio, so
   landscape phones get desktop resolution at DPR 2 with no AA and a floor the
@@ -88,9 +89,9 @@ Work top to bottom. Check items off here as they land; this file is what a
   landscape touch run (844x390) to the playable proof.
 - [x] 1.10 *(0d6b3055 — occluder cap 0.3 + alphaHash dither fade; replay ghost keeps blending)* **Rivals at the lens** — near plane 1, nothing fades a kart between
   camera and player; add a dither fade.
-- [ ] 1.11 *(firm flick behind `?driftFlick=firm`: fa301282, owner feel-check pending; touch-first How to Race in progress)* **Touch-first How-to-Race** + drift flick threshold (any ≥0.55 px/ms
+- [x] 1.11 *(touch-first How to Race f1e8897f; firm flick behind `?driftFlick=firm` fa301282 — owner feel-check on the aaa-preview deploy pending)* **Touch-first How-to-Race** + drift flick threshold (any ≥0.55 px/ms
   swipe starts a drift that only ends on lift) — newcomers can't drift.
-- [ ] 1.12 Smooth the Penguin Village centreline kink at p0.4375 (spline R~80
+- [x] 1.12 *(46d66538 — control points re-spaced around the 6.3-unit market step; test:spline green)* Smooth the Penguin Village centreline kink at p0.4375 (spline R~80
   over 6 units) — turns `test:spline` green.
 
 ## Phase 2 — TestFlight build · ~2-3 days engineering once unblocked
