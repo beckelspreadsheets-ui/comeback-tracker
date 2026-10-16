@@ -1,6 +1,57 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-10-15 (read first) → docs/RELEASE_V1_PLAN.md is the queue
+## 2026-10-15 EVENING — PHASE 1 DONE · next: iPhone prep (read first)
+Working from another machine: `git fetch && git checkout aaa-kart-ci && git pull`.
+Claude's memory files stay on the office Mac; THIS file and
+docs/RELEASE_V1_PLAN.md are the whole handoff.
+- **Phase 1 (looks) is complete and pushed.** All 12 items are checked off in
+  docs/RELEASE_V1_PLAN.md with commit hashes. Review page (picks, before/after
+  frames): https://claude.ai/artifact/Rm381M5UN4enxAUVbs1SqQ
+- **Owner picks now ship as defaults** (switches kept for comparison):
+  rival karts set A (`?rivalKarts=b|off`), driver outline B (`?driverPop=a|off`),
+  LED slogan boards + lit posts (`?barrierKit=0`), Penguin Village look B
+  (`?pvValue=a|off`). Firmer touch drift flick is still OPT-IN
+  (`?driftFlick=firm`) until the owner feel-checks it on his phone.
+- **Preview deployed with the owner's OK:** https://aaa-preview.comeback-city-kart.pages.dev
+  (Pages branch `aaa-preview` of `comeback-city-kart` on the Showcasedesigns
+  account; production comeback-city-kart.pages.dev untouched). Redeploy:
+  `PATH=<node 22 bin>:$PATH CLOUDFLARE_ACCOUNT_ID=9f01a1b31a298b112c22c3e00fe70a45 npm run deploy:kart:preview`
+  (wrangler refuses Node 20). NEVER deploy to Abel's account. Production only
+  on the owner's word.
+- **Gates all green** at the end of the day: build, bundle 9/9, ground
+  clearance (0/0 both tracks), **test:spline (green since 1.12)**, laps,
+  wrongway, offroad, autoplay, minimap, kart regressions, track visuals,
+  select models, playable proof (16 checks, now including a forced-touch
+  844x390 phone run that asserts the touch render tier).
+- **Watch item:** rivals between the lens and the player now fade by alphaHash
+  dither; at 1366 desktop it reads as visible speckle. Ask the owner how it
+  looks on his phone before tuning.
+- **NEXT (owner chose it): Phase 2 iPhone prep that needs no Apple account** —
+  see "Phase 2 — TestFlight build" in the plan: bundle the fonts locally
+  (no Google Fonts at runtime), WebGL context-loss recovery + teardown between
+  races, resume audio after an iOS interruption (calls/Siri), Capacitor
+  haptics (navigator.vibrate is a no-op on iOS), defer screen-edge gestures +
+  hide the home indicator, Info.plist (ITSAppUsesNonExemptEncryption=false,
+  iPhone-only, arm64), dark launch screen, unclean-exit marker, reachable perf
+  overlay. `npm run ios:sync` needs Node 22; simulator builds stay blocked
+  until the owner runs `sudo xcodebuild -license accept`.
+- **Owner-side blockers:** Xcode license; Apple Developer Program as the
+  COMPANY (Showcase Designs must be an LLC/corp; free D-U-N-S number, up to
+  5 business days; live site + email on the company domain); written OK from
+  each ordinal holder; music rights ("Vice On Ice" came from MiniMax's free
+  demo).
+- **Photo racer decisions** (plan Phase 5): Tripo pay-as-you-go API, $7.99 with
+  a $4.99 founders' price, Stripe link + Lightning for the hand-made start,
+  Apple IAP inside the app. Keys go in the macOS Keychain
+  (`security add-generic-password -a "$USER" -s tripo-api-key -w`, likewise
+  `openai-api-key`), typed by the owner in his own Terminal; never read or
+  print them. Build `racer-forge` while Apple verifies the company.
+- Also pushed: the Showcase Designs site copy in this repo now lists the
+  business phone (520) 222-9941 (dee23d4f). Its 221 MB `artifacts/` folder,
+  the root `scratchpad/` and regenerated `tmp/` outputs are deliberately
+  uncommitted — never `git add -A`.
+
+## 2026-10-15 (morning) → docs/RELEASE_V1_PLAN.md is the queue
 - Owner's "drove through the snow and it distorted your character" was white
   ground wedges across the Penguin Village valley road (p0.38-0.43). The 09-28
   Z-mirror fix had only been verified at the centreline. Fixed in
@@ -8,8 +59,8 @@
   the barrier back face plunging 1.0. New gate:
   `node scripts/test-ground-clearance.mjs` (`--legacy` shows the old failure).
   Build, bundle, node set and playable proof are green. `test:spline` was
-  already red (PV p0.4375 kink). **Uncommitted, waiting on the owner's go
-  (plan 1.0).** The Codex loop's fixes are also still uncommitted.
+  already red (PV p0.4375 kink, fixed later by 1.12). Committed the same day
+  on the owner's go: 7ed1bea6, with the Codex loop's fixes in d055d9fb.
 - Fresh graphics, release and photo-racer audits are folded into
   docs/RELEASE_V1_PLAN.md (phases + rules). Plan: one `/goal` per phase.
 
