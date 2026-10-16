@@ -49,7 +49,7 @@ Owner answers received on 2026-06-06:
 ```text
 1. Preview before production: YES. Production approval is not granted yet.
 2. Latest deploy target before preview: use the most updated local build, then verify preview.
-3. Final public phone number: (520) 367-2769.
+3. Final public phone number: (520) 222-9941.
 4. Final public email address: andrew@showcase-designs.com.
 5. Compliant physical mailing address or PO box: not available yet; add one before scaled commercial outreach.
 6. EvenPath, Felco, Abel, and Beckel public display approval: YES. Andrew can get reviews.

@@ -24,6 +24,6 @@ Do not print cards until:
 ## Contact Copy Used
 
 - Email: `andrew@showcase-designs.com`
-- Phone: `(520) 367-2769`
+- Phone: `(520) 222-9941`
 - Primary offer: `Free Website Review`
 - Targeting: `All local businesses`

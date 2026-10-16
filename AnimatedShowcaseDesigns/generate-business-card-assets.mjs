@@ -8,8 +8,8 @@ const { BarcodeFormat, EncodeHintType, QRCodeWriter } = require("@zxing/library"
 const outDir = "business-card";
 const qrUrl = "https://showcase-designs.com/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch";
 const email = "andrew@showcase-designs.com";
-const phone = "(520) 367-2769";
-const phoneHref = "5203672769";
+const phone = "(520) 222-9941";
+const phoneHref = "5202229941";
 const gold = "#c9a227";
 const warmWhite = "#f5f0e8";
 const muted = "#8a8578";

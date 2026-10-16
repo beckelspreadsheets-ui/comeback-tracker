@@ -77,7 +77,7 @@ Back:
 
 - QR code to `https://showcase-designs.com/?utm_source=business_card&utm_medium=offline&utm_campaign=v3_launch`
 - `andrew@showcase-designs.com`
-- `(520) 367-2769` only if confirmed
+- `(520) 222-9941` (confirmed current business number)
 - Built by Andrew Ferguson
 
 Do not print cards until:
