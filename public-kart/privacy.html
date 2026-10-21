@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#10151d" />
+    <title>Privacy Policy · Penguin Kart</title>
+    <meta name="description" content="Penguin Kart's privacy policy: no accounts, no ads, no tracking, and your progress stays on your device." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/jetbrains-mono-var-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      /* Self-contained: no scripts, no third-party requests. Fonts are the
+         game's own bundled files (public-kart/fonts/, SIL OFL 1.1). */
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url(/fonts/inter-var-latin.woff2) format('woff2');
+      }
+      @font-face {
+        font-family: 'JetBrains Mono';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url(/fonts/jetbrains-mono-var-latin.woff2) format('woff2');
+      }
+      :root {
+        color-scheme: dark;
+        --ink: #10151d;
+        --text: #f3ece0;
+        --muted: rgba(243, 236, 224, 0.76);
+        --faint: rgba(243, 236, 224, 0.52);
+        --cyan: #7eefff;
+        --gold: #ffd34f;
+        --line: rgba(255, 255, 255, 0.1);
+        --panel: rgba(255, 255, 255, 0.055);
+        --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        --sans: 'Inter', -apple-system, system-ui, sans-serif;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        background: var(--ink);
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(52rem 30rem at 8% -6%, rgba(56, 215, 255, 0.15), transparent 62%),
+          radial-gradient(42rem 26rem at 98% 0%, rgba(200, 121, 255, 0.12), transparent 60%),
+          radial-gradient(40rem 24rem at 50% 106%, rgba(255, 211, 79, 0.07), transparent 62%),
+          var(--ink);
+        color: var(--text);
+        font: 400 16px/1.65 var(--sans);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .wrap {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: max(2.5rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+          max(2.5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+      }
+      header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      .mark {
+        display: block;
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 1.1rem;
+        border-radius: 12px;
+        box-shadow: 0 0 36px -8px rgba(126, 239, 255, 0.55);
+      }
+      .eyebrow {
+        margin: 0;
+        font: 700 11px/1 var(--mono);
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: var(--cyan);
+      }
+      h1 {
+        margin: 0.65rem 0 0;
+        font: 700 clamp(1.75rem, 7vw, 2.4rem) / 1.1 var(--mono);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        text-shadow: 0 4px 24px rgba(0, 0, 0, 0.9);
+      }
+      .rule {
+        width: 6rem;
+        height: 1px;
+        margin: 1.1rem auto 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 211, 79, 0.75), transparent);
+      }
+      .meta {
+        margin: 1rem 0 0;
+        font: 500 11px/1.7 var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .meta span {
+        display: block;
+      }
+      .meta .sep {
+        display: none;
+      }
+      .panel {
+        margin-top: 1rem;
+        padding: 1.25rem 1.25rem 1.35rem;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--panel);
+        box-shadow:
+          0 24px 70px -28px rgba(0, 0, 0, 0.95),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      }
+      .panel--lead {
+        border-color: rgba(126, 239, 255, 0.32);
+        background: linear-gradient(180deg, rgba(126, 239, 255, 0.09), rgba(126, 239, 255, 0.025));
+        box-shadow:
+          0 0 40px -14px rgba(126, 239, 255, 0.45),
+          0 24px 70px -28px rgba(0, 0, 0, 0.95);
+      }
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin: 0 0 0.75rem;
+        font: 700 12px/1.3 var(--mono);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--gold);
+      }
+      h2::before {
+        content: '';
+        flex: none;
+        width: 3px;
+        height: 14px;
+        border-radius: 3px;
+        background: var(--gold);
+      }
+      .panel--lead h2 {
+        color: var(--cyan);
+      }
+      .panel--lead h2::before {
+        background: var(--cyan);
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+      p + p {
+        margin-top: 0.75rem;
+      }
+      .facts {
+        display: grid;
+        gap: 0.5rem;
+        margin: 0 0 1rem;
+        padding: 0;
+        list-style: none;
+      }
+      .facts li {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        padding: 0.7rem 0.85rem;
+        border: 1px solid rgba(126, 239, 255, 0.22);
+        border-radius: 12px;
+        background: rgba(8, 11, 26, 0.45);
+        font: 700 12.5px/1.35 var(--mono);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text);
+      }
+      .facts li::before {
+        content: '';
+        flex: none;
+        width: 0.45rem;
+        height: 0.8rem;
+        margin: -0.2rem 0.15rem 0 0.2rem;
+        border: solid var(--cyan);
+        border-width: 0 2.5px 2.5px 0;
+        transform: rotate(45deg);
+      }
+      @media (min-width: 560px) {
+        .meta span,
+        .meta .sep {
+          display: inline;
+        }
+        .wrap {
+          padding-left: max(1.5rem, env(safe-area-inset-left));
+          padding-right: max(1.5rem, env(safe-area-inset-right));
+        }
+        .facts {
+          grid-template-columns: 1fr 1fr;
+        }
+        .panel {
+          padding: 1.5rem 1.6rem 1.6rem;
+        }
+      }
+      strong {
+        font-weight: 600;
+        color: var(--text);
+      }
+      a {
+        color: var(--cyan);
+        text-decoration: underline;
+        text-decoration-color: rgba(126, 239, 255, 0.45);
+        text-underline-offset: 3px;
+        overflow-wrap: anywhere;
+      }
+      a.email {
+        white-space: nowrap;
+      }
+      a:hover {
+        text-decoration-color: var(--cyan);
+      }
+      a:focus-visible {
+        outline: 2px solid var(--cyan);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+      footer {
+        margin-top: 2.5rem;
+        text-align: center;
+        font: 500 11px/1.8 var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      footer nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.25rem 1.5rem;
+      }
+      footer nav a {
+        display: inline-block;
+        padding: 0.55rem 0.2rem;
+        color: var(--text);
+        text-decoration: none;
+      }
+      footer nav a:hover {
+        color: var(--cyan);
+      }
+      footer nav a[aria-current='page'] {
+        color: var(--gold);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <img class="mark" src="/favicon.svg" width="48" height="48" alt="" />
+        <p class="eyebrow">Penguin Kart</p>
+        <h1>Privacy Policy</h1>
+        <div class="rule" aria-hidden="true"></div>
+        <p class="meta">
+          <span>Effective <time datetime="2026-10-21">October 21, 2026</time></span>
+          <span class="sep" aria-hidden="true">·</span>
+          <span>Published by Showcase Designs</span>
+        </p>
+      </header>
+
+      <main>
+        <section class="panel panel--lead" aria-labelledby="short-version">
+          <h2 id="short-version">The short version</h2>
+          <ul class="facts">
+            <li>No accounts</li>
+            <li>No ads</li>
+            <li>No analytics or tracking</li>
+            <li>No personal data sent anywhere</li>
+          </ul>
+          <p>Penguin Kart doesn’t collect information about you. What the game saves, it saves on your device.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="on-device">
+          <h2 id="on-device">What stays on your device</h2>
+          <p>
+            To remember your progress, the game saves your <strong>race results, best times, settings and replay
+            ghosts</strong> in local storage on your device: the app’s own storage on iPhone and iPad, or your
+            browser’s storage when you play on the web. None of it is sent to us or to anyone else, and we can’t see
+            it.
+          </p>
+        </section>
+
+        <section class="panel" aria-labelledby="deleting">
+          <h2 id="deleting">Deleting it</h2>
+          <p>
+            Delete the app from your iPhone or iPad, or clear this site’s data in your browser, and everything the
+            game saved is gone. We never receive a copy, so there is nothing for us to delete on our side.
+          </p>
+        </section>
+
+        <section class="panel" aria-labelledby="tilt">
+          <h2 id="tilt">Tilt steering</h2>
+          <p>
+            If you switch on <strong>Tilt</strong>, the game reads your device’s motion sensors to steer your kart.
+            Those readings are used on the spot and are never saved or sent anywhere. Tilt stays off until you turn
+            it on.
+          </p>
+        </section>
+
+        <section class="panel" aria-labelledby="offline">
+          <h2 id="offline">Offline and on the web</h2>
+          <p>Penguin Kart works offline after the first load.</p>
+          <p>
+            If you play in a web browser, that first load comes from our web host. Like any website, it receives your
+            IP address and basic browser details so it can deliver the game’s files. The game adds nothing about you
+            to those requests.
+          </p>
+        </section>
+
+        <section class="panel" aria-labelledby="purchases">
+          <h2 id="purchases">Purchases</h2>
+          <p>There are no in-app purchases yet.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="changes">
+          <h2 id="changes">Changes to this policy</h2>
+          <p>
+            A future update may add an optional feature that turns a picture you choose into your own custom racer.
+            It will only arrive with an updated version of this policy, and it will ask for your explicit consent
+            first.
+          </p>
+          <p>Whenever this policy changes, the date at the top changes too.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="contact">
+          <h2 id="contact">Contact</h2>
+          <p>
+            Questions about privacy? Email
+            <a class="email" href="mailto:andrew@showcase-designs.com">andrew@showcase-designs.com</a>.
+          </p>
+          <p>Penguin Kart is published by Showcase Designs.</p>
+        </section>
+      </main>
+
+      <footer>
+        <nav aria-label="Penguin Kart pages">
+          <a href="/">Play Penguin Kart</a>
+          <a href="/privacy.html" aria-current="page">Privacy</a>
+          <a href="/support.html">Support</a>
+        </nav>
+      </footer>
+    </div>
+  </body>
+</html>
