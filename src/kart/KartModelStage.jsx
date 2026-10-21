@@ -39,6 +39,7 @@ import {
 import { KART_CHARACTERS, KART_NOSE_YAW } from '../game/ComebackCityThreeKartRace.jsx';
 import { KART_TRACKS } from '../game/race/tracks/index.js';
 import { createGameGltfLoader } from '../game/race/render/gltfLoader.js';
+import { collectRendererTextures, disposeTextures } from '../game/race/render/releaseTextures.js';
 import { SELECT_CHARACTER_MODELS, SELECT_KART_MODELS } from './selectModels.js';
 
 // The track's own key, read off the SHIPPED track palettes rather than
@@ -220,9 +221,14 @@ export const KartModelStage = ({ characterKey, kartKey, reducedMotion = false, t
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
+      // Before renderer.dispose(): the shared textures (three's DFG lookup,
+      // cached GLB maps) would otherwise keep this stage's renderer alive
+      // once per trip through the menu. See releaseTextures.js.
+      const rendererTextures = collectRendererTextures(renderer, scene);
       disposeTree(scene);
       shadowTexture.dispose();
       renderer.dispose();
+      disposeTextures(rendererTextures);
       // Menus mount and unmount repeatedly and browsers cap live WebGL
       // contexts (~16). Without this the race can boot into a lost context
       // after a few trips through the select screen.

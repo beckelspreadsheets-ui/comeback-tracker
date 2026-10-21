@@ -1,6 +1,38 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-10-15 EVENING — PHASE 1 DONE · next: iPhone prep (read first)
+## 2026-10-21 — iPhone groundwork done, memory leak fixed (read first)
+Same rules as below: `git pull` on `aaa-kart-ci`; this file plus
+docs/RELEASE_V1_PLAN.md are the handoff.
+- **Owner calls today:** new players start at 50cc · icon A (Seth Penguin on
+  the arctic ice) shipped in the iOS project and the web icons · JS gzip
+  budget 540 KiB · iPhone AND iPad, iOS 17.0 floor · App Store support /
+  privacy contact andrew@showcase-designs.com confirmed.
+- **Phase 2 groundwork is all in** (list with hashes in the plan): context
+  loss, audio after calls/Siri, crash marker + safe mode, perf readout in the
+  pause menu, haptics (native plugin synced), Info.plist / iPad / edge
+  gestures / launch screen / privacy manifest, self-hosted fonts, privacy +
+  support pages, store screenshot script, preview probe.
+- **Memory: quitting to the menu leaked every race.** Heap at the menu after
+  ten races went 54 → 26 MiB. Three causes, all fixed:
+  `window.__g3ParticlesDebug` / `__g2AmbientDebug` held the last race's whole
+  scene; three r184's shared DFG lookup texture (and our module textures, and
+  cached GLB maps) kept one dispose listener per renderer, so every race's
+  renderer stayed reachable → `src/game/race/render/releaseTextures.js` runs
+  at race and menu-stage teardown. Gate: `npm run test:kart:soak` (after
+  build:kart) — counts live AND retained WebGL contexts and heap growth.
+  Harness lesson: never `page.waitForSelector` in a memory test (its
+  ElementHandle pins the element); use locators.
+- **Music swap is ready, blocked on ElevenLabs.** `scripts/loop-music-bed.mjs`
+  turns a generated track into a seamless bed (finds the loop by chroma /
+  timbre / onsets, sample-accurate length, crossfaded seam, loudness matched
+  to the current beds) and prints the MUSIC_LOOP_SECONDS line. ElevenLabs
+  refuses every call with "Insufficient scope": owner must Disconnect →
+  Connect it in claude.ai Settings → Connectors (approve everything), then
+  `/mcp` → reconnect in Claude Code. Then: three beds (menu 96 bpm,
+  comeback-city 124, penguin-village 112), the trailer track replacing
+  "Vice On Ice", and a painted polish of icon A.
+
+## 2026-10-15 EVENING — PHASE 1 DONE · next: iPhone prep
 Working from another machine: `git fetch && git checkout aaa-kart-ci && git pull`.
 Claude's memory files stay on the office Mac; THIS file and
 docs/RELEASE_V1_PLAN.md are the whole handoff.

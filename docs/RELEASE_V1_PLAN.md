@@ -144,9 +144,13 @@ only the TRAILER track and gets replaced from ElevenLabs credits.
   the build (5b5da2d5, trimmed 87499060).
 - [x] 10-race soak (`npm run test:kart:soak`, after build:kart): race → Quit
   to menu → Single race on the other track → Start, ten times in one page.
-  First run: ONE live WebGL context at the menu after every race (each race's
-  context is released), JS heap after GC 45.3 → 53.6 MiB (~0.6 MiB a race
-  after warm-up) — passes the bar; the creep is being chased.
+  It found that EVERY quit race stayed in memory: the particles/ambient debug
+  hooks held the last scene, and three's shared DFG lookup texture (plus our
+  module textures and cached GLB maps) kept a dispose listener per renderer.
+  Fixed (race/render/releaseTextures.js at race + menu-stage teardown): heap
+  at the menu after ten races 54 → 26 MiB, retained WebGL contexts flat at 2,
+  heap growth 0.9 MiB over races 3-10. The gate now fails on retained
+  contexts > 2 or > 3 MiB growth.
 
 **Engineering still open (needs the Xcode licence, then the Apple account):**
 `npm run ios:sync` (node 22) → simulator + device boot, check models, meshopt

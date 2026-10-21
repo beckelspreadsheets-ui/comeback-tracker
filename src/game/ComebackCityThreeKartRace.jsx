@@ -203,6 +203,7 @@ import {
 } from './race/render/createSkyDome.js';
 import { createMidGroundBelt } from './race/render/createMidGroundBelt.js';
 import { buildRacePostChain } from './race/render/racePostChain.js';
+import { collectRendererTextures, disposeTextures } from './race/render/releaseTextures.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
 import {
   addShaderInjection,
@@ -14116,6 +14117,10 @@ export const ComebackCityThreeKartRace = ({
       window.removeEventListener('orientationchange', handleResizeSettled);
       window.visualViewport?.removeEventListener('resize', handleResizeSettled);
       resizeSettleTimers.forEach(clearTimeout);
+      // Gathered first, while the renderer still knows its per-material
+      // uniforms and before anything below detaches meshes; disposed last.
+      // Why textures at all: race/render/releaseTextures.js.
+      const rendererTextures = collectRendererTextures(engine.renderer, engine.scene);
       engine.midGroundBelt?.dispose?.();
       // The warm-up's 1x1 scratch target is created lazily and belongs to
       // nothing else, so it is freed here with the rest of the GPU objects.
@@ -14145,10 +14150,17 @@ export const ComebackCityThreeKartRace = ({
         if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
         else object.material?.dispose?.();
       });
+      disposeTextures(rendererTextures);
       if (engineRef.current === engine) engineRef.current = null;
       if (window.__comebackCityKartTrackVisualsEnabled === engine.trackVisualsEnabled) {
         delete window.__comebackCityKartTrackVisualsEnabled;
       }
+      // The two probe hooks reach this race's whole scene graph (particles ->
+      // world -> scene, ambient -> scenery). Left set, they kept a quit race
+      // alive at the menu until the next race overwrote them (heap trace,
+      // 2026-10-21). Only cleared when they are still ours.
+      if (window.__g3ParticlesDebug === particles) delete window.__g3ParticlesDebug;
+      if (window.__g2AmbientDebug === engine.ambient) delete window.__g2AmbientDebug;
     };
   }, [autoplay, characterKey, kartKey, mode, onFinish, onRestart, playerCharacter, playerKart, postChainEnabled, proofCameraMode, raceClass, reducedMotion, runId, timeTrial, trackVisualsEnabled]);
 

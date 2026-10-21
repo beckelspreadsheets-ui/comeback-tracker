@@ -73,8 +73,29 @@ try {
   page.on('pageerror', (error) => pageErrors.push(String(error).slice(0, 200)));
   await page.goto(`${baseUrl}/?raceAutoplay=1&track=comeback-city`, { waitUntil: 'networkidle' });
 
-  const sample = () =>
-    page.evaluate(async () => {
+  // Two context counts, because they catch different leaks:
+  // - live: contexts not yet lost. Browsers cap these (~16 in Chrome, fewer on
+  //   iOS); one race that forgets forceContextLoss shows up here.
+  // - retained: context OBJECTS still reachable, lost or not, counted by
+  //   prototype through the inspector. A renderer that something still
+  //   references keeps its context wrapper, so this is the direct read on
+  //   "is a quit race's renderer still alive" — it is how three's shared DFG
+  //   lookup texture was found pinning one renderer per race (2026-10-21).
+  const cdp = await context.newCDPSession(page);
+  const retainedContexts = async () => {
+    const group = 'soak-count';
+    const { result: proto } = await cdp.send('Runtime.evaluate', { expression: 'WebGL2RenderingContext.prototype', objectGroup: group });
+    const { objects } = await cdp.send('Runtime.queryObjects', { objectGroup: group, prototypeObjectId: proto.objectId });
+    const { result } = await cdp.send('Runtime.callFunctionOn', {
+      functionDeclaration: 'function () { return this.length; }',
+      objectId: objects.objectId,
+      returnByValue: true,
+    });
+    await cdp.send('Runtime.releaseObjectGroup', { objectGroup: group });
+    return result.value;
+  };
+  const sample = async () => {
+    const s = await page.evaluate(async () => {
       window.gc?.();
       await new Promise((resolve) => setTimeout(resolve, 300));
       window.gc?.();
@@ -86,6 +107,8 @@ try {
         totalContexts: refs.length,
       };
     });
+    return { ...s, retainedContexts: await retainedContexts() };
+  };
 
   // ?raceAutoplay=1 mounts race 1 straight away and lets autoplay drive every
   // race; after that each race goes through the real menu: Quit to menu, pick
@@ -93,42 +116,57 @@ try {
   // down), Start.
   const TRACKS = ['comeback-city', 'penguin-village'];
   const samples = [];
+  // Locators, never page.waitForSelector: that returns an ElementHandle, and
+  // an undisposed handle pins its element — here the pause menu's exit
+  // button, and through it the whole quit race's DOM and canvas. The first
+  // version of this test did exactly that and measured its own handles.
+  const click = (testId) => page.locator(`[data-testid="${testId}"]`).click({ timeout: 60000 });
+  const waitFor = (testId) => page.locator(`[data-testid="${testId}"]`).waitFor({ timeout: 60000 });
   for (let race = 1; race <= RACES; race += 1) {
     const track = TRACKS[(race - 1) % TRACKS.length];
     if (race > 1) {
-      await page.waitForSelector('[data-testid="race-character-start"]', { timeout: 60000 });
-      await page.click('[data-testid="race-mode-single"]');
-      await page.click(`[data-testid="race-track-${track}"]`);
+      await waitFor('race-character-start');
+      await click('race-mode-single');
+      await click(`race-track-${track}`);
       await page.evaluate(() => delete window.__comebackCityKartTelemetry);
-      await page.click('[data-testid="race-character-start"]');
+      await click('race-character-start');
     }
     await page.waitForFunction(() => window.__comebackCityKartTelemetry?.raceTime > 4, null, { timeout: 120000 });
     const raced = await page.evaluate(() => window.__comebackCityKartTelemetry?.track);
     // Quit to the menu through the pause menu, the way a player leaves.
     await page.keyboard.press('Escape');
-    await page.waitForSelector('[data-testid="race-pause-menu-exit"]', { timeout: 10000 });
-    await page.click('[data-testid="race-pause-menu-exit"]');
-    await page.waitForSelector('[data-testid="race-character-start"]', { timeout: 60000 });
+    await click('race-pause-menu-exit');
+    await waitFor('race-character-start');
     await page.waitForTimeout(800);
     const s = await sample();
     samples.push({ ...s, track: raced });
     console.log(
-      `race ${String(race).padStart(2)}  ${String(raced).padEnd(16)} heap ${s.heapMiB} MiB  live GL contexts ${s.liveContexts} (created ${s.totalContexts})`
+      `race ${String(race).padStart(2)}  ${String(raced).padEnd(16)} heap ${s.heapMiB} MiB  GL contexts live ${s.liveContexts} / retained ${s.retainedContexts} (created ${s.totalContexts})`
     );
   }
 
-  // Judge: live contexts must not accumulate (the menu stage keeps one), and
-  // the heap after race N must not keep climbing past the early races.
+  // Judge. The menu stage owns one context, and the quit race's wrapper may
+  // linger until the next collection, so 2 is the ceiling for both counts.
+  // Heap: after the leak fixes of 2026-10-21 ten races measured +1.2 MiB from
+  // race 3 to race 10 (one quit race's renderer is ~0.6 MiB, so a
+  // renderer-per-race leak shows as ~4 MiB over the same span).
   const maxLive = Math.max(...samples.map((s) => s.liveContexts));
+  const maxRetained = Math.max(...samples.map((s) => s.retainedContexts));
   const early = Math.max(...samples.slice(0, Math.min(3, samples.length)).map((s) => s.heapMiB));
   const late = samples[samples.length - 1].heapMiB;
   const growth = late - early;
-  console.log(`max live contexts ${maxLive}; heap early max ${early} MiB -> last ${late} MiB (growth ${growth.toFixed(1)} MiB)`);
+  console.log(
+    `max live contexts ${maxLive}, max retained ${maxRetained}; heap early max ${early} MiB -> last ${late} MiB (growth ${growth.toFixed(1)} MiB)`
+  );
   if (maxLive > 2) {
     failed = true;
-    console.log('FAIL WebGL contexts accumulate across races');
+    console.log('FAIL WebGL contexts stay live across races');
   }
-  if (growth > 25) {
+  if (maxRetained > 2) {
+    failed = true;
+    console.log('FAIL quit races are still reachable (WebGL context objects retained)');
+  }
+  if (samples.length >= 6 && growth > 3) {
     failed = true;
     console.log('FAIL JS heap keeps growing across races');
   }
