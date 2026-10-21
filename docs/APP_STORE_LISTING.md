@@ -122,20 +122,49 @@ Suggested order: race setup with a character on the stage, the start grid, a
 drift through Comeback City, Penguin Village, items in use. OWNER picks the
 final set.
 
+## TestFlight (Phase 3 — the fun check)
+
+Paste into App Store Connect › TestFlight once the first build is uploaded.
+External testers (the group) need Beta App Review once; internal testers
+(up to 100 people on the team) do not.
+
+**Beta App Description (4,000):**
+
+> Penguin Kart is an arcade kart racer starring a crew of penguin characters.
+> Race a neon city and an arctic village, drift for mini-turbos, throw items,
+> and chase your own ghost in Time Trial. This beta is about one thing: is it
+> fair and fun on your phone or iPad?
+
+**Feedback email:** andrew@showcase-designs.com (owner confirmed 2026-10-21)
+
+**What to Test (build 1):**
+
+> 1. Your very first race (it starts at 50cc). Where did you finish? Was
+>    anything confusing before or during it?
+> 2. Touch controls: drag to steer, flick to drift, tap to use an item. Does
+>    anything fight you or trigger by accident?
+> 3. Play ten races in a row without closing the app. Tell us if it ever
+>    reloads, freezes, goes black or loses sound.
+> 4. Take a call or use Siri mid-race, then come back: does the sound return?
+> 5. Pause › Performance shows the frame rate. If either track stutters,
+>    send a screenshot of that readout with your phone model.
+
+**Beta App Review contact:** OWNER — name, phone (the business line
+(520) 222-9941 is on the Showcase Designs site), email. Sign-in required: No.
+
 ## Still needed from the owner
 
 1. The final app name (and whether "Penguin Kart" is free on the store).
-2. The icon: today's is a generic penguin, which breaks the "every penguin is
-   an ordinal" rule. Pick an ordinal for it.
-3. Written permission from each ordinal holder whose character is in the game.
-4. Music rights for "Vice On Ice" (made with MiniMax's free demo on Hugging
-   Face, 2026-08-16). Checked 2026-10-21: the terms are unclear. Reports on
-   MiniMax's open music weights disagree (a community licence that allows
-   commercial use with visible "MiniMax" attribution and a $20M revenue cap,
-   versus CC-BY-SA or Apache claims), and nothing documents the terms for
-   outputs of the free demo Space itself. Two clean routes: confirm the licence
-   that applied to that generation and add the attribution it asks for, or
-   regenerate the track with a tool whose paid plan grants commercial rights
-   in writing.
+2. ~~The icon~~ — done 2026-10-21: pick A, Seth Penguin on the arctic ice
+   (65fee406); a painted polish of it is queued on ElevenLabs.
+3. Written permission from each ordinal holder whose character is in the game
+   (template and log: docs/LIKENESS_PERMISSION.md).
+4. Music: the in-game beds are rendered by our own script (clean). "Vice On
+   Ice" (MiniMax free demo, 2026-08-16, unclear terms) is only on the TRAILER;
+   owner chose 2026-10-21 to replace it with an ElevenLabs track, together
+   with new in-game beds — waiting on the ElevenLabs connector being
+   re-authorised. ElevenLabs markets Eleven Music as cleared for commercial
+   use on paid plans; OWNER: confirm the account's plan says so before
+   release, and keep the generation receipts.
 5. A production deploy of the kart site so the support and privacy URLs are
    live.
