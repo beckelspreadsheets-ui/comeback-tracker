@@ -93,10 +93,18 @@ const fitnessThresholdDefaults = {
 // 520 restores roughly 4% of working headroom. It does not license growth in
 // the first-paint path — if a future change spends this on eagerly-loaded
 // script, that is the thing to push back on, not the number.
+//
+// RAISED AGAIN 2026-10-21, OWNER ACK — 520 -> 540 KiB. The build sat at
+// 519.77 / 520 after the iOS hardening (context-loss recovery, the unclean-exit
+// marker, haptics, the pause-menu perf toggle), and the service worker's
+// precache list grew with the bundled fonts. The owner's call, asked directly:
+// the app ships as an iOS build that loads its JS from the phone, so this cap
+// now mainly protects the WEB download, where 20 KiB is ~4%. The same rule
+// still applies: first-paint script has to earn its bytes.
 const kartThresholdDefaults = {
   audioTotalMiB: 6.0,
   imageTotalMiB: 2.5,
-  javascriptTotalGzipKiB: 520,
+  javascriptTotalGzipKiB: 540,
   javascriptTotalMiB: 2.0,
   largestFileMiB: 3.0,
   largestJavaScriptGzipKiB: 400,
