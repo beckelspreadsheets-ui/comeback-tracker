@@ -105,10 +105,33 @@ a live website on the company's own domain plus an email on that domain, and
 the enroller must be able to bind the company; $99/yr, Apple may phone to
 verify · bundle id is `com.showcasedesigns.penguinkart` in capacitor.config.json
 (permanent once the App Store Connect record exists; display name can change)
-· icon (the current one is a generic penguin) · device floor (suggest
-iPhone-only, iOS 17+) · written likeness OK from each ordinal holder in the
+· icon (the current one is a generic penguin) · device floor: **owner chose
+iPhone AND iPad (2026-10-21)**; iOS 17.0 minimum set by Claude, changeable · written likeness OK from each ordinal holder in the
 roster · commercial terms for the music ("Vice On Ice" came from MiniMax's free
 demo) and generated assets.
+
+**Groundwork done without the Apple account (2026-10-21):**
+- [x] WebGL context loss: the race pauses with a note, skips drawing, and
+  recovers on restore; leaving a race calls forceContextLoss on its canvas
+  (every race mounts a fresh canvas). Gate: `npm run test:kart:context-loss`.
+- [x] Audio resumes after an iOS interruption (calls/Siri): 'interrupted' is
+  treated like 'suspended' while the game wants sound; taps on the pause menu
+  no longer restart audio behind it.
+- [x] Unclean-exit marker (race/sessionHealth.js): a race that dies on screen
+  puts the next one in safe mode (governor held at its floor), counted.
+- [x] The on-device performance readout (src/kart/devicePerfProbe.js, already
+  behind `?perf=1`) is now reachable inside the app: a pause-menu toggle that
+  is remembered on the device (race/perfToggle.js); it also shows the render
+  scale and SAFE MODE / crash count.
+- [x] Haptics through the native plugin via Capacitor's injected bridge (no
+  @capacitor/core in the web bundle), falling back to navigator.vibrate
+  (race/haptics.js); hits, walls, mini-turbos, the start and the finish.
+  Still needs `npm install @capacitor/haptics` + `npm run ios:sync`.
+- [x] App Store screenshot capture at the iPhone 6.9" and iPad 13" landscape
+  sizes: `node scripts/app-store-screenshots.mjs` (after build:kart).
+- [x] Review-frame capture lives in the repo now:
+  `node scripts/race-review-shots.mjs <outDir> '<variants json>'` (race-time,
+  progress and boost-hit marks; phone variants; camLab).
 
 **Engineering:** `ios:sync` (node 22) → simulator + device boot, check models,
 meshopt WASM and audio load from `capacitor://` · Info.plist/project:
