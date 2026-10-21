@@ -105,10 +105,12 @@ a live website on the company's own domain plus an email on that domain, and
 the enroller must be able to bind the company; $99/yr, Apple may phone to
 verify · bundle id is `com.showcasedesigns.penguinkart` in capacitor.config.json
 (permanent once the App Store Connect record exists; display name can change)
-· icon (the current one is a generic penguin) · device floor: **owner chose
+· icon: **owner picked A, Seth Penguin on the arctic ice (2026-10-21, shipped
+65fee406)**; a painted polish of it waits on ElevenLabs · device floor: **owner chose
 iPhone AND iPad (2026-10-21)**; iOS 17.0 minimum set by Claude, changeable · written likeness OK from each ordinal holder in the
-roster · commercial terms for the music ("Vice On Ice" came from MiniMax's free
-demo) and generated assets.
+roster (docs/LIKENESS_PERMISSION.md) · music: the in-game beds are rendered by
+our own script (clean); "Vice On Ice" (MiniMax free demo, unclear terms) is
+only the TRAILER track and gets replaced from ElevenLabs credits.
 
 **Groundwork done without the Apple account (2026-10-21):**
 - [x] WebGL context loss: the race pauses with a note, skips drawing, and
@@ -126,22 +128,30 @@ demo) and generated assets.
 - [x] Haptics through the native plugin via Capacitor's injected bridge (no
   @capacitor/core in the web bundle), falling back to navigator.vibrate
   (race/haptics.js); hits, walls, mini-turbos, the start and the finish.
-  Still needs `npm install @capacitor/haptics` + `npm run ios:sync`.
+  Native plugin installed + synced (d9290a5f, @capacitor/haptics 8.0.2).
 - [x] App Store screenshot capture at the iPhone 6.9" and iPad 13" landscape
   sizes: `node scripts/app-store-screenshots.mjs` (after build:kart).
 - [x] Review-frame capture lives in the repo now:
   `node scripts/race-review-shots.mjs <outDir> '<variants json>'` (race-time,
   progress and boost-hit marks; phone variants; camLab).
 
-**Engineering:** `ios:sync` (node 22) → simulator + device boot, check models,
-meshopt WASM and audio load from `capacitor://` · Info.plist/project:
-`ITSAppUsesNonExemptEncryption=false`, arm64 only, iPhone-only family, build
-number · defer screen-edge gestures + hide home indicator (steering zone
-reaches the bottom edge) · WebGL teardown (`forceContextLoss`, free textures)
-+ context-lost handling (new canvas per race) · self-host the Google Fonts ·
-`@capacitor/haptics` (navigator.vibrate is a no-op on iOS) · resume audio from
-`interrupted` (calls/Siri) · reachable perf overlay · unclean-exit marker ·
-dark launch screen.
+- [x] Native project (3b40172b): Info.plist `ITSAppUsesNonExemptEncryption`
+  false + arm64 only, iOS 17.0, iPhone + iPad family, every screen edge
+  deferred to the game (MainViewController.swift — the home indicator is left
+  visible on purpose, see the comment there), dark launch screen,
+  PrivacyInfo.xcprivacy.
+- [x] Fonts self-hosted, no Google requests; privacy + support pages ship in
+  the build (5b5da2d5, trimmed 87499060).
+- [x] 10-race soak (`npm run test:kart:soak`, after build:kart): race → Quit
+  to menu → Single race on the other track → Start, ten times in one page.
+  First run: ONE live WebGL context at the menu after every race (each race's
+  context is released), JS heap after GC 45.3 → 53.6 MiB (~0.6 MiB a race
+  after warm-up) — passes the bar; the creep is being chased.
+
+**Engineering still open (needs the Xcode licence, then the Apple account):**
+`npm run ios:sync` (node 22) → simulator + device boot, check models, meshopt
+WASM and audio load from `capacitor://` · build number at archive time ·
+TestFlight upload.
 
 ## Phase 3 — fun check with the group (TestFlight)
 

@@ -45,6 +45,7 @@
     "test:minimap": "node scripts/test-minimap.mjs",
     "test:race": "node scripts/race-content-playtest.mjs",
     "test:kart:context-loss": "node scripts/test-kart-context-loss.mjs",
+    "test:kart:soak": "node scripts/test-kart-race-soak.mjs",
     "test:kart:regressions": "node scripts/test-kart-local-store.mjs && node scripts/test-kart-replay-storage.mjs && node scripts/test-kart-gamepad-input.mjs && node scripts/test-kart-session-health.mjs",
     "test:audio:kart": "node scripts/kart-audio-smoke-test.mjs",
     "test:audio:samples": "node scripts/test-kart-audio-samples.mjs",
