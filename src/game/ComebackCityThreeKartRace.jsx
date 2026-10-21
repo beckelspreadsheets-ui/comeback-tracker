@@ -10256,6 +10256,26 @@ export const ComebackCityThreeKartRace = ({
   const finishReportedRef = useRef(false);
   const [snapshot, setSnapshot] = useState(createInitialRace);
   const [webglError, setWebglError] = useState(null);
+  // iOS (WKWebView) drops WebGL contexts under memory pressure and after long
+  // backgrounding. The race pauses and says so instead of freezing black;
+  // three re-initialises when the browser restores the context.
+  const [contextLost, setContextLost] = useState(false);
+  // The last race's renderer, for the unmount-only release below.
+  const rendererRef = useRef(null);
+  useEffect(
+    () => () => {
+      // Hand the GPU context back the moment the race leaves the screen,
+      // rather than whenever the canvas is garbage-collected. Phones allow a
+      // handful of live contexts and iOS kills the web process when one race's
+      // textures linger into the next, which is the reload the "0 reloads in
+      // 10 races" bar is about. Unmount only: every race mounts a fresh canvas
+      // (KartApp keys it on the race nonce), while the main effect below can
+      // re-run on the SAME canvas, where a forced loss would leave it black.
+      rendererRef.current?.forceContextLoss?.();
+      rendererRef.current = null;
+    },
+    []
+  );
   // K7 chip revision, owner pick B (2026-07-12): a new pickup pops the item's
   // icon oversized for ~0.6s (MK-style "you got X"), then the normal chip/
   // button display carries it. Purely cosmetic — input and item semantics
@@ -10555,7 +10575,27 @@ export const ComebackCityThreeKartRace = ({
     if (!engine) return undefined;
     if (typeof window !== 'undefined') window.__comebackCityKartTrackVisualsEnabled = engine.trackVisualsEnabled;
     engineRef.current = engine;
+    rendererRef.current = engine.renderer;
     finishReportedRef.current = false;
+    engine.contextLost = false;
+    const handleContextLost = (event) => {
+      // preventDefault is how a page asks the browser to RESTORE the context.
+      event.preventDefault();
+      engine.contextLost = true;
+      setContextLost(true);
+      if (!finishReportedRef.current) {
+        pausedRef.current = true;
+        setPausedState(true);
+      }
+    };
+    const handleContextRestored = () => {
+      engine.contextLost = false;
+      setContextLost(false);
+      // Buffers come back at their old size; re-fit before the next draw.
+      handleResize();
+    };
+    canvas.addEventListener('webglcontextlost', handleContextLost);
+    canvas.addEventListener('webglcontextrestored', handleContextRestored);
     // G3 particles/decals: pooled up front (4 draw calls total), one-shot
     // bursts fed by the SAME cuesForTransition the audio observes. The
     // speed-lines mesh is camera-space, so the camera must join the scene
@@ -13896,7 +13936,9 @@ export const ComebackCityThreeKartRace = ({
       engine.renderer.info.autoReset = false;
       engine.renderer.info.reset();
       // pmndrs composer takes the frame delta (seconds) for time-based effects.
-      if (engine.postChainEnabled) engine.composer.render(dt);
+      if (engine.contextLost) {
+        // Nothing to draw into until the browser restores the context.
+      } else if (engine.postChainEnabled) engine.composer.render(dt);
       else engine.composer.render();
       frameWorkSamples.push(performance.now() - now);
       while (frameWorkSamples.length > 40) frameWorkSamples.shift();
@@ -14043,6 +14085,8 @@ export const ComebackCityThreeKartRace = ({
     return () => {
       disposed = true;
       window.cancelAnimationFrame(raf);
+      canvas.removeEventListener('webglcontextlost', handleContextLost);
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', handleResizeSettled);
@@ -14587,6 +14631,11 @@ export const ComebackCityThreeKartRace = ({
         <div className="three-kart-race__pause" data-testid="race-pause-menu" role="dialog" aria-label="Paused">
           <div className="three-kart-race__pause-panel">
             <strong className="three-kart-race__pause-title">Paused</strong>
+            {contextLost ? (
+              <p className="three-kart-race__pause-note" data-testid="race-context-lost">
+                Your device paused the 3D view to save memory. Resume when the track is back, or restart the race.
+              </p>
+            ) : null}
             <button type="button" onClick={() => setPaused(false)} data-testid="race-pause-resume">
               <Play size={16} />
               Resume

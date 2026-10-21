@@ -360,10 +360,18 @@ export const createKartAudio = ({
     return ctx;
   };
 
+  // What the GAME wants: false while paused or backgrounded. iOS can also put
+  // the context into 'interrupted' (a phone call, Siri, another app's audio)
+  // and never brings it back on its own, so resume() and the gesture unlock
+  // treat 'interrupted' like 'suspended' — but only while the game wants
+  // sound, so a tap on the pause menu no longer restarts audio behind it.
+  let wantRunning = true;
   const resume = () => {
-    if (ctx?.state === 'suspended') ctx.resume?.().catch?.(() => {});
+    wantRunning = true;
+    if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) ctx.resume?.().catch?.(() => {});
   };
   const suspend = () => {
+    wantRunning = false;
     if (ctx?.state === 'running') ctx.suspend?.().catch?.(() => {});
   };
 
@@ -372,7 +380,7 @@ export const createKartAudio = ({
     if (!audioWindow || detachGesture) return;
     const unlock = () => {
       ensureContext();
-      resume();
+      if (wantRunning) resume();
     };
     const options = { capture: true, passive: true };
     ['pointerdown', 'keydown', 'touchstart'].forEach((type) =>

@@ -1260,6 +1260,17 @@
   text-transform: uppercase;
 }
 
+/* Shown when the device dropped the 3D view (WebGL context lost). */
+.three-kart-race__pause-note {
+  color: var(--tkr-text);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 300px;
+  opacity: 0.8;
+  text-align: center;
+}
+
 .three-kart-race__pause-panel button {
   align-items: center;
   background: rgba(248, 251, 255, 0.08);
