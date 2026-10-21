@@ -9,7 +9,11 @@ export const RACE_CLASSES = Object.freeze([
   Object.freeze({ catchUp: 1, key: '150cc', name: '150cc', rivalPace: 1, tagline: 'The crew at full tilt' }),
 ]);
 
-export const DEFAULT_RACE_CLASS = '100cc';
+// Owner call 2026-10-21: a brand-new player's first race is 50cc, so a
+// first-timer (and an App Store reviewer) can finish near the front. KartApp
+// saves the class the first time the menu loads, so anyone who has already
+// played keeps what they had, and the picker remembers every later choice.
+export const DEFAULT_RACE_CLASS = '50cc';
 export const QA_RACE_CLASS = '150cc';
 
 export const raceClassByKey = (key) => RACE_CLASSES.find((entry) => entry.key === key) || RACE_CLASSES[2];
