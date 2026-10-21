@@ -1260,6 +1260,15 @@
   text-transform: uppercase;
 }
 
+/* Pause-menu toggle for the performance overlay: quieter than the big actions. */
+.three-kart-race__pause-panel button.three-kart-race__pause-minor {
+  background: transparent;
+  border-color: rgba(248, 251, 255, 0.12);
+  font-size: 11px;
+  min-height: 44px;
+  opacity: 0.75;
+}
+
 /* Shown when the device dropped the 3D view (WebGL context lost). */
 .three-kart-race__pause-note {
   color: var(--tkr-text);

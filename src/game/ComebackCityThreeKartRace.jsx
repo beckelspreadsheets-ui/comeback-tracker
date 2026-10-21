@@ -186,6 +186,9 @@ import {
   roadEdgeSection,
 } from './race/render/buildRoadEdgeProfile.js';
 import { buildBarrierKit } from './race/render/barrierKit.js';
+import { readPerfProbePref, setPerfProbe } from './race/perfToggle.js';
+import { hapticForCue, hapticImpact } from './race/haptics.js';
+import { beginRaceSession, resumeRaceSession, suspendRaceSession } from './race/sessionHealth.js';
 import {
   GROUND_BASE_Y,
   createGroundTerrain,
@@ -10260,6 +10263,9 @@ export const ComebackCityThreeKartRace = ({
   // backgrounding. The race pauses and says so instead of freezing black;
   // three re-initialises when the browser restores the context.
   const [contextLost, setContextLost] = useState(false);
+  // On-device performance readout (src/kart/devicePerfProbe.js): the pause
+  // menu toggles it, since the iOS app has no address bar for ?perf=1.
+  const [perfOverlay, setPerfOverlay] = useState(readPerfProbePref);
   // The last race's renderer, for the unmount-only release below.
   const rendererRef = useRef(null);
   useEffect(
@@ -10596,6 +10602,15 @@ export const ComebackCityThreeKartRace = ({
     };
     canvas.addEventListener('webglcontextlost', handleContextLost);
     canvas.addEventListener('webglcontextrestored', handleContextRestored);
+    // Unclean-exit marker (race/sessionHealth.js): a marker left by a race
+    // that died on screen puts this race in safe mode (no governor climb).
+    engine.session = beginRaceSession();
+    if (typeof window !== 'undefined') window.__comebackCityKartSession = engine.session;
+    const handleSessionVisibility = () => {
+      if (document.visibilityState === 'hidden') suspendRaceSession();
+      else resumeRaceSession();
+    };
+    document.addEventListener('visibilitychange', handleSessionVisibility);
     // G3 particles/decals: pooled up front (4 draw calls total), one-shot
     // bursts fed by the SAME cuesForTransition the audio observes. The
     // speed-lines mesh is camera-space, so the camera must join the scene
@@ -13276,9 +13291,12 @@ export const ComebackCityThreeKartRace = ({
           yaw: engine.playerModel.group.rotation.y,
         };
         const particleSnapshot = snapshotRaceForAudio(race, driftState);
-        cuesForTransition(particlePrevSnapshot, particleSnapshot).forEach((cue) =>
-          particles.onCue(cue, particleContext)
-        );
+        cuesForTransition(particlePrevSnapshot, particleSnapshot).forEach((cue) => {
+          particles.onCue(cue, particleContext);
+          // Phones feel the race: hits, walls, mini-turbos, the start and the
+          // finish (race/haptics.js). Never during autoplay/capture runs.
+          if (touchControls && !autoplay) hapticForCue(cue);
+        });
         particlePrevSnapshot = particleSnapshot;
         particles.update(particleContext);
       }
@@ -13951,7 +13969,10 @@ export const ComebackCityThreeKartRace = ({
           floor: RACE_RENDER_SCALE[renderScaleTier(viewport)],
           frameElapsedMs: frameElapsedSamples[frameElapsedSamples.length - 1],
           frameWorkMs: frameWorkSamples[frameWorkSamples.length - 1],
-          max: RACE_RENDER_SCALE_MAX[renderScaleTier(viewport)],
+          // Safe mode (the last race died on screen): hold the floor.
+          max: engine.session?.safeMode
+            ? RACE_RENDER_SCALE[renderScaleTier(viewport)]
+            : RACE_RENDER_SCALE_MAX[renderScaleTier(viewport)],
           nowMs: now,
         });
         if (stepped) {
@@ -14087,6 +14108,8 @@ export const ComebackCityThreeKartRace = ({
       window.cancelAnimationFrame(raf);
       canvas.removeEventListener('webglcontextlost', handleContextLost);
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);
+      document.removeEventListener('visibilitychange', handleSessionVisibility);
+      suspendRaceSession();
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', handleResizeSettled);
@@ -14151,7 +14174,7 @@ export const ComebackCityThreeKartRace = ({
   const releaseTouch = (key) => () => setTouch(key, false);
   const itemTouchDown = (event) => {
     capturePointer(event);
-    if (snapshot.heldItem) navigator.vibrate?.(30);
+    if (snapshot.heldItem) hapticImpact('LIGHT');
     setTouch('item', true);
   };
   // Tour-style one-thumb grammar (owner 2026-07-12: "mario kart does that
@@ -14228,7 +14251,7 @@ export const ComebackCityThreeKartRace = ({
     if (joystickPuckRef.current) joystickPuckRef.current.style.transform = '';
     if (steerIndicatorRef.current) steerIndicatorRef.current.style.display = 'none';
     if (wasTap && event.type !== 'pointercancel') {
-      if (snapshot.heldItem) navigator.vibrate?.(30);
+      if (snapshot.heldItem) hapticImpact('LIGHT');
       setTouch('item', true);
       window.setTimeout(() => setTouch('item', false), 90);
     }
@@ -14652,6 +14675,18 @@ export const ComebackCityThreeKartRace = ({
                 Quit to menu
               </button>
             ) : null}
+            <button
+              type="button"
+              className="three-kart-race__pause-minor"
+              data-testid="race-pause-perf-toggle"
+              onClick={() => {
+                const next = !perfOverlay;
+                setPerfOverlay(next);
+                setPerfProbe(next, { remember: true });
+              }}
+            >
+              {perfOverlay ? 'Hide performance stats' : 'Show performance stats'}
+            </button>
           </div>
         </div>
       ) : null}

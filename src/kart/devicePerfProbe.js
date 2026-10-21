@@ -28,7 +28,16 @@ const OUTLIER_MS = 250;
 // A 60Hz frame is 16.7ms, so anything past 20 dropped a beat a player can see.
 const SPIKE_MS = 20;
 
+// One probe per page. mountDevicePerfProbe returns its own dispose so the
+// pause-menu toggle (race/perfToggle.js) can switch it off again; mounting
+// twice just hands back the live one's dispose.
+let activeProbe = null;
+
+export const unmountDevicePerfProbe = () => activeProbe?.dispose();
+
 export const mountDevicePerfProbe = () => {
+  if (activeProbe) return activeProbe.dispose;
+  let running = true;
   const ring = new Float64Array(WINDOW);
   const sorted = new Float64Array(WINDOW);
   let count = 0;
@@ -49,7 +58,7 @@ export const mountDevicePerfProbe = () => {
       head = (head + 1) % WINDOW;
       if (count < WINDOW) count += 1;
     }
-    requestAnimationFrame(sample);
+    if (running) requestAnimationFrame(sample);
   };
   requestAnimationFrame(sample);
 
@@ -119,6 +128,9 @@ export const mountDevicePerfProbe = () => {
     const buffer = canvas ? `${canvas.width}x${canvas.height}` : '—';
     const stats = telemetry?.rendererStats || {};
     const work = telemetry?.frameWorkMs;
+    // Unclean-exit marker (race/sessionHealth.js): safe mode means the last
+    // race died on screen and the render governor is held at its floor.
+    const session = window.__comebackCityKartSession;
     const ms = (value) => (Number.isFinite(value) ? value.toFixed(1) : '—');
     panel.textContent = [
       `buffer ${buffer}  dpr ${window.devicePixelRatio}`,
@@ -134,12 +146,26 @@ export const mountDevicePerfProbe = () => {
             stats.programs ?? '—'
           }`
         : 'waiting for the race…',
+      telemetry ? `render scale ${Number.isFinite(telemetry.renderScale) ? telemetry.renderScale.toFixed(2) : '—'}` : '',
+      session?.safeMode
+        ? `SAFE MODE — last race crashed (${session.uncleanExits} so far)`
+        : session?.uncleanExits
+          ? `crashes so far ${session.uncleanExits}`
+          : '',
     ]
       .filter(Boolean)
       .join('\n');
   };
 
   // 4Hz. Sampling every frame is free; laying out text is not.
-  setInterval(paint, 250);
+  const paintTimer = setInterval(paint, 250);
   paint();
+  const dispose = () => {
+    running = false;
+    clearInterval(paintTimer);
+    panel.remove();
+    activeProbe = null;
+  };
+  activeProbe = { dispose };
+  return dispose;
 };
