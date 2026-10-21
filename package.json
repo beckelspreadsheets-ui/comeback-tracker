@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Personal training tracker PWA \u2014 The Comeback: 181 \u2192 238 lbs",
+  "description": "Personal training tracker PWA — The Comeback: 181 → 238 lbs",
   "scripts": {
     "dev": "vite",
     "dev:kart": "vite --config vite.config.kart.js",
@@ -79,6 +79,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",
+    "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.5.2",
     "@zxing/browser": "^0.1.5",
     "lucide-react": "^0.400.0",
