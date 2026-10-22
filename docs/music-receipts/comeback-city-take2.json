@@ -1,0 +1,13 @@
+{
+  "bytes": 2401219,
+  "durationS": 100.048958,
+  "format": "mp3_44100_192",
+  "generatedAt": "2026-10-22T18:27:24.443Z",
+  "model": "music_v2_5",
+  "request": {
+    "music_length_ms": 100000,
+    "prompt": "Instrumental driving outrun synthwave for an arcade kart race through a neon Miami city at sunset. 124 BPM, A minor. Four-on-the-floor kick, gated snare, pulsing analog bass, a bright saw-lead hook, shimmering arpeggios. High energy that stays constant the whole way so it can loop under a race. No intro, no breakdown, no ending, no fade-out, no vocals."
+  },
+  "seconds": 10.6,
+  "songId": "gNNDaT89kySVSxHM1peL"
+}

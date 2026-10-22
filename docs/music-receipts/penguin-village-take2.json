@@ -1,0 +1,13 @@
+{
+  "bytes": 2401219,
+  "durationS": 100.048958,
+  "format": "mp3_44100_192",
+  "generatedAt": "2026-10-22T18:28:08.565Z",
+  "model": "music_v2_5",
+  "request": {
+    "music_length_ms": 100000,
+    "prompt": "Instrumental arctic synth-pop for an arcade kart race through a snowy penguin village at sunset. 112 BPM, B minor. Glassy bells and glockenspiel, crystalline plucks, airy pads, bouncy half-time drums with crisp hi-hats. Playful and cool, constant energy so it can loop under a race. No intro, no ending, no fade-out, no vocals."
+  },
+  "seconds": 11,
+  "songId": "n0pC9twsSXN9l9AzsIb0"
+}

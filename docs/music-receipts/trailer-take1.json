@@ -1,0 +1,12 @@
+{
+  "bytes": 1321004,
+  "durationS": 55.04,
+  "format": "mp3_44100_192",
+  "generatedAt": "2026-10-22T18:28:37.423Z",
+  "model": "music_v2_5",
+  "request": {
+    "composition_plan": "scripts/elevenlabs-plans/trailer-v25.json"
+  },
+  "seconds": 6.1,
+  "songId": "oqwYhcro3wa5sMy9SgGl"
+}

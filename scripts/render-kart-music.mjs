@@ -41,7 +41,13 @@ import { fileURLToPath } from 'node:url';
 
 const SR = 44100;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const outDir = path.join(root, 'src', 'assets', 'game', 'audio', 'music');
+// Since 2026-10-22 the shipped beds are ElevenLabs takes (scripts/
+// elevenlabs-music.mjs + loop-music-bed.mjs). This script now writes to tmp/
+// unless --install is passed, so re-running it can't silently put the old
+// self-rendered beds back over them.
+const outDir = process.argv.includes('--install')
+  ? path.join(root, 'src', 'assets', 'game', 'audio', 'music')
+  : path.join(root, 'tmp', 'kart-music', 'rendered');
 const wavDir = path.join(root, 'tmp', 'kart-music');
 
 const mulberry32 = (seed) => () => {

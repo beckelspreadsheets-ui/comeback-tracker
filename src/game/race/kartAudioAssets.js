@@ -54,9 +54,12 @@ const musicModules = import.meta.glob('../../assets/game/audio/music/*.{mp3,m4a,
 //
 // `gain` trims a bed that mixes hotter or quieter than the others.
 export const MUSIC_LOOP_SECONDS = {
-  'comeback-city': 61.935484,
-  menu: 80,
-  'penguin-village': 68.571429,
+  // ElevenLabs Music beds (2026-10-22), cut by scripts/loop-music-bed.mjs:
+  // the loop length is measured off the take (sample-accurate), not bar math,
+  // because a generated track drifts a few samples from its nominal tempo.
+  'comeback-city': 61.93644,
+  menu: 60.000748,
+  'penguin-village': 68.571474,
 };
 
 // The engine loops are WAVs on purpose — see scripts/render-kart-engine.mjs.

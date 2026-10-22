@@ -1,0 +1,13 @@
+{
+  "bytes": 2520964,
+  "durationS": 105.038333,
+  "format": "mp3_44100_192",
+  "generatedAt": "2026-10-22T18:27:46.956Z",
+  "model": "music_v2_5",
+  "request": {
+    "music_length_ms": 105000,
+    "prompt": "Instrumental chill synthwave groove for a racing game's menu screen. 96 BPM, A minor. Warm analog pads, a soft arpeggiated synth, round side-chained bass, light steady drums. Neon-dusk Miami mood, relaxed and inviting, the same energy from start to finish so it can loop. No intro, no build-up, no breakdown, no ending, no fade-out, no vocals."
+  },
+  "seconds": 10.4,
+  "songId": "Byk6ExO8VyLQsothULCA"
+}
