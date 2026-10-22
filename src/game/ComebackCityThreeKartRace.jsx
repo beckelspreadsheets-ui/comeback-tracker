@@ -206,6 +206,7 @@ import {
 import { createMidGroundBelt } from './race/render/createMidGroundBelt.js';
 import { buildRacePostChain } from './race/render/racePostChain.js';
 import { collectRendererTextures, disposeTextures } from './race/render/releaseTextures.js';
+import { applyBlendFade, prewarmBlendFade, rivalFadeVariant } from './race/render/rivalFade.js';
 import { createGameGltfLoader } from './race/render/gltfLoader.js';
 import {
   addShaderInjection,
@@ -1966,7 +1967,8 @@ const createGroundedKartModel = ({
     bodyMeshes.length = 0;
     [bodyGroup, driverMount].forEach((mount) =>
       mount.traverse((node) => {
-        if (node.isMesh && node.material) bodyMeshes.push(node);
+        // rivalFade.js's depth twins are children of these meshes; never fade them.
+        if (node.isMesh && node.material && !node.userData.isFadeTwin) bodyMeshes.push(node);
       })
     );
   };
@@ -10889,6 +10891,13 @@ export const ComebackCityThreeKartRace = ({
           // variant compile out of the race itself.
           // The time-trial replay ghost keeps its blended, see-through look.
           if (rival.replayGhost) return;
+          // Blended fade over a depth pre-pass (race/render/rivalFade.js) unless
+          // ?rivalFade=dither asks for the old screen-door below.
+          if (rivalFadeVariant() === 'blend') {
+            rival.model.fadeMode = 'blend';
+            rival.model.proximity = -1;
+            return;
+          }
           rival.model.bodyMeshes.forEach((mesh) => {
             if (!mesh.material || mesh.material.alphaHash) return;
             mesh.material.alphaHash = true;
@@ -11439,9 +11448,13 @@ export const ComebackCityThreeKartRace = ({
         // key are parented to the scene, and compile() keys its programs on the
         // lights it can see. Warming against the world group would link a set of
         // no-light programs the race never renders and leave the real ones cold.
+        // Blend-fade rivals: link their transparent program variant too, so
+        // the first fade mid-race is not a shader compile.
+        const restoreFadeVariants = prewarmBlendFade((engine.rivalModels || []).map((rival) => rival.model));
         try {
           engine.renderer.compile(engine.scene, engine.camera);
         } finally {
+          restoreFadeVariants();
           engine.renderer.setRenderTarget(previousTarget);
         }
         engine.scene.traverse((node) => {
@@ -13174,7 +13187,10 @@ export const ComebackCityThreeKartRace = ({
         if (proximity !== rival.model.proximity) {
           rival.model.proximity = proximity;
           const ghosted = proximity < 1;
-          rival.model.bodyMeshes.forEach((mesh) => {
+          if (rival.model.fadeMode === 'blend') {
+            applyBlendFade(rival.model, proximity);
+            if (rivalsCastShadows) rival.model.bodyMeshes.forEach((mesh) => (mesh.castShadow = proximity > 0.55));
+          } else rival.model.bodyMeshes.forEach((mesh) => {
             if (mesh.material.alphaHash) {
               // Dithered (screen-door) fade: stays in the opaque pass and keeps
               // writing depth, so there is no sorting to get wrong — the
