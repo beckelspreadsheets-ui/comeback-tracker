@@ -21,18 +21,20 @@ Character limits are Apple's.
 
 ## Promotional text (170)
 
-> Race a crew of penguins through a neon city and an arctic village. Drift for
-> mini-turbos, throw snowballs and sardines, and chase your own ghost.
+> Race a crew of penguins through a neon city, an arctic village and a
+> mountain pass under the aurora. Drift, boost, and earn ₿ for new paint.
 
-(145 characters. Can be changed any time without a new review.)
+(140 characters. Can be changed any time without a new review.)
 
 ## Description (4,000)
 
 > Penguin Kart is an arcade kart racer built for one thumb.
 >
-> Pick a racer and a kart, then take on two big tracks: Comeback City, a
-> neon-lit sunset city of skyline towers and viaducts, and Penguin Village, an
-> arctic run of ice bridges, frozen rivers and snowy hills.
+> Pick a racer and a kart, then take on three big tracks: Comeback City, a
+> neon-lit sunset city of skyline towers and viaducts; Penguin Village, an
+> arctic run of ice bridges, frozen rivers and snowy hills; and Satoshi
+> Summit, a mountain pass at dusk under the aurora, with switchbacks, a
+> beacon at the top and a jump across a glowing crevasse.
 >
 > DRIFT AND BOOST
 > Flick into a corner to drift. Your sparks charge blue, gold, then purple.
@@ -48,7 +50,13 @@ Character limits are Apple's.
 > • Grand Prix: race the whole cup for points and a trophy
 > • Single Race: one track, your pick
 > • Time Trial: race the clock and your own ghost
+> • Mirror Mode: win a Grand Prix to race every track flipped
 > • Three speed classes: 50cc, 100cc and 150cc
+>
+> EARN AND CUSTOMIZE
+> Finish races to earn ₿ coins and spend them on new paint for your kart.
+> First races come with quick tips, so new players learn to drift and use
+> items as they go.
 >
 > CONTROLS YOUR WAY
 > Drag to steer, flick to drift, tap to throw, or use the big on-screen
@@ -61,9 +69,9 @@ Character limits are Apple's.
 
 ## Keywords (100)
 
-`kart,racing,racer,drift,arcade,penguin,go kart,cart,race,offline,neon,arctic,time trial,cup`
+`kart,racing,racer,drift,arcade,penguin,go kart,cart,race,offline,neon,arctic,time trial,cup,mirror`
 
-(91 characters, comma separated with no spaces after commas. Apple ignores
+(98 characters, comma separated with no spaces after commas. Apple ignores
 words already in the name.)
 
 ## URLs
