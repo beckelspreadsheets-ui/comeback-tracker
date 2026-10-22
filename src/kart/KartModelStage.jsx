@@ -41,6 +41,7 @@ import { KART_TRACKS } from '../game/race/tracks/index.js';
 import { createGameGltfLoader } from '../game/race/render/gltfLoader.js';
 import { collectRendererTextures, disposeTextures } from '../game/race/render/releaseTextures.js';
 import { SELECT_CHARACTER_MODELS, SELECT_KART_MODELS } from './selectModels.js';
+import { applyStagePaint, createStagePaintUniform, setStagePaint } from './stagePaint.js';
 
 // The track's own key, read off the SHIPPED track palettes rather than
 // raceSceneTheme.js — that module is marked LEGACY and the monolith imports
@@ -116,10 +117,16 @@ const disposeTree = (root) => {
   });
 };
 
-export const KartModelStage = ({ characterKey, kartKey, reducedMotion = false, trackKey }) => {
+// `paint`: the race/progress.js palette entry to preview on the kart body —
+// the equipped paint, or a locked one the player is trying on — or null for
+// Factory (the GLB as authored).
+export const KartModelStage = ({ characterKey, kartKey, paint = null, reducedMotion = false, trackKey }) => {
   const hostRef = useRef(null);
   const stageRef = useRef(null);
   const [failed, setFailed] = useState(false);
+  // Read at mount too, so a stage rebuilt for reducedMotion keeps the paint.
+  const paintRef = useRef(paint);
+  paintRef.current = paint;
 
   // ── mount: renderer, camera, lights, loop ───────────────────────────────
   useEffect(() => {
@@ -171,7 +178,9 @@ export const KartModelStage = ({ characterKey, kartKey, reducedMotion = false, t
     shadow.position.y = 0.002;
     scene.add(shadow);
 
-    const stage = { camera, key, models: {}, popAt: 0, renderer, rim, scene, shadow, shadowTexture, turntable };
+    const paintUniform = createStagePaintUniform();
+    setStagePaint(paintUniform, paintRef.current);
+    const stage = { camera, key, models: {}, paintUniform, popAt: 0, renderer, rim, scene, shadow, shadowTexture, turntable };
     stageRef.current = stage;
 
     const resize = () => {
@@ -212,6 +221,7 @@ export const KartModelStage = ({ characterKey, kartKey, reducedMotion = false, t
           characterLoaded: Boolean(stage.models.character),
           frames: (window.__comebackCityKartSelectStage?.frames || 0) + 1,
           kartLoaded: Boolean(stage.models.kart),
+          paintAmount: stage.paintUniform.value.w,
         };
       }
       raf = requestAnimationFrame(tick);
@@ -297,6 +307,7 @@ export const KartModelStage = ({ characterKey, kartKey, reducedMotion = false, t
       if (kartScene) {
         kartScene.rotation.y = KART_NOSE_YAW[kartKey] ?? -Math.PI / 2;
         groundInto(kartScene, KART_STAGE_HEIGHT);
+        applyStagePaint(kartScene, stage.paintUniform, { kenney: kartKey === 'kenney' });
         stage.turntable.add(kartScene);
         stage.models.kart = kartScene;
       }
@@ -322,6 +333,18 @@ export const KartModelStage = ({ characterKey, kartKey, reducedMotion = false, t
       cancelled = true;
     };
   }, [characterKey, kartKey]);
+
+  // ── paint change: one uniform write, plus the selection pop ─────────────
+  const paintTint = paint?.tint || null;
+  const paintAmount = paint?.amount ?? 0;
+  const shownPaintRef = useRef(paintTint);
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    setStagePaint(stage.paintUniform, paintTint ? { amount: paintAmount, tint: paintTint } : null);
+    if (shownPaintRef.current !== paintTint && stage.models.kart) stage.popAt = performance.now();
+    shownPaintRef.current = paintTint;
+  }, [paintAmount, paintTint]);
 
   return (
     <div
