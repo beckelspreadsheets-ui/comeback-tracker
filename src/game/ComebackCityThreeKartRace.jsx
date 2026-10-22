@@ -190,6 +190,15 @@ import {
 import { buildBarrierKit } from './race/render/barrierKit.js';
 import { readPerfProbePref, setPerfProbe } from './race/perfToggle.js';
 import { hapticForCue, hapticImpact } from './race/haptics.js';
+import { createRaceJuice } from './race/juice.js';
+import {
+  FINISH_BANNER_MS,
+  FINISH_WARM_MS,
+  FinishBanner,
+  placeTier,
+  ResultsTime,
+  splitOrdinal,
+} from './race/raceResultsJuice.jsx';
 import { beginRaceSession, resumeRaceSession, suspendRaceSession } from './race/sessionHealth.js';
 import {
   GROUND_BASE_Y,
@@ -10436,6 +10445,35 @@ export const ComebackCityThreeKartRace = ({
   // null when there is no gap worth showing (see formatGap), which is also the
   // signal the position plate uses to omit the element entirely.
   const gapLabel = formatGap(snapshot.gap);
+  // ── Juice pass: the flag moment ────────────────────────────────────────
+  // 'banner' holds the screen for the place banner and the confetti, 'warm'
+  // lets the still-invisible panel paint under it, then 'results' reveals the
+  // panel. The panel is MOUNTED from the flag either way (proof scripts assert
+  // it the instant telemetry says finished); the stage only decides whether it
+  // is painted and visible yet. Reduced motion skips straight to the results.
+  // impactRef is the edge-flash layer race/juice.js animates, and hitMarkerRef
+  // the HIT! confirmation it pops when the player lands one.
+  const impactRef = useRef(null);
+  const hitMarkerRef = useRef(null);
+  const [finishStage, setFinishStage] = useState(null);
+  useEffect(() => {
+    if (!snapshot.finished) {
+      setFinishStage(null);
+      return undefined;
+    }
+    if (reducedMotion) {
+      setFinishStage('results');
+      return undefined;
+    }
+    setFinishStage('banner');
+    const warm = setTimeout(() => setFinishStage('warm'), FINISH_WARM_MS);
+    const reveal = setTimeout(() => setFinishStage('results'), FINISH_BANNER_MS);
+    return () => {
+      clearTimeout(warm);
+      clearTimeout(reveal);
+    };
+  }, [snapshot.finished, reducedMotion]);
+  const resultsReveal = finishStage === 'results' ? 'shown' : finishStage === 'warm' ? 'warm' : 'pending';
   const autoplay = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -10718,6 +10756,17 @@ export const ComebackCityThreeKartRace = ({
     // simulation: nothing in the sim may read it, and a restart throws it away
     // with the rest of the engine.
     const cameraFeel = createChaseFeelState();
+    // Juice pass (race/juice.js): severity-scaled impact kicks into the feel
+    // state above, the edge flash, impact haptics and the finish camera beat —
+    // all derived from rising edges of sim state, none of it written back.
+    const juice = createRaceJuice({
+      cameraFeel,
+      getHitMarker: () => hitMarkerRef.current,
+      getOverlay: () => impactRef.current,
+      haptics: touchControls && !autoplay,
+      reducedMotion,
+    });
+    if (typeof window !== 'undefined') window.__kartJuiceDebug = juice.debug;
     const rivalsCastShadows = engine.shadowRig.rivalsCast;
     // ?itemShowcase=1 parks one of each item visual just past the spawn and
     // raises the ice shield — deterministic close-ups for the approval
@@ -10789,6 +10838,7 @@ export const ComebackCityThreeKartRace = ({
     let disposed = false;
     let previousFrameTime = performance.now();
     let snapshotTimer = 0;
+    let snapshotPublishedFinish = false;
 
     const setInputKey = (key, value) => {
       inputRef.current = { ...inputRef.current, [key]: value };
@@ -13372,6 +13422,9 @@ export const ComebackCityThreeKartRace = ({
           landing: race.landSquashTimer > 0,
           miniTurboTier: driftState.miniTurboTier,
           reducedMotion,
+          // Juice pass: the place the flag froze, so the finish confetti can
+          // tell a podium from the rest of the field (the cue only says win).
+          finishPlace: race.position,
           // Wave-1 contract for the particle package: speed/maxSpeed let the
           // speed-lines fade in on an envelope instead of drawing flat in
           // every frame, and surface lets spray/skid pick ice vs snow vs
@@ -13452,6 +13505,9 @@ export const ComebackCityThreeKartRace = ({
         engine.sceneryCasters += grounding.casters;
         engine.groundPatches = grounding.patches;
       }
+      // Juice: this frame's impacts off the settled sim state (race/juice.js),
+      // ahead of the camera block so a kick lands in THIS frame's shake.
+      juice.update(race, rawDt, engine.sampler.length);
       let targetFov;
       if (proofCameraMode === 'top') {
         const target = playerSample.point.clone().addScaledVector(playerSample.tangent, 22);
@@ -13547,18 +13603,16 @@ export const ComebackCityThreeKartRace = ({
         const boomDirLength = Math.hypot(boomDirX, boomDirZ) || 1;
 
         // Impact impulses, all derived from rising edges of state the sim
-        // already keeps. Nothing else in the frame loop had to learn about the
-        // camera, and a new hit type gets a shake by adding one line here.
+        // already keeps. HITS — spin-outs, walls, kart contact, the shield
+        // eating one, a hit the player lands — are kicked from race/juice.js
+        // (juice.update above), scaled by how hard they were; a new hit type
+        // gets its kick there. The boost punch is not a hit and stays here.
         // (Landing is not in this list: it is passed as `landed` below, because
         // the feel model has to dip the eye and pinch the FOV on the same edge.)
         const landingNow = race.landSquashTimer > 0;
-        if (race.spinTimer > (race.cameraPrevSpin ?? 0) + 0.01) impulseChaseShake(cameraFeel, 0.9);
-        if (race.wallContact && !race.cameraWasWall) impulseChaseShake(cameraFeel, 0.45);
         if (race.boostTimer > (race.cameraPrevBoost ?? 0) + 0.01) impulseChaseShake(cameraFeel, 0.26);
         const landedThisFrame = landingNow && !race.cameraWasLanding;
         race.cameraWasLanding = landingNow;
-        race.cameraPrevSpin = race.spinTimer;
-        race.cameraWasWall = Boolean(race.wallContact);
         race.cameraPrevBoost = race.boostTimer;
 
         const feel = advanceChaseFeel(cameraFeel, {
@@ -14141,8 +14195,14 @@ export const ComebackCityThreeKartRace = ({
         },
       });
       snapshotTimer += dt;
-      if (snapshotTimer > 0.14 || race.finished) {
+      // The flag publishes on its own frame (the results panel mounts the
+      // instant telemetry says finished). After that the race is frozen and the
+      // normal cadence is plenty: this used to be `|| race.finished`, which
+      // re-rendered the whole HUD + results tree EVERY frame for as long as the
+      // results were up — on the phone tier, during the finish reveal.
+      if (snapshotTimer > 0.14 || (race.finished && !snapshotPublishedFinish)) {
         snapshotTimer = 0;
+        snapshotPublishedFinish = race.finished;
         setSnapshot({
           bestLap: race.bestLap,
           boostHits: race.boostHits,
@@ -14245,6 +14305,8 @@ export const ComebackCityThreeKartRace = ({
       // builds its probe.
       engine.raceEnvironment?.dispose?.();
       particles.dispose();
+      juice.dispose();
+      if (window.__kartJuiceDebug === juice.debug) delete window.__kartJuiceDebug;
       engine.scene.traverse((object) => {
         object.geometry?.dispose?.();
         if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
@@ -14691,64 +14753,131 @@ export const ComebackCityThreeKartRace = ({
           <HeldItemIcon heldItem={itemPop.item} projectileSkin={playerCharacter.projectileSkin} size={112} />
         </div>
       ) : null}
+      {/* JUICE PASS. The impact edge-flash layer and the HIT! marker
+          (race/juice.js animates both with the Web Animations API — no React
+          render per hit) and the flag moment's place banner, which owns the
+          screen for FINISH_BANNER_MS before the results panel reveals. */}
+      <div aria-hidden="true" className="three-kart-race__impact" ref={impactRef} />
+      <div aria-hidden="true" className="three-kart-race__hit-marker" ref={hitMarkerRef} />
+      {snapshot.finished && (finishStage === 'banner' || finishStage === 'warm') ? (
+        <FinishBanner
+          label={ordinal(snapshot.position)}
+          place={snapshot.position}
+          record={snapshot.ttRecord}
+          timeTrial={snapshot.timeTrial}
+        />
+      ) : null}
       {/* RESULTS. Same .three-kart-race__results hook the proof scripts assert
           on, but the panel now has parts: a headline, the run tallies that were
           pulled off the race HUD (this is where a tally belongs), and the
           action. data-finish-place lets the CSS celebrate a podium without the
-          JSX picking colours. */}
+          JSX picking colours.
+
+          Juice pass: mounted at the flag but held invisible until
+          data-reveal="shown" (see finishStage), then it rises in, the place
+          badge pops, the time counts up and the standings stagger in.
+          data-layout picks two columns (summary | standings) or one, so a
+          390px-tall landscape phone gets every row AND the buttons without
+          scrolling. The scrim is its own element now instead of a 100vmax
+          box-shadow spread on the panel, which made the panel's composited
+          layer several screens wide. */}
       {snapshot.finished ? (
-        <div className="three-kart-race__results" data-finish-place={snapshot.position}>
-          <div className="three-kart-race__results-head">
-            <span>{snapshot.timeTrial ? 'Time trial · finish' : `Finish · ${ordinal(snapshot.position)}`}</span>
-            <strong>{formatTime(snapshot.raceTime)}</strong>
-          </div>
-          <dl className="three-kart-race__results-tally">
-            {/* Best lap belongs here rather than on the race HUD: the running
-                split is what a driver acts on mid-race, the best is what they
-                compare afterwards, and the lap plate has no width for both. */}
-            {snapshot.bestLap ? (
+        <div
+          aria-hidden="true"
+          className="three-kart-race__results-scrim"
+          data-motion={reducedMotion ? 'reduced' : 'full'}
+          data-reveal={resultsReveal}
+        />
+      ) : null}
+      {snapshot.finished ? (
+        <div
+          className="three-kart-race__results"
+          data-finish-place={snapshot.position}
+          data-layout={snapshot.standings ? 'field' : 'solo'}
+          data-motion={reducedMotion ? 'reduced' : 'full'}
+          data-reveal={resultsReveal}
+        >
+          <div className="three-kart-race__results-summary">
+            <div className="three-kart-race__results-hero">
+              <div
+                aria-hidden="true"
+                className="three-kart-race__results-badge"
+                data-place-tier={placeTier(snapshot.position, snapshot.timeTrial, snapshot.ttRecord)}
+              >
+                {snapshot.timeTrial ? (
+                  snapshot.ttRecord ? <Trophy size={34} /> : <Flag size={32} />
+                ) : (
+                  <>
+                    <span>{splitOrdinal(ordinal(snapshot.position))[0]}</span>
+                    <sup>{splitOrdinal(ordinal(snapshot.position))[1]}</sup>
+                  </>
+                )}
+              </div>
+              <div className="three-kart-race__results-head">
+                <span>{snapshot.timeTrial ? 'Time trial · finish' : `Finish · ${ordinal(snapshot.position)}`}</span>
+                <ResultsTime
+                  active={resultsReveal === 'shown'}
+                  format={formatTime}
+                  reducedMotion={reducedMotion}
+                  seconds={snapshot.raceTime}
+                />
+              </div>
+            </div>
+            <dl className="three-kart-race__results-tally">
+              {/* Best lap belongs here rather than on the race HUD: the running
+                  split is what a driver acts on mid-race, the best is what they
+                  compare afterwards, and the lap plate has no width for both. */}
+              {snapshot.bestLap ? (
+                <div>
+                  <dt>Best lap</dt>
+                  <dd>{formatTime(snapshot.bestLap)}</dd>
+                </div>
+              ) : null}
               <div>
-                <dt>Best lap</dt>
-                <dd>{formatTime(snapshot.bestLap)}</dd>
+                <dt>Coins</dt>
+                <dd>{snapshot.coins}</dd>
+              </div>
+              <div>
+                <dt>Boosts</dt>
+                <dd>{snapshot.boostHits}</dd>
+              </div>
+              <div>
+                <dt>Items</dt>
+                <dd>{snapshot.itemPickups}</dd>
+              </div>
+            </dl>
+            {snapshot.timeTrial ? (
+              <div className="three-kart-race__results-cup" data-testid="race-results-time-trial">
+                {snapshot.ttRecord
+                  ? snapshot.ttGhostTime
+                    ? `New record! ${(snapshot.ttGhostTime - snapshot.raceTime).toFixed(2)}s faster than your ghost`
+                    : 'New record! Your ghost will race you next time'
+                  : snapshot.ttGhostTime
+                    ? `+${(snapshot.raceTime - snapshot.ttGhostTime).toFixed(2)}s behind your ghost`
+                    : 'Time trial'}
               </div>
             ) : null}
-            <div>
-              <dt>Coins</dt>
-              <dd>{snapshot.coins}</dd>
-            </div>
-            <div>
-              <dt>Boosts</dt>
-              <dd>{snapshot.boostHits}</dd>
-            </div>
-            <div>
-              <dt>Items</dt>
-              <dd>{snapshot.itemPickups}</dd>
-            </div>
-          </dl>
-          {snapshot.timeTrial ? (
-            <div className="three-kart-race__results-cup" data-testid="race-results-time-trial">
-              {snapshot.ttRecord
-                ? snapshot.ttGhostTime
-                  ? `New record! ${(snapshot.ttGhostTime - snapshot.raceTime).toFixed(2)}s faster than your ghost`
-                  : 'New record! Your ghost will race you next time'
-                : snapshot.ttGhostTime
-                  ? `+${(snapshot.raceTime - snapshot.ttGhostTime).toFixed(2)}s behind your ghost`
-                  : 'Time trial'}
-            </div>
-          ) : null}
-          {cup ? (
-            <div className="three-kart-race__results-cup" data-testid="race-results-cup-round">
-              Grand Prix · race {cup.round + 1} of {cup.rounds}
-            </div>
-          ) : null}
+            {cup ? (
+              <div className="three-kart-race__results-cup" data-testid="race-results-cup-round">
+                Grand Prix · race {cup.round + 1} of {cup.rounds}
+              </div>
+            ) : null}
+          </div>
           {snapshot.standings ? (
             <ol className="three-kart-race__results-standings" data-testid="race-results-standings">
               {snapshot.standings.map((entry, index) => {
                 const cupRow = cup?.summary?.find((row) => row.name === entry.name);
                 return (
-                  <li data-player={entry.isPlayer ? 'true' : 'false'} key={entry.name}>
+                  <li
+                    data-player={entry.isPlayer ? 'true' : 'false'}
+                    key={entry.name}
+                    style={{ '--tkr-row': index }}
+                  >
                     <span className="three-kart-race__results-place">{ordinal(index + 1)}</span>
-                    <span className="three-kart-race__results-name">{entry.isPlayer ? `${entry.name} (you)` : entry.name}</span>
+                    <span className="three-kart-race__results-name">
+                      {entry.name}
+                      {entry.isPlayer ? <em className="three-kart-race__results-you"> (you)</em> : null}
+                    </span>
                     {cupRow ? (
                       <span className="three-kart-race__results-points">
                         <em>+{cupRow.gained}</em> {cupRow.total} pts
@@ -14759,21 +14888,33 @@ export const ComebackCityThreeKartRace = ({
               })}
             </ol>
           ) : null}
+          {/* One primary, the rest secondary: racing again is the loop (a Grand
+              Prix has no restart, so its primary is the next round). */}
           <div className="three-kart-race__results-actions">
             {allowRestart ? (
-              <button type="button" onClick={restart} data-testid="race-results-restart">
+              <button type="button" onClick={restart} data-testid="race-results-restart" data-variant="primary">
                 <RotateCcw size={15} />
                 Race again
               </button>
             ) : null}
             {onNextTrack ? (
-              <button type="button" onClick={onNextTrack} data-testid="race-results-next">
+              <button
+                type="button"
+                onClick={onNextTrack}
+                data-testid="race-results-next"
+                data-variant={allowRestart ? 'secondary' : 'primary'}
+              >
                 <ArrowRight size={15} />
                 {nextTrackLabel || 'Next track'}
               </button>
             ) : null}
             {onExit ? (
-              <button type="button" onClick={onExit} data-testid="race-results-menu">
+              <button
+                type="button"
+                onClick={onExit}
+                data-testid="race-results-menu"
+                data-variant={allowRestart || onNextTrack ? 'secondary' : 'primary'}
+              >
                 <Home size={15} />
                 Menu
               </button>
