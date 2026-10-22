@@ -22,7 +22,7 @@
 // The sampler is the previewer's mirror of the runtime's (mirror-checked
 // against the monolith's source), imported rather than copied again.
 import { makeSampler, mirrorCheck } from './track-layout-preview.mjs';
-import { KART_TRACKS } from '../src/game/race/tracks/index.js';
+import { ALL_TRACKS } from '../src/game/race/tracks/index.js';
 import { roadEdgeSection } from '../src/game/race/render/buildRoadEdgeProfile.js';
 import {
   GROUND_BASE_Y,
@@ -111,7 +111,7 @@ const checkTrack = (trackDef) => {
   // barrier's back face is meant to be buried (footDrop).
   const footprintReach = section[6].u;
   const bridgeBand = trackDef.elevation?.bridgeBand || null;
-  const options = { bridgeBand, centreAt, edgeReach, length: sampler.length, widthAt: sampler.widthAt };
+  const options = { bridgeBand, centreAt, edgeReach, fill: trackDef.elevation?.fill || null, length: sampler.length, widthAt: sampler.widthAt };
   const terrain = LEGACY ? createLegacyTerrain(options) : createGroundTerrain(options);
   const reliefDisplace = trackDef.palette?.ground?.relief?.displace ?? 0.3;
 
@@ -208,7 +208,7 @@ if (!mirror.available || !mirror.pass) {
 }
 
 let failed = false;
-for (const trackDef of KART_TRACKS) {
+for (const trackDef of ALL_TRACKS) {
   const report = checkTrack(trackDef);
   const { worst, worstGap } = report;
   const ok = report.buried === 0 && report.gaps === 0;

@@ -69,6 +69,8 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, const in float depth,
 const AERIAL_TRACKS = {
   'comeback-city': { color: '#e08a52', desaturate: 0.16, full: 1500, lumFloor: 0.34, maxAmount: 0.86, start: 380, strength: 0.18 },
   'penguin-village': { color: '#7e9ab5', desaturate: 0.08, full: 1200, lumFloor: 0.42, maxAmount: 0.78, start: 300, strength: 0.26 },
+  // Satoshi Summit: recede into the cloud-sea slate the fog already uses.
+  'satoshi-summit': { color: '#5d6199', desaturate: 0.06, full: 1300, lumFloor: 0.36, maxAmount: 0.8, start: 330, strength: 0.24 },
 };
 
 export const createAerialEffect = ({ trackKey, mobile = false } = {}) => {

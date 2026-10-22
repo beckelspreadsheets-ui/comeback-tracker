@@ -19,7 +19,7 @@
 // against it by mirrorCheck() — the monolith itself cannot be loaded in node.
 import { makeSampler, mirrorCheck } from './track-layout-preview.mjs';
 import { projectToSpline, DEFAULT_PROJECTION_WINDOW } from '../src/game/race/splineProjection.js';
-import { KART_TRACKS } from '../src/game/race/tracks/index.js';
+import { ALL_TRACKS } from '../src/game/race/tracks/index.js';
 
 const PROGRESS_TOLERANCE = 0.001;
 
@@ -70,7 +70,7 @@ let worstProgress = 0;
 let worstLane = 0;
 let checks = 0;
 
-for (const trackDef of KART_TRACKS) {
+for (const trackDef of ALL_TRACKS) {
   const sampler = makeSampler(trackDef);
   let trackWorstProgress = 0;
   let trackWorstLane = 0;
@@ -147,7 +147,7 @@ for (const trackDef of KART_TRACKS) {
 }
 
 process.stdout.write(
-  `\n${checks} round-trips across ${KART_TRACKS.length} tracks x ${SAMPLES_PER_LAP} progress x ${LANES.length} lanes\n` +
+  `\n${checks} round-trips across ${ALL_TRACKS.length} tracks x ${SAMPLES_PER_LAP} progress x ${LANES.length} lanes\n` +
     `worst dprogress ${worstProgress.toExponential(2)}, worst dlane ${worstLane.toExponential(2)} -> ` +
     `${failures ? `${failures} FAILURES` : 'PASS'}\n`
 );

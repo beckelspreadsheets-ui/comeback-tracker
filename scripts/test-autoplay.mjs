@@ -70,7 +70,7 @@ const cornerPushFor = (kappa, speed) =>
 
 process.stdout.write('free-body autoplay laps\n');
 
-for (const key of ['comeback-city', 'penguin-village']) {
+for (const key of ['comeback-city', 'penguin-village', 'satoshi-summit']) {
   const sampler = makeSampler(trackByKey(key));
   const seat = sampler.pointAt(0, 0);
   const ahead = sampler.pointAt(0.001, 0);

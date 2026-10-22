@@ -31,6 +31,8 @@ export const BARRIER_SLOGANS = Object.freeze([
 const KIT_COLORS = {
   'comeback-city': ['#ffd34f', '#36e2ff', '#ff4fd8', '#a7f542'],
   'penguin-village': ['#9fefff', '#f4fbff', '#b98cff', '#7fe8ff'],
+  // Satoshi Summit: the magenta/cyan neon the blue-hour track speaks in.
+  'satoshi-summit': ['#ff4fd8', '#36e2ff', '#ffd34f', '#a98bff'],
 };
 
 const ATLAS_WIDTH = 1024;

@@ -30,7 +30,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { KART_TRACKS, trackByKey } from '../src/game/race/tracks/index.js';
+import { ALL_TRACKS, trackByKey } from '../src/game/race/tracks/index.js';
 import { COIN_ROWS } from '../src/game/race/raceCoins.js';
 import { SURFACE_ROAD_SHEEN, SURFACE_ROAD_TINT, surfaceTypeAt } from '../src/game/race/physics/surfacePhysics.js';
 
@@ -78,7 +78,11 @@ const OUT_DIR = resolve(ROOT, 'tmp/track-preview');
 // 46.67-47.52s (1.8%, vs the old <0.5%) — the grade widened the autoplay's
 // lap-time variance, so this PV number is soft; a quiet 3+ run re-measure would
 // tighten it (run 2 sat near the old 46.3 / 240.7).
-const MEAN_SPEED = { 'comeback-city': 247.2, 'penguin-village': 236.7 };
+// Satoshi Summit (preview track) measured 2026-10-22: first full autoplay race,
+// racing laps 46.13 / 45.63 s on the 11,087-unit 3D lap -> 241.6 u/s (139.3 s
+// race, ~59 fps); two later races on the final 11,098-unit lap ran 139.2 s and
+// 140.9 s (load 16-38, wall/game ~1). Softer than the three-race numbers above.
+const MEAN_SPEED = { 'comeback-city': 247.2, 'penguin-village': 236.7, 'satoshi-summit': 241.6 };
 
 // The tool must be CHECKABLE, not merely plausible — but the thing worth
 // checking is the SOLVER, not the track.
@@ -2564,7 +2568,7 @@ const parseArgs = (argv) => {
 
 const USAGE = `track-layout-preview — plan view + layout numbers for the shipped kart tracks
 
-  --track <key>            one track (${KART_TRACKS.map((t) => t.key).join(' | ')}); default: all
+  --track <key>            one track (${ALL_TRACKS.map((t) => t.key).join(' | ')}); default: all
   --file <path.js>         preview an UNREGISTERED draft definition (a module
                            exporting anything with .course.centerline)
   --compare <keyA,keyB>    side-by-side sheet at one shared scale
@@ -2594,13 +2598,13 @@ const main = async () => {
       ? args.compare.split(',').map((key) => key.trim())
       : args.track
         ? [args.track]
-        : KART_TRACKS.map((track) => track.key);
+        : ALL_TRACKS.map((track) => track.key);
 
   const reports = [];
   for (const requested of keys) {
     const trackDef = args.file ? await loadTrackFromFile(args.file) : trackByKey(requested);
     if (!args.file && trackDef.key !== requested) {
-      process.stderr.write(`unknown track "${requested}" — known: ${KART_TRACKS.map((t) => t.key).join(', ')}\n`);
+      process.stderr.write(`unknown track "${requested}" — known: ${ALL_TRACKS.map((t) => t.key).join(', ')}\n`);
       process.exitCode = 1;
       return;
     }

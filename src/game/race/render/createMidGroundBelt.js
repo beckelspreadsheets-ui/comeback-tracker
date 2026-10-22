@@ -713,6 +713,60 @@ const TRACK_TUNING = {
     stand: { accent: '#00e5ff', banner: ['#123044', '#7ee8ff'], structure: '#7f9db4' },
     crowd: ['#ffd9a8', '#7ee8ff', '#f8fbff', '#ffb27b', '#a8c8ff', '#ff8fbf'],
   },
+  // Satoshi Summit (preview track): rock, not ice and not buildings. Spires and
+  // long ridges in a cold slate-violet under a blue-hour sky, strata banding for
+  // the rock read, no windows, no neon crown, no Ferris wheel. The grandstands
+  // sit on the low stretches only (the straight, the run-out past the jump):
+  // stands are planted at the belt's flat ground, and the summit's terrain is
+  // raised (elevation.fill).
+  'satoshi-summit': {
+    ringColors: ['#3c3f74', '#4a4e85', '#5d6296'],
+    instanceTint: { amount: 0.22, cool: '#5d63b0', warm: '#9a7bb8' },
+    massShapes: [
+      [SHAPE.SHARD, 0.36],
+      [SHAPE.RIDGE, 0.28],
+      [SHAPE.TABULAR, 0.2],
+      [SHAPE.CALVED, 0.16],
+    ],
+    shapeVariants: { [SHAPE.SHARD]: 3, [SHAPE.TABULAR]: 2, [SHAPE.RIDGE]: 2, [SHAPE.CALVED]: 2 },
+    ringSpread: 1.4,
+    block: { depth: [12, 30], height: [14, 46], width: [12, 30] },
+    cone: { height: [46, 130], radius: [14, 36] },
+    shade: { base: 0.62, lit: [1.08, 1.06, 1.2], shadow: [0.3, 0.3, 0.62], sky: [0.05, 0.07, 0.18] },
+    window: null,
+    crown: null,
+    ferrisWheel: false,
+    fabric: {
+      block: { depth: [8, 22], height: [1.5, 4.5], width: [8, 22] },
+      color: '#8f9ccc',
+      density: 0.75,
+      peak: { height: [3, 10], radius: [6, 16] },
+      shapes: [
+        [SHAPE.RIDGE, 0.4],
+        [SHAPE.SHARD, 0.34],
+        [SHAPE.TABULAR, 0.26],
+      ],
+    },
+    shelf: {
+      block: { depth: [18, 48], height: [10, 34], width: [22, 64] },
+      color: '#5a5f95',
+      density: 0.6,
+      peak: { height: [24, 70], radius: [14, 34] },
+      shapes: [
+        [SHAPE.SHARD, 0.4],
+        [SHAPE.RIDGE, 0.3],
+        [SHAPE.TABULAR, 0.3],
+      ],
+      spread: 1.4,
+    },
+    coolClamp: 0,
+    iceTint: [0.96, 0.98, 1.08],
+    strata: 0.09,
+    sideFill: 0.12,
+    standMarks: [0.06, 0.13, 0.95],
+    stand: { accent: '#ff4fd8', banner: ['#15123a', '#36e2ff'], structure: '#3b3f72' },
+    crowd: ['#ffd9a8', '#ff8fd8', '#7ee8ff', '#f8fbff', '#b9a6ff', '#ffb27b'],
+  },
 };
 
 const DEFAULT_TUNING = TRACK_TUNING['comeback-city'];
@@ -771,6 +825,9 @@ const MAST_FOOTING = 2.4;
 export const BELT_DRAW_CALLS = Object.freeze({
   'comeback-city': 12,
   'penguin-village': 10,
+  // 5 ring + 3 grandstand (no crown, no wheel, no aurora/storm bank — the
+  // summit's aurora lives in summitBackdrop.js).
+  'satoshi-summit': 8,
 });
 
 // ---------------------------------------------------------------------------
@@ -2395,7 +2452,7 @@ vMapUv = vec2(vMapUv.x * 0.25 + aTile * 0.25, vMapUv.y);
   let wheelSpin = null;
   let cabinRig = null;
 
-  if (hasPath && options.trackKey !== 'penguin-village') {
+  if (hasPath && options.trackKey !== 'penguin-village' && track.ferrisWheel !== false) {
     // Comeback City: the procedural Ferris wheel salvaged from the deleted
     // createRaceScenery tree (torus + spokes + legs), scaled from radius 17
     // to 48 and lifted to y 62 so it clears the 90-unit ring and stays

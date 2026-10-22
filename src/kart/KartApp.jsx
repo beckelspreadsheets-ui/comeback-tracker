@@ -18,7 +18,7 @@ import {
   KART_CHARACTERS,
   KART_OPTIONS,
 } from '../game/ComebackCityThreeKartRace.jsx';
-import { DEFAULT_TRACK_KEY, KART_TRACKS } from '../game/race/tracks/index.js';
+import { ALL_TRACKS, DEFAULT_TRACK_KEY, KART_TRACKS, PREVIEW_TRACKS, isKnownTrackKey } from '../game/race/tracks/index.js';
 import { DEFAULT_RACE_CLASS, QA_RACE_CLASS, RACE_CLASSES } from '../game/race/raceClasses.js';
 import {
   migrateLegacyRaceResultsOnce,
@@ -555,7 +555,7 @@ const KartSelectHero = ({ characterKey, kartKey, paint = null, reducedMotion, tr
           </div>
         </div>
         <div className="rounded-lg border border-white/10 bg-black/40 px-2.5 py-1 text-right font-mono text-[9px] uppercase tracking-[0.18em] text-white/55 backdrop-blur-sm">
-          {KART_TRACKS.find((entry) => entry.key === trackKey)?.name}
+          {ALL_TRACKS.find((entry) => entry.key === trackKey)?.name}
         </div>
       </div>
     </div>
@@ -650,6 +650,7 @@ const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, on
   const [savedResults] = useState(() => readRaceResults() || {});
   // With Mirror Mode on, the track cards show the mirror records instead.
   const bestResults = recordsForMode(savedResults, mirror?.active);
+  const [pickerTracks] = useState(() => (readPreviewTracksFlag() ? [...KART_TRACKS, ...PREVIEW_TRACKS] : KART_TRACKS));
   return (
   <div className="absolute inset-0 z-40 overflow-y-auto" data-testid="race-character-select">
     <MenuBackdrop trackKey={trackKey} />
@@ -711,7 +712,7 @@ const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, on
         ) : null}
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {KART_TRACKS.map((entry) => {
+        {(gameMode === 'cup' ? KART_TRACKS : pickerTracks).map((entry) => {
           const selected = entry.key === trackKey;
           return (
             <button
@@ -875,6 +876,23 @@ const urlSeededKey = (name, isValid) => {
   return param && isValid(param) ? param : null;
 };
 
+// Preview tracks (built and raceable, not yet owner-approved) are listed in
+// the picker only behind ?previewTracks=1, remembered from the first time the
+// flag is seen (localStorage cc-kart-preview-tracks). The cup never includes
+// them; a direct ?track=<key> QA link still races them either way.
+const readPreviewTracksFlag = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (new URLSearchParams(window.location.search).get('previewTracks') === '1') {
+      window.localStorage?.setItem('cc-kart-preview-tracks', '1');
+      return true;
+    }
+    return window.localStorage?.getItem('cc-kart-preview-tracks') === '1';
+  } catch {
+    return false;
+  }
+};
+
 export const KartApp = () => {
   // One-shot legacy import before anything reads results; runs before the
   // first race can finish, so kart-local entries always win afterwards.
@@ -933,12 +951,14 @@ export const KartApp = () => {
     }
   });
   const [kartTrackKey, setKartTrackKey] = useState(() => {
-    const seeded = urlSeededKey('track', (key) => KART_TRACKS.some((entry) => entry.key === key));
+    const seeded = urlSeededKey('track', isKnownTrackKey);
     if (seeded) return seeded;
     if (typeof window === 'undefined') return DEFAULT_TRACK_KEY;
     try {
       const saved = window.localStorage?.getItem('cc-kart-track');
-      return KART_TRACKS.some((entry) => entry.key === saved) ? saved : DEFAULT_TRACK_KEY;
+      const pickable = KART_TRACKS.some((entry) => entry.key === saved) ||
+        (readPreviewTracksFlag() && PREVIEW_TRACKS.some((entry) => entry.key === saved));
+      return pickable ? saved : DEFAULT_TRACK_KEY;
     } catch {
       return DEFAULT_TRACK_KEY;
     }

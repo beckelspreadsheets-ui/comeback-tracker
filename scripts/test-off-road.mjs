@@ -136,7 +136,7 @@ process.stdout.write('off-road and rescue\n');
 // --- 6. NORMAL RACING IS UNTOUCHED. The one case that needs real driving, with
 //        a controller that follows the road. If a clean lap can trigger a
 //        rescue, the bounds are wrong and racing gets teleported.
-for (const key of ['comeback-city', 'penguin-village']) {
+for (const key of ['comeback-city', 'penguin-village', 'satoshi-summit']) {
   const sampler = makeSampler(trackByKey(key));
   const seat = sampler.pointAt(0, 0);
   const ahead = sampler.pointAt(0.001, 0);

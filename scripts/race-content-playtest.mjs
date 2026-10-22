@@ -234,7 +234,7 @@ import {
 } from '../src/game/race/raceCoins.js';
 // The coin-placement gate measures against the tracks' own geometry rather
 // than a hardcoded copy of it — see validateRaceCoinHelpers.
-import { KART_TRACKS } from '../src/game/race/tracks/index.js';
+import { ALL_TRACKS } from '../src/game/race/tracks/index.js';
 import { validateCenterline } from '../src/game/race/tracks/buildCenterline.js';
 import { createRaceCameraRuntime } from '../src/game/race/raceCameraRuntime.js';
 import { createRaceMotionRuntime } from '../src/game/race/raceMotionRuntime.js';
@@ -10328,7 +10328,7 @@ const validateRaceCoinHelpers = () => {
   // 233 units and blank out over half the road.
   const COIN_CLEARANCE_UNITS = 58;
   for (const [trackKey, rows] of Object.entries(COIN_ROWS)) {
-    const track = KART_TRACKS.find((entry) => entry.key === trackKey);
+    const track = ALL_TRACKS.find((entry) => entry.key === trackKey);
     if (!track) fail('coin rows for a track that does not exist', { trackKey });
     const { length } = validateCenterline(track.course.centerline);
     const markers = [

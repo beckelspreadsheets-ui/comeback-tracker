@@ -2,7 +2,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { KART_TRACKS } from '../src/game/race/tracks/index.js';
+import { ALL_TRACKS, KART_TRACKS } from '../src/game/race/tracks/index.js';
 import {
   buildCenterlineFrameSamples,
   buildVisualPlacementAnchors,
@@ -78,11 +78,11 @@ const assertCompiledMechanicsEqual = (track) => {
 };
 
 try {
-  const validation = validateTrackVisuals(KART_TRACKS);
+  const validation = validateTrackVisuals(ALL_TRACKS);
   if (!validation.ok) fail('Track visual validation failed', { validation });
 
   const summaries = [];
-  for (const track of KART_TRACKS) {
+  for (const track of ALL_TRACKS) {
     const mechanics = assertCompiledMechanicsEqual(track);
     const enabledVisuals = resolveTrackVisuals(track);
     const disabledVisuals = resolveTrackVisuals(track, { enabled: false });

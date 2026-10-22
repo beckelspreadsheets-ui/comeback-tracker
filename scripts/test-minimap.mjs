@@ -8,7 +8,7 @@
 // and a path that escapes its viewBox draws over the rest of the HUD.
 import { makeSampler, mirrorCheck } from './track-layout-preview.mjs';
 import { createMinimap, minimapPointAt, MINIMAP_BOX } from '../src/game/race/raceMinimap.js';
-import { KART_TRACKS } from '../src/game/race/tracks/index.js';
+import { ALL_TRACKS } from '../src/game/race/tracks/index.js';
 
 if (!mirrorCheck().pass) {
   process.stderr.write('FAIL: previewer sampler no longer mirrors the monolith.\n');
@@ -24,7 +24,7 @@ const check = (name, actual, expected) => {
 
 process.stdout.write('course map\n');
 
-for (const trackDef of KART_TRACKS) {
+for (const trackDef of ALL_TRACKS) {
   const sampler = makeSampler(trackDef);
   const minimap = createMinimap((p) => {
     const pt = sampler.pointAt(p, 0);

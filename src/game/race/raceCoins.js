@@ -73,6 +73,14 @@ export const COIN_ROWS = {
     0.01, 0.04, 0.07, 0.1, 0.14, 0.17, 0.2, 0.23, 0.27, 0.3, 0.34, 0.37, 0.4, 0.44, 0.48, 0.51, 0.54, 0.58, 0.61,
     0.64, 0.67, 0.71, 0.74, 0.775, 0.8, 0.84, 0.87, 0.9, 0.93, 0.97,
   ],
+  // Satoshi Summit (preview track). Clear of boost pads 0.075/0.415/0.59/0.878,
+  // item boxes 0.02/0.14/0.29/0.505/0.665/0.79/0.945 and the kicker at 0.385,
+  // and none in the crevasse flight window (crest 0.91 -> landing ~0.935): a
+  // row the kart flies over cannot be read as collectable.
+  'satoshi-summit': [
+    0.035, 0.055, 0.1, 0.12, 0.165, 0.19, 0.205, 0.235, 0.26, 0.31, 0.335, 0.36, 0.4, 0.44, 0.47, 0.53, 0.555,
+    0.615, 0.64, 0.69, 0.715, 0.74, 0.765, 0.815, 0.84, 0.86, 0.895, 0.96, 0.98, 0.995,
+  ],
 };
 
 export const buildCoinField = (trackKey) =>
