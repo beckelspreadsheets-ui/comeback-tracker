@@ -1,5 +1,6 @@
 // Post-deploy probe for a Cloudflare Pages deploy of the kart game (preview or
-// production): both tracks on desktop plus one forced-touch landscape phone
+// production): every track on desktop (Satoshi Summit is a preview track,
+// reached by ?track=) plus one forced-touch landscape phone
 // run. Fails on CSP refusals (blob: textures, meshopt WASM), failed GLB mounts,
 // page errors, or a race that never starts. Also checks the store pages.
 //
@@ -22,6 +23,7 @@ mkdirSync(OUT, { recursive: true });
 const runs = [
   { name: 'cc-desktop', query: '&track=comeback-city', viewport: { width: 1365, height: 768 } },
   { name: 'pv-desktop', query: '&track=penguin-village', viewport: { width: 1365, height: 768 } },
+  { name: 'ss-desktop', query: '&track=satoshi-summit', viewport: { width: 1365, height: 768 } },
   { name: 'cc-phone', phone: true, query: '&track=comeback-city&touchControls=1', viewport: { width: 844, height: 390 } },
 ];
 const browser = await chromium.launch({ args: chromiumGlArgs() });
