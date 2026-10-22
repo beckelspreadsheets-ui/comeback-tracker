@@ -11489,7 +11489,9 @@ export const ComebackCityThreeKartRace = ({
       const fpsEstimate = frameTimes.length > 1 ? (frameTimes.length - 1) / Math.max(0.001, elapsedWindow) : 60;
       const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
       const input = mergeGamepadInput(readInput(inputRef, autoplay, race, cornerPush, engine.sampler), pad);
-      if (input.restart) {
+      // inputRef is checked directly too: under autoplay readInput returns the
+      // driver's own fresh input, which dropped the pause menu's Restart.
+      if (input.restart || inputRef.current.restart) {
         inputRef.current.restart = false;
         restartRace();
       }

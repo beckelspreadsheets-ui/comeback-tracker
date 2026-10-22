@@ -22,7 +22,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RACES = Number(process.argv[2] || 10);
 // Restart race (pause menu) cycles inside race 1: the same engine resets
 // instead of remounting, so a leak there never shows in the remount loop.
-const RESTARTS = Number(process.env.KART_SOAK_RESTARTS ?? 6);
+const RESTARTS = Math.max(3, Number(process.env.KART_SOAK_RESTARTS ?? 8));
 const PORT = Number(process.env.KART_SOAK_PORT || 5411);
 const external = process.env.KART_SOAK_URL;
 const baseUrl = external || `http://127.0.0.1:${PORT}`;
@@ -138,16 +138,21 @@ try {
     await page.waitForFunction(() => window.__comebackCityKartTelemetry?.raceTime > 4, null, { timeout: 120000 });
     const raced = await page.evaluate(() => window.__comebackCityKartTelemetry?.track);
     if (race === 1 && RESTARTS > 0) {
-      const before = await sample();
-      for (let i = 0; i < RESTARTS; i += 1) {
+      // Measured from the second restart on, like the remount loop skips its
+      // first races: the first run and first restarts allocate once (pools,
+      // the previous run kept for the ghost, compiled code) — a heap diff
+      // between restart 2 and restart 8 showed no app objects growing.
+      let before = null;
+      for (let i = 1; i <= RESTARTS; i += 1) {
         await page.keyboard.press('Escape');
         await click('race-pause-restart');
         await page.waitForFunction(() => window.__comebackCityKartTelemetry?.raceTime < 1, null, { timeout: 30000 });
         await page.waitForFunction(() => window.__comebackCityKartTelemetry?.raceTime > 4, null, { timeout: 120000 });
+        if (i === 2) before = await sample();
       }
       const after = await sample();
       restartGrowth = after.heapMiB - before.heapMiB;
-      console.log(`restarts ${RESTARTS}: in-race heap ${before.heapMiB} -> ${after.heapMiB} MiB (growth ${restartGrowth.toFixed(1)} MiB)`);
+      console.log(`restarts ${RESTARTS}: in-race heap after restart 2 ${before.heapMiB} -> after restart ${RESTARTS} ${after.heapMiB} MiB (growth ${restartGrowth.toFixed(1)} MiB)`);
     }
     // Quit to the menu through the pause menu, the way a player leaves.
     await page.keyboard.press('Escape');
