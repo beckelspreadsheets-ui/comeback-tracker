@@ -3168,8 +3168,40 @@ const loadKartAssets = () => {
         noderunner: nodeRunnerGltf?.scene || null,
       },
     }));
+    // A failed load is not cached: the menu preloads this, and a blip there
+    // must not leave every later race without its bodies.
+    kartAssetsPromise.catch(() => {
+      kartAssetsPromise = null;
+    });
   }
   return kartAssetsPromise;
+};
+
+// RACE-START PRELOAD (2026-10-22; a first player's review: "a lil hiccupy at
+// the beginning"). Profiled from a cold page: the race requested every body
+// and scenery GLB only AFTER its synchronous scene build, so ~5.6 MB landed
+// mid-countdown and each swap-in hitched (texture uploads; 100-230 ms frames
+// at 4x CPU throttle). The menu calls this while the player is still choosing,
+// so the race mounts with all of it parsed and its first warm-up pass uploads
+// it behind the shell's loading card. Every loader here is the race's own
+// cached one, so nothing is fetched twice.
+export const preloadRaceAssets = (trackKey) => {
+  loadKartAssets().catch(() => {});
+  const trackDef = isKnownTrackKey(trackKey) ? trackByKey(trackKey) : null;
+  if (!trackDef) return;
+  if (ITEM_BOX_ASSETS[trackDef.key]) loadItemBoxTemplate(ITEM_BOX_ASSETS[trackDef.key]);
+  if (!skyLabConfig()) return;
+  // The same dressing flags the scene build reads, so the list cannot drift.
+  const keys = new Set();
+  if (trackDef.dressing?.openingFacades) {
+    [...MIAMI_OPENING_RUN, ...MIAMI_ROADSIDE].forEach((entry) => keys.add(entry.asset));
+    MIAMI_DISTRICT_ASSETS.forEach((key) => keys.add(key));
+  }
+  if (trackDef.dressing?.penguinVillage) PV_TRIBUTE_TRACKSIDE.forEach((entry) => keys.add(entry.asset));
+  if (trackDef.crossers?.length) keys.add('outplayasiansCrosser');
+  keys.forEach((key) => {
+    if (MIAMI_ASSETS[key]) loadMiamiAsset(MIAMI_ASSETS[key]);
+  });
 };
 
 // The Kenney kit's palette atlas as a texture, for the item-box fallback's toon
@@ -10071,6 +10103,10 @@ export const ComebackCityThreeKartRace = ({
   onExit = null,
   onFinish = null,
   onNextTrack = null,
+  // Called once, after the first frame is drawn (or straight away when WebGL
+  // is unavailable, so the error is not hidden). KartApp covers the race's
+  // synchronous scene build with a loading card and lifts it on this call.
+  onReady = null,
   onRestart = null,
   nextTrackLabel = null,
   reducedMotion = false,
@@ -10090,6 +10126,8 @@ export const ComebackCityThreeKartRace = ({
   // per run, so it never changes mid-race anyway).
   const mirrorRef = useRef(Boolean(mirror));
   mirrorRef.current = Boolean(mirror);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
   const [paused, setPausedState] = useState(false);
   const setPaused = useCallback((next) => {
     pausedRef.current = next;
@@ -10494,7 +10532,10 @@ export const ComebackCityThreeKartRace = ({
       trackDef,
       trackVisualsEnabled,
     });
-    if (!engine) return undefined;
+    if (!engine) {
+      onReadyRef.current?.();
+      return undefined;
+    }
     if (typeof window !== 'undefined') window.__comebackCityKartTrackVisualsEnabled = engine.trackVisualsEnabled;
     engineRef.current = engine;
     rendererRef.current = engine.renderer;
@@ -11379,6 +11420,8 @@ export const ComebackCityThreeKartRace = ({
       }
     };
     let nextWarmupAt = 0;
+    let readySignalled = false;
+    let framesBeforeReady = 0;
 
     let padPauseWasDown = false;
     // Lab/A-B switches for the MK-feel mechanics (default ON).
@@ -13900,6 +13943,19 @@ export const ComebackCityThreeKartRace = ({
         // Nothing to draw into until the browser restores the context.
       } else if (engine.postChainEnabled) engine.composer.render(dt);
       else engine.composer.render();
+      // Ready = the first SETTLED frame, not the first frame: the frames right
+      // after the build still upload textures and allocate targets (100-150 ms
+      // each at 4x CPU throttle), and the shell's loading card should hide
+      // those too. The sim clamps dt to 40 ms, so they cost the countdown
+      // almost nothing. Capped so a slow device still gets its race.
+      if (!readySignalled) {
+        framesBeforeReady += 1;
+        const lastGap = frameElapsedSamples[frameElapsedSamples.length - 1] ?? 0;
+        if ((framesBeforeReady > 1 && lastGap < 50) || framesBeforeReady >= 12) {
+          readySignalled = true;
+          onReadyRef.current?.();
+        }
+      }
       frameWorkSamples.push(performance.now() - now);
       while (frameWorkSamples.length > 40) frameWorkSamples.shift();
       // Adaptive render scale: fed AFTER this frame's work is measured, gated

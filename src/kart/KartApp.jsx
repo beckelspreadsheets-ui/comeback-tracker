@@ -17,6 +17,7 @@ import {
   HeldItemIcon,
   KART_CHARACTERS,
   KART_OPTIONS,
+  preloadRaceAssets,
 } from '../game/ComebackCityThreeKartRace.jsx';
 import { ALL_TRACKS, DEFAULT_TRACK_KEY, KART_TRACKS, PREVIEW_TRACKS, isKnownTrackKey } from '../game/race/tracks/index.js';
 import { DEFAULT_RACE_CLASS, QA_RACE_CLASS, RACE_CLASSES } from '../game/race/raceClasses.js';
@@ -121,6 +122,27 @@ const MenuBackdrop = ({ trackKey }) => (
       data-testid="menu-backdrop"
     />
     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,11,26,0.88)_0%,rgba(8,11,26,0.7)_42%,rgba(8,11,26,0.94)_100%)]" />
+  </div>
+);
+
+// Covers the race's synchronous scene build (see the race start gate in
+// KartApp). The spinner is a transform animation, which the compositor keeps
+// turning while the main thread is busy building, so the card reads as
+// loading rather than frozen.
+const RaceLoadingCard = ({ cup = null, trackKey }) => (
+  <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#0b0f1a]" data-testid="race-loading">
+    <MenuBackdrop trackKey={trackKey} />
+    <div className={`${PANEL} relative flex flex-col items-center gap-3 px-10 py-7 text-center`}>
+      <div className={EYEBROW}>{cup ? `Grand Prix · Race ${cup.round + 1} of ${cup.trackKeys.length}` : 'Get ready'}</div>
+      <div className="font-mono text-2xl font-black uppercase tracking-[0.14em] text-white">
+        {ALL_TRACKS.find((entry) => entry.key === trackKey)?.name}
+      </div>
+      <div
+        aria-hidden="true"
+        className="mt-1 h-7 w-7 rounded-full border-2 border-white/15 border-t-[#ffd34f] motion-safe:animate-spin"
+      />
+      <span className="sr-only">Loading the race</span>
+    </div>
   </div>
 );
 
@@ -1140,6 +1162,51 @@ export const KartApp = () => {
     setRaceNonce((value) => value + 1);
   }, [nextTrack]);
 
+  // RACE START GATE (2026-10-22; a first player's review: "a lil hiccupy at
+  // the beginning"). The race builds its whole scene synchronously when it
+  // mounts (0.6 s on a fast Mac, ~2 s at 4x CPU throttle) and a click flushes
+  // that mount before the browser paints, so pressing Start froze the menu
+  // for the whole build. Now the race mounts one PAINTED frame after the
+  // loading card, which stays over it until the race reports its first frame
+  // (onReady), with a timeout so the card can never strand the player.
+  const raceKey = `race-${raceNonce}`;
+  const [mountedRaceKey, setMountedRaceKey] = useState(null);
+  const [readyRaceKey, setReadyRaceKey] = useState(null);
+  useEffect(() => {
+    if (!characterReady || mountedRaceKey === raceKey) return undefined;
+    let timer = 0;
+    const frame = window.requestAnimationFrame(() => {
+      timer = window.setTimeout(() => setMountedRaceKey(raceKey), 0);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [characterReady, mountedRaceKey, raceKey]);
+  useEffect(() => {
+    if (!characterReady || readyRaceKey === raceKey) return undefined;
+    const timer = window.setTimeout(() => setReadyRaceKey(raceKey), 15000);
+    return () => window.clearTimeout(timer);
+  }, [characterReady, readyRaceKey, raceKey]);
+  const handleRaceReady = useCallback(() => setReadyRaceKey(raceKey), [raceKey]);
+  // Warm the race's models while the player is still in the menu (see
+  // preloadRaceAssets). Deferred so the menu's own model stage loads first;
+  // re-run when the track pick changes. A Grand Prix always opens on the
+  // first cup track, whatever the single-race pick is.
+  useEffect(() => {
+    if (characterReady) return undefined;
+    const timer = window.setTimeout(
+      () => preloadRaceAssets(gameMode === 'cup' ? KART_TRACKS[0].key : kartTrackKey),
+      1500
+    );
+    return () => window.clearTimeout(timer);
+  }, [characterReady, gameMode, kartTrackKey]);
+  // Grand Prix: the next round's scenery loads while the results are up.
+  useEffect(() => {
+    if (!cup || isCupOver(cup) || cup.results.length !== cup.round + 1) return;
+    preloadRaceAssets(cup.trackKeys[cup.round + 1]);
+  }, [cup]);
+
   // Paint for the kart actually being raced (same fallback the race uses).
   const effectiveKartKey =
     kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart;
@@ -1230,25 +1297,31 @@ export const KartApp = () => {
           wallet={<WalletChip coins={wallet.coins} pulse={Boolean(menuToast)} />}
         />
       ) : (
-        <ComebackCityThreeKartRace
-          allowRestart={!cup}
-          cup={cupProp}
-          character={characterKey}
-          difficulty={raceClass}
-          timeTrial={!cup && gameMode === 'timetrial'}
-          kart={kartKey}
-          key={`race-${raceNonce}`}
-          mirror={mirrorActive}
-          mode="race"
-          nextTrackLabel={cup ? cupNextLabel : nextTrack ? nextTrack.name : null}
-          onExit={exitToMenu}
-          onFinish={handleFinish}
-          onNextTrack={cup ? (cupNextLabel ? cupAdvance : null) : nextTrack ? goNextTrack : null}
-          playerPaint={racePaintFor(paints, effectiveKartKey)}
-          reducedMotion={reducedMotion}
-          runId={raceNonce}
-          track={kartTrackKey}
-        />
+        <>
+          {mountedRaceKey === raceKey ? (
+            <ComebackCityThreeKartRace
+              allowRestart={!cup}
+              cup={cupProp}
+              character={characterKey}
+              difficulty={raceClass}
+              timeTrial={!cup && gameMode === 'timetrial'}
+              kart={kartKey}
+              key={raceKey}
+              mirror={mirrorActive}
+              mode="race"
+              nextTrackLabel={cup ? cupNextLabel : nextTrack ? nextTrack.name : null}
+              onExit={exitToMenu}
+              onFinish={handleFinish}
+              onNextTrack={cup ? (cupNextLabel ? cupAdvance : null) : nextTrack ? goNextTrack : null}
+              onReady={handleRaceReady}
+              playerPaint={racePaintFor(paints, effectiveKartKey)}
+              reducedMotion={reducedMotion}
+              runId={raceNonce}
+              track={kartTrackKey}
+            />
+          ) : null}
+          {readyRaceKey !== raceKey ? <RaceLoadingCard cup={cup} trackKey={kartTrackKey} /> : null}
+        </>
       )}
       {menuToast && !characterReady ? <EarningsToast onDone={dismissMenuToast} summary={menuToast} /> : null}
     </div>

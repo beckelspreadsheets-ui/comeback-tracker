@@ -78,6 +78,7 @@
     "test:select:stage": "node scripts/test-select-stage.mjs",
     "audit:renderer": "node scripts/audit-renderer.mjs",
     "probe:difficulty": "node scripts/kart-difficulty-probe.mjs",
+    "profile:race-start": "node scripts/profile-race-start.mjs",
     "ios:sync": "npm run build:kart && PATH=/opt/homebrew/opt/node@22/bin:$PATH npx cap sync ios",
     "ios:open": "PATH=/opt/homebrew/opt/node@22/bin:$PATH npx cap open ios"
   },
