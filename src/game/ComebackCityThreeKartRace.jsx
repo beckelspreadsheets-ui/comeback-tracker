@@ -91,6 +91,7 @@ import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } fr
 import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
 import { autoplayApexLane, freeBodyAutoplayInput } from './race/autoplayDriver.js';
 import { createMinimap, minimapPointAt } from './race/raceMinimap.js';
+import { RaceCoach } from './race/RaceCoach.jsx';
 import {
   DRIFT_FEEL,
   createDriftState,
@@ -14059,6 +14060,9 @@ export const ComebackCityThreeKartRace = ({
           coins: race.coins,
           countdown: race.countdown,
           drift: race.drift,
+          // First-race coaching (race/RaceCoach.jsx): spark tier, banked turbo.
+          driftTier: race.driftTier,
+          miniTurboTier: race.driftState.miniTurboTier,
           finished: race.finished,
           gap: race.gap ?? null,
           heldItem: race.heldItem,
@@ -14555,6 +14559,19 @@ export const ComebackCityThreeKartRace = ({
       ) : null}
       {/* Slipstream wind: edge streaks while the draft charges. */}
       {snapshot.drafting && !snapshot.finished ? <div aria-hidden="true" className="three-kart-race__draft" /> : null}
+      {/* FIRST-RACE COACHING: drift / let-go / item / boost-pad tips until
+          the player has done each one (race/coaching.js). Renders nothing
+          under autoplay or webdriver unless ?coach=1. */}
+      <RaceCoach
+        autoplay={autoplay}
+        engineRef={engineRef}
+        ItemIcon={HeldItemIcon}
+        projectileSkin={playerCharacter.projectileSkin}
+        reducedMotion={reducedMotion}
+        snapshot={snapshot}
+        touchControls={touchControls}
+        trackDef={trackDef}
+      />
       {/* LAP ROLL-OVER banner. Final lap says so — until now the only cue that
           the last lap had begun was a counter in the corner changing by one. */}
       {lapFlash ? (

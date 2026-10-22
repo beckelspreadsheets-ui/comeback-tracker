@@ -1768,3 +1768,187 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── First-race coaching (race/RaceCoach.jsx, rules in race/coaching.js) ──
+   One plate, top-centre: under the utility buttons on desktop, under the
+   compact strip on phones and tablets. That band is sky on both tracks (the
+   framing solver keeps the kart and the road below the horizon), and it is
+   clear of every corner plate, the gyro pill and the thumb cluster. The
+   wrapper is the aria-live region and stays mounted; plates stack in one grid
+   cell so an outgoing prompt fades under the incoming one. Same plate
+   material as the HUD chips: accent tick, gloss, moulded face, bevel. */
+.three-kart-race__coach {
+  display: grid;
+  justify-items: center;
+  left: calc(16px + env(safe-area-inset-left, 0px));
+  pointer-events: none;
+  position: absolute;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  top: calc(78px + env(safe-area-inset-top, 0px));
+  z-index: 5;
+}
+
+.three-kart-race__coach-plate {
+  --tkr-accent-a: var(--tkr-gold);
+  --tkr-accent-b: rgba(255, 211, 79, 0.22);
+  align-items: center;
+  animation: tkr-coach-in 0.34s cubic-bezier(0.2, 1.25, 0.4, 1) both;
+  background:
+    linear-gradient(180deg, var(--tkr-accent-a), var(--tkr-accent-b)) 3px center / 3px 58% no-repeat,
+    radial-gradient(30px 70% at 0% 50%, var(--tkr-accent-b), rgba(0, 0, 0, 0) 74%),
+    var(--tkr-gloss),
+    var(--tkr-face);
+  border-radius: 13px;
+  box-shadow: var(--tkr-bevel), 0 0 0 1px rgba(255, 211, 79, 0.3), 0 0 26px rgba(255, 211, 79, 0.14);
+  box-sizing: border-box;
+  color: var(--tkr-text);
+  display: flex;
+  gap: 11px;
+  grid-area: 1 / 1;
+  max-width: 100%;
+  padding: 8px 18px 9px 15px;
+}
+
+.three-kart-race__coach-plate[data-coach-tone='drift'] {
+  --tkr-accent-a: var(--tkr-cyan);
+  --tkr-accent-b: rgba(126, 239, 255, 0.22);
+  box-shadow: var(--tkr-bevel), 0 0 0 1px rgba(126, 239, 255, 0.32), 0 0 26px rgba(126, 239, 255, 0.14);
+}
+
+/* Base opacity 0, so the copy stays gone whatever the fill mode ends up as. */
+.three-kart-race__coach-plate[data-coach-leaving='true'] {
+  animation: tkr-coach-out 0.24s ease both;
+  opacity: 0;
+}
+
+.three-kart-race__coach-glyph {
+  align-items: center;
+  color: var(--tkr-accent-a);
+  display: flex;
+  filter: drop-shadow(0 1px 2px rgba(4, 7, 14, 0.8));
+  flex: 0 0 auto;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.three-kart-race__coach-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.three-kart-race__coach-eyebrow {
+  color: var(--tkr-accent-a);
+  font: 700 9px/1 var(--tkr-mono);
+  letter-spacing: 0.22em;
+  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.8);
+  text-transform: uppercase;
+}
+
+.three-kart-race__coach-text {
+  font: 800 16px/1.2 var(--tkr-display);
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(4, 7, 14, 0.85);
+  text-wrap: balance;
+}
+
+/* Key caps, after the How-to-Race guide's <Key>. */
+.three-kart-race__coach-key {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 6px;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: inline-block;
+  font: 800 12px/1 var(--tkr-mono);
+  letter-spacing: 0.06em;
+  margin: 0 3px;
+  padding: 3px 7px 4px;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+
+@keyframes tkr-coach-in {
+  0% { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes tkr-coach-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes tkr-coach-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Reduced motion — the race's own reducedMotion prop... */
+.three-kart-race__coach[data-reduced-motion='true'] .three-kart-race__coach-plate {
+  animation: tkr-coach-fade-in 0.24s ease both;
+}
+
+.three-kart-race__coach[data-reduced-motion='true'] .three-kart-race__coach-plate[data-coach-leaving='true'] {
+  animation: tkr-coach-out 0.24s ease both;
+}
+
+/* ...and the OS setting. The blanket rule above flattens every animation in
+   the race to 0.01ms; a plain fade is the motion reduced-motion users keep,
+   so the plate opts back in to that and only that (no drop, no scale). */
+@media (prefers-reduced-motion: reduce) {
+  .three-kart-race .three-kart-race__coach-plate {
+    animation: tkr-coach-fade-in 0.24s ease both !important;
+  }
+
+  .three-kart-race .three-kart-race__coach-plate[data-coach-leaving='true'] {
+    animation: tkr-coach-out 0.24s ease both !important;
+  }
+}
+
+/* Compact HUD (phones, tablets, small windows): the strip ends at 56px. The
+   symmetric 104px gutters keep the plate off the gyro pill (top-right,
+   54-94px) and the item-pickup pop (top-left, from 64px) at any phone width;
+   a long line wraps inside them rather than reaching either. The lap banner
+   below (26%) never meets it: the coach goes quiet for the banner's 1.5s. */
+@media (max-width: 900px), (max-height: 620px), (pointer: coarse) {
+  .three-kart-race__coach {
+    left: calc(104px + env(safe-area-inset-left, 0px));
+    right: calc(104px + env(safe-area-inset-right, 0px));
+    top: calc(68px + env(safe-area-inset-top, 0px));
+  }
+
+  .three-kart-race__coach-plate {
+    border-radius: 12px;
+    gap: 9px;
+    padding: 6px 15px 7px 13px;
+  }
+
+  .three-kart-race__coach-glyph {
+    height: 24px;
+    width: 24px;
+  }
+
+  .three-kart-race__coach-glyph img {
+    height: 24px;
+    width: 24px;
+  }
+
+  .three-kart-race__coach-copy {
+    gap: 3px;
+  }
+
+  .three-kart-race__coach-eyebrow {
+    font-size: 8px;
+  }
+
+  .three-kart-race__coach-text {
+    font-size: 14px;
+  }
+
+  .three-kart-race__coach-key {
+    font-size: 11px;
+    padding: 2px 6px 3px;
+  }
+}
