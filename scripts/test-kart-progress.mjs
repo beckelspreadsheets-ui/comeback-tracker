@@ -296,8 +296,10 @@ console.log('PASS: respray reference — mean paint luminance ignores neutrals a
 {
   const one = mergeEarnings(null, computeRaceEarnings({ coins: 18, place: 1 }));
   assert.deepEqual(describeEarnings(one), { parts: ['18 coins', '1st place +10'], total: 28 });
-  const fourth = mergeEarnings(null, computeRaceEarnings({ coins: 1, place: 4 }));
-  assert.deepEqual(describeEarnings(fourth), { parts: ['1 coin', 'Finish +1'], total: 2 });
+  const sixth = mergeEarnings(null, computeRaceEarnings({ coins: 1, place: 6 }));
+  assert.deepEqual(describeEarnings(sixth), { parts: ['1 coin', '6th place +1'], total: 2 });
+  const trial = mergeEarnings(null, computeRaceEarnings({ coins: 22, place: 1, timeTrial: true }));
+  assert.deepEqual(describeEarnings(trial), { parts: ['22 coins', 'Finish +1'], total: 23 });
   const cup = mergeEarnings(
     mergeEarnings(null, computeRaceEarnings({ coins: 10, place: 2 })),
     computeRaceEarnings({ coins: 9, cupPlace: 1, place: 1 })

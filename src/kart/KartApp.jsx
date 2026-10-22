@@ -1029,11 +1029,11 @@ export const KartApp = () => {
     setCup(null);
     setCupFinal(false);
     setRaceNonce((value) => value + 1);
-    // Back at the menu: show what the finished race(s) paid, once.
-    if (pendingEarningsRef.current) {
-      setMenuToast(pendingEarningsRef.current);
-      pendingEarningsRef.current = null;
-    }
+    // Back at the menu: show what the finished race(s) paid, once. Always
+    // replaced (null after a quit with nothing new) so an earlier toast can
+    // never resurface.
+    setMenuToast(pendingEarningsRef.current);
+    pendingEarningsRef.current = null;
   }, []);
   // Cup: after a finish, the results button either starts the next round or
   // opens the podium. The cup has already absorbed the race (handleFinish).
@@ -1084,12 +1084,12 @@ export const KartApp = () => {
     if (result.ok) setPaints(result.paints);
     return result;
   }, []);
+  // Storage is the source of truth: a refused buy still resyncs the screen to
+  // what is actually saved (the result carries the stored wallet and paints).
   const handleBuyPaint = useCallback((kart, paintId) => {
     const result = purchasePaint(paintId, kart);
-    if (result.ok) {
-      setPaints(result.paints);
-      setWallet(result.wallet);
-    }
+    setPaints(result.paints);
+    setWallet(result.wallet);
     return result;
   }, []);
   // A try-on is "this paint on this kart": switch karts and it lapses.

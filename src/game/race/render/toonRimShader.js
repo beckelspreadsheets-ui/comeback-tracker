@@ -217,7 +217,6 @@ uniform float uKartRubberCeil;
 uniform float uKartRubberAlbedoCeil;
 uniform vec4 uKartPaintShape;
 uniform vec4 uKartTint;
-// Respray reference (race/render/paintLuminance.js); 0 = racer-tint behaviour.
 uniform float uKartTintRef;
 uniform vec4 uKartEnv;
 // (fresnel floor, probe ramp low, probe ramp high, unused)
@@ -378,11 +377,6 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	// untouched and keeps full luminance preservation.
 	float kartTintPeak = max(uKartTint.r, max(uKartTint.g, uKartTint.b));
 	float kartLitPeak = max(outgoingLight.r, max(outgoingLight.g, outgoingLight.b));
-	// RESPRAY (a paint the player bought, race/progress.js): divide by the
-	// BODY's mean paint luminance instead of the tint's own, so the paint lands
-	// at its own brightness while every texel keeps its brightness relative to
-	// the body's average. uKartTintRef is 0 for the racer tints, which keeps
-	// their path exactly as it was. The peak cap below still bounds both.
 	float kartTintRef = uKartTintRef > 0.0 ? uKartTintRef : luminance(uKartTint.rgb);
 	float kartTintScale = min(
 		luminance(outgoingLight) / max(1e-4, kartTintRef),
@@ -797,6 +791,11 @@ export const applyKartShading = (material, overrides = null) => {
       // paint highlight and the rim together in one write.
       uKartSpecTint: TOON_RIM_SHARED_TINT,
       uKartTint: { value: new THREE.Vector4(1, 1, 1, 0) },
+      // Respray reference (paintLuminance.js): the body's mean paint
+      // luminance. The tint block divides by it instead of by the tint's own
+      // luminance, so a BOUGHT paint lands at its own brightness while each
+      // texel keeps its brightness relative to the body's average. 0 = the
+      // racer-tint path, exactly as before (kartTintRef falls back to it).
       uKartTintRef: { value: 0 },
     },
   });

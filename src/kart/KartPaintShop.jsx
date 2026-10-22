@@ -34,7 +34,6 @@ const textColorFor = (entry, racerColor) => (entry.id === DEFAULT_PAINT_ID ? rac
 
 export const WalletChip = ({ coins, pulse = false }) => (
   <div
-    aria-label={`${coins} ₿ coins`}
     className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-[#ffd34f]/55 bg-[#0b0f1a]/70 px-3.5 font-mono text-[14px] font-black tabular-nums text-[#ffd34f] backdrop-blur-md transition-shadow duration-500 ${
       pulse
         ? 'shadow-[0_0_34px_-4px_rgba(255,211,79,0.95)] ring-2 ring-[#ffd34f]/60'
@@ -45,6 +44,7 @@ export const WalletChip = ({ coins, pulse = false }) => (
   >
     <span aria-hidden="true">₿</span>
     <span data-testid="race-wallet-coins">{coins}</span>
+    <span className="sr-only"> coins</span>
   </div>
 );
 
@@ -117,7 +117,11 @@ export const PaintShop = ({ kartKey, kartName, onBuy, onEquip, onPreview, paints
               aria-label={`${entry.name}${entry.id === DEFAULT_PAINT_ID ? ' (your racer’s colour)' : ''}: ${status}`}
               aria-pressed={isEquipped}
               className={`flex min-h-[82px] flex-col items-center justify-start gap-2 rounded-xl px-0.5 pb-1.5 pt-2.5 text-center outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[#7eefff] ${
-                isEquipped ? 'bg-[#ffd34f]/[0.12]' : isPreview ? 'bg-white/[0.08]' : 'hover:bg-white/[0.06]'
+                isEquipped
+                  ? 'bg-[#ffd34f]/[0.12]'
+                  : isPreview
+                    ? 'bg-white/[0.08]'
+                    : '[@media(hover:hover)]:hover:bg-white/[0.06]'
               }`}
               data-equipped={isEquipped ? '1' : '0'}
               data-owned={isOwned ? '1' : '0'}

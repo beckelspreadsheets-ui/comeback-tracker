@@ -103,14 +103,14 @@ export const applyAward = (wallet, awardId, amount) => {
 };
 
 // ── Paint palette ─────────────────────────────────────────────────────────
-// Neon-dusk livery. `tint` is a hex fed to setKartPaintTint
+// Neon-dusk livery. `tint` is a hex fed to setKartPaintTint(..., { respray })
 // (race/render/toonRimShader.js), which recolours only the body's PAINT
-// texels — tyres, glass, trim and chrome keep their bake — so a paint is a
-// change of hue on the panels the kart was painted with, and it keeps that
-// kart's tonal design. `amount` is the tint's mix: the racer tints rivals
-// carry run at KART_PAINT_TINT_AMOUNT (0.55), which is identity, not a respray;
-// a bought paint has to read as a respray at chase-cam distance, so it runs
-// harder. `null` tint = Factory: the racer's own colour, exactly as before.
+// texels — tyres, glass, trim and chrome keep their bake — and, as a respray,
+// lands the paint at its OWN brightness while the bake's panel shading
+// survives (render/paintLuminance.js). `amount` is the mix: the racer tints
+// rivals carry run at KART_PAINT_TINT_AMOUNT (0.55), which is identity, not a
+// respray; a bought paint has to read as a respray at chase-cam distance, so
+// it runs harder. `null` tint = Factory: the racer's own colour, as before.
 //
 // Prices climb with how loud the paint is; the bitcoin orange is the trophy.
 const PLAYER_PAINT_AMOUNT = 0.9;
@@ -220,7 +220,7 @@ export const describeEarnings = (summary) => {
   if (!summary || !(summary.total > 0)) return { parts: [], total: 0 };
   const parts = [`${summary.coins} ${summary.coins === 1 ? 'coin' : 'coins'}`];
   if (summary.races > 1) parts.unshift(`${summary.races} races`);
-  if (summary.races === 1 && summary.place && PLACE_BONUS[summary.place]) {
+  if (summary.races === 1 && summary.place) {
     parts.push(`${ordinalPlace(summary.place)} place +${summary.placeBonus}`);
   } else if (summary.placeBonus) {
     parts.push(`${summary.races > 1 ? 'Finishes' : 'Finish'} +${summary.placeBonus}`);
