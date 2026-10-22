@@ -539,6 +539,24 @@ const TRACK_GRADES = {
     guardLo: 0.3,
     guardHi: 0.52,
   },
+  // Satoshi Summit (preview track): blue hour. Shadows lean deep indigo, the
+  // top end takes a faint rose so the snow and the karts stay alive under a
+  // cold sky, and saturation sits between the two shipped grades — the neon
+  // accents and the aurora carry the chroma, the grade must not.
+  'satoshi-summit': {
+    black: 0.03,
+    white: 0.97,
+    gamma: 1.12,
+    scurve: 0.36,
+    gain: [1.0, 0.99, 1.035],
+    sat: 1.3,
+    shadowTint: '#1b1356',
+    shadowAmount: 0.16,
+    shadowKnee: 0.5,
+    hiTint: '#ffd9ee',
+    hiAmount: 0.18,
+    hiKnee: 0.8,
+  },
 };
 
 // THE SHOULDER. Round 1 shipped none: `white` was a hard divide followed by a

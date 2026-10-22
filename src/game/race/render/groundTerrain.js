@@ -71,11 +71,135 @@ export const groundPlaneLayout = (trackHalfExtent) => {
   return { scale: size / GROUND_REFERENCE_SIZE, segments: Math.round(size / GROUND_VERTEX_PITCH), size };
 };
 
+// MOUNTAIN FILL (opt-in, trackDef.elevation.fill — Satoshi Summit). Without it
+// the ground follows each road out to its flat band and then ramps back to the
+// plane, so a road at height h stands on a dyke, and two switchback legs at
+// different heights have a V-gully between them down to the plane. With it, the
+// ground BEYOND each road's flat band falls to a smooth interpolation of the
+// road heights around it instead of to the plane: Shepard weights over the road
+// samples within `radius`, plus a constant "plain" weight that pulls toward
+// zero. The plain weight is solved so that at `halfReach` from a lone straight
+// road the fill is half that road's height. Enclosed ground (between legs,
+// inside a loop) reads as one continuous hillside; open ground falls away.
+//
+// It only changes vertices OUTSIDE every road's flat band (the band's blend
+// targets the fill instead of zero), so the footprint guarantees above and the
+// other-pass clamp below are untouched, and with no fill the arithmetic is
+// bit-identical to the shipped follow (it adds fill * fade with fill = 0).
+const FILL_PITCH = 30;
+const FILL_SAMPLE_STRIDE = 3;
+const FILL_SOFTEN = 30;
+const createFillField = ({ centreline, followY, radius, halfReach, samples, sampleSpacing }) => {
+  const radiusSq = radius * radius;
+  const softenSq = FILL_SOFTEN * FILL_SOFTEN;
+  const weightAt = (distanceSq) => {
+    if (distanceSq >= radiusSq) return 0;
+    const falloff = 1 - distanceSq / radiusSq;
+    return (falloff * falloff) / (distanceSq + softenSq);
+  };
+  // The plain weight: the summed weight a lone straight road presents at
+  // halfReach, so H there is exactly half the road's height.
+  const stride = sampleSpacing * FILL_SAMPLE_STRIDE;
+  let plain = 0;
+  for (let along = -radius; along <= radius; along += stride) {
+    plain += weightAt(along * along + halfReach * halfReach);
+  }
+  const xs = [];
+  const zs = [];
+  const ys = [];
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (let sample = 0; sample < samples; sample += FILL_SAMPLE_STRIDE) {
+    const x = centreline[sample * 2];
+    const z = centreline[sample * 2 + 1];
+    xs.push(x);
+    zs.push(z);
+    ys.push(followY[sample]);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minZ = Math.min(minZ, z);
+    maxZ = Math.max(maxZ, z);
+  }
+  const originX = minX - radius;
+  const originZ = minZ - radius;
+  const columns = Math.ceil((maxX - minX + radius * 2) / FILL_PITCH) + 1;
+  const rows = Math.ceil((maxZ - minZ + radius * 2) / FILL_PITCH) + 1;
+  const grid = new Float32Array(columns * rows);
+  const count = xs.length;
+  for (let row = 0; row < rows; row += 1) {
+    const z = originZ + row * FILL_PITCH;
+    for (let column = 0; column < columns; column += 1) {
+      const x = originX + column * FILL_PITCH;
+      let sumW = 0;
+      let sumWY = 0;
+      for (let index = 0; index < count; index += 1) {
+        const dx = x - xs[index];
+        const dz = z - zs[index];
+        const w = weightAt(dx * dx + dz * dz);
+        if (w > 0) {
+          sumW += w;
+          sumWY += w * ys[index];
+        }
+      }
+      grid[row * columns + column] = sumW > 0 ? sumWY / (sumW + plain) : 0;
+    }
+  }
+  return (x, z) => {
+    const gx = (x - originX) / FILL_PITCH;
+    const gz = (z - originZ) / FILL_PITCH;
+    if (gx < 0 || gz < 0 || gx >= columns - 1 || gz >= rows - 1) return 0;
+    const column = Math.floor(gx);
+    const row = Math.floor(gz);
+    const fx = gx - column;
+    const fz = gz - row;
+    const index = row * columns + column;
+    const top = grid[index] + (grid[index + 1] - grid[index]) * fx;
+    const bottom = grid[index + columns] + (grid[index + columns + 1] - grid[index + columns]) * fx;
+    return top + (bottom - top) * fz;
+  };
+};
+
+// With a fill, the ground plane has real hillsides, and the runtime's relief
+// normals (a texture-scale height field on a notionally flat plate) would light
+// a 60-unit mountainside as if it were level. This adds the TERRAIN's own
+// gradient to them, read off the displaced grid itself (central differences on
+// the plane's lattice — free, no extra solves). `fillSlopes` holds the relief
+// slope pair per vertex as the runtime computed it; `position` is the
+// PlaneGeometry (built in XY, rotated -90 about X: local y = -world z, local z
+// = world y), so normals are written back in local space exactly as the
+// runtime's own loop writes them.
+export const addFillSlopeNormals = ({ fillSlopes, normals, position, segments }) => {
+  const row = segments + 1;
+  const pitch = Math.abs(position.getX(1) - position.getX(0)) || 1;
+  const heightOf = (ix, iy) => position.getZ(iy * row + ix);
+  for (let iy = 0; iy <= segments; iy += 1) {
+    const up = Math.max(0, iy - 1);
+    const down = Math.min(segments, iy + 1);
+    for (let ix = 0; ix <= segments; ix += 1) {
+      const left = Math.max(0, ix - 1);
+      const right = Math.min(segments, ix + 1);
+      // World x grows with ix; world z grows with iy (local y falls with it).
+      const gradientX = (heightOf(right, iy) - heightOf(left, iy)) / ((right - left) * pitch);
+      const gradientZ = (heightOf(ix, down) - heightOf(ix, up)) / ((down - up) * pitch);
+      const index = iy * row + ix;
+      const slopeX = fillSlopes[index * 2] + gradientX;
+      const slopeZ = fillSlopes[index * 2 + 1] + gradientZ;
+      const inverseLength = 1 / Math.hypot(slopeX, 1, slopeZ);
+      normals[index * 3] = -slopeX * inverseLength;
+      normals[index * 3 + 1] = slopeZ * inverseLength;
+      normals[index * 3 + 2] = inverseLength;
+    }
+  }
+};
+
 // centreAt(progress) -> { x, y, z } with y the road elevation; widthAt is the
 // sampler's; edgeReach is how far the welded edge profile extends past the
 // road's own edge (the last section point's u). bridgeBand progress is
-// excluded from the follow: the deck spans a gap the pillars fill.
-export const createGroundTerrain = ({ bridgeBand = null, centreAt, edgeReach, length, terrainEnabled = true, widthAt }) => {
+// excluded from the follow: the deck spans a gap the pillars fill. fill is the
+// optional mountain fill above ({ radius, halfReach }).
+export const createGroundTerrain = ({ bridgeBand = null, centreAt, edgeReach, fill = null, length, terrainEnabled = true, widthAt }) => {
   const samples = clamp(Math.round(length / CLEAR_CHORD_UNITS), 128, 1200);
   const centreline = new Float32Array(samples * 2);
   const centreY = new Float32Array(samples);
@@ -99,6 +223,18 @@ export const createGroundTerrain = ({ bridgeBand = null, centreAt, edgeReach, le
   for (let sample = 0; sample < samples; sample += 1) {
     followY[sample] = inBridge(sample / samples) ? 0 : centreY[sample];
   }
+
+  const fillAt =
+    terrainEnabled && fill && fill.radius > 0 && fill.halfReach > 0
+      ? createFillField({
+          centreline,
+          followY,
+          halfReach: fill.halfReach,
+          radius: fill.radius,
+          sampleSpacing: length / samples,
+          samples,
+        })
+      : null;
 
   const clearInner = widestHalfRoad + RELIEF_CLEAR_PAD;
   const clearOuter = clearInner + RELIEF_RAMP;
@@ -230,7 +366,12 @@ export const createGroundTerrain = ({ bridgeBand = null, centreAt, edgeReach, le
     // so it is held to zero wherever the terrain band is.
     result.displaceFade = Math.min(result.reliefFade, terrainFade);
     result.terrainLift = 0;
-    if (!terrainEnabled || nearestSample < 0 || distance === Infinity) return result;
+    // Mountain fill target (0 without a fill, which is the shipped follow).
+    const fillHeight = fillAt ? fillAt(x, z) : 0;
+    if (!terrainEnabled || nearestSample < 0 || distance === Infinity) {
+      result.terrainLift = fillHeight;
+      return result;
+    }
 
     // Elevation at the vertex's FOOT on the centreline, not at the nearest
     // sample: samples sit one chord apart, so on a 6.5% grade the nearest
@@ -277,6 +418,8 @@ export const createGroundTerrain = ({ bridgeBand = null, centreAt, edgeReach, le
     if (!inBridge(nearestSample / samples)) {
       lift = footY * (1 - terrainFade);
     }
+    // Outside the flat band the ground blends to the fill, not to the plane.
+    if (fillAt) lift += fillHeight * terrainFade;
     // Another pass of the track close enough that this vertex's triangles can
     // reach its footprint: the ground must clear that road too. Bridge-band
     // samples are the deck over a gap and never pull the ground up or down.
@@ -306,5 +449,5 @@ export const createGroundTerrain = ({ bridgeBand = null, centreAt, edgeReach, le
     return result;
   };
 
-  return { clearInner, clearOuter, samples, solve, terrainInner, terrainOuter, widestHalfRoad };
+  return { clearInner, clearOuter, hasFill: Boolean(fillAt), samples, solve, terrainInner, terrainOuter, widestHalfRoad };
 };

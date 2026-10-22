@@ -111,7 +111,7 @@ const checkTrack = (trackDef) => {
   // barrier's back face is meant to be buried (footDrop).
   const footprintReach = section[6].u;
   const bridgeBand = trackDef.elevation?.bridgeBand || null;
-  const options = { bridgeBand, centreAt, edgeReach, length: sampler.length, widthAt: sampler.widthAt };
+  const options = { bridgeBand, centreAt, edgeReach, fill: trackDef.elevation?.fill || null, length: sampler.length, widthAt: sampler.widthAt };
   const terrain = LEGACY ? createLegacyTerrain(options) : createGroundTerrain(options);
   const reliefDisplace = trackDef.palette?.ground?.relief?.displace ?? 0.3;
 

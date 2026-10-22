@@ -145,7 +145,7 @@ export const SATOSHI_SUMMIT_TRACK = Object.freeze({
     // interpolated from the road heights around it, so the switchback legs and
     // the summit loop sit on one continuous hillside instead of on dykes with
     // V-gullies between them. Opt-in; the shipped tracks omit it.
-    fill: { reach: 300, fade: 220 },
+    fill: { halfReach: 260, radius: 620 },
   },
   ramps: [
     // One small kicker, off the racing line on the middle switchback leg. The
@@ -180,8 +180,11 @@ export const SATOSHI_SUMMIT_TRACK = Object.freeze({
     // lavender-white disc 24 degrees up (high enough to throw a readable cast
     // shadow — PV's split-key note puts that floor at ~20).
     sun: { azimuthDeg: 32, distance: 190, elevationDeg: 24 },
-    sunColor: '#d6dcff',
-    sunIntensity: 3.6,
+    // A pale lavender rather than a white: the dome draws the disc at 2.2x
+    // this colour, so a white key reads as a blown-out sun; this lands a lit
+    // lavender moon. Intensity carries the same key energy (#d6dcff x 3.6).
+    sunColor: '#9a9cc8',
+    sunIntensity: 7.4,
     // Tight halo only: a moon does not paint the sky round it.
     skyGlow: [0.16, 0.02],
     clouds: {

@@ -86,7 +86,7 @@ import {
 import { QA_RACE_CLASS, raceClassByKey } from './race/raceClasses.js';
 import { mergeGamepadInput, pollGamepad } from './race/gamepadInput.js';
 import { createGhostRecorder, ghostStateAt, readGhost, recordGhostFrame, saveGhostIfBest } from './race/replayGhost.js';
-import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
+import { DEFAULT_TRACK_KEY, isKnownTrackKey, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
 import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
 import { autoplayApexLane, freeBodyAutoplayInput } from './race/autoplayDriver.js';
@@ -191,10 +191,13 @@ import { hapticForCue, hapticImpact } from './race/haptics.js';
 import { beginRaceSession, resumeRaceSession, suspendRaceSession } from './race/sessionHealth.js';
 import {
   GROUND_BASE_Y,
+  addFillSlopeNormals,
   createGroundTerrain,
   groundPlaneLayout,
   measureTrackHalfExtent,
 } from './race/render/groundTerrain.js';
+import { addSatoshiSummitDressing } from './race/render/summitDressing.js';
+import { createSummitAurora, createSummitBackdropStrips } from './race/render/summitBackdrop.js';
 import {
   createBackdropRingMaterial,
   createSkyDome,
@@ -4807,10 +4810,19 @@ varying float vRoadIce;`,
         bridgeBand: trackDef?.elevation?.bridgeBand || null,
         centreAt: groundCentreAt,
         edgeReach: roadEdgeReach,
+        // Opt-in mountain fill (Satoshi Summit); absent on the shipped tracks.
+        fill: trackDef?.elevation?.fill || null,
         length: sampler.length,
         terrainEnabled: terrainGradeEnabled,
         widthAt: sampler.widthAt,
       });
+      // Track dressing plants props on this exact surface (summitDressing.js).
+      world.userData.groundTerrain = terrain;
+      // With a fill the ground carries real hillsides, and the relief normals
+      // below describe only the snow texture on a flat plate — so the fill's
+      // own slope is added to them after the heights are known (see the block
+      // after this loop). Without a fill nothing here runs.
+      const fillSlopes = terrain.hasFill ? new Float32Array(position.count * 2) : null;
       // Its own lattice, offset from the albedo mottle's, so drifts and colour
       // patches do not coincide — coincident value and hue variation reads as
       // one painted texture rather than as a surface under a light.
@@ -4840,6 +4852,10 @@ varying float vRoadIce;`,
         const scale = (reliefNormal * reliefFade) / (2 * STEP);
         const slopeX = (heightAt(x + STEP, z) - heightAt(x - STEP, z)) * scale;
         const slopeZ = (heightAt(x, z + STEP) - heightAt(x, z - STEP)) * scale;
+        if (fillSlopes) {
+          fillSlopes[index * 2] = slopeX;
+          fillSlopes[index * 2 + 1] = slopeZ;
+        }
         const inverseLength = 1 / Math.hypot(slopeX, 1, slopeZ);
         // The plane is authored in XY and rotated -90 degrees about X, which
         // maps local (x, y, z) onto world (x, z, -y). The normal has to be
@@ -4852,6 +4868,7 @@ varying float vRoadIce;`,
           position.setZ(index, terrainLift + (heightAt(x, z) - 0.5) * 2 * reliefDisplace * displaceFade);
         }
       }
+      if (fillSlopes) addFillSlopeNormals({ fillSlopes, normals, position, segments: groundSegments });
       position.needsUpdate = true;
       groundGeometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
       groundGeometry.computeBoundingSphere();
@@ -6179,6 +6196,8 @@ const ITEM_BOX_ASSETS = {
   // FIELD already mounts itemBoxCcCoinUrl on both tracks, so the item box was
   // the only thing on Penguin Village still wearing the ice skin.
   'penguin-village': itemBoxCcCoinUrl,
+  // Preview track: the B coin is the Satoshi Summit's whole theme.
+  'satoshi-summit': itemBoxCcCoinUrl,
 };
 const itemBoxTemplateCache = new Map();
 // Scratch transforms for the instanced coin field — one compose per face
@@ -8510,7 +8529,10 @@ const createScene = ({
         near: backdropPvNearUrl,
       },
     };
-    const strips = SKY_LAB_STRIPS[trackDef.key] || {};
+    // A track with no painted plates can draw its own at runtime (Satoshi
+    // Summit: summitBackdrop.js, textures instead of URLs — see addBackdropRing).
+    const strips =
+      SKY_LAB_STRIPS[trackDef.key] || (trackDef.dressing?.satoshiSummit ? createSummitBackdropStrips() : null) || {};
     camera.far = 1800;
     camera.updateProjectionMatrix();
     // Aerial perspective for the fog-exempt rings (see createSkyDome.js). The
@@ -8527,7 +8549,7 @@ const createScene = ({
     });
     const addBackdropRing = (url, { deSun, glow, haze, height, mirrored, order, radius, repeats, y }, anchor) => {
       if (!url) return;
-      loader.load(url, (texture) => {
+      const mountRing = (texture) => {
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.wrapS = mirrored ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping;
         // The ring shader applies the tiling itself (raw ShaderMaterial gets
@@ -8547,7 +8569,10 @@ const createScene = ({
         ring.position.y = y;
         ring.renderOrder = order;
         anchor.add(ring);
-      });
+      };
+      // A runtime-generated plate arrives as a texture, a painted one as a URL.
+      if (url.isTexture) mountRing(url);
+      else loader.load(url, mountRing);
     };
     // Camera-anchored horizon. Both rings used to sit at the world origin
     // while the track spans ~350 units off it, so the skyline's apparent
@@ -8562,6 +8587,8 @@ const createScene = ({
     const backdropAnchorNear = new THREE.Group();
     scene.add(backdropAnchorFar, backdropAnchorNear);
     backdrop = { far: backdropAnchorFar, near: backdropAnchorNear, nearParallax: 0.72 };
+    // Satoshi Summit's aurora rides the camera-locked far anchor, behind the plates.
+    if (trackDef.dressing?.satoshiSummit) backdropAnchorFar.add(createSummitAurora({ mobile }));
     addBackdropRing(
       skyLab.far || strips.far,
       {
@@ -9007,6 +9034,15 @@ const createScene = ({
   const propCount =
     addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals, ambient) + trackVisualPropCount;
   if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef, ambient);
+  if (trackDef.dressing?.satoshiSummit) {
+    addSatoshiSummitDressing(world, sampler, trackDef, ambient, {
+      addGlowSprite,
+      createToonMaterial,
+      instanceTemplateField,
+      markCameraExempt,
+      setFlatTransform,
+    });
+  }
 
   // GROUNDING, tier 1 + tier 3. Both sweeps run HERE — after every prop is in
   // the world and BEFORE the karts mount, so kart caster policy stays with the
@@ -10506,7 +10542,7 @@ export const ComebackCityThreeKartRace = ({
   }, [kart, playerCharacter]);
   const playerKart = kartByKey(kartKey);
   const trackKey = useMemo(
-    () => (KART_TRACKS.some((entry) => entry.key === track) ? track : DEFAULT_TRACK_KEY),
+    () => (isKnownTrackKey(track) ? track : DEFAULT_TRACK_KEY),
     [track]
   );
   const trackVisualsEnabled = useMemo(() => {
@@ -10617,7 +10653,8 @@ export const ComebackCityThreeKartRace = ({
     // speed-lines mesh is camera-space, so the camera must join the scene
     // graph for its children to render.
     const particles = createRaceParticles({
-      isIce: trackDef.key === 'penguin-village',
+      // Snow-verge tracks (off-road = snow spray, icy exhaust) opt in by flag.
+      isIce: trackDef.key === 'penguin-village' || Boolean(trackDef.dressing?.arcticParticles),
       mobile: touchControls,
     });
     engine.world.add(markCameraExempt(particles.group));
