@@ -104,7 +104,9 @@ const fitnessThresholdDefaults = {
 const kartThresholdDefaults = {
   audioTotalMiB: 6.0,
   imageTotalMiB: 2.5,
-  javascriptTotalGzipKiB: 540,
+  // 540 -> 560 (owner ack 2026-10-22): Satoshi Summit, game feel, coaching,
+  // coins + paints and Mirror Mode together landed at 540.09 KiB.
+  javascriptTotalGzipKiB: 560,
   javascriptTotalMiB: 2.0,
   largestFileMiB: 3.0,
   largestJavaScriptGzipKiB: 400,
