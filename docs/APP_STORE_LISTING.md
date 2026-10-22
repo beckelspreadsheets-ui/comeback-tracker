@@ -118,9 +118,13 @@ Landscape, captured by `node scripts/app-store-screenshots.mjs` after
 | iPhone 6.9" | 2868 × 1320 | 3–10 (Apple scales these down for smaller iPhones) |
 | iPad 13" | 2752 × 2064 | 3–10 |
 
-Suggested order: race setup with a character on the stage, the start grid, a
-drift through Comeback City, Penguin Village, items in use. OWNER picks the
-final set.
+**OWNER PICK 2026-10-22: the suggested six, same order on both devices** —
+1 drift past the WAGMI boards (07), 2 Penguin Village (04), 3 Comeback City
+pack (03), 4 the racer roster (01b), 5 bubble shield (05), 6 Penguin Village
+pack (08). Upload-ready JPEGs at Apple's exact sizes:
+`store/app-store-screenshots/{iphone-6.9,ipad-13}/<slot>-<scene>.jpg`.
+Review page with every take: https://claude.ai/artifact/QNDcYWVPtBAQ3oygHT5rua
+Re-shoot one scene with `APP_STORE_SHOTS_ONLY=07 node scripts/app-store-screenshots.mjs`.
 
 ## TestFlight (Phase 3 — the fun check)
 

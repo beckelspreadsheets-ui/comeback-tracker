@@ -20,6 +20,9 @@ import { chromiumGlArgs } from './lib/chromium-gl-args.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RACES = Number(process.argv[2] || 10);
+// Restart race (pause menu) cycles inside race 1: the same engine resets
+// instead of remounting, so a leak there never shows in the remount loop.
+const RESTARTS = Number(process.env.KART_SOAK_RESTARTS ?? 6);
 const PORT = Number(process.env.KART_SOAK_PORT || 5411);
 const external = process.env.KART_SOAK_URL;
 const baseUrl = external || `http://127.0.0.1:${PORT}`;
@@ -116,6 +119,7 @@ try {
   // down), Start.
   const TRACKS = ['comeback-city', 'penguin-village'];
   const samples = [];
+  let restartGrowth = 0;
   // Locators, never page.waitForSelector: that returns an ElementHandle, and
   // an undisposed handle pins its element — here the pause menu's exit
   // button, and through it the whole quit race's DOM and canvas. The first
@@ -133,6 +137,18 @@ try {
     }
     await page.waitForFunction(() => window.__comebackCityKartTelemetry?.raceTime > 4, null, { timeout: 120000 });
     const raced = await page.evaluate(() => window.__comebackCityKartTelemetry?.track);
+    if (race === 1 && RESTARTS > 0) {
+      const before = await sample();
+      for (let i = 0; i < RESTARTS; i += 1) {
+        await page.keyboard.press('Escape');
+        await click('race-pause-restart');
+        await page.waitForFunction(() => window.__comebackCityKartTelemetry?.raceTime < 1, null, { timeout: 30000 });
+        await page.waitForFunction(() => window.__comebackCityKartTelemetry?.raceTime > 4, null, { timeout: 120000 });
+      }
+      const after = await sample();
+      restartGrowth = after.heapMiB - before.heapMiB;
+      console.log(`restarts ${RESTARTS}: in-race heap ${before.heapMiB} -> ${after.heapMiB} MiB (growth ${restartGrowth.toFixed(1)} MiB)`);
+    }
     // Quit to the menu through the pause menu, the way a player leaves.
     await page.keyboard.press('Escape');
     await click('race-pause-menu-exit');
@@ -165,6 +181,10 @@ try {
   if (maxRetained > 2) {
     failed = true;
     console.log('FAIL quit races are still reachable (WebGL context objects retained)');
+  }
+  if (restartGrowth > 3) {
+    failed = true;
+    console.log('FAIL JS heap grows with each Restart race');
   }
   if (samples.length >= 6 && growth > 3) {
     failed = true;
