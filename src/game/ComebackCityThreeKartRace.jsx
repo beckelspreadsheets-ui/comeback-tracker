@@ -10289,8 +10289,10 @@ export const ComebackCityThreeKartRace = ({
   const [perfOverlay, setPerfOverlay] = useState(readPerfProbePref);
   // The last race's renderer, for the unmount-only release below.
   const rendererRef = useRef(null);
-  useEffect(
-    () => () => {
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
       // Hand the GPU context back the moment the race leaves the screen,
       // rather than whenever the canvas is garbage-collected. Phones allow a
       // handful of live contexts and iOS kills the web process when one race's
@@ -10298,11 +10300,20 @@ export const ComebackCityThreeKartRace = ({
       // 10 races" bar is about. Unmount only: every race mounts a fresh canvas
       // (KartApp keys it on the race nonce), while the main effect below can
       // re-run on the SAME canvas, where a forced loss would leave it black.
-      rendererRef.current?.forceContextLoss?.();
-      rendererRef.current = null;
-    },
-    []
-  );
+      //
+      // Deferred one task and skipped if the race came straight back: React
+      // StrictMode (dev only) runs this cleanup and then mounts again on the
+      // same canvas, and a loss forced in between handed the re-run a dead
+      // context — dev:kart fell back to the 2D renderer (found 2026-10-22).
+      mountedRef.current = false;
+      const renderer = rendererRef.current;
+      setTimeout(() => {
+        if (mountedRef.current) return;
+        renderer?.forceContextLoss?.();
+        if (rendererRef.current === renderer) rendererRef.current = null;
+      }, 0);
+    };
+  }, []);
   // K7 chip revision, owner pick B (2026-07-12): a new pickup pops the item's
   // icon oversized for ~0.6s (MK-style "you got X"), then the normal chip/
   // button display carries it. Purely cosmetic — input and item semantics
