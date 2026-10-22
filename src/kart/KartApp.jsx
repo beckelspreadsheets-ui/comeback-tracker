@@ -681,7 +681,7 @@ const KartCharacterSelect = ({ gameMode, kartKey, onShowGuide, onStart, raceClas
         ) : null}
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {pickerTracks.map((entry) => {
+        {(gameMode === 'cup' ? KART_TRACKS : pickerTracks).map((entry) => {
           const selected = entry.key === trackKey;
           return (
             <button
