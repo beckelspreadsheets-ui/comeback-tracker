@@ -137,9 +137,13 @@ export default defineConfig({
     // build log: it spends the JS budget, which is the one cap the audio work
     // is explicitly not allowed to touch (JS blocks first paint, audio does
     // not); it puts sound in the precache by the back door; and it makes the
-    // runtimeCaching rule below unable to see those cues at all. Everything
-    // else keeps the normal 4 KB behaviour.
-    assetsInlineLimit: (filePath) => (/\.(?:mp3|m4a|ogg|wav)$/i.test(filePath) ? false : undefined),
+    // runtimeCaching rule below unable to see those cues at all.
+    //
+    // Images too (2026-10-22): the 3.7 KB fishbone item icon was riding in
+    // race-runtime as ~5 KB of base64 — JS budget spent on a picture, which the
+    // image budget carries for a fraction of the cost. Everything else keeps
+    // the normal 4 KB behaviour.
+    assetsInlineLimit: (filePath) => (/\.(?:mp3|m4a|ogg|wav|webp|png|jpe?g|avif|gif)$/i.test(filePath) ? false : undefined),
     rollupOptions: {
       input: kartHtmlPath,
       output: {
