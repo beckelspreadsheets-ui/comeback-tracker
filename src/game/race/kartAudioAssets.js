@@ -60,6 +60,8 @@ export const MUSIC_LOOP_SECONDS = {
   'comeback-city': 61.93644,
   menu: 60.000748,
   'penguin-village': 68.571474,
+  // 16 bars @ 118: the 32-bar cut of this take joined badly (seam 0.62).
+  'satoshi-summit': 32.542812,
 };
 
 // The engine loops are WAVs on purpose — see scripts/render-kart-engine.mjs.
