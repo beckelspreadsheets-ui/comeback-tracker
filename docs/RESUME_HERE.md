@@ -1,6 +1,14 @@
 # RESUME HERE — Penguin Kart game
 
 ## 2026-10-22 — five upgrades + new music merged, preview deployed (read first)
+**Latest stable, shareable build: https://61e25b89.comeback-city-kart.pages.dev**
+(pinned preview deploy of 880eb547; full battery 16/16 incl. context loss,
+soak and playable proof; deploy probe green on all three tracks + phone).
+The owner shares this pinned link (e.g. with people hiring him); production
+stays on the July build by his choice (2026-10-22, "preview link only").
+Owner calls made after the summary below: Satoshi Summit is IN the Grand
+Prix (3 races), JS budget raised to 560 KiB, no coin rows within 0.025 of
+the finish line, three-column track picker. Trailer take still unpicked.
 Summary page with screenshots and the owner's open calls:
 https://claude.ai/artifact/GG5Z1yfDfbwRFijkZaV5HW · music picks + re-scored
 trailer: https://claude.ai/artifact/2abKRs4f2Mgm3Ld3Hmvzri · preview deploy
