@@ -228,6 +228,12 @@ export const CHASE_FEEL_DEFAULTS = {
   shakeDecay: 0.0006,
   shakeYaw: 0.022,
   shakePitch: 0.017,
+  // IMPACT KICK (juice pass). A hit also drops the eye a touch through the
+  // landing spring, so it lands with weight instead of only rattling. In the
+  // landing's own units: 9 at full kick is ~a third of a reference landing,
+  // i.e. ~0.7 units of eye drop and ~0.8 degrees of lens pinch that rebound in
+  // half a second. Reduced motion zeroes it with the rest of the dip.
+  kickDipImpulse: 9,
 
   // ---------------------------------------------------------------------
   // SPEED. The wave-5 model had all four MK8 cues and the critics scored the
@@ -597,6 +603,19 @@ export const createChaseFeelState = (overrides = {}) => ({
 export const impulseChaseShake = (state, amount) => {
   if (!state || !(amount > 0)) return;
   state.shakeAmp = Math.min(1, Math.max(state.shakeAmp, amount));
+};
+
+/**
+ * Impact kick: the shake above plus a small velocity jolt into the landing-dip
+ * spring, so the eye drops and the lens pinches for a beat. A second door into
+ * the SAME state rather than a second shake — the shake still does not stack,
+ * advanceChaseFeel still decays both, and reduced motion still zeroes both.
+ * race/juice.js is the caller; it scales `amount` by how hard the hit was.
+ */
+export const impulseChaseKick = (state, amount) => {
+  if (!state || !(amount > 0)) return;
+  impulseChaseShake(state, amount);
+  state.landDipVelocity += (state.tuning.kickDipImpulse || 0) * Math.min(1, amount);
 };
 
 /**
