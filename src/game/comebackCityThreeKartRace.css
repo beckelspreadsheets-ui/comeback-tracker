@@ -1477,6 +1477,18 @@
     top: calc(10px + env(safe-area-inset-top, 0px));
   }
 
+  /* The course map is rendered inside the HUD, which this block turns into a
+     46px strip along the top — so its `bottom` was measured from the strip and
+     put the map 50px ABOVE the screen on every phone and iPad (2026-10-22).
+     Fixed positioning anchors it to the race box again (when the soft-landscape
+     rotation applies, its transform is the containing block instead). Still
+     bottom-centre: between the thumbs, clear of the coaching tip up top. */
+  .three-kart-race__coursemap {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    position: fixed;
+    top: auto;
+  }
+
   /* The corner groups dissolve rather than move: display:contents drops the
      wrappers out of the box tree so their plates become flex items of the
      strip directly. Reading order is then set by `order` below — declared, not
