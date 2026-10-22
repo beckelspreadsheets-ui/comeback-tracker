@@ -1,0 +1,21 @@
+{
+  "_note": "Prompts for the three in-game beds (scripts/elevenlabs-music.mjs --prompt, force_instrumental). Tempos match the self-rendered beds so the loop tool's bar math and the game's feel stay put. Takes run ~30 s past the loop so loop-music-bed.mjs can skip an intro and still crossfade.",
+  "menu": {
+    "bpm": 96,
+    "bars": "32,24",
+    "lengthMs": 105000,
+    "prompt": "Instrumental chill synthwave groove for a racing game's menu screen. 96 BPM, A minor. Warm analog pads, a soft arpeggiated synth, round side-chained bass, light steady drums. Neon-dusk Miami mood, relaxed and inviting, the same energy from start to finish so it can loop. No intro, no build-up, no breakdown, no ending, no fade-out, no vocals."
+  },
+  "comeback-city": {
+    "bpm": 124,
+    "bars": "32,40",
+    "lengthMs": 100000,
+    "prompt": "Instrumental driving outrun synthwave for an arcade kart race through a neon Miami city at sunset. 124 BPM, A minor. Four-on-the-floor kick, gated snare, pulsing analog bass, a bright saw-lead hook, shimmering arpeggios. High energy that stays constant the whole way so it can loop under a race. No intro, no breakdown, no ending, no fade-out, no vocals."
+  },
+  "penguin-village": {
+    "bpm": 112,
+    "bars": "32,40",
+    "lengthMs": 100000,
+    "prompt": "Instrumental arctic synth-pop for an arcade kart race through a snowy penguin village at sunset. 112 BPM, B minor. Glassy bells and glockenspiel, crystalline plucks, airy pads, bouncy half-time drums with crisp hi-hats. Playful and cool, constant energy so it can loop under a race. No intro, no ending, no fade-out, no vocals."
+  }
+}

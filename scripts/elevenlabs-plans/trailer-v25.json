@@ -1,0 +1,28 @@
+{
+  "chunks": [
+    {
+      "text": "[Neon Miami] {instrumental}",
+      "duration_ms": 26000,
+      "positive_styles": ["outrun synthwave", "120 BPM", "driving four-on-the-floor", "gated snare", "pulsing analog bass", "bright saw-lead hook", "sunset Miami energy", "building excitement"],
+      "negative_styles": ["vocals", "lo-fi", "ambient", "slow"]
+    },
+    {
+      "text": "[Freeze Over] {instrumental; an ice-crack impact right on the first beat, the drums drop out, an icy riser}",
+      "duration_ms": 4000,
+      "positive_styles": ["cinematic impact", "ice crack", "reverse cymbal riser", "filtered synths", "tension"],
+      "negative_styles": ["vocals", "silence"]
+    },
+    {
+      "text": "[Arctic Drive] {instrumental; the same groove returns frozen over}",
+      "duration_ms": 17000,
+      "positive_styles": ["icy synthwave", "120 BPM", "glassy bells", "crystalline plucks", "shimmering pads", "driving drums", "the Miami saw lead and the ice bells together", "big finale energy"],
+      "negative_styles": ["vocals", "lo-fi", "slow"]
+    },
+    {
+      "text": "[Title] {instrumental; one huge final hit, then a sustained chord ringing out}",
+      "duration_ms": 8000,
+      "positive_styles": ["cinematic final hit", "sustained synth chord", "bells ringing out", "triumphant"],
+      "negative_styles": ["vocals", "new melody", "drums continuing"]
+    }
+  ]
+}
