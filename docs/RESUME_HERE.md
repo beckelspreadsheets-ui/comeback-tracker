@@ -1,7 +1,19 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-10-22 — five upgrades + new music merged, preview deployed (read first)
-**Latest stable, shareable build: https://61e25b89.comeback-city-kart.pages.dev**
+## 2026-10-22 (late) — Dragster retired (read first)
+**Latest stable, shareable build: https://819fa1a3.comeback-city-kart.pages.dev**
+(pinned preview deploy of 286ba09c; full battery 16/16 incl. context loss,
+soak and playable proof; deploy probe green on all three tracks + phone).
+Supersedes 61e25b89. Owner: "we need to get rid of the dragster it looks
+like shit" — the Kenney Dragster is out of the kart picker (11 karts), the
+select stage and the GLB-failure fallback (now the Hero Kart); Seth / Mizzle /
+Layer 23 ride Hash Runner / Block Reward / Sat Stacker in KART_CHARACTERS.
+Next: a reviewer called the game "a lil hiccupy at the beginning" (on a busy
+PC) — profile the race start (scratchpad profiler: frame gaps + CPU profile
+from Start) and fix what it shows.
+
+## 2026-10-22 — five upgrades + new music merged, preview deployed
+Stable build at the time: https://61e25b89.comeback-city-kart.pages.dev
 (pinned preview deploy of 880eb547; full battery 16/16 incl. context loss,
 soak and playable proof; deploy probe green on all three tracks + phone).
 The owner shares this pinned link (e.g. with people hiring him); production
