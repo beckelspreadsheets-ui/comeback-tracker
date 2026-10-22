@@ -711,7 +711,9 @@ const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, on
           <p className="-mt-1 mb-3 text-[11px] text-white/40">Every track in order. Points for every finish; most points takes the trophy.</p>
         ) : null}
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {/* Three columns when the list fills them (three tracks since Satoshi
+          Summit joined the cup), so no card sits alone on a second row. */}
+      <div className={`grid grid-cols-1 gap-3 ${(gameMode === 'cup' ? KART_TRACKS : pickerTracks).length % 3 === 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
         {(gameMode === 'cup' ? KART_TRACKS : pickerTracks).map((entry) => {
           const selected = entry.key === trackKey;
           return (
