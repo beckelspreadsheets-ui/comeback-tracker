@@ -20,7 +20,11 @@ export const PREVIEW_TRACKS = [SATOSHI_SUMMIT_TRACK];
 // Every track the runtime can build — what the QA gates iterate.
 export const ALL_TRACKS = [...KART_TRACKS, ...PREVIEW_TRACKS];
 
-assertValidTrackVisuals(ALL_TRACKS);
+// Schema check at import time — in node (the QA gates import this file and
+// have no import.meta.env) and in dev, not in the shipped build: Vite folds
+// import.meta.env.DEV to false there and the validator drops out of the bundle
+// (test:track-visuals still validates every track before release).
+if (typeof import.meta.env === 'undefined' || import.meta.env.DEV) assertValidTrackVisuals(ALL_TRACKS);
 
 export const DEFAULT_TRACK_KEY = 'comeback-city';
 
