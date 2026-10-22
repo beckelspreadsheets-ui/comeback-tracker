@@ -14,11 +14,6 @@ import { Color, Vector2, Vector4 } from 'three';
 import { KART_SHADING_DESKTOP } from '../game/race/render/kartMaterials.js';
 import { measurePaintLuminance } from '../game/race/render/paintLuminance.js';
 
-// The Kenney drag racer's main panel is a near-grey atlas swatch (chroma
-// 0.118 linear) that the race repaints by UV region, not by mask — see
-// KENNEY_BODY_SWATCHES in the race. A lower window lets the preview reach it.
-const KENNEY_PAINT_CHROMA = [0.02, 0.1];
-
 const PAINT_CHUNK = /* glsl */ `
 {
 	vec3 stageAlbedo = diffuseColor.rgb;
@@ -50,8 +45,8 @@ export const setStagePaint = (uniform, paint) => {
 
 // Every material under `root` reads the one shared uniform, so a paint change
 // is a single write — no reload, no recompile.
-export const applyStagePaint = (root, uniform, { kenney = false } = {}) => {
-  const chroma = kenney ? KENNEY_PAINT_CHROMA : KART_SHADING_DESKTOP.paintChroma;
+export const applyStagePaint = (root, uniform) => {
+  const chroma = KART_SHADING_DESKTOP.paintChroma;
   root.traverse((node) => {
     if (!node.isMesh) return;
     (Array.isArray(node.material) ? node.material : [node.material]).forEach((material) => {
@@ -72,8 +67,7 @@ export const applyStagePaint = (root, uniform, { kenney = false } = {}) => {
           )
           .replace('#include <color_fragment>', `#include <color_fragment>\n${PAINT_CHUNK}`);
       };
-      const chromaKey = kenney ? 'kenney' : 'body';
-      material.customProgramCacheKey = () => `kart-stage-paint-v1-${chromaKey}`;
+      material.customProgramCacheKey = () => 'kart-stage-paint-v1-body';
       material.needsUpdate = true;
     });
   });

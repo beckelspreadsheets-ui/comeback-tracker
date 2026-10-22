@@ -14,7 +14,6 @@ const PORT = 5304;
 const OUT = path.join(root, 'src', 'assets', 'game', 'select');
 
 const TRIPO_POSE = -Math.PI / 2 + 0.55;
-const KENNEY_POSE = Math.PI + 0.55;
 // K5 Meshy karts arrive nose on -X (Tripo's are +X) — mirrored hero pose.
 const MESHY_KART_POSE = Math.PI / 2 + 0.55;
 // Lifoladen's Meshy rig fronts +Z (lab-verified 2026-07-12) — no facing
@@ -32,7 +31,6 @@ const PORTRAITS = [
   { model: '/src/assets/game/models/avatars/layer23-penguin.glb', name: 'char-layer23', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/tripo/hero-kart-tripo.glb', name: 'kart-hero', yaw: TRIPO_POSE },
   { model: '/src/assets/game/models/tripo/ice-sled.glb', name: 'kart-icesled', yaw: TRIPO_POSE },
-  { model: '/src/assets/game/models/toy-car-kit/vehicle-drag-racer.glb', name: 'kart-kenney', yaw: KENNEY_POSE },
   { model: '/src/assets/game/models/karts/ice-racer.glb', name: 'kart-iceracer', yaw: MESHY_KART_POSE },
   { model: '/src/assets/game/models/karts/miami-cruiser.glb', name: 'kart-miamicruiser', yaw: MESHY_KART_POSE },
   // K8 owner picks 2026-07-17 (Cold Storage + Block Reward, Meshy multi-view lifts):

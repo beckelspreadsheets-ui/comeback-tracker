@@ -99,7 +99,7 @@
     "filePath": "src/assets/game/models/toy-car-kit/colormap.png",
     "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models",
     "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
-    "role": "Palette colormap recolored per kart at runtime to the approved V2 trait-card colors (shared by the Kenney toy-car-kit GLBs)",
+    "role": "Palette colormap for the Kenney toy-car-kit item box (the item-box fallback's toon material). The per-seat Dragster recolour that also read it was retired 2026-10-22",
     "sizeBudget": "One 8 KB palette PNG",
     "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails"
   },
@@ -117,7 +117,7 @@
     "filePath": "src/assets/game/models/toy-car-kit/vehicle-drag-racer.glb",
     "source": "Kenney Toy Car Kit v1.2 downloaded from kenney.nl/assets/toy-car-kit on 2026-06-11; License.txt included alongside the models; shipped as downloaded (no transform)",
     "license": "Creative Commons CC0 1.0 Universal (public domain; commercial use permitted, no attribution required)",
-    "role": "Rival kart body (drag racer, recolored at runtime per seat accent)",
+    "role": "RETIRED 2026-10-22 (owner: get rid of the dragster). Was the Dragster kart and the recoloured rival/fallback body; no longer imported, so it does not ship. Kept on disk as kit source only, like the other unused toy-car-kit vehicles",
     "sizeBudget": "About 102 KB GLB",
     "fallback": "Runtime falls back to the procedural toon kart and item cube builders if GLB loading fails",
     "sourceHash": "sha256:e55cec7720744af6bdee05f0716c032dabede9d173a3629fd8af7ec58447ce1d",
@@ -192,9 +192,9 @@
     "filePath": "src/assets/game/models/tripo/hero-kart-tripo.glb",
     "source": "Owner-generated with Tripo (image-to-3D) on 2026-06-11 from the approved V2 hero kart trait card crops (tmp/tripo-inputs/); optimized in-repo via gltf-transform to ~40k triangles, 1024px texture",
     "license": "Owner-generated asset (Tripo free-tier credits include commercial rights)",
-    "role": "A/B-test hero kart body, selectable at runtime with ?tripoKart=1; fused mesh (static wheels). Not the default pending owner A/B decision vs the Kenney body",
+    "role": "Hero Kart body (KART_OPTIONS hero, the 1.0 stat baseline; CRRT Bunny's signature ride); fused mesh (static wheels). Also the fallback body for any kart whose GLB fails to load",
     "sizeBudget": "About 1.5 MB GLB with embedded 1024px texture, ~40k triangles",
-    "fallback": "Default Kenney drag-racer body renders when the flag is absent or the GLB fails",
+    "fallback": "Procedural kart body stays if this GLB fails; it is itself the fallback body for any other kart whose GLB fails",
     "sourceHash": "sha256:6d6817d9b429a6ce4d5e6b1c56628b0eff89e9d926f58d76f63a6ff86da64f62",
     "outputHash": "sha256:6d6817d9b429a6ce4d5e6b1c56628b0eff89e9d926f58d76f63a6ff86da64f62"
   },
@@ -780,7 +780,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 NO people/animals/penguins in every prompt)",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-k5-kart",
     "runtimeTransform": "weld -> simplify 0.5/0.01 -> resize 384 -> meshopt LAST (individual verbs; 384 chosen at the 2026-07-12 budget squeeze), THEN the 2026-08-02 dead-map strip (scripts/strip-dead-normal-maps.mjs --method filter). The strip deletes the 316.0 KiB PNG normal map and nothing else: the runtime mounts every authored kart through attachTripoKartBody, which builds a NEW MeshToonMaterial{gradientMap, map} and copies only `map` off the loaded material, so that texture was downloaded, decoded, uploaded and never sampled (same defect that took lifoladen 904 -> 353 KB). Geometry is re-encoded with the file's existing EXT_meshopt filter method: POSITION, TEXCOORD_0 and the index buffer come back BIT-IDENTICAL, node transforms unchanged, base-colour JPEG byte-identical, and NORMAL moves at most 0.541 deg / mean 0.002 deg from one octahedral filter round trip. Re-running the script is a no-op, so that drift cannot compound.",
@@ -800,7 +800,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 NO people/animals/penguins in every prompt)",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-k5-kart",
     "runtimeTransform": "weld -> simplify 0.5/0.01 -> resize 384 -> meshopt LAST (individual verbs; 384 chosen at the 2026-07-12 budget squeeze), THEN the 2026-08-02 dead-map strip (scripts/strip-dead-normal-maps.mjs --method filter). The strip deletes the 350.3 KiB PNG normal map and nothing else: the runtime mounts every authored kart through attachTripoKartBody, which builds a NEW MeshToonMaterial{gradientMap, map} and copies only `map` off the loaded material, so that texture was downloaded, decoded, uploaded and never sampled (same defect that took lifoladen 904 -> 353 KB). Geometry is re-encoded with the file's existing EXT_meshopt filter method: POSITION, TEXCOORD_0 and the index buffer come back BIT-IDENTICAL, node transforms unchanged, base-colour JPEG byte-identical, and NORMAL moves at most 0.452 deg / mean 0.001 deg from one octahedral filter round trip. Re-running the script is a no-op, so that drift cannot compound.",
@@ -820,7 +820,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline (no people/animals/penguins; toy vehicle only)",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-k8-kart",
     "runtimeTransform": "weld -> simplify 0.5/0.01 -> resize 384 -> meshopt LAST (individual verbs), THEN the 2026-08-02 dead-map strip (scripts/strip-dead-normal-maps.mjs --method filter). The strip deletes the 244.9 KiB PNG normal map and nothing else: the runtime mounts every authored kart through attachTripoKartBody, which builds a NEW MeshToonMaterial{gradientMap, map} and copies only `map` off the loaded material, so that texture was downloaded, decoded, uploaded and never sampled (same defect that took lifoladen 904 -> 353 KB). Geometry is re-encoded with the file's existing EXT_meshopt filter method: POSITION, TEXCOORD_0 and the index buffer come back BIT-IDENTICAL, node transforms unchanged, base-colour JPEG byte-identical, and NORMAL moves at most 0.452 deg / mean 0.001 deg from one octahedral filter round trip. Re-running the script is a no-op, so that drift cannot compound.",
@@ -840,7 +840,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline; Bitcoin \u20bf glyph = deliberate owner-directed art (same exception as the \u20bf item boxes); no people/animals/penguins",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-k8-kart",
     "runtimeTransform": "weld -> simplify 0.5/0.01 -> resize 384 -> meshopt LAST (individual verbs), THEN the 2026-08-02 dead-map strip (scripts/strip-dead-normal-maps.mjs --method filter). The strip deletes the 343.8 KiB PNG normal map and nothing else: the runtime mounts every authored kart through attachTripoKartBody, which builds a NEW MeshToonMaterial{gradientMap, map} and copies only `map` off the loaded material, so that texture was downloaded, decoded, uploaded and never sampled (same defect that took lifoladen 904 -> 353 KB). Geometry is re-encoded with the file's existing EXT_meshopt filter method: POSITION, TEXCOORD_0 and the index buffer come back BIT-IDENTICAL, node transforms unchanged, base-colour JPEG byte-identical, and NORMAL moves at most 0.541 deg / mean 0.002 deg from one octahedral filter round trip. Re-running the script is a no-op, so that drift cannot compound.",
@@ -860,7 +860,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
@@ -881,7 +881,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
@@ -902,7 +902,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
@@ -923,7 +923,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",
@@ -944,7 +944,7 @@
   },
   {
     "license": "Owner-generated via Higgsfield/Meshy pipeline (no likeness content \u2014 no people/animals/penguins in the prompt)",
-    "fallback": "kart body falls back to the recolored Kenney dragster on load failure (attachAuthoredKartBody path)",
+    "fallback": "kart body falls back to the Hero Kart body on load failure, then to the procedural kart (attachCharacter in the monolith)",
     "assetClass": "hero-kart",
     "status": "runtime-promoted-w8-kart",
     "runtimeTransform": "scripts/diet-kart-bodies.mjs (profile hero-kart-diet-v3): strip unsampled texture slots + prune -> weld -> simplify 0.5/0.01 -> resize base colour 512 jpeg q82 -> meshopt LAST at level HIGH (individual measured verbs; the blanket `optimize` verb is banned). v3 differs from the 2026-08-02 v2 pass in the meshopt level only: high encodes NORMAL as i8n octahedral instead of i16n, which is the encoding the four 2026-07 bodies already ship. Re-measured in world space against the v2 bytes: position deviation max 0.000000 units (the surface is bit-identical), normal deviation max 1.14 deg / mean 0.35 deg with zero vertices past 5 deg, turntable pixel delta max 4-25 of 255 on 0.65-1.09% of channels. Cost across the five bodies: -384.5 KiB raw, -366.5 KiB gz.",

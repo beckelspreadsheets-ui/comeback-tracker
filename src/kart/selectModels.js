@@ -37,7 +37,6 @@ import pixelPickupUrl from '../assets/game/models/karts/pixel-pickup.glb?url';
 import satStackerUrl from '../assets/game/models/karts/sat-stacker.glb?url';
 import heroKartUrl from '../assets/game/models/tripo/hero-kart-tripo.glb?url';
 import iceSledUrl from '../assets/game/models/tripo/ice-sled.glb?url';
-import dragRacerUrl from '../assets/game/models/toy-car-kit/vehicle-drag-racer.glb?url';
 
 export const SELECT_CHARACTER_MODELS = {
   'crrt-bunny': crrtBunnyUrl,
@@ -56,9 +55,6 @@ export const SELECT_KART_MODELS = {
   iceblock: iceBlockUrl,
   iceracer: iceRacerUrl,
   icesled: iceSledUrl,
-  // The three "Dragster" seats (Seth / Mizzle / Layer 23) all ride the Kenney
-  // drag racer; the race recolours it per driver, the stage shows the body.
-  kenney: dragRacerUrl,
   miamicruiser: miamiCruiserUrl,
   noderunner: nodeRunnerUrl,
   pixelpickup: pixelPickupUrl,

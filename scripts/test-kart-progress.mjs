@@ -186,16 +186,16 @@ reset();
 {
   awardRaceFinish({ awardId: 'race:p:1:100', coins: 50, place: 1 });
   assert.equal(stored(WALLET_KEY).coins, 60);
-  const result = purchasePaint('matrix-green', 'kenney');
+  const result = purchasePaint('matrix-green', 'iceracer');
   assert.equal(result.ok, true);
   assert.equal(stored(WALLET_KEY).coins, 0);
   assert.deepEqual(stored(PAINTS_KEY).owned, [DEFAULT_PAINT_ID, 'matrix-green']);
-  assert.equal(stored(PAINTS_KEY).equipped.kenney, 'matrix-green');
+  assert.equal(stored(PAINTS_KEY).equipped.iceracer, 'matrix-green');
   // A fresh launch reads back exactly what was saved.
   clearUnsavedProgress();
   assert.equal(readWallet().coins, 0);
-  assert.equal(equippedPaintId(readPaints(), 'kenney'), 'matrix-green');
-  const refused = purchasePaint('ordinal-orange', 'kenney');
+  assert.equal(equippedPaintId(readPaints(), 'iceracer'), 'matrix-green');
+  const refused = purchasePaint('ordinal-orange', 'iceracer');
   assert.equal(refused.ok, false);
   assert.equal(refused.reason, 'insufficient');
   assert.deepEqual(stored(PAINTS_KEY).owned, [DEFAULT_PAINT_ID, 'matrix-green'], 'refused buy writes nothing');

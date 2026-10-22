@@ -307,7 +307,7 @@ export const KartModelStage = ({ characterKey, kartKey, paint = null, reducedMot
       if (kartScene) {
         kartScene.rotation.y = KART_NOSE_YAW[kartKey] ?? -Math.PI / 2;
         groundInto(kartScene, KART_STAGE_HEIGHT);
-        applyStagePaint(kartScene, stage.paintUniform, { kenney: kartKey === 'kenney' });
+        applyStagePaint(kartScene, stage.paintUniform);
         stage.turntable.add(kartScene);
         stage.models.kart = kartScene;
       }

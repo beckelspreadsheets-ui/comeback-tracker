@@ -10,7 +10,6 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 // The three-examples chain above is the ?post=0 fallback only. The shipped
 // chain is the pmndrs one and it now lives in its own module — see
 // race/render/racePostChain.js for why it is three passes instead of one.
-import racerModelUrl from '../assets/game/models/toy-car-kit/vehicle-drag-racer.glb?url';
 import itemBoxModelUrl from '../assets/game/models/toy-car-kit/item-box.glb?url';
 import kartColormapUrl from '../assets/game/models/toy-car-kit/colormap.png';
 import crrtBunnyModelUrl from '../assets/game/models/avatars/crrt-bunny.glb?url';
@@ -684,9 +683,9 @@ const BOOST_SPEED = 284;
 // Trimmed 1.24 -> 1.12 -> 1.01 across owner feel-checks ("10% more = perfect").
 const KART_SCALE = 1.01;
 // The playable roster (owner's characters; more ordinals coming). The player
-// picks one — the other three fill the rival seats. `kart` selects the body
-// pipeline ('hero' / 'icesled' = owner-rendered Tripo GLBs, 'kenney' =
-// recolored drag racer); `projectileSkin` is the cosmetic snowball flavor
+// picks one — the other three fill the rival seats. `kart` is the signature
+// ride, a KART_OPTIONS key (all authored GLB bodies — the Kenney Dragster was
+// retired, owner 2026-10-22); `projectileSkin` is the cosmetic snowball flavor
 // (carrot for the bunny, ice shards for the penguins — identical stats);
 // `driverYaw` is the lab-verified authored yaw (all Tripo rigs face +X).
 export const KART_CHARACTERS = [
@@ -699,9 +698,9 @@ export const KART_CHARACTERS = [
   // Owner correction (round 8): the penguin previously labeled "CRRT
   // Penguin" IS T Clow — one character, the ice sled is his ride.
   { accent: '#9fe7ff', color: '#2378ff', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'icesled', kartName: 'Ice Sled', key: 'tclow', name: 'T Clow', projectileSkin: 'iceshard' },
-  { accent: '#38d7ff', color: '#7e35f4', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Purple Dragster', key: 'seth-penguin', name: 'Seth Penguin', projectileSkin: 'iceshard' },
-  { accent: '#ffd34f', color: '#f28b2e', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Orange Dragster', key: 'mizzle', name: 'Mizzle', projectileSkin: 'iceshard' },
-  { accent: '#ffd9a0', color: '#a86b32', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'kenney', kartName: 'Bronze Dragster', key: 'layer23', name: 'Layer 23', projectileSkin: 'iceshard' },
+  { accent: '#38d7ff', color: '#7e35f4', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'hashrunner', kartName: 'Hash Runner', key: 'seth-penguin', name: 'Seth Penguin', projectileSkin: 'iceshard' },
+  { accent: '#ffd34f', color: '#f28b2e', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'btckart', kartName: 'Block Reward', key: 'mizzle', name: 'Mizzle', projectileSkin: 'iceshard' },
+  { accent: '#ffd9a0', color: '#a86b32', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'satstacker', kartName: 'Sat Stacker', key: 'layer23', name: 'Layer 23', projectileSkin: 'iceshard' },
 ];
 
 // Karts are picked separately from characters (owner request, round 8) —
@@ -745,7 +744,6 @@ export const KART_CHARACTERS = [
 export const KART_OPTIONS = [
   { key: 'hero', name: 'Hero Kart', stats: { accel: 1.0, handling: 1.0, topSpeed: 1.0 }, tagline: 'Balanced' },
   { key: 'icesled', name: 'Ice Sled', stats: { accel: 0.97, handling: 0.96, topSpeed: 1.026 }, tagline: 'Fast & slippery' },
-  { key: 'kenney', name: 'Dragster', stats: { accel: 1.04, handling: 1.02, topSpeed: 0.982 }, tagline: 'Quick off the line' },
   // K5 owner picks 2026-07-12 ("i meant the ice racer and miami cruser"):
   { key: 'iceracer', name: 'Ice Racer', stats: { accel: 0.98, handling: 0.95, topSpeed: 1.035 }, tagline: 'Frozen top end' },
   { key: 'miamicruiser', name: 'Miami Cruiser', stats: { accel: 1.03, handling: 1.04, topSpeed: 0.974 }, tagline: 'Grips the neon' },
@@ -798,27 +796,20 @@ const kartByKey = (key) => KART_OPTIONS.find((entry) => entry.key === key) || KA
 // so the rival seat, the select stage and the default kart pick all follow it.
 // Rivals never read kart stats (kartByKey is the player's alone), so a rival's
 // pace is unchanged; a player who keeps the signature ride gets that kart's
-// stats. Set a matches body paint to racer colour (purple Hash Runner, orange
-// Block Reward, tan Sat Stacker); set b matches the outfits instead.
-// OWNER PICK 2026-10-15: set a ships. ?rivalKarts=b shows the other set and
-// ?rivalKarts=off puts all three back on the dragster.
-const SIGNATURE_KART_SETS = {
-  a: { layer23: 'satstacker', mizzle: 'btckart', 'seth-penguin': 'hashrunner' },
-  b: { layer23: 'coldwallet', mizzle: 'noderunner', 'seth-penguin': 'iceracer' },
-};
-{
-  const signatureSet =
-    SIGNATURE_KART_SETS[
-      (typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('rivalKarts')) ?? 'a'
-    ];
-  if (signatureSet) {
-    KART_CHARACTERS.forEach((entry) => {
-      const kart = signatureSet[entry.key];
-      if (!kart) return;
-      entry.kart = kart;
-      entry.kartName = kartByKey(kart).name;
-    });
-  }
+// stats. OWNER PICK 2026-10-15: set a ships and is written into
+// KART_CHARACTERS above — body paint matches racer colour (purple Hash Runner,
+// orange Block Reward, tan Sat Stacker). ?rivalKarts=b shows set b, which
+// matches the outfits instead. The Dragster itself, and the ?rivalKarts=off
+// switch back onto it, were retired 2026-10-22 (owner: "get rid of the
+// dragster").
+const ALT_SIGNATURE_KARTS = { layer23: 'coldwallet', mizzle: 'noderunner', 'seth-penguin': 'iceracer' };
+if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('rivalKarts') === 'b') {
+  KART_CHARACTERS.forEach((entry) => {
+    const kart = ALT_SIGNATURE_KARTS[entry.key];
+    if (!kart) return;
+    entry.kart = kart;
+    entry.kartName = kartByKey(kart).name;
+  });
 }
 export const DEFAULT_CHARACTER_KEY = 'crrt-bunny';
 const characterByKey = (key) =>
@@ -3102,7 +3093,6 @@ const loadKartAssets = () => {
       },
     });
     kartAssetsPromise = Promise.all([
-      gltfLoader.loadAsync(racerModelUrl),
       gltfLoader.loadAsync(itemBoxModelUrl),
       new Promise((resolve, reject) => {
         const image = new Image();
@@ -3142,7 +3132,7 @@ const loadKartAssets = () => {
     // THEY WERE ADDED TO THE ARRAY. A load added to the array without a matching
     // slot here silently shifts every binding after it, which is the one failure
     // mode in this block that a green build cannot catch.
-    ]).then(([racerGltf, itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, lifoladenGltf, iceRacerGltf, miamiCruiserGltf, iceBlockGltf, btcKartGltf, hashRunnerGltf, coldWalletGltf, satStackerGltf, pixelPickupGltf, nodeRunnerGltf, fishboneGltf, sardineGltf, avalancheGltf, blizzardGltf]) => ({
+    ]).then(([itemBoxGltf, colormapImage, bunnyGltf, sethGltf, tripoKartGltf, mizzleGltf, iceSledGltf, tclowGltf, layer23Gltf, lifoladenGltf, iceRacerGltf, miamiCruiserGltf, iceBlockGltf, btcKartGltf, hashRunnerGltf, coldWalletGltf, satStackerGltf, pixelPickupGltf, nodeRunnerGltf, fishboneGltf, sardineGltf, avalancheGltf, blizzardGltf]) => ({
       colormapImage,
       // Keyed by KART_CHARACTERS entries — seats are assigned at race start.
       driverScenes: {
@@ -3177,157 +3167,19 @@ const loadKartAssets = () => {
         pixelpickup: pixelPickupGltf?.scene || null,
         noderunner: nodeRunnerGltf?.scene || null,
       },
-      racerScene: racerGltf.scene,
     }));
   }
   return kartAssetsPromise;
 };
 
-// Which swatches of the Kenney colormap atlas the drag racer's BODY actually
-// samples, in normalised UV. Read off the shipped asset rather than guessed:
-// colormap.png is a 512x512 indexed PNG laid out as a grid of 64x128 swatch
-// cells, and vehicle-drag-racer.glb's body primitive puts 174 of its 366 UVs
-// in the cell at (64..128, 384..512) — palette index 3, rgb(134,139,161), a
-// DESATURATED BLUE-GREY — and 126 in the cell at (192..256, 256..384), palette
-// index 8, rgb(255,126,68), the kit orange.
-//
-// That is the whole bug. The old recolour gated on hue 0.04-0.12 AND
-// saturation > 0.55 AND luminance 0.25-0.78, which matches the orange cell and
-// CANNOT match the grey one — so the largest panel on the body kept the kit's
-// grey on every racer and seth-penguin, mizzle and layer23 all shipped
-// identical. Three critics flagged them as "untextured grey placeholder boxes"
-// every single round. A UV-region key hits the swatch the mesh actually uses;
-// a colour key was always going to miss a grey.
-//
-// The wheel swatch (128..192, 384..512) and the white trim swatch are
-// deliberately NOT listed: tyres and trim stay tyre and trim colours.
-//
-// The two swatches are given DIFFERENT roles rather than the same one. This
-// atlas is an indexed palette: each 64x128 cell is one near-flat colour, so
-// remapping both cells to the same hue at the same saturation makes body,
-// wing, nose, seat back and skirt one uniform slab — which is exactly what the
-// critics read as "a debug tint, not paint". Cell 3 is the large panel and
-// takes the racer's colour; cell 8 is the kit's orange accent and becomes a
-// pale low-chroma livery of the SAME hue, so every racer keeps a two-tone
-// read. Scaling by the SOURCE pixel's saturation instead (the obvious
-// alternative) cannot work here — cell 3 is a desaturated blue-grey, and
-// deriving from its saturation is precisely how all three Kenney rivals used
-// to ship identical grey.
-const KENNEY_BODY_SWATCHES = [
-  { lightScale: 1, satScale: 1, u0: 64 / 512, u1: 128 / 512, v0: 384 / 512, v1: 512 / 512 },
-  // lumaCarry: this kit-orange trim cell pins R=255 and B=68, so hsl.l is
-  // identically flat across it and the spread expansion below has nothing to
-  // widen. Its green channel really ramps, which Rec.601 luma sees — so this one
-  // cell carries value as luma. The grey cell above reads fine on hsl.l and is
-  // left on it. See makeKartPaletteTexture and scripts/measure — item 8, 2026-08-20.
-  { lightScale: 1.42, satScale: 0.3, lumaCarry: true, u0: 192 / 512, u1: 256 / 512, v0: 256 / 512, v1: 384 / 512 },
-];
-
-// How hard each body swatch's internal value range is expanded about its own
-// mean before the racer hue is written over it. See the use site — the shipped
-// atlas cells carry a 0.15 spread and a 0.00 spread respectively, and a toon
-// ramp cannot band a range that narrow.
-const KENNEY_SWATCH_CONTRAST = 2.1;
-
-const makeKartPaletteTexture = (colormapImage, bodyHex = null) => {
-  const canvas = document.createElement('canvas');
-  canvas.width = colormapImage.naturalWidth || colormapImage.width;
-  canvas.height = colormapImage.naturalHeight || colormapImage.height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(colormapImage, 0, 0);
-  if (bodyHex) {
-    // Remap the kit's body swatches to the kart's V2 color while keeping the
-    // baked gradient shading inside each swatch (lightness is carried through,
-    // only hue/saturation are replaced).
-    const targetHsl = { h: 0, l: 0, s: 0 };
-    new THREE.Color(bodyHex).getHSL(targetHsl);
-    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const probe = new THREE.Color();
-    const hsl = { h: 0, l: 0, s: 0 };
-    // The texture is sampled with flipY = false, so v maps straight to the
-    // image row and these rectangles are in raw canvas pixels.
-    KENNEY_BODY_SWATCHES.forEach((swatch) => {
-      const x0 = Math.round(swatch.u0 * canvas.width);
-      const x1 = Math.round(swatch.u1 * canvas.width);
-      const y0 = Math.round(swatch.v0 * canvas.height);
-      const y1 = Math.round(swatch.v1 * canvas.height);
-      // AAA wave 5 (e) — THE WAVE-3 HUE-GATE FIX OVERSHOT. Correction applied
-      // with the evidence and the numbers the wave-3 rubric critic handed back
-      // and the wave-4 env-probe agent confirmed from the other side
-      // (kartMaterials.js: "a body that is channel-clipped in blue").
-      //
-      // Old: clamp(targetHsl.s * swatch.satScale, 0.45 * swatch.satScale, 1).
-      // With every KART_CHARACTERS colour at s >= 0.85, the ceiling of 1 meant
-      // the largest panel on the body took the racer's hue at FULL chroma —
-      // measured median S 0.94 on the Penguin Village blue rival, where the roll
-      // bar, pillars, chassis and bumper all render the same flat pure blue.
-      // 0.72 is the critic's number and it is also the point at which a toon
-      // ramp still has somewhere to put a shading band.
-      //
-      // ROUND 2 — 0.72 IS STILL A SPECTRAL COLOUR, NOT A PAINT.
-      //
-      // Re-measured on the shipped build: penguin-village-p0_56's rival body
-      // samples (75,74,207) — saturation 0.643 at value 207, with R and G within
-      // ONE unit of each other. Nothing that comes out of a paint gun has two
-      // channels equal and the third at 2.8x; that is a spectral violet, and it
-      // is why the rival reads as placeholder geometry beside karts whose body
-      // paint has a specular band in it. The rubric critic's number this round
-      // is 0.55, and it is the right shape of fix: a toon ramp needs unspent
-      // headroom in the two low channels to put a shading band into, and at 0.64
-      // there is none. The swatch spread expansion below is untouched — that
-      // term is doing the right thing and this is not a contrast change.
-      const saturation = clamp(targetHsl.s * swatch.satScale, 0.3 * swatch.satScale, 0.55);
-      // ...and the second half of the same finding: the value SPREAD.
-      //
-      // The carry expands each cell's internal value about its OWN mean (mean
-      // preserved, so the paint's overall level is unchanged and only internal
-      // contrast moves), then 2.1 widens it to the range a three-band toon ramp
-      // needs. Measured on the shipped atlas (toy-car-kit/colormap.png): the grey
-      // body cell runs a ~0.18 spread and hsl.l reads it fine, so it STAYS on
-      // hsl.l — byte-identical to before. The kit-orange trim cell pins R=255 and
-      // B=68, so hsl.l is identically 0.633 across it and no contrast factor can
-      // widen a flat range; that cell is flagged lumaCarry and carries Rec.601
-      // luma instead, which sees its real green ramp (114->157). Deterministic
-      // replay (scripts/verify-rival-value-spread.mjs): orange output value-spread
-      // 0.000 -> ~0.25 across rival hues, mean held within 0.01; grey unchanged.
-      const carryValueAt = (index) => {
-        if (swatch.lumaCarry) {
-          return (0.299 * pixels.data[index] + 0.587 * pixels.data[index + 1] + 0.114 * pixels.data[index + 2]) / 255;
-        }
-        probe.setRGB(pixels.data[index] / 255, pixels.data[index + 1] / 255, pixels.data[index + 2] / 255);
-        probe.getHSL(hsl);
-        return hsl.l;
-      };
-      let meanValue = 0;
-      let sampleCount = 0;
-      for (let y = y0; y < y1; y += 1) {
-        for (let x = x0; x < x1; x += 1) {
-          meanValue += carryValueAt((y * canvas.width + x) * 4);
-          sampleCount += 1;
-        }
-      }
-      meanValue = sampleCount ? meanValue / sampleCount : 0.5;
-      const level = 0.65 + targetHsl.l * 0.5;
-      for (let y = y0; y < y1; y += 1) {
-        for (let x = x0; x < x1; x += 1) {
-          const index = (y * canvas.width + x) * 4;
-          // Only hue and saturation are replaced; the carried value keeps each
-          // cell's baked gradient (hsl.l for cells that read fine, luma for the
-          // flat orange trim). 2.1 expands about the cell mean.
-          const carried = carryValueAt(index);
-          const spread = clamp(meanValue + (carried - meanValue) * KENNEY_SWATCH_CONTRAST, 0, 1);
-          probe.setHSL(targetHsl.h, saturation, clamp(spread * level * swatch.lightScale, 0.04, 0.92));
-          pixels.data[index] = Math.round(probe.r * 255);
-          pixels.data[index + 1] = Math.round(probe.g * 255);
-          pixels.data[index + 2] = Math.round(probe.b * 255);
-        }
-      }
-    });
-    ctx.putImageData(pixels, 0, 0);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
+// The Kenney kit's palette atlas as a texture, for the item-box fallback's toon
+// material. It was also recoloured per seat for the Dragster body; that
+// recolour went with the kart (retired 2026-10-22).
+const makeKitColormapTexture = (colormapImage) => {
+  const texture = new THREE.Texture(colormapImage);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.flipY = false;
+  texture.needsUpdate = true;
   return texture;
 };
 
@@ -3340,10 +3192,8 @@ const makeKartPaletteTexture = (colormapImage, bodyHex = null) => {
 // (orientation-lab.html → scripts/orientation-lab-capture.mjs), which renders
 // every GLB at 4 yaws facing a known camera — never inferred from bboxes or
 // gameplay shots (both guessed wrong). Lab ground truth 2026-06-12: ALL
-// Tripo rigs (kart + seated avatars) natively face +X → yaw -π/2; the
-// Kenney drag racer faces -Z → yaw π.
+// Tripo rigs (kart + seated avatars) natively face +X → yaw -π/2.
 // Per-character authored yaws live in KART_CHARACTERS.driverYaw.
-const KENNEY_BODY_YAW = Math.PI;
 
 // Seat the avatar on the kart's driver mount: toon-shaded with its baked
 // texture, normalized so the seated character reads MK-style oversized.
@@ -3805,46 +3655,6 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math
   // proud of the bodywork, which is the part of the silhouette the shadow rig
   // relies on the driver for.
   kartModel.driverMount.position.set(0, (fitted.max.y - fitted.min.y) * 0.46, -2.1);
-  kartModel.replaceBody(rig);
-};
-
-const attachAuthoredKartBody = (
-  kartModel,
-  racerScene,
-  texture,
-  castsShadow,
-  fitLength = 15.6,
-  characterEntry = null
-) => {
-  const rig = racerScene.clone(true);
-  const material = applyHeroRim(new THREE.MeshToonMaterial({ gradientMap: getToonGradient(), map: texture }));
-  // Deliberately NO setKartPaintTint here, and the parameter is carried
-  // anyway so the intent is visible at the call site rather than inferred from
-  // an absence. The Kenney bodies are recoloured UPSTREAM — the texture this
-  // receives has already had its body swatches remapped to
-  // characterEntry.color by makeKartPaletteTexture — so tinting the same
-  // regions a second time would blend 70% of a flat colour over a bake that is
-  // already that colour, which only flattens the panel shading it kept.
-  // kartMaterials.js documents the same scope note beside KART_PAINT_TINTS.
-  // Keeping the argument (rather than dropping it) is what makes that a stated
-  // decision at the call site instead of an omission someone re-adds later.
-  rig.traverse((node) => {
-    if (node.isMesh) {
-      node.material = material;
-      node.castShadow = castsShadow;
-    }
-  });
-  const bounds = new THREE.Box3().setFromObject(rig);
-  const size = bounds.getSize(new THREE.Vector3());
-  // Lab-verified: the Kenney drag racer natively faces -Z; π puts its nose
-  // on +Z, our driving direction (rivals drove tail-first until 2026-06-12).
-  rig.rotation.y = KENNEY_BODY_YAW;
-  const fit = fitKartScale(size, fitLength);
-  rig.scale.setScalar(fit);
-  rig.updateMatrixWorld(true);
-  const fitted = new THREE.Box3().setFromObject(rig);
-  rig.position.y -= fitted.min.y;
-  kartModel.driverMount.position.set(0, 1.9, -1.3);
   kartModel.replaceBody(rig);
 };
 
@@ -10933,19 +10743,16 @@ export const ComebackCityThreeKartRace = ({
     // Swap procedural fallback bodies for the authored models — the chosen
     // character drives the player kart, the rest take the rival seats.
     loadKartAssets()
-      .then(({ colormapImage, driverScenes, itemBoxScene, itemPropScenes, kartScenes, racerScene }) => {
+      .then(({ colormapImage, driverScenes, itemBoxScene, itemPropScenes, kartScenes }) => {
         if (disposed || engineRef.current !== engine) return;
-        // ?kenneyKart=1 keeps the recolored Kenney body reachable for
-        // comparison on the player kart; it is also the automatic fallback
-        // when a character's authored kart GLB fails to load.
-        const wantsKenneyKart =
-          typeof window !== 'undefined' &&
-          new URLSearchParams(window.location.search).get('kenneyKart') === '1';
         const attachCharacter = (model, characterEntry, isPlayer) => {
           // The player's kart pick overrides the character's signature ride.
           const kartKind = isPlayer ? kartKey : characterEntry.kart;
-          const authoredKart =
-            kartKind !== 'kenney' && !(isPlayer && wantsKenneyKart) ? kartScenes[kartKind] : null;
+          // A kart whose GLB failed to load borrows the Hero Kart body, and if
+          // that failed too the procedural kart stays. The recoloured Kenney
+          // Dragster was this fallback until it was retired (owner 2026-10-22).
+          const bodyKind = kartScenes[kartKind] ? kartKind : 'hero';
+          const authoredKart = kartScenes[bodyKind];
           // Caster policy for the swapped-in GLBs. The kart FACTORY's defaults
           // are re-applied here because a GLB mount replaces the meshes the
           // factory tagged. Rivals cast on desktop (see the rival build above);
@@ -10958,20 +10765,9 @@ export const ComebackCityThreeKartRace = ({
               model,
               authoredKart,
               bodyCasts,
-              KART_NOSE_YAW[kartKind] ?? -Math.PI / 2,
+              KART_NOSE_YAW[bodyKind] ?? -Math.PI / 2,
               characterEntry,
               isPlayer ? playerPaint : null
-            );
-          } else {
-            // Drag-racer silhouette is long and slim — fit it larger than
-            // the hero body so every kart reads the same mass.
-            attachAuthoredKartBody(
-              model,
-              racerScene,
-              makeKartPaletteTexture(colormapImage, (isPlayer && playerPaint?.tint) || characterEntry.color),
-              bodyCasts,
-              18.2,
-              characterEntry
             );
           }
           const driverScene = driverScenes[characterEntry.key];
@@ -11057,7 +10853,7 @@ export const ComebackCityThreeKartRace = ({
         const itemMaterial = applyHeroRim(
           new THREE.MeshToonMaterial({
             gradientMap: getToonGradient(),
-            map: makeKartPaletteTexture(colormapImage),
+            map: makeKitColormapTexture(colormapImage),
           })
         );
         const generatedBoxUrl = ITEM_BOX_ASSETS[trackDef.key];

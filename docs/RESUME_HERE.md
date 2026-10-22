@@ -80,7 +80,7 @@ docs/RELEASE_V1_PLAN.md are the whole handoff.
   docs/RELEASE_V1_PLAN.md with commit hashes. Review page (picks, before/after
   frames): https://claude.ai/artifact/Rm381M5UN4enxAUVbs1SqQ
 - **Owner picks now ship as defaults** (switches kept for comparison):
-  rival karts set A (`?rivalKarts=b|off`), driver outline B (`?driverPop=a|off`),
+  rival karts set A (`?rivalKarts=b`; the Dragster is retired), driver outline B (`?driverPop=a|off`),
   LED slogan boards + lit posts (`?barrierKit=0`), Penguin Village look B
   (`?pvValue=a|off`). Firmer touch drift flick is still OPT-IN
   (`?driftFlick=firm`) until the owner feel-checks it on his phone.

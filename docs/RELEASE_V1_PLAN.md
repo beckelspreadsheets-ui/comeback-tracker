@@ -51,7 +51,7 @@ Work top to bottom. Check items off here as they land; this file is what a
   the Codex loop fixes from docs/CODEX_LOOP_2026-10-01.md (kartLocalStore,
   replayGhost, gamepadInput, their tests, package.json script, the CI yaml) as
   their own commit.
-- [x] 1.1 *(f4f8c18d; OWNER PICK 2026-10-15: set A ships — Hash Runner / Block Reward / Sat Stacker; `?rivalKarts=b|off`)* **Real karts for the ordinal rivals.** Seth Penguin, Mizzle and Layer
+- [x] 1.1 *(f4f8c18d; OWNER PICK 2026-10-15: set A ships — Hash Runner / Block Reward / Sat Stacker; `?rivalKarts=b`. 2026-10-22: the Dragster is retired outright (owner: "get rid of the dragster") — out of the kart picker, the stage and the GLB-failure fallback, which is now the Hero Kart; `?rivalKarts=off` and `?kenneyKart=1` are gone)* **Real karts for the ordinal rivals.** Seth Penguin, Mizzle and Layer
   23 still drive the recoloured Kenney toy dragster (roster ~line 681). Point
   them at existing authored bodies (iceracer, iceblock, btckart "Block Reward",
   hashrunner, coldwallet, satstacker, pixelpickup, noderunner) — owner picks

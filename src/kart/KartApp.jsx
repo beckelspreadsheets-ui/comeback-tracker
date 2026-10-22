@@ -61,7 +61,6 @@ import charLifoladenUrl from '../assets/game/select/char-lifoladen.webp';
 import kartHeroUrl from '../assets/game/select/kart-hero.png';
 import kartIcesledUrl from '../assets/game/select/kart-icesled.png';
 import kartIceracerUrl from '../assets/game/select/kart-iceracer.png';
-import kartKenneyUrl from '../assets/game/select/kart-kenney.png';
 import kartMiamicruiserUrl from '../assets/game/select/kart-miamicruiser.png';
 import kartIceblockUrl from '../assets/game/select/kart-iceblock.png';
 import kartBtckartUrl from '../assets/game/select/kart-btckart.png';
@@ -139,7 +138,6 @@ const KART_PORTRAITS = {
   hero: kartHeroUrl,
   icesled: kartIcesledUrl,
   iceracer: kartIceracerUrl,
-  kenney: kartKenneyUrl,
   miamicruiser: kartMiamicruiserUrl,
   iceblock: kartIceblockUrl,
   btckart: kartBtckartUrl,

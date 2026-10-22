@@ -951,6 +951,8 @@ export const tuneHeroTexture = (texture, anisotropy = HERO_TEXTURE_ANISOTROPY) =
 // racers already get a per-racer recolour upstream — makeKartPaletteTexture
 // remaps the atlas's orange swatch column to characterEntry.color before the
 // texture is built — so wiring the tint on those would recolour them twice.
+// (2026-10-22: the Kenney body is retired, owner call. Every seat rides an
+// authored body now, so every seat takes its tint through attachTripoKartBody.)
 export const KART_PAINT_TINTS = Object.freeze({
   'crrt-bunny': '#e8261d',
   layer23: '#a86b32',
@@ -985,7 +987,8 @@ export const KART_PAINT_TINTS = Object.freeze({
 //     number cannot explain penguin-village-p0_56's violet rival by any value.
 //     What CAN is that the Kenney atlas is a palette of FLAT swatches on a
 //     flat-shaded slab body: the albedo carries no panel shading for a shader
-//     to preserve. That is the asset track, not this file.
+//     to preserve. That is the asset track, not this file. (The asset track's
+//     answer, 2026-10-22: the Kenney body is retired outright.)
 //
 // SECOND, THE REAL BUG THIS CONSTANT IS HALF OF, which is a blocker and is
 // measured. The tint is applied as a LUMINANCE-PRESERVING RESCALE:
