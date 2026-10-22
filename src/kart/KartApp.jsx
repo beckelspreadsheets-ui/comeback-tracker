@@ -9,7 +9,7 @@
 // longer routes to the game at all (its Race nav links out to this app).
 // This file is now the ONLY owner of the intro → select flow; edit freely.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bitcoin, BookOpen, ChevronDown, Sparkles, Trophy, Wind } from 'lucide-react';
 import {
   ComebackCityThreeKartRace,
@@ -39,6 +39,17 @@ import {
   writeMirrorChoice,
 } from './mirrorUnlock.js';
 import { recordsForMode } from '../game/race/mirrorMode.js';
+import {
+  awardRaceFinish,
+  mergeEarnings,
+  paintById,
+  purchasePaint,
+  racePaintFor,
+  readPaints,
+  readWallet,
+  selectPaint,
+} from '../game/race/progress.js';
+import { EarningsToast, PaintShop, WalletChip } from './KartPaintShop.jsx';
 import { createKartAudio, readStoredMute } from '../game/race/kartAudio.js';
 import { KART_AUDIO_ASSETS } from '../game/race/kartAudioAssets.js';
 import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
@@ -510,7 +521,7 @@ const KartStatBar = ({ label, value }) => (
 // good at — being a legible grid you pick from. That split is the whole fix.
 // The stage previews the race (it borrows the chosen track's key light); the
 // tiles let you choose fast.
-const KartSelectHero = ({ characterKey, kartKey, reducedMotion, trackKey }) => {
+const KartSelectHero = ({ characterKey, kartKey, paint = null, reducedMotion, trackKey }) => {
   const character = KART_CHARACTERS.find((entry) => entry.key === characterKey);
   const kart = KART_OPTIONS.find((entry) => entry.key === kartKey);
   return (
@@ -527,6 +538,7 @@ const KartSelectHero = ({ characterKey, kartKey, reducedMotion, trackKey }) => {
       <KartModelStage
         characterKey={characterKey}
         kartKey={kartKey}
+        paint={paint}
         reducedMotion={reducedMotion}
         trackKey={trackKey}
       />
@@ -629,7 +641,10 @@ const formatBestTime = (seconds) => {
   return `${minutes}:${(seconds - minutes * 60).toFixed(2).padStart(5, '0')}`;
 };
 
-const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, onStart, raceClass, reducedMotion, selectedKey, setGameMode, setKartKey, setRaceClass, setSelectedKey, setTrackKey, trackKey }) => {
+// Unlocks: `wallet` (the ₿ chip) and `paintShop` (the swatch row) are built
+// by KartApp, which owns the progress state; `stagePaint` is what the 3D stage
+// shows on the kart — the equipped paint, or a locked one being tried on.
+const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, onStart, paintShop = null, raceClass, reducedMotion, selectedKey, setGameMode, setKartKey, setRaceClass, setSelectedKey, setTrackKey, stagePaint = null, trackKey, wallet = null }) => {
   // Saved bests per track (kartLocalStore). Read per mount: the screen
   // remounts on every return from a race, which is when they change.
   const [savedResults] = useState(() => readRaceResults() || {});
@@ -640,7 +655,8 @@ const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, on
     <MenuBackdrop trackKey={trackKey} />
     <div className="relative flex min-h-full justify-center p-4 sm:p-6">
       <div className="my-auto w-full max-w-4xl space-y-6 py-6">
-      <div className="text-center">
+      <div className="relative text-center">
+        {wallet ? <div className="mb-3 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mb-0">{wallet}</div> : null}
         <div className={EYEBROW}>Comeback City Grand Prix</div>
         <h2 className="mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] sm:text-4xl">
           Race Setup
@@ -650,9 +666,11 @@ const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, on
       <KartSelectHero
         characterKey={selectedKey}
         kartKey={kartKey}
+        paint={stagePaint}
         reducedMotion={reducedMotion}
         trackKey={trackKey}
       />
+      {paintShop}
       <div className="text-center">
         {/* W2 (owner): the intro's full item guide must be reachable every
             visit, not just the first — "so people are not just guessing". */}
@@ -1008,19 +1026,58 @@ export const KartApp = () => {
       `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`
     );
   }, []);
+  // ── Unlocks & progress (src/game/race/progress.js) ─────────────────────
+  // Read once, then kept in step with storage by the handlers below. The
+  // session token makes each finish's award id unique across app launches,
+  // which is what lets the wallet's double-count guard persist.
+  const [wallet, setWallet] = useState(readWallet);
+  const [paints, setPaints] = useState(readPaints);
+  const [paintPreview, setPaintPreview] = useState(null);
+  const [menuToast, setMenuToast] = useState(null);
+  const [progressSession] = useState(() => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`);
+  const pendingEarningsRef = useRef(null);
+  const raceNonceRef = useRef(1);
+  const cupRef = useRef(cup);
+  cupRef.current = cup;
   const handleFinish = useCallback((result) => {
     recordRaceFinish(result);
+    // Only a FINISH reaches here — quitting never calls onFinish — so this is
+    // the one place that pays. A ref'd copy of the cup is advanced to learn
+    // whether THIS finish ends it; the podium bonus rides on this finish's
+    // award id, so a replayed callback or the cup advance cannot pay it again.
+    // "Race again" restarts inside one mount; its finish time differs, so it
+    // gets a new id and pays as the new race it is.
+    const cupAfter = cupRef.current ? applyRaceToCup(cupRef.current, result?.standings) : null;
+    const cupPlace =
+      cupAfter && isCupOver(cupAfter) ? cupStandings(cupAfter).findIndex((row) => row.isPlayer) + 1 || null : null;
+    const award = awardRaceFinish({
+      awardId: `race:${progressSession}:${raceNonceRef.current}:${result?.time}`,
+      coins: result?.coins,
+      cupPlace,
+      place: result?.place,
+      timeTrial: result?.timeTrial,
+    });
+    if (award.applied) {
+      pendingEarningsRef.current = mergeEarnings(pendingEarningsRef.current, award.earnings);
+      setWallet(award.wallet);
+    }
     setCup((current) => (current ? applyRaceToCup(current, result.standings) : current));
-  }, []);
+  }, [progressSession]);
   // Race exits. Every new race is a fresh mount (keyed on raceNonce) so a
   // track change rebuilds the whole scene rather than trusting the race
   // effect to notice a prop change.
   const [raceNonce, setRaceNonce] = useState(1);
+  raceNonceRef.current = raceNonce;
   const exitToMenu = useCallback(() => {
     setCharacterReady(false);
     setCup(null);
     setCupFinal(false);
     setRaceNonce((value) => value + 1);
+    // Back at the menu: show what the finished race(s) paid, once. Always
+    // replaced (null after a quit with nothing new) so an earlier toast can
+    // never resurface.
+    setMenuToast(pendingEarningsRef.current);
+    pendingEarningsRef.current = null;
   }, []);
   // Cup: after a finish, the results button either starts the next round or
   // opens the podium. The cup has already absorbed the race (handleFinish).
@@ -1062,6 +1119,31 @@ export const KartApp = () => {
     }
     setRaceNonce((value) => value + 1);
   }, [nextTrack]);
+
+  // Paint for the kart actually being raced (same fallback the race uses).
+  const effectiveKartKey =
+    kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart;
+  const handleEquipPaint = useCallback((kart, paintId) => {
+    const result = selectPaint(kart, paintId);
+    if (result.ok) setPaints(result.paints);
+    return result;
+  }, []);
+  // Storage is the source of truth: a refused buy still resyncs the screen to
+  // what is actually saved (the result carries the stored wallet and paints).
+  const handleBuyPaint = useCallback((kart, paintId) => {
+    const result = purchasePaint(paintId, kart);
+    setPaints(result.paints);
+    setWallet(result.wallet);
+    return result;
+  }, []);
+  // A try-on is "this paint on this kart": switch karts and it lapses.
+  const handlePreviewPaint = useCallback(
+    (paintId) => setPaintPreview(paintId ? { kartKey: effectiveKartKey, paintId } : null),
+    [effectiveKartKey]
+  );
+  const previewPaintId = paintPreview?.kartKey === effectiveKartKey ? paintPreview.paintId : null;
+  const dismissMenuToast = useCallback(() => setMenuToast(null), []);
+  const racerColor = (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).color;
 
   // Menu music. The race component owns its own audio manager, so the menu
   // needs one of its own — it is the first thing a player hears and it existed
@@ -1111,6 +1193,21 @@ export const KartApp = () => {
           setSelectedKey={setCharacterKey}
           setTrackKey={setKartTrackKey}
           trackKey={kartTrackKey}
+          paintShop={
+            <PaintShop
+              kartKey={effectiveKartKey}
+              kartName={KART_OPTIONS.find((entry) => entry.key === effectiveKartKey)?.name || 'Kart'}
+              onBuy={handleBuyPaint}
+              onEquip={handleEquipPaint}
+              onPreview={handlePreviewPaint}
+              paints={paints}
+              previewId={previewPaintId}
+              racerColor={racerColor}
+              walletCoins={wallet.coins}
+            />
+          }
+          stagePaint={paintById(previewPaintId) || racePaintFor(paints, effectiveKartKey)}
+          wallet={<WalletChip coins={wallet.coins} pulse={Boolean(menuToast)} />}
         />
       ) : (
         <ComebackCityThreeKartRace
@@ -1127,11 +1224,13 @@ export const KartApp = () => {
           onExit={exitToMenu}
           onFinish={handleFinish}
           onNextTrack={cup ? (cupNextLabel ? cupAdvance : null) : nextTrack ? goNextTrack : null}
+          playerPaint={racePaintFor(paints, effectiveKartKey)}
           reducedMotion={reducedMotion}
           runId={raceNonce}
           track={kartTrackKey}
         />
       )}
+      {menuToast && !characterReady ? <EarningsToast onDone={dismissMenuToast} summary={menuToast} /> : null}
     </div>
   );
 };

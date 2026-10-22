@@ -3724,7 +3724,7 @@ const fitKartScale = (size, fitLength) =>
 
 // A/B variant: AI-generated kart body with its own baked texture. One fused
 // mesh — no wheel nodes, so wheels are static (acceptable for the visual A/B).
-const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math.PI / 2, characterEntry = null) => {
+const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math.PI / 2, characterEntry = null, paint = null) => {
   const rig = tripoScene.clone(true);
   // One material per TEXTURE, per rig — not per mesh node. An authored body
   // fuses into many nodes that all sample the same baked map, so the old
@@ -3760,7 +3760,9 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math
         // not wire it. Applied once per material rather than once per node:
         // the tint is a property of the material, so re-applying it for every
         // node sharing that material was always redundant work.
-        if (characterEntry) setKartPaintTint(material, KART_PAINT_TINTS[characterEntry.key]);
+        // A bought paint (player only, race/progress.js) replaces that tint.
+        if (paint?.tint) setKartPaintTint(material, paint.tint, paint.amount, { respray: true });
+        else if (characterEntry) setKartPaintTint(material, KART_PAINT_TINTS[characterEntry.key]);
         rigMaterials.set(mapKey, material);
       }
       node.material = material;
@@ -10195,6 +10197,9 @@ const heldItemLabel = (heldItem, projectileSkin) => {
 export const ComebackCityThreeKartRace = ({
   character = DEFAULT_CHARACTER_KEY,
   kart = null,
+  // Unlocks (race/progress.js): the paint equipped on this kart, { tint,
+  // amount }, or null for Factory. The PLAYER's body only; rivals keep theirs.
+  playerPaint = null,
   mode = 'race',
   // Cup context from the shell: { round, rounds, summary: [{ name, gained,
   // total }] } — summary arrives after onFinish, so the results panel fills
@@ -10856,7 +10861,8 @@ export const ComebackCityThreeKartRace = ({
               authoredKart,
               bodyCasts,
               KART_NOSE_YAW[kartKind] ?? -Math.PI / 2,
-              characterEntry
+              characterEntry,
+              isPlayer ? playerPaint : null
             );
           } else {
             // Drag-racer silhouette is long and slim — fit it larger than
@@ -10864,7 +10870,7 @@ export const ComebackCityThreeKartRace = ({
             attachAuthoredKartBody(
               model,
               racerScene,
-              makeKartPaletteTexture(colormapImage, characterEntry.color),
+              makeKartPaletteTexture(colormapImage, (isPlayer && playerPaint?.tint) || characterEntry.color),
               bodyCasts,
               18.2,
               characterEntry
@@ -14136,6 +14142,9 @@ export const ComebackCityThreeKartRace = ({
           bestLap: race.bestLap,
           // kartLocalStore keys mirror records apart from normal ones.
           mirror: mirrorRef.current,
+          // ₿ carried at the flag (the results card's Coins) — the shell
+          // credits them to the wallet (race/progress.js).
+          coins: race.coins,
           place: race.position,
           standings: race.standings || null,
           time: race.raceTime,
