@@ -85,6 +85,7 @@ import {
 } from './race/raceCoins.js';
 import { QA_RACE_CLASS, raceClassByKey } from './race/raceClasses.js';
 import { mergeGamepadInput, pollGamepad } from './race/gamepadInput.js';
+import { MIRROR_FLIP_STYLE, mirrorRecordKey, mirrorSteerInput } from './race/mirrorMode.js';
 import { createGhostRecorder, ghostStateAt, readGhost, recordGhostFrame, saveGhostIfBest } from './race/replayGhost.js';
 import { DEFAULT_TRACK_KEY, KART_TRACKS, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
@@ -10078,6 +10079,9 @@ const publishTelemetry = (
     character: characterKey,
     kart: kartKey,
     track: trackKey,
+    // Mirror mode: the picture is flipped, so lane/steer here are SIMULATION
+    // values whose on-screen direction is reversed while this is true.
+    mirror: Boolean(runtimeStats.mirror),
     trackVisualsEnabled,
     laps: race.laps,
     slapping: race.slapTimer > 0,
@@ -10198,6 +10202,9 @@ export const ComebackCityThreeKartRace = ({
   // Time trial: no rivals, no item boxes, three Hot Cocoas, and a replay
   // ghost of the best run on this track (replayGhost.js).
   timeTrial = false,
+  // Mirror mode: the picture flips left-to-right and the player's steering
+  // inverts; the simulation does not change (race/mirrorMode.js).
+  mirror = false,
   onExit = null,
   onFinish = null,
   onNextTrack = null,
@@ -10215,6 +10222,11 @@ export const ComebackCityThreeKartRace = ({
   // Read by the key handler inside the long-lived race effect.
   const allowRestartRef = useRef(allowRestart);
   allowRestartRef.current = allowRestart;
+  // Same pattern for mirror: the frame loop, the ghost store and telemetry
+  // read it without re-running the race effect (KartApp mounts a fresh race
+  // per run, so it never changes mid-race anyway).
+  const mirrorRef = useRef(Boolean(mirror));
+  mirrorRef.current = Boolean(mirror);
   const [paused, setPausedState] = useState(false);
   const setPaused = useCallback((next) => {
     pausedRef.current = next;
@@ -10634,7 +10646,8 @@ export const ComebackCityThreeKartRace = ({
     let storedGhostVisible = false;
     const applyTimeTrialSetup = () => {
       if (!timeTrial) return;
-      storedGhost = readGhost(trackKey, trackSignature);
+      // Mirror runs race (and save) their own ghost: '<track>:mirror'.
+      storedGhost = readGhost(mirrorRecordKey(trackKey, mirrorRef.current), trackSignature);
       storedGhostVisible = Boolean(storedGhost);
       race.timeTrial = true;
       race.heldItem = 'cocoa';
@@ -11488,7 +11501,12 @@ export const ComebackCityThreeKartRace = ({
       const elapsedWindow = frameTimes.length > 1 ? (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000 : 1;
       const fpsEstimate = frameTimes.length > 1 ? (frameTimes.length - 1) / Math.max(0.001, elapsedWindow) : 60;
       const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
-      const input = mergeGamepadInput(readInput(inputRef, autoplay, race, cornerPush, engine.sampler), pad);
+      // Mirror mode inverts the PLAYER's steering after every source is merged
+      // (keys, touch drag/flick, tilt, gamepad); autoplay passes through.
+      const input = mirrorSteerInput(
+        mergeGamepadInput(readInput(inputRef, autoplay, race, cornerPush, engine.sampler), pad),
+        { autoplay, mirror: mirrorRef.current }
+      );
       // inputRef is checked directly too: under autoplay readInput returns the
       // driver's own fresh input, which dropped the pause menu's Restart.
       if (input.restart || inputRef.current.restart) {
@@ -11975,7 +11993,7 @@ export const ComebackCityThreeKartRace = ({
               if (race.timeTrial) {
                 race.standings = null;
                 race.position = 1;
-                race.ttRecord = saveGhostIfBest(trackKey, trackSignature, {
+                race.ttRecord = saveGhostIfBest(mirrorRecordKey(trackKey, mirrorRef.current), trackSignature, {
                   character: characterKey,
                   kart: kartKey,
                   samples: race.ghostRecorder.samples,
@@ -13997,6 +14015,7 @@ export const ComebackCityThreeKartRace = ({
         audioMusic: audioRef.current?.currentMusic() ?? null,
         audioEngine: audioRef.current?.engineSource() ?? null,
         bakedSpike: engine.bakedSpike,
+        mirror: mirrorRef.current,
         miamiMounts: { ...miamiMountStats },
         paletteMoments: engine.paletteMoments,
         postChainEnabled: engine.postChainEnabled,
@@ -14095,6 +14114,8 @@ export const ComebackCityThreeKartRace = ({
           // Was hard-coded null while nothing timed a lap; the split state the
           // HUD rail feeds off makes it real.
           bestLap: race.bestLap,
+          // kartLocalStore keys mirror records apart from normal ones.
+          mirror: mirrorRef.current,
           place: race.position,
           standings: race.standings || null,
           time: race.raceTime,
@@ -14283,12 +14304,16 @@ export const ComebackCityThreeKartRace = ({
       data-testid="comeback-city-3d-kart-race"
       data-track-visuals-enabled={trackVisualsEnabled ? 'true' : 'false'}
     >
+      {/* Mirror mode flips the PICTURE only (race/mirrorMode.js); the HUD is
+          HTML over the canvas, so it stays readable. */}
       <canvas
         ref={canvasRef}
         aria-label="Comeback City V2 low-poly 3D kart race"
         className="three-kart-race__canvas"
+        data-mirror={mirror ? '1' : '0'}
         data-race-renderer="three-kart"
         data-visual-canvas="race"
+        style={mirror ? MIRROR_FLIP_STYLE : undefined}
       />
       {webglError ? (
         <div className="three-kart-race__fallback">
@@ -14338,7 +14363,9 @@ export const ComebackCityThreeKartRace = ({
             is drawn from a stable object reference and React leaves it alone. */}
         {snapshot.minimap ? (
           <div className="three-kart-race__coursemap" data-testid="race-coursemap">
-            <svg viewBox={snapshot.minimap.viewBox} aria-hidden="true">
+            {/* Mirror mode: the map flips with the picture, so a corner turns
+                the same way on the map as on the road. */}
+            <svg viewBox={snapshot.minimap.viewBox} aria-hidden="true" style={mirror ? MIRROR_FLIP_STYLE : undefined}>
               <path className="three-kart-race__coursemap-road" d={snapshot.minimap.path} />
               {(snapshot.minimapRivals || []).map((dot, index) =>
                 dot ? (

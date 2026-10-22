@@ -5,6 +5,8 @@
 // already owns (cc-kart-intro-seen / cc-kart-character / cc-kart-kart /
 // cc-kart-track), which carry over to this build unchanged.
 
+import { mirrorRecordKey } from '../game/race/mirrorMode.js';
+
 const RESULTS_KEY = 'cc-kart-results';
 const MIGRATED_FLAG_KEY = 'cc-kart-results-migrated';
 const LEGACY_ATOM_KEY = 'comeback-tracker-v1';
@@ -83,7 +85,7 @@ export const migrateLegacyRaceResultsOnce = () => {
 
 // Same merge rules as the fitness RaceScreen handleFinish
 // (src/game/RaceScreen.jsx:2149-2182), persisted locally instead of into the
-// atom. result = { bestLap, place, time, trackKey } from onFinish.
+// atom. result = { bestLap, mirror, place, time, trackKey } from onFinish.
 export const recordRaceFinish = (result) => {
   if (!result || typeof result !== 'object' || !result.trackKey) return;
   // A non-finite place/time would persist NaN and poison every later min().
@@ -91,13 +93,16 @@ export const recordRaceFinish = (result) => {
   // Time trials race nobody: they set bests, never places, runs or wins.
   if (!result.timeTrial && (!Number.isFinite(result.place) || result.place < 1)) return;
   const results = readRaceResults();
-  const previous = results[result.trackKey] || {};
+  // Mirror runs keep their own entry ('<track>:mirror'), so they never
+  // overwrite a normal best (src/game/race/mirrorMode.js).
+  const recordKey = mirrorRecordKey(result.trackKey, result.mirror);
+  const previous = results[recordKey] || {};
   // Reject invalid new laps and recover bests poisoned by older saves.
   const lap = Number.isFinite(result.bestLap) && result.bestLap > 0 ? result.bestLap : null;
   const previousLap = Number.isFinite(previous.bestLap) && previous.bestLap > 0 ? previous.bestLap : null;
   const bestLap = lap !== null && (previousLap === null || lap < previousLap) ? lap : previousLap;
   if (result.timeTrial) {
-    results[result.trackKey] = {
+    results[recordKey] = {
       ...previous,
       bestLap,
       bestTime: !previous.bestTime || result.time < previous.bestTime ? result.time : previous.bestTime,
@@ -107,7 +112,7 @@ export const recordRaceFinish = (result) => {
   }
   const bestTime =
     !previous.bestTime || result.time < previous.bestTime ? result.time : previous.bestTime;
-  results[result.trackKey] = {
+  results[recordKey] = {
     ...previous,
     bestLap,
     bestPlace: previous.bestPlace ? Math.min(previous.bestPlace, result.place) : result.place,
