@@ -1021,7 +1021,10 @@
 
 /* ── Results ──────────────────────────────────────────────────────────
    The 100vmax spread is a scrim: it dims the whole frame from the panel's
-   own box-shadow, which no extra element in the JSX could do. */
+   own box-shadow, which no extra element in the JSX could do.
+   (Superseded by Results v3 below: the v3 markup carries [data-layout] and a
+   real .three-kart-race__results-scrim element, because that spread made the
+   panel's composited layer several screens wide on phones.) */
 .three-kart-race__results {
   align-items: center;
   animation: tkr-results-in 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both;
@@ -1208,6 +1211,689 @@
 .three-kart-race__results-actions button {
   flex: 1 1 0;
   white-space: nowrap;
+}
+
+/* ── Results v3 (juice pass) ──────────────────────────────────────────
+   Everything below is keyed on [data-layout], which only the v3 markup
+   carries, so it outranks the v1/v2 rules above (and the compact block
+   further down) without !important.
+
+   LAYOUT. Two columns — summary (badge, time, tallies) | standings — over a
+   full-width action row. The single stacked column was ~476px tall with six
+   racers, so on an 844x390 landscape phone the buttons sat 40px BELOW the
+   screen inside a scrolling panel. Two columns put the whole board in ~250px.
+   Sizes are percentages of the race root rather than vw/svh, so the panel is
+   also right under the tilt soft-lock, where the root is rotated 90 degrees
+   and the viewport units point down the wrong axes.
+
+   CHOREOGRAPHY. Mounted at the flag, invisible until data-reveal="shown"
+   (the place banner owns the first FINISH_BANNER_MS), then: panel rises,
+   badge pops, time counts up (ResultsTime, JS), standings stagger in, your
+   row glows, buttons arrive last. Every animation only supplies a FROM state —
+   the base styles are the finished layout — so reduced motion (data-motion,
+   or the OS media query at the bottom of this file) simply shows the end. */
+.three-kart-race__results[data-layout] {
+  --tkr-res-badge: 84px;
+  --tkr-res-badge-font: 38px;
+  --tkr-res-time: 44px;
+  --tkr-res-row-y: 8px;
+  --tkr-res-row-font: 15px;
+  --tkr-res-place-font: 17px;
+  --tkr-res-gap: 16px;
+  align-items: stretch;
+  animation: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(255, 211, 79, 0.38),
+    0 26px 60px rgba(3, 6, 12, 0.6);
+  column-gap: 28px;
+  display: grid;
+  grid-template-areas:
+    'summary standings'
+    'actions actions';
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+  max-height: calc(100% - 20px);
+  max-width: calc(100% - 24px);
+  min-width: 0;
+  /* Three states, set by data-reveal:
+       pending  the flag frame: not painted at all (visibility), so the banner,
+                the confetti and the flash have the frame to themselves;
+       warm     mid-banner (FINISH_WARM_MS): painted but unseen (opacity 0)
+                and untouchable, so every glyph and shadow is rasterised in a
+                quiet frame — left to the reveal frame itself, the whole board
+                rasterised at once and measured as a one-off 250-680 ms hitch
+                on the phone tier;
+       shown    the reveal only animates layers that already exist. */
+  opacity: 0;
+  padding: 24px 26px;
+  pointer-events: none;
+  row-gap: 20px;
+  visibility: hidden;
+  will-change: opacity, transform;
+  width: min(860px, calc(100% - 40px));
+}
+
+.three-kart-race__results[data-layout][data-reveal='warm'] {
+  visibility: visible;
+}
+
+.three-kart-race__results[data-layout='solo'] {
+  grid-template-areas:
+    'summary'
+    'actions';
+  grid-template-columns: minmax(0, 1fr);
+  width: min(560px, calc(100% - 40px));
+}
+
+.three-kart-race__results[data-layout][data-reveal='shown'] {
+  animation: tkr-results-rise 0.5s cubic-bezier(0.18, 1.2, 0.4, 1) both;
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+@keyframes tkr-results-rise {
+  0% { opacity: 0; transform: translate(-50%, -44%) scale(0.94); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* The dim behind the panel. Lighter in the middle than at the edges, so the
+   kart and the confetti still read around the board instead of under a flat
+   two-thirds black. Opacity only — composited, no repaint. */
+.three-kart-race__results-scrim {
+  background: radial-gradient(ellipse 85% 80% at 50% 50%, rgba(5, 9, 16, 0.42) 0%, rgba(5, 9, 16, 0.76) 100%);
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.45s ease;
+  /* Painted in the warm state, not in the reveal frame (see the panel). */
+  visibility: hidden;
+  will-change: opacity;
+  z-index: 6;
+}
+
+.three-kart-race__results-scrim[data-reveal='warm'] {
+  visibility: visible;
+}
+
+.three-kart-race__results-scrim[data-reveal='shown'] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.three-kart-race__results-summary {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tkr-res-gap);
+  grid-area: summary;
+  min-width: 0;
+}
+
+.three-kart-race__results-hero {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  min-width: 0;
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-head {
+  min-width: 0;
+}
+
+/* Its own (tiny) layer: ResultsTime rewrites the digits every frame for its
+   count-up, and without one each rewrite re-rasters the whole panel. */
+.three-kart-race__results[data-layout] .three-kart-race__results-head strong {
+  font-size: var(--tkr-res-time);
+  margin-top: 8px;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+/* PLACE BADGE. A struck medal in the place's metal; the field gets a dark
+   plate with the HUD's cyan rim instead of a fourth metal. */
+.three-kart-race__results-badge {
+  --tkr-metal: radial-gradient(circle at 32% 26%, #fff7cf 0%, #ffd34f 38%, #d98f0c 100%);
+  --tkr-metal-ink: #3a2300;
+  --tkr-metal-ring: rgba(255, 211, 79, 0.6);
+  --tkr-metal-glow: rgba(255, 211, 79, 0.38);
+  align-items: center;
+  background: var(--tkr-metal);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.22),
+    0 0 0 3px rgba(9, 14, 24, 0.92),
+    0 0 0 5px var(--tkr-metal-ring),
+    0 10px 24px rgba(3, 6, 12, 0.55),
+    0 0 34px var(--tkr-metal-glow);
+  color: var(--tkr-metal-ink);
+  display: flex;
+  flex: 0 0 auto;
+  font: 900 var(--tkr-res-badge-font)/1 var(--tkr-display);
+  height: var(--tkr-res-badge);
+  justify-content: center;
+  letter-spacing: -0.03em;
+  overflow: hidden;
+  position: relative;
+  width: var(--tkr-res-badge);
+}
+
+/* The badge is a flex box, so vertical-align is inert on its children: the
+   suffix is lifted by hand to sit at the numeral's cap line. */
+.three-kart-race__results-badge sup {
+  font-size: 0.42em;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  margin-left: 1px;
+  position: relative;
+  text-transform: uppercase;
+  top: -0.5em;
+}
+
+.three-kart-race__results-badge[data-place-tier='silver'] {
+  --tkr-metal: radial-gradient(circle at 32% 26%, #ffffff 0%, #dde6f2 40%, #8d9db3 100%);
+  --tkr-metal-ink: #1b2431;
+  --tkr-metal-ring: rgba(221, 230, 242, 0.6);
+  --tkr-metal-glow: rgba(190, 214, 255, 0.24);
+}
+
+.three-kart-race__results-badge[data-place-tier='bronze'] {
+  --tkr-metal: radial-gradient(circle at 32% 26%, #ffe3c9 0%, #f19c5e 40%, #9c4c1a 100%);
+  --tkr-metal-ink: #2d1302;
+  --tkr-metal-ring: rgba(241, 156, 94, 0.6);
+  --tkr-metal-glow: rgba(241, 156, 94, 0.26);
+}
+
+.three-kart-race__results-badge[data-place-tier='field'] {
+  --tkr-metal: linear-gradient(160deg, #31435f 0%, #121a2a 100%);
+  --tkr-metal-ink: var(--tkr-text);
+  --tkr-metal-ring: rgba(126, 239, 255, 0.45);
+  --tkr-metal-glow: rgba(126, 239, 255, 0);
+}
+
+/* One pass of light across the metal once it has landed. Parked off the
+   badge (and clipped by its overflow) when it is not playing, so reduced
+   motion simply never shows it. */
+.three-kart-race__results-badge::after {
+  background: linear-gradient(105deg, transparent 32%, rgba(255, 255, 255, 0.7) 50%, transparent 68%);
+  content: '';
+  inset: -10%;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-130%);
+}
+
+.three-kart-race__results-badge[data-place-tier='field']::after {
+  display: none;
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-badge {
+  animation: tkr-badge-pop 0.62s cubic-bezier(0.2, 1.3, 0.4, 1) 0.1s both;
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-badge::after {
+  animation: tkr-badge-shine 0.9s ease-in-out 0.72s both;
+}
+
+@keyframes tkr-badge-pop {
+  0% { opacity: 0; transform: scale(0.35) rotate(-16deg); }
+  55% { opacity: 1; transform: scale(1.14) rotate(3deg); }
+  78% { transform: scale(0.97) rotate(0deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes tkr-badge-shine {
+  0% { transform: translateX(-130%); }
+  100% { transform: translateX(130%); }
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-tally {
+  align-self: flex-start;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-tally > div + div {
+  border-left: 1px solid rgba(248, 251, 255, 0.1);
+  padding-left: 16px;
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-standings {
+  align-self: center;
+  grid-area: standings;
+  min-width: 0;
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-standings li {
+  padding: var(--tkr-res-row-y) 12px;
+  position: relative;
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-place {
+  color: var(--tkr-muted);
+  font-size: var(--tkr-res-place-font);
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-name {
+  font-size: var(--tkr-res-row-font);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Podium metal on the place numerals, the same three the badge uses. */
+.three-kart-race__results[data-layout] .three-kart-race__results-standings li:nth-child(1) .three-kart-race__results-place {
+  color: var(--tkr-gold);
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-standings li:nth-child(2) .three-kart-race__results-place {
+  color: #dde6f2;
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-standings li:nth-child(3) .three-kart-race__results-place {
+  color: #f6a96f;
+}
+
+/* Off the podium, your own place still reads in your row's gold. */
+.three-kart-race__results[data-layout] .three-kart-race__results-standings li[data-player='true']:nth-child(n + 4) .three-kart-race__results-place {
+  color: var(--tkr-gold);
+}
+
+.three-kart-race__results-you {
+  color: rgba(255, 211, 79, 0.85);
+  font-style: normal;
+  font-weight: 800;
+}
+
+/* Your row: the gold plate it always had, plus a glow that blooms once as it
+   lands and settles to a soft halo. The halo is a pseudo-element's opacity —
+   composited — and its resting value IS the base style, so a frozen
+   (reduced-motion) board shows the settled halo. */
+.three-kart-race__results[data-layout] .three-kart-race__results-standings li[data-player='true']::after {
+  border-radius: inherit;
+  box-shadow: 0 0 22px rgba(255, 211, 79, 0.55), inset 0 0 0 1px rgba(255, 228, 140, 0.8);
+  content: '';
+  inset: 0;
+  opacity: 0.4;
+  pointer-events: none;
+  position: absolute;
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-standings li {
+  animation: tkr-row-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  animation-delay: calc(0.24s + var(--tkr-row, 0) * 0.06s);
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-standings li[data-player='true']::after {
+  animation: tkr-you-glow 1.5s ease-out both;
+  animation-delay: calc(0.62s + var(--tkr-row, 0) * 0.06s);
+}
+
+@keyframes tkr-row-in {
+  0% { opacity: 0; transform: translateX(22px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes tkr-you-glow {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-head,
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-tally,
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-cup {
+  animation: tkr-fade-up 0.42s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-head {
+  animation-delay: 0.16s;
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-tally {
+  animation-delay: 0.5s;
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-cup {
+  animation-delay: 0.58s;
+}
+
+.three-kart-race__results[data-reveal='shown'] .three-kart-race__results-actions {
+  animation: tkr-fade-up 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) 0.62s both;
+}
+
+@keyframes tkr-fade-up {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-actions {
+  flex-wrap: nowrap;
+  grid-area: actions;
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+/* PRIMARY: one filled gold button, wider than the rest — the next thing to do
+   is never a guess. SECONDARY: quiet glass, still a full 44pt+ target. */
+.three-kart-race__results[data-layout] .three-kart-race__results-actions button[data-variant='primary'] {
+  background: linear-gradient(180deg, #ffe17c 0%, #ffc12b 100%);
+  border-color: rgba(255, 238, 178, 0.95);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -2px 0 rgba(150, 90, 0, 0.32),
+    0 8px 22px rgba(255, 185, 30, 0.26),
+    0 6px 14px rgba(3, 6, 12, 0.45);
+  color: #2a1a00;
+  flex-grow: 1.45;
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-actions button[data-variant='secondary'] {
+  background: rgba(248, 251, 255, 0.06);
+  border-color: rgba(248, 251, 255, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 14px rgba(3, 6, 12, 0.35);
+  color: var(--tkr-text);
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-actions button:active {
+  filter: brightness(0.92);
+  transform: translateY(1px) scale(0.985);
+}
+
+.three-kart-race__results[data-layout] .three-kart-race__results-actions button:focus-visible {
+  outline: 2px solid var(--tkr-cyan);
+  outline-offset: 3px;
+}
+
+/* Big screens (iPad 13", desktop at full size) get one size up. */
+@media (min-width: 1200px) and (min-height: 880px) {
+  .three-kart-race__results[data-layout] {
+    --tkr-res-badge: 96px;
+    --tkr-res-badge-font: 44px;
+    --tkr-res-time: 52px;
+    --tkr-res-row-y: 10px;
+    --tkr-res-row-font: 17px;
+    --tkr-res-place-font: 19px;
+    width: min(940px, calc(100% - 48px));
+  }
+
+  .three-kart-race__results[data-layout] .three-kart-race__results-tally dd {
+    font-size: 24px;
+  }
+
+  .three-kart-race__results[data-layout] .three-kart-race__results-actions button {
+    font-size: 12px;
+    min-height: 58px;
+  }
+}
+
+/* Landscape phones: ~390px of height for the whole board. Also applied under
+   the tilt soft-lock, where the viewport reports PORTRAIT dimensions while the
+   rotated board is landscape, so no media feature can see it. */
+@media (max-height: 560px) {
+  .three-kart-race__results[data-layout] {
+    --tkr-res-badge: 58px;
+    --tkr-res-badge-font: 27px;
+    --tkr-res-time: 30px;
+    --tkr-res-row-y: 4px;
+    --tkr-res-row-font: 13px;
+    --tkr-res-place-font: 14px;
+    --tkr-res-gap: 10px;
+    border-radius: 16px;
+    column-gap: 20px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px) * 0.3);
+    row-gap: 10px;
+    width: min(780px, calc(100% - 28px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  }
+
+  .three-kart-race__results[data-layout] .three-kart-race__results-hero {
+    gap: 14px;
+  }
+
+  .three-kart-race__results[data-layout] .three-kart-race__results-head strong {
+    margin-top: 6px;
+  }
+
+  .three-kart-race__results[data-layout] .three-kart-race__results-standings {
+    gap: 4px;
+  }
+
+  .three-kart-race__results[data-layout] .three-kart-race__results-actions button {
+    min-height: 44px;
+  }
+}
+
+.three-kart-race--soft-landscape .three-kart-race__results[data-layout] {
+  --tkr-res-badge: 58px;
+  --tkr-res-badge-font: 27px;
+  --tkr-res-time: 30px;
+  --tkr-res-row-y: 4px;
+  --tkr-res-row-font: 13px;
+  --tkr-res-place-font: 14px;
+  --tkr-res-gap: 10px;
+  column-gap: 20px;
+  padding: 12px 16px;
+  row-gap: 10px;
+  width: min(780px, calc(100% - 28px));
+}
+
+/* Genuinely narrow (portrait before any lock): one column. */
+@media (max-width: 560px) {
+  .three-kart-race__results[data-layout='field'] {
+    grid-template-areas:
+      'summary'
+      'standings'
+      'actions';
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.three-kart-race--soft-landscape .three-kart-race__results[data-layout='field'] {
+  grid-template-areas:
+    'summary standings'
+    'actions actions';
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+}
+
+/* Reduced motion (the in-game setting): the board simply appears, finished. */
+.three-kart-race__results[data-motion='reduced'],
+.three-kart-race__results[data-motion='reduced'] *,
+.three-kart-race__results[data-motion='reduced'] *::before,
+.three-kart-race__results[data-motion='reduced'] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.three-kart-race__results-scrim[data-motion='reduced'] {
+  transition: none;
+}
+
+/* ── Flag moment: place banner ────────────────────────────────────────
+   "1ST!" slammed over the frame in the place's metal for FINISH_BANNER_MS,
+   riding a skewed ribbon, while the confetti falls — then it lifts away as the
+   results rise. Upper quarter: the finish camera frames the stopped kart just
+   above centre, and the banner has to clear its roll bar. */
+.three-kart-race__finish-banner {
+  --tkr-place: var(--tkr-gold);
+  --tkr-place-glow: rgba(255, 211, 79, 0.55);
+  --tkr-place-band: rgba(255, 211, 79, 0.3);
+  animation: tkr-finish-banner 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  text-transform: uppercase;
+  top: 24%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  /* Its own layer in EVERY motion mode. Under reduced motion the slam does not
+     run, the banner was painted into the page's main layer instead, and its
+     stroked, glowing 70-150px glyphs measured as 130-630 ms hitches on the
+     flag frame on the phone tier. */
+  will-change: transform, opacity;
+  z-index: 5;
+}
+
+.three-kart-race__finish-banner[data-place-tier='silver'] {
+  --tkr-place: #e9f0fa;
+  --tkr-place-glow: rgba(196, 218, 255, 0.45);
+  --tkr-place-band: rgba(221, 230, 242, 0.24);
+}
+
+.three-kart-race__finish-banner[data-place-tier='bronze'] {
+  --tkr-place: #ffae72;
+  --tkr-place-glow: rgba(255, 150, 80, 0.45);
+  --tkr-place-band: rgba(241, 156, 94, 0.26);
+}
+
+.three-kart-race__finish-banner[data-place-tier='field'] {
+  --tkr-place: var(--tkr-cyan);
+  --tkr-place-glow: rgba(126, 239, 255, 0.4);
+  --tkr-place-band: rgba(126, 239, 255, 0.2);
+}
+
+.three-kart-race__finish-banner::before {
+  animation: tkr-finish-band 1.6s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  background: linear-gradient(90deg, transparent 0%, var(--tkr-place-band) 16%, var(--tkr-place-band) 84%, transparent 100%);
+  content: '';
+  height: 52%;
+  left: 50%;
+  position: absolute;
+  top: 60%;
+  transform: translate(-50%, -50%) skewX(-14deg);
+  width: 150%;
+  z-index: -1;
+}
+
+.three-kart-race__finish-banner-eyebrow {
+  color: var(--tkr-place);
+  display: block;
+  font: 800 14px/1 var(--tkr-mono);
+  letter-spacing: 0.5em;
+  margin-right: -0.5em;
+  text-shadow: 0 2px 8px rgba(4, 7, 14, 0.9);
+}
+
+.three-kart-race__finish-banner-place {
+  color: var(--tkr-place);
+  display: block;
+  font: 900 clamp(68px, 9.5vw, 148px)/1 var(--tkr-display);
+  letter-spacing: 0.01em;
+  margin-top: 6px;
+  paint-order: stroke fill;
+  text-shadow: 0 10px 30px rgba(4, 7, 14, 0.75), 0 0 46px var(--tkr-place-glow);
+  -webkit-text-stroke: 9px rgba(6, 10, 18, 0.94);
+}
+
+@keyframes tkr-finish-banner {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(2.1); }
+  11% { opacity: 1; transform: translate(-50%, -50%) scale(0.93); }
+  18% { transform: translate(-50%, -50%) scale(1.04); }
+  26% { transform: translate(-50%, -50%) scale(1); }
+  82% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -62%) scale(0.92); }
+}
+
+@keyframes tkr-finish-band {
+  0% { opacity: 0; transform: translate(-50%, -50%) skewX(-14deg) scaleX(0); }
+  14% { opacity: 1; transform: translate(-50%, -50%) skewX(-14deg) scaleX(1); }
+  82% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) skewX(-14deg) scaleX(1.1); }
+}
+
+/* Landscape phones: the finish camera frames the kart a little higher in a
+   390px-tall frame, so the banner rides higher too — clear of the kart's roll
+   bar, still under the compact HUD strip. */
+@media (max-height: 560px) {
+  .three-kart-race__finish-banner {
+    top: 28%;
+  }
+
+  .three-kart-race__finish-banner-place {
+    font-size: clamp(64px, 18vh, 96px);
+    -webkit-text-stroke: 7px rgba(6, 10, 18, 0.94);
+  }
+
+  .three-kart-race__finish-banner-eyebrow {
+    font-size: 12px;
+  }
+}
+
+/* ── Impact edge flash ────────────────────────────────────────────────
+   One layer, driven by race/juice.js through the Web Animations API (opacity
+   only, so the compositor runs it with no repaint). The colour says what
+   happened: crimson you were hit, ice the shield ate it, white-hot a wall,
+   gold you finished. Below the HUD so the plates never tint.
+   The hit is CRIMSON rather than the obvious red because Comeback City is
+   graded orange-red at dusk: a red edge on that sky measured as a ~+20 shift
+   in the red channel and read as nothing; a blue-leaning red is a different
+   hue from the sky and reads on both tracks. */
+.three-kart-race__impact {
+  --tkr-impact: 226 28 72;
+  background: radial-gradient(
+    ellipse farthest-corner at 50% 50%,
+    rgb(var(--tkr-impact) / 0) 38%,
+    rgb(var(--tkr-impact) / 0.42) 66%,
+    rgb(var(--tkr-impact) / 0.95) 100%
+  );
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 3;
+}
+
+.three-kart-race__impact[data-impact='shield'] {
+  --tkr-impact: 150 236 255;
+}
+
+/* A wall is a white-hot scrape, not damage: brighter than the scene rather
+   than a hue, so it reads on the orange city and is never mistaken for the
+   crimson of a hit. */
+.three-kart-race__impact[data-impact='wall'] {
+  --tkr-impact: 255 228 200;
+}
+
+.three-kart-race__impact[data-impact='finish'] {
+  --tkr-impact: 255 226 140;
+}
+
+/* HIT! — the confirmation for a hit the PLAYER landed. A word, not a tint:
+   the hit usually happened up the road, and a stroked word reads on both
+   tracks' skies where a gold edge glow did not. Animated by race/juice.js. */
+.three-kart-race__hit-marker {
+  color: var(--tkr-gold);
+  font: 900 30px/1 var(--tkr-display);
+  left: 50%;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  paint-order: stroke fill;
+  pointer-events: none;
+  position: absolute;
+  text-shadow: 0 6px 18px rgba(4, 7, 14, 0.7), 0 0 26px rgba(255, 211, 79, 0.45);
+  text-transform: uppercase;
+  top: 15%;
+  transform: translate(-50%, 0);
+  white-space: nowrap;
+  -webkit-text-stroke: 5px rgba(6, 10, 18, 0.92);
+  z-index: 5;
+}
+
+@media (max-height: 560px) {
+  .three-kart-race__hit-marker {
+    font-size: 24px;
+    top: 17%;
+    -webkit-text-stroke: 4px rgba(6, 10, 18, 0.92);
+  }
 }
 
 /* SLIPSTREAM wind: two soft streak fields on the frame edges, drifting

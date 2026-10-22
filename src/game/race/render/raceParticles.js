@@ -858,6 +858,14 @@ const CONFETTI_COLORS_CITY = ['#FF4FD8', '#00E5FF', '#FFD34F', '#7B61FF', '#FF8A
 const CONFETTI_COLORS_ICE = ['#8FE9FF', '#FFFFFF', '#B27CFF', '#FFD34F', '#6BFFC4', '#FF7FB0'];
 const CONFETTI_WAVES = 3;
 const CONFETTI_WAVE_GAP = 0.34;
+// The win's gold flare (ring + spark fountain) on top of the confetti.
+const VICTORY_RING_TINT = '#FFD34F';
+const VICTORY_SPARK_TINT = '#FFE38A';
+// Podium cannon launch: ~14 units/s up against ~10 units/s² of pull puts the
+// apex 7-12 units over the kart a second in, then the paper falls back through
+// the finish frame inside CONFETTI_TTL.
+const CONFETTI_CANNON_LIFT = 14;
+const CONFETTI_CANNON_GRAVITY = -10;
 // Paper, not debris: it barely accelerates, and it lives long enough to actually
 // drift through the frame the finish camera pulls back into.
 const CONFETTI_GRAVITY = -5.5;
@@ -3281,6 +3289,52 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
   let confettiPending = 0;
   let confettiTimer = 0;
 
+  // Podium cannon (juice pass): the FIRST wave of a top-three finish, fired up
+  // and out of both flanks of the kart instead of dropped from above. Measured
+  // on Comeback City, paper falling from 7-20 units up spends its whole life
+  // against the dusk sky, where an additive sprite on an orange field is a
+  // faint speck; thrown from the kart it opens AT the kart — the one place the
+  // eye already is — against the road and the hero, then falls back through
+  // the frame on the same paper physics. Same palette, tumble and angular
+  // ceiling as spawnConfetti; the launch and the ribbon size differ.
+  const spawnConfettiCannon = (context) => {
+    const palette = isIce ? CONFETTI_COLORS_ICE : CONFETTI_COLORS_CITY;
+    const perSide = Math.max(4, Math.round(eventCount(14) * (context.reducedMotion ? 0.5 : 1)));
+    const cos = Math.cos(context.yaw);
+    const sin = Math.sin(context.yaw);
+    for (let side = -1; side <= 1; side += 2) {
+      for (let index = 0; index < perSide; index += 1) {
+        const item = nextBurst();
+        const lx = side * (3.6 + Math.random() * 1.6);
+        const lz = (Math.random() - 0.5) * 3;
+        item.position.set(
+          context.kartPosition.x + cos * lx + sin * lz,
+          context.groundY + 2.2 + Math.random(),
+          context.kartPosition.z - sin * lx + cos * lz
+        );
+        // Kart space: out to its own side, up, and a little fore/aft scatter.
+        const vx = side * (2.5 + Math.random() * 5);
+        const vz = (Math.random() - 0.5) * 5;
+        item.velocity.set(cos * vx + sin * vz, CONFETTI_CANNON_LIFT * (0.75 + Math.random() * 0.45), -sin * vx + cos * vz);
+        item.brightness = 0.72;
+        item.flicker = 0;
+        item.gravity = CONFETTI_CANNON_GRAVITY;
+        // Larger than the falling paper: at the finish camera's ~27 units this
+        // lands each ribbon ON the CONFETTI_MAX_ANGLE ceiling instead of well
+        // under it, which is the difference between a ribbon and a speck on a
+        // 390px-tall phone.
+        item.size = 0.62 + Math.random() * 0.4;
+        item.aspect = 1.8 + Math.random() * 1;
+        item.maxAngle = CONFETTI_MAX_ANGLE;
+        item.stretch = 0;
+        item.tumble = 6 + Math.random() * 10;
+        item.tint.set(palette[(index + (side > 0 ? 3 : 0)) % palette.length]);
+        item.ttl = CONFETTI_TTL * (0.8 + Math.random() * 0.4);
+        item.life = item.ttl;
+      }
+    }
+  };
+
   // Mini-turbo sparks. Distinct from the spray on purpose: tiny, fast, and
   // velocity-stretched, so the tier COLOUR (blue → amber → purple) is legible
   // from a single still frame the way the charge stage has to be.
@@ -3842,12 +3896,46 @@ export const createRaceParticles = ({ isIce = false, mobile = false, onShake = n
         stretch: 1.8,
         ttl: 0.26,
       });
-    } else if (cue === 'finish') {
+    } else if (cue === 'finish' || cue === 'victory') {
       // The one cue in the vocabulary that has never had a visual. First wave
       // now, the rest scheduled in update() — see CONFETTI_WAVES.
-      spawnConfetti(context, 0);
-      confettiPending = CONFETTI_WAVES - 1;
+      //
+      // 'victory' is what a WIN sends (kartAudio cuesForTransition), and until
+      // the juice pass it fell straight through this chain: the only finishers
+      // who never got confetti were the ones who won. A podium opens with the
+      // cannon (spawnConfettiCannon) and then gets the two falling waves; the
+      // rest of the field gets one falling wave. The win adds a gold flare at
+      // the kart — a ring and a spark fountain out of the same burst pool.
+      // Mid-tier census for a win: 18 cannon + 30 falling + 11 ring + 11
+      // sparks = 70 of the 72 burst slots.
+      const place = Number.isFinite(context.finishPlace) ? context.finishPlace : cue === 'victory' ? 1 : 4;
+      if (place <= 3) spawnConfettiCannon(context);
+      else spawnConfetti(context, 0);
+      confettiPending = place <= 3 ? CONFETTI_WAVES - 1 : 0;
       confettiTimer = CONFETTI_WAVE_GAP;
+      if (place === 1) {
+        spawnShockRing(context, {
+          count: eventCount(18),
+          point: anchorToWorld(context, 0, 3.4, 0),
+          radius: 1.6,
+          size: 0.46,
+          speed: 30,
+          tint: VICTORY_RING_TINT,
+          ttl: 0.42,
+        });
+        spawnBurst(context, {
+          color: VICTORY_SPARK_TINT,
+          count: eventCount(18),
+          gravity: -16,
+          maxAngle: SPARK_MAX_ANGLE,
+          originY: context.groundY + 2.6,
+          size: 0.34,
+          speed: 15,
+          stretch: 1.4,
+          ttl: 0.8,
+          upBias: 12,
+        });
+      }
     } else if (cue === 'land') {
       // Landing is the one cue that carries data the caller does not send:
       // how far the kart fell. update() banks the peak, this spends it, and
