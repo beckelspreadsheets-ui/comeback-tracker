@@ -1,6 +1,38 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-10-21 — iPhone groundwork done, memory leak fixed (read first)
+## 2026-10-22 — five upgrades + new music merged, preview deployed (read first)
+Summary page with screenshots and the owner's open calls:
+https://claude.ai/artifact/GG5Z1yfDfbwRFijkZaV5HW · music picks + re-scored
+trailer: https://claude.ai/artifact/2abKRs4f2Mgm3Ld3Hmvzri · preview deploy
+b66a5183 (alias https://aaa-preview.comeback-city-kart.pages.dev), verified by
+`node scripts/verify-preview-deploy.mjs <url>` (all three tracks + phone).
+- **Merged today** (five parallel agents in worktrees, then merged here):
+  Satoshi Summit preview track (hidden: `?previewTracks=1`, never in the
+  cup — `PREVIEW_TRACKS` in tracks/index.js), game feel (impact kicks, finish
+  banner + confetti, rebuilt results board — fixed phone buttons below the
+  screen and no-confetti-on-win), first-race coaching (race/coaching.js +
+  RaceCoach.jsx, `?coach=1`), coins + paints (race/progress.js,
+  KartPaintShop.jsx; earn at the finish, 8 paints), Mirror Mode (unlocked by
+  winning a cup; `?mirror=1|0`).
+- **Music:** ElevenLabs beds for menu / Comeback City / Penguin Village /
+  Satoshi Summit (owner may swap takes — takes + receipts in
+  tmp/kart-music/elevenlabs and docs/music-receipts). Tooling:
+  scripts/elevenlabs-music.mjs (key in Keychain `elevenlabs-api-key`; the
+  owner pasted it in chat once — he should delete it on elevenlabs.io when
+  done), loop-music-bed.mjs, rescore-trailer.mjs. Trailer re-scored (takes 1
+  and 2) in tmp/trailer-ai/*-eleven-t{1,2}.mp4 — owner picks.
+- **Fixes:** rival fade is a clean blend over a depth pre-pass
+  (race/render/rivalFade.js; `?rivalFade=dither` = old), course map back on
+  screen on phones/iPads, dev:kart renders 3D again (StrictMode vs forced
+  context loss), images never inlined into JS.
+- **Gates at HEAD:** build, 11/11 quick battery, test:juice, context-loss,
+  soak, playable proof (on the pre-juice merge), select stage, deploy probe.
+  **Bundle: JS gzip 540.09 / 540 — 90 bytes over; owner to choose raise to
+  560 or drop the `?post=0` lab render path.**
+- **Owner calls pending:** Summit into the Grand Prix? · JS budget · music /
+  trailer takes · the oversized ₿ coin row beside the kart at the finish.
+
+## 2026-10-21 — iPhone groundwork done, memory leak fixed
 Same rules as below: `git pull` on `aaa-kart-ci`; this file plus
 docs/RELEASE_V1_PLAN.md are the handoff.
 - **Owner calls today:** new players start at 50cc · icon A (Seth Penguin on
