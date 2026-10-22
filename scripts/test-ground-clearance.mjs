@@ -22,7 +22,7 @@
 // The sampler is the previewer's mirror of the runtime's (mirror-checked
 // against the monolith's source), imported rather than copied again.
 import { makeSampler, mirrorCheck } from './track-layout-preview.mjs';
-import { KART_TRACKS } from '../src/game/race/tracks/index.js';
+import { ALL_TRACKS } from '../src/game/race/tracks/index.js';
 import { roadEdgeSection } from '../src/game/race/render/buildRoadEdgeProfile.js';
 import {
   GROUND_BASE_Y,
@@ -208,7 +208,7 @@ if (!mirror.available || !mirror.pass) {
 }
 
 let failed = false;
-for (const trackDef of KART_TRACKS) {
+for (const trackDef of ALL_TRACKS) {
   const report = checkTrack(trackDef);
   const { worst, worstGap } = report;
   const ok = report.buried === 0 && report.gaps === 0;

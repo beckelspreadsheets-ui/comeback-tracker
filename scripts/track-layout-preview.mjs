@@ -30,7 +30,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { KART_TRACKS, trackByKey } from '../src/game/race/tracks/index.js';
+import { ALL_TRACKS, trackByKey } from '../src/game/race/tracks/index.js';
 import { COIN_ROWS } from '../src/game/race/raceCoins.js';
 import { SURFACE_ROAD_SHEEN, SURFACE_ROAD_TINT, surfaceTypeAt } from '../src/game/race/physics/surfacePhysics.js';
 
@@ -2564,7 +2564,7 @@ const parseArgs = (argv) => {
 
 const USAGE = `track-layout-preview — plan view + layout numbers for the shipped kart tracks
 
-  --track <key>            one track (${KART_TRACKS.map((t) => t.key).join(' | ')}); default: all
+  --track <key>            one track (${ALL_TRACKS.map((t) => t.key).join(' | ')}); default: all
   --file <path.js>         preview an UNREGISTERED draft definition (a module
                            exporting anything with .course.centerline)
   --compare <keyA,keyB>    side-by-side sheet at one shared scale
@@ -2594,13 +2594,13 @@ const main = async () => {
       ? args.compare.split(',').map((key) => key.trim())
       : args.track
         ? [args.track]
-        : KART_TRACKS.map((track) => track.key);
+        : ALL_TRACKS.map((track) => track.key);
 
   const reports = [];
   for (const requested of keys) {
     const trackDef = args.file ? await loadTrackFromFile(args.file) : trackByKey(requested);
     if (!args.file && trackDef.key !== requested) {
-      process.stderr.write(`unknown track "${requested}" — known: ${KART_TRACKS.map((t) => t.key).join(', ')}\n`);
+      process.stderr.write(`unknown track "${requested}" — known: ${ALL_TRACKS.map((t) => t.key).join(', ')}\n`);
       process.exitCode = 1;
       return;
     }
