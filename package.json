@@ -48,7 +48,7 @@
     "test:kart:soak": "node scripts/test-kart-race-soak.mjs",
     "test:kart:battery": "node scripts/kart-gate-battery.mjs",
     "test:kart:battery:quick": "node scripts/kart-gate-battery.mjs --quick",
-    "test:kart:regressions": "node scripts/test-kart-local-store.mjs && node scripts/test-kart-replay-storage.mjs && node scripts/test-kart-gamepad-input.mjs && node scripts/test-kart-session-health.mjs",
+    "test:kart:regressions": "node scripts/test-kart-local-store.mjs && node scripts/test-kart-replay-storage.mjs && node scripts/test-kart-gamepad-input.mjs && node scripts/test-kart-session-health.mjs && node scripts/test-kart-mirror.mjs",
     "test:audio:kart": "node scripts/kart-audio-smoke-test.mjs",
     "test:audio:samples": "node scripts/test-kart-audio-samples.mjs",
     "test:select:models": "node scripts/test-select-models.mjs",

@@ -29,6 +29,16 @@ import {
 import { KartModelStage } from './KartModelStage.jsx';
 import { GestureArt, RampGlyph } from './TouchGestureArt.jsx';
 import { applyRaceToCup, createCup, cupStandings, isCupOver } from './cupMode.js';
+import { MirrorModeToggle, MirrorUnlockedNote } from './MirrorModeToggle.jsx';
+import {
+  cupUnlocksMirror,
+  initialMirrorSetup,
+  isMirrorActive,
+  mirrorAvailable,
+  unlockMirror,
+  writeMirrorChoice,
+} from './mirrorUnlock.js';
+import { recordsForMode } from '../game/race/mirrorMode.js';
 import { createKartAudio, readStoredMute } from '../game/race/kartAudio.js';
 import { KART_AUDIO_ASSETS } from '../game/race/kartAudioAssets.js';
 import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
@@ -547,7 +557,7 @@ const GAME_MODES = [
 ];
 
 // Cup finale: the podium. Top three on plinths, the rest listed below.
-const CupPodium = ({ cup, onDone }) => {
+const CupPodium = ({ cup, mirrorUnlocked = false, onDone }) => {
   const standings = cupStandings(cup);
   const nameToKey = Object.fromEntries(KART_CHARACTERS.map((entry) => [entry.name, entry.key]));
   const podium = [standings[1], standings[0], standings[2]];
@@ -563,6 +573,7 @@ const CupPodium = ({ cup, onDone }) => {
             <h2 className="mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white sm:text-4xl">
               {playerPlace === 1 ? 'You won the cup!' : `You finished ${['1st', '2nd', '3rd'][playerPlace - 1] || `${playerPlace}th`}`}
             </h2>
+            {mirrorUnlocked ? <MirrorUnlockedNote /> : null}
           </div>
           <div className="flex items-end justify-center gap-3">
             {podium.map((row, index) =>
@@ -618,10 +629,12 @@ const formatBestTime = (seconds) => {
   return `${minutes}:${(seconds - minutes * 60).toFixed(2).padStart(5, '0')}`;
 };
 
-const KartCharacterSelect = ({ gameMode, kartKey, onShowGuide, onStart, raceClass, reducedMotion, selectedKey, setGameMode, setKartKey, setRaceClass, setSelectedKey, setTrackKey, trackKey }) => {
+const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, onStart, raceClass, reducedMotion, selectedKey, setGameMode, setKartKey, setRaceClass, setSelectedKey, setTrackKey, trackKey }) => {
   // Saved bests per track (kartLocalStore). Read per mount: the screen
   // remounts on every return from a race, which is when they change.
-  const [bestResults] = useState(() => readRaceResults() || {});
+  const [savedResults] = useState(() => readRaceResults() || {});
+  // With Mirror Mode on, the track cards show the mirror records instead.
+  const bestResults = recordsForMode(savedResults, mirror?.active);
   return (
   <div className="absolute inset-0 z-40 overflow-y-auto" data-testid="race-character-select">
     <MenuBackdrop trackKey={trackKey} />
@@ -733,6 +746,16 @@ const KartCharacterSelect = ({ gameMode, kartKey, onShowGuide, onStart, raceClas
           );
         })}
       </div>
+      {mirror ? (
+        <MirrorModeToggle
+          enabled={mirror.enabled}
+          locked={mirror.locked}
+          onToggle={mirror.onToggle}
+          panel={PANEL}
+          panelHover={PANEL_HOVER}
+          panelSelected={PANEL_SELECTED}
+        />
+      ) : null}
       <div>
         <h3 className={`${SECTION_TITLE} mb-1`}>Pick Your Racer</h3>
         <p className="mb-3 text-[11px] text-white/40">The rest of the crew lines up against you.</p>
@@ -926,6 +949,27 @@ export const KartApp = () => {
       return DEFAULT_RACE_CLASS;
     }
   });
+  // MIRROR MODE (mirrorUnlock.js). Locked until the player wins a Grand Prix;
+  // then a remembered on/off that every mode honours. ?mirror=1|0 seeds it on
+  // or off for QA, and =1 works even while locked.
+  const [mirrorSetup, setMirrorSetup] = useState(initialMirrorSetup);
+  const mirrorActive = isMirrorActive(mirrorSetup);
+  const toggleMirror = () => {
+    if (!mirrorAvailable(mirrorSetup)) return;
+    const enabled = !mirrorSetup.enabled;
+    writeMirrorChoice(enabled);
+    setMirrorSetup((current) => ({ ...current, enabled }));
+  };
+  useEffect(() => {
+    // The unlock: the cup is over and the player tops it. `news` puts the
+    // announcement on the podium; leaving the cup clears it.
+    if (cupUnlocksMirror(cup)) {
+      unlockMirror();
+      setMirrorSetup((current) => (current.unlocked ? current : { ...current, news: true, unlocked: true }));
+    } else if (!cup) {
+      setMirrorSetup((current) => (current.news ? { ...current, news: false } : current));
+    }
+  }, [cup]);
   const confirmCharacter = useCallback(() => {
     if (gameMode === 'cup') {
       const trackKeys = KART_TRACKS.map((entry) => entry.key);
@@ -1043,7 +1087,7 @@ export const KartApp = () => {
       data-testid="race-screen"
     >
       {cupFinal && cup ? (
-        <CupPodium cup={cup} onDone={exitToMenu} />
+        <CupPodium cup={cup} mirrorUnlocked={mirrorSetup.news} onDone={exitToMenu} />
       ) : !introSeen ? (
         <KartIntroScreen onStart={dismissIntro} trackKey={kartTrackKey} />
       ) : !characterReady ? (
@@ -1051,6 +1095,12 @@ export const KartApp = () => {
           kartKey={kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart}
           onShowGuide={() => setIntroSeen(false)}
           gameMode={gameMode}
+          mirror={{
+            active: mirrorActive,
+            enabled: mirrorSetup.enabled,
+            locked: !mirrorAvailable(mirrorSetup),
+            onToggle: toggleMirror,
+          }}
           onStart={confirmCharacter}
           raceClass={raceClass}
           setGameMode={setGameMode}
@@ -1071,6 +1121,7 @@ export const KartApp = () => {
           timeTrial={!cup && gameMode === 'timetrial'}
           kart={kartKey}
           key={`race-${raceNonce}`}
+          mirror={mirrorActive}
           mode="race"
           nextTrackLabel={cup ? cupNextLabel : nextTrack ? nextTrack.name : null}
           onExit={exitToMenu}
