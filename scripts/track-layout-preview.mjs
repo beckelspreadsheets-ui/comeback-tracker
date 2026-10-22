@@ -78,9 +78,10 @@ const OUT_DIR = resolve(ROOT, 'tmp/track-preview');
 // 46.67-47.52s (1.8%, vs the old <0.5%) — the grade widened the autoplay's
 // lap-time variance, so this PV number is soft; a quiet 3+ run re-measure would
 // tighten it (run 2 sat near the old 46.3 / 240.7).
-// Satoshi Summit (preview track) measured 2026-10-22: one full autoplay race,
+// Satoshi Summit (preview track) measured 2026-10-22: first full autoplay race,
 // racing laps 46.13 / 45.63 s on the 11,087-unit 3D lap -> 241.6 u/s (139.3 s
-// race, ~59 fps). One race, so softer than the three-race numbers above.
+// race, ~59 fps); two later races on the final 11,098-unit lap ran 139.2 s and
+// 140.9 s (load 16-38, wall/game ~1). Softer than the three-race numbers above.
 const MEAN_SPEED = { 'comeback-city': 247.2, 'penguin-village': 236.7, 'satoshi-summit': 241.6 };
 
 // The tool must be CHECKABLE, not merely plausible — but the thing worth

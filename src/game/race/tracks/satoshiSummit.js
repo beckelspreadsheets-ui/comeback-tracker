@@ -17,7 +17,9 @@
 //
 // Authored as corners + fillet radii through buildCenterline (zero kinks by
 // construction, every radius stated rather than discovered), then scaled to
-// the lap length the other two tracks race at (see LAP_SCALE).
+// the lap length the other two tracks race at (see LAP_SCALE). Measured: 11,098
+// units, 11 corners (0 kinks), a 10.2 s overtaking straight, every corner
+// announced >= 1.65 s; autoplay races it in 139-141 s (CC ~141.6, PV ~138.9).
 import { buildCenterline, validateCenterline } from './buildCenterline.js';
 
 // x east / z south. Waypoint 0 is the gallery corner, so the lap's first
@@ -34,7 +36,9 @@ const WAYPOINTS = [
   { x: 350, z: -400 }, // W8  BEACON CAROUSEL a
   { x: -150, z: -400 }, // W9  BEACON CAROUSEL b
   { x: -150, z: 120 }, // W10 descent esses 1
-  { x: -560, z: -20 }, // W11 descent esses 2
+  // -600, not -560: 40 more units between the first two esses take the
+  // second one's announcement from 1.50 s to 1.65 s (--strict-sight passes).
+  { x: -600, z: -20 }, // W11 descent esses 2
   { x: -900, z: 180 }, // W12 descent esses 3
   { x: -1280, z: 100 }, // W13 descent esses 4 -> crevasse run south
 ];
