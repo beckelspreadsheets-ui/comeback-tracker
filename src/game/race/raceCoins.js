@@ -60,17 +60,22 @@ export const COIN_FEEL = {
 // 0.775; as authored it sat 55.7 units off the beacon-hairpin ramp at 0.765,
 // just inside the floor, and the ramp's +0.5 side is exactly COIN_FEEL.hitLane
 // from the +0.3 coin so a kart taking the ramp would clip the row).
+// FINISH CLEARANCE (owner call 2026-10-22): no rows within 0.025 of a lap on
+// either side of the line. The row just past it flanked the kart through the
+// whole finish banner — two giant ₿ beside "1ST!" — and the rows just before
+// it did the same on Satoshi Summit. Removed: CC 0.98 / 0.01, PV 0.01, SS
+// 0.98 / 0.995, which leaves 28-29 rows a lap (the coin feed drops ~5%).
 export const COIN_ROWS = {
   // Skyline Viaduct. Clear of boost pads 0.09/0.3/0.7/0.965, item boxes
   // 0.03/0.16/0.22/0.38/0.52/0.77/0.905 and ramps 0.45/0.63.
   'comeback-city': [
-    0.01, 0.05, 0.08, 0.11, 0.14, 0.18, 0.21, 0.24, 0.28, 0.31, 0.34, 0.37, 0.41, 0.44, 0.47, 0.5, 0.54, 0.57, 0.6,
-    0.64, 0.67, 0.71, 0.74, 0.78, 0.81, 0.85, 0.88, 0.92, 0.95, 0.98,
+    0.05, 0.08, 0.11, 0.14, 0.18, 0.21, 0.24, 0.28, 0.31, 0.34, 0.37, 0.41, 0.44, 0.47, 0.5, 0.54, 0.57, 0.6,
+    0.64, 0.67, 0.71, 0.74, 0.78, 0.81, 0.85, 0.88, 0.92, 0.95,
   ],
   // Bayfront Sweep. Clear of boost pads 0.08/0.32/0.55/0.82, item boxes
   // 0.02/0.12/0.47/0.62/0.7/0.885/0.96 and ramps 0.24/0.765.
   'penguin-village': [
-    0.01, 0.04, 0.07, 0.1, 0.14, 0.17, 0.2, 0.23, 0.27, 0.3, 0.34, 0.37, 0.4, 0.44, 0.48, 0.51, 0.54, 0.58, 0.61,
+    0.04, 0.07, 0.1, 0.14, 0.17, 0.2, 0.23, 0.27, 0.3, 0.34, 0.37, 0.4, 0.44, 0.48, 0.51, 0.54, 0.58, 0.61,
     0.64, 0.67, 0.71, 0.74, 0.775, 0.8, 0.84, 0.87, 0.9, 0.93, 0.97,
   ],
   // Satoshi Summit (preview track). Clear of boost pads 0.075/0.415/0.59/0.878,
@@ -79,7 +84,7 @@ export const COIN_ROWS = {
   // row the kart flies over cannot be read as collectable.
   'satoshi-summit': [
     0.035, 0.055, 0.1, 0.12, 0.165, 0.19, 0.205, 0.235, 0.26, 0.31, 0.335, 0.36, 0.4, 0.44, 0.47, 0.53, 0.555,
-    0.615, 0.64, 0.69, 0.715, 0.74, 0.765, 0.815, 0.84, 0.86, 0.895, 0.96, 0.98, 0.995,
+    0.615, 0.64, 0.69, 0.715, 0.74, 0.765, 0.815, 0.84, 0.86, 0.895, 0.96,
   ],
 };
 
