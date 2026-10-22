@@ -17,5 +17,11 @@
     "bars": "32,40",
     "lengthMs": 100000,
     "prompt": "Instrumental arctic synth-pop for an arcade kart race through a snowy penguin village at sunset. 112 BPM, B minor. Glassy bells and glockenspiel, crystalline plucks, airy pads, bouncy half-time drums with crisp hi-hats. Playful and cool, constant energy so it can loop under a race. No intro, no ending, no fade-out, no vocals."
+  },
+  "satoshi-summit": {
+    "bpm": 118,
+    "bars": "32,40",
+    "lengthMs": 100000,
+    "prompt": "Instrumental high-altitude synthwave for an arcade kart race over a mountain pass at blue-hour dusk, aurora overhead, above a sea of clouds. 118 BPM, D minor. Pulsing analog bass, wide shimmering pads, bright plucked arpeggios, a soaring lead with a little choir-like air, tight electronic drums with a steady drive. Cool, epic and hopeful, constant energy so it can loop under a race. No intro, no breakdown, no ending, no fade-out, no vocals."
   }
 }

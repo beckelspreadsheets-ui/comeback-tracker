@@ -164,6 +164,21 @@ newcomer finishes top 3 in their first race (re-run `probe:difficulty` at
 50/100cc with touch), zero reloads in 10 races, ≥30 fps p95 on an iPhone
 12-class phone, no keyboard text on phones.
 
+Measured without a device (2026-10-22):
+- Difficulty (`DIFFICULTY_PROBE_URL=<preview> DIFFICULTY_PROBE_QUERY=cc=50`,
+  2 runs a track; the probe drives the shipped autoplay policy, a stronger
+  driver than a newcomer): **50cc** wins 4/4, leading 94-95% of the distance
+  on both tracks; **100cc** wins 4/4, Comeback City led 92%, Penguin Village
+  only 38-51% (contested). New players start at 50cc (rivals at 90% pace),
+  so a first-timer who keeps it on the road should make the podium.
+- Reloads: `npm run test:kart:soak` — ten menu remounts plus eight restarts
+  hold memory flat (see Phase 2).
+- Keyboard text on phones: a forced-touch 844x390 walk through intro, setup,
+  race HUD, pause and results finds none; the only keyboard wording is the
+  collapsed "Keyboard & controller" toggle in How to Race, kept on purpose for
+  iPad keyboards and game controllers.
+- Still needs the phone: fps p95 on an iPhone 12-class device.
+
 ## Phase 4 — App Store
 
 Screenshots at Apple sizes, privacy label ("Data Not Collected" for V1),
