@@ -335,8 +335,8 @@ export const addSatoshiSummitDressing = (world, sampler, trackDef, ambient, help
       ring.count += 1;
     }
     let best = { d: -1, x: ring.xs[0], z: ring.zs[0] };
-    for (let x = Math.min(...ring.xs); x <= Math.max(...ring.xs); x += 10) {
-      for (let z = Math.min(...ring.zs); z <= Math.max(...ring.zs); z += 10) {
+    for (let x = Math.min(...ring.xs); x <= Math.max(...ring.xs); x += 16) {
+      for (let z = Math.min(...ring.zs); z <= Math.max(...ring.zs); z += 16) {
         const d = insideLoop(ring, x, z) ? road.farDistance(x, z) : -1;
         if (d > best.d) best = { d, x, z };
       }
@@ -686,11 +686,13 @@ export const addSatoshiSummitDressing = (world, sampler, trackDef, ambient, help
     const maxZ = Math.max(...zs);
     // Infield: the point inside the loop furthest from any road.
     let infield = { d: 0 };
-    for (let x = minX; x <= maxX; x += 30) {
-      for (let z = minZ; z <= maxZ; z += 30) {
-        if (!insideLoop(road, x, z) || (x - site.x) ** 2 + (z - site.z) ** 2 < 160000) continue;
+    // Coarse grid, cheapest test first: only a point that beats the best so
+    // far pays for the winding test.
+    for (let x = minX; x <= maxX; x += 50) {
+      for (let z = minZ; z <= maxZ; z += 50) {
+        if ((x - site.x) ** 2 + (z - site.z) ** 2 < 160000) continue;
         const d = road.farDistance(x, z);
-        if (d > infield.d) infield = { d, x, z };
+        if (d > infield.d && insideLoop(road, x, z)) infield = { d, x, z };
       }
     }
     if (infield.d > 260) {
