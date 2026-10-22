@@ -1,16 +1,27 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-10-22 (late) — Dragster retired (read first)
-**Latest stable, shareable build: https://819fa1a3.comeback-city-kart.pages.dev**
-(pinned preview deploy of 286ba09c; full battery 16/16 incl. context loss,
+## 2026-10-22 (late) — Dragster retired, race start smoothed (read first)
+**Latest stable, shareable build: https://7a9167cb.comeback-city-kart.pages.dev**
+(pinned preview deploy of 3bece236; full battery 16/16 incl. context loss,
 soak and playable proof; deploy probe green on all three tracks + phone).
-Supersedes 61e25b89. Owner: "we need to get rid of the dragster it looks
-like shit" — the Kenney Dragster is out of the kart picker (11 karts), the
-select stage and the GLB-failure fallback (now the Hero Kart); Seth / Mizzle /
-Layer 23 ride Hash Runner / Block Reward / Sat Stacker in KART_CHARACTERS.
-Next: a reviewer called the game "a lil hiccupy at the beginning" (on a busy
-PC) — profile the race start (scratchpad profiler: frame gaps + CPU profile
-from Start) and fix what it shows.
+Supersedes 819fa1a3 and 61e25b89.
+- **Dragster retired** (286ba09c; owner: "we need to get rid of the
+  dragster"): out of the kart picker (11 karts), the select stage and the
+  GLB-failure fallback (now the Hero Kart); Seth / Mizzle / Layer 23 ride
+  Hash Runner / Block Reward / Sat Stacker in KART_CHARACTERS.
+- **Race start** (3bece236; a reviewer: "a lil hiccupy at the beginning"):
+  Start used to freeze the menu for the synchronous scene build (0.6 s here,
+  ~2 s at 4x CPU), then ~5.6 MB of GLBs arrived mid-countdown and hitched.
+  Now a "Get ready" card covers the build until the race's first settled
+  frame (`onReady`), and `preloadRaceAssets` warms bodies + track scenery from
+  the menu and for the next Grand Prix round. First 3 s after the card: 19 ms
+  max frame unthrottled, 49 ms at 4x CPU + 40 Mbps (was 1950 ms).
+  Measure with `npm run profile:race-start` (after build:kart; --throttle,
+  --mbps, --track; pass an unminified build dir for readable names).
+- Remaining start cost is the build itself (behind the card): shader links
+  (~60 programs), value-noise terrain, curve arc-length sampling. Async
+  compile (KHR_parallel_shader_compile / compileAsync) is the next lever if
+  the card time ever matters.
 
 ## 2026-10-22 — five upgrades + new music merged, preview deployed
 Stable build at the time: https://61e25b89.comeback-city-kart.pages.dev
