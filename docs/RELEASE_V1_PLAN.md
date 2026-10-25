@@ -9,7 +9,8 @@ Work top to bottom. Check items off here as they land; this file is what a
 
 - One item = one commit on `aaa-kart-ci`. Stage explicit paths, **never
   `git add -A`** (the tree holds unrelated AnimatedShowcaseDesigns/ and tmp/
-  work). Never deploy. Never push `aaa-kart-overhaul-full`.
+  work). Production deploys only on the owner's word; preview deploys after
+  green gates are routine. Never push `aaa-kart-overhaul-full`.
 - Gate every commit: `npm run build:kart`, `npm run test:bundle:kart`,
   `node scripts/test-ground-clearance.mjs`, the node set (`test:laps
   test:wrongway test:offroad test:autoplay test:minimap test:kart:regressions`)

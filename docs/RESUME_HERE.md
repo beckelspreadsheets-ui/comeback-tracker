@@ -1,6 +1,68 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-10-22 (late) — Dragster retired, race start smoothed (read first)
+## 2026-10-25 — handover: continuing on another machine (read first)
+**GitHub `aaa-kart-ci` is the truth** — everything is pushed (last code
+commit 3bece236). The office copy is `~/Downloads/comeback-tracker`; the SSD
+copy (`/Volumes/Back-up-SSD/Penguin Kart game`) has been stale since
+September, so ignore "Where the code lived" further down.
+Shareable build: **https://7a9167cb.comeback-city-kart.pages.dev** (the owner
+gives this link to people hiring him). Production
+(comeback-city-kart.pages.dev) stays on the July build until he says otherwise.
+
+**Set up a new machine**
+- `git clone git@github.com:beckelspreadsheets-ui/comeback-tracker.git` and
+  `git checkout aaa-kart-ci` (in an existing clone: `git fetch && git checkout
+  aaa-kart-ci && git pull`).
+- Node 22 (`nvm install 22`; the office runs 22.14.0). wrangler and
+  `npm run ios:sync` refuse Node 20.
+- `npm ci`, then `npx playwright install chromium` (the gates drive Chromium).
+- `npm run build:kart`, then `npm run test:kart:battery:quick` (11 node
+  gates); `npm run test:kart:battery` is the full 16. `npm run dev:kart` to play.
+- Preview deploys need `npx wrangler login` as the owner's **Showcasedesigns**
+  Cloudflare account (never Abel's); the command is in the 2026-10-15 EVENING
+  section. Check each deploy with `node scripts/verify-preview-deploy.mjs <url>`.
+
+**Stays on the office Mac (not on GitHub)**
+- Claude's memory files: this file and docs/RELEASE_V1_PLAN.md are the whole
+  handoff.
+- Keychain keys (ElevenLabs; later Tripo / OpenAI), so music regeneration
+  waits for the office. Never read or print them.
+- tmp/ outputs: trailer takes (tmp/trailer-ai, 2.8 GB; also playable on
+  https://claude.ai/artifact/2abKRs4f2Mgm3Ld3Hmvzri), music takes
+  (tmp/kart-music), store shots (tmp/app-store; regenerate with
+  `node scripts/app-store-screenshots.mjs`), icon art (tmp/ios-art).
+- iOS builds need a Mac with Xcode and `sudo xcodebuild -license accept`;
+  docs/APPLE_ENROLLMENT.md Track A puts the game on the owner's own iPhone
+  for free.
+
+**Waiting on the owner**
+- Trailer take 1 or 2 (page above); optionally swap a music bed.
+- Delete the ElevenLabs key on elevenlabs.io.
+- Feel-check the firm drift flick on his phone (`?driftFlick=firm`).
+- Xcode licence → own-iPhone route; D-U-N-S → Apple enrolment as Showcase
+  Designs; written OK from each ordinal holder (docs/LIKENESS_PERMISSION.md).
+
+**Open work that needs no owner input**
+- Small visual bugs: the moon disc renders oval; Satoshi Summit's backdrop
+  belt shapes sit partly buried; the HIT! popup overlaps the lap banner;
+  Summit uses Comeback City's menu backdrop.
+- The 11-kart picker leaves a short last row (a 12th kart is an art call: ask).
+- Optional: async shader compile (compileAsync / KHR_parallel_shader_compile)
+  to shorten the loading card.
+
+**How the owner works (memory doesn't travel, so it lives here)**
+- Keep moving; ask questions through AskUserQuestion, 2-3 at a time.
+- Give a link for anything visual; he works in Brave, so paste-able URLs.
+- One item = one commit; stage explicit paths, never `git add -A`; push every
+  commit.
+- Gate before committing; `test:bundle:kart` measures the existing dist, so
+  build first. Look at frames yourself before believing a green report.
+- Preview deploys after green gates are routine; production only on his
+  explicit word.
+- No generic penguins (every penguin is one of his ordinals); never
+  `gltf-transform optimize`; never open `.env` files or credentials.
+
+## 2026-10-22 (late) — Dragster retired, race start smoothed
 **Latest stable, shareable build: https://7a9167cb.comeback-city-kart.pages.dev**
 (pinned preview deploy of 3bece236; full battery 16/16 incl. context loss,
 soak and playable proof; deploy probe green on all three tracks + phone).
@@ -189,7 +251,7 @@ Not started: W4 trackside dressing/HUD restyle, W6 photo->racer pipeline.
 **Read this first after a context clear.** Then `docs/AAA_NEXT_RUN.md` for the
 AAA-overhaul detail, and `docs/GAME_AUDIT.md` for the audit findings.
 
-## Where the code lives
+## Where the code lived (2026-09-03, stale: see the top section)
 - **`/Volumes/Back-up-SSD/Penguin Kart game`** — the game's home (external SSD,
   a fresh clone). Branch **`aaa-kart-ci`**, pushed to
   `github.com:beckelspreadsheets-ui/comeback-tracker` (HEAD **`4340dca`**).
@@ -234,7 +296,7 @@ real draw-call win) + rival body value-spread luma re-key (`1d38b0b7`). See
    side's files from each copy.
 3. **Deploy** — always the owner's call.
 
-## Rules that must survive a context clear
+## Rules from 2026-09-03 (the top section wins where they differ)
 - Work in the SSD copy; commit ONE thing at a time, each verified; **read the
   frames yourself** before believing a healthy report; **never deploy**; never
   push the local-only `aaa-kart-overhaul-full` branch; render/physics changes ONE
