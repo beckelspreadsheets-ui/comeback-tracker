@@ -89,7 +89,19 @@ import { createGhostRecorder, ghostStateAt, readGhost, recordGhostFrame, saveGho
 import { DEFAULT_TRACK_KEY, isKnownTrackKey, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
 import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
-import { autoplayApexLane, freeBodyAutoplayInput } from './race/autoplayDriver.js';
+import { autoplayApexLane, classicAutoplayInput, freeBodyAutoplayInput } from './race/autoplayDriver.js';
+import {
+  CLASSIC,
+  classicSpeedStep,
+  classicSurfaceAt,
+  classicWallStep,
+  classicWorldVelocity,
+  createClassicState,
+  isClassicHandling,
+  makeBarrierOffsetLookup,
+  stepClassicBody,
+} from './race/classicHandling.js';
+import { readHandlingMode } from './race/handlingMode.js';
 import { createMinimap, minimapPointAt } from './race/raceMinimap.js';
 import { RaceCoach } from './race/RaceCoach.jsx';
 import {
@@ -1011,6 +1023,11 @@ const createInitialRace = (
   // Populated in createEngine, where the sampler exists to seed position and
   // heading from the grid slot.
   freeBody: null,
+  // Classic handling (?handling=mk64|mix, race/classicHandling.js). Null on
+  // Assisted, which is the rails game exactly as shipped. Seeded together
+  // with the free body in createEngine and again on every restart.
+  classic: null,
+  handling: 'assisted',
   // Signed cumulative laps, for P3. Advanced by the same per-frame delta that
   // moves progress, so driving backwards subtracts. Rails advances it too, so
   // the counter is identical on both paths and P3 can land independently.
@@ -3900,6 +3917,9 @@ const addTrack = (world, sampler, trackDef, trackVisuals = resolveTrackVisuals(t
       width,
     };
   });
+  // Classic handling's walls are the barrier the player can SEE: its inner
+  // face, read off these same rings (race/classicHandling.js).
+  sampler.barrierOffsetAt = makeBarrierOffsetLookup(roadFrames);
 
   // ---- The road's surface, as the RASTERISER sees it ----------------------
   //
@@ -9879,6 +9899,22 @@ const readInput = (input, autoplay, race, cornerPush = 0, sampler = null) => {
   // race/autoplayDriver.js so scripts/test-autoplay.mjs can lap it in node.
   // Same apex target and dodge bias as the rails driver, expressed as a point
   // on the road rather than a lane velocity.
+  if (race.classic && race.freeBody != null && sampler) {
+    return classicAutoplayInput({
+      airborne: race.airState.airborne,
+      cornerPush,
+      driftDirection: race.driftState.direction,
+      drifting: race.drift,
+      freeBody: race.freeBody,
+      heldItem: Boolean(race.heldItem),
+      offRoad: race.classic.verge,
+      pointAt: (progress, lane) => sampler.pointAt(progress, lane).point,
+      progress: race.progress,
+      speed: race.speed,
+      targetLane: clamp(autoplayDodgeBias(race, trackLength) * 1.2, -0.9, 0.9),
+      trackLength,
+    });
+  }
   if (race.freeBody != null && sampler) {
     return freeBodyAutoplayInput({
       airborne: race.airState.airborne,
@@ -10013,6 +10049,9 @@ const publishTelemetry = (
     // ?freebody=1 the difficulty probe needs it to prove the autoplay driver
     // races rather than rescue-loops.
     rescues: race.rescues,
+    // Classic handling: which model, and the wall hits it has taken.
+    handling: race.handling,
+    classicWallHits: race.classic ? race.classic.wallHits : 0,
     rivalCount: race.rivals.length,
     rivalPositions: rivalPositionsOf(playerTotalOf(race), race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
@@ -10651,14 +10690,24 @@ export const ComebackCityThreeKartRace = ({
     // Seeded from the grid slot the rails path would have put the kart in, so
     // both paths start identically: position from pointAt at the current
     // progress and lane, heading from the spline tangent there.
-    if (new URLSearchParams(window.location.search).get('freebody') === '1') {
+    //
+    // Classic handling (?handling=mk64|mix) drives the same free body with its
+    // own model (race/classicHandling.js). restartRace rebuilds the race state,
+    // which nulls both, so this runs again there.
+    const handlingMode = readHandlingMode();
+    const freeBodyFlag = new URLSearchParams(window.location.search).get('freebody') === '1';
+    const seatHandling = () => {
+      race.handling = handlingMode;
+      race.classic = isClassicHandling(handlingMode) ? createClassicState() : null;
+      if (!race.classic && !freeBodyFlag) return;
       const seat = engine.sampler.pointAt(race.progress, race.lane);
       race.freeBody = createFreeBody({
         heading: Math.atan2(seat.tangent.x, seat.tangent.z),
         x: seat.point.x,
         z: seat.point.z,
       });
-    }
+    };
+    seatHandling();
     // ?giveItem=<key> keeps that item in the slot whenever it's empty —
     // deterministic captures/tests of any single item (autoplay fires it on
     // the next straight).
@@ -11013,6 +11062,7 @@ export const ComebackCityThreeKartRace = ({
       // trackDef, not the default: without it a Penguin Village restart
       // rebuilt Comeback City's grid (start offset) and dropped PV's crosser.
       Object.assign(race, createInitialRace(rivalSeats, trackDef));
+      seatHandling();
       applyTimeTrialSetup();
       // Coin rows reset with the race (carried count already zeroed above).
       if (engine.coinField) {
@@ -11052,7 +11102,13 @@ export const ComebackCityThreeKartRace = ({
       // Player pose carries the smoothed drift slide yaw (kart visibly points
       // off its velocity direction); rivals keep the simple steer-based yaw.
       // extraYaw carries trick spins and spin-outs for either.
-      const yawOffset = pose ? pose.slideYaw + steer * (drift ? 0 : 0.16) : steer * (drift ? 0.32 : 0.16);
+      // Classic's nose is physical (the slide angle is in freeBody.heading), so
+      // the cosmetic slide and steer yaw would count it twice.
+      const yawOffset = pose
+        ? pose.realYaw
+          ? 0
+          : pose.slideYaw + steer * (drift ? 0 : 0.16)
+        : steer * (drift ? 0.32 : 0.16);
       // Free-body yaw is REAL, not a cosmetic offset from the spline tangent —
       // that is the whole point of the change, and it is what lets the kart be
       // pointed anywhere including backwards.
@@ -11734,20 +11790,48 @@ export const ComebackCityThreeKartRace = ({
           // sat in the physics table unused since it was written. Its own
           // comment says it is "what a lane clamp wider than the road resolves
           // to once the outer wheel can leave the tarmac" — this is that.
-          const offRoad = race.freeBody != null && Math.abs(race.lane) > 1;
-          const offRoadAccel = offRoad ? SURFACE_TYPES.offroad.accelerationMultiplier : 1;
-          const accel =
-            (throttle && !spinning ? 118 * playerKart.stats.accel : spinning ? -150 : -48) * offRoadAccel;
+          //
+          // Classic: the run-off between the kerb and the barrier, judged by the
+          // wall pass at the end of last frame.
+          const classic = race.classic;
+          const offRoad = classic ? classic.verge : race.freeBody != null && Math.abs(race.lane) > 1;
           const miniTurboAccel = driftState.miniTurboTimer > 0 ? 150 : auroraActive ? 130 : 0;
-          const brakeDrag = brake ? -180 : 0;
-          const steeringDrag = Math.abs(race.steer) * (race.drift ? -8 : -22);
-          race.speed = clamp(race.speed + (accel + miniTurboAccel + brakeDrag + steeringDrag) * dt, 0, maxSpeed);
-          if (!throttle && !brake) race.speed = Math.max(0, race.speed - 38 * dt);
-          // Rolling drag off the tarmac. Applied as a rate rather than a cap so
-          // it bleeds momentum you already had instead of teleporting the
-          // speedometer — cutting a corner should cost you the exit, not stop
-          // you dead.
-          if (offRoad) race.speed = Math.max(0, race.speed - 150 * dt);
+          if (classic) {
+            // CLASSIC SPEED (race/classicHandling.js): thrust fades toward top
+            // speed, so turning, sliding, slip and the run-off all cost top
+            // speed rather than being absorbed by a hard cap.
+            const statTop = playerKart.stats.topSpeed * coinSpeedMultiplier(race.coins);
+            classic.stun = Math.max(0, classic.stun - dt);
+            race.speed = classicSpeedStep(race.speed, {
+              accelStat: playerKart.stats.accel,
+              boostAccel: miniTurboAccel,
+              boostTop: BOOST_SPEED * statTop,
+              boosting: race.boostTimer > 0 || driftState.miniTurboTimer > 0 || auroraActive,
+              brake: Boolean(brake),
+              dt,
+              sliding: race.drift,
+              slip: classic.slip,
+              spinning,
+              steer: race.steer,
+              stunned: classic.stun > 0,
+              throttle: Boolean(throttle),
+              top: MAX_SPEED * statTop,
+              verge: offRoad,
+            });
+          } else {
+            const offRoadAccel = offRoad ? SURFACE_TYPES.offroad.accelerationMultiplier : 1;
+            const accel =
+              (throttle && !spinning ? 118 * playerKart.stats.accel : spinning ? -150 : -48) * offRoadAccel;
+            const brakeDrag = brake ? -180 : 0;
+            const steeringDrag = Math.abs(race.steer) * (race.drift ? -8 : -22);
+            race.speed = clamp(race.speed + (accel + miniTurboAccel + brakeDrag + steeringDrag) * dt, 0, maxSpeed);
+            if (!throttle && !brake) race.speed = Math.max(0, race.speed - 38 * dt);
+            // Rolling drag off the tarmac. Applied as a rate rather than a cap so
+            // it bleeds momentum you already had instead of teleporting the
+            // speedometer — cutting a corner should cost you the exit, not stop
+            // you dead.
+            if (offRoad) race.speed = Math.max(0, race.speed - 150 * dt);
+          }
           if (spinning) race.speed = Math.max(46, race.speed);
           // Blizzard fog caps grounded karts — yours included. Fly over it,
           // steer around it, or plow through it with an aurora.
@@ -11766,7 +11850,11 @@ export const ComebackCityThreeKartRace = ({
           // spun-out karts barely steer.
           const laneBeforeSteer = race.lane;
           race.steerLaneRate = 0;
-          if (!airState.airborne) {
+          if (classic) {
+            // Classic: the free body below owns steering, the walls and the
+            // run-off; the rails lane, corner push and scrape do not apply.
+            race.wallContact = classic.wallContact;
+          } else if (!airState.airborne) {
             const steerAuthority = spinning ? 0.12 : 1;
             const laneRate =
               (race.drift ? driftLaneRate(driftState, race.steer) * 1.15 : race.steer * 0.72) *
@@ -11819,22 +11907,64 @@ export const ComebackCityThreeKartRace = ({
             // progress/lane are read back off the spline, so everything
             // downstream — rivals, items, coins, crossers, camera — keeps
             // consuming exactly the two numbers it always has.
-            stepFreeBody(race.freeBody, {
-              dt,
-              drifting: race.drift,
-              handling: playerKart.stats.handling,
-              offRoad,
-              speed: race.speed,
-              steer: race.steer,
-              steerAuthority:
-                (airState.airborne ? 0 : spinning ? 0.12 : 1) *
-                (offRoad ? SURFACE_TYPES.offroad.steerMultiplier : 1),
-            });
-            const solved = engine.sampler.projectToSpline(
+            if (classic) {
+              const moved = stepClassicBody(race.freeBody, {
+                authority: airState.airborne ? 0 : spinning ? 0.12 : 1,
+                dt,
+                gripScale: airState.airborne ? 0 : offRoad ? CLASSIC.vergeGrip : 1,
+                handling: playerKart.stats.handling,
+                slideDir: race.drift ? driftState.direction : 0,
+                speed: race.speed,
+                steer: race.steer,
+              });
+              race.speed = moved.speed;
+              classic.slip = moved.slip;
+            } else {
+              stepFreeBody(race.freeBody, {
+                dt,
+                drifting: race.drift,
+                handling: playerKart.stats.handling,
+                offRoad,
+                speed: race.speed,
+                steer: race.steer,
+                steerAuthority:
+                  (airState.airborne ? 0 : spinning ? 0.12 : 1) *
+                  (offRoad ? SURFACE_TYPES.offroad.steerMultiplier : 1),
+              });
+            }
+            let solved = engine.sampler.projectToSpline(
               race.freeBody.x,
               race.freeBody.z,
               race.progress
             );
+            if (classic) {
+              // THE BARRIER IS A WALL. What the kart carries into it comes back
+              // at half strength, and a real hit ends the power slide.
+              const barrierOffset = engine.sampler.barrierOffsetAt
+                ? engine.sampler.barrierOffsetAt(solved.progress)
+                : engine.sampler.widthAt(solved.progress) * 0.44 + 12;
+              const wall = classicWallStep(race.freeBody, {
+                barrierOffset,
+                distance: solved.distance,
+                normal: solved.normal,
+                speed: race.speed,
+              });
+              race.speed = wall.speed;
+              classic.wallContact = wall.contact;
+              if (wall.hit) {
+                classic.wallHits += 1;
+                classic.stun = CLASSIC.wallStun;
+                driftState.active = false;
+                driftState.charge = 0;
+                driftState.tier = 0;
+                race.drift = false;
+              }
+              if (wall.contact) {
+                solved = engine.sampler.projectToSpline(race.freeBody.x, race.freeBody.z, race.progress);
+              }
+              classic.verge =
+                classicSurfaceAt(solved.distance, engine.sampler.widthAt(solved.progress) * 0.44) === 'verge';
+            }
             race.progress = solved.progress;
             race.lane = solved.lane;
             race.laneArcScale = 1; // arc scaling is implicit once the kart drives its own path
@@ -12186,7 +12316,13 @@ export const ComebackCityThreeKartRace = ({
               // spin rivals): laneRate × laneScale × railsPitGain, so a full-
               // steer swipe clears the pit gate and a gentle lean does not.
               // cornerPush is excluded — track shove is not attacker intent.
-              lateralVel: race.freeBody
+              lateralVel: race.classic
+                ? (() => {
+                    const velocity = classicWorldVelocity(race.freeBody, race.speed);
+                    const frame = engine.sampler.pointAt(race.progress, 0);
+                    return velocity.x * frame.normal.x + velocity.z * frame.normal.z;
+                  })()
+                : race.freeBody
                 ? race.freeBody.lateralVel || 0
                 : (race.steerLaneRate || 0) *
                   engine.sampler.widthAt(race.progress) *
@@ -12257,7 +12393,12 @@ export const ComebackCityThreeKartRace = ({
             race.freeBody.z += frame.normal.z * units;
             // A shove is an impulse, not a teleport: carry some of it as
             // lateral velocity so the kart keeps sliding after contact.
-            race.freeBody.lateralVel += units * 6;
+            if (race.classic) {
+              const h = race.freeBody.heading;
+              race.freeBody.lateralVel += units * 6 * (frame.normal.x * Math.cos(h) - frame.normal.z * Math.sin(h));
+            } else {
+              race.freeBody.lateralVel += units * 6;
+            }
           };
           if (playerNudgeLane) applyLaneShove(playerNudgeLane);
           if (playerBump) {
@@ -12427,6 +12568,7 @@ export const ComebackCityThreeKartRace = ({
           (race.shortcut.active ? shortcutArcHeight(race.shortcut, trackDef.shortcut) : 0),
         pitch: airPitchFor(race.airState) + shortcutPitchFor(race.shortcut),
         gradePitch: kartGradePitch(race.progress),
+        realYaw: Boolean(race.classic),
         slideYaw: driftState.slideYaw,
         squash: race.squash,
       }, race.freeBody);

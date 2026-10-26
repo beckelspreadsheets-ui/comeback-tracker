@@ -18,6 +18,7 @@
 // — the most the tyres/wheels can deliver — is the brake/drift decision. The
 // far probe looks twice as deep so braking starts before the corner, not in it.
 import { FREE_BODY, headingErrorTo, yawRateFor } from './freeBodyKart.js';
+import { CLASSIC, classicGripYaw, classicSlideYaw } from './classicHandling.js';
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
@@ -85,6 +86,82 @@ export const freeBodyAutoplayInput = ({
     brake,
     drift,
     // Same item timing as the rails policy: fire held items on straights.
+    item: heldItem && Math.abs(cornerPush) < 0.3,
+    left: steerAxis < -0.12,
+    restart: false,
+    right: steerAxis > 0.12,
+    steerAxis,
+    throttle: true,
+  };
+};
+
+// Classic handling's demo driver (?handling=mk64|mix). The same pure pursuit
+// with three differences:
+//   - the steering sign: in classicHandling.js positive steer is the player's
+//     RIGHT, which decreases heading, so a target at a larger heading (err > 0)
+//     needs NEGATIVE steer;
+//   - what it measures demand against: the grip-limited yaw and the power
+//     slide, not yawRateFor;
+//   - it holds a power slide through a corner that grip alone will not make,
+//     lets go when the corner opens or turns the other way, and brakes only
+//     when even a full slide would not make the far probe.
+export const CLASSIC_PURSUIT = {
+  steerGain: 2.4,
+  // Start a slide when the corner asks for more than this share of what grip
+  // alone gives; keep holding it while the ask stays above holdMargin.
+  slideMargin: 1.05,
+  slideHoldMargin: 0.55,
+  slideMinSpeed: 110,
+  // Brake when the far probe asks for more than this share of what a full
+  // slide (or grip, outside a slide) can give.
+  brakeMargin: 1.1,
+};
+
+export const classicAutoplayInput = ({
+  pointAt,
+  trackLength,
+  freeBody,
+  speed,
+  progress,
+  targetLane = 0,
+  cornerPush = 0,
+  heldItem = false,
+  airborne = false,
+  offRoad = false,
+  drifting = false,
+  driftDirection = 0,
+}) => {
+  const lookUnits = clamp(
+    AUTOPLAY_PURSUIT.lookaheadSeconds * Math.max(speed, 80),
+    AUTOPLAY_PURSUIT.minLookaheadUnits,
+    AUTOPLAY_PURSUIT.maxLookaheadUnits
+  );
+  const errTo = (aheadUnits, lane) => {
+    const raw = pointAt(progress + aheadUnits / Math.max(1, trackLength), lane);
+    const target = raw.point ?? raw;
+    const dx = target.x - freeBody.x;
+    const dz = target.z - freeBody.z;
+    return { dist: Math.max(1, Math.hypot(dx, dz)), err: headingErrorTo(freeBody.heading, dx, dz) };
+  };
+  const near = errTo(lookUnits, targetLane);
+  const far = errTo(lookUnits * 2, targetLane);
+  const steerAxis = clamp(-near.err * CLASSIC_PURSUIT.steerGain, -1, 1);
+  const requiredYaw = (probe) => Math.abs(((2 * Math.sin(probe.err)) / probe.dist) * speed);
+  const demand = Math.max(requiredYaw(near), requiredYaw(far));
+  const gripYaw = classicGripYaw(speed, offRoad ? CLASSIC.vergeGrip : 1);
+  // The way the corner turns, in steer terms: +1 right, -1 left.
+  const turnSide = -Math.sign(far.err);
+  let drift;
+  if (drifting) {
+    drift = demand > gripYaw * CLASSIC_PURSUIT.slideHoldMargin && turnSide === driftDirection;
+  } else {
+    drift = (demand > gripYaw * CLASSIC_PURSUIT.slideMargin && speed > CLASSIC_PURSUIT.slideMinSpeed) || airborne;
+  }
+  const capability = drift ? classicSlideYaw(1, speed) : gripYaw;
+  const brake = requiredYaw(far) > capability * CLASSIC_PURSUIT.brakeMargin && speed > 70;
+  return {
+    brake,
+    drift,
     item: heldItem && Math.abs(cornerPush) < 0.3,
     left: steerAxis < -0.12,
     restart: false,

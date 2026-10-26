@@ -29,6 +29,7 @@ const NODE_GATES = [
   ['wrongway', 'npm', ['run', 'test:wrongway']],
   ['offroad', 'npm', ['run', 'test:offroad']],
   ['autoplay', 'npm', ['run', 'test:autoplay']],
+  ['classic-handling', 'npm', ['run', 'test:classic-handling']],
   ['minimap', 'npm', ['run', 'test:minimap']],
   ['track-visuals', 'npm', ['run', 'test:track-visuals']],
   ['ground-clearance', 'node', ['scripts/test-ground-clearance.mjs']],

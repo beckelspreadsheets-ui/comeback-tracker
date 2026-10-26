@@ -40,6 +40,7 @@
     "test:wrongway": "node scripts/test-wrong-way.mjs",
     "test:offroad": "node scripts/test-off-road.mjs",
     "test:autoplay": "node scripts/test-autoplay.mjs",
+    "test:classic-handling": "node scripts/test-classic-handling.mjs",
     "test:juice": "node scripts/test-race-juice.mjs",
     "test:pit": "node scripts/test-pit-manoeuvre.mjs",
     "test:drift": "node scripts/test-drift-reach.mjs",

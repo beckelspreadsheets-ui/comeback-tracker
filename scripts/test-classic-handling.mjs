@@ -1,0 +1,270 @@
+// Classic handling gate (src/game/race/classicHandling.js).
+//
+//   node scripts/test-classic-handling.mjs [--verbose]
+//
+// Two parts, both numeric and headless (no frames, so no gaming machine):
+//
+// 1. The model's promises, each checked in isolation: top speed, the run-off's
+//    slowdown, the acceleration tail, grip washing wide at full lock, walls
+//    that bounce and cost speed, the power slide's tight arc.
+//
+// 2. Every track driven for two laps by the Classic autoplay policy (the same
+//    function the race's autoplay uses), next to a kart that holds the
+//    throttle and never steers. The policy must finish its laps without being
+//    rescued; the non-steering kart must NOT finish a lap. That second check is
+//    the whole point of Classic: on rails a kart that never steers finished
+//    every lap only 6-13 s down.
+import { makeSampler, mirrorCheck } from './track-layout-preview.mjs';
+import { projectToSpline } from '../src/game/race/splineProjection.js';
+import { createFreeBody } from '../src/game/race/freeBodyKart.js';
+import { createDriftState, updateDriftFeel, DRIFT_FEEL } from '../src/game/race/driftFeel.js';
+import { classicAutoplayInput } from '../src/game/race/autoplayDriver.js';
+import {
+  CLASSIC,
+  classicSpeedStep,
+  classicSurfaceAt,
+  classicWallStep,
+  stepClassicBody,
+} from '../src/game/race/classicHandling.js';
+import { roadEdgeSection } from '../src/game/race/render/buildRoadEdgeProfile.js';
+import { KART_TRACKS, PREVIEW_TRACKS } from '../src/game/race/tracks/index.js';
+
+const VERBOSE = process.argv.includes('--verbose');
+const DT = 1 / 60;
+const TOP = 228; // MAX_SPEED for the hero kart
+const BOOST_TOP = 284; // BOOST_SPEED
+const MINI_TURBO_ACCEL = 150;
+let failures = 0;
+const check = (ok, label, detail) => {
+  if (!ok) failures += 1;
+  process.stdout.write(`  ${ok ? 'ok  ' : 'FAIL'} ${label}${detail ? `  (${detail})` : ''}\n`);
+};
+
+if (!mirrorCheck().pass) {
+  process.stderr.write('FAIL: previewer sampler no longer mirrors the monolith.\n');
+  process.exit(1);
+}
+
+// --- 1. the model in isolation ------------------------------------------------
+process.stdout.write('Classic model\n');
+const settle = (opts, seconds = 12, start = 0) => {
+  let v = start;
+  for (let t = 0; t < seconds; t += DT) v = classicSpeedStep(v, { dt: DT, throttle: true, top: TOP, ...opts });
+  return v;
+};
+{
+  const top = settle({});
+  check(Math.abs(top / TOP - 1) < 0.02, 'flat-out settles at top speed', `${top.toFixed(1)} u/s`);
+  const verge = settle({ verge: true }, 12, TOP);
+  check(verge / TOP > 0.66 && verge / TOP < 0.76, 'run-off settles near 71% of top', `${((verge / TOP) * 100).toFixed(1)}%`);
+  let v = 0;
+  let t95 = null;
+  for (let t = 0; t < 10 && t95 == null; t += DT) {
+    v = classicSpeedStep(v, { dt: DT, throttle: true, top: TOP });
+    if (v >= TOP * 0.95) t95 = t;
+  }
+  check(t95 > 2.2 && t95 < 3.5, '0 to 95% takes ~2.8 s (rails: 1.9 s, no tail)', `${t95?.toFixed(2)} s`);
+  const slide = settle({ sliding: true }, 12, TOP);
+  check(slide / TOP > 0.85 && slide / TOP < 0.95, 'a held slide settles ~10% slower', `${((slide / TOP) * 100).toFixed(1)}%`);
+}
+{
+  // Full lock at top speed asks more than grip holds: the kart washes wide,
+  // slips, and the slip costs speed. 80% lock holds.
+  const drive = (stick, seconds = 2) => {
+    const body = createFreeBody({ heading: 0 });
+    let speed = TOP;
+    let slip = 0;
+    let maxSlip = 0;
+    for (let t = 0; t < seconds; t += DT) {
+      const out = stepClassicBody(body, { dt: DT, speed, steer: stick });
+      slip = out.slip;
+      maxSlip = Math.max(maxSlip, Math.abs(slip));
+      speed = classicSpeedStep(out.speed, { dt: DT, throttle: true, steer: stick, slip, top: TOP });
+    }
+    return { maxSlip, speed };
+  };
+  const full = drive(1);
+  check(full.maxSlip > 0.05, 'full lock at top speed washes wide', `slip ${((full.maxSlip * 180) / Math.PI).toFixed(1)} deg`);
+  check(full.speed < TOP * 0.93, 'and the slide wide costs speed', `${((full.speed / TOP) * 100).toFixed(1)}% after 2 s`);
+  const held = drive(0.75);
+  check(held.maxSlip < 0.02, '3/4 lock at top speed holds its line', `slip ${((held.maxSlip * 180) / Math.PI).toFixed(2)} deg`);
+}
+{
+  // Walls: a square hit loses most of the speed, a glancing one keeps most.
+  const hit = (angleDeg) => {
+    const body = createFreeBody({ heading: (angleDeg * Math.PI) / 180 });
+    // Wall along x = 20 (normal +x), kart just past it.
+    body.x = 20 - CLASSIC.kartHalfWidth + 0.5;
+    const result = classicWallStep(body, {
+      barrierOffset: 20,
+      distance: body.x,
+      normal: { x: 1, z: 0 },
+      speed: TOP,
+    });
+    return { ...result, x: body.x };
+  };
+  const square = hit(90);
+  const glance = hit(8);
+  check(square.speed < TOP * 0.2 && square.hit, 'a square wall hit loses most of the speed', `${square.speed.toFixed(1)} u/s left`);
+  check(glance.speed > TOP * 0.8 && !glance.hit, 'an 8-degree glance keeps most of it', `${glance.speed.toFixed(1)} u/s left`);
+  check(square.x <= 20 - CLASSIC.kartHalfWidth + 1e-6, 'the kart is put back inside the wall line');
+}
+{
+  // Power slide, stick fully into the corner at slide speed: a tight arc.
+  const body = createFreeBody({ heading: 0 });
+  let speed = 205;
+  const startX = body.x;
+  let minX = 0;
+  let maxX = 0;
+  for (let t = 0; t < 3; t += DT) {
+    speed = stepClassicBody(body, { dt: DT, slideDir: 1, speed, steer: 1 }).speed;
+    minX = Math.min(minX, body.x - startX);
+    maxX = Math.max(maxX, body.x - startX);
+  }
+  const diameter = maxX - minX;
+  check(diameter > 160 && diameter < 230, 'full-inward slide at 205 u/s is a ~98 u radius', `diameter ${diameter.toFixed(0)} u`);
+}
+
+// --- 2. every track -------------------------------------------------------------
+const barrierInset = roadEdgeSection({ curbWidth: 3.2 })[7].u;
+const tracks = [...KART_TRACKS, ...(PREVIEW_TRACKS || [])].filter(
+  (track, index, list) => list.findIndex((other) => other.key === track.key) === index
+);
+
+const drive = (trackDef, policy, { laps = 2, seconds = 170 } = {}) => {
+  const sampler = makeSampler(trackDef);
+  const startProgress = 0.01;
+  const seat = sampler.pointAt(startProgress, 0);
+  const ahead = sampler.pointAt(startProgress + 0.001, 0);
+  const body = createFreeBody({ heading: Math.atan2(ahead.x - seat.x, ahead.z - seat.z), x: seat.x, z: seat.z });
+  const drift = createDriftState();
+  let progress = startProgress;
+  let cumulative = 0;
+  let speed = 0;
+  let steer = 0;
+  let slip = 0;
+  let verge = false;
+  let stun = 0;
+  let lostTimer = 0;
+  const stats = { hits: 0, contactFrames: 0, laps: [], maxSlip: 0, rescues: 0, slideFrames: 0, vergeFrames: 0, frames: 0, distance: 0 };
+  let lapStart = 0;
+  let lapsDone = 0;
+  for (let frame = 0; frame < seconds / DT && lapsDone < laps; frame += 1) {
+    const t = frame * DT;
+    const input = policy({ body, drift, progress, sampler, speed, verge });
+    steer += ((input.steerAxis ?? 0) - steer) * (1 - Math.pow(0.001, DT));
+    const events = updateDriftFeel(drift, { dt: DT, held: Boolean(input.drift), speed, steer });
+    if (events.released > 0) speed = Math.min(speed + DRIFT_FEEL.boostKick[events.released - 1], BOOST_TOP);
+    const boosting = drift.miniTurboTimer > 0;
+    stun = Math.max(0, stun - DT);
+    speed = classicSpeedStep(speed, {
+      accelStat: 1,
+      boostAccel: boosting ? MINI_TURBO_ACCEL : 0,
+      boostTop: BOOST_TOP,
+      boosting,
+      brake: Boolean(input.brake),
+      dt: DT,
+      sliding: drift.active,
+      slip,
+      steer,
+      stunned: stun > 0,
+      throttle: input.throttle !== false,
+      top: TOP,
+      verge,
+    });
+    const moved = stepClassicBody(body, {
+      dt: DT,
+      gripScale: verge ? CLASSIC.vergeGrip : 1,
+      slideDir: drift.active ? drift.direction : 0,
+      speed,
+      steer,
+    });
+    speed = moved.speed;
+    slip = moved.slip;
+    let solved = projectToSpline(sampler.curve, sampler.widthAt, body.x, body.z, progress);
+    const wall = classicWallStep(body, {
+      barrierOffset: sampler.widthAt(solved.progress) * 0.44 + barrierInset,
+      distance: solved.distance,
+      normal: solved.normal,
+      speed,
+    });
+    speed = wall.speed;
+    if (wall.contact) stats.contactFrames += 1;
+    if (wall.hit) {
+      stats.hits += 1;
+      stun = CLASSIC.wallStun;
+      drift.active = false;
+      drift.charge = 0;
+      drift.tier = 0;
+    }
+    if (wall.contact) solved = projectToSpline(sampler.curve, sampler.widthAt, body.x, body.z, progress);
+    verge = classicSurfaceAt(solved.distance, sampler.widthAt(solved.progress) * 0.44) === 'verge';
+    if (verge) stats.vergeFrames += 1;
+    if (drift.active) stats.slideFrames += 1;
+    stats.maxSlip = Math.max(stats.maxSlip, Math.abs(slip));
+    let delta = solved.progress - progress;
+    if (delta > 0.5) delta -= 1;
+    if (delta < -0.5) delta += 1;
+    cumulative += delta;
+    stats.distance += Math.max(0, delta) * sampler.length;
+    progress = solved.progress;
+    lostTimer = Math.abs(solved.lane) > 2.6 || (Math.abs(solved.lane) > 1 && speed < 30) ? lostTimer + DT : 0;
+    if (lostTimer > 2.2) {
+      const home = sampler.pointAt(progress, 0);
+      const next = sampler.pointAt(progress + 0.001, 0);
+      body.x = home.x;
+      body.z = home.z;
+      body.heading = Math.atan2(next.x - home.x, next.z - home.z);
+      body.lateralVel = 0;
+      speed = Math.min(speed, 90);
+      lostTimer = 0;
+      stats.rescues += 1;
+    }
+    if (cumulative >= lapsDone + 1) {
+      stats.laps.push(t - lapStart);
+      lapStart = t;
+      lapsDone += 1;
+    }
+    stats.frames = frame + 1;
+  }
+  stats.seconds = stats.frames * DT;
+  stats.meanSpeed = stats.distance / Math.max(1e-6, stats.seconds);
+  stats.length = sampler.length;
+  return stats;
+};
+
+const autoplay = ({ body, drift, progress, sampler, speed, verge }) =>
+  classicAutoplayInput({
+    drifting: drift.active,
+    driftDirection: drift.direction,
+    freeBody: body,
+    offRoad: verge,
+    pointAt: (p, lane) => sampler.pointAt(p, lane),
+    progress,
+    speed,
+    trackLength: sampler.length,
+  });
+const noSteer = () => ({ steerAxis: 0, throttle: true });
+
+for (const trackDef of tracks) {
+  const best = drive(trackDef, autoplay);
+  const rails = (best.length / TOP).toFixed(1);
+  process.stdout.write(
+    `\n${trackDef.key}  (${best.length.toFixed(0)} u; a lap at the rails' top speed is ${rails} s)\n` +
+      `  autoplay: laps ${best.laps.map((lap) => `${lap.toFixed(1)}s`).join(' / ') || 'none'}, mean ${best.meanSpeed.toFixed(0)} u/s, ` +
+      `wall hits ${best.hits}, wall contact ${(best.contactFrames * DT).toFixed(1)}s, run-off ${(best.vergeFrames * DT).toFixed(1)}s, ` +
+      `sliding ${(best.slideFrames * DT).toFixed(1)}s, max slip ${((best.maxSlip * 180) / Math.PI).toFixed(0)} deg, rescues ${best.rescues}\n`
+  );
+  check(best.laps.length === 2, 'the Classic autoplay finishes two laps');
+  check(best.rescues === 0, 'without ever being rescued');
+  const blind = drive(trackDef, noSteer, { laps: 1, seconds: 90 });
+  process.stdout.write(
+    `  never steering: ${blind.laps.length ? `finished in ${blind.laps[0].toFixed(1)}s` : 'no lap in 90 s'}, ` +
+      `${((blind.distance / blind.length) * 100).toFixed(0)}% of a lap, wall hits ${blind.hits}\n`
+  );
+  check(blind.laps.length === 0, 'a kart that never steers cannot finish a lap');
+  if (VERBOSE) process.stdout.write(`  ${JSON.stringify({ best, blind })}\n`);
+}
+
+process.stdout.write(`\n${failures ? `${failures} FAILURES` : 'PASS'}\n`);
+if (failures) process.exit(1);
