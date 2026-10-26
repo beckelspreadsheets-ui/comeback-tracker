@@ -333,6 +333,24 @@ export const classicWallStep = (body, { speed = 0, distance = 0, normal = { x: 0
   };
 };
 
+// RIVALS on Classic (docs/CLASSIC_HANDLING.md step 5). The class sets the
+// speed of the whole field, the player's included (raceClasses.js
+// classicSpeed). `pace` trims the field against what a Classic driver can do,
+// which is less than the rails let anyone do (measured with the difficulty
+// probe). The band is MK64's idea in our numbers: a rival that falls behind
+// you chases hard, and one well clear eases off; on Assisted the band only
+// wakes up 3 s back.
+export const CLASSIC_RIVALS = Object.freeze({
+  pace: 1,
+  rubberBand: Object.freeze({
+    aheadMaxSeconds: 6,
+    behindMaxSeconds: 1.5,
+    catchUpBoost: 1.09,
+    finalLapCatchUp: 1.09,
+    slowDown: 0.98,
+  }),
+});
+
 // Classic Mix only: ideas from the owner's decomp list that are not MK64's.
 // Air rules (timed tricks, hang time) live in airTricks.js MIX_AIR.
 export const MIX = Object.freeze({

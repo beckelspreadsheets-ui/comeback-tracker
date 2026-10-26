@@ -1,6 +1,22 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-10-25 — handover: continuing on another machine (read first)
+## 2026-10-26 — branch `classic-handling`: harder, MK64-style driving (read first on this branch)
+The owner said the game is "perfect besides driving mechanics being a bit too
+easy" and wants it closer to Mario Kart 64. This branch adds a **Handling**
+setting on the setup screen: **Assisted** (today's game, still the default),
+**Classic 64** (MK64's rules) and **Classic Mix** (the same base plus ideas
+from Crash Team Racing, Diddy Kong Racing and Mario Kart Wii). He compares
+the two Classic versions and picks; nothing merges into `aaa-kart-ci` before that.
+- Everything is in **docs/CLASSIC_HANDLING.md**: his answers, the rule for
+  borrowing from decompiled games (behaviour, never code), each step with its
+  numbers, and the preview links.
+- Preview: https://classic-handling.comeback-city-kart.pages.dev (its own
+  Pages alias; never aaa-preview or production).
+- Gate: `npm run test:classic-handling` (in the quick battery).
+- The full battery's playable proof REBUILDS dist partway through; do not
+  edit `src/` while it runs.
+
+## 2026-10-25 — handover: continuing on another machine
 **GitHub `aaa-kart-ci` is the truth** — everything is pushed (last code
 commit 3bece236). The office copy is `~/Downloads/comeback-tracker`; the SSD
 copy (`/Volumes/Back-up-SSD/Penguin Kart game`) has been stale since

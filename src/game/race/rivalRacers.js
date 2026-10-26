@@ -367,6 +367,9 @@ export const updateRivalRacers = (field, ctx) => {
   // Engine class (raceClasses.js). Absent = 150cc, the tuned field.
   const rivalPace = ctx.rivalPace ?? 1;
   const catchUpScale = ctx.catchUp ?? 1;
+  // Classic handling passes its own band (classicHandling.js CLASSIC_RIVALS);
+  // absent = RUBBER_BAND, Assisted's.
+  const band = ctx.rubberBand ?? RUBBER_BAND;
   // Total laps in this race — the personality arcs are phased over it. 3 is
   // every shipped race; harnesses that predate the arc simply get the same
   // three-lap story.
@@ -424,9 +427,9 @@ export const updateRivalRacers = (field, ctx) => {
     // catch-up so a lead the player earned holds to the line.
     const gapSeconds = ((totalProgressOf(rival) - player.total) * trackLength) / Math.max(60, maxSpeed);
     let rubberTarget = 1;
-    if (gapSeconds > RUBBER_BAND.aheadMaxSeconds) rubberTarget = RUBBER_BAND.slowDown;
-    else if (gapSeconds < -RUBBER_BAND.behindMaxSeconds) {
-      rubberTarget = 1 + ((finalLap ? RUBBER_BAND.finalLapCatchUp : RUBBER_BAND.catchUpBoost) - 1) * catchUpScale;
+    if (gapSeconds > band.aheadMaxSeconds) rubberTarget = band.slowDown;
+    else if (gapSeconds < -band.behindMaxSeconds) {
+      rubberTarget = 1 + ((finalLap ? band.finalLapCatchUp : band.catchUpBoost) - 1) * catchUpScale;
     }
     rival.rubber = lerp(rival.rubber, rubberTarget, 1 - Math.pow(0.05, dt));
 

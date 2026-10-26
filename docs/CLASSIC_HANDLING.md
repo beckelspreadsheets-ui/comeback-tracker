@@ -166,6 +166,30 @@ From the owner's picks off the decomp list (Classic 64 has none of these):
 Real race, Classic Mix autoplay, Comeback City, 70 s: 4 tap boosts, 0
 backfires, 2 hang-time boosts, 1 timed trick, no errors.
 
+## Step 5: rivals — IN PROGRESS (committed as WIP, not tuned, not deployed)
+
+Code in place: `raceClasses.js` classicSpeed (MK64's class rule: 50/100/150cc
+set the WHOLE field's speed, the player's kart too — 0.88 / 1.0 / 1.08),
+`classicHandling.js` CLASSIC_RIVALS (a field pace trim, `pace: 1`
+placeholder, and an MK64-style band: rivals more than 1.5 s behind you chase
+at +9%, rivals 6 s clear ease to 0.98), and `rivalRacers.js` accepting that
+band through `ctx.rubberBand` (Assisted still uses RUBBER_BAND).
+
+**Baseline measured BEFORE this code** (difficulty probe, Classic Mix
+autoplay, 50cc, one race per track): last (P6) on BOTH tracks, 0/2 wins,
+~8-12 s behind the winner over a ~160-170 s race, 8-9% of the race on the
+run-off, 2 spin-outs a race. So on Classic the problem flips: against the
+rails-tuned rivals a Classic driver is too SLOW, even at 50cc. The autoplay
+is a cautious centreline driver (no racing line, no stick rocks), so a human
+will do better, but expect `CLASSIC_RIVALS.pace` to land around 0.93-0.95.
+
+To finish: re-run the probe at 50 / 100 / 150cc on mix and mk64 with this
+code (`DIFFICULTY_PROBE_URL=<local preview> DIFFICULTY_PROBE_RUNS=1
+DIFFICULTY_PROBE_QUERY='handling=mix&cc=50' node scripts/kart-difficulty-probe.mjs`),
+set the pace so the autoplay finishes mid-pack at 50cc and loses at 150cc,
+then build, full battery, deploy, verify under each handling. The probe was
+stopped mid-run on 2026-10-26 when the repo moved to an SSD.
+
 ## Step 7: the Handling switch
 
 The setup screen has a **Handling** row under the class picker: Assisted /
@@ -192,7 +216,7 @@ scripts/verify-preview-deploy.mjs <unique url>` (and mix, and none).
 2. ~~Mini-turbos: `mk64` = stick rocks; `mix` = CTR timed taps (both phones and pads).~~
 3. ~~Rocket start that works (both versions) — the reward bug is in Assisted too.~~
 4. ~~Mistakes: costlier hits, shorter immunity, banana brake-save.~~
-5. Rivals: player speed by class (MK64 ratios), rubber band that pushes back.
+5. Rivals: player speed by class (MK64 ratios), rubber band that pushes back. **WIP: code in, pace untuned (see Step 5).**
 6. ~~`mix` extras: hits drop coins, timed ramp tricks, hang-time boosts.~~
 7. ~~The Handling switch on the setup screen (saved per device), and first-race
    coaching that teaches the chosen handling's mini-turbo.~~

@@ -92,6 +92,7 @@ import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
 import { autoplayApexLane, classicAutoplayInput, freeBodyAutoplayInput } from './race/autoplayDriver.js';
 import {
   CLASSIC,
+  CLASSIC_RIVALS,
   classicSlipStep,
   classicSpeedStep,
   classicSurfaceAt,
@@ -11876,7 +11877,9 @@ export const ComebackCityThreeKartRace = ({
             // CLASSIC SPEED (race/classicHandling.js): thrust fades toward top
             // speed, so turning, sliding, slip and the run-off all cost top
             // speed rather than being absorbed by a hard cap.
-            const statTop = playerKart.stats.topSpeed * coinSpeedMultiplier(race.coins);
+            // The class sets the whole field's speed on Classic, yours included
+            // (raceClasses.js classicSpeed, MK64's rule).
+            const statTop = playerKart.stats.topSpeed * coinSpeedMultiplier(race.coins) * raceClass.classicSpeed;
             classic.stun = Math.max(0, classic.stun - dt);
             race.speed = classicSpeedStep(race.speed, {
               accelStat: playerKart.stats.accel,
@@ -12377,7 +12380,10 @@ export const ComebackCityThreeKartRace = ({
             laneScale: engine.sampler.widthAt(race.progress) * 0.44,
             maxSpeed: MAX_SPEED,
             catchUp: raceClass.catchUp,
-            rivalPace: raceClass.rivalPace,
+            // Classic: MK64's class speeds for the whole field, trimmed by the
+            // measured CLASSIC_RIVALS.pace, and a band that chases.
+            rivalPace: race.classic ? raceClass.classicSpeed * CLASSIC_RIVALS.pace : raceClass.rivalPace,
+            rubberBand: race.classic ? CLASSIC_RIVALS.rubberBand : undefined,
             ramps: trackDef.ramps,
             projectiles: race.projectiles,
             player: {
