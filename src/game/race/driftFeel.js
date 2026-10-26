@@ -47,6 +47,54 @@ export const DRIFT_FEEL = {
   sparkColors: ['#F5F8FF', '#00E5FF', '#FFD34F', '#C879FF'],
 };
 
+// CLASSIC MINI-TURBOS (?handling=mk64|mix, docs/CLASSIC_HANDLING.md). Assisted
+// keeps the time-held charge above; the two Classic versions make you earn it,
+// and the owner picks between them.
+
+// Classic 64: MK64's rule, in our own numbers. During the slide, push the
+// stick OUT of the corner and hold it there, then bring it back IN: that is
+// one rock. The first rock needs a longer push than the rest; two rocks turn
+// the sparks amber; letting go then pays one boost. Holding the stick out too
+// long throws the charge away. Read on the raw stick, not the smoothed steer,
+// so the timing is the player's and not the filter's.
+export const ROCK_TURBO = {
+  outward: 0.19,
+  inward: 0.19,
+  firstHold: 0.28,
+  nextHold: 0.13,
+  overHold: 1.6,
+  readyStage: 2,
+  maxStage: 3,
+  boostDuration: 0.55,
+  boostKick: 14,
+  boostAccel: 120,
+};
+
+// Classic Mix: Crash Team Racing's idea, in our own numbers. A meter fills
+// through the slide; press drift AGAIN while it is in the hot zone (the sparks
+// turn amber) for a boost on the spot, up to three a slide, each bigger.
+// Press early and the meter starts over with nothing; leave it full too long
+// and it backfires. The button may come up briefly between presses (a pump)
+// without ending the slide.
+export const TAP_TURBO = {
+  fillTime: 0.8,
+  hotFrom: 0.7,
+  backfireAfter: 0.2,
+  backfireLoss: 12,
+  maxBoosts: 3,
+  pumpGrace: 0.16,
+  boostDurations: [0.4, 0.55, 0.7],
+  boostKicks: [10, 16, 22],
+  boostAccel: 120,
+};
+
+// Which charge rule a handling uses.
+export const driftModeForHandling = (handling) => (handling === 'mk64' ? 'rock' : handling === 'mix' ? 'tap' : 'hold');
+
+// The mini-turbo's extra thrust, u/s^2, by charge rule.
+export const turboAccelForMode = (mode) =>
+  mode === 'rock' ? ROCK_TURBO.boostAccel : mode === 'tap' ? TAP_TURBO.boostAccel : 150;
+
 export const driftTierForCharge = (charge) =>
   DRIFT_FEEL.chargeTimes.reduce((tier, time, index) => (charge >= time ? index + 1 : tier), 0);
 
@@ -61,13 +109,104 @@ export const createDriftState = () => ({
   slideYaw: 0,
   tier: 0,
   wasHeld: false,
+  // Classic charge state (ROCK_TURBO / TAP_TURBO); idle on Assisted.
+  lastPresses: 0,
+  meter: 0,
+  meterFull: 0,
+  pumpTimer: 0,
+  rockOut: 0,
+  stage: 0,
+  tapBoosts: 0,
 });
 
+const resetClassicCharge = (drift) => {
+  drift.meter = 0;
+  drift.meterFull = 0;
+  drift.pumpTimer = 0;
+  drift.rockOut = 0;
+  drift.stage = 0;
+  drift.tapBoosts = 0;
+};
+
+const stepRockCharge = (drift, stick, dt, events) => {
+  const along = Math.max(-1, Math.min(1, stick * drift.direction));
+  if (along <= -ROCK_TURBO.outward) {
+    drift.rockOut += dt;
+    if (drift.rockOut >= ROCK_TURBO.overHold) {
+      drift.stage = 0;
+      drift.rockOut = 0;
+    }
+  } else if (along >= ROCK_TURBO.inward && drift.rockOut > 0) {
+    const need = drift.stage === 0 ? ROCK_TURBO.firstHold : ROCK_TURBO.nextHold;
+    if (drift.rockOut >= need && drift.stage < ROCK_TURBO.maxStage) {
+      drift.stage += 1;
+      events.stageUp = drift.stage;
+    }
+    drift.rockOut = 0;
+  }
+  // Sparks: white, then blue after one rock, amber once a release pays.
+  drift.tier = drift.stage >= ROCK_TURBO.readyStage ? 2 : drift.stage;
+};
+
+const stepTapCharge = (drift, freshPress, dt, events) => {
+  if (drift.tapBoosts >= TAP_TURBO.maxBoosts) {
+    drift.meter = 0;
+    drift.tier = 0;
+    return;
+  }
+  drift.meter = Math.min(1, drift.meter + dt / TAP_TURBO.fillTime);
+  drift.meterFull = drift.meter >= 1 ? drift.meterFull + dt : 0;
+  if (freshPress) {
+    if (drift.meter >= TAP_TURBO.hotFrom) {
+      drift.tapBoosts += 1;
+      const tier = drift.tapBoosts;
+      drift.miniTurboTier = tier;
+      drift.miniTurboTimer = TAP_TURBO.boostDurations[tier - 1];
+      drift.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
+      events.tapBoost = tier;
+      events.kick = TAP_TURBO.boostKicks[tier - 1];
+    } else {
+      events.tapEarly = true;
+    }
+    drift.meter = 0;
+    drift.meterFull = 0;
+  } else if (drift.meterFull > TAP_TURBO.backfireAfter) {
+    events.backfire = true;
+    events.kick = -TAP_TURBO.backfireLoss;
+    drift.meter = 0;
+    drift.meterFull = 0;
+  }
+  // Amber = press now.
+  drift.tier = drift.meter >= TAP_TURBO.hotFrom ? 2 : 0;
+};
+
 // Advances the drift state machine one frame. Mutates `drift` and returns the
-// frame's events: { hopped, landed, released } — released is the banked tier
-// (0 = none/cancel).
-export const updateDriftFeel = (drift, { dt, held, speed, steer }) => {
-  const events = { hopped: false, landed: false, released: 0 };
+// frame's events: { hopped, landed, released, kick, ... } — released is the
+// banked tier (0 = none/cancel) and kick the speed to add this frame.
+//
+// mode: 'hold' (Assisted, time-held charge), 'rock' (Classic 64) or 'tap'
+// (Classic Mix). stick is the raw steering input (the rock rule reads it);
+// presses counts fresh drift presses from every input source (the tap rule
+// reads it).
+export const updateDriftFeel = (drift, { dt, held, speed, steer, mode = 'hold', stick = steer, presses = 0 }) => {
+  const events = {
+    backfire: false,
+    hopped: false,
+    kick: 0,
+    landed: false,
+    released: 0,
+    stageUp: 0,
+    tapBoost: 0,
+    tapEarly: false,
+  };
+  const freshPress = presses !== drift.lastPresses;
+  drift.lastPresses = presses;
+  // Classic Mix pumps the button between taps: a short gap keeps the slide.
+  let holding = held;
+  if (mode === 'tap' && drift.active) {
+    drift.pumpTimer = held ? 0 : drift.pumpTimer + dt;
+    holding = held || drift.pumpTimer < TAP_TURBO.pumpGrace;
+  }
 
   // Tap drift → hop. The drift itself only starts on landing, and only if
   // the player is steering — matching the MK hop-commit rhythm.
@@ -85,27 +224,38 @@ export const updateDriftFeel = (drift, { dt, held, speed, steer }) => {
         drift.direction = steer > 0 ? 1 : -1;
         drift.charge = 0;
         drift.tier = 0;
+        resetClassicCharge(drift);
       }
     }
   }
 
   if (drift.active) {
-    if (!held || speed < DRIFT_FEEL.minSpeed * 0.6) {
+    if (!holding || speed < DRIFT_FEEL.minSpeed * 0.6) {
       // Releasing the button banks the mini-turbo; dropping too slow while
-      // still holding cancels the drift without one.
-      const releasedTier = held ? 0 : drift.tier;
+      // still holding cancels the drift without one. Classic Mix pays its
+      // boosts mid-slide, so letting go there pays nothing more.
+      let releasedTier = 0;
+      if (!holding) {
+        if (mode === 'hold') releasedTier = drift.tier;
+        else if (mode === 'rock') releasedTier = drift.stage >= ROCK_TURBO.readyStage ? 2 : 0;
+      }
       if (releasedTier > 0) {
+        const rock = mode === 'rock';
         drift.miniTurboTier = releasedTier;
-        drift.miniTurboTimer = DRIFT_FEEL.boostDurations[releasedTier - 1];
+        drift.miniTurboTimer = rock ? ROCK_TURBO.boostDuration : DRIFT_FEEL.boostDurations[releasedTier - 1];
         drift.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
         events.released = releasedTier;
+        events.kick = rock ? ROCK_TURBO.boostKick : DRIFT_FEEL.boostKick[releasedTier - 1];
       }
       drift.active = false;
       drift.charge = 0;
       drift.tier = 0;
+      resetClassicCharge(drift);
     } else {
       drift.charge = Math.min(drift.charge + dt, DRIFT_FEEL.chargeTimes[2] + 0.6);
-      drift.tier = driftTierForCharge(drift.charge);
+      if (mode === 'rock') stepRockCharge(drift, stick, dt, events);
+      else if (mode === 'tap') stepTapCharge(drift, freshPress, dt, events);
+      else drift.tier = driftTierForCharge(drift.charge);
     }
   }
 

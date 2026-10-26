@@ -82,12 +82,19 @@ All in `CLASSIC` (classicHandling.js), each number with its reason beside it:
 | Turning cost | none at the cap | full lock settles ~8% slower; slip costs ~1%/deg |
 | Power slide | lane-rate arc | travel swings 0.45 / 0.95 / 2.1 rad/s (out / centred / in), ~10% slower |
 | Run-off | unreachable | past the kerb: top speed x0.71, grip x0.6 |
-| Barrier | lane clamp + scrape | real wall at the barrier's inner face: half the incoming speed bounces, square hits lose most of it, >11.5 deg ends the slide + 0.18 s stun |
+| Barrier | lane clamp + scrape | real wall at the barrier's inner face: half the speed INTO it bounces back, friction along it scales with that push (8 deg kiss keeps ~84%, 20 deg ~58%, square stops you); a hit squarer than 11.5 deg and faster than 30 u/s into the wall ends the slide + 0.18 s stun |
+| Standstill | n/a | the kart can pivot at up to 1.4 rad/s below 40 u/s, so a kart stopped nose-first on a wall can turn away (no reverse gear) |
 
 Measured by `test:classic-handling` (centreline autoplay, two laps): Comeback
-City 55.5 / 54.7 s, Penguin Village 53.5 / 51.7 s, Satoshi Summit 52.3 / 51.1 s
-against a 49-51 s lap at flat top speed; 0 rescues. A kart that never steers
-covers 67-76% of a lap in 90 s and finishes none. In the real race (Comeback
+City 54.2 / 53.2 s, Penguin Village 53.5 / 52.0 s, Satoshi Summit 52.1 / 51.1 s
+against a 49-51 s lap at flat top speed; 0-4 wall hits, 0 rescues. A kart that
+never steers covers 55-62% of the road the autoplay does in the same minute.
+
+Found driving the real race with keys (step 2): the first wall model charged
+its impact loss EVERY frame of contact, so grinding along a wall at a shallow
+angle bled the kart to a stop in about a second, and a kart stopped nose-first
+on a wall could never turn away. Both fixed above (friction scaled by the push;
+the standstill pivot); test:classic-handling now drives that escape. In the real race (Comeback
 City, ?handling=mk64, autoplay) it averaged 219 u/s with 2 wall hits in 40 s.
 
 Steering sign: positive steer is the player's right, which decreases heading.
@@ -95,15 +102,39 @@ The August `?freebody=1` model (freeBodyKart.js) has it the other way round —
 pressing right there turns left — and its contact shove adds lateral velocity
 against the shove. Classic does neither; the August path is left as it was.
 
+## Step 2: the two mini-turbos (driftFeel.js ROCK_TURBO / TAP_TURBO)
+
+Both start the same way as today: hold drift (Space, a bumper, the Drift button
+or a flick on the steering thumb) and steer, and the kart hops into a slide.
+
+- **Classic 64, stick rocks.** Mid-slide, push the stick (arrow key, thumb, or
+  tilt) OUT of the corner for a moment, then back IN. The first push needs
+  ~0.28 s, later ones ~0.13 s. One rock turns the sparks blue, two turn them
+  amber; let go of drift then for the boost (0.55 s, worth ~0.28 s). Holding
+  the stick out for 1.6 s throws the charge away; a slide held without rocking
+  pays nothing. Read on the raw stick, not the smoothed steering.
+- **Classic Mix, timed taps.** Mid-slide a meter fills in 0.8 s; when the
+  sparks flash amber (the last 30%), press drift AGAIN and the boost fires on
+  the spot. Up to three a slide, each bigger (worth ~0.21 / 0.29 / 0.36 s).
+  Too early and the meter starts over with nothing; full for 0.2 s and it
+  backfires (-12 u/s). On a keyboard or pad, re-pressing means letting go for
+  a moment: a gap under 0.16 s keeps the slide. On a phone, tap the Drift
+  button while the flick holds the slide (touch drift now stays down while
+  either the flick or the button holds it).
+- Assisted is unchanged: the time-held charge and its three tiers.
+
+The demo driver slides in both and taps on amber in Mix; it does not rock.
+
 ## Next steps (one commit each)
 
 1. ~~Free steering: the Classic model, walls, run-off, power slide.~~
-2. Mini-turbos: `mk64` = stick rocks; `mix` = CTR timed taps (both phones and pads).
+2. ~~Mini-turbos: `mk64` = stick rocks; `mix` = CTR timed taps (both phones and pads).~~
 3. Rocket start that works (both versions) — the reward bug is in Assisted too.
 4. Mistakes: costlier hits, shorter immunity, banana brake-save.
 5. Rivals: player speed by class (MK64 ratios), rubber band that pushes back.
 6. `mix` extras: hits drop coins, timed ramp tricks, hang-time boosts.
-7. The Handling switch on the setup screen (saved per device).
+7. The Handling switch on the setup screen (saved per device), and first-race
+   coaching that teaches the chosen handling's mini-turbo.
 
 Preview deploys of this branch go to their own Pages alias
 (`classic-handling`), never to aaa-preview or production.

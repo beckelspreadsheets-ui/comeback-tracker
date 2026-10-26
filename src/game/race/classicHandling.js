@@ -72,6 +72,12 @@ export const CLASSIC = Object.freeze({
   yawTop: 1.55,
   yawTopSpeed: 228,
   minTurnRadius: 16,
+  // At a crawl the kart can still pivot, up to this rate at a standstill and
+  // fading out by pivotSpeed. There is no reverse gear, so without it a kart
+  // stopped nose-first against a wall could never turn away (found driving
+  // the real race with keys, 2026-10-26).
+  pivotYaw: 1.4,
+  pivotSpeed: 40,
   // yaw = |stick|^steerExponent: half stick is a quarter of the turn.
   steerExponent: 2,
   // Cornering force the tyres hold, u/s^2. Full lock at top speed asks
@@ -107,11 +113,18 @@ export const CLASSIC = Object.freeze({
   kartHalfWidth: 4.5,
   // The speed carried INTO the wall comes back out at this fraction.
   wallRestitution: 0.5,
-  // Extra loss scaled by how square the hit is (0 glancing .. 1 head-on).
-  wallImpactLoss: 0.85,
-  // Hits squarer than this (~11.5 degrees) end a power slide and stun; a
-  // shallower kiss only scrubs speed.
+  // Friction along the wall, as a share of the push into it: the speed along
+  // the wall drops by wallFriction x (1 + restitution) x the speed into it.
+  // An 8-degree kiss at top speed keeps ~84%, a 20-degree hit ~58%, a square
+  // one stops you. Scaled by the push rather than charged per frame, so a
+  // kart grinding along a wall pays for the grind (~300 u/s^2 while it steers
+  // into it), not a fixed share of its speed every frame.
+  wallFriction: 0.7,
+  // Hits squarer than this (~11.5 degrees) and faster than wallHitSpeed into
+  // the wall end a power slide and stun; a shallower or slower touch only
+  // scrubs speed (a kart resting on the wall must not re-stun every frame).
   wallHitImpact: 0.2,
+  wallHitSpeed: 30,
   wallStun: 0.18,
 });
 
@@ -129,7 +142,8 @@ export const wrapAngle = (angle) => {
 export const classicFullLockYaw = (speed) => {
   const v = Math.abs(speed);
   const bySpeed = lerp(CLASSIC.yawLow, CLASSIC.yawTop, clamp(v / CLASSIC.yawTopSpeed, 0, 1));
-  return Math.min(v / CLASSIC.minTurnRadius, bySpeed);
+  const pivot = CLASSIC.pivotYaw * Math.max(0, 1 - v / CLASSIC.pivotSpeed);
+  return Math.max(pivot, Math.min(v / CLASSIC.minTurnRadius, bySpeed));
 };
 
 // The most the kart can turn its travel direction without sliding, rad/s:
@@ -286,11 +300,20 @@ export const classicWallStep = (body, { speed = 0, distance = 0, normal = { x: 0
   const into = velocity.x * nx + velocity.z * nz;
   if (!(into > 0)) return { contact: true, hit: false, impact: 0, speed };
   const impact = into / Math.max(1, magnitude);
-  const keep = Math.max(0, 1 - CLASSIC.wallImpactLoss * impact);
-  const vx = (velocity.x - (1 + CLASSIC.wallRestitution) * into * nx) * keep;
-  const vz = (velocity.z - (1 + CLASSIC.wallRestitution) * into * nz) * keep;
+  const tx = velocity.x - into * nx;
+  const tz = velocity.z - into * nz;
+  const along = Math.hypot(tx, tz);
+  const friction = Math.min(along, CLASSIC.wallFriction * (1 + CLASSIC.wallRestitution) * into);
+  const keepAlong = along > 1e-6 ? (along - friction) / along : 0;
+  const vx = tx * keepAlong - CLASSIC.wallRestitution * into * nx;
+  const vz = tz * keepAlong - CLASSIC.wallRestitution * into * nz;
   const forward = storeWorldVelocity(body, vx, vz);
-  return { contact: true, hit: impact > CLASSIC.wallHitImpact, impact, speed: Math.max(0, forward) };
+  return {
+    contact: true,
+    hit: impact > CLASSIC.wallHitImpact && into > CLASSIC.wallHitSpeed,
+    impact,
+    speed: Math.max(0, forward),
+  };
 };
 
 // Per-race Classic state on `race.classic` (null on Assisted).
@@ -303,6 +326,9 @@ export const createClassicState = () => ({
   verge: false,
   wallContact: false,
   wallHits: 0,
+  // Mini-turbos banked and Classic Mix backfires, for telemetry and probes.
+  turbos: 0,
+  backfires: 0,
 });
 
 // The barrier's inner face, in world units from the centreline, by progress —

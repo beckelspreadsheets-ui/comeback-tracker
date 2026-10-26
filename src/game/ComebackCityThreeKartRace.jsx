@@ -108,7 +108,9 @@ import {
   DRIFT_FEEL,
   createDriftState,
   driftLaneRate,
+  driftModeForHandling,
   hopHeightFor,
+  turboAccelForMode,
   updateDriftFeel,
 } from './race/driftFeel.js';
 import { createKartAudio, cuesForTransition, readStoredMute, snapshotRaceForAudio } from './race/kartAudio.js';
@@ -1028,6 +1030,14 @@ const createInitialRace = (
   // with the free body in createEngine and again on every restart.
   classic: null,
   handling: 'assisted',
+  // The mini-turbo charge rule (driftFeel.js): 'hold' on Assisted, 'rock' on
+  // Classic 64, 'tap' on Classic Mix. Gamepad drift presses are counted here
+  // (keyboard and touch count theirs on the input itself).
+  driftMode: 'hold',
+  padDriftPresses: 0,
+  padDriftWas: false,
+  // Classic Mix's demo driver counts its own presses (readInput).
+  autoplayPresses: 0,
   // Signed cumulative laps, for P3. Advanced by the same per-frame delta that
   // moves progress, so driving backwards subtracts. Rails advances it too, so
   // the counter is identical on both paths and P3 can land independently.
@@ -9900,20 +9910,28 @@ const readInput = (input, autoplay, race, cornerPush = 0, sampler = null) => {
   // Same apex target and dodge bias as the rails driver, expressed as a point
   // on the road rather than a lane velocity.
   if (race.classic && race.freeBody != null && sampler) {
-    return classicAutoplayInput({
-      airborne: race.airState.airborne,
-      cornerPush,
-      driftDirection: race.driftState.direction,
-      drifting: race.drift,
-      freeBody: race.freeBody,
-      heldItem: Boolean(race.heldItem),
-      offRoad: race.classic.verge,
-      pointAt: (progress, lane) => sampler.pointAt(progress, lane).point,
-      progress: race.progress,
-      speed: race.speed,
-      targetLane: clamp(autoplayDodgeBias(race, trackLength) * 1.2, -0.9, 0.9),
-      trackLength,
-    });
+    // Classic Mix's demo driver presses drift again the moment the meter turns
+    // amber, so it banks the boosts instead of backfiring every slide.
+    if (race.driftMode === 'tap' && race.drift && race.driftState.tier === 2) {
+      race.autoplayPresses = (race.autoplayPresses || 0) + 1;
+    }
+    return {
+      driftPresses: race.autoplayPresses || 0,
+      ...classicAutoplayInput({
+        airborne: race.airState.airborne,
+        cornerPush,
+        driftDirection: race.driftState.direction,
+        drifting: race.drift,
+        freeBody: race.freeBody,
+        heldItem: Boolean(race.heldItem),
+        offRoad: race.classic.verge,
+        pointAt: (progress, lane) => sampler.pointAt(progress, lane).point,
+        progress: race.progress,
+        speed: race.speed,
+        targetLane: clamp(autoplayDodgeBias(race, trackLength) * 1.2, -0.9, 0.9),
+        trackLength,
+      }),
+    };
   }
   if (race.freeBody != null && sampler) {
     return freeBodyAutoplayInput({
@@ -10052,6 +10070,8 @@ const publishTelemetry = (
     // Classic handling: which model, and the wall hits it has taken.
     handling: race.handling,
     classicWallHits: race.classic ? race.classic.wallHits : 0,
+    classicTurbos: race.classic ? race.classic.turbos : 0,
+    classicBackfires: race.classic ? race.classic.backfires : 0,
     rivalCount: race.rivals.length,
     rivalPositions: rivalPositionsOf(playerTotalOf(race), race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
@@ -10698,6 +10718,7 @@ export const ComebackCityThreeKartRace = ({
     const freeBodyFlag = new URLSearchParams(window.location.search).get('freebody') === '1';
     const seatHandling = () => {
       race.handling = handlingMode;
+      race.driftMode = driftModeForHandling(handlingMode);
       race.classic = isClassicHandling(handlingMode) ? createClassicState() : null;
       if (!race.classic && !freeBodyFlag) return;
       const seat = engine.sampler.pointAt(race.progress, race.lane);
@@ -10770,6 +10791,9 @@ export const ComebackCityThreeKartRace = ({
       if (!key) return;
       event.preventDefault();
       if (key === 'restart' && !allowRestartRef.current) return;
+      if (key === 'drift' && !event.repeat) {
+        inputRef.current = { ...inputRef.current, driftPresses: (inputRef.current.driftPresses || 0) + 1 };
+      }
       setInputKey(key, true);
     };
     const handleKeyUp = (event) => {
@@ -11586,19 +11610,32 @@ export const ComebackCityThreeKartRace = ({
           race.wobbleTimer = Math.max(0, (race.wobbleTimer || 0) - dt);
           // While airborne or spun out, the drift machine sees no input —
           // launching a ramp ends a drift, spinning cancels one.
+          // Fresh drift presses: keyboard and touch count theirs on the input;
+          // a pad's are counted here off its button edge.
+          if (pad?.drift && !race.padDriftWas) race.padDriftPresses += 1;
+          race.padDriftWas = Boolean(pad?.drift);
           const driftEvents = updateDriftFeel(driftState, {
             dt,
             held: Boolean(input.drift) && !airState.airborne && !spinning,
+            mode: race.driftMode,
+            presses: (input.driftPresses || 0) + race.padDriftPresses,
             speed: race.speed,
             steer: race.steer,
+            stick: targetSteer,
           });
           race.drift = driftState.active;
           race.driftCharge = driftState.charge;
           race.driftTier = driftState.tier;
           if (driftEvents.landed) race.landSquashTimer = 0.14;
           race.landSquashTimer = Math.max(0, race.landSquashTimer - dt);
-          if (driftEvents.released > 0) {
-            race.speed = clamp(race.speed + DRIFT_FEEL.boostKick[driftEvents.released - 1], 0, BOOST_SPEED);
+          // The mini-turbo's kick: on release (Assisted, Classic 64), on a tap
+          // mid-slide (Classic Mix), or negative for a Classic Mix backfire.
+          if (driftEvents.kick) {
+            race.speed = clamp(race.speed + driftEvents.kick, 0, BOOST_SPEED);
+          }
+          if (race.classic) {
+            if (driftEvents.released || driftEvents.tapBoost) race.classic.turbos += 1;
+            if (driftEvents.backfire) race.classic.backfires += 1;
           }
           // Ramps and the bridge crest launch the kart; the drift button
           // doubles as the trick button mid-air (MK-style).
@@ -11804,7 +11841,7 @@ export const ComebackCityThreeKartRace = ({
             classic.stun = Math.max(0, classic.stun - dt);
             race.speed = classicSpeedStep(race.speed, {
               accelStat: playerKart.stats.accel,
-              boostAccel: miniTurboAccel,
+              boostAccel: driftState.miniTurboTimer > 0 ? turboAccelForMode(race.driftMode) : miniTurboAccel,
               boostTop: BOOST_SPEED * statTop,
               boosting: race.boostTimer > 0 || driftState.miniTurboTimer > 0 || auroraActive,
               brake: Boolean(brake),
@@ -14335,11 +14372,26 @@ export const ComebackCityThreeKartRace = ({
       /* capture is an optimization, not a requirement */
     }
   };
+  // Drift can be held two ways at once on touch — the steer thumb's flick and
+  // the Drift button — so it stays down while EITHER holds it. (Before this a
+  // button tap during a flick drift ended the drift on the button's release;
+  // Classic Mix's tap-to-boost presses that button mid-slide on purpose.)
+  // Every fresh press is counted for Classic Mix (driftFeel.js TAP_TURBO).
+  const touchDriftRef = useRef({ button: false, flick: false });
+  const setTouchDrift = (source, value) => {
+    const sources = touchDriftRef.current;
+    if (value && !sources[source]) {
+      inputRef.current = { ...inputRef.current, driftPresses: (inputRef.current.driftPresses || 0) + 1 };
+    }
+    sources[source] = value;
+    setTouch('drift', sources.button || sources.flick);
+  };
   const holdTouch = (key) => (event) => {
     capturePointer(event);
-    setTouch(key, true);
+    if (key === 'drift') setTouchDrift('button', true);
+    else setTouch(key, true);
   };
-  const releaseTouch = (key) => () => setTouch(key, false);
+  const releaseTouch = (key) => () => (key === 'drift' ? setTouchDrift('button', false) : setTouch(key, false));
   const itemTouchDown = (event) => {
     capturePointer(event);
     if (snapshot.heldItem) hapticImpact('LIGHT');
@@ -14402,7 +14454,7 @@ export const ComebackCityThreeKartRace = ({
     stick.maxDist = Math.max(stick.maxDist, Math.hypot(event.clientX - stick.originX, event.clientY - stick.originY));
     if (!stick.flicked && Math.abs(stepX) >= FLICK_MIN_STEP_PX && Math.abs(stepX) / stepMs >= FLICK_SPEED_PX_MS) {
       stick.flicked = true;
-      setTouch('drift', true);
+      setTouchDrift('flick', true);
       steerIndicatorRef.current?.classList.add('three-kart-race__steer-indicator--drifting');
     }
     const axis = clamp((horizontal - originHorizontal) / JOYSTICK_RANGE_PX, -1, 1);
@@ -14415,7 +14467,7 @@ export const ComebackCityThreeKartRace = ({
     const wasTap = !stick.flicked && performance.now() - stick.startT < TAP_MAX_MS && stick.maxDist < TAP_MAX_PX;
     joystickStateRef.current = { ...stick, active: false, pointerId: null };
     inputRef.current = { ...inputRef.current, steerAxis: null };
-    if (stick.flicked) setTouch('drift', false); // release pays the mini-turbo
+    if (stick.flicked) setTouchDrift('flick', false); // release pays the mini-turbo
     if (joystickPuckRef.current) joystickPuckRef.current.style.transform = '';
     if (steerIndicatorRef.current) steerIndicatorRef.current.style.display = 'none';
     if (wasTap && event.type !== 'pointercancel') {

@@ -17,7 +17,7 @@
 import { makeSampler, mirrorCheck } from './track-layout-preview.mjs';
 import { projectToSpline } from '../src/game/race/splineProjection.js';
 import { createFreeBody } from '../src/game/race/freeBodyKart.js';
-import { createDriftState, updateDriftFeel, DRIFT_FEEL } from '../src/game/race/driftFeel.js';
+import { createDriftState, updateDriftFeel, DRIFT_FEEL, ROCK_TURBO, TAP_TURBO } from '../src/game/race/driftFeel.js';
 import { classicAutoplayInput } from '../src/game/race/autoplayDriver.js';
 import {
   CLASSIC,
@@ -108,6 +108,26 @@ const settle = (opts, seconds = 12, start = 0) => {
   check(square.speed < TOP * 0.2 && square.hit, 'a square wall hit loses most of the speed', `${square.speed.toFixed(1)} u/s left`);
   check(glance.speed > TOP * 0.8 && !glance.hit, 'an 8-degree glance keeps most of it', `${glance.speed.toFixed(1)} u/s left`);
   check(square.x <= 20 - CLASSIC.kartHalfWidth + 1e-6, 'the kart is put back inside the wall line');
+  // Stopped nose-first against the wall, throttle and full lock away from it:
+  // the kart must pivot off it and drive on, not sit pinned (no reverse gear).
+  const body = createFreeBody({ heading: Math.PI / 2 });
+  body.x = 20 - CLASSIC.kartHalfWidth;
+  let speed = 0;
+  let hits = 0;
+  let turnedAway = false;
+  for (let t = 0; t < 3; t += DT) {
+    // Full lock away until the nose points off the wall, then straighten up
+    // parallel to it, as a driver would (the test road has walls both sides).
+    if (body.heading < -0.3) turnedAway = true;
+    const steer = turnedAway ? Math.max(-1, Math.min(1, body.heading * 3)) : 1;
+    speed = classicSpeedStep(speed, { dt: DT, steer, throttle: true, top: TOP });
+    speed = stepClassicBody(body, { dt: DT, speed, steer }).speed;
+    const wall = classicWallStep(body, { barrierOffset: 20, distance: body.x, normal: { x: 1, z: 0 }, speed });
+    speed = wall.speed;
+    if (wall.hit) hits += 1;
+  }
+  check(body.x < 20 - CLASSIC.kartHalfWidth - 8 && speed > 120, 'a kart stopped against a wall pivots away and drives off', `${(20 - CLASSIC.kartHalfWidth - body.x).toFixed(0)} u off it at ${speed.toFixed(0)} u/s`);
+  check(hits === 0, 'and resting on the wall never counts as a hit', `${hits} hits`);
 }
 {
   // Power slide, stick fully into the corner at slide speed: a tight arc.
@@ -123,6 +143,95 @@ const settle = (opts, seconds = 12, start = 0) => {
   }
   const diameter = maxX - minX;
   check(diameter > 160 && diameter < 230, 'full-inward slide at 205 u/s is a ~98 u radius', `diameter ${diameter.toFixed(0)} u`);
+}
+
+// --- 1b. the Classic mini-turbo rules ----------------------------------------------
+process.stdout.write('\nMini-turbo rules\n');
+// A slide to the right at 200 u/s, then a script of segments:
+// [seconds, { held, stick, press }] — press bumps the fresh-press count once
+// at the segment's start. Returns the drift state and every event seen.
+const slideScript = (mode, script) => {
+  const drift = createDriftState();
+  let presses = 1;
+  const seen = [];
+  const tick = (held, stick) => {
+    const events = updateDriftFeel(drift, { dt: DT, held, mode, presses, speed: 200, steer: stick, stick });
+    seen.push(events);
+  };
+  // Press, hop, land steering right: the slide starts.
+  for (let t = 0; t < DRIFT_FEEL.hopDuration + 0.05; t += DT) tick(true, 1);
+  for (const [seconds, { held = true, stick = 1, press = false }] of script) {
+    if (press) presses += 1;
+    for (let t = 0; t < seconds - 1e-9; t += DT) tick(held, stick);
+  }
+  return { drift, seen };
+};
+const any = (seen, key) => seen.some((events) => events[key]);
+{
+  const rocked = slideScript('rock', [
+    [ROCK_TURBO.firstHold + 0.05, { stick: -1 }],
+    [0.1, { stick: 1 }],
+    [ROCK_TURBO.nextHold + 0.05, { stick: -1 }],
+    [0.1, { stick: 1 }],
+  ]);
+  check(rocked.drift.active && rocked.drift.stage === 2 && rocked.drift.tier === 2, 'Classic 64: two rocks turn the sparks amber', `stage ${rocked.drift.stage}`);
+  const paid = slideScript('rock', [
+    [ROCK_TURBO.firstHold + 0.05, { stick: -1 }],
+    [0.1, { stick: 1 }],
+    [ROCK_TURBO.nextHold + 0.05, { stick: -1 }],
+    [0.1, { stick: 1 }],
+    [0.05, { held: false }],
+  ]);
+  const release = paid.seen.find((events) => events.released);
+  check(
+    release?.released === 2 && release.kick === ROCK_TURBO.boostKick && paid.drift.miniTurboTimer > 0,
+    'Classic 64: letting go then pays one boost',
+    `kick ${release?.kick}`
+  );
+  const short = slideScript('rock', [
+    [ROCK_TURBO.firstHold - 0.1, { stick: -1 }],
+    [0.1, { stick: 1 }],
+  ]);
+  check(short.drift.stage === 0, 'Classic 64: a first push shorter than the hold does not count');
+  const lazy = slideScript('rock', [[2, { stick: 0 }], [0.05, { held: false }]]);
+  check(!any(lazy.seen, 'released'), 'Classic 64: holding a slide without rocking pays nothing');
+  const over = slideScript('rock', [
+    [ROCK_TURBO.firstHold + 0.05, { stick: -1 }],
+    [0.1, { stick: 1 }],
+    [ROCK_TURBO.overHold + 0.05, { stick: -1 }],
+  ]);
+  check(over.drift.stage === 0, 'Classic 64: holding the stick out too long throws the charge away');
+}
+{
+  const hot = TAP_TURBO.fillTime * TAP_TURBO.hotFrom;
+  const early = slideScript('tap', [[hot * 0.5, {}], [0.02, { press: true }]]);
+  check(any(early.seen, 'tapEarly') && !any(early.seen, 'tapBoost'), 'Classic Mix: an early press pays nothing');
+  const good = slideScript('tap', [[hot + 0.05, {}], [0.02, { press: true }]]);
+  const boost = good.seen.find((events) => events.tapBoost);
+  check(boost?.tapBoost === 1 && boost.kick === TAP_TURBO.boostKicks[0] && good.drift.active, 'Classic Mix: a press in the hot zone boosts on the spot, mid-slide');
+  const chain = slideScript('tap', [
+    [hot + 0.05, {}],
+    [0.05, { held: false }],
+    [hot, { press: true }],
+    [0.05, { held: false }],
+    [hot, { press: true }],
+    [0.05, { held: false }],
+    [hot, { press: true }],
+    [hot + 0.1, { press: true }],
+  ]);
+  const tiers = chain.seen.filter((events) => events.tapBoost).map((events) => events.tapBoost);
+  check(tiers.join(',') === '1,2,3' && chain.drift.active, 'Classic Mix: pumped presses chain three bigger boosts, then stop', `tiers ${tiers.join(',') || 'none'}`);
+  const backfire = slideScript('tap', [[TAP_TURBO.fillTime + TAP_TURBO.backfireAfter + 0.1, {}]]);
+  const fired = backfire.seen.find((events) => events.backfire);
+  check(fired?.kick === -TAP_TURBO.backfireLoss, 'Classic Mix: leaving the meter full backfires');
+  const ended = slideScript('tap', [[0.3, {}], [TAP_TURBO.pumpGrace + 0.05, { held: false }]]);
+  check(!ended.drift.active, 'Classic Mix: letting go for longer than a pump ends the slide');
+}
+{
+  // Assisted is untouched: time held still banks the tier and pays on release.
+  const held = slideScript('hold', [[DRIFT_FEEL.chargeTimes[1] + 0.05, {}], [0.02, { held: false }]]);
+  const release = held.seen.find((events) => events.released);
+  check(release?.released === 2 && release.kick === DRIFT_FEEL.boostKick[1], 'Assisted: the time-held charge is unchanged');
 }
 
 // --- 2. every track -------------------------------------------------------------
@@ -257,12 +366,16 @@ for (const trackDef of tracks) {
   );
   check(best.laps.length === 2, 'the Classic autoplay finishes two laps');
   check(best.rescues === 0, 'without ever being rescued');
-  const blind = drive(trackDef, noSteer, { laps: 1, seconds: 90 });
+  // Same minute for both: a kart that never steers must cover far less road.
+  // (On rails it lost only 6-13 s a lap.)
+  const minute = drive(trackDef, autoplay, { laps: 99, seconds: 60 });
+  const blind = drive(trackDef, noSteer, { laps: 99, seconds: 60 });
+  const share = blind.distance / Math.max(1, minute.distance);
   process.stdout.write(
-    `  never steering: ${blind.laps.length ? `finished in ${blind.laps[0].toFixed(1)}s` : 'no lap in 90 s'}, ` +
-      `${((blind.distance / blind.length) * 100).toFixed(0)}% of a lap, wall hits ${blind.hits}\n`
+    `  never steering: ${((blind.distance / blind.length) * 100).toFixed(0)}% of a lap in 60 s ` +
+      `(the autoplay: ${((minute.distance / minute.length) * 100).toFixed(0)}%), wall hits ${blind.hits}\n`
   );
-  check(blind.laps.length === 0, 'a kart that never steers cannot finish a lap');
+  check(share < 0.7, 'a kart that never steers covers under 70% of the road the autoplay does', `${(share * 100).toFixed(0)}%`);
   if (VERBOSE) process.stdout.write(`  ${JSON.stringify({ best, blind })}\n`);
 }
 
