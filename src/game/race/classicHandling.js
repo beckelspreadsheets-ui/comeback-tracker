@@ -126,6 +126,23 @@ export const CLASSIC = Object.freeze({
   wallHitImpact: 0.2,
   wallHitSpeed: 30,
   wallStun: 0.18,
+
+  // --- mistakes --------------------------------------------------------------
+  // A spin-out keeps 35% of your speed, lasts 1.4 s and never drops you below a
+  // crawl: ~2.1 s lost at top speed, against Assisted's ~1.3 s (x0.5, 0.95 s,
+  // floor 46). Measured in scratch sims against classicSpeedStep.
+  spinDuration: 1.4,
+  spinSpeedScale: 0.35,
+  spinFloor: 25,
+  // No kart contact for this long after a spin (Assisted: 2.4 s).
+  contactImmunity: 1.2,
+  // MK64's banana, on our fish bone: running over one wobbles you first, and
+  // touching the brake before the wobble runs out saves the spin for a small
+  // speed cost. Steering hard when you hit it (past slipHardSteer) means no
+  // wobble, straight into the spin.
+  slipWobble: 0.55,
+  slipSaveSpeedScale: 0.85,
+  slipHardSteer: 0.6,
 });
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -329,6 +346,9 @@ export const createClassicState = () => ({
   // Mini-turbos banked and Classic Mix backfires, for telemetry and probes.
   turbos: 0,
   backfires: 0,
+  // Seconds left in a fish-bone wobble (brake to save); saves made.
+  slipTimer: 0,
+  saves: 0,
 });
 
 // The barrier's inner face, in world units from the centreline, by progress —
@@ -354,4 +374,17 @@ export const makeBarrierOffsetLookup = (frames) => {
     const span = progress[hi] - progress[lo];
     return span > 0 ? offset[lo] + ((offset[hi] - offset[lo]) * (q - progress[lo])) / span : offset[lo];
   };
+};
+
+// One frame of the fish-bone wobble on race.classic. Returns 'saved' when the
+// brake catches it, 'spin' when the wobble runs out, else null.
+export const classicSlipStep = (classic, { dt = 0, brake = false } = {}) => {
+  if (!(classic.slipTimer > 0)) return null;
+  classic.slipTimer = Math.max(0, classic.slipTimer - dt);
+  if (brake) {
+    classic.slipTimer = 0;
+    classic.saves += 1;
+    return 'saved';
+  }
+  return classic.slipTimer <= 0 ? 'spin' : null;
 };

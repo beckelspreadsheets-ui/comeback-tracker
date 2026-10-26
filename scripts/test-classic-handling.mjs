@@ -21,12 +21,15 @@ import { createDriftState, updateDriftFeel, DRIFT_FEEL, ROCK_TURBO, TAP_TURBO } 
 import { classicAutoplayInput } from '../src/game/race/autoplayDriver.js';
 import {
   CLASSIC,
+  classicSlipStep,
   classicSpeedStep,
   classicSurfaceAt,
   classicWallStep,
+  createClassicState,
   stepClassicBody,
 } from '../src/game/race/classicHandling.js';
 import { roadEdgeSection } from '../src/game/race/render/buildRoadEdgeProfile.js';
+import { rocketStartResult, rocketStartReward } from '../src/game/race/rocketStart.js';
 import { KART_TRACKS, PREVIEW_TRACKS } from '../src/game/race/tracks/index.js';
 
 const VERBOSE = process.argv.includes('--verbose');
@@ -232,6 +235,74 @@ const any = (seen, key) => seen.some((events) => events[key]);
   const held = slideScript('hold', [[DRIFT_FEEL.chargeTimes[1] + 0.05, {}], [0.02, { held: false }]]);
   const release = held.seen.find((events) => events.released);
   check(release?.released === 2 && release.kick === DRIFT_FEEL.boostKick[1], 'Assisted: the time-held charge is unchanged');
+}
+
+// --- 1c. the rocket start --------------------------------------------------------
+process.stdout.write('\nRocket start\n');
+{
+  const classic = { classic: true };
+  check(rocketStartResult(1.6) === 'perfect' && rocketStartResult(0.8) === 'good' && rocketStartResult(2.6) === 'flooded', 'Assisted keeps its windows: "2" perfect, later good, "3" floods');
+  check(rocketStartResult(0.2, classic) === 'perfect', 'Classic: a fresh press in the last 0.25 s is perfect');
+  check(rocketStartResult(0.6, classic) === null && rocketStartResult(1.6, classic) === 'flooded', 'Classic: earlier is nothing, held from over a second out floods');
+  // What a start is worth over the first 8 s: the reward used to be a higher
+  // cap only, which a kart starting from 0 never reaches (worth +0.00 s).
+  const gained = (result, opts) => {
+    const reward = rocketStartReward(result, opts);
+    const run = (r) => {
+      let v = r.kick;
+      let boost = r.boost;
+      let spin = r.spin;
+      let d = 0;
+      for (let t = 0; t < 8; t += DT) {
+        v = classicSpeedStep(v, { boostTop: BOOST_TOP, boosting: boost > 0, dt: DT, spinning: spin > 0, throttle: true, top: TOP });
+        boost = Math.max(0, boost - DT);
+        spin = Math.max(0, spin - DT);
+        d += v * DT;
+      }
+      return d;
+    };
+    return (run(reward) - run({ boost: 0, kick: 0, spin: 0 })) / TOP;
+  };
+  const perfect = gained('perfect', classic);
+  const flooded = gained('flooded', classic);
+  check(perfect > 0.4, 'a perfect Classic start is worth real time now', `+${perfect.toFixed(2)} s`);
+  check(flooded < -1, 'a Classic flood costs over a second', `${flooded.toFixed(2)} s`);
+  check(rocketStartReward('perfect').kick > 0, 'Assisted perfect starts launch too (the cap-only reward was worth nothing)');
+}
+
+// --- 1d. mistakes -------------------------------------------------------------------
+process.stdout.write('\nMistakes\n');
+{
+  // Time lost to one spin-out from top speed, over 8 s.
+  const lost = (keep, spinFor, floor, model) => {
+    let v = TOP * keep;
+    let spin = spinFor;
+    let d = 0;
+    for (let t = 0; t < 8; t += DT) {
+      const spinning = spin > 0;
+      v = model === 'classic'
+        ? classicSpeedStep(v, { dt: DT, spinning, throttle: true, top: TOP })
+        : Math.min(TOP, Math.max(0, v + (spinning ? -150 : 118) * DT));
+      if (spinning) v = Math.max(floor, v);
+      spin = Math.max(0, spin - DT);
+      d += v * DT;
+    }
+    return 8 - d / TOP;
+  };
+  const assisted = lost(0.5, 0.95, 46, 'assisted');
+  const classic = lost(CLASSIC.spinSpeedScale, CLASSIC.spinDuration, CLASSIC.spinFloor, 'classic');
+  check(classic > assisted + 0.5 && classic < 2.6, 'a Classic spin-out costs ~2 s (Assisted ~1.3 s)', `${classic.toFixed(2)} s vs ${assisted.toFixed(2)} s`);
+  const state = createClassicState();
+  state.slipTimer = CLASSIC.slipWobble;
+  let result = null;
+  for (let t = 0; t < 0.2 && !result; t += DT) result = classicSlipStep(state, { dt: DT });
+  result = classicSlipStep(state, { brake: true, dt: DT });
+  check(result === 'saved' && state.saves === 1, 'a fish-bone wobble caught with the brake is saved');
+  const late = createClassicState();
+  late.slipTimer = CLASSIC.slipWobble;
+  let outcome = null;
+  for (let t = 0; t < 1 && !outcome; t += DT) outcome = classicSlipStep(late, { dt: DT });
+  check(outcome === 'spin', 'one left to run out spins you');
 }
 
 // --- 2. every track -------------------------------------------------------------

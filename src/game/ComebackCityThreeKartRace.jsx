@@ -92,6 +92,7 @@ import { createFreeBody, stepFreeBody } from './race/freeBodyKart.js';
 import { autoplayApexLane, classicAutoplayInput, freeBodyAutoplayInput } from './race/autoplayDriver.js';
 import {
   CLASSIC,
+  classicSlipStep,
   classicSpeedStep,
   classicSurfaceAt,
   classicWallStep,
@@ -102,6 +103,7 @@ import {
   stepClassicBody,
 } from './race/classicHandling.js';
 import { readHandlingMode } from './race/handlingMode.js';
+import { rocketStartResult, rocketStartReward } from './race/rocketStart.js';
 import { createMinimap, minimapPointAt } from './race/raceMinimap.js';
 import { RaceCoach } from './race/RaceCoach.jsx';
 import {
@@ -876,28 +878,9 @@ const VISUAL_ASSET_SET = 'comeback-city-v2-three-runtime';
 const startProgressFor = (trackDef) =>
   wrap01((trackDef.course.startProgress || 0) + (trackDef.startOffset || 0));
 
-// Rocket start windows, in countdown seconds remaining at the press. Pressing
-// between ~1.9 and 1.3 (just after "2" appears) is perfect; anything held
-// from before GO but later than that is a smaller boost; pressing while "3" is
-// still fresh floods the engine. Autoplay never holds gas early, so the gate
-// runs are unchanged.
-const ROCKET_START = Object.freeze({
-  floodBefore: 2.45,
-  floodSpin: 0.7,
-  goodBoost: 0.7,
-  goodFrom: 1.3,
-  goodTo: 0.35,
-  perfectBoost: 1.3,
-  perfectFrom: 1.9,
-});
-const rocketStartResult = (pressAt) => {
-  if (pressAt == null) return null;
-  if (pressAt > ROCKET_START.floodBefore) return 'flooded';
-  if (pressAt <= ROCKET_START.perfectFrom && pressAt > ROCKET_START.goodFrom) return 'perfect';
-  if (pressAt <= ROCKET_START.goodFrom && pressAt >= ROCKET_START.goodTo) return 'good';
-  if (pressAt > ROCKET_START.perfectFrom) return 'early';
-  return null;
-};
+// Rocket start windows and rewards live in race/rocketStart.js (Assisted's
+// "press on the 2" window, Classic's last-moment press). Autoplay never holds
+// gas early, so the gate runs are unchanged.
 
 // How long the item slot spins before the pick lands. MK8 is ~1.3 s at
 // 60 fps; a touch shorter suits 45 s laps with seven boxes each.
@@ -10072,6 +10055,7 @@ const publishTelemetry = (
     classicWallHits: race.classic ? race.classic.wallHits : 0,
     classicTurbos: race.classic ? race.classic.turbos : 0,
     classicBackfires: race.classic ? race.classic.backfires : 0,
+    classicSaves: race.classic ? race.classic.saves : 0,
     rivalCount: race.rivals.length,
     rivalPositions: rivalPositionsOf(playerTotalOf(race), race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
@@ -11082,6 +11066,15 @@ export const ComebackCityThreeKartRace = ({
       return { avalancheBy: null, playerBump: null, playerNudgeLane: null, playerSpin: false };
     };
 
+    // Every way the player gets spun out (items, crossers, the march, kart
+    // contact) lands here, so Classic's costlier spin applies to all of them.
+    const spinOutPlayer = (speedScale) => {
+      const classic = race.classic;
+      race.spinTimer = classic ? CLASSIC.spinDuration : ITEM_FEEL.spinDuration;
+      race.bumpCooldown = classic ? CLASSIC.contactImmunity : KART_CONTACT.spinCooldown;
+      race.spinOuts += 1;
+      race.speed *= classic ? Math.min(speedScale, CLASSIC.spinSpeedScale) : speedScale;
+    };
     const restartRace = () => {
       // trackDef, not the default: without it a Penguin Village restart
       // rebuilt Comeback City's grid (start offset) and dropped PV's crosser.
@@ -11554,21 +11547,28 @@ export const ComebackCityThreeKartRace = ({
         const countdownBefore = race.countdown;
         race.countdown = Math.max(0, race.countdown - dt);
         if (countdownBefore > 0) {
-          // ROCKET START. Gas on keyboard/pad; the drift button on touch,
-          // where throttle is automatic. Press on the "2" beat and hold to GO
-          // for a boost; mash during "3" and the engine floods. Releasing
-          // re-arms, so a nervous early tap can still be corrected.
+          // ROCKET START (race/rocketStart.js). Gas on keyboard/pad; the drift
+          // button on touch, where throttle is automatic. Assisted: press on
+          // the "2" beat and hold to GO; mash during "3" and the engine floods.
+          // Classic: one fresh press in the last 0.25 s before GO; holding from
+          // more than a second out floods. Releasing re-arms, so a nervous
+          // early tap can still be corrected.
           const rocketHeld = !autoplay && (input.autoThrottle ? Boolean(input.drift) : Boolean(input.throttle));
           if (!rocketHeld) race.rocketPressAt = null;
           else if (race.rocketPressAt == null) race.rocketPressAt = countdownBefore;
           if (race.countdown <= 0) {
             const pressAt = race.rocketPressAt;
-            race.rocketStart = rocketStartResult(pressAt);
-            if (race.rocketStart === 'perfect' || race.rocketStart === 'good') {
-              race.boostTimer = race.rocketStart === 'perfect' ? ROCKET_START.perfectBoost : ROCKET_START.goodBoost;
+            const classicStart = { classic: Boolean(race.classic) };
+            race.rocketStart = rocketStartResult(pressAt, classicStart);
+            const reward = rocketStartReward(race.rocketStart, classicStart);
+            if (reward.boost > 0) {
+              // A launch, not just a higher cap: the cap alone did nothing from
+              // a standstill (see rocketStart.js).
+              race.boostTimer = reward.boost;
+              race.speed = Math.min(BOOST_SPEED, race.speed + reward.kick);
               race.boostHits += 1;
-            } else if (race.rocketStart === 'flooded') {
-              race.spinTimer = ROCKET_START.floodSpin;
+            } else if (reward.spin > 0) {
+              race.spinTimer = reward.spin;
             }
           }
         }
@@ -11869,7 +11869,7 @@ export const ComebackCityThreeKartRace = ({
             // you dead.
             if (offRoad) race.speed = Math.max(0, race.speed - 150 * dt);
           }
-          if (spinning) race.speed = Math.max(46, race.speed);
+          if (spinning) race.speed = Math.max(race.classic ? CLASSIC.spinFloor : 46, race.speed);
           // Blizzard fog caps grounded karts — yours included. Fly over it,
           // steer around it, or plow through it with an aurora.
           if (
@@ -12217,10 +12217,7 @@ export const ComebackCityThreeKartRace = ({
               race.shieldActive = false;
               race.shieldTimer = 0;
             } else {
-              race.spinTimer = ITEM_FEEL.spinDuration;
-              race.bumpCooldown = KART_CONTACT.spinCooldown;
-              race.spinOuts += 1;
-              race.speed *= 0.45;
+              spinOutPlayer(0.45);
             }
           }
           // K4: crosser hazards — advance the pure sim, drive the rigs, and
@@ -12257,10 +12254,7 @@ export const ComebackCityThreeKartRace = ({
                 race.shieldTimer = 0;
                 race.crosserGraceTimer = 1.2;
               } else {
-                race.spinTimer = ITEM_FEEL.spinDuration;
-                race.bumpCooldown = KART_CONTACT.spinCooldown;
-                race.spinOuts += 1;
-                race.speed *= 0.45;
+                spinOutPlayer(0.45);
                 race.crosserGraceTimer = 1.6;
               }
             }
@@ -12282,12 +12276,19 @@ export const ComebackCityThreeKartRace = ({
                 race.shieldActive = false;
                 race.shieldTimer = 0;
               } else {
-                race.spinTimer = ITEM_FEEL.spinDuration;
-                race.bumpCooldown = KART_CONTACT.spinCooldown;
-                race.spinOuts += 1;
-                race.speed *= 0.5;
+                spinOutPlayer(0.5);
               }
             }
+          }
+          // Classic's fish-bone wobble: brake before it runs out and you keep
+          // it on the road; let it run out and you spin.
+          const slip = race.classic ? classicSlipStep(race.classic, { brake: Boolean(brake), dt }) : null;
+          if (slip === 'saved') race.speed *= CLASSIC.slipSaveSpeedScale;
+          else if (slip === 'spin' && !spinning) {
+            spinOutPlayer(0.5);
+            driftState.active = false;
+            driftState.charge = 0;
+            driftState.tier = 0;
           }
           if (!airState.airborne && !spinning) {
             const fishBoneHit = fishBoneHitFor(race.fishBones, 'player', race.progress, race.lane, engine.sampler.length);
@@ -12295,11 +12296,12 @@ export const ComebackCityThreeKartRace = ({
               if (race.shieldActive) {
                 race.shieldActive = false;
                 race.shieldTimer = 0;
+              } else if (race.classic && Math.abs(race.steer) <= CLASSIC.slipHardSteer) {
+                // Classic: the wobble first, the spin only if you do not brake.
+                race.classic.slipTimer = CLASSIC.slipWobble;
+                race.wobbleTimer = KART_CONTACT.wobbleDuration;
               } else {
-                race.spinTimer = ITEM_FEEL.spinDuration;
-                race.bumpCooldown = KART_CONTACT.spinCooldown;
-                race.spinOuts += 1;
-                race.speed *= 0.5;
+                spinOutPlayer(0.5);
                 driftState.active = false;
                 driftState.charge = 0;
                 driftState.tier = 0;
@@ -12476,10 +12478,7 @@ export const ComebackCityThreeKartRace = ({
             !race.shortcut.active &&
             !race.shieldActive
           ) {
-            race.spinTimer = ITEM_FEEL.spinDuration;
-            race.bumpCooldown = KART_CONTACT.spinCooldown;
-            race.spinOuts += 1;
-            race.speed *= KART_CONTACT.spinSpeedScale;
+            spinOutPlayer(KART_CONTACT.spinSpeedScale);
             race.driftState.active = false;
             race.driftState.charge = 0;
             race.driftState.tier = 0;

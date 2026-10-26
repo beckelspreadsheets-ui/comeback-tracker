@@ -125,11 +125,27 @@ or a flick on the steering thumb) and steer, and the kart hops into a slide.
 
 The demo driver slides in both and taps on amber in Mix; it does not rock.
 
+## Step 3: a rocket start that works (race/rocketStart.js)
+
+The reward was a bug on every handling: a good start only raised the speed
+CAP for a moment, which a kart starting from 0 never reaches, so a perfect
+start finished level with a lazy one (+0.00 s in a sim). Now it launches: an
+instant kick plus the boost window, worth ~0.6 s.
+
+- **Assisted** keeps its windows (press on the "2" for perfect, later for good,
+  mashing on "3" floods 0.7 s) and gains the kick (+90 perfect, +45 good). The
+  only Assisted change on this branch, and it is a bug fix.
+- **Classic** (both versions): MK64's rule in our numbers. One fresh press in
+  the last 0.25 s before GO, held through GO, is perfect (+95 kick, 1.1 s boost;
+  +0.64 s). Holding the gas from more than a second out floods for 1.4 s
+  (-1.4 s). No "good" start. How-to-Race still teaches Assisted's timing until
+  the Handling switch (step 7) makes the guide handling-aware.
+
 ## Next steps (one commit each)
 
 1. ~~Free steering: the Classic model, walls, run-off, power slide.~~
 2. ~~Mini-turbos: `mk64` = stick rocks; `mix` = CTR timed taps (both phones and pads).~~
-3. Rocket start that works (both versions) — the reward bug is in Assisted too.
+3. ~~Rocket start that works (both versions) — the reward bug is in Assisted too.~~
 4. Mistakes: costlier hits, shorter immunity, banana brake-save.
 5. Rivals: player speed by class (MK64 ratios), rubber band that pushes back.
 6. `mix` extras: hits drop coins, timed ramp tricks, hang-time boosts.
