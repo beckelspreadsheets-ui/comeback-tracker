@@ -166,6 +166,26 @@ From the owner's picks off the decomp list (Classic 64 has none of these):
 Real race, Classic Mix autoplay, Comeback City, 70 s: 4 tap boosts, 0
 backfires, 2 hang-time boosts, 1 timed trick, no errors.
 
+## Step 7: the Handling switch
+
+The setup screen has a **Handling** row under the class picker: Assisted /
+Classic 64 / Classic Mix. It is saved on Start (`cc-kart-handling`), passed to
+the race as a prop, and a `?handling=` link seeds it once (stripped from the
+URL like `?track=`). The race resolves URL > pick > saved > Assisted, once per
+mount. How to Race follows the pick: a rules card for the chosen Classic
+version on top, and its drift, rocket-start and trick lines (touch and
+keyboard) swap to that version's. The first-race coach's "let go" prompt does
+too (Classic 64: out and back in, then let go; Classic Mix: press again on
+the amber flash).
+
+## Preview
+
+Its own Pages alias, so the owner's shared link and aaa-preview stay put:
+**https://classic-handling.comeback-city-kart.pages.dev** (first deploy
+4032fe4b, steps 1-6: `?handling=mk64` / `?handling=mix`). Every deploy is
+checked under each handling: `VERIFY_QUERY='&handling=mk64' node
+scripts/verify-preview-deploy.mjs <unique url>` (and mix, and none).
+
 ## Next steps (one commit each)
 
 1. ~~Free steering: the Classic model, walls, run-off, power slide.~~
@@ -174,8 +194,8 @@ backfires, 2 hang-time boosts, 1 timed trick, no errors.
 4. ~~Mistakes: costlier hits, shorter immunity, banana brake-save.~~
 5. Rivals: player speed by class (MK64 ratios), rubber band that pushes back.
 6. ~~`mix` extras: hits drop coins, timed ramp tricks, hang-time boosts.~~
-7. The Handling switch on the setup screen (saved per device), and first-race
-   coaching that teaches the chosen handling's mini-turbo.
+7. ~~The Handling switch on the setup screen (saved per device), and first-race
+   coaching that teaches the chosen handling's mini-turbo.~~
 
 Preview deploys of this branch go to their own Pages alias
 (`classic-handling`), never to aaa-preview or production.

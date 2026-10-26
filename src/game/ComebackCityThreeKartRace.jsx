@@ -10148,6 +10148,9 @@ export const ComebackCityThreeKartRace = ({
   // Mirror mode: the picture flips left-to-right and the player's steering
   // inverts; the simulation does not change (race/mirrorMode.js).
   mirror = false,
+  // Handling picked on the setup screen ('assisted' | 'mk64' | 'mix'); a
+  // ?handling= in the URL still wins (race/handlingMode.js).
+  handling = null,
   onExit = null,
   onFinish = null,
   onNextTrack = null,
@@ -10174,6 +10177,12 @@ export const ComebackCityThreeKartRace = ({
   // per run, so it never changes mid-race anyway).
   const mirrorRef = useRef(Boolean(mirror));
   mirrorRef.current = Boolean(mirror);
+  // Resolved once per mount (URL, then the setup screen's pick, then the
+  // saved choice); the engine seats the race with it and the coach words its
+  // tips for it.
+  const resolvedHandling = useMemo(() => readHandlingMode({ preferred: handling }), [handling]);
+  const resolvedHandlingRef = useRef(resolvedHandling);
+  resolvedHandlingRef.current = resolvedHandling;
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
   const [paused, setPausedState] = useState(false);
@@ -10703,7 +10712,7 @@ export const ComebackCityThreeKartRace = ({
     // Classic handling (?handling=mk64|mix) drives the same free body with its
     // own model (race/classicHandling.js). restartRace rebuilds the race state,
     // which nulls both, so this runs again there.
-    const handlingMode = readHandlingMode();
+    const handlingMode = resolvedHandlingRef.current;
     const freeBodyFlag = new URLSearchParams(window.location.search).get('freebody') === '1';
     const seatHandling = () => {
       race.handling = handlingMode;
@@ -14801,6 +14810,7 @@ export const ComebackCityThreeKartRace = ({
           under autoplay or webdriver unless ?coach=1. */}
       <RaceCoach
         autoplay={autoplay}
+        handling={resolvedHandling}
         engineRef={engineRef}
         ItemIcon={HeldItemIcon}
         projectileSkin={playerCharacter.projectileSkin}

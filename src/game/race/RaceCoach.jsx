@@ -50,8 +50,8 @@ const readGate = (autoplay) => {
 const sameView = (a, b) =>
   a === b || (a && b && a.id === b.id && a.key === b.key && a.scheme === b.scheme && a.heldItem === b.heldItem);
 
-const CoachPlate = ({ ItemIcon, leaving = false, projectileSkin, view }) => {
-  const message = coachMessage(view.id, view.scheme, { heldItem: view.heldItem, projectileSkin });
+const CoachPlate = ({ handling = 'assisted', ItemIcon, leaving = false, projectileSkin, view }) => {
+  const message = coachMessage(view.id, view.scheme, { handling, heldItem: view.heldItem, projectileSkin });
   if (!message) return null;
   const glyph =
     view.id === 'item' && ItemIcon && view.heldItem ? (
@@ -94,6 +94,7 @@ const CoachPlate = ({ ItemIcon, leaving = false, projectileSkin, view }) => {
 };
 
 export const RaceCoach = ({
+  handling = 'assisted',
   autoplay = false,
   engineRef = null,
   ItemIcon = null,
@@ -220,10 +221,10 @@ export const RaceCoach = ({
       role="status"
     >
       {leaving && !(view && view.id === leaving.id && view.key === leaving.key) ? (
-        <CoachPlate ItemIcon={ItemIcon} key={`out-${leaving.id}-${leaving.key}`} leaving projectileSkin={projectileSkin} view={leaving} />
+        <CoachPlate handling={handling} ItemIcon={ItemIcon} key={`out-${leaving.id}-${leaving.key}`} leaving projectileSkin={projectileSkin} view={leaving} />
       ) : null}
       {view ? (
-        <CoachPlate ItemIcon={ItemIcon} key={`in-${view.id}-${view.key}`} projectileSkin={projectileSkin} view={view} />
+        <CoachPlate handling={handling} ItemIcon={ItemIcon} key={`in-${view.id}-${view.key}`} projectileSkin={projectileSkin} view={view} />
       ) : null}
     </div>
   );

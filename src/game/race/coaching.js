@@ -179,7 +179,7 @@ const message = (parts) => ({
 });
 
 // parts: strings, plus { key } for a key-cap the component styles.
-export const coachMessage = (id, scheme, { heldItem = null, projectileSkin = null } = {}) => {
+export const coachMessage = (id, scheme, { handling = 'assisted', heldItem = null, projectileSkin = null } = {}) => {
   const buttons = BUTTONS[scheme] || BUTTONS.keyboard;
   if (id === 'drift') {
     return scheme === 'touch'
@@ -187,6 +187,13 @@ export const coachMessage = (id, scheme, { heldItem = null, projectileSkin = nul
       : message(['Hold ', { key: buttons.drift }, ' to drift']);
   }
   if (id === 'release') {
+    // Classic earns the boost differently (driftFeel.js ROCK_TURBO / TAP_TURBO).
+    if (handling === 'mk64') {
+      return message([scheme === 'touch' ? 'Slide out of the turn and back in, then lift!' : 'Steer out and back in twice, then let go!']);
+    }
+    if (handling === 'mix') {
+      return message(scheme === 'touch' ? ['Tap Drift when the sparks flash amber!'] : ['Press ', { key: buttons.drift }, ' again on the amber flash!']);
+    }
     return message([scheme === 'touch' ? 'Lift your thumb to boost!' : 'Let go to boost!']);
   }
   if (id === 'item') {

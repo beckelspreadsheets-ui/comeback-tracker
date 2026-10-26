@@ -21,6 +21,7 @@ import {
 } from '../game/ComebackCityThreeKartRace.jsx';
 import { ALL_TRACKS, DEFAULT_TRACK_KEY, KART_TRACKS, PREVIEW_TRACKS, isKnownTrackKey } from '../game/race/tracks/index.js';
 import { DEFAULT_RACE_CLASS, QA_RACE_CLASS, RACE_CLASSES } from '../game/race/raceClasses.js';
+import { HANDLING_OPTIONS, readHandlingMode, saveHandlingMode } from '../game/race/handlingMode.js';
 import {
   migrateLegacyRaceResultsOnce,
   readRaceResults,
@@ -279,6 +280,46 @@ const TouchTip = ({ chips, children }) => (
 // wherever the thumb lands (±64px = full lock), a fast sideways flick during
 // a drag holds drift until the thumb lifts, and a tap under 220ms / 12px
 // fires the item.
+// How to Race, for the two Classic handlings (docs/CLASSIC_HANDLING.md). The
+// guide's drift, rocket-start and trick lines swap to these; Assisted keeps
+// the originals.
+const CLASSIC_GUIDE = {
+  mk64: {
+    flick:
+      'Into a corner, flick toward the turn and keep your thumb down. Slide it out of the turn and back in, twice, until the sparks turn amber; lift to fire the boost.',
+    keyDrift: 'In the drift, tap the arrow out of the turn and back in, twice. Amber sparks: let go for the boost.',
+    keyRocket: 'Rocket start: press gas in the last moment before GO and hold it. Hold it early and the engine floods.',
+    name: 'Classic 64',
+    rules: [
+      'You aim the kart. The road no longer carries it round the bends.',
+      'Full lock at speed slides wide and costs speed, so ease it in.',
+      'The barrier bounces you back, and the strip past the kerb is slow.',
+      'Boost: in a drift, push out of the turn and back in, twice. Amber sparks: let go.',
+      'Rocket start: press in the last moment before GO. Too early floods the engine.',
+      'Hit a fish bone? Tap the brake while you wobble to save the spin.',
+    ],
+    touchRocket: 'Rocket start: hold Drift in the last moment before GO. Hold it early and the engine floods.',
+  },
+  mix: {
+    flick:
+      'Into a corner, flick toward the turn and keep your thumb down. Each time the sparks flash amber, tap the Drift button for a boost, up to three a drift.',
+    keyDrift: 'In the drift, each time the sparks flash amber let go of SPACE and press it again: up to three boosts, each bigger.',
+    keyRocket: 'Rocket start: press gas in the last moment before GO and hold it. Hold it early and the engine floods.',
+    keyTrick: 'Press SPACE as you leave a ramp for a trick, and keep it held to the landing for a hang-time boost.',
+    name: 'Classic Mix',
+    rules: [
+      'Classic driving: you aim the kart, walls bounce you back, the run-off is slow.',
+      'Boost: in a drift, press Drift again each time the sparks flash amber, up to three, each bigger. Too early wastes it; too late and it backfires.',
+      'Tricks only count if you press as you leave the ramp. Keep Drift held to the landing for a hang-time boost.',
+      'Getting hit spills three coins, and coins are top speed.',
+      'Rocket start: press in the last moment before GO.',
+      'Hit a fish bone? Tap the brake while you wobble to save the spin.',
+    ],
+    touchRocket: 'Rocket start: hold Drift in the last moment before GO. Hold it early and the engine floods.',
+    touchTrick: 'Tap Drift as you leave a ramp for a trick, and keep it held to the landing for a hang-time boost.',
+  },
+};
+
 const TOUCH_GESTURES = [
   {
     kind: 'drag',
@@ -304,106 +345,133 @@ const TOUCH_GESTURES = [
 
 // raceTips: the two control-free tips that otherwise live only in the keyboard
 // cards — needed when those sit behind the disclosure.
-const TouchControlsCard = ({ note, raceTips }) => (
-  <GuideCard data-testid="race-touch-guide" note={note} title="Touch controls">
-    <p className="text-[13px] leading-relaxed text-white/75">
-      Your kart accelerates by itself. Steer, drift and throw with one thumb on the left of the screen.
-    </p>
-    <ul className="mt-4 grid gap-4 sm:grid-cols-3">
-      {TOUCH_GESTURES.map((gesture) => (
-        <li className="flex items-center gap-4 sm:flex-col sm:items-stretch sm:gap-3" key={gesture.kind}>
-          <span className="h-[76px] w-[108px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/30 sm:h-24 sm:w-full [@media(max-height:500px)]:h-20">
-            <GestureArt kind={gesture.kind} />
-          </span>
-          <span className="min-w-0">
-            <span className="block font-mono text-[13px] font-black uppercase tracking-[0.08em] text-white">
-              {gesture.title}
+const TouchControlsCard = ({ handling = 'assisted', note, raceTips }) => {
+  const tips = CLASSIC_GUIDE[handling] || null;
+  return (
+    <GuideCard data-testid="race-touch-guide" note={note} title="Touch controls">
+      <p className="text-[13px] leading-relaxed text-white/75">
+        Your kart accelerates by itself. Steer, drift and throw with one thumb on the left of the screen.
+      </p>
+      <ul className="mt-4 grid gap-4 sm:grid-cols-3">
+        {TOUCH_GESTURES.map((gesture) => (
+          <li className="flex items-center gap-4 sm:flex-col sm:items-stretch sm:gap-3" key={gesture.kind}>
+            <span className="h-[76px] w-[108px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/30 sm:h-24 sm:w-full [@media(max-height:500px)]:h-20">
+              <GestureArt kind={gesture.kind} />
             </span>
-            <span className="mt-1 block text-[13px] leading-snug text-white/75">{gesture.text}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
-    <div className="mt-5 border-t border-white/10 pt-4">
-      <div className={EYEBROW}>Buttons &amp; extras</div>
-      <ul className="mt-3 grid gap-x-6 gap-y-3 text-[13px] leading-snug text-white/75 md:grid-cols-2">
-        <TouchTip chips={<><DriftChip /><ItemChip /></>}>
-          Prefer buttons? Hold <Em>Drift</Em> through a corner and let go to boost, or tap <Em>Item</Em> to throw. The
-          red <span className="font-semibold text-[#ff8f8f]">↓</span> brakes.
-        </TouchTip>
-        <TouchTip chips={<ItemChip />}>
-          <Em>Shield trick:</Em> got a fish bone, snowball or sardine? Hold <Em>Item</Em> to trail it behind you — it
-          blocks the next shot. Let go to use it.
-        </TouchTip>
-        <TouchTip
-          chips={
-            <Chip className={`${CHIP} h-7 rounded-full border-[#38d7ff]/30 bg-[#0c101d]/70 px-2.5 text-[8px] text-[#9fc2d8]`}>
-              Tilt off
-            </Chip>
-          }
-        >
-          <Em>Tilt</Em> (top right) steers by tilting your phone. Your thumb still takes over whenever it’s down.
-        </TouchTip>
-        <TouchTip
-          chips={
+            <span className="min-w-0">
+              <span className="block font-mono text-[13px] font-black uppercase tracking-[0.08em] text-white">
+                {gesture.title}
+              </span>
+              <span className="mt-1 block text-[13px] leading-snug text-white/75">
+                {gesture.kind === 'flick' && tips ? tips.flick : gesture.text}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-5 border-t border-white/10 pt-4">
+        <div className={EYEBROW}>Buttons &amp; extras</div>
+        <ul className="mt-3 grid gap-x-6 gap-y-3 text-[13px] leading-snug text-white/75 md:grid-cols-2">
+          <TouchTip chips={<><DriftChip /><ItemChip /></>}>
+            Prefer buttons? Hold <Em>Drift</Em> through a corner and let go to boost, or tap <Em>Item</Em> to throw. The
+            red <span className="font-semibold text-[#ff8f8f]">↓</span> brakes.
+          </TouchTip>
+          <TouchTip chips={<ItemChip />}>
+            <Em>Shield trick:</Em> got a fish bone, snowball or sardine? Hold <Em>Item</Em> to trail it behind you — it
+            blocks the next shot. Let go to use it.
+          </TouchTip>
+          <TouchTip
+            chips={
+              <Chip className={`${CHIP} h-7 rounded-full border-[#38d7ff]/30 bg-[#0c101d]/70 px-2.5 text-[8px] text-[#9fc2d8]`}>
+                Tilt off
+              </Chip>
+            }
+          >
+            <Em>Tilt</Em> (top right) steers by tilting your phone. Your thumb still takes over whenever it’s down.
+          </TouchTip>
+          <TouchTip
+            chips={
+              <>
+                <Chip className={`${CHIP} h-10 w-10 rounded-full border-2 border-[#ffd34f]/70 text-[19px] text-[#ffd34f]`}>2</Chip>
+                <DriftChip />
+              </>
+            }
+          >
+            {tips ? (
+              tips.touchRocket
+            ) : (
+              <>
+                <Em>Rocket start:</Em> hold <Em>Drift</Em> just as the <span className="font-semibold text-[#ffd34f]">2</span>{' '}
+                appears and keep holding to GO. Too early floods the engine.
+              </>
+            )}
+          </TouchTip>
+          <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-white/15 text-[#7eefff]`}><RampGlyph /></Chip>}>
+            {tips?.touchTrick ?? (
+              <>
+                <Em>Tricks:</Em> tap <Em>Drift</Em> in mid-air off a ramp, then land it for a boost.
+              </>
+            )}
+          </TouchTip>
+          {raceTips ? (
             <>
-              <Chip className={`${CHIP} h-10 w-10 rounded-full border-2 border-[#ffd34f]/70 text-[19px] text-[#ffd34f]`}>2</Chip>
-              <DriftChip />
+              <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-white/15 text-[#7eefff]`}><Wind size={18} /></Chip>}>
+                <Em>Slipstream:</Em> tuck in behind a rival — hold it and you slingshot past.
+              </TouchTip>
+              <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-[#c879ff]/40 text-[#c879ff]`}><RampGlyph /></Chip>}>
+                The <span className="font-semibold text-[#c879ff]">purple dare ramp</span> jumps the whole corner, but only
+                at boost speed. Miss it and you crawl.
+              </TouchTip>
             </>
-          }
-        >
-          <Em>Rocket start:</Em> hold <Em>Drift</Em> just as the <span className="font-semibold text-[#ffd34f]">2</span>{' '}
-          appears and keep holding to GO. Too early floods the engine.
-        </TouchTip>
-        <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-white/15 text-[#7eefff]`}><RampGlyph /></Chip>}>
-          <Em>Tricks:</Em> tap <Em>Drift</Em> in mid-air off a ramp, then land it for a boost.
-        </TouchTip>
-        {raceTips ? (
-          <>
-            <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-white/15 text-[#7eefff]`}><Wind size={18} /></Chip>}>
-              <Em>Slipstream:</Em> tuck in behind a rival — hold it and you slingshot past.
-            </TouchTip>
-            <TouchTip chips={<Chip className={`${BUTTON_CHIP} border-[#c879ff]/40 text-[#c879ff]`}><RampGlyph /></Chip>}>
-              The <span className="font-semibold text-[#c879ff]">purple dare ramp</span> jumps the whole corner, but only
-              at boost speed. Miss it and you crawl.
-            </TouchTip>
-          </>
-        ) : null}
-      </ul>
+          ) : null}
+        </ul>
+      </div>
+    </GuideCard>
+  );
+};
+
+const KeyboardGuide = ({ handling = 'assisted' }) => {
+  const tips = CLASSIC_GUIDE[handling] || null;
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <GuideCard title="Drive">
+        <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
+          <li><Key>↑</Key><Key>W</Key> accelerate</li>
+          <li><Key>←</Key><Key>→</Key><Key>A</Key><Key>D</Key> steer</li>
+          <li><Key>↓</Key><Key>S</Key> brake</li>
+          <li><Key>SHIFT</Key><Key>ENTER</Key><Key>E</Key><Key>F</Key> fire item — <span className="text-white/90">hold</span> a fish bone, snowball or sardine to trail it behind you as a shield, release to use it</li>
+          <li><Key>ESC</Key><Key>P</Key> pause · controllers work too (A gas, B brake, RB drift, LB item)</li>
+          {tips ? (
+            <li className="text-white/90">{tips.keyRocket}</li>
+          ) : (
+            <li className="text-white/90">Rocket start: press gas just as the <span className="font-semibold text-[#ffd34f]">2</span> appears and hold it to GO. Too early floods the engine.</li>
+          )}
+          <li>Tuck in behind a rival to build a <span className="font-semibold text-[#7eefff]">slipstream</span> — hold it and you slingshot past.</li>
+        </ul>
+      </GuideCard>
+      <GuideCard title="Drift &amp; Tricks">
+        <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
+          <li><Key>SPACE</Key> in a corner — hop into a drift; hold it.</li>
+          {tips ? (
+            <li>{tips.keyDrift}</li>
+          ) : (
+            <li>
+              Sparks charge <SparkLadder />; release for a bigger boost.
+            </li>
+          )}
+          {tips?.keyTrick ? <li>{tips.keyTrick}</li> : <li>Tap <Key>SPACE</Key> mid-air off any ramp — land a trick for a boost.</li>}
+          <li>
+            The <span className="font-semibold text-[#c879ff]">purple dare ramp</span> jumps the whole corner — only
+            with boost speed. Miss it and you crawl.
+          </li>
+        </ul>
+      </GuideCard>
     </div>
-  </GuideCard>
-);
+  );
+};
 
-const KeyboardGuide = () => (
-  <div className="grid gap-4 lg:grid-cols-2">
-    <GuideCard title="Drive">
-      <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
-        <li><Key>↑</Key><Key>W</Key> accelerate</li>
-        <li><Key>←</Key><Key>→</Key><Key>A</Key><Key>D</Key> steer</li>
-        <li><Key>↓</Key><Key>S</Key> brake</li>
-        <li><Key>SHIFT</Key><Key>ENTER</Key><Key>E</Key><Key>F</Key> fire item — <span className="text-white/90">hold</span> a fish bone, snowball or sardine to trail it behind you as a shield, release to use it</li>
-        <li><Key>ESC</Key><Key>P</Key> pause · controllers work too (A gas, B brake, RB drift, LB item)</li>
-        <li className="text-white/90">Rocket start: press gas just as the <span className="font-semibold text-[#ffd34f]">2</span> appears and hold it to GO. Too early floods the engine.</li>
-        <li>Tuck in behind a rival to build a <span className="font-semibold text-[#7eefff]">slipstream</span> — hold it and you slingshot past.</li>
-      </ul>
-    </GuideCard>
-    <GuideCard title="Drift &amp; Tricks">
-      <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
-        <li><Key>SPACE</Key> in a corner — hop into a drift; hold it.</li>
-        <li>
-          Sparks charge <SparkLadder />; release for a bigger boost.
-        </li>
-        <li>Tap <Key>SPACE</Key> mid-air off any ramp — land a trick for a boost.</li>
-        <li>
-          The <span className="font-semibold text-[#c879ff]">purple dare ramp</span> jumps the whole corner — only
-          with boost speed. Miss it and you crawl.
-        </li>
-      </ul>
-    </GuideCard>
-  </div>
-);
-
-const KartIntroScreen = ({ onStart, trackKey }) => {
+const KartIntroScreen = ({ handling = 'assisted', onStart, trackKey }) => {
+  const classicTips = CLASSIC_GUIDE[handling] || null;
   // Read once per mount, so plugging a keyboard into a tablet mid-read does
   // not reshuffle the page under the player.
   const [touchFirst] = useState(detectTouchFirst);
@@ -430,9 +498,19 @@ const KartIntroScreen = ({ onStart, trackKey }) => {
           <div className="mx-auto mt-3 h-px w-24 bg-gradient-to-r from-transparent via-[#ffd34f]/70 to-transparent" />
         </div>
 
+        {classicTips ? (
+          <GuideCard data-testid="race-classic-guide" note="Picked on the setup screen" title={`${classicTips.name} handling`}>
+            <ul className="space-y-2 text-[13px] leading-relaxed text-white/75">
+              {classicTips.rules.map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+          </GuideCard>
+        ) : null}
+
         {touchFirst ? (
           <>
-            <TouchControlsCard raceTips />
+            <TouchControlsCard handling={handling} raceTips />
             <div className="text-center">
               <button
                 aria-controls="race-guide-keys"
@@ -449,13 +527,13 @@ const KartIntroScreen = ({ onStart, trackKey }) => {
             {/* A bare wrapper carries `hidden`: on the grid itself Tailwind's
                 .grid display rule would beat preflight's [hidden]. */}
             <div hidden={!keysOpen} id="race-guide-keys">
-              <KeyboardGuide />
+              <KeyboardGuide handling={handling} />
             </div>
           </>
         ) : (
           <>
-            <KeyboardGuide />
-            <TouchControlsCard note="Phone & tablet" />
+            <KeyboardGuide handling={handling} />
+            <TouchControlsCard handling={handling} note="Phone & tablet" />
           </>
         )}
 
@@ -664,7 +742,7 @@ const formatBestTime = (seconds) => {
 // Unlocks: `wallet` (the ₿ chip) and `paintShop` (the swatch row) are built
 // by KartApp, which owns the progress state; `stagePaint` is what the 3D stage
 // shows on the kart — the equipped paint, or a locked one being tried on.
-const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, onStart, paintShop = null, raceClass, reducedMotion, selectedKey, setGameMode, setKartKey, setRaceClass, setSelectedKey, setTrackKey, stagePaint = null, trackKey, wallet = null }) => {
+const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror = null, onShowGuide, onStart, paintShop = null, raceClass, reducedMotion, selectedKey, setGameMode, setHandling = null, setKartKey, setRaceClass, setSelectedKey, setTrackKey, stagePaint = null, trackKey, wallet = null }) => {
   // Saved bests per track (kartLocalStore). Read per mount: the screen
   // remounts on every return from a race, which is when they change.
   const [savedResults] = useState(() => readRaceResults() || {});
@@ -787,6 +865,31 @@ const KartCharacterSelect = ({ gameMode, kartKey, mirror = null, onShowGuide, on
           );
         })}
       </div>
+      {setHandling ? (
+        <>
+          <div>
+            <h3 className={`${SECTION_TITLE} mb-3`}>Handling</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-3" data-testid="race-handling-picker">
+            {HANDLING_OPTIONS.map((entry) => {
+              const selected = entry.key === handling;
+              return (
+                <button
+                  aria-pressed={selected}
+                  className={`p-3 text-left ${selected ? PANEL_SELECTED : `${PANEL} ${PANEL_HOVER}`}`}
+                  data-testid={`race-handling-${entry.key}`}
+                  key={entry.key}
+                  onClick={() => setHandling(entry.key)}
+                  type="button"
+                >
+                  <div className="font-mono text-[15px] font-black uppercase tracking-[0.04em] text-white">{entry.name}</div>
+                  <div className="mt-1 text-[10px] leading-snug text-white/55">{entry.tagline}</div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
       {mirror ? (
         <MirrorModeToggle
           enabled={mirror.enabled}
@@ -1009,6 +1112,10 @@ export const KartApp = () => {
       return DEFAULT_RACE_CLASS;
     }
   });
+  // HANDLING (race/handlingMode.js, docs/CLASSIC_HANDLING.md). Assisted is the
+  // shipped game; Classic 64 and Classic Mix are the harder MK64-style ones.
+  // A ?handling= link seeds it (one-shot, like the track); Start saves it.
+  const [handling, setHandling] = useState(() => readHandlingMode());
   // MIRROR MODE (mirrorUnlock.js). Locked until the player wins a Grand Prix;
   // then a remembered on/off that every mode honours. ?mirror=1|0 seeds it on
   // or off for QA, and =1 works even while locked.
@@ -1042,6 +1149,7 @@ export const KartApp = () => {
     try {
       window.localStorage?.setItem('cc-kart-mode', gameMode);
       window.localStorage?.setItem('cc-kart-class', raceClass);
+      saveHandlingMode(handling);
       window.localStorage?.setItem('cc-kart-character', characterKey);
       window.localStorage?.setItem('cc-kart-track', kartTrackKey);
       if (kartKey) window.localStorage?.setItem('cc-kart-kart', kartKey);
@@ -1049,7 +1157,7 @@ export const KartApp = () => {
       // localStorage unavailable — the pick still applies this session.
     }
     setCharacterReady(true);
-  }, [characterKey, gameMode, kartKey, kartTrackKey, raceClass]);
+  }, [characterKey, gameMode, handling, kartKey, kartTrackKey, raceClass]);
   useEffect(() => {
     // W1: the URL seed is ONE-SHOT. Strip the select params once the
     // initializers above have consumed them, so a stale share/lab URL can't
@@ -1057,10 +1165,11 @@ export const KartApp = () => {
     // contexts are fresh page loads, so their seeded mount is unaffected.
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    if (!params.has('track') && !params.has('character') && !params.has('kart')) return;
+    if (!params.has('track') && !params.has('character') && !params.has('kart') && !params.has('handling')) return;
     params.delete('track');
     params.delete('character');
     params.delete('kart');
+    params.delete('handling');
     const query = params.toString();
     window.history.replaceState(
       window.history.state,
@@ -1258,7 +1367,7 @@ export const KartApp = () => {
       {cupFinal && cup ? (
         <CupPodium cup={cup} mirrorUnlocked={mirrorSetup.news} onDone={exitToMenu} />
       ) : !introSeen ? (
-        <KartIntroScreen onStart={dismissIntro} trackKey={kartTrackKey} />
+        <KartIntroScreen handling={handling} onStart={dismissIntro} trackKey={kartTrackKey} />
       ) : !characterReady ? (
         <KartCharacterSelect
           kartKey={kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart}
@@ -1271,9 +1380,11 @@ export const KartApp = () => {
             onToggle: toggleMirror,
           }}
           onStart={confirmCharacter}
+          handling={handling}
           raceClass={raceClass}
           setGameMode={setGameMode}
           reducedMotion={reducedMotion}
+          setHandling={setHandling}
           setRaceClass={setRaceClass}
           selectedKey={characterKey}
           setKartKey={setKartKey}
@@ -1304,6 +1415,7 @@ export const KartApp = () => {
               cup={cupProp}
               character={characterKey}
               difficulty={raceClass}
+              handling={handling}
               timeTrial={!cup && gameMode === 'timetrial'}
               kart={kartKey}
               key={raceKey}

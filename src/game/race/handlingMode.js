@@ -14,10 +14,20 @@ export const HANDLING_STORAGE_KEY = 'cc-kart-handling';
 export const DEFAULT_HANDLING = 'assisted';
 export const HANDLING_LABELS = Object.freeze({ assisted: 'Assisted', mix: 'Classic Mix', mk64: 'Classic 64' });
 
-export const readHandlingMode = ({ search, storage } = {}) => {
+// The setup screen's picker, in the order it shows them.
+export const HANDLING_OPTIONS = Object.freeze([
+  Object.freeze({ key: 'assisted', name: 'Assisted', tagline: 'The road helps you round every bend' }),
+  Object.freeze({ key: 'mk64', name: 'Classic 64', tagline: 'Aim it yourself. Rock the stick for boosts' }),
+  Object.freeze({ key: 'mix', name: 'Classic Mix', tagline: 'Classic, plus timed boosts, tricks and coin spills' }),
+]);
+
+// URL first (a shared link shows what it names), then `preferred` (the setup
+// screen's pick, passed to the race as a prop), then the saved choice.
+export const readHandlingMode = ({ search, storage, preferred } = {}) => {
   const query = search ?? (typeof window !== 'undefined' ? window.location.search : '');
   const fromUrl = new URLSearchParams(query).get('handling');
   if (HANDLING_MODES.includes(fromUrl)) return fromUrl;
+  if (HANDLING_MODES.includes(preferred)) return preferred;
   try {
     const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null);
     const saved = store?.getItem(HANDLING_STORAGE_KEY);
