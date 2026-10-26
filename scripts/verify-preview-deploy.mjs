@@ -5,6 +5,7 @@
 // page errors, or a race that never starts. Also checks the store pages.
 //
 //   node scripts/verify-preview-deploy.mjs https://<hash>.comeback-city-kart.pages.dev [outDir]
+//   VERIFY_QUERY='&handling=mk64' node scripts/verify-preview-deploy.mjs <url>   # every run under that query
 //
 // Probe the UNIQUE deployment URL wrangler prints, not the branch alias: the
 // alias can serve the previous deploy for ~30-60 s after "Deployment complete".
@@ -15,6 +16,8 @@ import { chromiumGlArgs } from './lib/chromium-gl-args.mjs';
 
 const BASE = (process.argv[2] || '').replace(/\/$/, '');
 const OUT = path.resolve(process.argv[3] || 'tmp/preview-check');
+// Extra query for every run, e.g. a handling (docs/CLASSIC_HANDLING.md).
+const EXTRA_QUERY = process.env.VERIFY_QUERY || '';
 if (!BASE) {
   console.error('usage: node scripts/verify-preview-deploy.mjs <deploy url> [outDir]');
   process.exit(2);
@@ -44,7 +47,7 @@ for (const run of runs) {
   });
   page.on('pageerror', (error) => pageErrors.push(String(error).slice(0, 160)));
   try {
-    await page.goto(`${BASE}/?playableAutoplay=1${run.query}#race`, { timeout: 90000, waitUntil: 'networkidle' });
+    await page.goto(`${BASE}/?playableAutoplay=1${run.query}${EXTRA_QUERY}#race`, { timeout: 90000, waitUntil: 'networkidle' });
     await page.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, { timeout: 90000 });
     await page.waitForFunction(() => window.__comebackCityKartTelemetry?.raceTime > 5, null, { timeout: 120000 });
     const t = await page.evaluate(() => window.__comebackCityKartTelemetry);
