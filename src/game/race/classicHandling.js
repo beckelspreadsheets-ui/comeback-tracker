@@ -333,6 +333,15 @@ export const classicWallStep = (body, { speed = 0, distance = 0, normal = { x: 0
   };
 };
 
+// Classic Mix only: ideas from the owner's decomp list that are not MK64's.
+// Air rules (timed tricks, hang time) live in airTricks.js MIX_AIR.
+export const MIX = Object.freeze({
+  // Diddy Kong Racing / Super Mario Kart: a spin-out spills coins, and coins
+  // are top speed (coinSpeedMultiplier) and the money at the finish, so one
+  // mistake keeps costing.
+  coinsLostPerHit: 3,
+});
+
 // Per-race Classic state on `race.classic` (null on Assisted).
 export const createClassicState = () => ({
   // Seconds since the last real wall hit, counting down: no thrust while > 0.
@@ -349,6 +358,9 @@ export const createClassicState = () => ({
   // Seconds left in a fish-bone wobble (brake to save); saves made.
   slipTimer: 0,
   saves: 0,
+  // Classic Mix: hang-time boosts landed, coins spilled by hits.
+  hangBoosts: 0,
+  coinsLost: 0,
 });
 
 // The barrier's inner face, in world units from the centreline, by progress —

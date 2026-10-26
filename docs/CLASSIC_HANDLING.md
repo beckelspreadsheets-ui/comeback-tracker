@@ -141,14 +141,39 @@ instant kick plus the boost window, worth ~0.6 s.
   (-1.4 s). No "good" start. How-to-Race still teaches Assisted's timing until
   the Handling switch (step 7) makes the guide handling-aware.
 
+## Step 4: mistakes cost (Classic)
+
+Every spin-out (items, crossers, the march, kart contact) goes through one
+helper (`spinOutPlayer`). Classic: 35% of speed kept, 1.4 s spin, crawl floor
+25 -> ~2.1 s lost (Assisted ~1.3 s, unchanged); 1.2 s of contact immunity
+(Assisted 2.4 s). MK64's banana save on our fish bone: running over one
+wobbles you for 0.55 s first; touch the brake before it ends and you keep it
+on the road for a 15% speed cost. Steering harder than 0.6 as you hit it skips
+the wobble.
+
+## Step 6: Classic Mix's extras
+
+From the owner's picks off the decomp list (Classic 64 has none of these):
+- **Hits cost coins** (Diddy Kong Racing / Super Mario Kart): a spin-out spills
+  3 coins. Coins are top speed (+0.4% each) and the money at the finish.
+- **Timed ramp tricks** (Mario Kart Wii): the trick arms only if drift is
+  pressed within 0.22 s of leaving the lip; Assisted and Classic 64 take a
+  press any time in the air.
+- **Hang-time boosts** (Crash Team Racing): drift still held when you land
+  from a jump longer than 0.5 s pays a boost that grows with the air time
+  (a normal ramp, 0.9 s: 0.44 s boost; the crest, 1.2 s: 0.77 s).
+
+Real race, Classic Mix autoplay, Comeback City, 70 s: 4 tap boosts, 0
+backfires, 2 hang-time boosts, 1 timed trick, no errors.
+
 ## Next steps (one commit each)
 
 1. ~~Free steering: the Classic model, walls, run-off, power slide.~~
 2. ~~Mini-turbos: `mk64` = stick rocks; `mix` = CTR timed taps (both phones and pads).~~
 3. ~~Rocket start that works (both versions) — the reward bug is in Assisted too.~~
-4. Mistakes: costlier hits, shorter immunity, banana brake-save.
+4. ~~Mistakes: costlier hits, shorter immunity, banana brake-save.~~
 5. Rivals: player speed by class (MK64 ratios), rubber band that pushes back.
-6. `mix` extras: hits drop coins, timed ramp tricks, hang-time boosts.
+6. ~~`mix` extras: hits drop coins, timed ramp tricks, hang-time boosts.~~
 7. The Handling switch on the setup screen (saved per device), and first-race
    coaching that teaches the chosen handling's mini-turbo.
 

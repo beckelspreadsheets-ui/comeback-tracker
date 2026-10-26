@@ -98,6 +98,7 @@ import {
   classicWallStep,
   classicWorldVelocity,
   createClassicState,
+  MIX,
   isClassicHandling,
   makeBarrierOffsetLookup,
   stepClassicBody,
@@ -163,7 +164,9 @@ import {
   airPitchFor,
   createAirState,
   createShortcutState,
+  hangTimeBoost,
   launchAir,
+  MIX_AIR,
   launchShortcut,
   shortcutArcHeight,
   shortcutPitchFor,
@@ -10056,6 +10059,8 @@ const publishTelemetry = (
     classicTurbos: race.classic ? race.classic.turbos : 0,
     classicBackfires: race.classic ? race.classic.backfires : 0,
     classicSaves: race.classic ? race.classic.saves : 0,
+    classicHangBoosts: race.classic ? race.classic.hangBoosts : 0,
+    classicCoinsLost: race.classic ? race.classic.coinsLost : 0,
     rivalCount: race.rivals.length,
     rivalPositions: rivalPositionsOf(playerTotalOf(race), race.rivals),
     route: mode === 'spike' ? 'race-3d-spike' : 'race',
@@ -11074,6 +11079,12 @@ export const ComebackCityThreeKartRace = ({
       race.bumpCooldown = classic ? CLASSIC.contactImmunity : KART_CONTACT.spinCooldown;
       race.spinOuts += 1;
       race.speed *= classic ? Math.min(speedScale, CLASSIC.spinSpeedScale) : speedScale;
+      // Classic Mix: a hit spills coins, which are top speed and finish money.
+      if (classic && race.handling === 'mix' && race.coins > 0) {
+        const lost = Math.min(race.coins, MIX.coinsLostPerHit);
+        race.coins -= lost;
+        classic.coinsLost += lost;
+      }
     };
     const restartRace = () => {
       // trackDef, not the default: without it a Penguin Village restart
@@ -11668,8 +11679,27 @@ export const ComebackCityThreeKartRace = ({
               launchShortcut(race.shortcut, trackDef.shortcut, race.speed, race.progress, race.lane);
             }
           }
-          const airEvents = updateAir(airState, { actionHeld: Boolean(input.drift), dt });
+          // Classic Mix times the trick press to the ramp's lip (Mario Kart
+          // Wii); Assisted and Classic 64 take a press any time in the air.
+          const mixRules = race.handling === 'mix';
+          const airEvents = updateAir(airState, {
+            actionHeld: Boolean(input.drift),
+            dt,
+            trickWindow: mixRules ? MIX_AIR.trickWindow : Infinity,
+          });
           if (airEvents.landed) race.landSquashTimer = 0.16;
+          // Classic Mix: drift held through a long jump pays a hang-time boost
+          // on landing that grows with the time in the air (Crash Team Racing).
+          if (mixRules && airEvents.landed && airEvents.heldLanding) {
+            const hang = hangTimeBoost(airEvents.airTime);
+            if (hang) {
+              driftState.miniTurboTier = Math.max(driftState.miniTurboTier, 1);
+              driftState.miniTurboTimer = Math.max(driftState.miniTurboTimer, hang.duration);
+              driftState.releaseFlashTimer = DRIFT_FEEL.releaseFlash;
+              race.speed = clamp(race.speed + hang.kick, 0, BOOST_SPEED);
+              if (race.classic) race.classic.hangBoosts += 1;
+            }
+          }
           if (airEvents.trickTier > 0) {
             race.tricksLanded += 1;
             driftState.miniTurboTier = airEvents.trickTier;

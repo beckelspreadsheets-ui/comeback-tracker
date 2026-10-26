@@ -26,10 +26,12 @@ import {
   classicSurfaceAt,
   classicWallStep,
   createClassicState,
+  MIX,
   stepClassicBody,
 } from '../src/game/race/classicHandling.js';
 import { roadEdgeSection } from '../src/game/race/render/buildRoadEdgeProfile.js';
 import { rocketStartResult, rocketStartReward } from '../src/game/race/rocketStart.js';
+import { createAirState, hangTimeBoost, launchAir, MIX_AIR, updateAir } from '../src/game/race/airTricks.js';
 import { KART_TRACKS, PREVIEW_TRACKS } from '../src/game/race/tracks/index.js';
 
 const VERBOSE = process.argv.includes('--verbose');
@@ -303,6 +305,29 @@ process.stdout.write('\nMistakes\n');
   let outcome = null;
   for (let t = 0; t < 1 && !outcome; t += DT) outcome = classicSlipStep(late, { dt: DT });
   check(outcome === 'spin', 'one left to run out spins you');
+}
+
+// --- 1e. Classic Mix extras -------------------------------------------------------
+process.stdout.write('\nClassic Mix extras\n');
+{
+  // A ramp at race speed; the trick press comes `pressAt` s after the lip.
+  const jump = (pressAt, trickWindow) => {
+    const air = createAirState();
+    launchAir(air, TOP);
+    let t = 0;
+    let events;
+    do {
+      events = updateAir(air, { actionHeld: t >= pressAt, dt: DT, trickWindow });
+      t += DT;
+    } while (!events.landed && t < 5);
+    return events;
+  };
+  check(jump(0.5, Infinity).trickTier === 1, 'Assisted and Classic 64 take a trick press any time in the air');
+  check(jump(0.1, MIX_AIR.trickWindow).trickTier === 1 && jump(0.5, MIX_AIR.trickWindow).trickTier === 0, 'Mix: the trick only arms off the lip (Mario Kart Wii)');
+  const ramp = jump(0, MIX_AIR.trickWindow);
+  const hang = hangTimeBoost(ramp.airTime);
+  check(Boolean(hang) && ramp.heldLanding && hangTimeBoost(1.2).duration > hang.duration && !hangTimeBoost(0.4), 'Mix: drift held through a jump pays a hang-time boost that grows with air time (CTR)', `${ramp.airTime.toFixed(2)} s in the air -> ${hang?.duration.toFixed(2)} s boost`);
+  check(MIX.coinsLostPerHit > 0, 'Mix: a hit spills coins', `${MIX.coinsLostPerHit} a hit`);
 }
 
 // --- 2. every track -------------------------------------------------------------

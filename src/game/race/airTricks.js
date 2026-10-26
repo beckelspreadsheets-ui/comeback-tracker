@@ -17,6 +17,34 @@ export const TRICK_FEEL = {
   trickSpinRate: 8.5, // rad/s of visual yaw spin
 };
 
+// Classic Mix's air rules (docs/CLASSIC_HANDLING.md step 6), from two of the
+// owner's picks off the decomp list, in our own numbers:
+//   - TIMED TRICKS (Mario Kart Wii): the trick only arms if the press comes
+//     within trickWindow of leaving the ramp. Assisted takes a press any time
+//     in the air.
+//   - HANG-TIME BOOST (Crash Team Racing): keep drift held through a long
+//     jump and the landing pays a boost that grows with the time in the air.
+export const MIX_AIR = {
+  trickWindow: 0.22,
+  hangMin: 0.5,
+  // Landing boost = (airTime - hangMin) x these, capped.
+  hangBoostPerSecond: 1.1,
+  hangBoostMax: 0.85,
+  hangKickPerSecond: 34,
+  hangKickMax: 24,
+};
+
+// What a landing after `airTime` seconds pays with drift held: { duration,
+// kick }, or null when the jump was too short.
+export const hangTimeBoost = (airTime) => {
+  const over = airTime - MIX_AIR.hangMin;
+  if (!(over > 0)) return null;
+  return {
+    duration: Math.min(MIX_AIR.hangBoostMax, over * MIX_AIR.hangBoostPerSecond),
+    kick: Math.min(MIX_AIR.hangKickMax, over * MIX_AIR.hangKickPerSecond),
+  };
+};
+
 // Ramp placements and the dare-shortcut parameters are TRACK DATA — they
 // live in each TrackDefinition (src/game/race/tracks/). These functions take
 // the track's shortcut def so the math works for every track.
@@ -65,6 +93,8 @@ export const createAirState = () => ({
   trickDone: false,
   verticalVel: 0,
   wasAction: false,
+  // Seconds since leaving the ramp (Classic Mix times tricks and hang time).
+  airTime: 0,
 });
 
 export const launchAir = (air, speed, { big = false } = {}) => {
@@ -77,6 +107,7 @@ export const launchAir = (air, speed, { big = false } = {}) => {
   air.spin = 0;
   air.trickArmed = false;
   air.trickDone = false;
+  air.airTime = 0;
   return true;
 };
 
@@ -88,17 +119,21 @@ export const airPitchFor = (air) =>
 export const shortcutPitchFor = (shortcut) =>
   shortcut.active ? Math.cos(Math.PI * Math.min(1, shortcut.t)) * 0.42 : 0;
 
-// Advances the air state one frame; returns { landed, trickTier } where
-// trickTier is 0 (no trick), 1 (ramp trick) or 2 (big/bridge trick).
-export const updateAir = (air, { actionHeld, dt }) => {
-  const events = { landed: false, trickTier: 0 };
+// Advances the air state one frame; returns { landed, trickTier, airTime,
+// heldLanding } where trickTier is 0 (no trick), 1 (ramp trick) or 2
+// (big/bridge trick), airTime the flight's length on the landing frame and
+// heldLanding whether the action was still held as it landed. trickWindow
+// (Classic Mix) limits when a press can arm the trick; Infinity = any time.
+export const updateAir = (air, { actionHeld, dt, trickWindow = Infinity }) => {
+  const events = { airTime: 0, heldLanding: false, landed: false, trickTier: 0 };
   if (!air.airborne) {
     air.wasAction = actionHeld;
     return events;
   }
   air.verticalVel -= TRICK_FEEL.gravity * dt;
   air.height = Math.max(0, air.height + air.verticalVel * dt);
-  if (actionHeld && !air.wasAction) air.trickArmed = true;
+  air.airTime += dt;
+  if (actionHeld && !air.wasAction && air.airTime <= trickWindow) air.trickArmed = true;
   if (air.trickArmed && !air.trickDone) {
     air.spin = Math.min(Math.PI * 2, air.spin + TRICK_FEEL.trickSpinRate * dt);
     if (air.spin >= Math.PI * 2) air.trickDone = true;
@@ -107,6 +142,8 @@ export const updateAir = (air, { actionHeld, dt }) => {
     air.airborne = false;
     air.height = 0;
     events.landed = true;
+    events.airTime = air.airTime;
+    events.heldLanding = Boolean(actionHeld);
     if (air.trickArmed) events.trickTier = air.big ? 2 : 1;
     air.spin = 0;
     air.trickArmed = false;
