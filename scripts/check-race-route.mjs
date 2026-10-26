@@ -1,8 +1,9 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
-const root = '/Users/andrewferguson/Downloads/comeback-tracker';
+const root = fileURLToPath(new URL('../', import.meta.url)).replace(/\/$/, '');
 const port = 5205;
 const outDir = `${root}/.agent/runs/kart-racer-production-readiness/evidence/phase5-automation-2026-06-17/route-check`;
 await mkdir(outDir, { recursive: true });

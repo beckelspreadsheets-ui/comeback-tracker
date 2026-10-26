@@ -1,5 +1,27 @@
 # RESUME HERE — Penguin Kart game
 
+## 2026-10-26 — Tracker-NVMe migration (current working location)
+
+Use `/Volumes/Tracker-NVMe/Projects/comeback-tracker` as the canonical checkout.
+The earlier `~/Downloads/comeback-tracker` and Back-up-SSD locations below
+are historical. Tracker-NVMe UUID: `9EA78A7E-1E58-4CEC-848C-9E192F81237B`.
+Keep this drive mounted while working.
+
+Migration preserved the entire local folder, including ignored/untracked assets,
+private configuration, Git history and nine linked Claude worktrees. All ten
+worktree HEADs and dirty states matched after path repair. Local evidence/media
+remain intentionally uncommitted; GitHub is public and is not their backup.
+The pre-migration code checkpoint is `5e2a6340` on `classic-handling`, verified
+on origin. Its rival pacing remains WIP; read `docs/CLASSIC_HANDLING.md`.
+
+Start a fresh session from the new path: `cd /Volumes/Tracker-NVMe/Projects/comeback-tracker && claude`.
+Run the kart preview with `npm run dev:kart`; use `npm run dev` for the full tracker.
+A same-drive rollback copy is stored at
+`/Volumes/Tracker-NVMe/Archives/Project-Migrations/comeback-tracker-2026-10-26/pre-repair`.
+Its pre-repair Git pointers require repair before restoring it elsewhere.
+This rollback copy is not an independent physical backup.
+
+
 ## 2026-10-26 — branch `classic-handling`: harder, MK64-style driving (read first on this branch)
 The owner said the game is "perfect besides driving mechanics being a bit too
 easy" and wants it closer to Mario Kart 64. This branch adds a **Handling**
