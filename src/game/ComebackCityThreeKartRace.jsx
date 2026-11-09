@@ -12381,8 +12381,8 @@ export const ComebackCityThreeKartRace = ({
             maxSpeed: MAX_SPEED,
             catchUp: raceClass.catchUp,
             // Classic: MK64's class speeds for the whole field, trimmed by the
-            // measured CLASSIC_RIVALS.pace, and a band that chases.
-            rivalPace: race.classic ? raceClass.classicSpeed * CLASSIC_RIVALS.pace : raceClass.rivalPace,
+            // measured per-version, per-class CLASSIC_RIVALS.pace, and a band that chases.
+            rivalPace: race.classic ? raceClass.classicSpeed * CLASSIC_RIVALS.pace[race.handling][raceClass.key] : raceClass.rivalPace,
             rubberBand: race.classic ? CLASSIC_RIVALS.rubberBand : undefined,
             ramps: trackDef.ramps,
             projectiles: race.projectiles,

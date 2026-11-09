@@ -335,13 +335,18 @@ export const classicWallStep = (body, { speed = 0, distance = 0, normal = { x: 0
 
 // RIVALS on Classic (docs/CLASSIC_HANDLING.md step 5). The class sets the
 // speed of the whole field, the player's included (raceClasses.js
-// classicSpeed). `pace` trims the field against what a Classic driver can do,
-// which is less than the rails let anyone do (measured with the difficulty
-// probe). The band is MK64's idea in our numbers: a rival that falls behind
-// you chases hard, and one well clear eases off; on Assisted the band only
-// wakes up 3 s back.
+// classicSpeed). `pace` is per Classic version and per class (keyed like
+// RACE_CLASSES) and multiplies the field's classicSpeed, so it sets how hard
+// the rivals drive against the player's fixed kart: below 1 they are slower
+// than the class, above 1 they are faster. Each version is tuned with the
+// difficulty probe to mid-pack at 50cc and a loss at 150cc. The band is MK64's
+// idea in our numbers: a rival that falls behind you chases hard, and one well
+// clear eases off; on Assisted the band only wakes up 3 s back.
 export const CLASSIC_RIVALS = Object.freeze({
-  pace: 1,
+  pace: Object.freeze({
+    mix: Object.freeze({ '50cc': 0.9, '100cc': 0.94, '150cc': 1 }),
+    mk64: Object.freeze({ '50cc': 0.78, '100cc': 0.84, '150cc': 1 }),
+  }),
   rubberBand: Object.freeze({
     aheadMaxSeconds: 6,
     behindMaxSeconds: 1.5,
