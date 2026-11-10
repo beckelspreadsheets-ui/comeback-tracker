@@ -10795,7 +10795,7 @@ export const ComebackCityThreeKartRace = ({
       const key = keyMap[event.code];
       if (!key) return;
       event.preventDefault();
-      if (key === 'restart' && !allowRestartRef.current) return;
+      if (key === 'restart' && (!allowRestartRef.current || event.repeat)) return;
       if (key === 'drift' && !event.repeat) {
         inputRef.current = { ...inputRef.current, driftPresses: (inputRef.current.driftPresses || 0) + 1 };
       }
@@ -10840,6 +10840,12 @@ export const ComebackCityThreeKartRace = ({
         engine.bloomPass.setSize(viewport.width * viewport.dpr * 0.3, viewport.height * viewport.dpr * 0.3);
       }
     };
+    // A key held while the window loses focus never sends its keyup (app
+    // switch, Command-Tab, an iPad keyboard), so it stayed held on return.
+    const handleBlur = () => {
+      inputRef.current = { ...inputRef.current, brake: false, drift: false, item: false, left: false, restart: false, right: false, throttle: false };
+    };
+    window.addEventListener('blur', handleBlur);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     // iOS Safari settles browser-chrome collapse and rotation layout AFTER
@@ -14382,6 +14388,7 @@ export const ComebackCityThreeKartRace = ({
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);
       document.removeEventListener('visibilitychange', handleSessionVisibility);
       suspendRaceSession();
+      window.removeEventListener('blur', handleBlur);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', handleResizeSettled);
