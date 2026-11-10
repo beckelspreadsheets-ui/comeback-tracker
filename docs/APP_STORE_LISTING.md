@@ -16,7 +16,7 @@ Character limits are Apple's.
 | Bundle ID | com.showcasedesigns.penguinkart | Permanent once the app record exists. |
 | SKU | penguinkart-ios-1 | Internal only. |
 | Copyright | © 2026 Showcase Designs | OWNER: the legal name Apple verifies. |
-| Devices | iPhone and iPad, iOS 17.0+ | Owner decision 2026-10-21. |
+| Devices | iPhone only, iOS 17.0+ | Owner decision 2026-11-10 (was iPhone and iPad). iPad support comes in a later update, once it handles resizable windows. The Xcode target is iPhone only; iPad owners can still run it as an iPhone app. |
 | Price | Free | V1 has no purchases; the photo racer comes later with its own review. |
 
 ## Promotional text (170)
@@ -124,9 +124,9 @@ Landscape, captured by `node scripts/app-store-screenshots.mjs` after
 | Device class | Pixel size | Count |
 |---|---|---|
 | iPhone 6.9" | 2868 × 1320 | 3–10 (Apple scales these down for smaller iPhones) |
-| iPad 13" | 2752 × 2064 | 3–10 |
+| iPad 13" | 2752 × 2064 | Not needed for V1 (iPhone only). The takes are kept for the iPad update. |
 
-**OWNER PICK 2026-10-22: the suggested six, same order on both devices** —
+**OWNER PICK 2026-10-22: the suggested six** —
 1 drift past the WAGMI boards (07), 2 Penguin Village (04), 3 Comeback City
 pack (03), 4 the racer roster (01b), 5 bubble shield (05), 6 Penguin Village
 pack (08). Upload-ready JPEGs at Apple's exact sizes:
@@ -145,7 +145,7 @@ External testers (the group) need Beta App Review once; internal testers
 > Penguin Kart is an arcade kart racer starring a crew of penguin characters.
 > Race a neon city and an arctic village, drift for mini-turbos, throw items,
 > and chase your own ghost in Time Trial. This beta is about one thing: is it
-> fair and fun on your phone or iPad?
+> fair and fun on your phone?
 
 **Feedback email:** andrew@showcase-designs.com (owner confirmed 2026-10-21)
 
