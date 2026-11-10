@@ -88,7 +88,7 @@ words already in the name.)
 |---|---|---|
 | Cartoon or fantasy violence | None | Items spin karts out; nobody is hurt or damaged. OWNER: if Apple's reviewer disagrees, "Infrequent/Mild" moves the rating to 9+. |
 | Realistic violence, horror, profanity, mature themes, sexual content, drugs, alcohol, tobacco | None | |
-| Simulated gambling / contests | None | The trackside boards avoid betting and odds on purpose. |
+| Simulated gambling / contests | None | Penguin Village has casino scenery: a craps table, a blackjack table and an odds board. They are props beside the track. The player cannot play them, nothing is wagered, and no in-game currency is won or lost by chance. OWNER: if Apple's reviewer counts the scenery, "Infrequent" raises the rating; the fallback is to remove the three props. |
 | Medical / treatment info | None | |
 | Unrestricted web access | No | The game never opens a browser. |
 | User-generated content | No | V1. The photo racer will change this answer when it ships. |
