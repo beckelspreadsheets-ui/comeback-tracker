@@ -12214,7 +12214,9 @@ export const ComebackCityThreeKartRace = ({
             );
           }
           const spinningNow = race.spinTimer > 0;
-          if (spinningNow && !race.wasSpinning) race.coins = coinsAfterSpin(race.coins);
+          // Classic Mix already spilled its coins in spinOutPlayer; taking the
+          // standard loss too made a hit cost six where the guide says three.
+          if (spinningNow && !race.wasSpinning && race.handling !== 'mix') race.coins = coinsAfterSpin(race.coins);
           race.wasSpinning = spinningNow;
           // AAA wave 8 — PICKUP WINDOWS ARE WORLD DISTANCES, NOT LAP FRACTIONS.
           //
