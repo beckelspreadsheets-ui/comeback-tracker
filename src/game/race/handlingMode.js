@@ -18,7 +18,7 @@ export const HANDLING_LABELS = Object.freeze({ assisted: 'Assisted', mix: 'Class
 // The setup screen's picker, in the order it shows them.
 export const HANDLING_OPTIONS = Object.freeze([
   Object.freeze({ key: 'assisted', name: 'Assisted', tagline: 'The road helps you round every bend' }),
-  Object.freeze({ key: 'retro', name: 'Retro', tagline: 'Aim it yourself. Rock the stick for boosts' }),
+  Object.freeze({ key: 'retro', name: 'Retro', tagline: 'Aim it yourself. Rock the steering for boosts' }),
   Object.freeze({ key: 'mix', name: 'Classic Mix', tagline: 'Classic, plus timed boosts, tricks and coin spills' }),
 ]);
 

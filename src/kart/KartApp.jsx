@@ -981,10 +981,20 @@ const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror 
           );
         })}
       </div>
-      <div className="pt-1 text-center">
-        <button type="button" className={CTA} data-testid="race-character-start" onClick={onStart}>
-          Start Race
-        </button>
+      {/* Start rides the bottom edge of the screen while the pickers scroll
+          under it. On a phone this screen is about seven screens tall and
+          Start was the last thing on it (audit 2026-11-09). The dark pad
+          behind the button keeps it readable over whatever scrolls past;
+          the wrapper lets touches through to the cards on either side. */}
+      <div
+        className="pointer-events-none sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 text-center"
+        data-testid="race-setup-start-bar"
+      >
+        <div className="pointer-events-auto inline-block rounded-2xl bg-[#04060c]/85 p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.75)] backdrop-blur-md">
+          <button type="button" className={CTA} data-testid="race-character-start" onClick={onStart}>
+            Start Race
+          </button>
+        </div>
       </div>
       </div>
     </div>
