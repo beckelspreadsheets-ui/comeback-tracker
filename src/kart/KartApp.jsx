@@ -588,7 +588,7 @@ const KartIntroScreen = ({ handling = 'assisted', onStart, trackKey }) => {
             Start Race
           </button>
           <div className="mt-3 text-[11px] text-white/40">
-            Beat Blue Speed for the win — he's fast, but he can't drift like you.
+            Finish first for the win. The crew is fast, but they can't drift like you.
           </div>
         </div>
       </div>
