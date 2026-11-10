@@ -1003,7 +1003,9 @@ const createInitialRace = (
   // straight-line no-op so telemetry read before the first physics tick is a
   // real number rather than undefined.
   laneArcScale: 1,
-  position: 1 + RIVALS.length,
+  // Last on the grid of THIS field (rivalSeats, not the RIVALS templates: the
+  // badge read "8th" through the countdown of a six-kart race).
+  position: 1 + rivalSeats.length,
   previousProgress: startProgressFor(trackDef),
   progress: startProgressFor(trackDef),
   // P2 of docs/FREE_BODY_PLAN.md. Null until the flag turns it on, and null is
