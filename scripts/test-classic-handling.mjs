@@ -475,5 +475,20 @@ for (const trackDef of tracks) {
   if (VERBOSE) process.stdout.write(`  ${JSON.stringify({ best, blind })}\n`);
 }
 
+// The rival pace table is read as pace[handling][class] inside the race's
+// frame loop: a missing entry throws there and freezes the race, so every
+// Classic handling must carry every class, as a positive finite number.
+{
+  const { CLASSIC_RIVALS, HANDLING_MODES } = await import('../src/game/race/classicHandling.js');
+  const { RACE_CLASSES } = await import('../src/game/race/raceClasses.js');
+  process.stdout.write('\nrival pace table\n');
+  for (const handling of HANDLING_MODES.filter((mode) => mode !== 'assisted')) {
+    for (const raceClass of RACE_CLASSES) {
+      const pace = CLASSIC_RIVALS.pace?.[handling]?.[raceClass.key];
+      check(Number.isFinite(pace) && pace > 0, `rival pace is set for ${handling} at ${raceClass.key}`, String(pace));
+    }
+  }
+}
+
 process.stdout.write(`\n${failures ? `${failures} FAILURES` : 'PASS'}\n`);
 if (failures) process.exit(1);
