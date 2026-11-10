@@ -11604,8 +11604,33 @@ export const ComebackCityThreeKartRace = ({
             race.previousProgress = race.progress;
             race.progress = lerp(race.shortcut.fromProgress, landTarget, race.shortcut.t);
             if (!race.shortcut.failed) race.lane = lerp(race.shortcut.fromLane, -0.1, race.shortcut.t);
+            // The flight is distance covered. Laps, the finish and the
+            // player's place all read cumulativeProgress, and the ground path
+            // below is the only other place it grows; without this every jump
+            // left the player ~0.06 of a lap short (the lap flipped late and
+            // the shortcut cost places instead of gaining them).
+            {
+              let flown = race.progress - race.previousProgress;
+              if (flown > 0.5) flown -= 1;
+              if (flown < -0.5) flown += 1;
+              race.cumulativeProgress += flown;
+              if (race.ghostRecorder) {
+                recordGhostFrame(race.ghostRecorder, race.raceTime, race.cumulativeProgress, race.lane, race.airState.height);
+              }
+            }
             if (flight.landed) {
               race.landSquashTimer = 0.18;
+              // Free steering (Classic, ?freebody=1): the body did not move
+              // during the flight, so set it down where the kart landed,
+              // facing down the road, or the next frame projects it from the
+              // launch ramp.
+              if (race.freeBody) {
+                const landing = engine.sampler.pointAt(race.progress, race.lane);
+                race.freeBody.x = landing.point.x;
+                race.freeBody.z = landing.point.z;
+                race.freeBody.heading = Math.atan2(landing.tangent.x, landing.tangent.z);
+                race.freeBody.lateralVel = 0;
+              }
               if (flight.failed) {
                 race.spinTimer = trackDef.shortcut.failSpin;
                 race.bumpCooldown = KART_CONTACT.spinCooldown;
