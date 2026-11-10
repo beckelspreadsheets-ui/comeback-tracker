@@ -1,5 +1,33 @@
 # RESUME HERE — Penguin Kart game
 
+## 2026-11-10 — App Store audit done; fixes on `audit-fixes-2026-11-09` (read first)
+
+**docs/APP_STORE_AUDIT_2026-11-09.md** is the audit and the fix plan: verdict,
+every finding with evidence and an acceptance test, the Apple requirements
+checked on 2026-11-09, rights gaps, the implementation sequence and the
+owner's open questions.
+
+- Branch `audit-fixes-2026-11-09` = `classic-handling` + the pace-table edits
+  that were uncommitted (kept as a WIP commit, untuned) + one commit per
+  confirmed bug: shortcut lap credit, grid badge, Classic Mix coins, records
+  per handling and class, held keys, Resume while the 3D view is lost, intro
+  copy, a pace-table gate, and the notched-iPhone double safe-area inset.
+  Pushed to GitHub; nothing deployed, signed or merged. `classic-handling`
+  itself is unchanged.
+- Not ready for TestFlight: Apple enrolment, likeness permissions (seven
+  holders: the six racers plus the "outplayasians" finish-line walker), rights
+  evidence for Tripo / ElevenLabs / Higgsfield assets, an iPad decision
+  (`UIRequiresFullScreen` is ignored by the iOS 27 SDK and a tall window turns
+  the game sideways), a privacy link inside the app, and live privacy/support
+  pages. No physical device has run the game.
+- This Mac now has the iOS 27.2 simulator runtime; the game runs in the
+  iPhone 18 Pro and iPad Pro 13-inch simulators from `capacitor://localhost`.
+  `ios/App/App/public` in the repo is still the stale Oct 21 sync: run
+  `npm run ios:sync` before any Xcode build.
+- Next engineering, in order: section 10 of the audit (iPad decision first,
+  then privacy/support links, lap chip, sticky Start, Classic rival re-tune,
+  rename "Classic 64").
+
 ## 2026-10-26 — Tracker-NVMe migration (current working location)
 
 Use `/Volumes/Tracker-NVMe/Projects/comeback-tracker` as the canonical checkout.
