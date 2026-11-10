@@ -11037,35 +11037,10 @@ export const ComebackCityThreeKartRace = ({
         // Procedural fallback bodies stay in place.
       });
 
-    // Blender bake spike (A/B): ?bakedSpike=1 overlays the offline-baked
-    // gym-sweeper shell (public/baked-spike.glb) on the procedural road.
-    // Rendered unlit — all lighting is in the baked texture.
-    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('bakedSpike') === '1') {
-      engine.bakedSpike = 'pending';
-      createGameGltfLoader().load(
-        '/baked-spike.glb',
-        (gltf) => {
-          if (disposed || engineRef.current !== engine) return;
-          const shell = gltf.scene;
-          shell.traverse((node) => {
-            if (node.isMesh) {
-              node.material = new THREE.MeshBasicMaterial({ map: node.material?.map || null });
-              node.castShadow = false;
-              node.receiveShadow = false;
-            }
-          });
-          shell.position.y = 0.12;
-          shell.userData.kind = 'baked-spike-shell';
-          engine.world.add(markCameraExempt(shell));
-          engine.bakedSpike = 'active';
-        },
-        undefined,
-        (error) => {
-          console.warn('[kart] /baked-spike.glb failed to load — spike overlay skipped', error);
-          engine.bakedSpike = 'missing';
-        }
-      );
-    }
+    // The ?bakedSpike=1 A/B overlay and its 1.58 MB baked-spike.glb retired
+    // 2026-11-10 (App Store audit: a lab asset shipping in every build, and a
+    // dormant feature under guideline 2.5.19). scripts/bake-baked-glbs.mjs
+    // can still bake the shell; git history has the loader.
 
     // The /baked-buildings.glb loader retired with the W0 promotion: the
     // buildings it swapped in were the old procedural boxes' bakes, and
