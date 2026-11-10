@@ -284,6 +284,57 @@ branch; no deploys, signing changes or merges.
 | 7 | Name and "(beta)" | **Penguin Kart; keep "(beta)" on the web build** | "Penguin Kart" everywhere as the game's name ("Comeback City" only as a track); "(beta)" stays on the web until the App Store release and comes out of the store build. Name availability on the store still to be checked. |
 | 8 | Production deploy | **Not now.** A proper website once everything is ready | The privacy and support URLs stay a submission blocker until that site exists; the in-app links can point at the bundled pages meanwhile. |
 
+## 13. Work done after the decisions (2026-11-10)
+
+Owner authorised (2026-11-10, question tool): implement the decisions, carry
+on down the fix plan, run the Blender trial, push. Still no deploy, signing
+change or merge. Tables above are left as written on 2026-11-09; this section
+says what has changed since.
+
+| Commit | Change | Checked how |
+|---|---|---|
+| `31fbe672` | iPhone-only target; iPad keys and `UIRequiresFullScreen` removed | Simulator build passes; built app's `UIDeviceFamily` is `[1]` |
+| `87ef0797` | Age-rating note describes the casino props accurately | Read |
+| `70c88e9d` | "Classic 64" is "Retro"; key `mk64` is `retro`; old saved choices and links still open it | New cases in the classic gate |
+| `9a86c53d` | Lap count readable on phones (icons no longer push "1/3" onto the bar) | Phone-size Chromium capture |
+| `587bd7f4` | Performance button only in test builds (`npm run ios:sync:test`) or with `?perf=` on the web | Pause menu shows Resume / Restart / Quit |
+| `98537ad1` | Start Race pinned to the bottom of the setup screen | Visible without scrolling at 844×390, 667×375, 1280×720; iPhone simulator |
+| `c0001aa3` | Privacy, Support and Credits links on the setup screen; new bundled credits page with the licence notices | Chromium walk to each page and back; privacy page opens inside the app in the simulator |
+| `613c1cb5` | Menus say "Penguin Kart" | Simulator capture |
+| `79861629` | Blender trial: scripts, two GLBs, renders (`scripts/blender/scripted-models/`) | Not loaded by the game; comparison page https://claude.ai/artifact/NY8hRucuBSpp1GS1KLw4QV |
+| `1ece025d` | Assisted rivals: 100cc 0.95 → 1.02, 150cc 1 → 1.05 | Autoplay, all three tracks: was 1st in 8 of 9; now 2nd, 2nd, 4th at 100cc and 2nd, 2nd, 3rd at 150cc |
+| `daa646b6` | `baked-spike.glb` and its `?bakedSpike=1` loader removed (1.58 MB) | Gate battery |
+| `0a09029e` | Classic rival pace re-tuned: Retro 0.94 / 0.89 / 1, Mix 0.89 / 0.88 / 1 | Autoplay table in docs/CLASSIC_HANDLING.md; one run per value |
+
+Gate battery: 17/17 at `daa646b6` (isolated copy). The Classic pace commit
+after it changes one table and passes the classic gate; the full battery was
+not re-run on it.
+
+**Findings now closed:** privacy link in the app; iPad windowing (deferred by
+the iPhone-only decision); age-rating note; "Classic 64" name; lap chip;
+setup screen Start; performance toggle; mixed branding in the menus; credits
+and licence notices; `baked-spike.glb`; Classic balance and Assisted
+difficulty (both pending a human feel check).
+
+**Still open before TestFlight:** Apple enrolment; written permission from
+the seven holders; rights evidence for Tripo / ElevenLabs / Higgsfield /
+Meshy assets (the Blender route covers the Tripo ones if the owner accepts
+the look); live privacy and support URLs (waits for the website); a first
+run on a physical iPhone; `npm run ios:sync` before any archive; new store
+screenshots (the HUD and menus changed).
+
+**Not verified in this round:**
+- Tuning used the autoplay driver, one run per value. It does not drift for
+  boosts, so a person will do better than it. The owner has to feel 100cc and
+  150cc on Assisted and 50cc on Retro and Classic Mix.
+- Holder credit lines on the credits page are a placeholder until permission
+  is logged.
+- The credits page says the music was made with ElevenLabs, from the audit's
+  reading of docs/music-receipts; the owner should confirm the wording.
+- The scripted kart and Seth have not been loaded in the game. CRRT Bunny,
+  the third Tripo model, has not been started.
+- "(beta)" is still in the web manifest and page description, by decision.
+
 ## Appendix: Apple sources (checked 2026-11-09)
 
 | Topic | Source |

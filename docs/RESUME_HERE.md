@@ -1,6 +1,22 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-11-10 — App Store audit done; fixes on `audit-fixes-2026-11-09` (read first)
+## 2026-11-10 (later) — owner decisions implemented on `audit-fixes-2026-11-09` (read first)
+
+Section 13 of docs/APP_STORE_AUDIT_2026-11-09.md lists every commit and how it
+was checked. In short: V1 is **iPhone only**; "Classic 64" is now **Retro**
+(key `retro`, old `mk64` still opens it); the menus say Penguin Kart; the
+setup screen has a pinned Start and Privacy / Support / Credits links; the
+lap chip is readable on phones; the performance button is test-build only
+(`npm run ios:sync:test`); Assisted 100/150cc and both Classic versions were
+re-tuned with the autoplay driver and **need the owner's feel check**; a
+Blender-script rebuild trial of the hero kart and Seth Penguin is in
+`scripts/blender/scripted-models/` (not in the game). Nothing deployed.
+
+Next: owner feel check of the tuning; owner's view of the Blender trial
+(https://claude.ai/artifact/NY8hRucuBSpp1GS1KLw4QV); then the "before public
+release" items in section 10. The section below is the earlier state.
+
+## 2026-11-10 — App Store audit done; fixes on `audit-fixes-2026-11-09`
 
 **docs/APP_STORE_AUDIT_2026-11-09.md** is the audit and the fix plan: verdict,
 every finding with evidence and an acceptance test, the Apple requirements
