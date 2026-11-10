@@ -996,6 +996,18 @@ const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror 
           </button>
         </div>
       </div>
+      {/* App Review 5.1.1(i): the privacy policy must be easy to reach inside
+          the app. All three are pages in the bundle (public-kart/), so they
+          open offline; each has a link back to the game. */}
+      <nav
+        aria-label="About Penguin Kart"
+        className="flex justify-center gap-6 pb-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-white/45"
+        data-testid="race-setup-links"
+      >
+        <a className="py-2 transition-colors hover:text-white/80" href="/privacy.html">Privacy</a>
+        <a className="py-2 transition-colors hover:text-white/80" href="/support.html">Support</a>
+        <a className="py-2 transition-colors hover:text-white/80" href="/credits.html">Credits</a>
+      </nav>
       </div>
     </div>
   </div>
