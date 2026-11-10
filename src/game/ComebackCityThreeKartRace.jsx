@@ -207,7 +207,7 @@ import {
   roadEdgeSection,
 } from './race/render/buildRoadEdgeProfile.js';
 import { buildBarrierKit } from './race/render/barrierKit.js';
-import { readPerfProbePref, setPerfProbe } from './race/perfToggle.js';
+import { perfToggleAvailable, readPerfProbePref, setPerfProbe } from './race/perfToggle.js';
 import { hapticForCue, hapticImpact } from './race/haptics.js';
 import { createRaceJuice } from './race/juice.js';
 import {
@@ -15081,18 +15081,20 @@ export const ComebackCityThreeKartRace = ({
                 Quit to menu
               </button>
             ) : null}
-            <button
-              type="button"
-              className="three-kart-race__pause-minor"
-              data-testid="race-pause-perf-toggle"
-              onClick={() => {
-                const next = !perfOverlay;
-                setPerfOverlay(next);
-                setPerfProbe(next, { remember: true });
-              }}
-            >
-              {perfOverlay ? 'Hide performance stats' : 'Show performance stats'}
-            </button>
+            {perfToggleAvailable() ? (
+              <button
+                type="button"
+                className="three-kart-race__pause-minor"
+                data-testid="race-pause-perf-toggle"
+                onClick={() => {
+                  const next = !perfOverlay;
+                  setPerfOverlay(next);
+                  setPerfProbe(next, { remember: true });
+                }}
+              >
+                {perfOverlay ? 'Hide performance stats' : 'Show performance stats'}
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
