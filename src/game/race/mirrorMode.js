@@ -59,15 +59,36 @@ export const isMirrorRecordKey = (key) => typeof key === 'string' && key.endsWit
 export const mirrorRecordKey = (trackKey, mirror) =>
   mirror && !isMirrorRecordKey(trackKey) ? `${trackKey}${MIRROR_RECORD_SUFFIX}` : trackKey;
 
+// Classic handling is a different game from Assisted (free steering, and the
+// speed class sets the player's own top speed: 0.88 / 1.0 / 1.08), so its
+// bests and ghosts are kept per handling and class: '<track>@mix-150cc'.
+// Without this a Classic 150cc ghost became the target on Assisted, and
+// "Best" on a track card mixed the three. Assisted keeps the plain key, so
+// everything saved before Classic existed stays where it is. The mirror
+// suffix still goes last: '<track>@mk64-50cc:mirror'.
+export const HANDLING_RECORD_MARK = '@';
+
+export const handlingRecordKey = (trackKey, handling, classKey) =>
+  handling && handling !== 'assisted' && classKey && !String(trackKey).includes(HANDLING_RECORD_MARK)
+    ? `${trackKey}${HANDLING_RECORD_MARK}${handling}-${classKey}`
+    : trackKey;
+
+export const raceRecordKey = (trackKey, { classKey, handling, mirror } = {}) =>
+  mirrorRecordKey(handlingRecordKey(trackKey, handling, classKey), mirror);
+
 // The saved results as the setup screen should show them for the mode it is
 // in, keyed by plain track key: normal mode sees only normal records, mirror
 // mode sees only the ':mirror' ones.
-export const recordsForMode = (results, mirror) => {
+export const recordsForMode = (results, mirror, { classKey, handling } = {}) => {
   const view = {};
   if (!results || typeof results !== 'object') return view;
+  const variant = handlingRecordKey('', handling, classKey); // '' on Assisted
   for (const [key, entry] of Object.entries(results)) {
     if (isMirrorRecordKey(key) !== Boolean(mirror)) continue;
-    view[mirror ? key.slice(0, -MIRROR_RECORD_SUFFIX.length) : key] = entry;
+    const plain = mirror ? key.slice(0, -MIRROR_RECORD_SUFFIX.length) : key;
+    const mark = plain.indexOf(HANDLING_RECORD_MARK);
+    if ((mark === -1 ? '' : plain.slice(mark)) !== variant) continue;
+    view[mark === -1 ? plain : plain.slice(0, mark)] = entry;
   }
   return view;
 };

@@ -16,6 +16,7 @@ import {
   isMirrorRecordKey,
   mirrorRecordKey,
   mirrorSteerInput,
+  raceRecordKey,
   recordsForMode,
 } from '../src/game/race/mirrorMode.js';
 import { readGhost, saveGhostIfBest } from '../src/game/race/replayGhost.js';
@@ -199,6 +200,28 @@ ok('the setup screen sees one mode at a time, keyed by plain track key', () => {
   assert.deepEqual(recordsForMode(saved, false), { 'comeback-city': { bestTime: 100 }, 'penguin-village': { bestTime: 120 } });
   assert.deepEqual(recordsForMode(saved, true), { 'comeback-city': { bestTime: 90 } });
   assert.deepEqual(recordsForMode(null, true), {});
+});
+
+ok('Classic handling keeps its own records per handling and class', () => {
+  assert.equal(raceRecordKey('comeback-city', {}), 'comeback-city');
+  assert.equal(raceRecordKey('comeback-city', { classKey: '150cc', handling: 'assisted' }), 'comeback-city');
+  assert.equal(raceRecordKey('comeback-city', { classKey: '150cc', handling: 'mix' }), 'comeback-city@mix-150cc');
+  assert.equal(
+    raceRecordKey('comeback-city', { classKey: '50cc', handling: 'mk64', mirror: true }),
+    'comeback-city@mk64-50cc:mirror'
+  );
+  const saved = {
+    'comeback-city': { bestTime: 100 },
+    'comeback-city@mix-150cc': { bestTime: 80 },
+    'comeback-city@mix-50cc': { bestTime: 120 },
+    'comeback-city@mix-150cc:mirror': { bestTime: 85 },
+  };
+  assert.deepEqual(recordsForMode(saved, false), { 'comeback-city': { bestTime: 100 } }, 'Assisted never sees a Classic best');
+  assert.deepEqual(recordsForMode(saved, false, { classKey: '150cc', handling: 'assisted' }), { 'comeback-city': { bestTime: 100 } });
+  assert.deepEqual(recordsForMode(saved, false, { classKey: '150cc', handling: 'mix' }), { 'comeback-city': { bestTime: 80 } });
+  assert.deepEqual(recordsForMode(saved, false, { classKey: '50cc', handling: 'mix' }), { 'comeback-city': { bestTime: 120 } });
+  assert.deepEqual(recordsForMode(saved, true, { classKey: '150cc', handling: 'mix' }), { 'comeback-city': { bestTime: 85 } });
+  assert.deepEqual(recordsForMode(saved, false, { classKey: '150cc', handling: 'mk64' }), {});
 });
 
 ok('time-trial ghosts: mirror saves beside the normal ghost, never over it', () => {

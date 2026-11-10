@@ -747,7 +747,7 @@ const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror 
   // remounts on every return from a race, which is when they change.
   const [savedResults] = useState(() => readRaceResults() || {});
   // With Mirror Mode on, the track cards show the mirror records instead.
-  const bestResults = recordsForMode(savedResults, mirror?.active);
+  const bestResults = recordsForMode(savedResults, mirror?.active, { classKey: raceClass, handling });
   const [pickerTracks] = useState(() => (readPreviewTracksFlag() ? [...KART_TRACKS, ...PREVIEW_TRACKS] : KART_TRACKS));
   return (
   <div className="absolute inset-0 z-40 overflow-y-auto" data-testid="race-character-select">

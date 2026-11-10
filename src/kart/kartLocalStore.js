@@ -5,7 +5,7 @@
 // already owns (cc-kart-intro-seen / cc-kart-character / cc-kart-kart /
 // cc-kart-track), which carry over to this build unchanged.
 
-import { mirrorRecordKey } from '../game/race/mirrorMode.js';
+import { raceRecordKey } from '../game/race/mirrorMode.js';
 
 const RESULTS_KEY = 'cc-kart-results';
 const MIGRATED_FLAG_KEY = 'cc-kart-results-migrated';
@@ -95,7 +95,14 @@ export const recordRaceFinish = (result) => {
   const results = readRaceResults();
   // Mirror runs keep their own entry ('<track>:mirror'), so they never
   // overwrite a normal best (src/game/race/mirrorMode.js).
-  const recordKey = mirrorRecordKey(result.trackKey, result.mirror);
+  // Classic handling keeps its own entry per handling and class as well
+  // ('<track>@mix-150cc'); Assisted results carry no handling and keep the
+  // plain key.
+  const recordKey = raceRecordKey(result.trackKey, {
+    classKey: result.raceClass,
+    handling: result.handling,
+    mirror: result.mirror,
+  });
   const previous = results[recordKey] || {};
   // Reject invalid new laps and recover bests poisoned by older saves.
   const lap = Number.isFinite(result.bestLap) && result.bestLap > 0 ? result.bestLap : null;

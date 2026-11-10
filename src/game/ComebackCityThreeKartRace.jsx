@@ -84,7 +84,7 @@ import {
 } from './race/raceCoins.js';
 import { QA_RACE_CLASS, raceClassByKey } from './race/raceClasses.js';
 import { mergeGamepadInput, pollGamepad } from './race/gamepadInput.js';
-import { MIRROR_FLIP_STYLE, mirrorRecordKey, mirrorSteerInput } from './race/mirrorMode.js';
+import { MIRROR_FLIP_STYLE, mirrorSteerInput, raceRecordKey } from './race/mirrorMode.js';
 import { createGhostRecorder, ghostStateAt, readGhost, recordGhostFrame, saveGhostIfBest } from './race/replayGhost.js';
 import { DEFAULT_TRACK_KEY, isKnownTrackKey, trackByKey } from './race/tracks/index.js';
 import { DEFAULT_PROJECTION_WINDOW, projectToSpline as projectPointToSpline } from './race/splineProjection.js';
@@ -10649,10 +10649,14 @@ export const ComebackCityThreeKartRace = ({
     // Re-read on every (re)start so "Race again" races the run just set.
     let storedGhost = null;
     let storedGhostVisible = false;
+    // Mirror and Classic runs race (and save) their own ghost; see
+    // raceRecordKey in race/mirrorMode.js.
+    const ghostRecordKey = () =>
+      raceRecordKey(trackKey, { classKey: raceClass.key, handling: resolvedHandlingRef.current, mirror: mirrorRef.current });
     const applyTimeTrialSetup = () => {
       if (!timeTrial) return;
       // Mirror runs race (and save) their own ghost: '<track>:mirror'.
-      storedGhost = readGhost(mirrorRecordKey(trackKey, mirrorRef.current), trackSignature);
+      storedGhost = readGhost(ghostRecordKey(), trackSignature);
       storedGhostVisible = Boolean(storedGhost);
       race.timeTrial = true;
       race.heldItem = 'cocoa';
@@ -12186,7 +12190,7 @@ export const ComebackCityThreeKartRace = ({
               if (race.timeTrial) {
                 race.standings = null;
                 race.position = 1;
-                race.ttRecord = saveGhostIfBest(mirrorRecordKey(trackKey, mirrorRef.current), trackSignature, {
+                race.ttRecord = saveGhostIfBest(ghostRecordKey(), trackSignature, {
                   character: characterKey,
                   kart: kartKey,
                   samples: race.ghostRecorder.samples,
@@ -14354,6 +14358,9 @@ export const ComebackCityThreeKartRace = ({
           bestLap: race.bestLap,
           // kartLocalStore keys mirror records apart from normal ones.
           mirror: mirrorRef.current,
+          // ...and Classic ones apart per handling and class.
+          handling: race.handling,
+          raceClass: raceClass.key,
           // ₿ carried at the flag (the results card's Coins) — the shell
           // credits them to the wallet (race/progress.js).
           coins: race.coins,
