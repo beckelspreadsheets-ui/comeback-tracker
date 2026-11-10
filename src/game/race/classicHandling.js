@@ -348,8 +348,17 @@ export const classicWallStep = (body, { speed = 0, distance = 0, normal = { x: 0
 // clear eases off; on Assisted the band only wakes up 3 s back.
 export const CLASSIC_RIVALS = Object.freeze({
   pace: Object.freeze({
-    mix: Object.freeze({ '50cc': 0.9, '100cc': 0.94, '150cc': 1 }),
-    retro: Object.freeze({ '50cc': 0.78, '100cc': 0.84, '150cc': 1 }),
+    // RETUNED 2026-11-10 (audit: Retro won 50/100cc leading 93-97% while Mix
+    // came 4th-6th). Autoplay finishes, on Comeback City / Penguin Village /
+    // Satoshi Summit, one run each:
+    //   retro 50cc  0.90 -> 1,1,1   0.94 -> 2,3,4   0.97 -> 4,5,6
+    //   retro 100cc 0.87 -> 1,1,2   0.90 -> 3,1,6   0.95 -> 6,6,6
+    //   mix 50cc    0.86 -> 1,1,1   0.88 -> 1,3,1   0.90 -> 4,6,5
+    //   mix 100cc   0.86 -> 1,1,1   0.88 -> 3,4,1   0.90 -> 5,5,4
+    // The band from "wins" to "last" is about 0.05 wide, so move in 0.01s.
+    // The 0.89s sit between two measured values and were not raced themselves.
+    mix: Object.freeze({ '50cc': 0.89, '100cc': 0.88, '150cc': 1 }),
+    retro: Object.freeze({ '50cc': 0.94, '100cc': 0.89, '150cc': 1 }),
   }),
   rubberBand: Object.freeze({
     aheadMaxSeconds: 6,

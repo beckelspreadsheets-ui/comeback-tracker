@@ -187,12 +187,21 @@ rails-tuned rivals a Classic driver is too SLOW, even at 50cc. The autoplay
 is a cautious centreline driver (no racing line, no stick rocks), so a human
 will do better, but expect `CLASSIC_RIVALS.pace` to land around 0.93-0.95.
 
-To finish: re-run the probe at 50 / 100 / 150cc on mix and retro with this
-code (`DIFFICULTY_PROBE_URL=<local preview> DIFFICULTY_PROBE_RUNS=1
-DIFFICULTY_PROBE_QUERY='handling=mix&cc=50' node scripts/kart-difficulty-probe.mjs`),
-set the pace so the autoplay finishes mid-pack at 50cc and loses at 150cc,
-then build, full battery, deploy, verify under each handling. The probe was
-stopped mid-run on 2026-10-26 when the repo moved to an SSD.
+**Done 2026-11-10** (App Store audit follow-up). Autoplay raced every track
+at several pace values per cell; finishing places on Comeback City / Penguin
+Village / Satoshi Summit:
+
+| Cell | Tried | Set |
+|---|---|---|
+| retro 50cc | 0.90: 1,1,1 · 0.94: 2,3,4 · 0.97: 4,5,6 | **0.94** |
+| retro 100cc | 0.87: 1,1,2 · 0.90: 3,1,6 · 0.95: 6,6,6 | **0.89** |
+| mix 50cc | 0.86: 1,1,1 · 0.88: 1,3,1 · 0.90: 4,6,5 | **0.89** |
+| mix 100cc | 0.86: 1,1,1 · 0.88: 3,4,1 · 0.90: 5,5,4 | **0.88** |
+| both 150cc | 1: last on every track (audit, section 4) | 1 |
+
+One run per value, and the two 0.89s were interpolated, not raced. The gap
+between "autoplay wins" and "autoplay is last" is only about 0.05, so a
+human check decides the last 0.01-0.02. Not deployed.
 
 ## Step 7: the Handling switch
 
