@@ -188,7 +188,7 @@ export const coachMessage = (id, scheme, { handling = 'assisted', heldItem = nul
   }
   if (id === 'release') {
     // Classic earns the boost differently (driftFeel.js ROCK_TURBO / TAP_TURBO).
-    if (handling === 'mk64') {
+    if (handling === 'retro') {
       return message([scheme === 'touch' ? 'Slide out of the turn and back in, then lift!' : 'Steer out and back in twice, then let go!']);
     }
     if (handling === 'mix') {

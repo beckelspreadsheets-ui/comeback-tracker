@@ -8,7 +8,7 @@ n64decomp/mk64 decompilation) and to try ideas from other decompiled racers
 - **Too easy:** corners, boosts, mistakes and rivals — all four.
 - **A setting, not a replacement:** Assisted (today's rails game, unchanged and
   the default for new players) vs Classic.
-- **Two Classic versions to compare:** `mk64` (MK64's rules) and `mix` (the
+- **Two Classic versions to compare:** `retro` (MK64's rules) and `mix` (the
   same base plus ideas from the other games). "I want to see the m64 vs the
   other side so lets do two versions."
 - **Mini-turbo:** build both MK64 stick rocks and CTR timed taps; he picks.
@@ -16,7 +16,11 @@ n64decomp/mk64 decompilation) and to try ideas from other decompiled racers
   Kart), timed ramp tricks (Mario Kart Wii), hang-time boosts (CTR).
 - **First:** free steering.
 
-Try it: `?handling=mk64` or `?handling=mix` on any build of this branch
+Renamed 2026-11-10: the picker's "Classic 64" is now **Retro** and its key
+`mk64` is now `retro` (owner decision; old saved choices and links still
+open it).
+
+Try it: `?handling=retro` or `?handling=mix` on any build of this branch
 (`?handling=assisted` forces today's game). Code: `src/game/race/classicHandling.js`,
 `src/game/race/handlingMode.js`, the Classic branches in the monolith's player
 update, `classicAutoplayInput` in `src/game/race/autoplayDriver.js`. Gate:
@@ -95,7 +99,7 @@ its impact loss EVERY frame of contact, so grinding along a wall at a shallow
 angle bled the kart to a stop in about a second, and a kart stopped nose-first
 on a wall could never turn away. Both fixed above (friction scaled by the push;
 the standstill pivot); test:classic-handling now drives that escape. In the real race (Comeback
-City, ?handling=mk64, autoplay) it averaged 219 u/s with 2 wall hits in 40 s.
+City, ?handling=retro, autoplay) it averaged 219 u/s with 2 wall hits in 40 s.
 
 Steering sign: positive steer is the player's right, which decreases heading.
 The August `?freebody=1` model (freeBodyKart.js) has it the other way round —
@@ -107,7 +111,7 @@ against the shove. Classic does neither; the August path is left as it was.
 Both start the same way as today: hold drift (Space, a bumper, the Drift button
 or a flick on the steering thumb) and steer, and the kart hops into a slide.
 
-- **Classic 64, stick rocks.** Mid-slide, push the stick (arrow key, thumb, or
+- **Retro, stick rocks.** Mid-slide, push the stick (arrow key, thumb, or
   tilt) OUT of the corner for a moment, then back IN. The first push needs
   ~0.28 s, later ones ~0.13 s. One rock turns the sparks blue, two turn them
   amber; let go of drift then for the boost (0.55 s, worth ~0.28 s). Holding
@@ -153,11 +157,11 @@ the wobble.
 
 ## Step 6: Classic Mix's extras
 
-From the owner's picks off the decomp list (Classic 64 has none of these):
+From the owner's picks off the decomp list (Retro has none of these):
 - **Hits cost coins** (Diddy Kong Racing / Super Mario Kart): a spin-out spills
   3 coins. Coins are top speed (+0.4% each) and the money at the finish.
 - **Timed ramp tricks** (Mario Kart Wii): the trick arms only if drift is
-  pressed within 0.22 s of leaving the lip; Assisted and Classic 64 take a
+  pressed within 0.22 s of leaving the lip; Assisted and Retro take a
   press any time in the air.
 - **Hang-time boosts** (Crash Team Racing): drift still held when you land
   from a jump longer than 0.5 s pays a boost that grows with the air time
@@ -183,7 +187,7 @@ rails-tuned rivals a Classic driver is too SLOW, even at 50cc. The autoplay
 is a cautious centreline driver (no racing line, no stick rocks), so a human
 will do better, but expect `CLASSIC_RIVALS.pace` to land around 0.93-0.95.
 
-To finish: re-run the probe at 50 / 100 / 150cc on mix and mk64 with this
+To finish: re-run the probe at 50 / 100 / 150cc on mix and retro with this
 code (`DIFFICULTY_PROBE_URL=<local preview> DIFFICULTY_PROBE_RUNS=1
 DIFFICULTY_PROBE_QUERY='handling=mix&cc=50' node scripts/kart-difficulty-probe.mjs`),
 set the pace so the autoplay finishes mid-pack at 50cc and loses at 150cc,
@@ -193,27 +197,27 @@ stopped mid-run on 2026-10-26 when the repo moved to an SSD.
 ## Step 7: the Handling switch
 
 The setup screen has a **Handling** row under the class picker: Assisted /
-Classic 64 / Classic Mix. It is saved on Start (`cc-kart-handling`), passed to
+Retro / Classic Mix. It is saved on Start (`cc-kart-handling`), passed to
 the race as a prop, and a `?handling=` link seeds it once (stripped from the
 URL like `?track=`). The race resolves URL > pick > saved > Assisted, once per
 mount. How to Race follows the pick: a rules card for the chosen Classic
 version on top, and its drift, rocket-start and trick lines (touch and
 keyboard) swap to that version's. The first-race coach's "let go" prompt does
-too (Classic 64: out and back in, then let go; Classic Mix: press again on
+too (Retro: out and back in, then let go; Classic Mix: press again on
 the amber flash).
 
 ## Preview
 
 Its own Pages alias, so the owner's shared link and aaa-preview stay put:
 **https://classic-handling.comeback-city-kart.pages.dev** (first deploy
-4032fe4b, steps 1-6: `?handling=mk64` / `?handling=mix`). Every deploy is
-checked under each handling: `VERIFY_QUERY='&handling=mk64' node
+4032fe4b, steps 1-6: `?handling=retro` / `?handling=mix`). Every deploy is
+checked under each handling: `VERIFY_QUERY='&handling=retro' node
 scripts/verify-preview-deploy.mjs <unique url>` (and mix, and none).
 
 ## Next steps (one commit each)
 
 1. ~~Free steering: the Classic model, walls, run-off, power slide.~~
-2. ~~Mini-turbos: `mk64` = stick rocks; `mix` = CTR timed taps (both phones and pads).~~
+2. ~~Mini-turbos: `retro` = stick rocks; `mix` = CTR timed taps (both phones and pads).~~
 3. ~~Rocket start that works (both versions) — the reward bug is in Assisted too.~~
 4. ~~Mistakes: costlier hits, shorter immunity, banana brake-save.~~
 5. Rivals: player speed by class (MK64 ratios), rubber band that pushes back. **WIP: code in, pace untuned (see Step 5).**

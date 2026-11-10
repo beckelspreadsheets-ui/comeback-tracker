@@ -65,7 +65,7 @@ export const mirrorRecordKey = (trackKey, mirror) =>
 // Without this a Classic 150cc ghost became the target on Assisted, and
 // "Best" on a track card mixed the three. Assisted keeps the plain key, so
 // everything saved before Classic existed stays where it is. The mirror
-// suffix still goes last: '<track>@mk64-50cc:mirror'.
+// suffix still goes last: '<track>@retro-50cc:mirror'.
 export const HANDLING_RECORD_MARK = '@';
 
 export const handlingRecordKey = (trackKey, handling, classKey) =>

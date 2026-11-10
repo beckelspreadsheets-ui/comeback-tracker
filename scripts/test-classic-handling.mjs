@@ -179,7 +179,7 @@ const any = (seen, key) => seen.some((events) => events[key]);
     [ROCK_TURBO.nextHold + 0.05, { stick: -1 }],
     [0.1, { stick: 1 }],
   ]);
-  check(rocked.drift.active && rocked.drift.stage === 2 && rocked.drift.tier === 2, 'Classic 64: two rocks turn the sparks amber', `stage ${rocked.drift.stage}`);
+  check(rocked.drift.active && rocked.drift.stage === 2 && rocked.drift.tier === 2, 'Retro: two rocks turn the sparks amber', `stage ${rocked.drift.stage}`);
   const paid = slideScript('rock', [
     [ROCK_TURBO.firstHold + 0.05, { stick: -1 }],
     [0.1, { stick: 1 }],
@@ -190,22 +190,22 @@ const any = (seen, key) => seen.some((events) => events[key]);
   const release = paid.seen.find((events) => events.released);
   check(
     release?.released === 2 && release.kick === ROCK_TURBO.boostKick && paid.drift.miniTurboTimer > 0,
-    'Classic 64: letting go then pays one boost',
+    'Retro: letting go then pays one boost',
     `kick ${release?.kick}`
   );
   const short = slideScript('rock', [
     [ROCK_TURBO.firstHold - 0.1, { stick: -1 }],
     [0.1, { stick: 1 }],
   ]);
-  check(short.drift.stage === 0, 'Classic 64: a first push shorter than the hold does not count');
+  check(short.drift.stage === 0, 'Retro: a first push shorter than the hold does not count');
   const lazy = slideScript('rock', [[2, { stick: 0 }], [0.05, { held: false }]]);
-  check(!any(lazy.seen, 'released'), 'Classic 64: holding a slide without rocking pays nothing');
+  check(!any(lazy.seen, 'released'), 'Retro: holding a slide without rocking pays nothing');
   const over = slideScript('rock', [
     [ROCK_TURBO.firstHold + 0.05, { stick: -1 }],
     [0.1, { stick: 1 }],
     [ROCK_TURBO.overHold + 0.05, { stick: -1 }],
   ]);
-  check(over.drift.stage === 0, 'Classic 64: holding the stick out too long throws the charge away');
+  check(over.drift.stage === 0, 'Retro: holding the stick out too long throws the charge away');
 }
 {
   const hot = TAP_TURBO.fillTime * TAP_TURBO.hotFrom;
@@ -322,7 +322,7 @@ process.stdout.write('\nClassic Mix extras\n');
     } while (!events.landed && t < 5);
     return events;
   };
-  check(jump(0.5, Infinity).trickTier === 1, 'Assisted and Classic 64 take a trick press any time in the air');
+  check(jump(0.5, Infinity).trickTier === 1, 'Assisted and Retro take a trick press any time in the air');
   check(jump(0.1, MIX_AIR.trickWindow).trickTier === 1 && jump(0.5, MIX_AIR.trickWindow).trickTier === 0, 'Mix: the trick only arms off the lip (Mario Kart Wii)');
   const ramp = jump(0, MIX_AIR.trickWindow);
   const hang = hangTimeBoost(ramp.airTime);
@@ -488,6 +488,19 @@ for (const trackDef of tracks) {
       check(Number.isFinite(pace) && pace > 0, `rival pace is set for ${handling} at ${raceClass.key}`, String(pace));
     }
   }
+}
+
+// 'retro' was 'mk64' until 2026-11-10: a saved choice or a shared link that
+// still names the old key must open Retro, not fall back to Assisted.
+{
+  const { readHandlingMode } = await import('../src/game/race/handlingMode.js');
+  const storage = (value) => ({ getItem: () => value });
+  process.stdout.write('\nrenamed handling key\n');
+  check(readHandlingMode({ search: '', storage: storage('mk64') }) === 'retro', 'a saved "mk64" choice opens Retro');
+  check(readHandlingMode({ search: '?handling=mk64', storage: storage(null) }) === 'retro', 'a ?handling=mk64 link opens Retro');
+  check(readHandlingMode({ search: '', storage: storage(null), preferred: 'mk64' }) === 'retro', 'a preferred "mk64" opens Retro');
+  check(readHandlingMode({ search: '', storage: storage('retro') }) === 'retro', 'a saved "retro" choice opens Retro');
+  check(readHandlingMode({ search: '', storage: storage('nonsense') }) === 'assisted', 'an unknown saved choice falls back to Assisted');
 }
 
 process.stdout.write(`\n${failures ? `${failures} FAILURES` : 'PASS'}\n`);

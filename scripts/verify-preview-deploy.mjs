@@ -5,7 +5,7 @@
 // page errors, or a race that never starts. Also checks the store pages.
 //
 //   node scripts/verify-preview-deploy.mjs https://<hash>.comeback-city-kart.pages.dev [outDir]
-//   VERIFY_QUERY='&handling=mk64' node scripts/verify-preview-deploy.mjs <url>   # every run under that query
+//   VERIFY_QUERY='&handling=retro' node scripts/verify-preview-deploy.mjs <url>   # every run under that query
 //
 // Probe the UNIQUE deployment URL wrangler prints, not the branch alias: the
 // alias can serve the previous deploy for ~30-60 s after "Deployment complete".

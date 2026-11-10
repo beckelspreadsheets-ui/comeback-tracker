@@ -1014,13 +1014,13 @@ const createInitialRace = (
   // Populated in createEngine, where the sampler exists to seed position and
   // heading from the grid slot.
   freeBody: null,
-  // Classic handling (?handling=mk64|mix, race/classicHandling.js). Null on
+  // Classic handling (?handling=retro|mix, race/classicHandling.js). Null on
   // Assisted, which is the rails game exactly as shipped. Seeded together
   // with the free body in createEngine and again on every restart.
   classic: null,
   handling: 'assisted',
   // The mini-turbo charge rule (driftFeel.js): 'hold' on Assisted, 'rock' on
-  // Classic 64, 'tap' on Classic Mix. Gamepad drift presses are counted here
+  // Retro, 'tap' on Classic Mix. Gamepad drift presses are counted here
   // (keyboard and touch count theirs on the input itself).
   driftMode: 'hold',
   padDriftPresses: 0,
@@ -10151,7 +10151,7 @@ export const ComebackCityThreeKartRace = ({
   // Mirror mode: the picture flips left-to-right and the player's steering
   // inverts; the simulation does not change (race/mirrorMode.js).
   mirror = false,
-  // Handling picked on the setup screen ('assisted' | 'mk64' | 'mix'); a
+  // Handling picked on the setup screen ('assisted' | 'retro' | 'mix'); a
   // ?handling= in the URL still wins (race/handlingMode.js).
   handling = null,
   onExit = null,
@@ -10716,7 +10716,7 @@ export const ComebackCityThreeKartRace = ({
     // both paths start identically: position from pointAt at the current
     // progress and lane, heading from the spline tangent there.
     //
-    // Classic handling (?handling=mk64|mix) drives the same free body with its
+    // Classic handling (?handling=retro|mix) drives the same free body with its
     // own model (race/classicHandling.js). restartRace rebuilds the race state,
     // which nulls both, so this runs again there.
     const handlingMode = resolvedHandlingRef.current;
@@ -11686,7 +11686,7 @@ export const ComebackCityThreeKartRace = ({
           race.driftTier = driftState.tier;
           if (driftEvents.landed) race.landSquashTimer = 0.14;
           race.landSquashTimer = Math.max(0, race.landSquashTimer - dt);
-          // The mini-turbo's kick: on release (Assisted, Classic 64), on a tap
+          // The mini-turbo's kick: on release (Assisted, Retro), on a tap
           // mid-slide (Classic Mix), or negative for a Classic Mix backfire.
           if (driftEvents.kick) {
             race.speed = clamp(race.speed + driftEvents.kick, 0, BOOST_SPEED);
@@ -11727,7 +11727,7 @@ export const ComebackCityThreeKartRace = ({
             }
           }
           // Classic Mix times the trick press to the ramp's lip (Mario Kart
-          // Wii); Assisted and Classic 64 take a press any time in the air.
+          // Wii); Assisted and Retro take a press any time in the air.
           const mixRules = race.handling === 'mix';
           const airEvents = updateAir(airState, {
             actionHeld: Boolean(input.drift),

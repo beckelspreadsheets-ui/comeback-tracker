@@ -54,7 +54,7 @@ This rollback copy is not an independent physical backup.
 The owner said the game is "perfect besides driving mechanics being a bit too
 easy" and wants it closer to Mario Kart 64. This branch adds a **Handling**
 setting on the setup screen: **Assisted** (today's game, still the default),
-**Classic 64** (MK64's rules) and **Classic Mix** (the same base plus ideas
+**Retro** (MK64's rules; called "Classic 64", key `mk64`, until 2026-11-10) and **Classic Mix** (the same base plus ideas
 from Crash Team Racing, Diddy Kong Racing and Mario Kart Wii). He compares
 the two Classic versions and picks; nothing merges into `aaa-kart-ci` before that.
 - Everything is in **docs/CLASSIC_HANDLING.md**: his answers, the rule for

@@ -47,11 +47,11 @@ export const DRIFT_FEEL = {
   sparkColors: ['#F5F8FF', '#00E5FF', '#FFD34F', '#C879FF'],
 };
 
-// CLASSIC MINI-TURBOS (?handling=mk64|mix, docs/CLASSIC_HANDLING.md). Assisted
+// CLASSIC MINI-TURBOS (?handling=retro|mix, docs/CLASSIC_HANDLING.md). Assisted
 // keeps the time-held charge above; the two Classic versions make you earn it,
 // and the owner picks between them.
 
-// Classic 64: MK64's rule, in our own numbers. During the slide, push the
+// Retro: MK64's rule, in our own numbers. During the slide, push the
 // stick OUT of the corner and hold it there, then bring it back IN: that is
 // one rock. The first rock needs a longer push than the rest; two rocks turn
 // the sparks amber; letting go then pays one boost. Holding the stick out too
@@ -89,7 +89,7 @@ export const TAP_TURBO = {
 };
 
 // Which charge rule a handling uses.
-export const driftModeForHandling = (handling) => (handling === 'mk64' ? 'rock' : handling === 'mix' ? 'tap' : 'hold');
+export const driftModeForHandling = (handling) => (handling === 'retro' ? 'rock' : handling === 'mix' ? 'tap' : 'hold');
 
 // The mini-turbo's extra thrust, u/s^2, by charge rule.
 export const turboAccelForMode = (mode) =>
@@ -184,7 +184,7 @@ const stepTapCharge = (drift, freshPress, dt, events) => {
 // frame's events: { hopped, landed, released, kick, ... } — released is the
 // banked tier (0 = none/cancel) and kick the speed to add this frame.
 //
-// mode: 'hold' (Assisted, time-held charge), 'rock' (Classic 64) or 'tap'
+// mode: 'hold' (Assisted, time-held charge), 'rock' (Retro) or 'tap'
 // (Classic Mix). stick is the raw steering input (the rock rule reads it);
 // presses counts fresh drift presses from every input source (the tap rule
 // reads it).

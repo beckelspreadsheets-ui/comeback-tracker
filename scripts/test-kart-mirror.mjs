@@ -207,8 +207,8 @@ ok('Classic handling keeps its own records per handling and class', () => {
   assert.equal(raceRecordKey('comeback-city', { classKey: '150cc', handling: 'assisted' }), 'comeback-city');
   assert.equal(raceRecordKey('comeback-city', { classKey: '150cc', handling: 'mix' }), 'comeback-city@mix-150cc');
   assert.equal(
-    raceRecordKey('comeback-city', { classKey: '50cc', handling: 'mk64', mirror: true }),
-    'comeback-city@mk64-50cc:mirror'
+    raceRecordKey('comeback-city', { classKey: '50cc', handling: 'retro', mirror: true }),
+    'comeback-city@retro-50cc:mirror'
   );
   const saved = {
     'comeback-city': { bestTime: 100 },
@@ -221,7 +221,7 @@ ok('Classic handling keeps its own records per handling and class', () => {
   assert.deepEqual(recordsForMode(saved, false, { classKey: '150cc', handling: 'mix' }), { 'comeback-city': { bestTime: 80 } });
   assert.deepEqual(recordsForMode(saved, false, { classKey: '50cc', handling: 'mix' }), { 'comeback-city': { bestTime: 120 } });
   assert.deepEqual(recordsForMode(saved, true, { classKey: '150cc', handling: 'mix' }), { 'comeback-city': { bestTime: 85 } });
-  assert.deepEqual(recordsForMode(saved, false, { classKey: '150cc', handling: 'mk64' }), {});
+  assert.deepEqual(recordsForMode(saved, false, { classKey: '150cc', handling: 'retro' }), {});
 });
 
 ok('time-trial ghosts: mirror saves beside the normal ghost, never over it', () => {

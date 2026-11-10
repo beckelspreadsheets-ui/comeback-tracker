@@ -284,12 +284,12 @@ const TouchTip = ({ chips, children }) => (
 // guide's drift, rocket-start and trick lines swap to these; Assisted keeps
 // the originals.
 const CLASSIC_GUIDE = {
-  mk64: {
+  retro: {
     flick:
       'Into a corner, flick toward the turn and keep your thumb down. Slide it out of the turn and back in, twice, until the sparks turn amber; lift to fire the boost.',
     keyDrift: 'In the drift, tap the arrow out of the turn and back in, twice. Amber sparks: let go for the boost.',
     keyRocket: 'Rocket start: press gas in the last moment before GO and hold it. Hold it early and the engine floods.',
-    name: 'Classic 64',
+    name: 'Retro',
     rules: [
       'You aim the kart. The road no longer carries it round the bends.',
       'Full lock at speed slides wide and costs speed, so ease it in.',
@@ -1115,7 +1115,7 @@ export const KartApp = () => {
     }
   });
   // HANDLING (race/handlingMode.js, docs/CLASSIC_HANDLING.md). Assisted is the
-  // shipped game; Classic 64 and Classic Mix are the harder MK64-style ones.
+  // shipped game; Retro and Classic Mix are the harder MK64-style ones.
   // A ?handling= link seeds it (one-shot, like the track); Start saves it.
   const [handling, setHandling] = useState(() => readHandlingMode());
   // MIRROR MODE (mirrorUnlock.js). Locked until the player wins a Grand Prix;

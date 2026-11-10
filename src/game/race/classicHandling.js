@@ -33,8 +33,12 @@
 // Pure: no Three.js, no DOM. scripts/test-classic-handling.mjs drives every
 // track with it in node.
 
-export const HANDLING_MODES = Object.freeze(['assisted', 'mk64', 'mix']);
-export const isClassicHandling = (mode) => mode === 'mk64' || mode === 'mix';
+export const HANDLING_MODES = Object.freeze(['assisted', 'retro', 'mix']);
+export const isClassicHandling = (mode) => mode === 'retro' || mode === 'mix';
+// 'retro' was 'mk64' until 2026-11-10. Saved choices and shared links made
+// before the rename still name the old key, so every reader maps it here.
+const RENAMED_HANDLING = Object.freeze({ mk64: 'retro' });
+export const currentHandlingKey = (mode) => RENAMED_HANDLING[mode] ?? mode;
 
 export const CLASSIC = Object.freeze({
   // --- speed ---------------------------------------------------------------
@@ -345,7 +349,7 @@ export const classicWallStep = (body, { speed = 0, distance = 0, normal = { x: 0
 export const CLASSIC_RIVALS = Object.freeze({
   pace: Object.freeze({
     mix: Object.freeze({ '50cc': 0.9, '100cc': 0.94, '150cc': 1 }),
-    mk64: Object.freeze({ '50cc': 0.78, '100cc': 0.84, '150cc': 1 }),
+    retro: Object.freeze({ '50cc': 0.78, '100cc': 0.84, '150cc': 1 }),
   }),
   rubberBand: Object.freeze({
     aheadMaxSeconds: 6,

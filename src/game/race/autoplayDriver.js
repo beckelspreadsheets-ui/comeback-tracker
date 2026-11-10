@@ -95,7 +95,7 @@ export const freeBodyAutoplayInput = ({
   };
 };
 
-// Classic handling's demo driver (?handling=mk64|mix). The same pure pursuit
+// Classic handling's demo driver (?handling=retro|mix). The same pure pursuit
 // with three differences:
 //   - the steering sign: in classicHandling.js positive steer is the player's
 //     RIGHT, which decreases heading, so a target at a larger heading (err > 0)
