@@ -676,7 +676,7 @@ const CupPodium = ({ cup, mirrorUnlocked = false, onDone }) => {
   return (
     <div className="absolute inset-0 z-50 overflow-y-auto" data-testid="race-cup-podium">
       <MenuBackdrop trackKey={cup.trackKeys[cup.trackKeys.length - 1]} />
-      <div className="relative flex min-h-full items-center justify-center p-4">
+      <div className="relative flex min-h-full items-center justify-center py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
         <div className="w-full max-w-2xl space-y-6 py-6 text-center">
           <div>
             <div className={EYEBROW}>Grand Prix complete</div>
@@ -752,7 +752,9 @@ const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror 
   return (
   <div className="absolute inset-0 z-40 overflow-y-auto" data-testid="race-character-select">
     <MenuBackdrop trackKey={trackKey} />
-    <div className="relative flex min-h-full justify-center p-4 sm:p-6">
+    {/* Side padding clears the notch, as on How to Race (the kart build no
+        longer pads <body>: src/kart/kart.css). */}
+    <div className="relative flex min-h-full justify-center py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:py-6 sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
       <div className="my-auto w-full max-w-4xl space-y-6 py-6">
       <div className="relative text-center">
         {wallet ? <div className="mb-3 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mb-0">{wallet}</div> : null}

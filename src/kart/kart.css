@@ -1,0 +1,12 @@
+/* Kart build only (imported after index.css by src/kart/main.jsx).
+ *
+ * index.css pads <body> by the safe-area insets for the tracker. In the kart
+ * app that inset the WHOLE game: on a notched iPhone in landscape the race and
+ * the menus sat between two ~60pt black bars, and the HUD, touch buttons and
+ * menu gutters then added the same insets again (seen in the iPhone 18 Pro
+ * simulator, 2026-11-10). Here the picture runs edge to edge and each screen
+ * keeps its own controls clear of the notch.
+ */
+body {
+  padding: 0;
+}

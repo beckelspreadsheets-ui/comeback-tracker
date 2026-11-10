@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { KartApp } from './KartApp.jsx';
 import '../index.css';
+import './kart.css';
 import { registerSW } from 'virtual:pwa-register';
 import { readPerfProbePref, setPerfProbe } from '../game/race/perfToggle.js';
 
