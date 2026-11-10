@@ -15065,7 +15065,7 @@ export const ComebackCityThreeKartRace = ({
                 Your device paused the 3D view to save memory. Resume when the track is back, or restart the race.
               </p>
             ) : null}
-            <button type="button" onClick={() => setPaused(false)} data-testid="race-pause-resume">
+            <button type="button" disabled={contextLost} onClick={() => setPaused(false)} data-testid="race-pause-resume">
               <Play size={16} />
               Resume
             </button>
