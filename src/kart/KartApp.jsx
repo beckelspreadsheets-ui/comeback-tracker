@@ -491,7 +491,7 @@ const KartIntroScreen = ({ handling = 'assisted', onStart, trackKey }) => {
     <div className="relative flex min-h-full justify-center py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:py-6 sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] [@media(max-height:500px)]:py-2">
       <div className="my-auto w-full max-w-5xl space-y-6 py-6 [@media(max-height:500px)]:space-y-4 [@media(max-height:500px)]:py-2">
         <div className="text-center">
-          <div className={EYEBROW}>Comeback City</div>
+          <div className={EYEBROW}>Penguin Kart</div>
           <h2 className="mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] sm:text-4xl [@media(max-height:500px)]:text-3xl">
             How to Race
           </h2>
@@ -758,7 +758,7 @@ const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror 
       <div className="my-auto w-full max-w-4xl space-y-6 py-6">
       <div className="relative text-center">
         {wallet ? <div className="mb-3 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mb-0">{wallet}</div> : null}
-        <div className={EYEBROW}>Comeback City Grand Prix</div>
+        <div className={EYEBROW}>Penguin Kart</div>
         <h2 className="mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] sm:text-4xl">
           Race Setup
         </h2>
