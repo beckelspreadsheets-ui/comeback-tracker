@@ -2278,6 +2278,8 @@
 
   .three-kart-race__badge[data-hud-stat='lap'] {
     height: 46px;
+    /* Lifts the caption and value 3px so the value clears the rail below. */
+    padding-bottom: 6px;
     width: 66px;
   }
 
@@ -2285,9 +2287,12 @@
     flex-basis: 100%;
   }
 
-  .three-kart-race__badge[data-hud-stat='lap'] svg {
-    height: 13px;
-    width: 13px;
+  /* No glyph on the lap and coins chips either. The caption is a full-width
+     line here, so the icon took a row of its own and pushed the value down
+     onto the progress rail: "1/3" was struck through on every phone. */
+  .three-kart-race__badge[data-hud-stat='lap'] svg,
+  .three-kart-race__badge[data-hud-stat='coins'] svg {
+    display: none;
   }
 
   .three-kart-race__badge[data-hud-stat='lap'] .three-kart-race__badge-value {
@@ -2325,10 +2330,6 @@
     flex-basis: 100%;
   }
 
-  .three-kart-race__badge[data-hud-stat='coins'] svg {
-    height: 14px;
-    width: 14px;
-  }
 
   .three-kart-race__badge[data-hud-stat='coins'] .three-kart-race__badge-value {
     font-size: 15px;
