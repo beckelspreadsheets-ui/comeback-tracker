@@ -271,19 +271,18 @@ branch; no deploys, signing changes or merges.
 - Vendor terms (Tripo, ElevenLabs, Higgsfield, Meshy) were not fetched.
 - Web offline mode (the service worker is not registered on localhost).
 
-## 12. Questions for the owner
+## 12. Owner decisions (answered 2026-11-10)
 
-1. **iPad in V1?** iPhone-only (simplest; iPad later) or keep iPad and do the
-   resizing work.
-2. **"outplayasians" finish-line walker:** ask for permission, or remove.
-3. **"Classic 64":** new name (and `mk64` key) before any public build.
-4. **Casino props on Penguin Village:** keep with an accurate rating answer,
-   or remove.
-5. **Assisted difficulty:** leave easy for newcomers, or tighten 100/150cc.
-6. **Tripo free-credit models (CRRT Bunny, Seth Penguin, hero kart):**
-   regenerate on paid credits, or seek Tripo's written OK.
-7. **Final name, and whether "(beta)" stays.**
-8. **Production deploy of the kart site** for the privacy and support URLs.
+| # | Question | Decision | What it changes |
+|---|---|---|---|
+| 1 | iPad in V1? | **iPhone only first** | Set the target to iPhone (`TARGETED_DEVICE_FAMILY = 1`, drop the iPad orientation key and `UIRequiresFullScreen`), iPhone screenshots only, support page says iPhone. The iPad blocker in section 5 becomes a later-update item. This replaces the 2026-10-21 "iPhone AND iPad" call. |
+| 2 | "outplayasians" finish-line walker | **Stays.** Owner: the holder is a friend who is never selling that ordinal | Still needs the same written yes as the other six, covering the walking-obstacle role and the "BITCOIN IS DEAD" sign; added to docs/LIKENESS_PERMISSION.md. |
+| 3 | "Classic 64" name | **"Retro"**; "Classic Mix" stays | Rename the label, guide and coach text, and the `mk64` key / `?handling=` value / saved setting to `retro`, migrating the saved value. |
+| 4 | Casino props | **Keep; fix the note** | Correct the age-rating reasoning in docs/APP_STORE_LISTING.md: decorative, nothing is wagered or playable. |
+| 5 | Assisted difficulty | **50cc stays easy; tighten 100cc and 150cc** | Raise Assisted rival pace at 100/150cc with the difficulty probe (several runs per track), then an owner feel check. |
+| 6 | Tripo free-credit models | **Owner asked whether they can be rebuilt in Blender by script instead** | Yes, and that route is clean on rights (our own work). Blender is installed on the office Mac. Trial: rebuild the hero kart first (hard surfaces suit scripting), then Seth Penguin, and compare side by side on one approval page before replacing anything. Likeness quality for the characters is the risk, not rights. Awaiting the owner's go. |
+| 7 | Name and "(beta)" | **Penguin Kart; keep "(beta)" on the web build** | "Penguin Kart" everywhere as the game's name ("Comeback City" only as a track); "(beta)" stays on the web until the App Store release and comes out of the store build. Name availability on the store still to be checked. |
+| 8 | Production deploy | **Not now.** A proper website once everything is ready | The privacy and support URLs stay a submission blocker until that site exists; the in-app links can point at the bundled pages meanwhile. |
 
 ## Appendix: Apple sources (checked 2026-11-09)
 

@@ -9,6 +9,9 @@ answer. This is a plain-language template, not legal advice.
 **Characters in the game today:** CRRT Bunny, Lifoladen, T Clow, Seth Penguin,
 Mizzle, Layer 23 (racers and rivals); the penguin ordinals among them also
 appear as Penguin Village statues, spectators and in the Penguin March item.
+Also **outplayasians**, who walks across the Penguin Village finish line
+holding a "BITCOIN IS DEAD" sign (owner, 2026-11-10: a friend, staying in; his
+message should name that role and the sign).
 
 ---
 
@@ -44,3 +47,4 @@ appear as Penguin Village statues, spectators and in the Penguin March item.
 | Seth Penguin | | | | |
 | Mizzle | | | | |
 | Layer 23 | | | | |
+| outplayasians (Penguin Village finish-line walker, carries the "BITCOIN IS DEAD" sign; not a racer) | | | | |
