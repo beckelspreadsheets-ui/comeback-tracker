@@ -1,6 +1,24 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-11-11 — phone build prepared, scripted kart in dev builds (read first)
+## 2026-11-11 (evening) — screenshots fixed, inventory done, Bunny started (read first)
+
+Audit section 15 has the detail. A ready-to-run phone build with every fix
+is at `~/PenguinKart-PhoneBuild` (temporary `.dev` bundle id, not committed)
+and the owner has a printed guide (`~/Desktop/Penguin-Kart-Phone-Test-Guide.pdf`).
+The owner expects to test on 2026-11-12. Still nothing on a real iPhone.
+
+Done this evening: the three weak iPhone screenshots re-shot (plus a front
+light on the setup stage, a real app change); scripted kart rear detail;
+scripted CRRT Bunny first version; `?drivers=scripted` loads scripted Seth
+and Bunny in the race (dev and trial builds only); an unused-content
+inventory of the store build with ten findings, none fixed yet.
+
+Next: owner's phone feel check, then pace in 0.01 steps. Ask the owner
+which inventory findings to fix (section 15, items 1 to 4 and 6 to 8 are
+code; 5 and 9 are the owner's calls). Owner's eye on the Bunny, Seth and
+the kart's rear on the comparison page.
+
+## 2026-11-11 — phone build prepared, scripted kart in dev builds
 
 Audit section 14 has the detail. The owner has **not played the tuning** and
 wants to judge it on a real phone; no pace value changed. A test build with

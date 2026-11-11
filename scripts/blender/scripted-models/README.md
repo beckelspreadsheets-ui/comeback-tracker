@@ -5,22 +5,25 @@ our own work. Owner approved the trial on 2026-11-10 (App Store audit,
 section 12, question 6). The kart loads in the game only behind a test switch
 (`?heroKart=scripted`, and only in `npm run dev:kart` or a build made with
 `VITE_KART_TRIAL_MODELS=1`; the store build carries neither the switch nor
-the file). Seth is not loaded by the game.
+the file). Seth Penguin and CRRT Bunny load the same way behind
+`?drivers=scripted` (2026-11-11), in the race only.
 
 Comparison page (current vs new, three angles each):
 https://claude.ai/artifact/NY8hRucuBSpp1GS1KLw4QV
 
 | Model | Current | Scripted | State |
 |---|---|---|---|
-| Hero kart (`hero-kart-tripo.glb`) | 23,170 triangles, 1,049 KB | 7,152 triangles, 453 KB, 5 draws | In the game behind `?heroKart=scripted` (2026-11-11). Works; the rear view is plainer than the current kart. |
-| Seth Penguin (`seth-penguin.glb`) | 12,826 triangles, 506 KB | 4,586 triangles, 137 KB, 1 draw | Closer after the 2026-11-11 rounds (goggles, face, scarf, jacket, mitts, feet). No painted detail. Not in the game. |
+| Hero kart (`hero-kart-tripo.glb`) | 23,170 triangles, 1,049 KB | 7,852 triangles, 505 KB, 5 draws | In the game behind `?heroKart=scripted` (2026-11-11). Rear detail added the same day (tail lip, exhausts, slatted panel, plate); still simpler than the current kart. |
+| Seth Penguin (`seth-penguin.glb`) | 12,826 triangles, 506 KB | 4,586 triangles, 137 KB, 1 draw | Closer after the 2026-11-11 rounds (goggles, face, scarf, jacket, mitts, feet). No painted detail. In the race behind `?drivers=scripted`. |
+| CRRT Bunny (`crrt-bunny.glb`) | 14,932 triangles, 568 KB | 2,958 triangles, 74 KB, 1 draw | First version (2026-11-11). Eyes, ears and hands need more rounds. In the race behind `?drivers=scripted`. |
 
-Still to do: CRRT Bunny (the third Tripo model) has not been started.
+All three Tripo-made models now have a scripted version.
 
 ## Build
 
     blender -b -P scripts/blender/scripted-models/build_kart.py -- out/hero-kart-scripted.glb renders/kart-new
     blender -b -P scripts/blender/scripted-models/build_seth.py -- out/seth-penguin-scripted.glb renders/seth-new
+    blender -b -P scripts/blender/scripted-models/build_bunny.py -- out/crrt-bunny-scripted.glb renders/bunny-new
     blender -b -P scripts/blender/scripted-models/render_current.py -- <current.glb> renders/kart-current <nx> <ny>
 
 `build_lib.py` holds the shape helpers, `render_lib.py` the shared camera and
@@ -37,7 +40,9 @@ last two arguments. Export is Blender's own glTF exporter; never run
   `build_lib.py`), so the GLB is one material and five primitives: the body
   and four wheels. Every hub is turned the same way (wheel X = the kart's
   right) so the game's one spin sign rolls all four forward.
-- **Seth:** one static seated mesh, height 1.0, feet at 0, facing +X.
+- **Seth and CRRT Bunny:** one static seated mesh each, height 1.0, feet at
+  0, facing +X, colours baked per vertex. `mountDriverAvatar` turns on vertex
+  colours when the mesh has them.
 
 ## Checked on 2026-11-11 (desktop Chromium, dev server, Comeback City)
 
@@ -48,13 +53,22 @@ last two arguments. Export is Blender's own glTF exporter; never run
   named wheels, all spinning at the same rate, the front pair taking the steer
   angle, axles one wheel radius above the ground.
 
+- `?heroKart=scripted&drivers=scripted` with Seth Penguin and with CRRT
+  Bunny: each driver sits in the seat facing forward, in colour, no console
+  errors, 10 s of autoplay race each.
+- The store build (`npm run build:kart`) contains no scripted file and no
+  `scripted` string.
+
 ## Not verified
 
 - The scripted kart on a phone or in the simulator (the switch is a URL
   value in dev and trial builds, so the installed app cannot reach it), on rivals, with a bought
   paint, or on the select screen.
 - Brake-lamp placement was not looked at under braking.
-- Seth's GLB has not been loaded in the game.
+- The scripted drivers were seen from the chase camera only. The setup
+  stage, the racer tiles and the results screen still use the Tripo models,
+  and the Penguin Village statues and spectators that reuse a driver's
+  texture have none to reuse with a scripted driver.
 - Renders are Blender Eevee with matched camera and lights, not the game's
   lighting or outline.
 - The likeness needs the owner's eye, and Seth's.

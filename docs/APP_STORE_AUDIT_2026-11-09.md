@@ -388,6 +388,57 @@ deploy of the pages and App Store Connect answers (owner), and an inventory of
 any other dormant assets (only `baked-spike.glb` and the trial kart were
 checked).
 
+## 15. Evening follow-up (2026-11-11)
+
+Owner asked for four jobs to run while the phone test waits: fix the store
+screenshots, a full unused-asset inventory, start CRRT Bunny, and the kart's
+rear view plus Seth in the game. Still nothing on a real iPhone.
+
+### Built
+
+| Change | How it was checked |
+|---|---|
+| Setup stage: a front light, so the kart and driver are no longer a silhouette (the track sun and rim both sit behind the rig) | Desktop Chromium at phone size, before and after frames |
+| Screenshots: setup shot scrolled so the stage sits above the pinned Start; roster shot shows the heading and both rows; drift shot stepped frame by frame to the release flash | Looked at all three at 2868 x 1320 in tmp/app-store/iphone-6.9 |
+| Scripted kart: rear detail (tail lip, twin exhausts, slatted panel, plate, bigger tail lights) | Blender renders; chase-camera frames in a desktop dev race |
+| Scripted CRRT Bunny, first version (`build_bunny.py`) | Blender renders against the current model; desktop dev race |
+| `?drivers=scripted` loads scripted Seth and Bunny in the race, dev and trial builds only | Desktop dev race, no console errors; store build has no scripted file or string |
+
+### Unused-content inventory (store build at 5ea11a8c)
+
+Done by a read-only sweep of a fresh `npm run build:kart` (129 files, about
+16 MB) plus a headless race per track. Two findings were re-checked by hand
+after the sweep (the perf button string and the two extra files are in
+`dist-kart`); the rest is the sweep's report and has not been re-checked.
+
+Clean: no network calls off the app's own files, no analytics, no payment
+code, no `eval` or remote scripts. Every character, kart, track, item, mode,
+class and handling is reachable from the menus. All 39 models and all audio
+are used. Nothing from the fitness tracker is copied (`publicDir` is
+`public-kart`).
+
+Findings, most important first:
+
+| # | Finding | Risk | Suggested fix |
+|---|---|---|---|
+| 1 | About 50 QA URL switches ship in the store bundle (`giveItem`, `itemShowcase`, `freebody`, `playableAutoplay`, `mirror=1`, the `post*` and `*Lab` families, and more). Not reachable in the installed app: no URL scheme, no universal links, no `@capacitor/app`, no address bar. Reachable on the web. | Medium | One build flag in front of all of them, on for web and test builds, off for the store build |
+| 2 | The pause-menu performance button is hidden, not removed: its code and the `devicePerfProbe` chunk (2 KB) are in the store bundle and `?perf` shows it. Section 13's "a store build has no button" is true on screen only. | Medium | Gate the import behind `VITE_KART_PERF_TOGGLE` |
+| 3 | `cc-near-v2.webp` (154 KB) is only used under `?ccSkyline=v2` | Medium | Remove the file and the switch |
+| 4 | Seven `window.__*` debug hooks are set in every store race | Low | Same flag as 1 (the gates and screenshot script read some of them, so they need the flag on) |
+| 5 | Penguin Village scenery includes craps, blackjack and odds-board props | Medium for the age rating | Owner: answer the rating questions to match, or swap the props |
+| 6 | "(beta)" in the page description and web manifest | Low to medium | Drop it |
+| 7 | An HTML comment in `index.kart.html` says "owner-pending PLACEHOLDER name" | Low | Delete the comment |
+| 8 | PWA and Cloudflare files are copied into the iOS app and never loaded there (`sw.js`, workbox, manifest, icons, `_headers`, `_redirects`; about 195 KB) | Low | Leave them out of the iOS copy |
+| 9 | The coin chip uses the bitcoin glyph and the store is called a wallet; karts are named Cold Wallet and Sat Stacker. No wallet, token or chain code exists. | Low to medium | Owner: a review note that coins are play-only, or a neutral coin glyph |
+| 10 | A stale `baked-spike.glb` name in the service-worker cache rule; two rival seat names that can never be used | Low | Tidy |
+
+Not covered by the sweep: what flags the real store build is made with (no
+`.env` file was read), the built `.ipa`, anything inside the model files,
+the native plugin code, and behaviour on a device.
+
+None of these is fixed yet. Items 1 to 4 and 6 to 8 are code changes the
+owner has not asked for; 5 and 9 are the owner's calls.
+
 ## Appendix: Apple sources (checked 2026-11-09)
 
 | Topic | Source |
