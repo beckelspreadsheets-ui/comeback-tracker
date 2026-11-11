@@ -143,6 +143,9 @@ pack (03), 4 the racer roster (01b), 5 bubble shield (05), 6 Penguin Village
 pack (08). Upload-ready JPEGs at Apple's exact sizes:
 `store/app-store-screenshots/{iphone-6.9,ipad-13}/<slot>-<scene>.jpg`.
 Review page with every take: https://claude.ai/artifact/QNDcYWVPtBAQ3oygHT5rua
+
+Current iPhone set (nine shots, re-taken 2026-11-11 on the current code):
+https://claude.ai/artifact/4YPHwEbvH4X82ihZKGqLPP
 Re-shoot one scene with `APP_STORE_SHOTS_ONLY=07 node scripts/app-store-screenshots.mjs`.
 
 ## TestFlight (Phase 3 — the fun check)

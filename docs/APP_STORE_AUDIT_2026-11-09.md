@@ -450,7 +450,13 @@ server, the gates and the screenshot script are unchanged.
 | 3 unused skyline | `cc-near-v2.webp` and the `?ccSkyline` switch are deleted from every build | Not in `dist-kart`; `scripts/backdrops/cc_skyline_plate.py` can remake it |
 | 8 web-only files | No service worker, workbox or manifest is generated; `_headers`, `_redirects` and the three install icons are removed from the output | Store `dist-kart`: 119 files against 129 |
 
-Left as they were: 6 and 7 (wording), 10 (tidy). 5 and 9 are answered in
+Later still (owner: "finish inventory leftovers"): finding 2 is now fixed
+properly, the plain store build has no button code and no readout chunk
+(`PERF_READOUT` in `src/game/race/perfToggle.js`; the test variant and the
+web build keep both), and 6 and 7 are done ("(beta)" and the placeholder
+comment are gone).
+
+Left as it was: 10 (tidy). 5 and 9 are answered in
 the review notes (docs/APP_STORE_LISTING.md): the owner keeps the casino
 props and the ₿ coin look.
 
@@ -460,8 +466,22 @@ web deploy.
 
 In the iPhone 18 Pro simulator the `ios:sync:test` variant of the store
 build installs, launches and shows the How to Race screen (2026-11-11); no
-race was driven there. Not tested: the plain `ios:sync` store build inside
-the app, and anything on a real iPhone.
+race was driven there.
+
+Dress rehearsal (2026-11-11, desktop Chromium, phone-size touch context,
+the `ios:sync:test` bundle, real taps and no URL switches, clean storage):
+the intro shows once; the Sound and Reduce motion switches survive a
+reload; a Single Race at 50cc Assisted ran start to finish on all three
+tracks with nobody steering (6th each time); the pause menu opened and
+resumed; coins went 0, 17, 27, 57 and were still 57 after a reload; no
+console errors, no failed requests.
+
+The same evening the owner's iPhone 18 Pro Max got the `ios:sync:test`
+build at 3ea0712f (built and installed from the command line with the
+owner's Personal Team and the `.dev` bundle id, from
+`~/PenguinKart-PhoneBuild`). The install command reported success; what it
+does on the phone is the owner's test. Not tested: the plain `ios:sync`
+store build inside the app.
 
 ## Appendix: Apple sources (checked 2026-11-09)
 

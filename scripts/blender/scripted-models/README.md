@@ -13,7 +13,7 @@ https://claude.ai/artifact/NY8hRucuBSpp1GS1KLw4QV
 
 | Model | Current | Scripted | State |
 |---|---|---|---|
-| Hero kart (`hero-kart-tripo.glb`) | 23,170 triangles, 1,049 KB | 8,164 triangles, 528 KB, 5 draws | In the game behind `?heroKart=scripted` (2026-11-11). Rear detail added the same day (tail lip, exhausts, slatted panel, plate), then mirrors, side roundels, louvres and a tow hook; still simpler than the current kart. |
+| Hero kart (`hero-kart-tripo.glb`) | 23,170 triangles, 1,049 KB | 8,120 triangles, 524 KB, 5 draws | In the game behind `?heroKart=scripted` (2026-11-11). Rear detail added the same day (tail lip, exhausts, slatted panel, plate), then mirrors, side roundels, louvres, a tow hook and a lower seat back (so the driver shows from the chase camera); still simpler than the current kart. |
 | Seth Penguin (`seth-penguin.glb`) | 12,826 triangles, 506 KB | 4,466 triangles, 130 KB, 1 draw | Closer after the 2026-11-11 rounds (goggles, face, scarf, jacket, mitts, feet). No painted detail. In the race behind `?drivers=scripted`. |
 | CRRT Bunny (`crrt-bunny.glb`) | 14,932 triangles, 568 KB | 3,178 triangles, 79 KB, 1 draw | Two rounds (2026-11-11). Eye edges are still too clean. In the race behind `?drivers=scripted`. |
 

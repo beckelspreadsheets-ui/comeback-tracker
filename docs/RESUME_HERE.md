@@ -20,10 +20,19 @@ unused skyline image is gone. The owner keeps the casino props and the ₿
 coin look; both are explained in the review notes in
 docs/APP_STORE_LISTING.md. One more round on all three scripted models.
 
-Next: owner's phone feel check, then pace in 0.01 steps. Still open from
-the inventory: the perf button's code (hidden, not removed), "(beta)" and
-the PLACEHOLDER comment. Owner's eye on the Bunny, Seth and the kart on the
-comparison page. The store build has not been run inside the app.
+Late evening: the game is **installed on the owner's iPhone 18 Pro Max**
+(test variant of the store build at 3ea0712f, free Personal Team, expires
+after 7 days; reinstall from `~/PenguinKart-PhoneBuild` with the phone
+plugged in and unlocked: `xcodebuild ... -destination id=<phone>
+-allowProvisioningUpdates build`, then `xcrun devicectl device install
+app`). The perf button is now compiled out of the plain store build and
+the "(beta)" wording is gone. A tap-driven dress rehearsal of the same
+bundle passed on desktop (audit section 15). All nine screenshots were
+re-taken: https://claude.ai/artifact/4YPHwEbvH4X82ihZKGqLPP
+
+Next: the owner plays the four tuning cells on the phone, then pace in 0.01
+steps. Owner's eye on the Bunny, Seth and the kart on the comparison page,
+and a pick of screenshots.
 
 ## 2026-11-11 — phone build prepared, scripted kart in dev builds
 
