@@ -47,8 +47,8 @@ for s in (-1,1):
     P.append(cube('pod_vent',BLK,(0.10,s*0.285,0.16),(0.05,0.085,0.045),rot=(0,0.5,0),bevel=0.004))
     # rear fender blocks and tail lights
     P.append(loft('fender',RED,[(-0.30,0.05,0.14,0.30,0.025),(-0.40,0.06,0.13,0.285,0.03),(-0.465,0.05,0.14,0.24,0.03)],yc=s*0.20,bevel=0.007))
-    P.append(cube('light_r_frame',BLK,(-0.475,s*0.165,0.185),(0.04,0.125,0.06),bevel=0.005))
-    P.append(cube('light_r',CYN,(-0.492,s*0.165,0.185),(0.014,0.095,0.03),bevel=0.003))
+    P.append(cube('light_r_frame',BLK,(-0.475,s*0.165,0.185),(0.04,0.135,0.07),bevel=0.005))
+    P.append(cube('light_r',CYN,(-0.492,s*0.165,0.185),(0.014,0.108,0.04),bevel=0.003))
     P.append(tube('arm_r',GRY,[(-0.36,s*0.14,0.14),(-0.36,s*0.27,0.14)],0.022,sides=6))
     # roll-hoop stays
     P.append(tube('stay',GRY,[(-0.30,s*0.15,0.40),(-0.43,s*0.15,0.23)],0.015,sides=6,ref=(0,1,0)))
@@ -77,6 +77,19 @@ P.append(loft('deck',BLK,[(-0.29,0.15,0.10,0.235,0.03),(-0.44,0.15,0.10,0.225,0.
 P.append(loft('deck_cover',RED,[(-0.36,0.085,0.20,0.262,0.02),(-0.47,0.075,0.14,0.235,0.025)],bevel=0.006))
 P.append(loft('rear_bumper',BLK,[(-0.455,0.235,0.075,0.15,0.02),(-0.50,0.20,0.085,0.14,0.02)],bevel=0.005))
 P.append(cube('diffuser',GRY,(-0.485,0,0.10),(0.03,0.16,0.05),bevel=0.004))
+# --- rear detail (2026-11-11): the first pass was a plain box from behind,
+# and behind is the view the player has all race.
+P.append(cube('bulkhead',BLK,(-0.474,0,0.19),(0.03,0.215,0.105),bevel=0.006))
+for k in range(4): P.append(cube('slat',GRY,(-0.491,0,0.152+k*0.025),(0.01,0.085,0.011),bevel=0.002))
+P.append(cube('ducktail',RED,(-0.45,0,0.268),(0.075,0.36,0.016),rot=(0,-0.28,0),bevel=0.005))
+P.append(cube('ducktail_lip',BLK,(-0.487,0,0.281),(0.012,0.365,0.02),rot=(0,-0.28,0),bevel=0.003))
+P.append(cube('plate',WHT,(-0.4975,0,0.112),(0.006,0.09,0.035),bevel=0.002))
+for s in (-1,1):
+    ex=lathe_x('exhaust',CHR,[(-0.502,0.015),(-0.502,0.024),(-0.43,0.024)],segs=10,smooth=False); ex.location=(0,s*0.075,0.19); P.append(ex)
+    ei=lathe_x('exhaust_in',BLK,[(-0.492,0.0),(-0.492,0.0155)],segs=10,smooth=False); ei.location=(0,s*0.075,0.19); P.append(ei)
+    P.append(cube('fender_vent',BLK,(-0.385,s*0.20,0.297),(0.07,0.05,0.01),rot=(0,-0.12,0),bevel=0.002))
+    P.append(cube('light_r_hood',RED,(-0.47,s*0.165,0.228),(0.055,0.14,0.022),bevel=0.005))
+    P.append(tube('brace',GRY,[(-0.44,s*0.105,0.235),(-0.47,s*0.105,0.14)],0.01,sides=4))
 body=bake_colours(join(P,'kart_body'))
 # --- wheels: each under a hub that carries the axle direction, so the wheel
 # node itself has no rotation and the game can spin it about its own X axis.
