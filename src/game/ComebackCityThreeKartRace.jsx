@@ -2038,6 +2038,9 @@ const createGroundedKartModel = ({
       // the body the node sits in — the sign convention (+Z drives) is fixed by
       // the time any body reaches this function.
       node.userData.front = /(^|[^a-z])f($|[^a-z])|front/i.test(name) ? true : node.position.z > 0;
+      // Steer first, then spin about the steered axle. The default XYZ order
+      // spins about the unsteered axis, which makes a turned wheel wobble.
+      node.rotation.order = 'YXZ';
       wheels.push(node);
       named += 1;
     });
@@ -3101,6 +3104,21 @@ const sharedSceneryGeometry = (key, build) => {
 // The procedural kart builds instantly as a fallback; the authored body is
 // hot-swapped in once the GLB resolves.
 let kartAssetsPromise = null;
+// Blender-script rebuild of the hero kart (scripts/blender/scripted-models).
+// A trial: ?heroKart=scripted loads it in place of the Tripo body, and only in
+// the dev server or a build made with VITE_KART_TRIAL_MODELS=1. The store
+// build carries neither the switch nor the file (no dormant content).
+const TRIAL_MODELS = import.meta.env.DEV || import.meta.env.VITE_KART_TRIAL_MODELS === '1';
+const heroKartUrl = () => {
+  if (
+    TRIAL_MODELS &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('heroKart') === 'scripted'
+  ) {
+    return import('../../scripts/blender/scripted-models/out/hero-kart-scripted.glb?url').then((module) => module.default);
+  }
+  return Promise.resolve(heroKartTripoUrl);
+};
 const loadKartAssets = () => {
   if (!kartAssetsPromise) {
     const gltfLoader = createGameGltfLoader({
@@ -3119,7 +3137,7 @@ const loadKartAssets = () => {
       // Driver avatars are optional — a failed load must not block the karts.
       gltfLoader.loadAsync(crrtBunnyModelUrl).catch(() => null),
       gltfLoader.loadAsync(sethPenguinModelUrl).catch(() => null),
-      gltfLoader.loadAsync(heroKartTripoUrl).catch(() => null),
+      heroKartUrl().then((url) => gltfLoader.loadAsync(url)).catch(() => null),
       gltfLoader.loadAsync(mizzleModelUrl).catch(() => null),
       gltfLoader.loadAsync(iceSledUrl).catch(() => null),
       gltfLoader.loadAsync(tclowModelUrl).catch(() => null),
@@ -3652,13 +3670,16 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math
   const rigMaterials = new Map();
   rig.traverse((node) => {
     if (node.isMesh) {
-      const mapKey = node.material?.map?.uuid || 'nomap';
+      // The scripted bodies carry their colours per vertex instead of in a map.
+      const vertexColors = Boolean(node.geometry?.attributes?.color);
+      const mapKey = `${node.material?.map?.uuid || 'nomap'}${vertexColors ? ':vc' : ''}`;
       let material = rigMaterials.get(mapKey);
       if (!material) {
         material = applyHeroRim(
           new THREE.MeshToonMaterial({
             gradientMap: getToonGradient(),
             map: node.material?.map || null,
+            vertexColors,
           })
         );
         // Per-racer paint identity. These bodies keep whatever colour their

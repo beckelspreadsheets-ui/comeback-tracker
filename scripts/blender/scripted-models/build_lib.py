@@ -105,7 +105,26 @@ def join(objs,name):
     o=bpy.context.view_layer.objects.active; o.name=name; o.data.name=name
     bpy.ops.object.transform_apply(location=True,rotation=True,scale=True)
     return o
+def bake_colours(o,name='scripted_paint'):
+    """Write each face's material colour into a colour attribute and leave the
+    mesh with ONE material that reads it: one primitive per mesh in the GLB,
+    so the game draws a wheel or a body in a single call."""
+    me=o.data
+    cols=[tuple(m.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value) for m in me.materials]
+    att=me.color_attributes.new('Col','FLOAT_COLOR','CORNER')
+    for p in me.polygons:
+        for li in p.loop_indices: att.data[li].color=cols[p.material_index]
+        p.material_index=0
+    me.color_attributes.active_color=att; me.color_attributes.render_color_index=0
+    m=bpy.data.materials.get(name)
+    if not m:
+        m=bpy.data.materials.new(name); m.use_nodes=True
+        b=m.node_tree.nodes['Principled BSDF']; b.inputs['Roughness'].default_value=0.55
+        n=m.node_tree.nodes.new('ShaderNodeVertexColor'); n.layer_name='Col'
+        m.node_tree.links.new(n.outputs['Color'],b.inputs['Base Color'])
+    me.materials.clear(); me.materials.append(m)
+    return o
 def export_glb(path,objs):
     bpy.ops.object.select_all(action='DESELECT')
     for o in objs: o.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=path,export_format='GLB',use_selection=True,export_apply=True,export_yup=True)
+    bpy.ops.export_scene.gltf(filepath=path,export_format='GLB',use_selection=True,export_apply=True,export_yup=True,export_vertex_color='ACTIVE',export_all_vertex_colors=False)

@@ -1,6 +1,6 @@
 # Hero kart, built from scratch by script. No imported meshes, no textures.
 # Blender axes: +X nose, +Y left, +Z up. Unit length (1.0), like the current GLB.
-import bpy, sys, os, math
+import bpy, bmesh, sys, os, math
 sys.path.insert(0, os.path.dirname(__file__))
 from build_lib import *
 from render_lib import *
@@ -77,9 +77,11 @@ P.append(loft('deck',BLK,[(-0.29,0.15,0.10,0.235,0.03),(-0.44,0.15,0.10,0.225,0.
 P.append(loft('deck_cover',RED,[(-0.36,0.085,0.20,0.262,0.02),(-0.47,0.075,0.14,0.235,0.025)],bevel=0.006))
 P.append(loft('rear_bumper',BLK,[(-0.455,0.235,0.075,0.15,0.02),(-0.50,0.20,0.085,0.14,0.02)],bevel=0.005))
 P.append(cube('diffuser',GRY,(-0.485,0,0.10),(0.03,0.16,0.05),bevel=0.004))
-body=join(P,'kart_body')
+body=bake_colours(join(P,'kart_body'))
 # --- wheels: each under a hub that carries the axle direction, so the wheel
 # node itself has no rotation and the game can spin it about its own X axis.
+# Every hub turns the same way (wheel X = the kart's right), so one spin sign
+# rolls all four forward; the left wheels are mirrored to face outward.
 def wheel(name,x,y,r,hw,side):
     o=hw
     tyre=lathe_x('t',TYR,[(-hw,r*0.60),(-hw,r*0.80),(-hw*0.86,r*0.95),(-hw*0.6,r),(hw*0.6,r),(hw*0.86,r*0.95),(hw,r*0.80),(hw,r*0.60),(hw-0.012,r*0.57)],segs=24,caps=False)
@@ -91,8 +93,13 @@ def wheel(name,x,y,r,hw,side):
         a=2*math.pi*k/5+0.3
         parts.append(cube('spoke',GRY,(o-0.03,-0.36*r*math.sin(a),0.36*r*math.cos(a)),(0.02,0.045,0.36*r),rot=(a,0,0),bevel=0.004))
     w=join(parts,name)
+    if side>0:
+        bm=bmesh.new(); bm.from_mesh(w.data)
+        for v in bm.verts: v.co.x=-v.co.x
+        bmesh.ops.reverse_faces(bm,faces=bm.faces); bm.to_mesh(w.data); bm.free()
+    bake_colours(w)
     hub=bpy.data.objects.new(name.replace('wheel','hub'),None); bpy.context.scene.collection.objects.link(hub)
-    hub.location=(x,y,r); hub.rotation_euler=(0,0,math.radians(90*side))
+    hub.location=(x,y,r); hub.rotation_euler=(0,0,math.radians(-90))
     w.parent=hub
     return hub,w
 objs=[body]
