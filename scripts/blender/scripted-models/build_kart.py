@@ -65,10 +65,11 @@ sw.rotation_euler=(0,-0.42,0)
 P.append(cube('steer_hub',BLK,(0.04,0,0.322),(0.012,0.10,0.022),rot=(0,-0.42,0),bevel=0.003))
 # --- seat
 P.append(cube('seat_base',BLK,(-0.12,0,0.135),(0.20,0.21,0.07),rot=(0,-0.08,0),bevel=0.014))
-P.append(cube('seat_back',BLK,(-0.235,0,0.255),(0.055,0.25,0.23),rot=(0,-0.2,0),bevel=0.018,taper=(1,0.84)))
-for sy in (-1,1): P.append(cube('seat_wing',BLK,(-0.205,sy*0.118,0.24),(0.07,0.03,0.15),rot=(0,-0.2,sy*0.25),bevel=0.012))
-P.append(cube('seat_pad',GRY,(-0.21,0,0.255),(0.02,0.15,0.15),rot=(0,-0.2,0),bevel=0.008))
-P.append(cube('headrest',BLK,(-0.268,0,0.405),(0.045,0.12,0.075),rot=(0,-0.2,0),bevel=0.012))
+# Seat back kept low (2026-11-11): from the chase camera the tall back and
+# headrest hid the driver, who is the thing the player is looking for.
+P.append(cube('seat_back',BLK,(-0.228,0,0.215),(0.055,0.25,0.15),rot=(0,-0.2,0),bevel=0.018,taper=(1,0.84)))
+for sy in (-1,1): P.append(cube('seat_wing',BLK,(-0.2,sy*0.118,0.21),(0.07,0.03,0.11),rot=(0,-0.2,sy*0.25),bevel=0.012))
+P.append(cube('seat_pad',GRY,(-0.205,0,0.215),(0.02,0.15,0.10),rot=(0,-0.2,0),bevel=0.008))
 # --- roll hoop (chamfered arch) 
 hoop=[(-0.305,-0.16,0.20),(-0.30,-0.16,0.42),(-0.297,-0.135,0.468),(-0.295,-0.09,0.485),(-0.295,0.09,0.485),(-0.297,0.135,0.468),(-0.30,0.16,0.42),(-0.305,0.16,0.20)]
 P.append(tube('hoop',GRY,hoop,0.03,sides=8,ref=(1,0,0),flat=0.6))
