@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { pollGamepad, mergeGamepadInput } from '../src/game/race/gamepadInput.js';
+import { pollGamepad, mergeGamepadInput, padDrivingNext } from '../src/game/race/gamepadInput.js';
+import { nextFocusIndex } from '../src/kart/gamepadMenu.js';
 const pad = (down = []) => ({connected:true,mapping:'standard',axes:[0],buttons:Array.from({length:16},(_,i)=>({pressed:down.includes(i),value:down.includes(i)?1:0}))});
 const mock = getGamepads => Object.defineProperty(globalThis,'navigator',{configurable:true,value:{getGamepads}});
 mock(()=>[pad(),pad([0])]);
@@ -17,4 +18,25 @@ assert.equal(pollGamepad(),null);
 const input={throttle:true,brake:false,item:false,drift:false,steerAxis:0.5};
 assert.equal(mergeGamepadInput(input,null),input);
 assert.deepEqual(mergeGamepadInput(input,{throttle:false,brake:true,item:true,drift:false,steerAxis:null}),{...input,brake:true,item:true});
-console.log('PASS: active pad selection, disconnected pads, pause, API failure and input merging');
+// A controller on a touch device: the pad's gas button decides, not auto-throttle.
+const touch={autoThrottle:true,throttle:false,brake:false,item:false,drift:false,steerAxis:null};
+const idlePad={active:false,throttle:false,brake:false,item:false,drift:false,steerAxis:null};
+assert.equal(padDrivingNext(false,touch,idlePad),false,'an idle pad does not take the kart');
+assert.equal(padDrivingNext(false,touch,{...idlePad,active:true,throttle:true}),true,'first press takes over');
+assert.equal(padDrivingNext(true,touch,idlePad),true,'the pad keeps the kart while idle');
+assert.equal(padDrivingNext(true,{...touch,steerAxis:0.4},idlePad),false,'touching the screen hands it back');
+assert.equal(padDrivingNext(true,{...touch,steerAxis:0.4},{...idlePad,active:true}),true,'an active pad wins over touch');
+assert.equal(mergeGamepadInput(touch,idlePad,{padDriving:true}).autoThrottle,false);
+assert.equal(mergeGamepadInput(touch,idlePad,{padDriving:false}).autoThrottle,true);
+assert.equal(mergeGamepadInput(touch,{...idlePad,throttle:true},{padDriving:true}).throttle,true);
+// Menu focus: nearest control in the pressed direction.
+const grid=[{x:100,y:100},{x:300,y:100},{x:100,y:300},{x:320,y:310},{x:100,y:900}];
+assert.equal(nextFocusIndex(grid,0,'right'),1);
+assert.equal(nextFocusIndex(grid,0,'down'),2);
+assert.equal(nextFocusIndex(grid,2,'right'),3);
+assert.equal(nextFocusIndex(grid,3,'up'),1);
+assert.equal(nextFocusIndex(grid,2,'down'),4);
+assert.equal(nextFocusIndex(grid,0,'left'),-1,'nothing to the left: stay put');
+assert.equal(nextFocusIndex(grid,-1,'down'),0);
+assert.equal(nextFocusIndex([],-1,'down'),-1);
+console.log('PASS: active pad selection, disconnected pads, pause, API failure, input merging, pad takeover and menu focus');

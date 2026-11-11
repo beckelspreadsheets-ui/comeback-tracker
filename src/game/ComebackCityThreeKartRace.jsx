@@ -83,7 +83,7 @@ import {
   respawnCoins,
 } from './race/raceCoins.js';
 import { QA_RACE_CLASS, raceClassByKey } from './race/raceClasses.js';
-import { mergeGamepadInput, pollGamepad } from './race/gamepadInput.js';
+import { mergeGamepadInput, padDrivingNext, pollGamepad } from './race/gamepadInput.js';
 import { MIRROR_FLIP_STYLE, mirrorSteerInput, raceRecordKey } from './race/mirrorMode.js';
 import { createGhostRecorder, ghostStateAt, readGhost, recordGhostFrame, saveGhostIfBest } from './race/replayGhost.js';
 import { DEFAULT_TRACK_KEY, isKnownTrackKey, trackByKey } from './race/tracks/index.js';
@@ -11530,6 +11530,8 @@ export const ComebackCityThreeKartRace = ({
     const mechanicsParams = new URLSearchParams(window.location.search);
     const slipstreamEnabled = mechanicsParams.get('slipstream') !== '0';
     const rouletteEnabled = mechanicsParams.get('roulette') !== '0';
+    // True while a controller, not the touch screen, is driving (see padDrivingNext).
+    let padDriving = false;
     const frame = () => {
       if (disposed) return;
       const now = performance.now();
@@ -11565,8 +11567,10 @@ export const ComebackCityThreeKartRace = ({
       const cornerPush = cornerPushFor(trackCurvatureAt(engine.sampler, race.progress), race.speed);
       // Mirror mode inverts the PLAYER's steering after every source is merged
       // (keys, touch drag/flick, tilt, gamepad); autoplay passes through.
+      const rawInput = readInput(inputRef, autoplay, race, cornerPush, engine.sampler);
+      padDriving = padDrivingNext(padDriving, rawInput, pad);
       const input = mirrorSteerInput(
-        mergeGamepadInput(readInput(inputRef, autoplay, race, cornerPush, engine.sampler), pad),
+        mergeGamepadInput(rawInput, pad, { padDriving }),
         { autoplay, mirror: mirrorRef.current }
       );
       // inputRef is checked directly too: under autoplay readInput returns the

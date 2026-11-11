@@ -44,11 +44,25 @@ export const pollGamepad = () => {
   return idlePad;
 };
 
-// Merge a polled pad over the live keyboard/touch input object.
-export const mergeGamepadInput = (input, pad) => {
+// Which device is driving. A touch session accelerates by itself
+// (autoThrottle), which is wrong the moment someone picks up a controller:
+// the kart would never stop and A would do nothing. The pad takes over on its
+// first press and keeps the kart until the screen is touched again.
+export const padDrivingNext = (padDriving, input, pad) => {
+  if (pad?.active) return true;
+  const touched = Boolean(
+    input && (input.left || input.right || input.brake || input.drift || input.item || (input.steerAxis ?? null) !== null)
+  );
+  return touched ? false : Boolean(padDriving);
+};
+
+// Merge a polled pad over the live keyboard/touch input object. With
+// padDriving the pad's own gas button decides the throttle.
+export const mergeGamepadInput = (input, pad, { padDriving = false } = {}) => {
   if (!pad) return input;
   return {
     ...input,
+    ...(padDriving ? { autoThrottle: false } : null),
     brake: input.brake || pad.brake,
     drift: input.drift || pad.drift,
     item: input.item || pad.item,

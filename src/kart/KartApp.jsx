@@ -53,6 +53,7 @@ import {
   selectPaint,
 } from '../game/race/progress.js';
 import { EarningsToast, PaintShop, WalletChip } from './KartPaintShop.jsx';
+import { startGamepadMenu } from './gamepadMenu.js';
 import { createKartAudio, readStoredMute } from '../game/race/kartAudio.js';
 import { KART_AUDIO_ASSETS } from '../game/race/kartAudioAssets.js';
 import charCrrtBunnyUrl from '../assets/game/select/char-crrt-bunny.png';
@@ -441,7 +442,7 @@ const KeyboardGuide = ({ handling = 'assisted' }) => {
           <li><Key>←</Key><Key>→</Key><Key>A</Key><Key>D</Key> steer</li>
           <li><Key>↓</Key><Key>S</Key> brake</li>
           <li><Key>SHIFT</Key><Key>ENTER</Key><Key>E</Key><Key>F</Key> fire item — <span className="text-white/90">hold</span> a fish bone, snowball or sardine to trail it behind you as a shield, release to use it</li>
-          <li><Key>ESC</Key><Key>P</Key> pause · controllers work too (A gas, B brake, RB drift, LB item)</li>
+          <li><Key>ESC</Key><Key>P</Key> pause · controllers work too (A gas, B brake, RB drift, LB item; in menus the d-pad moves, A picks, Start starts the race)</li>
           {tips ? (
             <li className="text-white/90">{tips.keyRocket}</li>
           ) : (
@@ -1091,6 +1092,22 @@ export const KartApp = () => {
       return !muted;
     });
   }, []);
+  // Controller in the menus. While a race is running the pad belongs to the
+  // kart, except on the pause menu and the results panel.
+  useEffect(
+    () =>
+      startGamepadMenu({
+        getScope: () => {
+          const overlay = document.querySelector('[data-testid="race-pause-menu"]') || document.querySelector('.three-kart-race__results');
+          if (overlay) return overlay;
+          if (document.querySelector('[data-testid="race-pause-toggle"]')) return null;
+          return document.querySelector('[data-testid="race-screen"]');
+        },
+        mainSelector: '[data-testid="race-character-start"], [data-testid="race-pause-resume"], [data-testid="race-results-next"], [data-testid="race-results-restart"]',
+        skipSelector: '[data-testid="race-character-start"]',
+      }),
+    []
+  );
   const toggleReducedMotion = useCallback(() => {
     setReducedMotion((reduced) => {
       writeReducedMotion(!reduced);
