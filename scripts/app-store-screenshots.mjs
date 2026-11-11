@@ -1,11 +1,11 @@
 // App Store screenshot capture (RELEASE_V1_PLAN Phase 4).
 //
 // App Store Connect wants exact pixel sizes per device class. Penguin Kart is
-// landscape-only and ships for iPhone and iPad, so this captures LANDSCAPE
-// sets for:
+// landscape-only and V1 ships for iPhone only (owner 2026-11-10), so this
+// captures one LANDSCAPE set:
 //   iphone-6.9  2868 x 1320  (956 x 440 CSS at 3x — the 6.9" class; Apple
 //                             scales it down for smaller iPhones)
-//   ipad-13     2752 x 2064  (1376 x 1032 CSS at 2x — the 13" class)
+// The iPad set (ipad-13, 2752 x 2064) comes back with the iPad update.
 // Scenes: the race setup screen with a character on the stage, the racer
 // roster, the start grid, Comeback City, Penguin Village, the item showcase,
 // plus alternates (launch, drift sparks, a Penguin Village pack shot). Output:
@@ -32,7 +32,6 @@ const wanted = (name) => !ONLY.length || ONLY.some((prefix) => name.startsWith(p
 
 const DEVICES = [
   { dsf: 3, height: 440, name: 'iphone-6.9', touch: true, width: 956 },
-  { dsf: 2, height: 1032, name: 'ipad-13', touch: true, width: 1376 },
 ];
 
 // Race scenes: query, then the race time (seconds) to shoot at.
