@@ -357,6 +357,37 @@ Not verified: the scripted kart on a phone, on rivals, with a bought paint or
 on the select screen; its brake lamps under braking; scripted Seth in the
 game. From the chase camera the scripted kart is plainer than the Tripo one.
 
+### Before-release items built on 2026-11-11
+
+Owner answers (question tool): drop the reduced-motion slowdown; build menu
+mute and reduced motion, the controller scheme, progress backup and the
+iPhone screenshots.
+
+| Commit | Change | Checked how |
+|---|---|---|
+| `a919c995` | Setup screen: Sound and Reduce motion switches; the device's Reduce Motion setting decides until the player picks; the 14% race slowdown under reduced motion is gone | Phone-size Chromium: both switches save and survive a reload; emulated Reduce Motion turns it on. Race speed parity is from the code (one line), not timed |
+| `3bf6638f` | Controller: on a touch session the pad takes over and A / right trigger is the gas; d-pad or stick moves a focus ring in the menus, pause menu and results, A presses, Start presses the main button | Unit cases in the gamepad test. Chromium with a simulated pad: touch-only 249 km/h by itself; after a pad press 0 km/h with no gas for 5 s; 231 km/h after 4 s of A; pause menu Resume by pad; Start on the pad starts the race. **No real controller, no iPhone** |
+| `8f6b27d4` | Coins, paints, the Mirror unlock and records mirrored to the app's preferences (`@capacitor/preferences`) and restored at launch; privacy manifest declares UserDefaults `CA92.1` | New unit test. iPhone 18 Pro simulator: web data deleted and a 4321-coin copy seeded, launch, copy removed with the simulator off, relaunch: the app wrote 4321 back. Not tested: iOS itself purging storage, a real device |
+| `cf40e6b1` | Haptics reach the native plugin (the app's bridge has no `registerPlugin`, so every pulse had been falling back to `navigator.vibrate`, which iOS ignores) | Bridge shape read on screen in the simulator (`registerPlugin` undefined, `nativePromise` a function). **Not felt on a device** |
+| `5dd2a06e` | Screenshot script shoots the iPhone 6.9-inch set only | Nine shots at 2868 x 1320 in `tmp/app-store/iphone-6.9/` (not committed) |
+
+Gate battery: 17/17 at `5dd2a06e` (isolated copy); the quick battery passed
+before each commit.
+
+Screenshot faults still visible: `01-race-setup` has a dark stage with Start
+over the kart; `01b-roster` is still cut at the top and bottom with the sixth
+racer under Start; `07-drift-sparks` shows almost no sparks. The seven race
+shots are clean and the lap count reads "1/3".
+
+Controller menu focus moves by position on screen and can jump oddly on the
+long setup page; the pinned Start is reached with the pad's Start button.
+The two setup switches sit at the very bottom of that page.
+
+Left from section 10 item 5: iPad HUD scale (deferred with iPad), production
+deploy of the pages and App Store Connect answers (owner), and an inventory of
+any other dormant assets (only `baked-spike.glb` and the trial kart were
+checked).
+
 ## Appendix: Apple sources (checked 2026-11-09)
 
 | Topic | Source |

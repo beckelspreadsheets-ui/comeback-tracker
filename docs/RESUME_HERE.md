@@ -11,6 +11,14 @@ nothing has run on a device yet. The scripted hero kart loads with
 build (never the store build). Scripted Seth had more rounds and is still
 not in the game. Comparison: https://claude.ai/artifact/NY8hRucuBSpp1GS1KLw4QV
 
+Also built on 2026-11-11 (audit section 14, second table): Sound and Reduce
+motion switches on the setup screen (no more 14% slowdown), controller gas
+and menu navigation, progress backup to the app's preferences (proved in the
+simulator), a haptics fix (the native plugin was never reached), and an
+iPhone-only screenshot set in tmp/app-store/iphone-6.9. The phone build the
+owner was given predates these; run `npm run ios:sync:test` again for one
+that has them.
+
 Next: owner's phone feel check (Assisted 100/150cc, Retro and Classic Mix at
 50cc), then pace in 0.01 steps; owner's eye on the kart's rear view and on
 Seth; then the "before public release" items in audit section 10 and the
