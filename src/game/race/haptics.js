@@ -26,7 +26,19 @@ const resolveNative = () => {
   try {
     const capacitor = typeof window !== 'undefined' ? window.Capacitor : null;
     if (capacitor?.isNativePlatform?.() && capacitor.isPluginAvailable?.('Haptics')) {
-      nativeHaptics = capacitor.registerPlugin('Haptics');
+      // The injected bridge has no registerPlugin (that ships with the
+      // @capacitor/core script, which this bundle does not carry), so the old
+      // lookup threw and every pulse fell through to navigator.vibrate, which
+      // iOS ignores. nativePromise is the bridge's own call (simulator,
+      // 2026-11-11).
+      if (typeof capacitor.registerPlugin === 'function') {
+        nativeHaptics = capacitor.registerPlugin('Haptics');
+      } else if (typeof capacitor.nativePromise === 'function') {
+        nativeHaptics = {
+          impact: (options) => capacitor.nativePromise('Haptics', 'impact', options),
+          notification: (options) => capacitor.nativePromise('Haptics', 'notification', options),
+        };
+      }
     }
   } catch {
     nativeHaptics = null;
