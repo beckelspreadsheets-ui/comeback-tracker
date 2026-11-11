@@ -90,6 +90,18 @@ for s in (-1,1):
     P.append(cube('fender_vent',BLK,(-0.385,s*0.20,0.297),(0.07,0.05,0.01),rot=(0,-0.12,0),bevel=0.002))
     P.append(cube('light_r_hood',RED,(-0.47,s*0.165,0.228),(0.055,0.14,0.022),bevel=0.005))
     P.append(tube('brace',GRY,[(-0.44,s*0.105,0.235),(-0.47,s*0.105,0.14)],0.01,sides=4))
+# --- third round (2026-11-11): small parts that break up the plain panels
+P.append(tube('tow_hook',CHR,[(0.47,0.03,0.075),(0.494,0.03,0.075),(0.494,-0.03,0.075),(0.47,-0.03,0.075)],0.006,sides=4))
+for s in (-1,1):
+    # wing mirrors on stalks either side of the cowl
+    P.append(tube('mirror_stalk',GRY,[(0.13,s*0.165,0.29),(0.12,s*0.215,0.325)],0.007,sides=4))
+    P.append(cube('mirror',BLK,(0.118,s*0.228,0.332),(0.022,0.05,0.032),rot=(0,0,s*0.2),bevel=0.004))
+    P.append(cube('mirror_glass',CYN,(0.106,s*0.228,0.332),(0.004,0.04,0.024),rot=(0,0,s*0.2),bevel=0))
+    # white number roundel and a black stripe along each side pod
+    rd=lathe_x('roundel',WHT,[(0,0.0),(0,0.034)],segs=14,smooth=False); rd.rotation_euler=(0,0,s*math.radians(90)); rd.location=(-0.06,s*0.352,0.158); P.append(rd)
+    P.append(cube('pod_stripe',BLK,(-0.06,s*0.3505,0.118),(0.30,0.004,0.012),bevel=0))
+    # louvres on each rear fender top
+    for k in range(3): P.append(cube('louvre',BLK,(-0.33-k*0.022,s*0.20,0.303-k*0.0035),(0.008,0.06,0.006),bevel=0))
 body=bake_colours(join(P,'kart_body'))
 # --- wheels: each under a hub that carries the axle direction, so the wheel
 # node itself has no rotation and the game can spin it about its own X axis.
