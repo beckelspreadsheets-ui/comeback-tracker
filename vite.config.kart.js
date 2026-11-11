@@ -64,7 +64,7 @@ export default defineConfig({
       manifest: {
         name: 'Penguin Kart',
         short_name: 'Penguin Kart',
-        description: 'Penguin Kart — arcade kart racing with the ordinal crew (beta)',
+        description: 'Penguin Kart — arcade kart racing with the ordinal crew',
         theme_color: '#10151d',
         background_color: '#10151d',
         display: 'standalone',
