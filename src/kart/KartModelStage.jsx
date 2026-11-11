@@ -167,7 +167,13 @@ export const KartModelStage = ({ characterKey, kartKey, paint = null, reducedMot
     const rim = new DirectionalLight('#7eefff', 1.9);
     rim.position.set(-2.4, 2.1, -3.2);
     const fill = new HemisphereLight('#cfe6ff', '#1a1533', 0.85);
-    scene.add(key, rim, fill);
+    // The track's sun sits BEHIND the rig on every track (it is the race's
+    // sunset, and the camera looks into it), and so does the rim. Without a
+    // light on the camera's side the kart and driver were a silhouette. This
+    // one is fixed, soft and warm, so the track relight still sets the mood.
+    const front = new DirectionalLight('#fff0dc', 1.5);
+    front.position.set(1.6, 2.2, 4.2);
+    scene.add(key, rim, fill, front);
 
     const shadowTexture = makeShadowTexture();
     const shadow = new Mesh(
