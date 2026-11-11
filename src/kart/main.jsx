@@ -1,3 +1,6 @@
+// First on purpose: in a store build this wipes the page address before any
+// other module can read a QA switch from it (game/race/storeBuild.js).
+import '../game/race/storeBuild.js';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { KartApp } from './KartApp.jsx';

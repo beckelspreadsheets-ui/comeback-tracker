@@ -206,6 +206,7 @@ import {
 } from './race/render/buildRoadEdgeProfile.js';
 import { buildBarrierKit } from './race/render/barrierKit.js';
 import { perfToggleAvailable, readPerfProbePref, setPerfProbe } from './race/perfToggle.js';
+import { DEBUG_HOOKS } from './race/storeBuild.js';
 import { hapticForCue, hapticImpact } from './race/haptics.js';
 import { createRaceJuice } from './race/juice.js';
 import {
@@ -8941,7 +8942,7 @@ const createScene = ({
   const ambient = { floes: [], ordinalStatues: [], snow: null, spectatorFigures: [], spectators: null, tickers: [] };
   // Probe hook (same spirit as __comebackCityKartTelemetry): headless
   // smokes assert the ambient handles mounted without a scene traversal.
-  if (typeof window !== 'undefined') window.__g2AmbientDebug = ambient;
+  if (DEBUG_HOOKS && typeof window !== 'undefined') window.__g2AmbientDebug = ambient;
   const propCount =
     addDistrictsAndProps(world, sampler, loader, trackDef, trackVisuals, ambient) + trackVisualPropCount;
   if (trackDef.dressing?.penguinVillage) addPenguinVillageDressing(world, sampler, trackDef, ambient);
@@ -10022,7 +10023,8 @@ const publishTelemetry = (
   trackKey = DEFAULT_TRACK_KEY,
   runtimeStats = {}
 ) => {
-  if (typeof window === 'undefined') return;
+  // No debug hooks in the store build (race/storeBuild.js).
+  if (!DEBUG_HOOKS || typeof window === 'undefined') return;
   const trackVisualsEnabled = Boolean(window.__comebackCityKartTrackVisualsEnabled);
   window.__comebackCityKartTelemetry = {
     airborne: race.airState.airborne,
@@ -10631,7 +10633,7 @@ export const ComebackCityThreeKartRace = ({
       onReadyRef.current?.();
       return undefined;
     }
-    if (typeof window !== 'undefined') window.__comebackCityKartTrackVisualsEnabled = engine.trackVisualsEnabled;
+    if (DEBUG_HOOKS && typeof window !== 'undefined') window.__comebackCityKartTrackVisualsEnabled = engine.trackVisualsEnabled;
     engineRef.current = engine;
     rendererRef.current = engine.renderer;
     finishReportedRef.current = false;
@@ -10657,7 +10659,7 @@ export const ComebackCityThreeKartRace = ({
     // Unclean-exit marker (race/sessionHealth.js): a marker left by a race
     // that died on screen puts this race in safe mode (no governor climb).
     engine.session = beginRaceSession();
-    if (typeof window !== 'undefined') window.__comebackCityKartSession = engine.session;
+    if (DEBUG_HOOKS && typeof window !== 'undefined') window.__comebackCityKartSession = engine.session;
     const handleSessionVisibility = () => {
       if (document.visibilityState === 'hidden') suspendRaceSession();
       else resumeRaceSession();
@@ -10676,7 +10678,7 @@ export const ComebackCityThreeKartRace = ({
     engine.scene.add(engine.camera);
     engine.camera.add(particles.speedLines);
     // Probe hook (same spirit as __g2AmbientDebug) for headless smokes.
-    if (typeof window !== 'undefined') window.__g3ParticlesDebug = particles;
+    if (DEBUG_HOOKS && typeof window !== 'undefined') window.__g3ParticlesDebug = particles;
     let particlePrevSnapshot = null;
     const race = createInitialRace(rivalSeats, trackDef);
     // Time trial state. The signature pins a stored ghost to this geometry.
@@ -10716,7 +10718,7 @@ export const ComebackCityThreeKartRace = ({
       haptics: touchControls && !autoplay,
       reducedMotion,
     });
-    if (typeof window !== 'undefined') window.__kartJuiceDebug = juice.debug;
+    if (DEBUG_HOOKS && typeof window !== 'undefined') window.__kartJuiceDebug = juice.debug;
     const rivalsCastShadows = engine.shadowRig.rivalsCast;
     // ?itemShowcase=1 parks one of each item visual just past the spawn and
     // raises the ice shield — deterministic close-ups for the approval

@@ -42,6 +42,7 @@ import { createGameGltfLoader } from '../game/race/render/gltfLoader.js';
 import { collectRendererTextures, disposeTextures } from '../game/race/render/releaseTextures.js';
 import { SELECT_CHARACTER_MODELS, SELECT_KART_MODELS } from './selectModels.js';
 import { applyStagePaint, createStagePaintUniform, setStagePaint } from './stagePaint.js';
+import { DEBUG_HOOKS } from '../game/race/storeBuild.js';
 
 // The track's own key, read off the SHIPPED track palettes rather than
 // raceSceneTheme.js — that module is marked LEGACY and the monolith imports
@@ -222,7 +223,7 @@ export const KartModelStage = ({ characterKey, kartKey, paint = null, reducedMot
       // rendering, is indistinguishable from a working one via the DOM — and
       // navigator.webdriver skips this screen entirely, so nothing else here
       // is ever exercised by the existing harnesses.
-      if (typeof window !== 'undefined') {
+      if (DEBUG_HOOKS && typeof window !== 'undefined') {
         window.__comebackCityKartSelectStage = {
           characterLoaded: Boolean(stage.models.character),
           frames: (window.__comebackCityKartSelectStage?.frames || 0) + 1,

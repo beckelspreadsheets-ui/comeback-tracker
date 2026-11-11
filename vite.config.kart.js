@@ -1,4 +1,4 @@
-import { renameSync } from 'node:fs';
+import { renameSync, rmSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -8,6 +8,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 // the comeback-city-kart Pages project. The fitness build (vite.config.js ->
 // dist) is untouched by this file — K1 adds, never mutates. "Penguin Kart" is
 // the owner-pending placeholder name.
+
+// `npm run ios:sync` sets this (src/game/race/storeBuild.js has the rest).
+const STORE_BUILD = process.env.VITE_KART_STORE === '1';
+const STORE_WEB_ONLY_FILES = ['_headers', '_redirects', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
 
 const kartHtmlPath = fileURLToPath(new URL('./index.kart.html', import.meta.url));
 
@@ -24,6 +28,11 @@ const kartHtmlEntry = () => ({
     const outDir = options.dir;
     if (!outDir) return;
     renameSync(`${outDir}/index.kart.html`, `${outDir}/index.html`);
+    // The iPhone app never loads the website-only files (Cloudflare Pages
+    // config and the install icons the web manifest points at), so the store
+    // build leaves them out. The service worker and manifest are not made at
+    // all in that build: see `disable` on VitePWA below.
+    if (STORE_BUILD) STORE_WEB_ONLY_FILES.forEach((name) => rmSync(`${outDir}/${name}`, { force: true }));
   },
   configureServer(server) {
     server.middlewares.use((req, _res, next) => {
@@ -47,6 +56,9 @@ export default defineConfig({
     react(),
     kartHtmlEntry(),
     VitePWA({
+      // No service worker, workbox or web manifest in the iPhone app: it
+      // never registers one (src/kart/main.jsx).
+      disable: STORE_BUILD,
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
