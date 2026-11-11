@@ -13,10 +13,17 @@ scripted CRRT Bunny first version; `?drivers=scripted` loads scripted Seth
 and Bunny in the race (dev and trial builds only); an unused-content
 inventory of the store build with ten findings, none fixed yet.
 
-Next: owner's phone feel check, then pace in 0.01 steps. Ask the owner
-which inventory findings to fix (section 15, items 1 to 4 and 6 to 8 are
-code; 5 and 9 are the owner's calls). Owner's eye on the Bunny, Seth and
-the kart's rear on the comparison page.
+Later the same evening, on the owner's answers: `npm run ios:sync` now makes
+a **store build** (`VITE_KART_STORE=1`: test switches dead, no debug hooks,
+no web-only files; run `npm run build:kart` again before a web deploy). The
+unused skyline image is gone. The owner keeps the casino props and the ₿
+coin look; both are explained in the review notes in
+docs/APP_STORE_LISTING.md. One more round on all three scripted models.
+
+Next: owner's phone feel check, then pace in 0.01 steps. Still open from
+the inventory: the perf button's code (hidden, not removed), "(beta)" and
+the PLACEHOLDER comment. Owner's eye on the Bunny, Seth and the kart on the
+comparison page. The store build has not been run inside the app.
 
 ## 2026-11-11 — phone build prepared, scripted kart in dev builds
 

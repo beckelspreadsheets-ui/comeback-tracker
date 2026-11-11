@@ -436,8 +436,30 @@ Not covered by the sweep: what flags the real store build is made with (no
 `.env` file was read), the built `.ipa`, anything inside the model files,
 the native plugin code, and behaviour on a device.
 
-None of these is fixed yet. Items 1 to 4 and 6 to 8 are code changes the
-owner has not asked for; 5 and 9 are the owner's calls.
+### Fixed later on 2026-11-11 (owner chose: strip test switches, drop unused files)
+
+There is now a **store build**: `npm run ios:sync` builds with
+`VITE_KART_STORE=1` (`npm run build:kart:store`). The web build, the dev
+server, the gates and the screenshot script are unchanged.
+
+| Finding | What the store build does | How it was checked |
+|---|---|---|
+| 1 QA switches | The page address is wiped to a bare path before anything reads it (`src/game/race/storeBuild.js`, imported first by `src/kart/main.jsx`), so no switch can act, including ones added later | Store build in desktop Chromium, opened with `?playableAutoplay=1&giveItem=rocket&perf=1&mirror=1&track=penguin-village#race`: address became `/`, the menu showed, Mirror stayed locked. Unit test `scripts/test-kart-store-build.mjs` |
+| 4 debug hooks | None of the seven `window.__*` hooks is set (kept in `ios:sync:test`, whose performance readout reads them) | Same run: no hooks on `window` on the menu or 15 s into a race, no console errors, no failed requests |
+| 2 perf button | Not asked for and not removed: the code is still in the bundle. With the address wiped, `?perf` can no longer show it | Same run: no button in the pause menu |
+| 3 unused skyline | `cc-near-v2.webp` and the `?ccSkyline` switch are deleted from every build | Not in `dist-kart`; `scripts/backdrops/cc_skyline_plate.py` can remake it |
+| 8 web-only files | No service worker, workbox or manifest is generated; `_headers`, `_redirects` and the three install icons are removed from the output | Store `dist-kart`: 119 files against 129 |
+
+Left as they were: 6 and 7 (wording), 10 (tidy). 5 and 9 are answered in
+the review notes (docs/APP_STORE_LISTING.md): the owner keeps the casino
+props and the ₿ coin look.
+
+Caution: after `npm run ios:sync`, `dist-kart` holds a store build with no
+service worker or Pages config. Run `npm run build:kart` again before any
+web deploy.
+
+Not tested: the store build inside the iOS app or the simulator (desktop
+Chromium only), and the `ios:sync:test` variant of it.
 
 ## Appendix: Apple sources (checked 2026-11-09)
 

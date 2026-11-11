@@ -24,7 +24,8 @@ This is enough for the phone feel check (drift flick, the dither on close
 rivals, frame rate via Pause › Performance) and for finding iOS-only bugs
 before anyone else sees the game.
 
-The performance readout is in test builds only. Use `npm run ios:sync:test`
+Since 2026-11-11 `ios:sync` makes the store build (no test switches, no
+debug hooks, no web-only files; audit section 15). The performance readout is in test builds only. Use `npm run ios:sync:test`
 (not `ios:sync`) before pressing Run for this check; the store build has no
 such button.
 

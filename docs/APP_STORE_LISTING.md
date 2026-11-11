@@ -115,6 +115,17 @@ cryptocurrency, so the crypto rules in guideline 3.1.5 do not apply.
 > launch a How to Race guide explains the touch controls (drag to steer, flick
 > to drift, tap to use an item). Races take about two minutes; the pause
 > button is at the top of the screen.
+>
+> The coins marked with a ₿ sign are play money. They are earned only by
+> finishing races and spent only on kart paint colours inside the game. They
+> cannot be bought, sold, transferred or cashed out. The app has no in-app
+> purchases, no cryptocurrency, no wallet connection and no network
+> requests. Kart names such as "Cold Wallet" and "Sat Stacker" are a theme
+> only. The casino tables beside the Penguin Village track are scenery: they
+> cannot be played and nothing is wagered.
+
+(Coin and casino paragraph added 2026-11-11, owner's call: keep the ₿ look
+and the props, explain them here.)
 
 ## Screenshots
 
