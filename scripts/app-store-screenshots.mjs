@@ -91,14 +91,28 @@ try {
       });
       const page = await context.newPage();
       await page.goto(`${baseUrl}/?character=seth-penguin`, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(6000);
+      // The page is taller than a landscape phone and Start is pinned to the
+      // bottom of the screen, so at scroll 0 Start sits on top of the kart.
+      // Scroll the stage to the top of the screen: it then ends above Start.
+      await page.waitForSelector('[data-testid="race-select-stage"] canvas', { timeout: 30000 });
+      await page.evaluate(() => {
+        const stage = document.querySelector('[data-testid="race-select-stage"]');
+        const scroller = stage?.closest('.overflow-y-auto');
+        if (scroller) scroller.scrollTop += stage.getBoundingClientRect().top - 8;
+      });
+      // ~3 s into the turntable the kart is front three-quarter on.
+      await page.waitForTimeout(3000);
       const file = path.join(dir, '01-race-setup.png');
       await page.screenshot({ path: file });
       written.push(file);
       // 01b: the same screen scrolled to the racer picker — the roster of
       // ordinal characters is the thing the group will recognise.
+      // Heading at the top, both rows of racers below it. The pinned Start
+      // lands on the empty tiles of the second row.
       await page.evaluate(() => {
-        document.querySelector('[data-testid="race-character-seth-penguin"]')?.scrollIntoView({ block: 'center' });
+        const first = document.querySelector('[data-testid="race-character-crrt-bunny"]');
+        const scroller = first?.closest('.overflow-y-auto');
+        if (scroller) scroller.scrollTop += first.getBoundingClientRect().top - 92;
       });
       await page.waitForTimeout(1200);
       const roster = path.join(dir, '01b-roster.png');
@@ -110,20 +124,42 @@ try {
     for (const scene of RACE_SCENES.filter((entry) => wanted(entry.name))) {
       const context = await browser.newContext(contextOptions);
       const page = await context.newPage();
+      // The drift shot is stepped frame by frame (see below), which needs
+      // Playwright's clock in place before the page loads.
+      if (scene.at === 'drift') await page.clock.install();
       await page.goto(`${baseUrl}/?playableAutoplay=1&touchControls=1${scene.query}#race`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => window.__comebackCityKartTelemetry?.renderer === 'three-kart', null, { timeout: 90000 });
       if (scene.at === 'drift') {
-        // Mid-drift with a charged tier, so the sparks are in frame. The
-        // autoplay driver reaches tier 1 (first at ~29 s on Comeback City),
-        // not tier 2.
-        await page.waitForFunction(
-          () => {
-            const t = window.__comebackCityKartTelemetry;
-            return t?.raceTime > 4 && t.drift && t.driftTier >= 1;
-          },
-          null,
-          { timeout: 180000 }
-        );
+        // The autoplay driver lets go the instant a drift banks tier 1, and
+        // the sparks while charging are faint, so a shot taken "when the
+        // tier is 1" always missed. Instead: stop the clock when a drift
+        // starts, step 33 ms at a time until the tier banks, then step
+        // another quarter second to the release flash and mini-turbo.
+        // Not every drift banks (some corners are too short), so try each
+        // drift in turn until one does.
+        let banked = false;
+        for (let attempt = 0; attempt < 12 && !banked; attempt += 1) {
+          await page.waitForFunction(
+            () => {
+              const t = window.__comebackCityKartTelemetry;
+              return t?.raceTime > 4 && t.drift && t.driftCharge < 0.2;
+            },
+            null,
+            { polling: 30, timeout: 180000 }
+          );
+          await page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 50));
+          let drifting = true;
+          for (let step = 0; step < 150 && drifting && !banked; step += 1) {
+            await page.clock.runFor(33);
+            ({ banked, drifting } = await page.evaluate(() => {
+              const t = window.__comebackCityKartTelemetry;
+              return { banked: t.driftTier >= 1, drifting: t.drift };
+            }));
+          }
+          if (!banked) await page.clock.resume();
+        }
+        if (!banked) throw new Error('drift scene: no drift banked a tier');
+        for (let step = 0; step < 8; step += 1) await page.clock.runFor(33);
       } else if (scene.at === 'grid') {
         await page.waitForFunction(
           () => {
