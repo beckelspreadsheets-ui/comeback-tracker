@@ -458,8 +458,10 @@ Caution: after `npm run ios:sync`, `dist-kart` holds a store build with no
 service worker or Pages config. Run `npm run build:kart` again before any
 web deploy.
 
-Not tested: the store build inside the iOS app or the simulator (desktop
-Chromium only), and the `ios:sync:test` variant of it.
+In the iPhone 18 Pro simulator the `ios:sync:test` variant of the store
+build installs, launches and shows the How to Race screen (2026-11-11); no
+race was driven there. Not tested: the plain `ios:sync` store build inside
+the app, and anything on a real iPhone.
 
 ## Appendix: Apple sources (checked 2026-11-09)
 
