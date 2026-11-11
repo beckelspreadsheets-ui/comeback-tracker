@@ -3119,6 +3119,22 @@ const heroKartUrl = () => {
   }
   return Promise.resolve(heroKartTripoUrl);
 };
+// Same trial, for the two Tripo-made drivers: ?drivers=scripted swaps Seth
+// Penguin and CRRT Bunny for their Blender-script rebuilds. Dev and trial
+// builds only, like the kart above.
+// TRIAL_MODELS is written out at each import on purpose: the bundler only
+// drops the file from the store build when the constant is in the same
+// expression as the import (a helper that returns it is not enough).
+const trialDrivers = () =>
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('drivers') === 'scripted';
+const sethDriverUrl = () =>
+  TRIAL_MODELS && trialDrivers()
+    ? import('../../scripts/blender/scripted-models/out/seth-penguin-scripted.glb?url').then((module) => module.default)
+    : Promise.resolve(sethPenguinModelUrl);
+const bunnyDriverUrl = () =>
+  TRIAL_MODELS && trialDrivers()
+    ? import('../../scripts/blender/scripted-models/out/crrt-bunny-scripted.glb?url').then((module) => module.default)
+    : Promise.resolve(crrtBunnyModelUrl);
 const loadKartAssets = () => {
   if (!kartAssetsPromise) {
     const gltfLoader = createGameGltfLoader({
@@ -3135,8 +3151,8 @@ const loadKartAssets = () => {
         image.src = kartColormapUrl;
       }),
       // Driver avatars are optional — a failed load must not block the karts.
-      gltfLoader.loadAsync(crrtBunnyModelUrl).catch(() => null),
-      gltfLoader.loadAsync(sethPenguinModelUrl).catch(() => null),
+      bunnyDriverUrl().then((url) => gltfLoader.loadAsync(url)).catch(() => null),
+      sethDriverUrl().then((url) => gltfLoader.loadAsync(url)).catch(() => null),
       heroKartUrl().then((url) => gltfLoader.loadAsync(url)).catch(() => null),
       gltfLoader.loadAsync(mizzleModelUrl).catch(() => null),
       gltfLoader.loadAsync(iceSledUrl).catch(() => null),
@@ -3343,7 +3359,9 @@ const mountDriverAvatar = (
   const rigMaterials = new Map();
   rig.traverse((node) => {
     if (node.isMesh) {
-      const mapKey = node.material?.map?.uuid || 'nomap';
+      // The scripted trial drivers carry their colours per vertex, no texture.
+      const vertexColors = Boolean(node.geometry?.attributes?.color);
+      const mapKey = `${node.material?.map?.uuid || 'nomap'}${vertexColors ? ':vc' : ''}`;
       if (!rigMaterials.has(mapKey)) {
         rigMaterials.set(
           mapKey,
@@ -3351,6 +3369,7 @@ const mountDriverAvatar = (
             new THREE.MeshToonMaterial({
               gradientMap: getToonGradient(),
               map: node.material?.map || null,
+              vertexColors,
             })
           )
         );
