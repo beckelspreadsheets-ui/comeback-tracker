@@ -11554,7 +11554,10 @@ export const ComebackCityThreeKartRace = ({
       while (frameElapsedSamples.length > 40) frameElapsedSamples.shift();
       const rawDt = Math.min(0.04, Math.max(0.001, (now - previousFrameTime) / 1000));
       previousFrameTime = now;
-      const dt = reducedMotion ? rawDt * 0.86 : rawDt;
+      // Reduced motion calms the picture only. It used to run the race at
+      // 0.86 speed as well, which made its lap times incomparable (owner
+      // 2026-11-11: drop the slowdown).
+      const dt = rawDt;
       frameTimes.push(now);
       while (frameTimes.length > 40) frameTimes.shift();
       const elapsedWindow = frameTimes.length > 1 ? (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000 : 1;

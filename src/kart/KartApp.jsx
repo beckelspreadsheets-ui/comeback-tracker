@@ -10,7 +10,7 @@
 // This file is now the ONLY owner of the intro → select flow; edit freely.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bitcoin, BookOpen, ChevronDown, Sparkles, Trophy, Wind } from 'lucide-react';
+import { Bitcoin, BookOpen, ChevronDown, Sparkles, Trophy, Volume2, VolumeX, Wind } from 'lucide-react';
 import {
   ComebackCityThreeKartRace,
   DEFAULT_CHARACTER_KEY,
@@ -26,6 +26,7 @@ import {
   migrateLegacyRaceResultsOnce,
   readRaceResults,
   readReducedMotion,
+  writeReducedMotion,
   recordRaceFinish,
 } from './kartLocalStore.js';
 import { KartModelStage } from './KartModelStage.jsx';
@@ -742,7 +743,7 @@ const formatBestTime = (seconds) => {
 // Unlocks: `wallet` (the ₿ chip) and `paintShop` (the swatch row) are built
 // by KartApp, which owns the progress state; `stagePaint` is what the 3D stage
 // shows on the kart — the equipped paint, or a locked one being tried on.
-const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror = null, onShowGuide, onStart, paintShop = null, raceClass, reducedMotion, selectedKey, setGameMode, setHandling = null, setKartKey, setRaceClass, setSelectedKey, setTrackKey, stagePaint = null, trackKey, wallet = null }) => {
+const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror = null, onShowGuide, onStart, paintShop = null, raceClass, reducedMotion, selectedKey, settings = null, setGameMode, setHandling = null, setKartKey, setRaceClass, setSelectedKey, setTrackKey, stagePaint = null, trackKey, wallet = null }) => {
   // Saved bests per track (kartLocalStore). Read per mount: the screen
   // remounts on every return from a race, which is when they change.
   const [savedResults] = useState(() => readRaceResults() || {});
@@ -999,6 +1000,37 @@ const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror 
       {/* App Review 5.1.1(i): the privacy policy must be easy to reach inside
           the app. All three are pages in the bundle (public-kart/), so they
           open offline; each has a link back to the game. */}
+      {/* Sound and motion, reachable before a race (audit 2026-11-09: the
+          only mute was in the race HUD, and nothing set reduced motion). */}
+      {settings ? (
+        <div
+          className="flex justify-center gap-3 pb-1 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-white/70"
+          data-testid="race-setup-settings"
+        >
+          <button
+            type="button"
+            aria-pressed={settings.muted}
+            aria-label={settings.muted ? 'Unmute sound' : 'Mute sound'}
+            className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 transition-colors hover:bg-white/10"
+            data-audio-muted={settings.muted ? '1' : '0'}
+            data-testid="race-setup-mute"
+            onClick={settings.onToggleMute}
+          >
+            {settings.muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            {settings.muted ? 'Sound off' : 'Sound on'}
+          </button>
+          <button
+            type="button"
+            aria-pressed={reducedMotion}
+            className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 transition-colors hover:bg-white/10"
+            data-reduced-motion={reducedMotion ? '1' : '0'}
+            data-testid="race-setup-reduced-motion"
+            onClick={settings.onToggleReducedMotion}
+          >
+            Reduce motion: {reducedMotion ? 'on' : 'off'}
+          </button>
+        </div>
+      ) : null}
       <nav
         aria-label="About Penguin Kart"
         className="flex justify-center gap-6 pb-2 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-white/45"
@@ -1049,7 +1081,22 @@ export const KartApp = () => {
     migrateLegacyRaceResultsOnce();
     return true;
   });
-  const [reducedMotion] = useState(readReducedMotion);
+  const [reducedMotion, setReducedMotion] = useState(readReducedMotion);
+  const [menuMuted, setMenuMuted] = useState(() => readStoredMute());
+  const menuAudioRef = useRef(null);
+  const toggleMenuMute = useCallback(() => {
+    setMenuMuted((muted) => {
+      // setMuted also saves the choice, so the race starts in the same state.
+      menuAudioRef.current?.setMuted(!muted);
+      return !muted;
+    });
+  }, []);
+  const toggleReducedMotion = useCallback(() => {
+    setReducedMotion((reduced) => {
+      writeReducedMotion(!reduced);
+      return !reduced;
+    });
+  }, []);
   const [introSeen, setIntroSeen] = useState(() => {
     if (typeof window === 'undefined') return true;
     if (window.navigator?.webdriver) return true; // QA harness skips the intro
@@ -1375,7 +1422,11 @@ export const KartApp = () => {
     const audio = createKartAudio({ assets: KART_AUDIO_ASSETS, muted: readStoredMute() });
     audio.attach();
     audio.playMusic('menu');
+    menuAudioRef.current = audio;
+    // The race HUD's mute may have changed the saved choice since last time.
+    setMenuMuted(audio.isMuted());
     return () => {
+      menuAudioRef.current = null;
       audio.stopMusic({ fadeMs: 260 });
       audio.dispose();
     };
@@ -1396,6 +1447,7 @@ export const KartApp = () => {
         <KartCharacterSelect
           kartKey={kartKey || (KART_CHARACTERS.find((entry) => entry.key === characterKey) || KART_CHARACTERS[0]).kart}
           onShowGuide={() => setIntroSeen(false)}
+          settings={{ muted: menuMuted, onToggleMute: toggleMenuMute, onToggleReducedMotion: toggleReducedMotion }}
           gameMode={gameMode}
           mirror={{
             active: mirrorActive,

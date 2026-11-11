@@ -131,14 +131,24 @@ export const recordRaceFinish = (result) => {
   writeRaceResults(results);
 };
 
-// Kart-local stand-in for the fitness atom's game.hub.reducedMotion. No UI
-// sets it yet (K1 parity — the fitness default is false); flip it manually:
-// localStorage.setItem('cc-kart-reduced-motion', '1')
+// Reduced motion. The setup screen's switch saves '1' or '0'; until the
+// player has touched it, the device's own Reduce Motion setting decides.
 export const readReducedMotion = () => {
   if (typeof window === 'undefined') return false;
   try {
-    return window.localStorage?.getItem(REDUCED_MOTION_KEY) === '1';
+    const saved = window.localStorage?.getItem(REDUCED_MOTION_KEY);
+    if (saved === '1') return true;
+    if (saved === '0') return false;
+  } catch {}
+  try {
+    return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
   } catch {
     return false;
   }
+};
+
+export const writeReducedMotion = (reduced) => {
+  try {
+    window.localStorage?.setItem(REDUCED_MOTION_KEY, reduced ? '1' : '0');
+  } catch {}
 };
