@@ -206,7 +206,7 @@ import {
 } from './race/render/buildRoadEdgeProfile.js';
 import { buildBarrierKit } from './race/render/barrierKit.js';
 import { perfToggleAvailable, readPerfProbePref, setPerfProbe } from './race/perfToggle.js';
-import { DEBUG_HOOKS } from './race/storeBuild.js';
+import { DEBUG_HOOKS, PERF_READOUT } from './race/storeBuild.js';
 import { hapticForCue, hapticImpact } from './race/haptics.js';
 import { createRaceJuice } from './race/juice.js';
 import {
@@ -15100,7 +15100,7 @@ export const ComebackCityThreeKartRace = ({
                 Quit to menu
               </button>
             ) : null}
-            {perfToggleAvailable() ? (
+            {PERF_READOUT && perfToggleAvailable() ? (
               <button
                 type="button"
                 className="three-kart-race__pause-minor"

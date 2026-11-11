@@ -10,16 +10,21 @@
 // guideline 2.5.19, and it reads as unfinished to a player). A store build
 // has no button. `npm run ios:sync:test` builds with VITE_KART_PERF_TOGGLE=1
 // for the device checks; on the web, ?perf=1 or ?perf=0 brings it back.
+// Spelled out here rather than imported from storeBuild.js: the bundler only
+// drops the readout's chunk when the constant is in this module.
+const PERF_READOUT = import.meta.env?.VITE_KART_STORE !== '1' || import.meta.env?.VITE_KART_PERF_TOGGLE === '1';
+
 const PERF_PREF_KEY = 'cc-kart-perf-overlay';
 
 export const perfToggleAvailable = () => {
+  if (!PERF_READOUT) return false;
   if (import.meta.env?.VITE_KART_PERF_TOGGLE === '1') return true;
   if (typeof window === 'undefined') return false;
   return new URLSearchParams(window.location.search).has('perf');
 };
 
 export const readPerfProbePref = () => {
-  if (typeof window === 'undefined') return false;
+  if (!PERF_READOUT || typeof window === 'undefined') return false;
   const forced = new URLSearchParams(window.location.search).get('perf');
   if (forced === '1') return true;
   if (forced === '0') return false;
@@ -42,10 +47,14 @@ export const setPerfProbe = (on, { remember = false } = {}) => {
       // Not remembered; the toggle still works for this session.
     }
   }
-  return import('../../kart/devicePerfProbe.js')
-    .then(({ mountDevicePerfProbe, unmountDevicePerfProbe }) => {
-      if (on) mountDevicePerfProbe();
-      else unmountDevicePerfProbe();
-    })
-    .catch(() => {});
+  // The constant is in the same expression as the import on purpose: that is
+  // what lets the bundler leave the readout's chunk out of the store build.
+  return PERF_READOUT
+    ? import('../../kart/devicePerfProbe.js')
+        .then(({ mountDevicePerfProbe, unmountDevicePerfProbe }) => {
+          if (on) mountDevicePerfProbe();
+          else unmountDevicePerfProbe();
+        })
+        .catch(() => {})
+    : Promise.resolve();
 };

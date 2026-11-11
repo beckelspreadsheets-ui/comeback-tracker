@@ -15,6 +15,10 @@
 // the hooks.
 export const STORE_BUILD = import.meta.env?.VITE_KART_STORE === '1';
 export const DEBUG_HOOKS = !STORE_BUILD || import.meta.env?.VITE_KART_PERF_TOGGLE === '1';
+// The performance readout and its pause-menu button are compiled out of the
+// plain store build (finding 2): every use sits behind this constant so the
+// bundler drops the button and the readout's chunk, not just hides them.
+export const PERF_READOUT = DEBUG_HOOKS;
 
 // The address with its query and hash removed, or null when there is nothing
 // to remove.
