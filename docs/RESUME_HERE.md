@@ -1,5 +1,21 @@
 # RESUME HERE — Penguin Kart game
 
+## 2026-11-11 — phone build prepared, scripted kart in dev builds (read first)
+
+Audit section 14 has the detail. The owner has **not played the tuning** and
+wants to judge it on a real phone; no pace value changed. A test build with
+the temporary `.dev` bundle id was prepared in an isolated copy and opened in
+Xcode for a free Personal Team install (docs/APPLE_ENROLLMENT.md Track A);
+nothing has run on a device yet. The scripted hero kart loads with
+`?heroKart=scripted` in `npm run dev:kart` or a `VITE_KART_TRIAL_MODELS=1`
+build (never the store build). Scripted Seth had more rounds and is still
+not in the game. Comparison: https://claude.ai/artifact/NY8hRucuBSpp1GS1KLw4QV
+
+Next: owner's phone feel check (Assisted 100/150cc, Retro and Classic Mix at
+50cc), then pace in 0.01 steps; owner's eye on the kart's rear view and on
+Seth; then the "before public release" items in audit section 10 and the
+iPhone screenshots.
+
 ## 2026-11-10 (later) — owner decisions implemented on `audit-fixes-2026-11-09` (read first)
 
 Section 13 of docs/APP_STORE_AUDIT_2026-11-09.md lists every commit and how it

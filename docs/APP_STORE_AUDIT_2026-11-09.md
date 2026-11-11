@@ -335,6 +335,28 @@ screenshots (the HUD and menus changed).
   the third Tripo model, has not been started.
 - "(beta)" is still in the web manifest and page description, by decision.
 
+## 14. Follow-up (2026-11-11)
+
+Owner answers (question tool): the tuning is **not played yet** and has to be
+judged on a real phone, so no pace value changed. Go-ahead for a free
+Personal Team phone build, more rounds on Seth, and the scripted kart in the
+game.
+
+| Commit | Change | Checked how |
+|---|---|---|
+| `cc4ec8d1` | Scripted hero kart behind `?heroKart=scripted`, dev server and `VITE_KART_TRIAL_MODELS=1` builds only; 22 draws down to 5 | Desktop Chromium race on Comeback City: loads, fits, driver seated, four wheels spin, fronts steer, exhaust at the tail, no console errors. Store build has neither the file nor the switch. Gate battery 17/17 (isolated copy) |
+| `be1675eb` | Scripted Seth, second set of rounds | Blender renders only; comparison page updated |
+
+Phone build: `npm run ios:sync:test` in an isolated copy, bundle id switched
+to `com.showcasedesigns.penguinkart.dev` there only (not committed), Debug
+build for the iPhone 18 Pro simulator passes, project opened in Xcode for the
+owner to pick his Personal Team and press Run. **Nothing has run on a real
+iPhone yet.**
+
+Not verified: the scripted kart on a phone, on rivals, with a bought paint or
+on the select screen; its brake lamps under braking; scripted Seth in the
+game. From the chase camera the scripted kart is plainer than the Tripo one.
+
 ## Appendix: Apple sources (checked 2026-11-09)
 
 | Topic | Source |
