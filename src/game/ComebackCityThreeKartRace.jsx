@@ -14507,16 +14507,12 @@ export const ComebackCityThreeKartRace = ({
   const steerIndicatorRef = useRef(null);
   const JOYSTICK_RANGE_PX = 64;
   // Horizontal thumb speed that reads as a deliberate flick, and the smallest
-  // single move that counts. RELEASE_V1_PLAN 1.11 (owner feel-check pending):
-  // at 0.55 px/ms an ordinary quick steer (10 px in one 16 ms pointer step)
-  // already engages a drift that then holds until the thumb lifts, so new
-  // players drift by accident. ?driftFlick=firm asks for a real flick.
-  const firmFlick = useMemo(
-    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('driftFlick') === 'firm',
-    []
-  );
-  const FLICK_SPEED_PX_MS = firmFlick ? 0.9 : 0.55;
-  const FLICK_MIN_STEP_PX = firmFlick ? 12 : 8;
+  // single move that counts. At the old 0.55 px/ms an ordinary quick steer
+  // (10 px in one 16 ms pointer step) already engaged a drift that then held
+  // until the thumb lifted, so new players drifted by accident. The firm
+  // values are now the default (owner 2026-11-12: "Stop accidental drifts").
+  const FLICK_SPEED_PX_MS = 0.9;
+  const FLICK_MIN_STEP_PX = 12;
   const TAP_MAX_MS = 220;
   const TAP_MAX_PX = 12;
   const joystickDown = (event) => {
