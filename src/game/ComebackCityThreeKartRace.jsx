@@ -14505,7 +14505,11 @@ export const ComebackCityThreeKartRace = ({
   const joystickStateRef = useRef({ active: false, flicked: false, lastT: 0, lastX: 0, lastY: 0, maxDist: 0, originX: 0, originY: 0, pointerId: null, startT: 0 });
   const joystickPuckRef = useRef(null);
   const steerIndicatorRef = useRef(null);
-  const JOYSTICK_RANGE_PX = 64;
+  // Thumb drag for full steering. Was 64 px, linear; on the first phone test
+  // (owner 2026-11-12) steering was "SUPER hard", so full lock now needs a
+  // longer drag and the first part of the drag steers more gently.
+  const JOYSTICK_RANGE_PX = 96;
+  const JOYSTICK_CURVE = 1.3;
   // Horizontal thumb speed that reads as a deliberate flick, and the smallest
   // single move that counts. At the old 0.55 px/ms an ordinary quick steer
   // (10 px in one 16 ms pointer step) already engaged a drift that then held
@@ -14553,9 +14557,11 @@ export const ComebackCityThreeKartRace = ({
       setTouchDrift('flick', true);
       steerIndicatorRef.current?.classList.add('three-kart-race__steer-indicator--drifting');
     }
-    const axis = clamp((horizontal - originHorizontal) / JOYSTICK_RANGE_PX, -1, 1);
+    const drag = clamp((horizontal - originHorizontal) / JOYSTICK_RANGE_PX, -1, 1);
+    const axis = Math.sign(drag) * Math.pow(Math.abs(drag), JOYSTICK_CURVE);
+    // The puck shows the thumb's travel, not the curved steer value.
     inputRef.current = { ...inputRef.current, steerAxis: axis };
-    if (joystickPuckRef.current) joystickPuckRef.current.style.transform = `translateX(${Math.round(axis * 34)}px)`;
+    if (joystickPuckRef.current) joystickPuckRef.current.style.transform = `translateX(${Math.round(drag * 34)}px)`;
   };
   const joystickEnd = (event) => {
     const stick = joystickStateRef.current;
