@@ -207,6 +207,7 @@ import {
 import { buildBarrierKit } from './race/render/barrierKit.js';
 import { perfToggleAvailable, readPerfProbePref, setPerfProbe } from './race/perfToggle.js';
 import { DEBUG_HOOKS, PERF_READOUT } from './race/storeBuild.js';
+import { smoothTiltAxis, tiltAxis, tiltRoll } from './race/tiltSteer.js';
 import { hapticForCue, hapticImpact } from './race/haptics.js';
 import { createRaceJuice } from './race/juice.js';
 import {
@@ -10509,29 +10510,22 @@ export const ComebackCityThreeKartRace = ({
   }, [softLandscape]);
   useEffect(() => {
     if (!tiltEnabled || typeof window === 'undefined') return undefined;
+    // Maths and the reasons for it live in race/tiltSteer.js: the roll is
+    // folded so an upright phone cannot flip it, full lock is at 36 degrees,
+    // and readings are smoothed.
+    let smoothed = null;
+    let lastAt = 0;
     const onOrientation = (event) => {
-      if (joystickStateRef.current.active) return; // an active drag always wins
-      // Portrait steering roll = gamma; landscape = ±beta (device axes are
-      // defined in portrait frame, so remap by the screen angle). Under the
-      // soft lock the OS *reports* portrait but the phone is physically
-      // landscape — roll is beta, signed by which way round it's held
-      // (gamma's sign tells landscape-left from landscape-right).
+      if (joystickStateRef.current.active) {
+        smoothed = null; // an active drag always wins; start fresh after it
+        return;
+      }
       const angle = window.screen?.orientation?.angle ?? window.orientation ?? 0;
-      const beta = event.beta ?? 0;
-      const gamma = event.gamma ?? 0;
-      const roll = softLandscapeRef.current
-        ? beta * (gamma >= 0 ? 1 : -1)
-        : angle === 90 ? beta : angle === 270 || angle === -90 ? -beta : gamma;
-      // Feel fix (owner 2026-07-17 "gyro sensitivity seems off"): the old
-      // linear roll/22 with a hard 2.5° cutoff STEPPED from 0 to ~12% steer
-      // at the deadzone edge and hit 50% by 11° — twitchy around center.
-      // Now: smooth ramp FROM the deadzone edge with a 1.5-expo curve, so
-      // small tilts steer gently and full lock arrives at 24°.
-      const dead = 3;
-      const lock = 24;
-      const mag = clamp((Math.abs(roll) - dead) / (lock - dead), 0, 1);
-      const axis = Math.sign(roll) * Math.pow(mag, 1.5);
-      inputRef.current = { ...inputRef.current, steerAxis: axis };
+      const roll = tiltRoll({ angle, beta: event.beta ?? 0, gamma: event.gamma ?? 0, soft: softLandscapeRef.current });
+      const now = performance.now();
+      smoothed = smoothTiltAxis(smoothed, tiltAxis(roll), now - lastAt);
+      lastAt = now;
+      inputRef.current = { ...inputRef.current, steerAxis: smoothed };
     };
     window.addEventListener('deviceorientation', onOrientation);
     return () => {
