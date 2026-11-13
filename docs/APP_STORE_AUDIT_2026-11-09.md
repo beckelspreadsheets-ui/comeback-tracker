@@ -483,6 +483,53 @@ owner's Personal Team and the `.dev` bundle id, from
 does on the phone is the owner's test. Not tested: the plain `ios:sync`
 store build inside the app.
 
+## 16. First phone feedback and new icon (2026-11-12 and 2026-11-13)
+
+### What the owner reported
+
+First play on the real iPhone (store-test build at 3ea0712f): steering was
+"SUPER hard", tilt "turned way too fast", and the owner is not used to tilt.
+The karts in the three script-built concept pictures looked "so cheap".
+
+### Changes
+
+| Commit | Change | Checked how |
+|---|---|---|
+| `13392836` | Tilt: the roll is folded into -90..90 so a phone held near upright cannot flip the reading to full lock; full lock 24 to 36 degrees, dead zone 3 to 4, 70 ms smoothing. Maths in `src/game/race/tiltSteer.js` | New unit test `scripts/test-kart-tilt-steer.mjs`; gate battery 17/17 |
+| `7919e53e` | The firm drift flick is the default; `?driftFlick=firm` is gone | Gate battery 17/17 on the next commit's state |
+| `e752bddb` | Thumb drag for full lock 64 to 96 px, curve 1.3 | Gate battery 17/17 |
+| `9b78f51b` | New app icon and web icons from a Blender Cycles render (white kart); render script added | **Pushed before the gate result was read. Its message says 17/17, which was false: the image budget failed (2.825 MiB against 2.5 MiB) and the browser gates were skipped** |
+| `1bf64308` | Web icons reduced to 256-colour PNGs (about 770 KB to 235 KB); corrects the commit above | Gate battery 17/17 |
+
+The upright-flip cause of the tilt problem is a diagnosis from the code. It
+was not reproduced on a device.
+
+Section 15's inventory finding 10: the stale `baked-spike.glb` name is out
+of the service-worker cache rule. The two unused rival seats (`Red Line`,
+`Silver Arrow` in `RIVALS` and `RIVAL_PERSONALITIES`) are left in place on
+purpose: they are tuned seats waiting for a seventh and eighth character,
+and with six characters they are never reached.
+
+### Artwork route
+
+Higgsfield had 0 credits and the ElevenLabs connector has no
+image-generation permission (still refused after the owner reconnected it),
+so the artwork was built and rendered entirely by script in Blender. Two
+takes were made (purple and white); the owner picked the white kart and
+prefers the purple take's Seth. The script-built Seth from the model trial
+has a black stripe down the forehead that the real Seth does not have; it
+must not be used in any picture.
+
+The wide render is 2688 x 1242. The iPhone screenshot set is 2868 x 1320 and
+the iPad set is 2752 x 2064, so a lead store picture needs its own render or
+crop at those sizes.
+
+### Not tested
+
+Nothing in this section has been felt or seen on a real device: steering
+feel, tilt direction, the icon on the home screen. Installs only reported
+success. The Safari address was checked from the Mac only.
+
 ## Appendix: Apple sources (checked 2026-11-09)
 
 | Topic | Source |

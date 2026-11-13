@@ -1,5 +1,40 @@
 # RESUME HERE — Penguin Kart game
 
+## 2026-11-13 — first phone feedback, steering softened, new app icon (read first)
+
+Audit section 16 has the detail. The owner played the phone build for the
+first time on 2026-11-12: steering was "SUPER hard" and tilt "turned way too
+fast". Three steering changes followed (tilt reading folded and softened,
+firm drift flick as the default, longer and gentler thumb drag). The owner
+has **not yet said how the new build feels**, and the four tuning cells are
+still unplayed; no rival pace value has changed.
+
+New app icon: the owner rejected three script-built concept karts as cheap,
+then picked a full Blender Cycles render of Seth in a white kart
+(`scripts/blender/key-art/white-kart-hero.py`, no external assets). Pictures
+and scripts are also in `~/Desktop/Penguin-Kart-Icon-Art/`. The owner
+prefers the Seth from the purple render; a version of the white scene with
+that Seth is being made for the owner to approve before it replaces the icon.
+
+On the phone: the store-test build of 1bf64308 (free Personal Team install
+of 2026-11-13, expires after 7 days). The install command reported success;
+the owner had not yet seen it on the home screen. A phone build raises a
+macOS keychain prompt from `codesign`: **warn the owner before starting one**.
+
+Safari testing without a reinstall: a web build served from
+`~/PenguinKart-Safari/site` with `/usr/bin/python3 -m http.server 8765`;
+the phone opens `http://<this Mac's address>:8765` on the office Wi-Fi.
+Never checked from the phone; stops on reboot; rebuild and recopy after any
+change.
+
+Owner rules added on 2026-11-13: every question goes through the
+AskUserQuestion tool; warn before anything that can raise a keychain or
+password prompt (both are in the owner's global CLAUDE.md).
+
+Next: the owner reports how thumb steering and tilt feel, then plays the
+four tuning cells; approve or reject the Seth swap; the lead store picture
+and screenshot order; comments on the scripted Bunny, Seth and kart.
+
 ## 2026-11-11 (evening) — screenshots fixed, inventory done, Bunny started (read first)
 
 Audit section 15 has the detail. A ready-to-run phone build with every fix
