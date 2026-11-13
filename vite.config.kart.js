@@ -45,10 +45,9 @@ const kartHtmlEntry = () => ({
   },
 });
 
-// publicDir is public-kart/ — baked-spike.glb moved there with the 2026-07-13
-// app split (the fitness build no longer ships ANY race asset), so vite's
-// native publicDir copy covers build and dev; the old shared-copy plugin is
-// gone.
+// publicDir is public-kart/ since the 2026-07-13 app split (the fitness build
+// no longer ships ANY race asset), so vite's native publicDir copy covers
+// build and dev; the old shared-copy plugin is gone.
 
 export default defineConfig({
   publicDir: 'public-kart',
@@ -113,7 +112,7 @@ export default defineConfig({
           // protect. Here the cost is zero at install and a track you have
           // already raced keeps its music and cues offline.
           {
-            urlPattern: /\/(?:assets\/[^?]+\.(?:glb|webp|png|mp3|m4a|ogg|wav)|baked-spike\.glb)$/,
+            urlPattern: /\/assets\/[^?]+\.(?:glb|webp|png|mp3|m4a|ogg|wav)$/,
             handler: 'CacheFirst',
             options: {
               cacheName: 'kart-runtime-assets',
