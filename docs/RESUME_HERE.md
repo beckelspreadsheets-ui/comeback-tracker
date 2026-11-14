@@ -31,9 +31,21 @@ Owner rules added on 2026-11-13: every question goes through the
 AskUserQuestion tool; warn before anything that can raise a keychain or
 password prompt (both are in the owner's global CLAUDE.md).
 
-Next: the owner reports how thumb steering and tilt feel, then plays the
-four tuning cells; approve or reject the Seth swap; the lead store picture
-and screenshot order; comments on the scripted Bunny, Seth and kart.
+Later on 2026-11-13 (owner's answers): the white kart picture with the new
+Seth and feet tucked in ("white3", previews in `docs/key-art/`) is approved
+as the next icon **after Seth's head is made smaller**; that render
+("white4") was in progress when this was written and exists only on the
+owner's Mac. The same scene at 2868 x 1320 and 2752 x 2064 is approved as
+the first App Store picture. The owner likes every gameplay screenshot
+except `01-race-setup` ("cheap looking cart", the in-game Hash Runner on the
+setup stage): leave it out of the store set. Whether to improve the in-game
+kart itself has not been asked yet. Scripts: `scripts/blender/key-art/`.
+
+Next: finish the smaller-head render, show the owner, then build the icon
+from it (gates first, and read the result before committing); assemble the
+store set with the artwork first and `01-race-setup` left out; the owner
+reports how thumb steering and tilt feel, then plays the four tuning cells;
+comments on the scripted Bunny, Seth and kart.
 
 ## 2026-11-11 (evening) — screenshots fixed, inventory done, Bunny started (read first)
 
