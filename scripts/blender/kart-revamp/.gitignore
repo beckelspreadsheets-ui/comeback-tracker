@@ -2,3 +2,4 @@ out/_bake/
 renders/ref/
 renders/wip-*
 renders/*-tmp-*
+__pycache__/

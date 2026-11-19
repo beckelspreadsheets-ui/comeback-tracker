@@ -28,6 +28,7 @@ const PORT = Number(process.env.GAME_SHOTS_PORT || 5377);
 const CHARACTER = process.env.GAME_SHOTS_CHARACTER || 'seth-penguin';
 const TRACK = process.env.GAME_SHOTS_TRACK || 'comeback-city';
 const PAINT = process.env.GAME_SHOTS_PAINT || 'ice-cyan';
+const TURNTABLE_FRAMES = Number(process.env.GAME_SHOTS_TURNTABLE_FRAMES || 8);
 const RACE_MARKS = (process.env.GAME_SHOTS_RACE_MARKS || '4.5,7,9.5,12').split(',').map(Number);
 const baseUrl = `http://127.0.0.1:${PORT}`;
 mkdirSync(OUT, { recursive: true });
@@ -88,12 +89,21 @@ const measure = () => {
     driverMount: model.driverMount.position.toArray().map(round),
     wheels: model.wheels.map((wheel) => {
       const p = model.group.worldToLocal(wheel.getWorldPosition(wheel.position.clone()));
-      const b = box(wheel);
+      // radius from the wheel's own geometry (its box in its own frame, times
+      // the scale it is drawn at), so the spin angle does not inflate it
+      let radius = null;
+      wheel.traverse((node) => {
+        if (radius !== null || !node.isMesh) return;
+        if (!node.geometry.boundingBox) node.geometry.computeBoundingBox();
+        const size = node.geometry.boundingBox.max.clone().sub(node.geometry.boundingBox.min);
+        const scale = node.getWorldScale(size.clone());
+        radius = round((size.y * scale.y) / 2);
+      });
       return {
         front: Boolean(wheel.userData.front),
         name: wheel.name,
         position: [round(p.x), round(p.y), round(p.z)],
-        radius: b ? round((b.max[1] - b.min[1]) / 2) : null,
+        radius,
         spinBand: Boolean(wheel.userData.spinBand),
         spinX: round(wheel.rotation.x),
         steerY: round(wheel.rotation.y),
@@ -144,13 +154,13 @@ try {
       await page.screenshot({ path: path.join(OUT, `${variant.name}-${file}.png`) });
       await stage.screenshot({ path: path.join(OUT, `${variant.name}-${file}-stage.png`) });
     };
-    // the turntable: front three-quarter at ~3 s, then round to the back
-    await page.waitForTimeout(3000);
-    await stageShot('setup');
-    await page.waitForTimeout(3500);
-    await stageShot('setup-b');
-    await page.waitForTimeout(3500);
-    await stageShot('setup-c');
+    // the turntable turns all the way round; a frame every 1.5 s, the best
+    // angles are picked by eye afterwards
+    await page.waitForTimeout(2500);
+    for (let frame = 0; frame < TURNTABLE_FRAMES; frame += 1) {
+      await stageShot(`setup-${frame}`);
+      await page.waitForTimeout(1500);
+    }
     // paint try-on: tapping a locked paint previews it on the stage
     const swatch = page.locator(`[data-testid="race-paint-${PAINT}"]`);
     if (await swatch.count()) {
@@ -199,10 +209,19 @@ try {
         return telemetry();
       };
       await until((t) => t.countdown !== undefined && t.countdown <= 0 && t.raceTime > 0.2, 60000);
+      if (pass === 'race') await page.screenshot({ path: path.join(OUT, `${variant.name}-race-start.png`) });
+      // several frames: a rival ghosting through the camera or a held item
+      // can cover the kart, so the clean one is picked by eye afterwards
+      for (const seconds of RACE_MARKS) {
+        const shot = await until((t) => t.raceTime >= seconds, 90000);
+        const tag = `${variant.name}-${pass}-${String(seconds).replace('.', '_')}s`;
+        await page.screenshot({ path: path.join(OUT, `${tag}.png`) });
+        await page.screenshot({ clip: { height: 300, width: 460, x: 370, y: 270 }, path: path.join(OUT, `${tag}-crop.png`) });
+        entry[`${pass}Times`] = [...(entry[`${pass}Times`] || []), shot.raceTime];
+      }
       if (pass === 'race') {
-        await page.screenshot({ path: path.join(OUT, `${variant.name}-race-start.png`) });
         const first = await page.evaluate(measure);
-        await until((t) => t.raceTime >= 3, 60000);
+        await page.waitForTimeout(2500);
         const second = await page.evaluate(measure);
         // steering is sampled while the autoplay driver corners
         let steer = 0;
@@ -219,15 +238,6 @@ try {
         }));
         entry.maxFrontSteer = Math.round(steer * 1000) / 1000;
         entry.rearSteer = Math.max(0, ...(second?.wheels || []).filter((wheel) => !wheel.front).map((wheel) => Math.abs(wheel.steerY)));
-      }
-      // several frames: a rival ghosting through the camera or a held item
-      // can cover the kart, so the clean one is picked by eye afterwards
-      for (const seconds of RACE_MARKS) {
-        const shot = await until((t) => t.raceTime >= seconds, 90000);
-        const tag = `${variant.name}-${pass}-${String(seconds).replace('.', '_')}s`;
-        await page.screenshot({ path: path.join(OUT, `${tag}.png`) });
-        await page.screenshot({ clip: { height: 300, width: 460, x: 370, y: 270 }, path: path.join(OUT, `${tag}-crop.png`) });
-        entry[`${pass}Times`] = [...(entry[`${pass}Times`] || []), shot.raceTime];
       }
       await context.close();
     }

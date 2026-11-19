@@ -3132,6 +3132,14 @@ const hashRunnerUrl = () => {
   }
   return Promise.resolve(hashRunnerKartUrl);
 };
+// Same trial, second question for the owner: &hashRunnerTint=off shows the
+// rebuilt kart in its own baked purple and mint instead of under the racer's
+// colour wash (which turns the mint accents lilac on Seth's seat).
+const hashRunnerFactoryColours = () =>
+  TRIAL_MODELS &&
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('hashRunner') === 'v2' &&
+  new URLSearchParams(window.location.search).get('hashRunnerTint') === 'off';
 // Same trial, for the two Tripo-made drivers: ?drivers=scripted swaps Seth
 // Penguin and CRRT Bunny for their Blender-script rebuilds. Dev and trial
 // builds only, like the kart above.
@@ -10938,7 +10946,7 @@ export const ComebackCityThreeKartRace = ({
               authoredKart,
               bodyCasts,
               KART_NOSE_YAW[bodyKind] ?? -Math.PI / 2,
-              characterEntry,
+              bodyKind === 'hashrunner' && hashRunnerFactoryColours() ? null : characterEntry,
               isPlayer ? playerPaint : null
             );
           }

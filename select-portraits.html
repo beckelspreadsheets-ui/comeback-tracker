@@ -42,7 +42,9 @@
         const rig = gltf.scene;
         const bounds = new THREE.Box3().setFromObject(rig);
         const size = bounds.getSize(new THREE.Vector3());
-        const fit = 6 / Math.max(size.x, size.y, size.z);
+        // ?fit= shrinks a wide model that the default 6 would crop (a front wing
+        // close to the lens); the shipped portraits all use the default.
+        const fit = Number(params.get('fit') || 6) / Math.max(size.x, size.y, size.z);
         rig.scale.setScalar(fit);
         rig.rotation.y = yaw;
         rig.updateMatrixWorld(true);

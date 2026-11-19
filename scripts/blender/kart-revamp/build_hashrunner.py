@@ -22,7 +22,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 reset_scene()
 
 # ---------------------------------------------------------------- colours ---
-C_PURPLE = (0.088, 0.012, 0.30)
+C_PURPLE = (0.070, 0.009, 0.23)
 C_MINT = (0.28, 0.92, 0.62)
 C_INK = (0.012, 0.006, 0.03)
 
@@ -68,17 +68,17 @@ def tyre_pattern(t, c):
     return mixc(t, mth(t, 'MULTIPLY', mth(t, 'MULTIPLY', bar, tread), mth(t, 'MULTIPLY', edge, 0.7)), c, (0.006, 0.006, 0.008))
 
 
-PAINT_HULL = mat('paint_hull', C_PURPLE, rough=0.3, pattern=hull_pattern)
-PAINT = mat('paint', C_PURPLE, rough=0.3)
-MINT_POD = mat('paint_pod', C_PURPLE, rough=0.3, pattern=pod_pattern)
+PAINT_HULL = mat('paint_hull', C_PURPLE, rough=0.3, pattern=hull_pattern, edge=0.4)
+PAINT = mat('paint', C_PURPLE, rough=0.3, edge=0.4)
+MINT_POD = mat('paint_pod', C_PURPLE, rough=0.3, pattern=pod_pattern, edge=0.4)
 MINT = mat('mint', C_MINT, rough=0.36)
 DARK = mat('dark', (0.022, 0.024, 0.032), rough=0.5)
 SEAT = mat('seat', (0.04, 0.034, 0.052), rough=0.75, edge=0.35)
 ENGINE = mat('engine', (0.115, 0.12, 0.135), rough=0.42, metal=0.5)
 STEEL = mat('steel', (0.40, 0.42, 0.46), rough=0.3, metal=0.65)
-CHROME = mat('chrome', (0.70, 0.72, 0.76), rough=0.2, metal=0.8, edge=0.7)
+CHROME = mat('chrome', (0.58, 0.60, 0.64), rough=0.2, metal=0.8, edge=0.8)
 GLASS = mat('glass', (0.03, 0.08, 0.09), rough=0.08)
-LAMP_F = mat('lamp_front', (0.6, 1.0, 0.85), rough=0.2, emit=(0.5, 1.0, 0.8), emit_strength=1.0)
+LAMP_F = mat('lamp_front', (0.5, 1.0, 0.8), rough=0.2, emit=(0.22, 1.0, 0.72), emit_strength=1.0)
 LAMP_R = mat('lamp_rear', (1.0, 0.1, 0.2), rough=0.2, emit=(1.0, 0.03, 0.12), emit_strength=1.0)
 # wheel materials: no top light, the wheel turns
 RUBBER = mat('rubber', (0.036, 0.036, 0.04), rough=0.9, toplight=False, ao_floor=0.45, edge=0.45, pattern=tyre_pattern)
@@ -104,8 +104,8 @@ HULL = [  # x, half width, top, bottom, exponent
     (0.265, 0.126, 0.250, 0.050, 3.4),
     (0.222, 0.146, 0.290, 0.050, 3.4),
     (0.192, 0.164, 0.300, 0.050, 3.4),
-    (0.165, 0.174, 0.268, 0.050, 3.6),
-    (0.100, 0.180, 0.250, 0.050, 3.8),
+    (0.165, 0.174, 0.288, 0.050, 3.6),
+    (0.100, 0.180, 0.262, 0.050, 3.8),
     (-0.100, 0.184, 0.246, 0.050, 3.8),
     (-0.235, 0.181, 0.250, 0.050, 3.8),
     (-0.285, 0.174, 0.285, 0.052, 3.6),
@@ -158,8 +158,8 @@ for s in (-1, 1):
     d = V((0.86, s * 0.50, 0.10)).normalized()
     o = V((0.437, s * 0.079, 0.126))
     m4 = frame(o, d)
-    add(lathe('lamp_f', LAMP_F, [(0, 0.014), (0.012, 0.012), (0.021, 0.006), (0.0245, -0.004)], segs=12, M4=m4, sharp=60))
-    add(lathe('lamp_bezel', DARK, [(0.0245, -0.002), (0.031, 0.003), (0.033, -0.003), (0.033, -0.02)], segs=12, M4=m4, sharp=40))
+    add(lathe('lamp_f', LAMP_F, [(0, 0.015), (0.014, 0.013), (0.024, 0.007), (0.028, -0.004)], segs=12, M4=m4, sharp=60))
+    add(lathe('lamp_bezel', DARK, [(0.028, -0.002), (0.0345, 0.003), (0.0365, -0.003), (0.0365, -0.02)], segs=12, M4=m4, sharp=40))
 
 # ---------------------------------------------------------------- side pods ---
 for s in (-1, 1):
@@ -223,8 +223,8 @@ for s in (-1, 1):
     add(lathe('hoop_foot', ENGINE, [(0.025, 0.0), (0.025, 0.008), (0.019, 0.012), (0, 0.012)], segs=10, M4=T(-0.330, s * 0.138, 0.238), sharp=40))
 
 # ------------------------------------------------------------------- engine ---
-add(xloft('tail', PAINT, [(-0.322, 0.156, 0.226, 0.060, 3.2), (-0.400, 0.150, 0.212, 0.064, 3.2), (-0.462, 0.136, 0.198, 0.074, 3.2),
-                          (-0.492, 0.116, 0.184, 0.090, 3.0)], N=16, sub=1, sharp=60))
+add(xloft('tail', PAINT, [(-0.322, 0.158, 0.262, 0.060, 3.4), (-0.400, 0.158, 0.268, 0.062, 3.6), (-0.462, 0.150, 0.258, 0.070, 3.6),
+                          (-0.490, 0.134, 0.236, 0.084, 3.2), (-0.497, 0.110, 0.214, 0.100, 3.0)], N=16, sub=1, sharp=60))
 add(rbox('block', (0.13, 0.165, 0.12), ENGINE, T(-0.403, 0, 0.222), bevel=0.012, sharp=50))
 for s in (-1, 1):
     hm = T(-0.403, s * 0.070, 0.288) @ R(-s * 0.62, 'X')
@@ -243,9 +243,6 @@ for s in (-1, 1):
         add(tube('header', CHROME, pts, [0.014, 0.014, 0.0145, 0.016, 0.018], N=8, sharp=70))
         a, b = V(pts[-2]), V(pts[-1]); d = (b - a).normalized()
         add(lathe('header_bore', DARK, [(0, 0.0), (0.013, 0.0)], segs=8, M4=frame(b + d * 0.0006, d), sharp=60, recalc=False))
-for i in range(4):
-    add(rbox('block_fin', (0.014, 0.125, 0.009), STEEL, T(-0.468, 0, 0.212 + i * 0.019), bevel=0.003, segs=1, sharp=50))
-add(lathe('cam_cover', CHROME, [(0, 0.008), (0.020, 0.008), (0.026, 0.002), (0.026, -0.006)], segs=12, M4=frame((-0.470, 0, 0.292), (-1, 0, 0.25)), sharp=40))
 add(rbox('blower', (0.10, 0.08, 0.052), STEEL, T(-0.403, 0, 0.332), bevel=0.010, sharp=50))
 for i in range(4):
     add(rbox('blower_rib', (0.008, 0.086, 0.040), ENGINE, T(-0.438 + i * 0.0235, 0, 0.332), bevel=0.003, segs=1, sharp=50))
@@ -257,12 +254,14 @@ add(make_obj('scoop_mouth', ring, [tuple(range(14))], DARK, sharp=60, recalc=Fal
 lip = sup_ring((-0.343, 0, 0.3965), (0, 1, 0), (0, 0, 1), 0.047, 0.028, e=3.0, N=18)
 add(tube('scoop_lip', MINT, lip, 0.006, N=6, closed=True, up=(1, 0, 0), sharp=70))
 # tail lamps and diffuser
-add(rbox('lamp_bezel_r', (0.016, 0.215, 0.050), DARK, T(-0.4925, 0, 0.140), bevel=0.007, sharp=50))
+add(rbox('lamp_bezel_r', (0.016, 0.225, 0.052), DARK, T(-0.494, 0, 0.158), bevel=0.007, sharp=50))
 for s in (-1, 1):
-    add(rbox('lamp_r', (0.010, 0.082, 0.028), LAMP_R, T(-0.5005, s * 0.052, 0.140), bevel=0.005, sharp=50))
-    add(rbox('lamp_r_trim', (0.006, 0.092, 0.006), MINT, T(-0.5005, s * 0.052, 0.1605), bevel=0.002, segs=1, sharp=50))
+    add(rbox('lamp_r', (0.010, 0.086, 0.030), LAMP_R, T(-0.502, s * 0.055, 0.158), bevel=0.005, sharp=50))
+    add(rbox('lamp_r_trim', (0.006, 0.096, 0.006), MINT, T(-0.502, s * 0.055, 0.1795), bevel=0.002, segs=1, sharp=50))
     for fy in (0.035, 0.095):
         add(rbox('diffuser_fin', (0.07, 0.008, 0.036), DARK, T(-0.455, s * fy, 0.066), bevel=0.002, segs=1, sharp=50))
+# plate with the hash mark under the lamps
+add(rbox('plate', (0.006, 0.07, 0.034), MINT, T(-0.4985, 0, 0.112), bevel=0.002, segs=1, sharp=50))
 
 # --------------------------------------------------------------- suspension ---
 for s in (-1, 1):
