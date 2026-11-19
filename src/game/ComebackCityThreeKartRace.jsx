@@ -3120,27 +3120,6 @@ const heroKartUrl = () => {
   }
   return Promise.resolve(heroKartTripoUrl);
 };
-// Premium rebuild of the Hash Runner (scripts/blender/kart-revamp), on trial
-// the same way: ?hashRunner=v2, dev and trial builds only. The file keeps the
-// current Hash Runner's facing, so KART_NOSE_YAW is unchanged.
-const hashRunnerUrl = () => {
-  if (
-    TRIAL_MODELS &&
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('hashRunner') === 'v2'
-  ) {
-    return import('../../scripts/blender/kart-revamp/out/hash-runner-v2.glb?url').then((module) => module.default);
-  }
-  return Promise.resolve(hashRunnerKartUrl);
-};
-// Same trial, second question for the owner: &hashRunnerTint=off shows the
-// rebuilt kart in its own baked purple and mint instead of under the racer's
-// colour wash (which turns the mint accents lilac on Seth's seat).
-const hashRunnerFactoryColours = () =>
-  TRIAL_MODELS &&
-  typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).get('hashRunner') === 'v2' &&
-  new URLSearchParams(window.location.search).get('hashRunnerTint') === 'off';
 // Same trial, for the two Tripo-made drivers: ?drivers=scripted swaps Seth
 // Penguin and CRRT Bunny for their Blender-script rebuilds. Dev and trial
 // builds only, like the kart above.
@@ -3188,7 +3167,7 @@ const loadKartAssets = () => {
       // Wave 8 bodies. `.catch(() => null)` like every other kart: a body that
       // fails to load must fall back to the procedural kart, never reject the
       // whole Promise.all and take the race down with it.
-      hashRunnerUrl().then((url) => gltfLoader.loadAsync(url)).catch(() => null),
+      gltfLoader.loadAsync(hashRunnerKartUrl).catch(() => null),
       gltfLoader.loadAsync(coldWalletKartUrl).catch(() => null),
       gltfLoader.loadAsync(satStackerKartUrl).catch(() => null),
       gltfLoader.loadAsync(pixelPickupKartUrl).catch(() => null),
@@ -3764,7 +3743,15 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math
   // hips behind the seat's own bolsters while keeping the helmet and shoulders
   // proud of the bodywork, which is the part of the silhouette the shadow rig
   // relies on the driver for.
-  kartModel.driverMount.position.set(0, (fitted.max.y - fitted.min.y) * 0.46, -2.1);
+  //
+  // Where along the kart the driver sits comes from the file when it says so:
+  // an empty node named `seat_mount` (scripts/blender/kart-revamp/README.md)
+  // marks the middle of the seat, and the driver goes over it. Only its
+  // position along and across the kart is read; the height stays the rule
+  // above. Bodies without the node keep the old fixed 2.1 behind centre.
+  const seatMount = rig.getObjectByName('seat_mount');
+  const seatAt = seatMount ? seatMount.getWorldPosition(new THREE.Vector3()) : null;
+  kartModel.driverMount.position.set(seatAt ? seatAt.x : 0, (fitted.max.y - fitted.min.y) * 0.46, seatAt ? seatAt.z : -2.1);
   kartModel.replaceBody(rig);
 };
 
@@ -10676,9 +10663,6 @@ export const ComebackCityThreeKartRace = ({
     // that died on screen puts this race in safe mode (no governor climb).
     engine.session = beginRaceSession();
     if (DEBUG_HOOKS && typeof window !== 'undefined') window.__comebackCityKartSession = engine.session;
-    // Dev server only: lets scripts/blender/kart-revamp/game-shots.mjs measure a
-    // trial kart's wheels and seat on the live model.
-    if (import.meta.env.DEV && typeof window !== 'undefined') window.__comebackCityKartPlayerModel = engine.playerModel;
     const handleSessionVisibility = () => {
       if (document.visibilityState === 'hidden') suspendRaceSession();
       else resumeRaceSession();
@@ -10947,7 +10931,7 @@ export const ComebackCityThreeKartRace = ({
               authoredKart,
               bodyCasts,
               KART_NOSE_YAW[bodyKind] ?? -Math.PI / 2,
-              bodyKind === 'hashrunner' && hashRunnerFactoryColours() ? null : characterEntry,
+              characterEntry,
               isPlayer ? playerPaint : null
             );
           }
