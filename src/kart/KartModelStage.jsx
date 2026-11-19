@@ -98,6 +98,19 @@ const makeShadowTexture = () => {
   return new CanvasTexture(canvas);
 };
 
+// Trial of the rebuilt Hash Runner on the stage (?hashRunner=v2), matching the
+// race's switch in ComebackCityThreeKartRace.jsx: dev and trial builds only.
+// TRIAL_MODELS sits in the same expression as the import so the store build
+// drops the file.
+const TRIAL_MODELS = import.meta.env.DEV || import.meta.env.VITE_KART_TRIAL_MODELS === '1';
+const stageKartUrl = (kartKey) =>
+  TRIAL_MODELS &&
+  kartKey === 'hashrunner' &&
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('hashRunner') === 'v2'
+    ? import('../../scripts/blender/kart-revamp/out/hash-runner-v2.glb?url').then((module) => module.default)
+    : Promise.resolve(SELECT_KART_MODELS[kartKey]);
+
 // Scale to a target size and sit the model's feet on y = 0.
 const groundInto = (object3d, targetHeight) => {
   const box = new Box3().setFromObject(object3d);
@@ -280,14 +293,13 @@ export const KartModelStage = ({ characterKey, kartKey, paint = null, reducedMot
     let cancelled = false;
     const loader = createGameGltfLoader();
     const characterUrl = SELECT_CHARACTER_MODELS[characterKey];
-    const kartUrl = SELECT_KART_MODELS[kartKey];
 
     const load = (url) =>
       url
         ? new Promise((resolve) => loader.load(url, (gltf) => resolve(gltf.scene), undefined, () => resolve(null)))
         : Promise.resolve(null);
 
-    Promise.all([load(characterUrl), load(kartUrl)]).then(([characterScene, kartScene]) => {
+    Promise.all([load(characterUrl), stageKartUrl(kartKey).then(load)]).then(([characterScene, kartScene]) => {
       if (cancelled || !stageRef.current) return;
       Object.values(stage.models).forEach((model) => {
         stage.turntable.remove(model);

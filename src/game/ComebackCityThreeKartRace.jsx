@@ -3119,6 +3119,19 @@ const heroKartUrl = () => {
   }
   return Promise.resolve(heroKartTripoUrl);
 };
+// Premium rebuild of the Hash Runner (scripts/blender/kart-revamp), on trial
+// the same way: ?hashRunner=v2, dev and trial builds only. The file keeps the
+// current Hash Runner's facing, so KART_NOSE_YAW is unchanged.
+const hashRunnerUrl = () => {
+  if (
+    TRIAL_MODELS &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('hashRunner') === 'v2'
+  ) {
+    return import('../../scripts/blender/kart-revamp/out/hash-runner-v2.glb?url').then((module) => module.default);
+  }
+  return Promise.resolve(hashRunnerKartUrl);
+};
 // Same trial, for the two Tripo-made drivers: ?drivers=scripted swaps Seth
 // Penguin and CRRT Bunny for their Blender-script rebuilds. Dev and trial
 // builds only, like the kart above.
@@ -3166,7 +3179,7 @@ const loadKartAssets = () => {
       // Wave 8 bodies. `.catch(() => null)` like every other kart: a body that
       // fails to load must fall back to the procedural kart, never reject the
       // whole Promise.all and take the race down with it.
-      gltfLoader.loadAsync(hashRunnerKartUrl).catch(() => null),
+      hashRunnerUrl().then((url) => gltfLoader.loadAsync(url)).catch(() => null),
       gltfLoader.loadAsync(coldWalletKartUrl).catch(() => null),
       gltfLoader.loadAsync(satStackerKartUrl).catch(() => null),
       gltfLoader.loadAsync(pixelPickupKartUrl).catch(() => null),
@@ -10654,6 +10667,9 @@ export const ComebackCityThreeKartRace = ({
     // that died on screen puts this race in safe mode (no governor climb).
     engine.session = beginRaceSession();
     if (DEBUG_HOOKS && typeof window !== 'undefined') window.__comebackCityKartSession = engine.session;
+    // Dev server only: lets scripts/blender/kart-revamp/game-shots.mjs measure a
+    // trial kart's wheels and seat on the live model.
+    if (import.meta.env.DEV && typeof window !== 'undefined') window.__comebackCityKartPlayerModel = engine.playerModel;
     const handleSessionVisibility = () => {
       if (document.visibilityState === 'hidden') suspendRaceSession();
       else resumeRaceSession();
