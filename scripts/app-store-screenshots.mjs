@@ -100,7 +100,8 @@ try {
         const scroller = stage?.closest('.overflow-y-auto');
         if (scroller) scroller.scrollTop += stage.getBoundingClientRect().top - 8;
       });
-      // ~3 s into the turntable the kart is front three-quarter on.
+      // The stage holds a front three-quarter view and sways a little either
+      // side of it; 3 s is long enough for the models to load and settle.
       await page.waitForTimeout(3000);
       const file = path.join(dir, '01-race-setup.png');
       await page.screenshot({ path: file });
