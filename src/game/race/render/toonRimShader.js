@@ -22,6 +22,7 @@ import {
   tuneHeroTexture,
 } from './kartMaterials.js';
 import { measurePaintLuminance } from './paintLuminance.js';
+import { PAINT_PROTECT_ATTRIBUTE } from './paintProtect.js';
 
 // Fresnel rim added to the lit toon color. MeshToonMaterial has no envMap
 // in r184, so this injected rim IS the character-pop lever — it lifts kart
@@ -227,7 +228,21 @@ uniform vec4 uKartGlint;
 uniform vec2 uKartFill;
 // The SECOND headroom ceiling, for the terms allowed to blow out — see
 // SPEC_BLOOM_CEILING in kartMaterials.js.
-uniform float uKartSpecCeilHi;`;
+uniform float uKartSpecCeilHi;
+// The kart file's "never recolour" flag (paintProtect.js). Declared only on a
+// material whose kart carries one.
+#ifdef KART_PAINT_PROTECT
+varying float vKartPaintProtect;
+#endif`;
+
+// Vertex half of the paint-protect flag. Inert without the define.
+const KART_PROTECT_VERTEX_PARS = /* glsl */ `#ifdef KART_PAINT_PROTECT
+attribute float ${PAINT_PROTECT_ATTRIBUTE};
+varying float vKartPaintProtect;
+#endif`;
+const KART_PROTECT_VERTEX_CHUNK = /* glsl */ `#ifdef KART_PAINT_PROTECT
+	vKartPaintProtect = ${PAINT_PROTECT_ATTRIBUTE};
+	#endif`;
 
 const KART_SHADING_CHUNK = /* glsl */ `
 	// Declares that the four class masks below exist in this scope. The rim
@@ -265,6 +280,15 @@ const KART_SHADING_CHUNK = /* glsl */ `
 	float kartLum = luminance(kartAlbedo);
 	float kartPaintMask = smoothstep(uKartPaintChroma.x, uKartPaintChroma.y, kartChroma);
 	float kartNeutral = 1.0 - kartPaintMask;
+	// What the racer wash / bought paint may recolour: the paint class, minus
+	// the vertices the kart file marks as keeping their own colour (gold, brass,
+	// lamps). Only the tint reads this; those surfaces stay paint for shading.
+	// Without the flag it is the paint mask itself, by name, so nothing changes.
+	#ifdef KART_PAINT_PROTECT
+		float kartTintMask = kartPaintMask * saturate(1.0 - vKartPaintProtect);
+	#else
+		#define kartTintMask kartPaintMask
+	#endif
 	// Chrome is a BAND-PASS, not a step. Round 1 used the rising edge alone, so
 	// any near-white neutral texel scored a full chrome flash — which is what
 	// turned the pink kart's baked-white tyres into glossy marshmallows in
@@ -383,7 +407,7 @@ const KART_SHADING_CHUNK = /* glsl */ `
 		max(kartLitPeak, uKartPaintShape.w) / max(1e-4, kartTintPeak)
 	);
 	vec3 kartTinted = uKartTint.rgb * kartTintScale;
-	outgoingLight = mix(outgoingLight, kartTinted, kartPaintMask * uKartTint.a);
+	outgoingLight = mix(outgoingLight, kartTinted, kartTintMask * uKartTint.a);
 	outgoingLight *= kartAo * mix(1.0, uKartRubberDarken, kartRubberMask);
 
 	// Paint gets a THIRD value. The curvature AO above is light-independent by
@@ -735,6 +759,9 @@ export const applyKartShading = (material, overrides = null) => {
     fragmentChunk: KART_SHADING_CHUNK,
     fragmentPars: KART_SHADING_PARS,
     name: 'kart-shading-v1',
+    vertexAnchor: '#include <begin_vertex>',
+    vertexChunk: KART_PROTECT_VERTEX_CHUNK,
+    vertexPars: KART_PROTECT_VERTEX_PARS,
     uniforms: {
       uKartAo: { value: new THREE.Vector2(params.aoFloor, params.aoCrease) },
       uKartChromeCeil: { value: new THREE.Vector2(...params.chromeCeiling) },
@@ -813,6 +840,20 @@ export const setKartPaintTint = (material, tint, amount = KART_PAINT_TINT_AMOUNT
   const color = new THREE.Color(tint);
   entry.uniforms.uKartTint.value.set(color.r, color.g, color.b, amount);
   entry.uniforms.uKartTintRef.value = respray ? measurePaintLuminance(material.map) || 0 : 0;
+  return material;
+};
+
+// Tell a race material that its kart carries the paint-protect flag
+// (paintProtect.js): the wash and a bought paint then skip the flagged
+// vertices. Call AFTER applyToonRim / applyKartShading, once any mesh that
+// uses the material has the attribute. Costs one float attribute, one varying
+// and two instructions; no texture read. Never called for a kart without the
+// attribute, which keeps the program it had.
+export const setKartPaintProtect = (material) => {
+  const entry = material.userData.shaderInjections?.find((item) => item.name === 'kart-shading-v1');
+  if (!entry || material.defines?.KART_PAINT_PROTECT !== undefined) return material;
+  material.defines = { ...material.defines, KART_PAINT_PROTECT: '' };
+  material.needsUpdate = true;
   return material;
 };
 

@@ -244,10 +244,12 @@ import {
   AMBIENT_SWAY_TIME,
   applyAmbientSway,
   applyToonRim,
+  setKartPaintProtect,
   setKartPaintTint,
   TOON_RIM_SHARED_TINT,
 } from './race/render/toonRimShader.js';
 import { KART_PAINT_TINTS } from './race/render/kartMaterials.js';
+import { hasPaintProtect } from './race/render/paintProtect.js';
 import {
   buildVisualPlacementAnchors,
   resolveTrackVisuals,
@@ -3716,6 +3718,9 @@ const attachTripoKartBody = (kartModel, tripoScene, castsShadow, noseYaw = -Math
         else if (characterEntry) setKartPaintTint(material, KART_PAINT_TINTS[characterEntry.key]);
         rigMaterials.set(mapKey, material);
       }
+      // "Keep gold gold": a kart file can flag vertices the wash and a bought
+      // paint must leave alone (gold, brass, lamps) — race/render/paintProtect.js.
+      if (hasPaintProtect(node.geometry)) setKartPaintProtect(material);
       node.material = material;
       node.castShadow = castsShadow;
     }
