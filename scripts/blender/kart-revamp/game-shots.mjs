@@ -25,7 +25,7 @@ const VARIANTS = (process.argv.slice(3).length ? process.argv.slice(3) : ['v2=ha
   return { name: arg.slice(0, index), query: arg.slice(index + 1) };
 });
 const PORT = Number(process.env.GAME_SHOTS_PORT || 5377);
-const CHARACTER = process.env.GAME_SHOTS_CHARACTER || 'seth-penguin';
+const CHARACTER = process.env.GAME_SHOTS_CHARACTER || 'tclow';
 const TRACK = process.env.GAME_SHOTS_TRACK || 'comeback-city';
 const PAINT = process.env.GAME_SHOTS_PAINT || 'ice-cyan';
 const TURNTABLE_FRAMES = Number(process.env.GAME_SHOTS_TURNTABLE_FRAMES || 8);
@@ -208,6 +208,13 @@ try {
         }
         return telemetry();
       };
+      if (pass === 'race') {
+        // standing on the grid, before the lights: the kart is level, so this
+        // is where axle height can be compared with wheel radius
+        await until((t) => t.countdown !== undefined && t.countdown > 0 && t.countdown < 2.2, 60000);
+        entry.atRest = await page.evaluate(measure);
+        await page.screenshot({ path: path.join(OUT, `${variant.name}-race-grid.png`) });
+      }
       await until((t) => t.countdown !== undefined && t.countdown <= 0 && t.raceTime > 0.2, 60000);
       if (pass === 'race') await page.screenshot({ path: path.join(OUT, `${variant.name}-race-start.png`) });
       // several frames: a rival ghosting through the camera or a held item
