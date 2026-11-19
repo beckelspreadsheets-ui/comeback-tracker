@@ -291,10 +291,10 @@
     },
     "assetClass": "rival-kart",
     "assetId": "ice-sled-candidate-blender-decimate-rival-kart-blender-15k-v1",
-    "outputHash": "sha256:bd6ce093427fcb99758f9fe1e07d9199aca7add3cf8a7816423e097a9eadc91e",
+    "outputHash": "sha256:1f78089ce7021a5127167957347cea10be89c40dc1dcf7ea2ae83b57d7bb6a01",
     "sourceHash": "sha256:3f70a14552d5a12aaed5c88f0ca4bfbe210c3481c023e800ca4a9aadce772e3d",
     "status": "runtime-hard-pass-target-warning",
-    "runtimeTransform": "Approved blender-decimate rival-kart-blender-15k-v1"
+    "runtimeTransform": "Approved blender-decimate rival-kart-blender-15k-v1; 2026-11-19 baked-in penguin face removed from the seat hood (beak deleted and capped, face retargeted to existing navy texels), repacked meshopt medium"
   },
   {
     "filePath": "src/assets/game/models/items/fishbone-trap.glb",
