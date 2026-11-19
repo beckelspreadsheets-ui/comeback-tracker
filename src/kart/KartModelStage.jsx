@@ -757,6 +757,17 @@ export const KartModelStage = ({ accent = null, characterKey, kartKey, paint = n
         // of the kart reads correctly from every angle the turntable shows,
         // and an offset guessed blind does not.
         seat.position.y = kartHeight * DRIVER_SEAT_DEPTH - sink;
+        // A rebuilt kart says where its seat is: an empty node `seat_mount`
+        // in the file (scripts/blender/kart-revamp/README.md), the same node
+        // the race reads. The driver goes over it instead of over the middle
+        // of the kart, which on a rear-seated body left a gap to the seat back.
+        const seatMount = kartScene?.getObjectByName('seat_mount');
+        if (seatMount) {
+          kartScene.updateMatrixWorld(true);
+          const seatAt = seatMount.getWorldPosition(new Vector3());
+          seat.position.x = seatAt.x;
+          seat.position.z = seatAt.z;
+        }
         seat.add(characterScene);
         rigBox.union(new Box3().setFromObject(seat));
         stage.models.character = seat;
