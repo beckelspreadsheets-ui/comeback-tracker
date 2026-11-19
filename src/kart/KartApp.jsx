@@ -96,6 +96,11 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 // how the old ones ended up looking like three different products.
 const PANEL =
   'rounded-2xl border border-white/10 bg-white/[0.055] backdrop-blur-xl shadow-[0_24px_70px_-28px_rgba(0,0,0,0.95)] ring-1 ring-inset ring-white/[0.07]';
+// The hero stage's frame: PANEL without the backdrop blur and the glass tint.
+// The stage fills it with an opaque backdrop, so blurring what is behind it
+// would be GPU work nobody sees.
+const HERO_PANEL =
+  'rounded-2xl border border-white/10 shadow-[0_24px_70px_-28px_rgba(0,0,0,0.95)] ring-1 ring-inset ring-white/[0.07]';
 const PANEL_HOVER = 'transition-all duration-200 hover:border-white/25 hover:bg-white/[0.09] hover:-translate-y-0.5';
 // Selection has to be unmistakable at a glance on a phone, so it is three
 // signals at once — border, glow and lift — not just a border colour.
@@ -626,16 +631,14 @@ const KartSelectHero = ({ characterKey, kartKey, paint = null, reducedMotion, tr
   const kart = KART_OPTIONS.find((entry) => entry.key === kartKey);
   return (
     <div
-      className={`${PANEL} relative h-[260px] w-full overflow-hidden sm:h-[340px]`}
+      className={`${HERO_PANEL} relative h-[260px] w-full overflow-hidden sm:h-[340px]`}
       style={{ boxShadow: `0 0 60px -30px ${character?.accent || '#7eefff'}, 0 24px 70px -28px rgba(0,0,0,0.95)` }}
     >
-      {/* A pool of the character's own accent under the kart, so the stage
-          reacts to the pick in colour as well as in motion. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 opacity-40 transition-colors duration-500"
-        style={{ background: `radial-gradient(ellipse at 50% 100%, ${character?.accent || '#7eefff'}44 0%, transparent 70%)` }}
-      />
+      {/* The stage paints its own backdrop and lights the ground under the
+          kart in the character's accent, so the stage still reacts to the
+          pick in colour as well as in motion. */}
       <KartModelStage
+        accent={character?.accent}
         characterKey={characterKey}
         kartKey={kartKey}
         paint={paint}
