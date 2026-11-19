@@ -144,7 +144,16 @@ pack (08). Upload-ready JPEGs at Apple's exact sizes:
 `store/app-store-screenshots/{iphone-6.9,ipad-13}/<slot>-<scene>.jpg`.
 Review page with every take: https://claude.ai/artifact/QNDcYWVPtBAQ3oygHT5rua
 
-Current iPhone set (nine shots, re-taken 2026-11-11 on the current code):
+**OWNER UPDATE 2026-11-19 (iPhone set):** the key-art picture goes first
+(slot 1, the white kart render at 2868 x 1320; **not in the folder yet**,
+waiting for the owner to approve Seth's proportions). Every gameplay shot
+follows except `01-race-setup`, which the owner rejected ("cheap looking
+cart"). `store/app-store-screenshots/iphone-6.9/` now holds slots 2 to 9
+from the 2026-11-11 takes, in the 2026-10-22 order with the start grid (02)
+and launch (06) added at the end. The owner has not confirmed this order.
+The `ipad-13` folder is unchanged (2026-10-21 takes, not needed for V1).
+
+Current iPhone takes (nine shots, re-taken 2026-11-11 on the current code):
 https://claude.ai/artifact/4YPHwEbvH4X82ihZKGqLPP
 Re-shoot one scene with `APP_STORE_SHOTS_ONLY=07 node scripts/app-store-screenshots.mjs`.
 
