@@ -48,6 +48,7 @@ import {
   MeshStandardMaterial,
   NeutralToneMapping,
   PerspectiveCamera,
+  Plane,
   PMREMGenerator,
   ReplaceStencilOp,
   RingGeometry,
@@ -250,6 +251,75 @@ const groundInto = (object3d, targetHeight) => {
   return { scale, size };
 };
 
+// ── grounding ─────────────────────────────────────────────────────────────
+// The height at which a kart actually STANDS, which is not always its lowest
+// point. The Ice Sled has a motor strut under the stern that reaches well
+// below its runners; grounded on the strut, the sled hovered over the
+// platform on a stick.
+//
+// Whatever a kart stands on is spread out under it: four tyres, two runners.
+// A strut, a fin or an exhaust tip is not. So walk the vertices from the
+// bottom up and stop at the first height where everything at or below it
+// covers CONTACT_SPREAD of the kart's length AND of its width. For a kart on
+// wheels that is the bottom of its tyres, within a few millimetres of the
+// lowest point, and anything under CONTACT_MIN is treated as no difference at
+// all, so those karts stand exactly where they did.
+//
+// Measured 2026-11-19, in stage units (a kart is 0.72 tall): Ice Sled 0.215,
+// Hash Runner 0.022, the other nine under 0.007.
+//
+// CONTACT_OVERRIDES is the escape hatch for a body this reads wrongly: the
+// height to stand on, in stage units above the model's lowest point. Empty
+// today; all eleven karts were checked against the measured value.
+const CONTACT_SPREAD = 0.5;
+const CONTACT_MIN = 0.05;
+const CONTACT_OVERRIDES = {};
+
+const contactHeight = (object3d, kartKey) => {
+  if (CONTACT_OVERRIDES[kartKey] !== undefined) return CONTACT_OVERRIDES[kartKey];
+  const points = [];
+  const vertex = new Vector3();
+  object3d.updateMatrixWorld(true);
+  object3d.traverse((node) => {
+    const position = node.isMesh && node.geometry?.attributes?.position;
+    if (!position) return;
+    for (let index = 0; index < position.count; index += 1) {
+      vertex.fromBufferAttribute(position, index).applyMatrix4(node.matrixWorld);
+      points.push([vertex.y, vertex.x, vertex.z]);
+    }
+  });
+  if (!points.length) return 0;
+  points.sort((a, b) => a[0] - b[0]);
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  points.forEach(([, x, z]) => {
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minZ = Math.min(minZ, z);
+    maxZ = Math.max(maxZ, z);
+  });
+  const needX = (maxX - minX) * CONTACT_SPREAD;
+  const needZ = (maxZ - minZ) * CONTACT_SPREAD;
+  const floor = points[0][0];
+  let lowX = Infinity;
+  let highX = -Infinity;
+  let lowZ = Infinity;
+  let highZ = -Infinity;
+  for (const [y, x, z] of points) {
+    lowX = Math.min(lowX, x);
+    highX = Math.max(highX, x);
+    lowZ = Math.min(lowZ, z);
+    highZ = Math.max(highZ, z);
+    if (highX - lowX >= needX && highZ - lowZ >= needZ) {
+      const height = y - floor;
+      return height < CONTACT_MIN ? 0 : height;
+    }
+  }
+  return 0;
+};
+
 const disposeTree = (root) => {
   root?.traverse?.((node) => {
     if (node.geometry) node.geometry.dispose();
@@ -351,6 +421,9 @@ const mirrorOf = (object3d) => {
   return copy;
 };
 
+const ABOVE_FLOOR = new Plane(new Vector3(0, 1, 0), 0);
+const BELOW_FLOOR = new Plane(new Vector3(0, -1, 0), 0);
+
 const DEFAULT_RIG = { halfX: 1, halfZ: 0.6, height: KART_STAGE_HEIGHT * 1.57 };
 
 // The backdrop: the picked track's menu art, out of focus, with its horizon on
@@ -436,6 +509,8 @@ export const KartModelStage = ({ accent = null, characterKey, kartKey, paint = n
     // off above it, which is what lets the lights be bright enough for a dark
     // kart without a white one clipping.
     renderer.toneMapping = NeutralToneMapping;
+    // For the floor cut on a kart that stands lower than its lowest point.
+    renderer.localClippingEnabled = true;
 
     const scene = new Scene();
     const camera = new PerspectiveCamera(CAMERA_FOV, 1, 0.3, 40);
@@ -656,10 +731,18 @@ export const KartModelStage = ({ accent = null, characterKey, kartKey, paint = n
       const kartHeight = KART_STAGE_HEIGHT;
       const rigBox = new Box3();
       let footprint = null;
+      let sink = 0;
       if (kartScene) {
         kartScene.rotation.y = KART_NOSE_YAW[kartKey] ?? -Math.PI / 2;
         groundInto(kartScene, KART_STAGE_HEIGHT);
         footprint = new Box3().setFromObject(kartScene);
+        // Stand the kart on what touches the floor (see contactHeight). Zero
+        // for every kart on wheels; the Ice Sled drops until its runners are
+        // on the platform and its strut is under it.
+        sink = contactHeight(kartScene, kartKey);
+        kartScene.position.y -= sink;
+        footprint.translate(new Vector3(0, -sink, 0));
+        footprint.min.y = 0;
         rigBox.union(footprint);
         stage.models.kart = kartScene;
       }
@@ -673,7 +756,7 @@ export const KartModelStage = ({ accent = null, characterKey, kartKey, paint = n
         // than pushed back: without frames I can judge, a driver in the middle
         // of the kart reads correctly from every angle the turntable shows,
         // and an offset guessed blind does not.
-        seat.position.y = kartHeight * DRIVER_SEAT_DEPTH;
+        seat.position.y = kartHeight * DRIVER_SEAT_DEPTH - sink;
         seat.add(characterScene);
         rigBox.union(new Box3().setFromObject(seat));
         stage.models.character = seat;
@@ -688,6 +771,22 @@ export const KartModelStage = ({ accent = null, characterKey, kartKey, paint = n
         stage.models[`mirror${index}`] = model;
       });
       if (kartScene) [kartScene, mirrors[0]].forEach((model) => applyStagePaint(model, stage.paintUniform));
+      // Whatever now hangs below the floor is cut off at it, on the kart and
+      // on its mirror image, so no strut shows through the platform or pokes
+      // up out of the reflection.
+      if (kartScene && sink > 0) {
+        [
+          [kartScene, ABOVE_FLOOR],
+          [mirrors[0], BELOW_FLOOR],
+        ].forEach(([model, plane]) =>
+          model.traverse((node) => {
+            if (!node.isMesh) return;
+            (Array.isArray(node.material) ? node.material : [node.material]).forEach((material) => {
+              material.clippingPlanes = [plane];
+            });
+          })
+        );
+      }
 
       // Measured rig: the camera, the platform and the shadow all take their
       // size from what is actually on the stage.
