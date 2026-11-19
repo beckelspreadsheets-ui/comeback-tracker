@@ -6,7 +6,7 @@
 # the game can drop in.
 #
 # Kart frame while building: +X nose, +Y left, +Z up, length 1.0, ground z=0.
-import bpy, bmesh, math, os
+import bpy, bmesh, json, math, os, sys
 from mathutils import Vector, Matrix
 
 V = Vector
@@ -29,7 +29,11 @@ def reset_scene():
 MATS = {}
 
 
-def mat(name, color, rough=0.5, metal=0.0, emit=None, emit_strength=0.0, pattern=None, toplight=True, ao_floor=0.34, edge=0.5):
+def mat(name, color, rough=0.5, metal=0.0, emit=None, emit_strength=0.0, pattern=None, toplight=True, ao_floor=0.34, edge=0.5,
+        protect=None):
+    """`protect`: this material keeps its own colour under a racer wash or a
+    bought paint (gold, brass, lamps, cargo). Lamps (anything emissive) are
+    protected unless told otherwise. See stamp_paint_protect."""
     m = bpy.data.materials.new(name)
     m.use_nodes = True
     b = m.node_tree.nodes['Principled BSDF']
@@ -40,7 +44,8 @@ def mat(name, color, rough=0.5, metal=0.0, emit=None, emit_strength=0.0, pattern
         b.inputs['Emission Color'].default_value = (*emit, 1)
         b.inputs['Emission Strength'].default_value = emit_strength
     MATS[name] = dict(color=color, rough=rough, metal=metal, emit=emit, emit_strength=emit_strength, pattern=pattern,
-                      toplight=toplight, ao_floor=ao_floor, edge=edge)
+                      toplight=toplight, ao_floor=ao_floor, edge=edge,
+                      protect=bool(emit) if protect is None else bool(protect))
     return m
 
 
@@ -444,12 +449,67 @@ def _bake_tree(m, mode, image, d):
     img.select = True
 
 
+# The game recolours every saturated texel of a kart (racer wash, bought
+# paint). Gold, brass and lamps must not follow the body, and colour alone
+# cannot say which is which (a sand body and a gold coin are the same hue), so
+# the kart says it per vertex: a float attribute, 1.0 on every vertex of a
+# face whose material has protect=True, 0.0 elsewhere. It exports as the glTF
+# attribute _PAINT_PROTECT; the game reads it in src/game/race/render/
+# paintProtect.js. Parts are never welded to each other, so a vertex belongs
+# to one material and the edge between gold and paint is exact at any distance.
+PROTECT_ATTRIBUTE = '_PAINT_PROTECT'
+
+
+def stamp_paint_protect(objs):
+    """call while the source materials are still assigned (bake_atlas does)"""
+    total = 0
+    for o in objs:
+        me = o.data
+        flags = [0.0] * len(me.vertices)
+        for p in me.polygons:
+            slot = me.materials[p.material_index] if me.materials else None
+            if slot and MATS.get(slot.name, {}).get('protect'):
+                for vi in p.vertices:
+                    flags[vi] = 1.0
+        old = me.attributes.get(PROTECT_ATTRIBUTE)
+        if old:
+            me.attributes.remove(old)
+        me.attributes.new(PROTECT_ATTRIBUTE, 'FLOAT', 'POINT').data.foreach_set('value', flags)
+        total += int(sum(flags))
+    return total
+
+
+def dump_paint_protect(objs, path):
+    """every UV corner of the unwrapped kart with its protect flag, in glTF
+    UV space (v down). paint-protect.mjs uses it to stamp a GLB that was
+    packed before the attribute existed, without rebuilding it."""
+    corners = {}
+    for o in objs:
+        me = o.data
+        uv = me.uv_layers.active.data
+        flag = me.attributes[PROTECT_ATTRIBUTE].data
+        for loop in me.loops:
+            u, v = uv[loop.index].uv
+            key = (round(u, 6), round(1.0 - v, 6))
+            corners[key] = max(corners.get(key, 0), int(flag[loop.vertex_index].value))
+    with open(path, 'w') as handle:
+        json.dump({'attribute': PROTECT_ATTRIBUTE, 'corners': [[u, v, f] for (u, v), f in corners.items()]}, handle)
+    print('PAINT PROTECT', path, len(corners), 'uv corners,', sum(corners.values()), 'protected')
+
+
 def bake_atlas(groups, sizes, samples=24, ground=True):
     """groups: list of object lists baked together; objects outside a group are
     hidden from it, so a wheel's ambient occlusion comes only from the wheel
     (it has to stay right while the wheel spins) and the body's from everything.
     groups[0] is the body group and sees every other object.
-    Returns {'color','orm','emit'} images."""
+    Returns {'color','orm','emit'} images. Also stamps the paint-protect
+    attribute, the last moment the source materials are on the meshes.
+    KART_PROTECT_DUMP=<json> writes the protect flags by UV and stops there
+    (no bake): see dump_paint_protect."""
+    stamp_paint_protect([o for g in groups for o in g])
+    if os.environ.get('KART_PROTECT_DUMP'):
+        dump_paint_protect([o for g in groups for o in g], os.environ['KART_PROTECT_DUMP'])
+        sys.exit(0)
     sc = bpy.context.scene
     sc.render.engine = 'CYCLES'
     sc.cycles.device = 'CPU'
@@ -561,4 +621,5 @@ def export_glb(path, objs, jpeg_quality=88):
         o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
                               export_image_format='JPEG', export_image_quality=jpeg_quality, export_jpeg_quality=jpeg_quality,
-                              export_vertex_color='NONE', export_tangents=False, export_extras=False)
+                              export_vertex_color='NONE', export_tangents=False, export_extras=False,
+                              export_attributes=True)   # _PAINT_PROTECT

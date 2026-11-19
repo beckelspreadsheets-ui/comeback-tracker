@@ -25,7 +25,8 @@ file's facing does not touch it.
 | Wheel axes | Each wheel sits under a hub node (`hub_front_l`, ...) at the axle centre. The hub carries the rotation that makes the wheel's local X the kart's right-hand direction; the wheel node itself has no rotation. The game spins on local X and steers on local Y. Axle height must equal tyre radius. Left wheels are mirrored mesh data, not negative scale. |
 | Seat | An empty node `seat_mount` on the centre line at the middle of the seat (`pack-glb.mjs --seat=<x>`). The race and the setup stage put the driver over it. Only its position along and across the kart is read; height is the game's rule (0.46 of the kart's height in a race). Leave the cockpit open above it: the driver is about 0.41 kart lengths tall and 0.4 wide. Without the node the race seats the driver 2.1 units (0.135 lengths) behind the origin and the stage in the middle. |
 | Materials | One material, one colour texture. In a race every material is replaced by a toon material that keeps ONLY the colour map (and vertex colours): metalness, roughness, emissive and colour factors are dropped. Stripes, panel lines, crease shading and lamp colours must be baked into the colour map. The setup stage does use the full material. |
-| Paint | Racer tints and bought paints recolour every saturated texel (chroma above about 0.08 to 0.3, linear). Keep tyres, metal, seat and trim grey so they stay put. Accents in a second saturated colour will take the tint too. |
+| Paint | Racer tints and bought paints recolour every saturated texel (chroma above about 0.08 to 0.3, linear). Keep tyres, metal, seat and trim grey so they stay put. Accents in a second saturated colour will take the tint too, unless they are protected (next row). |
+| Paint protect | Gold, brass, lamps, indicators and cargo keep their own colour: give the material `protect=True` in `mat()` (anything emissive is protected already). The build writes a float vertex attribute `_PAINT_PROTECT` (1 = never recoloured) on every mesh; the race and the setup stage skip those vertices when they recolour. Do not protect the body colour, and do not weld a protected part to a painted one. A file without the attribute behaves as before. See "Paint protect" below. |
 | Size | No larger than the Hero Kart file (1,049 KB), and the kart bundle gate must pass (`npm run test:bundle:kart`: largest file 3 MiB, images 2.5 MiB in total). Hash Runner: 462 KB, 21,816 triangles, 4 draw calls, one 1024 colour JPEG plus two 256 maps. |
 | Compression | `pack-glb.mjs` only (meshopt level high). Never `gltf-transform optimize`. |
 | Thumbnail | `src/assets/game/select/kart-<key>.webp`, 480 x 480, transparent, about 10 KB (`cwebp -q 60 -alpha_q 90`). |
@@ -33,6 +34,40 @@ file's facing does not touch it.
 The body pitches up to 3 degrees under power and braking and rolls in
 corners (`updateKartBodyMotion`), wheels included, so a measured axle height
 in a moving race is not the resting one. Measure on the grid.
+
+## Paint protect
+
+The recolour picks texels by saturation only, so before this a gold coin, a
+brass grille or a red tail lamp went lilac, pink or cyan with the body. Hue
+cannot separate them from a body that is itself tan, orange or yellow, so the
+kart file says which vertices are off limits.
+
+- `kart_lib.mat(..., protect=True)` marks a material. Emissive materials are
+  marked without asking; pass `protect=False` to let one take paint.
+- `bake_atlas` calls `stamp_paint_protect`, which writes the point attribute
+  `_PAINT_PROTECT` while the source materials are still on the meshes, and
+  `export_glb` exports it (`export_attributes=True`). `pack-glb.mjs` keeps it.
+- The game: `src/game/race/render/paintProtect.js` (what it is),
+  `toonRimShader.js` `setKartPaintProtect` (race), `src/kart/stagePaint.js`
+  (setup stage). One float attribute and one varying, no texture read.
+- Check a file: `node scripts/blender/kart-revamp/glb-info.mjs <file>` lists
+  `paint protect: none` or how many primitives carry the attribute.
+
+The six karts rebuilt on 2026-11-19 were packed before the attribute existed.
+They were stamped in place, without a rebuild or a re-pack, and the same two
+commands work for any packed kart whose build script is unchanged:
+
+```
+KART_PROTECT_DUMP=/abs/path/protect.json /opt/homebrew/bin/blender -b -P build_<kart>.py -- out/unused.glb
+node scripts/blender/kart-revamp/paint-protect.mjs src/assets/game/models/karts/<file>.glb src/assets/game/models/karts/<file>.glb /abs/path/protect.json
+```
+
+The first builds the shapes and the unwrap only (no bake, no render, about two
+seconds) and writes every UV corner with its flag. The second finds each
+vertex of the packed file by its UV, appends the attribute as new buffer
+views, and refuses to write if any vertex has no match or if the bytes that
+were already in the file would move. Then update the file's `outputHash` in
+`src/assets/game/asset-manifest.json` with the sha256 it prints.
 
 ## Steps for another kart
 

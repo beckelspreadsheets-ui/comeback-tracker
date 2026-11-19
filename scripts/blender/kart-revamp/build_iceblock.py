@@ -142,7 +142,7 @@ ICICLE = mat('icicle', C_PALE, rough=0.08, pattern=icicle_pattern, edge=0.6, ao_
 FROST = mat('frost', C_FROST, rough=0.55, edge=0.3, ao_floor=0.5)
 NAVY = mat('navy', C_NAVY, rough=0.1, pattern=window_pattern, edge=0.3)
 SLOT = mat('slot', (0.010, 0.05, 0.17), rough=0.2, edge=0.2)
-GOLD = mat('gold', C_GOLD, rough=0.25, metal=0.9, pattern=gold_pattern, edge=0.9, ao_floor=0.55)
+GOLD = mat('gold', C_GOLD, rough=0.25, metal=0.9, pattern=gold_pattern, edge=0.9, ao_floor=0.55, protect=True)
 DARK = mat('dark', (0.030, 0.036, 0.050), rough=0.55)
 SEAT = mat('seat', (0.060, 0.072, 0.100), rough=0.75, edge=0.4)
 STEEL = mat('steel', (0.42, 0.45, 0.50), rough=0.3, metal=0.65)

@@ -9,6 +9,7 @@ for (const file of process.argv.slice(2)) {
   let triangles = 0;
   let vertices = 0;
   let primitives = 0;
+  let protectedVertices = null; // primitives that carry the attribute
   for (const mesh of json.meshes || []) {
     for (const primitive of mesh.primitives) {
       const position = json.accessors[primitive.attributes.POSITION];
@@ -16,6 +17,8 @@ for (const file of process.argv.slice(2)) {
       triangles += count / 3;
       vertices += position.count;
       primitives += 1;
+      // _PAINT_PROTECT (README, "Paint protect")
+      if (primitive.attributes._PAINT_PROTECT !== undefined) protectedVertices = (protectedVertices || 0) + 1;
     }
   }
   const images = (json.images || []).map((image) => `${image.mimeType} ${Math.round((json.bufferViews[image.bufferView]?.byteLength || 0) / 1024)} KB`);
@@ -27,6 +30,7 @@ for (const file of process.argv.slice(2)) {
       `${vertices} vertices`,
       `${primitives} draw calls`,
       `${(json.materials || []).length} materials`,
+      `paint protect: ${protectedVertices === null ? 'none' : `on ${protectedVertices} of ${primitives} primitives`}`,
       `images: ${images.join(', ') || 'none'}`,
       `extensions: ${(json.extensionsUsed || []).join(', ') || 'none'}`,
       `nodes: ${(json.nodes || []).map((node) => node.name).filter(Boolean).join(', ')}`,

@@ -361,7 +361,7 @@ CUBES = [  # x centre, y centre, z base, size, tones
     (-0.400, -0.036, Z_BED + 0.006 + 0.100, 0.078, ((0.95, 0.55, 0.03), (1.0, 0.82, 0.16), (0.50, 0.20, 0.02))),
 ]
 for i, (cx, cy, zb, size, tones) in enumerate(CUBES):
-    m = mat(f'cube{i}', tones[0], rough=0.55, edge=0.25, ao_floor=0.5,
+    m = mat(f'cube{i}', tones[0], rough=0.55, edge=0.25, ao_floor=0.5, protect=True,   # cargo keeps its colours under paint
             pattern=pixel_pattern((cx - size / 2, cy - size / 2, zb), size / 5, tones, n=5))
     add(rbox(f'cube{i}', (size, size, size), m, T(cx, cy, zb + size / 2), bevel=0.0035, segs=1, sharp=40))
 
