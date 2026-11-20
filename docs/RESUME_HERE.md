@@ -1,5 +1,52 @@
 # RESUME HERE — Penguin Kart game
 
+## 2026-11-19 — new icon, store set, setup screen, six rebuilt karts (read first)
+
+Working clone: `~/PenguinKart-Work` (durable; the old scratchpad was wiped by
+the macOS temp cleaner). Kart rebuild clones: `~/PenguinKart-Revamp/<kart>`.
+
+Owner decisions today, all approved from pictures on the desktop:
+- **App icon and store slot 1:** chubby Seth in the white kart
+  (`scripts/blender/key-art/white-kart-chubby-seth-hero.py`).
+- **iPhone store set:** key art first, then eight gameplay shots;
+  `01-race-setup` left out. Order not confirmed by the owner.
+- **Setup screen:** showroom staging (low front view, platform, reflection,
+  blurred track art). The Ice Sled now stands on its runners.
+- **Starting karts:** Seth starts in the Ice Sled, T Clow in the Hash Runner.
+- **Six karts rebuilt by script** (`scripts/blender/kart-revamp/`, contract in
+  its README): Hash Runner, Cold Wallet, Ice Block, Node Runner, Pixel
+  Pickup, Sat Stacker. Kept as they were: Block Reward, Hero, Ice Racer, Ice
+  Sled, Miami Cruiser.
+- **Ice Sled:** the penguin face sculpted into its seat was removed.
+- **Keep gold gold:** rebuilt karts carry a per-vertex `_PAINT_PROTECT` flag,
+  so coins, brass and lamps are not recoloured by the racer wash or bought
+  paints. Older karts have no flag and behave as before (Block Reward's gold
+  wheels still take the wash).
+
+**Soak gate is unreliable, and was before today.** It counts retained WebGL
+context objects with a limit of 2, and the normal state after a quit is
+already 2 (live menu stage + the race just quit), so one late collection
+fails it. Measured 2026-11-19, one run at a time: commit 4a45f4ca (before
+today's stage work) failed 2 of 5; the stage + Hash Runner state failed 0 of
+5 in that series but did fail in other runs. On the final state of this push
+the battery was 16/17 (soak: max retained 3), and the soak gate alone then
+gave one more failure and one pass. Live contexts were 1 and heap growth about
+1 MiB over ten races in every run. A heap snapshot at a failing sample showed
+no reference chain to the lost contexts. Not proven: what keeps the just-quit
+race counted. Evidence: `~/PenguinKart-Revamp/soak-*.log`, `diag*.log`. Open
+decision for the owner: fix the race teardown so the baseline drops to 1, or
+change how the gate counts. The limit has not been loosened.
+
+**Tested:** desktop Chromium only. Nothing from today has run in the
+simulator or on a device. The phone still has the 2026-11-13 build, whose
+free install expires about 2026-11-20. No install was done (owner: later);
+warn about the codesign keychain prompt before any install.
+
+Still open: owner's Twitter links for Seth references; feel report on thumb
+and tilt steering; the four tuning races; screenshot order; the store
+gameplay shots still show the old karts and the old setup screen and need
+re-taking.
+
 ## 2026-11-13 — first phone feedback, steering softened, new app icon (read first)
 
 Audit section 16 has the detail. The owner played the phone build for the
