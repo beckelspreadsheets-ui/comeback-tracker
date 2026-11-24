@@ -631,7 +631,7 @@ const KartSelectHero = ({ characterKey, kartKey, paint = null, reducedMotion, tr
   const kart = KART_OPTIONS.find((entry) => entry.key === kartKey);
   return (
     <div
-      className={`${HERO_PANEL} relative h-[260px] w-full overflow-hidden sm:h-[340px]`}
+      className={`${HERO_PANEL} relative h-[260px] w-full overflow-hidden sm:h-[340px] [@media(max-height:520px)]:!h-[240px]`}
       style={{ boxShadow: `0 0 60px -30px ${character?.accent || '#7eefff'}, 0 24px 70px -28px rgba(0,0,0,0.95)` }}
     >
       {/* The stage paints its own backdrop and lights the ground under the
@@ -759,15 +759,19 @@ const KartCharacterSelect = ({ gameMode, handling = 'assisted', kartKey, mirror 
     <MenuBackdrop trackKey={trackKey} />
     {/* Side padding clears the notch, as on How to Race (the kart build no
         longer pads <body>: src/kart/kart.css). */}
-    <div className="relative flex min-h-full justify-center py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:py-6 sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
-      <div className="my-auto w-full max-w-4xl space-y-6 py-6">
+    {/* SHORT (a phone held sideways, about 375-430 px tall): the header
+        folds to one line and the stage is a little lower, so the whole kart
+        sits above the sticky Start button on the first view instead of
+        having its wheels under it (owner 2026-11-19). */}
+    <div className={`relative flex min-h-full justify-center py-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:py-6 sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] [@media(max-height:520px)]:!py-2`}>
+      <div className={`my-auto w-full max-w-4xl space-y-6 py-6 [@media(max-height:520px)]:!space-y-3 [@media(max-height:520px)]:!py-0`}>
       <div className="relative text-center">
         {wallet ? <div className="mb-3 flex justify-center sm:absolute sm:right-0 sm:top-0 sm:mb-0">{wallet}</div> : null}
-        <div className={EYEBROW}>Penguin Kart</div>
-        <h2 className="mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] sm:text-4xl">
+        <div className={`${EYEBROW} [@media(max-height:520px)]:hidden`}>Penguin Kart</div>
+        <h2 className={`mt-2 font-mono text-3xl font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] sm:text-4xl [@media(max-height:520px)]:!mt-0 [@media(max-height:520px)]:!text-2xl`}>
           Race Setup
         </h2>
-        <div className="mx-auto mt-3 h-px w-24 bg-gradient-to-r from-transparent via-[#ffd34f]/70 to-transparent" />
+        <div className={`mx-auto mt-3 h-px w-24 bg-gradient-to-r from-transparent via-[#ffd34f]/70 to-transparent [@media(max-height:520px)]:hidden`} />
       </div>
       <KartSelectHero
         characterKey={selectedKey}
