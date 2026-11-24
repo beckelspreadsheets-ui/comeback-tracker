@@ -958,7 +958,9 @@ export const KART_PAINT_TINTS = Object.freeze({
   layer23: '#a86b32',
   lifoladen: '#8e1a43',
   mizzle: '#f28b2e',
-  'seth-penguin': '#7e35f4',
+  // Owner 2026-11-24: ice cyan, to match the Ice Sled he starts in. He was
+  // purple (#7e35f4, the colour the measurements above were taken with).
+  'seth-penguin': '#1bb4ea',
   tclow: '#2378ff',
 });
 

@@ -721,7 +721,7 @@ export const KART_CHARACTERS = [
   // Penguin" IS T Clow — one character. Owner 2026-11-19: Seth starts in the
   // Ice Sled, so T Clow and Seth swapped signature rides.
   { accent: '#9fe7ff', color: '#2378ff', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'hashrunner', kartName: 'Hash Runner', key: 'tclow', name: 'T Clow', projectileSkin: 'iceshard' },
-  { accent: '#38d7ff', color: '#7e35f4', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'icesled', kartName: 'Ice Sled', key: 'seth-penguin', name: 'Seth Penguin', projectileSkin: 'iceshard' },
+  { accent: '#38d7ff', color: '#1bb4ea', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'icesled', kartName: 'Ice Sled', key: 'seth-penguin', name: 'Seth Penguin', projectileSkin: 'iceshard' },
   { accent: '#ffd34f', color: '#f28b2e', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'btckart', kartName: 'Block Reward', key: 'mizzle', name: 'Mizzle', projectileSkin: 'iceshard' },
   { accent: '#ffd9a0', color: '#a86b32', driverHeight: 6.4, driverYaw: -Math.PI / 2, kart: 'satstacker', kartName: 'Sat Stacker', key: 'layer23', name: 'Layer 23', projectileSkin: 'iceshard' },
 ];
