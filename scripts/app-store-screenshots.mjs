@@ -37,7 +37,7 @@ const DEVICES = [
 // Race scenes: query, then the race time (seconds) to shoot at.
 const RACE_SCENES = [
   { at: 'grid', name: '02-start-grid', query: '&track=comeback-city&character=seth-penguin' },
-  { at: 9, name: '03-comeback-city', query: '&track=comeback-city&character=mizzle' },
+  { at: 11, name: '03-comeback-city', query: '&track=comeback-city&character=mizzle' },
   { at: 12, name: '04-penguin-village', query: '&track=penguin-village&character=layer23' },
   { at: 5, name: '05-items', query: '&track=comeback-city&itemShowcase=1&character=lifoladen' },
   // Alternates, so the owner picks from more than one take of each idea.

@@ -148,9 +148,16 @@ Review page with every take: https://claude.ai/artifact/QNDcYWVPtBAQ3oygHT5rua
 (slot 1, the white kart render at 2868 x 1320; **not in the folder yet**,
 waiting for the owner to approve Seth's proportions). Every gameplay shot
 follows except `01-race-setup`, which the owner rejected ("cheap looking
-cart"). `store/app-store-screenshots/iphone-6.9/` now holds slots 2 to 9
-from the 2026-11-11 takes, in the 2026-10-22 order with the start grid (02)
-and launch (06) added at the end. The owner has not confirmed this order.
+cart"). `store/app-store-screenshots/iphone-6.9/` holds slots 2 to 9, in the
+2026-10-22 order with the start grid (02) and launch (06) added at the end.
+The owner has not confirmed this order.
+
+**Re-taken 2026-11-24** (owner: "Now, on desktop"): slots 2 to 9 are new
+takes from desktop Chromium at 2868 x 1320, quality-92 JPEGs, on the build
+with the seven rebuilt karts (Block Reward included), the Ice Sled fix and
+Seth's ice-cyan colour. Slot 4 (Comeback City) is shot at race time 11 s
+instead of 9 s, because at 9 s a rival's sled sat on top of the player's
+kart. Slot 1 (key art) is unchanged. Not captured on a device.
 The `ipad-13` folder is unchanged (2026-10-21 takes, not needed for V1).
 
 Current iPhone takes (nine shots, re-taken 2026-11-11 on the current code):
