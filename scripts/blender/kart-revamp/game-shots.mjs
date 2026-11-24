@@ -28,6 +28,8 @@ const PORT = Number(process.env.GAME_SHOTS_PORT || 5377);
 const CHARACTER = process.env.GAME_SHOTS_CHARACTER || 'tclow';
 const TRACK = process.env.GAME_SHOTS_TRACK || 'comeback-city';
 const PAINT = process.env.GAME_SHOTS_PAINT || 'ice-cyan';
+// the kart key the bought paint is equipped under (the kart CHARACTER starts in)
+const KART_KEY = process.env.GAME_SHOTS_KART_KEY || 'hashrunner';
 const TURNTABLE_FRAMES = Number(process.env.GAME_SHOTS_TURNTABLE_FRAMES || 8);
 const RACE_MARKS = (process.env.GAME_SHOTS_RACE_MARKS || '4.5,7,9.5,12').split(',').map(Number);
 const baseUrl = `http://127.0.0.1:${PORT}`;
@@ -184,11 +186,11 @@ try {
     for (const pass of ['race', 'race-paint']) {
       const context = await browser.newContext({ deviceScaleFactor: 2, viewport: { height: 675, width: 1200 } });
       if (pass === 'race-paint') {
-        await context.addInitScript((paint) => {
+        await context.addInitScript(({ kartKey, paint }) => {
           try {
-            window.localStorage.setItem('cc-kart-paints', JSON.stringify({ equipped: { hashrunner: paint }, owned: ['stock', paint] }));
+            window.localStorage.setItem('cc-kart-paints', JSON.stringify({ equipped: { [kartKey]: paint }, owned: ['stock', paint] }));
           } catch {}
-        }, PAINT);
+        }, { kartKey: KART_KEY, paint: PAINT });
       }
       page = await context.newPage();
       listen(page);

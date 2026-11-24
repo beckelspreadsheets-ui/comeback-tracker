@@ -497,7 +497,7 @@ def dump_paint_protect(objs, path):
     print('PAINT PROTECT', path, len(corners), 'uv corners,', sum(corners.values()), 'protected')
 
 
-def bake_atlas(groups, sizes, samples=24, ground=True):
+def bake_atlas(groups, sizes, samples=24, ground=True, margins=None):
     """groups: list of object lists baked together; objects outside a group are
     hidden from it, so a wheel's ambient occlusion comes only from the wheel
     (it has to stay right while the wheel spins) and the body's from everything.
@@ -505,7 +505,12 @@ def bake_atlas(groups, sizes, samples=24, ground=True):
     Returns {'color','orm','emit'} images. Also stamps the paint-protect
     attribute, the last moment the source materials are on the meshes.
     KART_PROTECT_DUMP=<json> writes the protect flags by UV and stops there
-    (no bake): see dump_paint_protect."""
+    (no bake): see dump_paint_protect.
+    margins: bake margin in colour-map pixels for each group (default 12 for
+    all). Each group is a separate bake that cannot see the texels an earlier
+    one filled, so a later group's margin paints over its neighbours: give
+    the wheel groups less than the unwrap gap when their colours would show
+    on the body (white marks next to charcoal)."""
     stamp_paint_protect([o for g in groups for o in g])
     if os.environ.get('KART_PROTECT_DUMP'):
         dump_paint_protect([o for g in groups for o in g], os.environ['KART_PROTECT_DUMP'])
@@ -536,6 +541,8 @@ def bake_atlas(groups, sizes, samples=24, ground=True):
         for name, d in defs.items():
             _bake_tree(bpy.data.materials[name], mode, images[mode], d)
         for gi, g in enumerate(groups):
+            if margins:
+                sc.render.bake.margin = max(1, round(margins[gi] * sizes[mode] / sizes['color']))
             for o in everything:
                 o.hide_render = not (o in g or gi == 0)
             if gp:

@@ -1,5 +1,5 @@
-// "Keep gold gold": the six rebuilt karts carry the paint-protect vertex flag
-// (src/game/race/render/paintProtect.js) and the five older karts do not.
+// "Keep gold gold": the seven rebuilt karts carry the paint-protect vertex flag
+// (src/game/race/render/paintProtect.js) and the four older karts do not.
 // A re-pack or a re-export that silently dropped the attribute would put the
 // lilac coins back with no error anywhere, so the files are checked here.
 // Pure node, no browser.
@@ -14,6 +14,8 @@ const KARTS = new URL('../src/assets/game/models/karts/', import.meta.url);
 // file -> [fewest, most] protected vertices as a share of the kart. Gold and
 // lamps are a part of each kart, never none of it and never most of it.
 const PROTECTED = {
+  // coin wheels, six body coins and their marks: many small protected parts
+  'btc-kart.glb': [0.2, 0.6],
   'cold-wallet.glb': [0.01, 0.2],
   'hash-runner.glb': [0.005, 0.2],
   'ice-block.glb': [0.03, 0.3],
@@ -21,7 +23,7 @@ const PROTECTED = {
   'pixel-pickup.glb': [0.01, 0.2],
   'sat-stacker.glb': [0.3, 0.6],
 };
-const UNTOUCHED = ['btc-kart.glb', 'ice-racer.glb', 'miami-cruiser.glb', '../tripo/hero-kart-tripo.glb', '../tripo/ice-sled.glb'];
+const UNTOUCHED = ['ice-racer.glb', 'miami-cruiser.glb', '../tripo/hero-kart-tripo.glb', '../tripo/ice-sled.glb'];
 
 await MeshoptDecoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });

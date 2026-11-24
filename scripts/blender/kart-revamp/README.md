@@ -69,6 +69,17 @@ views, and refuses to write if any vertex has no match or if the bytes that
 were already in the file would move. Then update the file's `outputHash` in
 `src/assets/game/asset-manifest.json` with the sha256 it prints.
 
+## Two things the Block Reward rebuild found (2026-11-24)
+
+- A mark that reads one way round (a letter, a logo) cannot sit on a mirrored
+  left wheel: it shows back to front. `build_blockreward.py` makes the left
+  wheels with `turned_copy` (the right wheel turned half a turn in mesh data,
+  same UVs, no negative scale) instead of `mirrored_copy`.
+- Each bake group is a separate bake, and its 12 px margin paints over
+  texels an earlier group filled. White wheel marks bled onto charcoal body
+  parts that way. `bake_atlas(..., margins=[12, 3, 3])` keeps the wheel
+  groups' margin inside the unwrap gap; without `margins` nothing changes.
+
 ## Steps for another kart
 
 1. Copy `build_hashrunner.py` to `build_<kart>.py`. Keep the structure
@@ -93,8 +104,9 @@ were already in the file would move. Then update the file's `outputHash` in
    contract above is met.
 5. Capture the game: `node scripts/blender/kart-revamp/game-shots.mjs tmp/kart-revamp final=`
    (`GAME_SHOTS_CHARACTER` picks a racer who starts in the kart, default
-   `tclow` for the Hash Runner; the paint pass writes the equipped paint under
-   the kart key `hashrunner`, change that one line for another kart). It
+   `tclow` for the Hash Runner; `GAME_SHOTS_KART_KEY` is the kart key the
+   paint pass equips the paint under, default `hashrunner`; a variant query of
+   `kart=<key>` puts another racer in the kart). It
    starts its own dev server on port 5377, photographs the setup screen,
    tries a paint, runs a race, and writes `report.json` with console errors.
    Wheel and seat measurements are only filled in when the page exposes
