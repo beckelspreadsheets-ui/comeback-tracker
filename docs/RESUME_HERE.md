@@ -1,6 +1,41 @@
 # RESUME HERE — Penguin Kart game
 
-## 2026-11-19 — new icon, store set, setup screen, six rebuilt karts (read first)
+## 2026-11-24 — soak gate fixed, Block Reward rebuilt, store shots re-taken (read first)
+
+Battery on this state: **17/17** (desktop Chromium). Bundle: images 2.283 of
+2.5 MiB, JS gzip 552.96 of 560 KiB. Nothing from 2026-11-19 or today has run
+in the simulator or on a device.
+
+- **Soak gate (87b1585e):** the 2026-11-19 "unreliable soak" was the gate
+  counting Playwright's own references, not a leak. A Playwright click keeps
+  the element it clicked; the detached button's React props lead back to the
+  closed screen. Every click and wait is now in-page, and one settle step
+  (menu re-render + more GC, lowest reading kept) covers both the context
+  count and the heap. Limits unchanged (2 retained contexts, 3 MiB). Same
+  build, ten races per run: old gate failed 2 of 3, final gate passed 10 of
+  10 and again in the battery. The soak paragraph in the 2026-11-19 section
+  below is superseded.
+- **Setup screen on a phone held sideways (85b0303b):** header folds to one
+  line and the stage is 240px at max-height 520px, so the whole kart is above
+  Start on the first view. Checked at 932x430 and 667x375.
+- **Seth's racer colour (0ddbb700):** ice cyan #1bb4ea (owner), was purple.
+- **Block Reward v2 (20f1cf2c):** rebuilt through the kart-revamp pipeline
+  (`build_blockreward.py`); gold coin wheels, marks, chart and lamps are
+  paint-protected. Seven karts are rebuilt now. The owner has NOT yet looked
+  at it: picture at `~/Desktop/Penguin-Kart-Icon-Art/kart-revamp/blockreward-before-after.jpg`.
+  Weak points noted by the build: the picker thumbnail's wheel coins read
+  pale, and the chart arrow only shows from behind.
+- **Store set (33e50a8c):** iPhone slots 2-9 re-taken on this build; slot 1
+  (key art) and the iPad folder unchanged. Order still not confirmed.
+- **Owner: Pixel Pickup cargo stays as is** (all cubes keep their colours).
+
+Open, in order: phone reinstall when the owner says (the free 7-day install
+from 2026-11-13 has expired; warn before the codesign keychain prompt), then
+the steering feel report and the four tuning races; owner's look at Block
+Reward and the store order; Miami Cruiser and Ice Racer are the two karts not
+rebuilt or judged; paid Apple Developer account before submission.
+
+## 2026-11-19 — new icon, store set, setup screen, six rebuilt karts
 
 Working clone: `~/PenguinKart-Work` (durable; the old scratchpad was wiped by
 the macOS temp cleaner). Kart rebuild clones: `~/PenguinKart-Revamp/<kart>`.
