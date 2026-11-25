@@ -97,17 +97,28 @@ export const CLASSIC = Object.freeze({
   // --- power slide -----------------------------------------------------------
   // How fast the slide swings the kart's travel direction, rad/s, by where
   // the stick is: pushed into the corner, centred, pushed out of it. At a
-  // slide's ~205 u/s full inward is a ~98 u radius — the tight corners — and
-  // pushed out is a gentle ~450 u arc for straightening.
-  slideYawIn: 2.1,
-  slideYawCentre: 0.95,
-  slideYawOut: 0.45,
+  // slide's ~205 u/s full inward is a ~114 u radius — the tight corners — and
+  // pushed out is a gentle ~540 u arc for straightening.
+  //
+  // Softened 2026-11-25 after the owner's first phone session on this build
+  // (Retro / Classic Mix, thumb stick and tilt: "the turn to drift is way too
+  // aggressive", the kart swings too hard and will not hold a line). It was
+  // 2.1 / 0.95 / 0.45 with a straight-line stick response, so a touch of
+  // stick into the corner already added a lot of swing, and full stick was a
+  // third faster than full lock without a slide (1.55). Now the stick into
+  // the corner follows slideInExponent (half stick is ~38% of the extra
+  // swing, not 50%), the rates are ~15-20% lower, and the nose swings out
+  // less far and less quickly.
+  slideYawIn: 1.8,
+  slideYawCentre: 0.8,
+  slideYawOut: 0.38,
+  slideInExponent: 1.4,
   // The nose's angle off the travel direction in a slide (inward / centred /
   // outward) and how fast it swings to it.
-  slideNoseIn: 0.5,
-  slideNoseCentre: 0.36,
-  slideNoseOut: 0.22,
-  slideNoseRate: 4,
+  slideNoseIn: 0.42,
+  slideNoseCentre: 0.3,
+  slideNoseOut: 0.2,
+  slideNoseRate: 3,
 
   // --- surfaces and walls ----------------------------------------------------
   // The raised kerb past the road edge drives like road; past it is run-off.
@@ -178,7 +189,10 @@ export const classicGripYaw = (speed, gripScale = 1) => {
 // the slide: +1 pushed into the corner, 0 centred, -1 pushed out of it.
 export const classicSlideYaw = (inward, speed) => {
   const i = clamp(inward, -1, 1);
-  const rate = i >= 0 ? lerp(CLASSIC.slideYawCentre, CLASSIC.slideYawIn, i) : lerp(CLASSIC.slideYawCentre, CLASSIC.slideYawOut, -i);
+  const rate =
+    i >= 0
+      ? lerp(CLASSIC.slideYawCentre, CLASSIC.slideYawIn, i ** CLASSIC.slideInExponent)
+      : lerp(CLASSIC.slideYawCentre, CLASSIC.slideYawOut, -i);
   return Math.min(rate, Math.abs(speed) / CLASSIC.minTurnRadius);
 };
 

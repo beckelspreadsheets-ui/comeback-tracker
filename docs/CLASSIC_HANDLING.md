@@ -84,7 +84,7 @@ All in `CLASSIC` (classicHandling.js), each number with its reason beside it:
 | Grip | none needed | 280 u/s²: full lock at top speed washes wide, ~3/4 lock holds |
 | Speed | flat 118 u/s² to a hard cap, 1.9 s | thrust fades as 1-(v/top)², 0 to 95% in 2.75 s |
 | Turning cost | none at the cap | full lock settles ~8% slower; slip costs ~1%/deg |
-| Power slide | lane-rate arc | travel swings 0.45 / 0.95 / 2.1 rad/s (out / centred / in), ~10% slower |
+| Power slide | lane-rate arc | travel swings 0.38 / 0.8 / 1.8 rad/s (out / centred / in; softened 2026-11-25 from 0.45 / 0.95 / 2.1 after the owner's phone session, with a 1.4 exponent on the stick into the corner), ~10% slower |
 | Run-off | unreachable | past the kerb: top speed x0.71, grip x0.6 |
 | Barrier | lane clamp + scrape | real wall at the barrier's inner face: half the speed INTO it bounces back, friction along it scales with that push (8 deg kiss keeps ~84%, 20 deg ~58%, square stops you); a hit squarer than 11.5 deg and faster than 30 u/s into the wall ends the slide + 0.18 s stun |
 | Standstill | n/a | the kart can pivot at up to 1.4 rad/s below 40 u/s, so a kart stopped nose-first on a wall can turn away (no reverse gear) |
