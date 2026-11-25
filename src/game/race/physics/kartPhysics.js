@@ -575,7 +575,7 @@ export const steeringTurnInputForState = ({
   driftDirection = 0,
   steerInput = 0,
   vehicle,
-}) => (driftActive ? driftDirection * (vehicle?.driftTurn || 0) + steerInput * 0.25 : steerInput);
+}) => (driftActive ? driftDirection * (vehicle?.driftTurn || 0) + steerInput * (vehicle?.driftSteer ?? 0.25) : steerInput);
 
 export const steeringTurnSpeedForState = ({
   driftActive = false,

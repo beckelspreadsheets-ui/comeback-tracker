@@ -42,7 +42,15 @@ export const VEHICLES = {
     driftCharge: 1.38,
     driftGrip: DRIFT_TUNING.kart.grip,
     driftSlip: 15.4,
-    driftTurn: 2.12,
+    // Owner on the phone, 2026-11-25: "the turn to drift is way too
+    // aggressive", the kart swings too hard to hold a line, and softening
+    // the Classic slide alone did not change it. A drift used to turn at
+    // 2.12x full lock whatever the stick did (it only moved that by 0.25
+    // either way), so there was nothing to hold a line WITH. Now it turns at
+    // 1.4x with the stick centred, 1.9x pushed into the corner and 0.9x
+    // pushed out of it.
+    driftTurn: 1.4,
+    driftSteer: 0.5,
     driftVisualAngle: DRIFT_TUNING.kart.slideAngle,
     grip: 15.8,
     hover: 0,
