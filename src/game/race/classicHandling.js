@@ -97,7 +97,7 @@ export const CLASSIC = Object.freeze({
   // --- power slide -----------------------------------------------------------
   // How fast the slide swings the kart's travel direction, rad/s, by where
   // the stick is: pushed into the corner, centred, pushed out of it. At a
-  // slide's ~205 u/s full inward is a ~114 u radius — the tight corners — and
+  // slide's ~205 u/s full inward is a ~132 u radius — the tight corners — and
   // pushed out is a gentle ~540 u arc for straightening.
   //
   // Softened 2026-11-25 after the owner's first phone session on this build
@@ -109,15 +109,18 @@ export const CLASSIC = Object.freeze({
   // the corner follows slideInExponent (half stick is ~38% of the extra
   // swing, not 50%), the rates are ~15-20% lower, and the nose swings out
   // less far and less quickly.
-  slideYawIn: 1.8,
-  slideYawCentre: 0.8,
-  slideYawOut: 0.38,
-  slideInExponent: 1.4,
+  // Second step the same day ("still too aggressive"): 1.8 / 0.8 / 0.38 with
+  // a 1.4 exponent -> the numbers below. Full stick now swings no faster
+  // than full lock without a slide.
+  slideYawIn: 1.55,
+  slideYawCentre: 0.68,
+  slideYawOut: 0.32,
+  slideInExponent: 1.6,
   // The nose's angle off the travel direction in a slide (inward / centred /
   // outward) and how fast it swings to it.
-  slideNoseIn: 0.42,
-  slideNoseCentre: 0.3,
-  slideNoseOut: 0.2,
+  slideNoseIn: 0.36,
+  slideNoseCentre: 0.26,
+  slideNoseOut: 0.18,
   slideNoseRate: 3,
 
   // --- surfaces and walls ----------------------------------------------------

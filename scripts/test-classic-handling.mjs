@@ -147,7 +147,7 @@ const settle = (opts, seconds = 12, start = 0) => {
     maxX = Math.max(maxX, body.x - startX);
   }
   const diameter = maxX - minX;
-  check(diameter > 200 && diameter < 260, 'full-inward slide at 205 u/s is a ~114 u radius', `diameter ${diameter.toFixed(0)} u`);
+  check(diameter > 230 && diameter < 300, 'full-inward slide at 205 u/s is a ~132 u radius', `diameter ${diameter.toFixed(0)} u`);
 }
 
 // --- 1b. the Classic mini-turbo rules ----------------------------------------------
