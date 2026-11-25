@@ -25,6 +25,15 @@ in the simulator or on a device.
   at it: picture at `~/Desktop/Penguin-Kart-Icon-Art/kart-revamp/blockreward-before-after.jpg`.
   Weak points noted by the build: the picker thumbnail's wheel coins read
   pale, and the chart arrow only shows from behind.
+- **Block Reward v3 (34060896, 2026-11-25):** owner said keep it but improve:
+  gold-on-gold coins (no white mark), chart arrow on both spoiler faces and
+  the doors, bigger hood coin, fender stripes. Battery 17/17 with it in.
+  Store slots 4 and 6 still show v2.
+- **Phone (2026-11-25):** test variant of the store build at 45a8e79c
+  installed on the owner's iPhone 18 Pro Max from `~/PenguinKart-PhoneBuild`
+  (free install, expires about 2026-12-02). The install command reported
+  success; the owner was trusting the developer profile and had not yet
+  reported it running. It has Block Reward v2, not v3.
 - **Store set (33e50a8c):** iPhone slots 2-9 re-taken on this build; slot 1
   (key art) and the iPad folder unchanged. Order still not confirmed.
 - **Owner: Pixel Pickup cargo stays as is** (all cubes keep their colours).
