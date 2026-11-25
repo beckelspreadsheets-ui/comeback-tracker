@@ -1,8 +1,8 @@
 # Block Reward v2 ("Number go up"): a chunky Bitcoin-orange buggy. Orange body
-# and arch fenders, charcoal trim, a grey front bumper, gold coin wheels with a
-# white B-with-ticks mark, the same coin on the hood, doors and tail, and a
-# rear spoiler that is a price board: a green chart line climbing to an arrow,
-# between two gold coin endplates. Built from nothing by script (no imported
+# and arch fenders, charcoal trim, a grey front bumper, gold coin wheels (bright
+# rim and B-with-ticks mark on a darker gold field), the same coin on the hood
+# and tail, and the number-go-up chart, a green line climbing to an arrow, on
+# both faces of the rear price-board spoiler and on a panel on each door. Built from nothing by script (no imported
 # meshes, no external images).
 #
 #   blender -b -P build_blockreward.py -- out/btc-kart-v2.glb [--preview renders/wip] [--nobake]
@@ -13,7 +13,7 @@
 # btc-kart.glb. Pack with `--seat=0.14 --join-rear`.
 #
 # Paint: the game recolours texels whose linear chroma is over about 0.1. Only
-# the orange body takes it. Gold, the white marks, the green chart and the
+# the orange body takes it. Gold, the green chart and the
 # lamps are flagged protect=True (they keep their colour under any racer or
 # bought paint); charcoal, steel and rubber are grey and stay put anyway.
 #
@@ -35,8 +35,8 @@ random.seed(21)
 
 # ---------------------------------------------------------------- colours ---
 C_ORANGE = (0.90, 0.250, 0.022)
-C_GOLD = (1.00, 0.60, 0.050)
-C_GOLD_D = (0.62, 0.30, 0.020)
+C_GOLD = (1.00, 0.60, 0.040)
+C_GOLD_D = (0.72, 0.36, 0.016)
 C_WHITE = (0.86, 0.85, 0.82)
 C_CHAR = (0.030, 0.030, 0.034)
 C_INK = (0.010, 0.010, 0.012)
@@ -55,7 +55,7 @@ def hull_pattern(t, c):
     # twin charcoal stripes down the hood, either side of the coin
     ay = mth(t, 'ABSOLUTE', y)
     nose = band(t, x, 0.2065, 0.4450)
-    stripe = mth(t, 'MULTIPLY', mth(t, 'MULTIPLY', band(t, ay, 0.082, 0.104), top), nose)
+    stripe = mth(t, 'MULTIPLY', mth(t, 'MULTIPLY', band(t, ay, 0.098, 0.126), top), nose)
     c = mixc(t, stripe, c, C_CHAR)
     # panel lines: cowl joint, door cuts, rear deck joint
     lines = None
@@ -103,6 +103,18 @@ def reeded(r_lo, r_hi, count=40):
 
 PAINT_HULL = mat('paint_hull', C_ORANGE, rough=0.32, pattern=hull_pattern, edge=0.4)
 PAINT = mat('paint', C_ORANGE, rough=0.32, edge=0.4)
+
+
+def haunch_pattern(t, c):
+    # a charcoal stripe with white pinstripes over the top of each rear arch
+    x, y, z = objcoord(t)
+    d = mth(t, 'ABSOLUTE', mth(t, 'SUBTRACT', mth(t, 'ABSOLUTE', y), 0.322))
+    up = smooth(t, z, 0.150, 0.160)
+    c = mixc(t, mth(t, 'MULTIPLY', band(t, d, 0.021, 0.027, soft=0.001), up), c, C_WHITE)
+    return mixc(t, mth(t, 'MULTIPLY', mth(t, 'SUBTRACT', 1.0, smooth(t, d, 0.0170, 0.0185)), up), c, C_CHAR)
+
+
+PAINT_HAUNCH = mat('paint_haunch', C_ORANGE, rough=0.32, edge=0.4, pattern=haunch_pattern)
 CHAR = mat('charcoal', C_CHAR, rough=0.5, edge=0.5)
 DARK = mat('dark', (0.016, 0.016, 0.018), rough=0.5)
 STEP = mat('step', (0.040, 0.040, 0.044), rough=0.6, pattern=step_pattern, edge=0.4)
@@ -110,8 +122,7 @@ SEAT = mat('seat', (0.040, 0.040, 0.046), rough=0.7, edge=0.45)
 STEEL = mat('steel', (0.30, 0.31, 0.33), rough=0.35, metal=0.6, edge=0.7)
 IRON = mat('iron', (0.085, 0.085, 0.090), rough=0.45, metal=0.5, edge=0.6)
 GOLD = mat('gold', C_GOLD, rough=0.42, metal=0.2, edge=0.4, ao_floor=0.3, protect=True)
-GOLD_D = mat('gold_dark', C_GOLD_D, rough=0.42, metal=0.2, edge=0.3, ao_floor=0.4, protect=True)
-MARK = mat('mark', C_WHITE, rough=0.4, edge=0.2, ao_floor=0.75, protect=True)
+GOLD_D = mat('gold_dark', C_GOLD_D, rough=0.5, metal=0.2, edge=0.0, ao_floor=0.6, protect=True)
 BOARD = mat('board', (0.020, 0.024, 0.030), rough=0.3, edge=0.35)
 CHART = mat('chart', C_GREEN, rough=0.3, ao_floor=0.8, edge=0.5, protect=True)
 CHART_D = mat('chart_dim', C_GREEN_D, rough=0.4, ao_floor=0.8, edge=0.2, protect=True)
@@ -122,7 +133,6 @@ LAMP_R = mat('lamp_rear', (0.80, 0.045, 0.03), rough=0.2, ao_floor=0.75, edge=0.
 # wheel materials: no top light, the wheel turns
 RUBBER = mat('rubber', (0.036, 0.034, 0.034), rough=0.9, toplight=False, ao_floor=0.45, edge=0.45, pattern=tyre_pattern)
 W_DARK = mat('wheel_dark', (0.030, 0.030, 0.034), rough=0.5, toplight=False)
-W_MARK = mat('wheel_mark', C_WHITE, rough=0.4, toplight=False, edge=0.2, ao_floor=0.75, protect=True)
 
 P = []
 
@@ -192,13 +202,36 @@ def btc_mark(M4, h, depth, material, out):
         out.append(slab_arc('mark', material, M4, 0.04 * h, cy * h, 0.1225 * h, 0.2925 * h, -pi / 2, pi / 2, 0.0, d, n=8))
 
 
-def coin(M4, R, th, out, gold=None, mark=None, segs=22, mark_h=0.60):
-    """a coin lying on the plane z = 0 of M4, face toward +z: raised border,
-    sunk field, the mark standing on the field"""
-    c = min(0.0035, th * 0.3); rec = min(0.003, th * 0.25)
-    out.append(lathe('coin', gold or GOLD, [(R, 0.0), (R, th - c), (R - c, th), (R * 0.85, th), (R * 0.80, th - rec), (0, th - rec)], segs=segs, M4=M4, sharp=35))
+def coin(M4, R, th, out, mark=True, segs=22, mark_h=0.62):
+    """a coin lying on the plane z = 0 of M4, face toward +z: a bright raised
+    border, a darker gold field sunk into it, and the mark standing on the
+    field in bright gold. Gold on gold, so the coin reads as gold from any
+    distance (a white mark turned the whole face pale)."""
+    c = min(0.0035, th * 0.3); rec = min(0.0045, th * 0.34)
+    out.append(lathe('coin', GOLD, [(R, 0.0), (R, th - c), (R - c, th), (R * 0.84, th), (R * 0.79, th - rec)], segs=segs, M4=M4, sharp=35))
+    out.append(lathe('coin_field', GOLD_D, [(R * 0.79, th - rec), (0, th - rec)], segs=segs, M4=M4, sharp=35))
     if mark:
-        btc_mark(M4 @ T(0, 0, th - rec), R * mark_h * 2 * 0.80 / 1.46, rec * 1.1, mark, out)
+        btc_mark(M4 @ T(0, 0, th - rec), R * mark_h * 2 * 0.79 / 1.46, rec * 1.05, GOLD, out)
+
+
+def chart(M4, zs, out, k=1.0, lw=0.0135, lt=0.0065, bars=None):
+    """the number-go-up chart on the plane z = zs of M4 (x: the viewer's
+    right, y: up): a green line that climbs to an arrow, and optionally dim
+    volume bars along the bottom edge y = bars."""
+    pts = [(-0.232 * k, -0.026 * k), (-0.140 * k, 0.000), (-0.078 * k, -0.018 * k), (0.020 * k, 0.012 * k), (0.076 * k, -0.004 * k), (0.180 * k, 0.024 * k)]
+    for i, (a, b) in enumerate(zip(pts, pts[1:])):
+        a = V((a[0], a[1], 0)); b = V((b[0], b[1], 0)); d = b - a
+        out.append(rbox('chart_line', (d.length + lw * 0.9, lw, lt + (i % 2) * 0.0008), CHART,
+                        M4 @ T((a.x + b.x) / 2, (a.y + b.y) / 2, zs + lt / 2) @ R(math.atan2(d.y, d.x), 'Z'), bevel=0.0, segs=1, sharp=40))
+    a = V((pts[-2][0], pts[-2][1], 0)); b = V((pts[-1][0], pts[-1][1], 0)); d = (b - a).normalized(); nrm = V((-d.y, d.x, 0))
+    tip = b + d * (lw * 3.7); base = b + d * (lw * 0.3); hwid = lw * 1.75; ht = lt + 0.0016
+    tri = [base + nrm * hwid, base - nrm * hwid, tip]
+    verts = [M4 @ (q + V((0, 0, zs))) for q in tri] + [M4 @ (q + V((0, 0, zs + ht))) for q in tri]
+    out.append(make_obj('chart_arrow', verts, [(0, 2, 1), (3, 4, 5), (0, 1, 4, 3), (1, 2, 5, 4), (2, 0, 3, 5)], CHART, sharp=40))
+    if bars is not None:
+        heights = [0.006, 0.010, 0.007, 0.012, 0.009, 0.015, 0.011, 0.018, 0.014, 0.022]
+        for i, hgt in enumerate(heights):
+            out.append(rbox('chart_bar', (0.024 * k, hgt * k, 0.003), CHART_D, M4 @ T((-0.232 + i * 0.0445) * k, bars + (0.008 + hgt / 2) * k, zs + 0.0015), bevel=0.0, segs=1, sharp=40))
 
 
 add(xloft('hull', PAINT_HULL, HULL, N=20, sub=1, sharp=60))
@@ -209,10 +242,12 @@ add(rbox('sill', (0.30, 0.40, 0.022), CHAR, T(0.0, 0, 0.058), bevel=0.008, segs=
 hx = 0.335
 hw, top, slope, bot = hull_at(hx)
 hn = V((-slope, 0, 1)).normalized()
-coin(frame((hx, 0, top - 0.004), hn, (0, 1, 0)), 0.074, 0.016, P, mark=MARK)
-# door coins
+coin(frame((hx, 0, top - 0.004), hn, (0, 1, 0)), 0.090, 0.018, P, segs=26)
+# door price panels: the chart climbs left to right on both sides
 for s in (-1, 1):
-    coin(frame((-0.030, s * 0.1835, 0.168), (0, s, 0), (-s, 0, 0)), 0.050, 0.012, P, mark=MARK, segs=18)
+    Md = frame((-0.005, s * 0.1860, 0.172), (0, s, 0), (-s, 0, 0))
+    add(rbox('door_panel', (0.224, 0.084, 0.010), BOARD, Md, bevel=0.004, segs=1, sharp=50))
+    chart(Md, 0.005, P, k=0.40, lw=0.0105, lt=0.0055)
 
 # -------------------------------------------------------- nose and bumper ---
 GX = 0.4690
@@ -247,7 +282,7 @@ for s in (-1, 1):
 
 
 # ----------------------------------------------------------------- fenders ---
-def fender(spec, s, a0, a1, y_in, y_out, clear=0.020, t=0.013, crown=0.010, lip=0.018, n=15):
+def fender(spec, s, a0, a1, y_in, y_out, clear=0.020, t=0.013, crown=0.010, lip=0.018, n=15, material=None):
     """arch over a wheel, crowned across its width, with a down-turned lip on
     the outboard edge. y_in / y_out: how far the section reaches inboard and
     outboard of the wheel centre."""
@@ -270,7 +305,7 @@ def fender(spec, s, a0, a1, y_in, y_out, clear=0.020, t=0.013, crown=0.010, lip=
         e = 1.0
         rings.append([c + V((0, s * yo, 0)) + rd * (ro * e) for yo, ro in sect])
     v, f = loft(rings)
-    return make_obj('fender', v, f, PAINT, sharp=50)
+    return make_obj('fender', v, f, material or PAINT, sharp=50)
 
 
 for s in (-1, 1):
@@ -280,7 +315,7 @@ for s in (-1, 1):
         add(tube('fender_arm', IRON, [(FW['x'] + ax, s * 0.130, 0.215), (FW['x'] + ax * 0.9, s * 0.236, FW['R'] * 2 + 0.006)], 0.0075, N=6, sharp=70))
     add(tube('wishbone', IRON, [(FW['x'] + 0.060, s * 0.120, 0.120), (FW['x'], s * (FW['y'] - 0.070), FW['R'] + 0.010), (FW['x'] - 0.070, s * 0.120, 0.120)], 0.0095, N=6, sharp=70))
     # rear: a wide haunch that runs into the body
-    add(fender(RW, s, -6, 162, RW['y'] - 0.176, 0.100, crown=0.012))
+    add(fender(RW, s, -6, 162, RW['y'] - 0.176, 0.100, crown=0.012, material=PAINT_HAUNCH))
 
 # ------------------------------------------------------------------ cockpit ---
 path = []
@@ -321,7 +356,7 @@ for s in (-1, 1):
 # ----------------------------------------------------------------- tail ---
 TX = -0.4705
 add(rbox('tail_panel', (0.014, 0.276, 0.092), CHAR, T(TX, 0, 0.196), bevel=0.006, segs=1, sharp=50))
-coin(frame((TX - 0.006, 0, 0.198), (-1, 0, 0), (0, -1, 0)), 0.041, 0.011, P, mark=MARK, segs=18)
+coin(frame((TX - 0.006, 0, 0.198), (-1, 0, 0), (0, -1, 0)), 0.041, 0.011, P, segs=18)
 for s in (-1, 1):
     m4 = frame((TX - 0.0065, s * 0.098, 0.200), (-1, 0, 0))
     add(lathe('lamp_r_bezel', STEEL, [(0.0285, -0.004), (0.0285, 0.004), (0.024, 0.007), (0.021, 0.007)], segs=12, M4=m4, sharp=45))
@@ -343,24 +378,12 @@ add(rbox('board_foot', (BW + 0.004, 0.010, BT + 0.006), CHAR, Mb @ T(0, -BH / 2 
 for s in (-1, 1):
     add(rbox('board_post', (0.030, 0.018, 0.072), CHAR, T(BC.x + 0.016, s * 0.150, DECK_Z + 0.030) @ R(-LEAN, 'Y'), bevel=0.005, segs=1, sharp=50))
     # gold coin endplates, face out
-    coin(frame((BC.x, s * (BW / 2 + 0.002), BC.z), (0, s, 0), (-s, 0, 0)), 0.055, 0.014, P, mark=MARK, segs=20)
-# the chart: volume bars along the bottom, a line that only goes up, an arrow
-ZS = BT / 2
-pts = [(-0.232, -0.026), (-0.140, 0.000), (-0.078, -0.018), (0.020, 0.012), (0.076, -0.004), (0.180, 0.024)]
-LW, LT = 0.0135, 0.0065
-for i, (a, b) in enumerate(zip(pts, pts[1:])):
-    a = V((a[0], a[1], 0)); b = V((b[0], b[1], 0)); d = b - a
-    add(rbox('chart_line', (d.length + LW * 0.9, LW, LT + (i % 2) * 0.0008), CHART,
-             Mb @ T((a.x + b.x) / 2, (a.y + b.y) / 2, ZS + LT / 2) @ R(math.atan2(d.y, d.x), 'Z'), bevel=0.0, segs=1, sharp=40))
-a = V((pts[-2][0], pts[-2][1], 0)); b = V((pts[-1][0], pts[-1][1], 0)); d = (b - a).normalized(); nrm = V((-d.y, d.x, 0))
-tip = b + d * 0.050; base = b + d * 0.004; hwid = 0.0235; ht = LT + 0.0016
-tri = [base + nrm * hwid, base - nrm * hwid, tip]
-verts = [Mb @ (p + V((0, 0, ZS))) for p in tri] + [Mb @ (p + V((0, 0, ZS + ht))) for p in tri]
-add(make_obj('chart_arrow', verts, [(0, 2, 1), (3, 4, 5), (0, 1, 4, 3), (1, 2, 5, 4), (2, 0, 3, 5)], CHART, sharp=40))
-heights = [0.006, 0.010, 0.007, 0.012, 0.009, 0.015, 0.011, 0.018, 0.014, 0.022]
-for i, hgt in enumerate(heights):
-    bx = -0.232 + i * 0.0445
-    add(rbox('chart_bar', (0.024, hgt, 0.003), CHART_D, Mb @ T(bx, -BH / 2 + 0.008 + hgt / 2, ZS + 0.0015), bevel=0.0, segs=1, sharp=40))
+    coin(frame((BC.x, s * (BW / 2 + 0.002), BC.z), (0, s, 0), (-s, 0, 0)), 0.055, 0.014, P, segs=20)
+# the chart on both faces: from behind (the chase camera) and from the front
+# (the setup stage and the thumbnail), each climbing left to right
+chart(Mb, BT / 2, P, bars=-BH / 2)
+Mf = frame(BC, -bn, (0, 1, 0))
+chart(Mf, BT / 2, P, bars=-BH / 2)
 
 body = join(P, 'blockreward_body')
 
@@ -388,10 +411,12 @@ def build_wheel(name, spec):
     parts.append(lathe('tyre', RUBBER, prof, segs=segs, M4=A, rmod=rmod, sharp=30))
     w_gold = mat(f'{name}_gold', C_GOLD, rough=0.42, metal=0.2, toplight=False, edge=0.45, ao_floor=0.45, protect=True,
                  pattern=reeded(0.585 * Rr, 0.70 * Rr))
-    zf = hw * 0.90
+    zf = hw * 0.86
     parts.append(lathe('coin', w_gold, [(0.650 * Rr, hw * 0.66), (0.665 * Rr, hw * 0.80), (0.690 * Rr, hw * 0.92), (0.672 * Rr, hw * 1.00), (0.610 * Rr, hw * 1.02),
-                                        (0.520 * Rr, hw * 1.02), (0.480 * Rr, zf), (0.0, zf)], segs=24, M4=A, sharp=40))
-    btc_mark(A @ T(0, 0, zf), 0.47 * Rr, hw * 0.075, W_MARK, parts)
+                                        (0.500 * Rr, hw * 1.02), (0.455 * Rr, zf)], segs=24, M4=A, sharp=40))
+    w_field = mat(f'{name}_field', C_GOLD_D, rough=0.5, metal=0.2, toplight=False, edge=0.0, ao_floor=0.6, protect=True)
+    parts.append(lathe('coin_field', w_field, [(0.455 * Rr, zf), (0.0, zf)], segs=24, M4=A, sharp=40))
+    btc_mark(A @ T(0, 0, zf), 0.54 * Rr, hw * 0.105, w_gold, parts)
     parts.append(lathe('back', W_DARK, [(0.0, -hw * 0.60), (0.40 * Rr, -hw * 0.60), (0.62 * Rr, -hw * 0.78)], segs=16, M4=A, sharp=45))
     return join(parts, name)
 
@@ -416,7 +441,7 @@ mn, mx = bounds([body, wf, wr] + stand_ins); print('BOUNDS', [round(v, 3) for v 
 # ------------------------------------------------------------- bake + export ---
 if not NOBAKE:
     unwrap([body, wf, wr])
-    # the wheels are baked after the body and their white marks would bleed
+    # the wheels are baked after the body and their marks would bleed
     # over body islands with the default 12 px margin; 3 px stays in the gap
     images = bake_atlas([[body], [wf], [wr]], dict(color=1024, orm=256, emit=256), samples=24, margins=[12, 3, 3])
     final = final_material('blockreward_atlas', images, os.path.join(os.path.dirname(out_glb), '_bake'))

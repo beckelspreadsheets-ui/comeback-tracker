@@ -14,7 +14,7 @@ const KARTS = new URL('../src/assets/game/models/karts/', import.meta.url);
 // file -> [fewest, most] protected vertices as a share of the kart. Gold and
 // lamps are a part of each kart, never none of it and never most of it.
 const PROTECTED = {
-  // coin wheels, six body coins and their marks: many small protected parts
+  // coin wheels, four body coins, their marks and three charts: many small protected parts
   'btc-kart.glb': [0.2, 0.6],
   'cold-wallet.glb': [0.01, 0.2],
   'hash-runner.glb': [0.005, 0.2],
