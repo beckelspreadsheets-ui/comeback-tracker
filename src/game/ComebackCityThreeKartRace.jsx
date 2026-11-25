@@ -257,6 +257,10 @@ import {
 } from './race/tracks/trackVisualSchema.js';
 import './comebackCityThreeKartRace.css';
 
+// Motion permission is per app launch on iOS (see the tilt effect below);
+// this remembers that it has been granted in this one.
+let tiltMotionGranted = false;
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const lerp = (from, to, amount) => from + (to - from) * amount;
 // Scratch vectors for the chase camera's occlusion guard. Module scope, not
@@ -10470,6 +10474,7 @@ export const ComebackCityThreeKartRace = ({
       } catch {
         return;
       }
+      tiltMotionGranted = true;
     }
     // NO fullscreen/orientation.lock attempts (owner 2026-07-12: "the
     // camera changes when it goes into fullscreen mode and looks wild") —
@@ -10530,7 +10535,10 @@ export const ComebackCityThreeKartRace = ({
     // degrees, and readings are smoothed.
     let smoothed = null;
     let lastAt = 0;
+    let events = 0;
+    let logAt = 0;
     const onOrientation = (event) => {
+      events += 1;
       if (joystickStateRef.current.active) {
         smoothed = null; // an active drag always wins; start fresh after it
         return;
@@ -10541,10 +10549,54 @@ export const ComebackCityThreeKartRace = ({
       smoothed = smoothTiltAxis(smoothed, tiltAxis(roll), now - lastAt);
       lastAt = now;
       inputRef.current = { ...inputRef.current, steerAxis: smoothed };
+      // Test builds only: one line a second to the device console, so a
+      // phone report ("tilt does nothing") can be read as numbers.
+      if (DEBUG_HOOKS && now - logAt > 1000) {
+        logAt = now;
+        console.log(
+          `[tilt] angle ${angle} soft ${softLandscapeRef.current} beta ${(event.beta ?? 0).toFixed(1)} gamma ${(event.gamma ?? 0).toFixed(1)} roll ${roll.toFixed(1)} axis ${smoothed.toFixed(2)} events ${events}`
+        );
+      }
     };
     window.addEventListener('deviceorientation', onOrientation);
+    // iOS only sends motion after requestPermission() has been answered in
+    // THIS launch, and only a touch may ask. The saved "tilt on" choice
+    // survives a relaunch but the permission does not, so the toggle read
+    // "Tilt on" while no readings arrived at all (owner on the phone,
+    // 2026-11-25: "tilting doesn't even seem to work at all"). So when tilt
+    // comes back on from the saved choice, the first touch asks again; a
+    // refusal turns the toggle off so it says what is true.
+    const needsAsk =
+      !tiltMotionGranted && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
+    let asked = false;
+    const askOnTouch = async () => {
+      if (asked) return;
+      asked = true;
+      window.removeEventListener('touchend', askOnTouch, true);
+      window.removeEventListener('click', askOnTouch, true);
+      let answer = 'error';
+      try {
+        answer = await DeviceOrientationEvent.requestPermission();
+      } catch {}
+      if (DEBUG_HOOKS) console.log(`[tilt] permission asked on touch: ${answer}`);
+      if (answer === 'granted') tiltMotionGranted = true;
+      else setTiltEnabled(false);
+    };
+    if (needsAsk) {
+      window.addEventListener('touchend', askOnTouch, true);
+      window.addEventListener('click', askOnTouch, true);
+    }
+    const silentCheck = DEBUG_HOOKS
+      ? window.setInterval(() => {
+          if (events === 0) console.log(`[tilt] on, but no motion readings yet (permission ${tiltMotionGranted ? 'granted' : needsAsk ? 'not asked this launch' : 'not needed'})`);
+        }, 3000)
+      : 0;
+    if (DEBUG_HOOKS) console.log(`[tilt] enabled; needs permission ask: ${needsAsk}`);
     return () => {
       window.removeEventListener('deviceorientation', onOrientation);
+      window.removeEventListener('touchend', askOnTouch, true);
+      window.removeEventListener('click', askOnTouch, true);
+      if (silentCheck) window.clearInterval(silentCheck);
       if (!joystickStateRef.current.active) inputRef.current = { ...inputRef.current, steerAxis: null };
     };
   }, [tiltEnabled]);

@@ -43,16 +43,19 @@ const RAD = Math.PI / 180;
 // of its long edge (foldBeta). "Up" in the phone's frame is
 // (-cos(beta) sin(gamma), sin(beta), cos(beta) cos(gamma)): x across the
 // short edge, y along the long edge, z out of the screen. The wheel angle is
-// the angle of its x-y part. Near flat on a table that part is too short to
-// trust (and turning a flat phone is not a tilt at all), so the reading
-// fades back to the plain lift there.
+// the angle of its x-y part. That is only the right reading while the phone
+// is held up like a wheel. Held nearly flat (screen to the sky) people steer
+// by dipping one end instead, and there the plain lift of the long edge IS
+// the tilt, while the x-y angle would call a 15 degree dip full lock. `across`
+// says which it is: it is large while the short edge points up and near zero
+// when the phone is flat, so the reading fades from wheel to lift with it
+// (all wheel up to about 60 degrees of lean, all lift past about 78).
 export const wheelAngle = (beta, gamma) => {
   const b = (Number.isFinite(beta) ? beta : 0) * RAD;
   const g = (Number.isFinite(gamma) ? gamma : 0) * RAD;
   const across = Math.abs(Math.cos(b) * Math.sin(g));
   const along = Math.sin(b);
-  const inPlane = Math.hypot(across, along);
-  const trust = clamp((inPlane - 0.2) / 0.2, 0, 1);
+  const trust = clamp((across - 0.2) / 0.2, 0, 1);
   const lift = Math.asin(clamp(along, -1, 1)) / RAD;
   const wheel = Math.atan2(along, across) / RAD;
   return lift + (wheel - lift) * trust;

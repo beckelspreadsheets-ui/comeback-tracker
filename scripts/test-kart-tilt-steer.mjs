@@ -38,8 +38,11 @@ close(foldBeta(pose(25, 50).beta), 15.76, 'old reading');
 close(wheelAngle(pose(25, 50).beta, pose(25, 50).gamma), 25, 'new reading');
 // The flip that slammed the steering on 2026-11-12 still changes nothing.
 close(tiltRoll({ angle: 90, beta: 12, gamma: -80 }), tiltRoll({ angle: 90, beta: 168, gamma: 80 }), 'flip');
-// Nearly flat on a table the reading is the plain lift, and level is zero.
+// Held nearly flat, dipping one end reads as that dip (not as a wheel turn,
+// which would call it full lock), and level is zero.
 close(wheelAngle(5, 3), 5, 'nearly flat');
+close(wheelAngle(15, 0), 15, 'flat, one end dipped 15');
+close(wheelAngle(-20, 8), -20, 'flat-ish, other end dipped 20');
 assert.equal(wheelAngle(0, 0), 0);
 assert.equal(wheelAngle(NaN, NaN), 0);
 // Portrait uses gamma; the soft lock signs the wheel by gamma.
