@@ -10524,9 +10524,10 @@ export const ComebackCityThreeKartRace = ({
   }, [softLandscape]);
   useEffect(() => {
     if (!tiltEnabled || typeof window === 'undefined') return undefined;
-    // Maths and the reasons for it live in race/tiltSteer.js: the roll is
-    // folded so an upright phone cannot flip it, full lock is at 36 degrees,
-    // and readings are smoothed.
+    // Maths and the reasons for it live in race/tiltSteer.js: the wheel
+    // angle is read in the screen plane (so leaning the phone back does not
+    // weaken it and an upright phone cannot flip it), full lock is at 30
+    // degrees, and readings are smoothed.
     let smoothed = null;
     let lastAt = 0;
     const onOrientation = (event) => {

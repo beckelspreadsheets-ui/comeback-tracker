@@ -1,18 +1,33 @@
 // Tilt (gyro) steering maths, kept pure so it can be tested without a phone.
 //
-// The steering angle is how far the phone's long edge is lifted off level,
-// like turning a wheel. The browser reports it as `beta`, but with the phone
-// held nearly upright in landscape the Euler angles hit their singularity:
-// beta jumps from, say, 10 to 170 for the same physical pose. Read raw, that
-// jump slammed the steering to full lock (owner 2026-11-12, first phone test:
-// "it turned way too fast with the tilt"). sin(beta) is the same either side
-// of the jump, so folding beta back into -90..90 removes it.
+// The steering angle is how far the phone is turned like a wheel: rotation
+// about the line coming straight out of the screen.
+//
+// Two things went wrong reading that from the browser's Euler angles:
+//
+// 1. With the phone held nearly upright in landscape the angles hit their
+//    singularity: beta jumps from, say, 10 to 170 for the same physical pose.
+//    Read raw, that jump slammed the steering to full lock (owner 2026-11-12,
+//    first phone test: "it turned way too fast with the tilt").
+// 2. beta alone is how far the long edge is lifted off level, and that is the
+//    wheel angle only while the screen is vertical. Nobody holds a phone like
+//    that: leaned back 50 degrees, a 25 degree wheel turn reads as 16. With
+//    the gentle curve of the time that was about a sixth of full steer
+//    (owner 2026-11-25, on the phone: "the tilt barely works to control the
+//    cart even at 50CC").
+//
+// Both go away by working from where "up" points in the phone's own frame
+// (sin and cos of the angles, which do not jump), and measuring the wheel
+// angle inside the screen plane, so leaning the phone back changes nothing.
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-export const TILT_DEAD_DEG = 4;
-export const TILT_LOCK_DEG = 36;
-export const TILT_CURVE = 1.5;
+// Full lock at 30 degrees of wheel, a 3 degree dead zone, and a mild curve: a
+// 15 degree turn is about a third of full steer, 20 degrees a little over
+// half. (36 / 4 / 1.5 before 2026-11-25, tuned against the under-read above.)
+export const TILT_DEAD_DEG = 3;
+export const TILT_LOCK_DEG = 30;
+export const TILT_CURVE = 1.3;
 export const TILT_SMOOTH_MS = 70;
 
 export const foldBeta = (beta) => {
@@ -22,15 +37,35 @@ export const foldBeta = (beta) => {
   return value;
 };
 
+const RAD = Math.PI / 180;
+
+// Degrees the phone is turned like a wheel, always the same sign as the lift
+// of its long edge (foldBeta). "Up" in the phone's frame is
+// (-cos(beta) sin(gamma), sin(beta), cos(beta) cos(gamma)): x across the
+// short edge, y along the long edge, z out of the screen. The wheel angle is
+// the angle of its x-y part. Near flat on a table that part is too short to
+// trust (and turning a flat phone is not a tilt at all), so the reading
+// fades back to the plain lift there.
+export const wheelAngle = (beta, gamma) => {
+  const b = (Number.isFinite(beta) ? beta : 0) * RAD;
+  const g = (Number.isFinite(gamma) ? gamma : 0) * RAD;
+  const across = Math.abs(Math.cos(b) * Math.sin(g));
+  const along = Math.sin(b);
+  const inPlane = Math.hypot(across, along);
+  const trust = clamp((inPlane - 0.2) / 0.2, 0, 1);
+  const lift = Math.asin(clamp(along, -1, 1)) / RAD;
+  const wheel = Math.atan2(along, across) / RAD;
+  return lift + (wheel - lift) * trust;
+};
+
 // Degrees of wheel turn, positive = steer right.
 // angle: screen.orientation.angle (0 portrait, 90 / 270 landscape).
 // soft: the web soft-landscape lock (OS reports portrait, phone is held
 // landscape), where gamma's sign says which way round it is held.
 export const tiltRoll = ({ angle = 0, beta = 0, gamma = 0, soft = false } = {}) => {
-  const wheel = foldBeta(beta);
-  if (soft) return wheel * (gamma >= 0 ? 1 : -1);
-  if (angle === 90) return wheel;
-  if (angle === 270 || angle === -90) return -wheel;
+  if (soft) return wheelAngle(beta, gamma) * (gamma >= 0 ? 1 : -1);
+  if (angle === 90) return wheelAngle(beta, gamma);
+  if (angle === 270 || angle === -90) return -wheelAngle(beta, gamma);
   return Number.isFinite(gamma) ? gamma : 0;
 };
 
